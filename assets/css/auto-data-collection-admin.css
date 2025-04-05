@@ -1,0 +1,101 @@
+/* assets/css/auto-data-collection-admin.css */
+
+.wrap {
+    padding: 20px;
+    background-color: #f9f9f9;
+}
+
+.wrap h1 {
+    margin-bottom: 20px;
+}
+
+.wrap h2 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+}
+
+.wrap h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.wrap label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.wrap input[type="text"],
+.wrap textarea,
+.wrap input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    box-sizing: border-box; /* Ensure padding is included in width */
+    font-size: 14px;
+}
+
+.wrap textarea {
+    font-family: monospace; /* Monospace font for system prompt and JSON outputs */
+}
+
+.wrap pre code {
+    display: block;
+    background-color: #eee;
+    padding: 15px;
+    border: 1px solid #ddd;
+    overflow-x: auto;
+    tab-size: 4;
+    font-family: monospace;
+}
+
+.wrap .button-secondary {
+    margin-right: 10px;
+}
+
+.wrap .error {
+    color: #dc3232;
+    font-weight: bold;
+}
+
+.wrap .notice-error {
+    border-left-color: #dc3232;
+    padding: 10px;
+    background-color: #fef0f0;
+    border: 1px solid #dc3232;
+    margin-bottom: 10px;
+}
+
+.wrap .notice-error p {
+    margin: 0;
+}
+
+.wrap .spinner-border {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    vertical-align: text-bottom;
+    border: 0.25em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    -webkit-animation: spinner-border 0.75s linear infinite;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+@-webkit-keyframes spinner-border {
+  to { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+#copy-success-tooltip {
+    display: none;
+    margin-left: 10px;
+    color: green;
+    font-weight: bold;
+}
