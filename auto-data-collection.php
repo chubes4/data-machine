@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:     Data Processing Machine
+ * Plugin Name:     Data Machine
  * Plugin URI:      PLUGIN_URL
  * Description:     A plugin to automatically collect data from files using OpenAI API, fact-check it, and return a final output.
  * Version:         0.1.0
@@ -23,7 +23,10 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'AUTO_DATA_COLLECTION_VERSION', '0.1.0' );
 
 // Include the main plugin class - IMPORTANT: Include this BEFORE using the class
-require plugin_dir_path( __FILE__ ) . 'includes/class-auto-data-collection.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-auto-data-collection.php';
+
+// Include database modules class
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-database-modules.php';
 
 /**
  * Begins execution of the plugin.

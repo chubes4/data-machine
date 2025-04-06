@@ -22,16 +22,17 @@ PLUGIN CORRECTLY ACHIEVES ITS BASIC FUNCTIONALITY
 *   **Unique Functionalities:** Each module can have unique functionalities. For example, one module might focus on data collection and provide "Copy Data" buttons, while another module could be designed for publishing and offer "Publish to WordPress" buttons with post type selection settings.
 *   **Granular Settings:** Each module will have its own set of granular settings, including:
     *   **Prompts:**  Unique prompts for data processing, fact-checking, and JSON finalization, tailored to the module's purpose.
-    *   **API Keys:**  Optionally, modules could have their own API key settings if needed for specific integrations (though user-level API keys might be more appropriate for general use).
+    *   **API Keys:** **Per-module API keys for maximum flexibility.**
     *   **Output Settings:** Settings to control the final output format and actions, such as choosing between "Copy Data" or "Publish to WordPress" buttons, and configuring publishing options (post type, categories, etc.).
     *   **Other Module-Specific Settings:**  Any other settings relevant to the module's unique functionality.
 
 **User-Level Module Configuration:**
 
 *   **Module Selection Dropdown:**  The plugin settings page will feature a dropdown menu allowing users to select the "Active Module."
+**Module Name Field:** The plugin settings page will be updated to include a Module Name field. 
 *   **Dynamic Settings Form:**  Upon module selection, the settings form will dynamically update to display the settings fields specific to the chosen module.
 *   **"Create Module" Button:**  A "Create Module" button will be added to the settings page, enabling users to create new modules.
-    *   **Module Creation Process:**  Clicking "Create Module" will likely open a modal or a new section on the settings page where users can:
+    *   **Module Creation Process:**  Clicking "Create Module" will replace the existing form with a blank version and a save button. After saving the module, the new module will be selectable from the dropdown menu. Selecting a module will load the settings for that module into the form. The currently active module will be displayed upon initial page load. 
         *   Enter a name for the new module.
         *   Define initial settings and prompts for the module.
 *   **Module Management (Future Enhancement):**  In the future, we can add features for:
@@ -41,7 +42,7 @@ PLUGIN CORRECTLY ACHIEVES ITS BASIC FUNCTIONALITY
 
 **Implementation Steps:**
 
-1.  **Design Module Settings Structure:** Define how module settings will be stored in the database (WordPress options or custom table).
+1.  **Design Module Settings Structure:** Define the schema for the `modules` database table (WordPress options or custom table).
 2.  **Modify Settings Page (`admin/class-auto-data-collection-admin-page.php`):**
     *   Add module selection dropdown.
     *   Implement dynamic form field generation based on selected module.
@@ -51,6 +52,26 @@ PLUGIN CORRECTLY ACHIEVES ITS BASIC FUNCTIONALITY
     *   Ensure settings are stored and retrieved on a per-user basis.
 4.  **Module-Based Processing (Future):** Modify core processing logic to utilize settings and prompts from the active module.
 5.  **Implement Example Modules (Initial Set):** Create a few example modules to showcase the module system's capabilities (e.g., "Data Collection Module", "Publish to Blog Post Module", "Publish to Page Module").
+6.  **Include `class-database-modules.php` in `auto-data-collection.php`:**  Modify the main plugin file (`auto-data-collection.php`) to include the new `class-database-modules.php` file.
+
+7.  **Database Schema Design:** Define the schema for the `modules` database table.  Initially, let's include these columns:
+    *   `module_id` (INT, AUTO_INCREMENT, PRIMARY KEY)
+    *   `user_id` (INT, INDEX) - Foreign key to WordPress users table (or just user ID for simplicity initially)
+    *   `module_name` (VARCHAR)
+    *   `process_data_prompt` (TEXT)
+    *   `fact_check_prompt` (TEXT)
+    *   `finalize_json_prompt` (TEXT)
+    *   `openai_api_key` (VARCHAR) - **Per-module OpenAI API Key**
+    *   `created_at` (TIMESTAMP)
+    *   `updated_at` (TIMESTAMP)
+
+8.  **Implement Database Table Creation:** Add a method within the `Auto_Data_Collection_Database_Modules` class to handle creating the `modules` table during plugin activation (if it doesn't exist). We can use the WordPress `$wpdb->get_charset_collate()` and `dbDelta()` functions for table creation and updates.
+
+9.  **Implement CRUD Operations:** Implement the CRUD methods within the `Auto_Data_Collection_Database_Modules` class using WordPress `$wpdb` methods (`insert`, `get_results`, `update`, `delete`).
+
+10. **Integrate with Settings Page and Core Logic (Future Steps):**  After implementing the database class and CRUD operations, we will proceed to:
+    *   Modify the settings page to use the database class to display modules, create new modules, etc.
+    *   Update the core plugin logic to load prompts and settings from the database based on the selected module.
 
 ## Batch Processing Implementation Plan (Updated - PDF and Image Support)
 
