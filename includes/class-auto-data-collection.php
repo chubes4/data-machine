@@ -20,8 +20,8 @@ require_once plugin_dir_path( __FILE__ ) . '../admin/class-auto-data-collection-
 require_once plugin_dir_path( __FILE__ ) . 'api/class-auto-data-collection-api-openai.php';
 require_once plugin_dir_path( __FILE__ ) . 'api/class-auto-data-collection-api-factcheck.php';
 require_once plugin_dir_path( __FILE__ ) . 'api/class-auto-data-collection-api-jsonfinalize.php';
-// Include Process PDF class
-require_once plugin_dir_path( __FILE__ ) . 'class-process-pdf.php';
+// Include Process Data class
+require_once plugin_dir_path( __FILE__ ) . 'class-process-data.php';
 
 /**
  * The main plugin class.
@@ -83,13 +83,13 @@ class Auto_Data_Collection {
 	private $jsonfinalize_api;
 
 	/**
-	 * Process PDF class instance.
+	 * Process Data class instance.
 	 *
 	 * @since    0.1.0
 	 * @access   private
-	 * @var      Auto_Data_Collection_Process_PDF    $process_pdf    Process PDF class instance.
+	 * @var      Auto_Data_Collection_process_data    $process_data    Process Data class instance.
 	 */
-	private $process_pdf;
+	private $process_data;
 
 	/**
 	 * Initialize the class and set its properties.
@@ -103,7 +103,7 @@ class Auto_Data_Collection {
 		$this->openai_api = new Auto_Data_Collection_API_OpenAI( $this ); // Instantiate OpenAI API class
 		$this->factcheck_api = new Auto_Data_Collection_API_FactCheck(); // Instantiate FactCheck API class
 		$this->jsonfinalize_api = new Auto_Data_Collection_API_JSONFinalize(); // Instantiate JSONFinalize API class
-		$this->process_pdf = new Auto_Data_Collection_Process_PDF( $this ); // Instantiate Process PDF class with plugin instance
+		$this->process_data = new Auto_Data_Collection_process_data( $this ); // Instantiate Process Data class with plugin instance
 	}
 
 	/**
@@ -114,7 +114,7 @@ class Auto_Data_Collection {
 	public function run() {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this->admin_page, 'enqueue_admin_assets' ) ); // Use admin page class for assets
-		add_action( 'wp_ajax_process_pdf', array( $this, 'process_pdf_ajax_handler' ) );
+		add_action( 'wp_ajax_process_data', array( $this, 'process_data_ajax_handler' ) );
 		add_action( 'wp_ajax_fact_check_json', array( $this, 'fact_check_json_ajax_handler' ) );
 		add_action( 'wp_ajax_finalize_json', array( $this, 'finalize_json_ajax_handler' ) );
 		add_action( 'admin_notices', array( $this->admin_page, 'display_admin_notices' ) ); // Use admin page class for notices
@@ -130,16 +130,16 @@ class Auto_Data_Collection {
 	}
 
 	/**
-	 * Process PDF upload and OpenAI API call - AJAX handler.
+	 * Process Data upload and OpenAI API call - AJAX handler.
 	 *
 	 * @since    0.1.0
 	 */
-	public function process_pdf_ajax_handler() {
-		check_ajax_referer( 'pdf_processing_nonce', 'nonce' );
+	public function process_data_ajax_handler() {
+		check_ajax_referer( 'file_processing_nonce', 'nonce' );
 
 		$api_key = get_option( 'openai_api_key' ); // Get API key from settings using get_option()
-		$process_pdf_prompt = get_option( 'process_pdf_prompt', 'The Frankenstein Prompt' ); // Get system prompt from settings, default to "The Frankenstein Prompt"
-		$pdf_file = isset( $_FILES['pdf_file'] ) ? $_FILES['pdf_file'] : null;
+		$process_data_prompt = get_option( 'process_data_prompt', 'The Frankenstein Prompt' ); // Get system prompt from settings, default to "The Frankenstein Prompt"
+		$data_file = isset( $_FILES['data_file'] ) ? $_FILES['data_file'] : null;
 
 		if ( empty( $api_key ) ) {
 			$this->log_error( 'OpenAI API Key is missing. Please enter it in the plugin settings.' );
@@ -147,20 +147,20 @@ class Auto_Data_Collection {
 			return;
 		}
 
-		if ( empty( $process_pdf_prompt ) ) {
+		if ( empty( $process_data_prompt ) ) {
 			$this->log_error( 'System Prompt is missing. Please enter it in the plugin settings.' );
 			wp_send_json_error( array( 'message' => 'System Prompt is missing.' ) );
 			return;
 		}
 
-		if ( empty( $pdf_file ) || $pdf_file['error'] !== 0 ) {
+		if ( empty( $data_file ) || $data_file['error'] !== 0 ) {
 			$this->log_error( 'PDF file upload failed.' );
 			wp_send_json_error( array( 'message' => 'PDF file upload failed.' ) );
 			return;
 		}
 
-		// Use OpenAI API class to process PDF
-		$api_response = $this->process_pdf->process_pdf( $api_key, $process_pdf_prompt, $pdf_file );
+		// Use OpenAI API class to Process Data
+		$api_response = $this->process_data->process_data( $api_key, $process_data_prompt, $data_file );
 
 		if ( is_wp_error( $api_response ) ) {
 			$error_message = 'OpenAI API Error: ' . $api_response->get_error_message();
@@ -169,7 +169,7 @@ class Auto_Data_Collection {
 				'error_message' => $api_response->get_error_message(),
 			);
 			$this->log_error( $error_message, $error_data ); // Log detailed error info
-			wp_send_json_error( array( 'message' => 'Failed to process PDF. Please check plugin errors for details.', 'error_detail' => $error_message ) );
+			wp_send_json_error( array( 'message' => 'Failed to process Data. Please check plugin errors for details.', 'error_detail' => $error_message ) );
 			return;
 		}
 
@@ -233,16 +233,16 @@ public function finalize_json_ajax_handler() {
 
     $api_key = get_option( 'openai_api_key' ); // Get API key from settings
     $fact_checked_json = isset( $_POST['fact_checked_json'] ) ? wp_kses_post( wp_unslash( $_POST['fact_checked_json'] ) ) : '';
-    $process_pdf_results = isset( $_POST['process_pdf_results'] ) ? wp_kses_post( wp_unslash( $_POST['process_pdf_results'] ) ) : '';
+    $process_data_results = isset( $_POST['process_data_results'] ) ? wp_kses_post( wp_unslash( $_POST['process_data_results'] ) ) : '';
 
     if ( empty( $fact_checked_json ) ) {
         $this->log_error( 'Fact-checked JSON data is missing for finalization.' );
         wp_send_json_error( array( 'message' => 'Fact-checked JSON data is missing for finalization.' ) );
         return;
     }
-    if ( empty( $process_pdf_results ) ) {
-        $this->log_error( 'Process PDF results are missing for finalization.' );
-        wp_send_json_error( array( 'message' => 'Process PDF results are missing for finalization.' ) );
+    if ( empty( $process_data_results ) ) {
+        $this->log_error( 'Process Data results are missing for finalization.' );
+        wp_send_json_error( array( 'message' => 'Process Data results are missing for finalization.' ) );
         return;
     }
     if ( empty( $api_key ) ) {
@@ -253,14 +253,14 @@ public function finalize_json_ajax_handler() {
 
     // Retrieve additional prompts from settings.
     $finalize_json_prompt = get_option( 'finalize_json_prompt', 'Please finalize the JSON output:' );
-    $process_pdf_prompt   = get_option( 'process_pdf_prompt', 'The Frankenstein Prompt' );
+    $process_data_prompt   = get_option( 'process_data_prompt', 'The Frankenstein Prompt' );
 
     // Use JSONFinalize API class to finalize JSON
     $api_response = $this->jsonfinalize_api->finalize_json( 
         $api_key, 
         $finalize_json_prompt, 
-        $process_pdf_prompt, 
-        $process_pdf_results, 
+        $process_data_prompt, 
+        $process_data_results, 
         $fact_checked_json 
     );
 

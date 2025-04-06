@@ -37,8 +37,8 @@ class Auto_Data_Collection_Settings {
 		);
 		register_setting(
 			'auto_data_collection_settings_group', // Option group
-			'process_pdf_prompt', // Option name
-			array( $this, 'sanitize_process_pdf_prompt' ) // Sanitize callback
+			'process_data_prompt', // Option name
+			array( $this, 'sanitize_process_data_prompt' ) // Sanitize callback
 		);
 		register_setting(
 			'auto_data_collection_settings_group', // Option group
@@ -68,9 +68,9 @@ class Auto_Data_Collection_Settings {
 			'api_settings_section' // Section
 		);
 		add_settings_field(
-			'process_pdf_prompt', // ID
-			'Process PDF Prompt', // Title
-			array( $this, 'process_pdf_prompt_callback' ), // Callback
+			'process_data_prompt', // ID
+			'Process Data Prompt', // Title
+			array( $this, 'process_data_prompt_callback' ), // Callback
 			'auto-data-collection-settings-page', // Page
 			'api_settings_section' // Section
 		);
@@ -83,7 +83,7 @@ class Auto_Data_Collection_Settings {
 		);
 		add_settings_field(
 			'finalize_json_prompt', // ID
-			'Finalize JSON Prompt', // Title
+			'Finalize Prompt', // Title
 			array( $this, 'finalize_json_prompt_callback' ), // Callback for finalize JSON prompt
 			'auto-data-collection-settings-page', // Page
 			'api_settings_section' // Section
@@ -102,13 +102,13 @@ class Auto_Data_Collection_Settings {
 	}
 
 	/**
-	 * Sanitize the Process PDF Prompt input.
+	 * Sanitize the Process Data Prompt input.
 	 *
 	 * @since    0.1.0
 	 * @param    string    $input    The unsanitized input.
 	 * @return   string             The sanitized input.
 	 */
-	public function sanitize_process_pdf_prompt( $input ) {
+	public function sanitize_process_data_prompt( $input ) {
 		return wp_kses_post( $input );
 	}
 
@@ -156,14 +156,14 @@ class Auto_Data_Collection_Settings {
 	}
 
 	/**
-	 * Process PDF Prompt field callback.
+	 * Process Data Prompt field callback.
 	 *
 	 * @since    0.1.0
 	 */
-	public function process_pdf_prompt_callback() {
+	public function process_data_prompt_callback() {
 		printf(
-			'<textarea id="process_pdf_prompt" name="process_pdf_prompt" rows="5" cols="60">%s</textarea>',
-			esc_textarea( get_option( 'process_pdf_prompt', 'The Frankenstein Prompt' ) )
+			'<textarea id="process_data_prompt" name="process_data_prompt" rows="5" cols="60">%s</textarea>',
+			esc_textarea( get_option( 'process_data_prompt', 'The Frankenstein Prompt' ) )
 		);
 	}
 

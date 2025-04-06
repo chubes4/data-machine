@@ -16,8 +16,8 @@ class Auto_Data_Collection_Settings {
         );
         register_setting(
             'auto_data_collection_settings_group',
-            'process_pdf_prompt',
-            array( $this, 'sanitize_process_pdf_prompt' )
+            'process_data_prompt',
+            array( $this, 'sanitize_process_data_prompt' )
         );
         register_setting(
             'auto_data_collection_settings_group',
@@ -45,9 +45,9 @@ class Auto_Data_Collection_Settings {
             'api_settings_section'
         );
         add_settings_field(
-            'process_pdf_prompt',
-            'Process PDF Prompt',
-            array( $this, 'process_pdf_prompt_callback' ),
+            'process_data_prompt',
+            'Process Data Prompt',
+            array( $this, 'process_data_prompt_callback' ),
             'auto-data-collection-settings-page',
             'api_settings_section'
         );
@@ -70,7 +70,7 @@ class Auto_Data_Collection_Settings {
     public function sanitize_openai_api_key( $input ) {
         return sanitize_text_field( $input );
     }
-    public function sanitize_process_pdf_prompt( $input ) {
+    public function sanitize_process_data_prompt( $input ) {
         return wp_kses_post( $input );
     }
     public function sanitize_fact_check_prompt( $input ) {
@@ -91,10 +91,10 @@ class Auto_Data_Collection_Settings {
         );
     }
 
-    public function process_pdf_prompt_callback() {
+    public function process_data_prompt_callback() {
         printf(
-            '<textarea id="process_pdf_prompt" name="process_pdf_prompt" style="width:100%%; min-height:200px; white-space:pre-wrap;">%s</textarea>',
-            esc_textarea( get_option( 'process_pdf_prompt', 'The Frankenstein Prompt' ) )
+            '<textarea id="process_data_prompt" name="process_data_prompt" style="width:100%%; min-height:200px; white-space:pre-wrap;">%s</textarea>',
+            esc_textarea( get_option( 'process_data_prompt', 'The Frankenstein Prompt' ) )
         );
     }
 

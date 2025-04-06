@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:     Auto Data Collection
+ * Plugin Name:     Data Processing Machine
  * Plugin URI:      PLUGIN_URL
- * Description:     A plugin to automatically collect data from PDFs using OpenAI API and fact-check it.
+ * Description:     A plugin to automatically collect data from files using OpenAI API, fact-check it, and return a final output.
  * Version:         0.1.0
  * Author:          Your Name
  * Author URI:      YOUR_URL

@@ -17,20 +17,20 @@ class Auto_Data_Collection_API_JSONFinalize {
      * @since    0.1.0
      * @param    string    $api_key                OpenAI API Key.
      * @param    string    $finalize_json_prompt   Finalize JSON Prompt from settings.
-     * @param    string    $process_pdf_prompt     Process PDF Prompt from settings.
-     * @param    string    $process_pdf_results    The initial JSON output from processing the PDF.
+     * @param    string    $process_data_prompt     Process Data Prompt from settings.
+     * @param    string    $process_data_results    The initial JSON output from processing the PDF.
      * @param    string    $fact_check_results     The fact-check results.
      * @return   array|WP_Error                     API response data or WP_Error on failure.
      */
-    public function finalize_json( $api_key, $finalize_json_prompt, $process_pdf_prompt, $process_pdf_results, $fact_check_results ) {
+    public function finalize_json( $api_key, $finalize_json_prompt, $process_data_prompt, $process_data_results, $fact_check_results ) {
         $api_endpoint = 'https://api.openai.com/v1/chat/completions'; // OpenAI Chat Completions API endpoint
         $model = 'o3-mini';
 
         // Combine all values into a more structured plain text message for AI.
-        $combined_message = "here is the initial formatting request:\n\n" .
-                            $process_pdf_prompt . "\n\n" .
+        $combined_message = "here is the initial request:\n\n" .
+                            $process_data_prompt . "\n\n" .
                             "and the result:\n\n" .
-                            $process_pdf_results . "\n\n" .
+                            $process_data_results . "\n\n" .
                             "and the fact check:\n\n" .
                             $fact_check_results . "\n\n" .
                             "and your assignment is:\n\n" .
@@ -53,7 +53,7 @@ class Auto_Data_Collection_API_JSONFinalize {
                 'messages' => $messages,
             ) ),
             'method'  => 'POST',
-            'timeout' => 80,
+            'timeout' => 120,
         );
 
         $response = wp_remote_post( $api_endpoint, $args );
