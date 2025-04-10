@@ -1,1 +1,1 @@
-# auto-data-collection
+# data-machine

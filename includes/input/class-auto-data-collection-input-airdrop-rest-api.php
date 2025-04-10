@@ -1,0 +1,436 @@
+<?php
+/**
+ * Handles REST API as a data source using the Data Machine Airdrop helper plugin.
+ *
+ * Fetches posts from a remote WordPress site via a custom endpoint
+ * provided by the Data Machine Airdrop helper plugin, requiring authentication.
+ *
+ * @package    Data_Machine
+ * @subpackage Data_Machine/includes/input
+ * @since      0.7.0 (Renamed/Refactored 0.13.0)
+ */
+class Data_Machine_Input_Helper_Rest_Api implements Data_Machine_Input_Handler_Interface {
+
+	/**
+	 * Service Locator instance.
+	 * @var Data_Machine_Service_Locator
+	 */
+	private $locator;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Data_Machine_Service_Locator $locator Service Locator instance.
+	 */
+	public function __construct(Data_Machine_Service_Locator $locator) {
+	 $this->locator = $locator;
+	}
+
+	/**
+	 * Processes the input data.
+	 *
+	 * NOTE: In the current architecture (v0.12+), the core logic is handled by
+	 * Module_Ajax_Handler::process_data_source_ajax_handler, which calls get_input_data().
+	 * This method is implemented only to satisfy the interface requirement.
+	 *
+	 * @param array $post_data Data from the $_POST superglobal.
+	 * @param array $files_data Data from the $_FILES superglobal (if applicable).
+	 * @return void
+	 */
+	public function process_input( $post_data, $files_data ) {
+	 // This method is required by the interface but the primary logic
+	 // now resides in Module_Ajax_Handler::process_data_source_ajax_handler
+	 // which directly calls get_input_data() and handles job enqueueing.
+	 // Log if called unexpectedly.
+	 error_log('Data Machine: Input_Helper_Rest_Api::process_input called unexpectedly.');
+	 // Optionally send an error response if this endpoint were still active.
+	 // wp_send_json_error(['message' => 'Deprecated endpoint. Use main processing action.']);
+	 // wp_die();
+	}
+
+
+	/**
+	 * Fetches and prepares the Helper REST API input data into a standardized format.
+	 *
+	 * @param array $post_data Data from the $_POST superglobal (or equivalent context).
+	 * @param array $files_data Data from the $_FILES superglobal (not used).
+	 * @param array $source_config Decoded data_source_config for the specific module run.
+	 * @param int   $user_id The ID of the user context.
+	 * @return array The standardized input data packet.
+	 * @throws Exception If input data is invalid or cannot be retrieved.
+	 */
+	public function get_input_data(array $post_data, array $files_data, array $source_config, int $user_id): array {
+		// Get module ID from context data
+		$module_id = isset( $post_data['module_id'] ) ? absint( $post_data['module_id'] ) : 0;
+		// Use the passed $user_id for validation
+		if ( empty( $module_id ) || empty( $user_id ) ) {
+			throw new Exception(__( 'Missing module ID or user ID.', 'data-machine' ));
+		}
+
+		// Get dependencies
+		$db_processed_items = $this->locator->get('database_processed_items');
+		$db_modules = $this->locator->get('database_modules'); // Needed for ownership check
+		$db_projects = $this->locator->get('database_projects'); // Needed for ownership check
+		if (!$db_processed_items || !$db_modules || !$db_projects) {
+			throw new Exception(__( 'Required database service not available.', 'data-machine' ));
+		}
+
+		// Need to check ownership via project
+		$module = $db_modules->get_module( $module_id );
+		if (!$module || !isset($module->project_id)) {
+			throw new Exception(__( 'Invalid module or project association missing.', 'data-machine' ));
+		}
+		$project = $db_projects->get_project($module->project_id, $user_id); // Use passed $user_id for ownership check
+		if (!$project) {
+			throw new Exception(__( 'Permission denied for this module.', 'data-machine' ));
+		}
+
+		// --- Configuration ---
+		// Get remote location ID from source config
+		$remote_location_id = absint($source_config['remote_location_id'] ?? 0);
+		if (empty($remote_location_id)) {
+			throw new Exception(__('No Remote Location selected for Helper REST API.', 'data-machine'));
+		}
+
+		// Get Remote Location details
+		$db_remote_locations = $this->locator->get('database_remote_locations');
+		if (!$db_remote_locations) {
+			throw new Exception(__('Remote Locations database service not available.', 'data-machine'));
+		}
+		// Fetch location data (no user ID check needed here as module ownership implies permission)
+		$location = $db_remote_locations->get_location($remote_location_id);
+		if (!$location) {
+			throw new Exception(sprintf(__('Could not retrieve details for Remote Location ID: %d.', 'data-machine'), $remote_location_id));
+		}
+
+		// Extract connection details from the location object
+		$endpoint_url_base = trim($location->target_site_url ?? '');
+		$remote_user = trim($location->target_username ?? '');
+		// Use the decrypted password
+		$remote_password = $db_remote_locations->get_decrypted_password($location); // Use helper method
+
+		$process_limit = max(1, absint( $source_config['item_count'] ?? 1 )); // Process limit
+		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
+		$fetch_batch_size = min(100, max(10, $process_limit * 2)); // Fetch reasonable batches, max 100
+
+		if ( empty( $endpoint_url_base ) || ! filter_var( $endpoint_url_base, FILTER_VALIDATE_URL ) ) {
+			throw new Exception(sprintf(__('Invalid Target Site URL configured for Remote Location: %s.', 'data-machine'), $location->location_name ?? $remote_location_id));
+		}
+		if ( empty( $remote_user ) || empty( $remote_password ) ) {
+			throw new Exception(sprintf(__('Missing username or application password for Remote Location: %s.', 'data-machine'), $location->location_name ?? $remote_location_id));
+		}
+
+		// Calculate cutoff timestamp
+		$cutoff_timestamp = null;
+		if ($timeframe_limit !== 'all_time') {
+			$interval_map = [
+				'24_hours' => '-24 hours',
+				'72_hours' => '-72 hours',
+				'7_days'   => '-7 days',
+				'30_days'  => '-30 days'
+			];
+			if (isset($interval_map[$timeframe_limit])) {
+				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp', true)); // GMT
+			}
+		}
+		// --- End Configuration ---
+
+		// Construct the base Helper Plugin Endpoint URL
+		$api_url_base = trailingslashit($endpoint_url_base) . 'wp-json/dma/v1/query-posts';
+
+		// Get query parameters from config for the initial request
+		$post_type = $source_config['rest_post_type'] ?? 'post';
+		$post_status = $source_config['rest_post_status'] ?? 'publish';
+		$category_id = $source_config['rest_category'] ?? 0;
+		$tag_id = $source_config['rest_tag'] ?? 0;
+		$orderby = $source_config['rest_orderby'] ?? 'date';
+		$order = $source_config['rest_order'] ?? 'DESC';
+		$search = $source_config['search'] ?? null; // Added search term
+
+		$eligible_items_packets = [];
+		$current_page = 1;
+		$max_pages = 10; // Safety limit for pagination
+		$hit_time_limit_boundary = false;
+
+		// Prepare authorization header once
+		$auth_header = 'Basic ' . base64_encode( $remote_user . ':' . $remote_password );
+
+		while (count($eligible_items_packets) < $process_limit && $current_page <= $max_pages) {
+			// Build query parameters for the current page
+			$query_params = [
+				'post_type' => $post_type,
+				'post_status' => $post_status,
+				'category' => $category_id ?: null,
+				'tag' => $tag_id ?: null,
+				'posts_per_page' => $fetch_batch_size,
+				'paged' => $current_page, // Use 'paged' for helper API pagination
+				'orderby' => $orderby,
+				'order' => $order,
+                's' => $search // Use 's' for search in WP_Query used by helper
+			];
+			$current_api_url = add_query_arg( array_filter($query_params, function($value) { return $value !== null; }), $api_url_base );
+
+			// Prepare arguments for wp_remote_get
+			$args = array(
+				'headers' => array( 'Authorization' => $auth_header ),
+				'timeout' => 60,
+			);
+
+			// Make the API request
+			$response = wp_remote_get( $current_api_url, $args );
+
+			// Handle Fetch Response Errors
+			if ( is_wp_error( $response ) ) {
+				$error_message = __( 'Failed to connect to the remote data source.', 'data-machine' ) . ' ' . $response->get_error_message();
+				error_log( 'Data Machine Helper REST Input: API Request Failed. URL: ' . $current_api_url . ' Error: ' . $response->get_error_message() );
+				if ($current_page === 1) throw new Exception($error_message);
+				else break;
+			}
+
+			$response_code = wp_remote_retrieve_response_code( $response );
+			$response_headers = wp_remote_retrieve_headers( $response ); // Get headers for potential pagination info
+			$body = wp_remote_retrieve_body( $response );
+
+			if ( $response_code !== 200 ) {
+				$error_data = json_decode( $body, true );
+				$error_message_detail = isset( $error_data['message'] ) ? $error_data['message'] : __( 'Unknown error occurred on the remote site.', 'data-machine' );
+				$error_message = sprintf( __( 'Remote data source returned an error (Code: %d).', 'data-machine' ), $response_code ) . ' ' . $error_message_detail;
+				error_log( 'Data Machine Helper REST Input: API Error Response. URL: ' . $current_api_url . ' Code: ' . $response_code . ' Body: ' . $body );
+				if ($current_page === 1) throw new Exception($error_message);
+				else break;
+			}
+
+			$response_data = json_decode( $body, true );
+
+			// Helper returns array under 'posts' key
+			$posts_data = $response_data['posts'] ?? [];
+
+			if ( empty( $posts_data ) || ! is_array( $posts_data ) ) {
+				break; // No more items found on this page, stop pagination
+			}
+
+			// --- Process items in the current batch --- 
+			foreach ($posts_data as $post) {
+				if (!is_array($post) || empty($post['ID'])) {
+					continue; // Skip invalid items
+				}
+
+				// 1. Check timeframe limit first (using post_date_gmt)
+				if ($cutoff_timestamp !== null) {
+					if (empty($post['post_date_gmt'])) {
+						continue; // Skip if no GMT date available
+					}
+					$item_timestamp = strtotime($post['post_date_gmt']);
+					if ($item_timestamp === false || $item_timestamp < $cutoff_timestamp) {
+						// If sorting by date desc, hitting an old item means we can stop entirely
+						if ($orderby === 'date' && $order === 'DESC') {
+							$hit_time_limit_boundary = true;
+						}
+						continue; // Skip this old item regardless
+					}
+				}
+
+				// 2. Check if processed
+				$current_item_id = $post['ID'];
+				if ( $db_processed_items->has_item_been_processed($module_id, 'helper_rest_api', $current_item_id) ) {
+					continue; // Skip if already processed
+				}
+
+				// --- Item is ELIGIBLE! --- 
+				// Extract data (assuming Helper API structure)
+				$title = $post['post_title'] ?? 'N/A';
+				$content = $post['post_content'] ?? '';
+				$source_link = $post['guid'] ?? $endpoint_url_base; // Use guid, fallback to base URL
+
+				$content_string = "Title: " . $title . "\n\n" . $content; // Content is raw
+				
+				$input_data_packet = [
+					'content_string' => $content_string,
+					'file_info' => null,
+					'metadata' => [
+						'source_type' => 'helper_rest_api',
+						'item_identifier_to_log' => $current_item_id,
+						'original_id' => $current_item_id,
+						'source_url' => $source_link,
+						'original_title' => $title,
+						// Add other relevant fields from $post if needed
+					]
+				];
+				array_push($eligible_items_packets, $input_data_packet);
+				// --- End Eligible Item Handling ---
+
+				// Check if we have reached the process limit
+				if (count($eligible_items_packets) >= $process_limit) {
+					break; // Exit the inner foreach loop
+				}
+
+			} // End foreach ($posts_data as $post)
+
+			// --- Handle Pagination --- 
+			// Helper API might indicate total pages in headers (e.g., X-WP-TotalPages) or response body
+			$total_pages = $response_data['max_num_pages'] ?? ($response_headers['x-wp-totalpages'] ?? null);
+			if ($total_pages !== null && $current_page >= (int)$total_pages) {
+				break; // Reached the last page
+			}
+
+			// Stop outer loop conditions
+			if (count($eligible_items_packets) >= $process_limit || $hit_time_limit_boundary) {
+				break;
+			}
+
+			$current_page++; // Increment page for next request
+
+		} // End while (count($eligible_items_packets) < $process_limit ... )
+
+		// --- Return Results --- 
+		if (empty($eligible_items_packets)) {
+			return ['status' => 'no_new_items', 'message' => __('No new items found matching the criteria from the helper API endpoint.', 'data-machine')];
+		}
+
+		return $eligible_items_packets;
+	}
+
+	/**
+	 * Helper to get module and check ownership.
+	 */
+	private function get_module_with_ownership_check(int $module_id, int $user_id): ?object {
+		$db_modules = $this->locator->get('database_modules');
+		$db_projects = $this->locator->get('database_projects');
+		if (!$db_modules || !$db_projects) return null;
+
+		$module = $db_modules->get_module($module_id);
+		if (!$module || !isset($module->project_id)) return null;
+
+		$project = $db_projects->get_project($module->project_id, $user_id);
+		return $project ? $module : null;
+	}
+
+	/**
+	 * Defines the settings fields for this input handler.
+	 *
+	 * @since 0.13.0
+	 * @return array An associative array defining the settings fields.
+	 */
+	public static function get_settings_fields() {
+		// Fetch available remote locations dynamically (requires JavaScript to populate)
+		// Placeholder option for when JS hasn't loaded or no locations exist
+		$location_options = ['' => __('Select a Remote Location...', 'data-machine')];
+
+		return [
+			'remote_location_id' => [
+				'label'       => __('Remote Location', 'data-machine'),
+				'type'        => 'select',
+				'options'     => $location_options, // Will be populated by JS
+				'required'    => true,
+				'description' => __('Select the pre-configured Remote Location containing the Helper Plugin.', 'data-machine') . ' <a href="' . admin_url('admin.php?page=adc-remote-locations') . '" target="_blank">' . __('Manage Locations', 'data-machine') . '</a>',
+				'attributes'  => ['data-target-for' => 'helper_rest_api'] // Add data attribute for JS targeting
+			],
+			'rest_post_type' => [
+				'label'       => __('Post Type', 'data-machine'),
+				'type'        => 'select',
+				'options'     => ['' => __('Loading...', 'data-machine')], // Populated by JS based on selected location
+				'required'    => true,
+				'default'     => 'post',
+				'description' => __('Select the post type to fetch from the remote site. Populated after selecting a location.', 'data-machine'),
+				'dependency'  => ['field' => 'remote_location_id', 'value' => ''] // Initially dependent on location selection
+			],
+			'rest_post_status' => [
+				'label'       => __('Post Status', 'data-machine'),
+				'type'        => 'select',
+				'options'     => [ // Standard post statuses
+                    'publish' => __('Published', 'data-machine'),
+                    'pending' => __('Pending Review', 'data-machine'),
+                    'draft'   => __('Draft', 'data-machine'),
+                    'future'  => __('Scheduled', 'data-machine'),
+                    'private' => __('Private', 'data-machine'),
+                    'any'     => __('Any', 'data-machine'),
+				],
+				'default'     => 'publish',
+				'required'    => true,
+				'description' => __('Select the post status to fetch.', 'data-machine'),
+			],
+			'rest_category' => [
+				'label'       => __('Category (Optional)', 'data-machine'),
+				'type'        => 'select',
+				'options'     => ['' => __('Loading...', 'data-machine')], // Populated by JS
+				'required'    => false,
+				'description' => __('Filter by a specific category from the remote site. Populated after selecting a location.', 'data-machine'),
+				'dependency'  => ['field' => 'remote_location_id', 'value' => ''] // Initially dependent
+			],
+			'rest_tag' => [
+				'label'       => __('Tag (Optional)', 'data-machine'),
+				'type'        => 'select',
+				'options'     => ['' => __('Loading...', 'data-machine')], // Populated by JS
+				'required'    => false,
+				'description' => __('Filter by a specific tag from the remote site. Populated after selecting a location.', 'data-machine'),
+				'dependency'  => ['field' => 'remote_location_id', 'value' => ''] // Initially dependent
+			],
+			'rest_orderby' => [
+				'label'       => __('Order By', 'data-machine'),
+				'type'        => 'select',
+				'options'     => [ // Common orderby parameters
+					'date'          => __('Date', 'data-machine'),
+					'ID'            => __('ID', 'data-machine'),
+					'author'        => __('Author', 'data-machine'),
+					'title'         => __('Title', 'data-machine'),
+					'modified'      => __('Modified Date', 'data-machine'),
+					'rand'          => __('Random', 'data-machine'),
+					'comment_count' => __('Comment Count', 'data-machine'),
+					'menu_order'    => __('Menu Order', 'data-machine'),
+				],
+				'default'     => 'date',
+				'description' => __('Select the field to order posts by.', 'data-machine'),
+			],
+			'rest_order' => [
+				'label'       => __('Order', 'data-machine'),
+				'type'        => 'select',
+				'options'     => [
+					'DESC' => __('Descending', 'data-machine'),
+					'ASC'  => __('Ascending', 'data-machine'),
+				],
+				'default'     => 'DESC',
+				'description' => __('Select the order direction.', 'data-machine'),
+			],
+            'search' => [
+                'label'       => __('Search Term (Optional)', 'data-machine'),
+                'type'        => 'text',
+                'required'    => false,
+                'description' => __('Enter a search term to filter posts by keyword.', 'data-machine'),
+            ],
+			'item_count' => [
+				'label'       => __('Items to Process Per Run', 'data-machine'),
+				'type'        => 'number',
+				'required'    => true,
+				'default'     => 1,
+				'description' => __('Maximum number of new items to fetch and process in each execution cycle.', 'data-machine'),
+				'attributes'  => ['min' => '1', 'step' => '1']
+			],
+			'timeframe_limit' => [
+                'label' => __('Timeframe Limit', 'data-machine'),
+                'type' => 'select',
+                'options' => [
+                    'all_time' => __('All Time', 'data-machine'),
+                    '24_hours' => __('Last 24 Hours', 'data-machine'),
+                    '72_hours' => __('Last 72 Hours', 'data-machine'),
+                    '7_days'   => __('Last 7 Days', 'data-machine'),
+                    '30_days'  => __('Last 30 Days', 'data-machine'),
+                ],
+                'default' => 'all_time',
+                'required' => true,
+                'description' => __('Only fetch items published within this timeframe.', 'data-machine'),
+            ],
+            // REMOVED: target_site_url, target_username, application_password
+		];
+	}
+
+	/**
+	 * Returns the user-friendly label for this input handler.
+	 *
+	 * @since 0.13.0
+	 * @return string The label for the handler.
+	 */
+	public static function get_label(): string {
+		return __('Helper REST API (via Remote Location)', 'data-machine');
+	}
+
+} // End class Data_Machine_Input_Helper_Rest_Api
