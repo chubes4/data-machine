@@ -108,8 +108,69 @@ class Data_Machine_Admin_Page {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
+
+        // Instagram OAuth flow logic (admin page safe)
+        if (isset($_GET['instagram_oauth']) && !isset($_GET['code'])) {
+            $client_id = get_option('instagram_oauth_client_id');
+            $redirect_uri = admin_url('admin.php?page=dm-api-keys&callback_oauth=1');
+            $scope = 'user_profile,user_media';
+            $auth_url = 'https://api.instagram.com/oauth/authorize'
+                . '?client_id=' . urlencode($client_id)
+                . '&redirect_uri=' . urlencode($redirect_uri)
+                . '&scope=' . urlencode($scope)
+                . '&response_type=code';
+            wp_redirect($auth_url);
+            exit;
+        }
+
+        if (isset($_GET['callback_oauth']) && isset($_GET['code'])) {
+            $client_id = get_option('instagram_oauth_client_id');
+            $client_secret = get_option('instagram_oauth_client_secret');
+            $redirect_uri = admin_url('admin.php?page=dm-api-keys&callback_oauth=1');
+            $code = sanitize_text_field($_GET['code']);
+            $response = wp_remote_post('https://api.instagram.com/oauth/access_token', [
+                'body' => [
+                    'client_id' => $client_id,
+                    'client_secret' => $client_secret,
+                    'grant_type' => 'authorization_code',
+                    'redirect_uri' => $redirect_uri,
+                    'code' => $code,
+                ]
+            ]);
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
+
+            if (!empty($data['access_token']) && !empty($data['user_id'])) {
+                $access_token = $data['access_token'];
+                $user_id_ig = $data['user_id'];
+                // Fetch user info
+                $user_info_response = wp_remote_get('https://graph.instagram.com/' . $user_id_ig . '?fields=id,username,account_type,media_count,profile_picture_url&access_token=' . urlencode($access_token));
+                $user_info = json_decode(wp_remote_retrieve_body($user_info_response), true);
+
+                if (!empty($user_info['id'])) {
+                    $accounts = get_user_meta(get_current_user_id(), 'data_machine_instagram_accounts', true);
+                    if (!is_array($accounts)) $accounts = [];
+                    $accounts[] = [
+                        'id' => $user_info['id'],
+                        'username' => $user_info['username'],
+                        'profile_pic' => $user_info['profile_picture_url'] ?? '',
+                        'access_token' => $access_token,
+                        'account_type' => $user_info['account_type'] ?? '',
+                        'media_count' => $user_info['media_count'] ?? 0,
+                        'expires_at' => isset($data['expires_in']) ? date('Y-m-d H:i:s', time() + intval($data['expires_in'])) : '',
+                    ];
+                    update_user_meta(get_current_user_id(), 'data_machine_instagram_accounts', $accounts);
+                    // Redirect to remove query params
+                    wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_success=1'));
+                    exit;
+                }
+            }
+            // On error, redirect with error param
+            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=1'));
+            exit;
+        }
+
         // Display the settings page content
-        // Load the template file
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/api-keys-page.php';
     }
 

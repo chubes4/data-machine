@@ -22,7 +22,7 @@ if ( ! isset( $list_table ) || ! is_a( $list_table, 'WP_List_Table' ) ) {
 
 ?>
 <h2><?php echo esc_html__( 'Existing Locations', 'data-machine' ); ?></h2>
-<a href="<?php echo esc_url( admin_url( 'admin.php?page=adc-remote-locations&action=add' ) ); ?>" class="page-title-action"><?php echo esc_html__( 'Add New Location', 'data-machine' ); ?></a>
+<a href="<?php echo esc_url( admin_url( 'admin.php?page=dm-remote-locations&action=add' ) ); ?>" class="page-title-action"><?php echo esc_html__( 'Add New Location', 'data-machine' ); ?></a>
 
 <form method="post">
     <?php

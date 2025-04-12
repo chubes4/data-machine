@@ -1,5 +1,5 @@
 jQuery(document).ready(function($) {
-    var noticesContainer = $('#adc-remote-locations-notices');
+    var noticesContainer = $('#dm-remote-locations-notices');
 
     /**
      * Display admin notices dynamically.
@@ -21,7 +21,7 @@ jQuery(document).ready(function($) {
     }
 
     // --- Sync Action --- 
-    $('.wp-list-table').on('click', '.adc-sync-location', function(e) {
+    $('.wp-list-table').on('click', '.dm-sync-location', function(e) {
         e.preventDefault();
         var $button = $(this);
         var locationId = $button.data('id');
@@ -34,7 +34,7 @@ jQuery(document).ready(function($) {
         $button.prop('disabled', true);
 
         $.ajax({
-            url: adcRemoteLocationsParams.ajax_url,
+            url: dmRemoteLocationsParams.ajax_url,
             type: 'POST',
             data: {
                 action: 'dm_sync_location_info', // Correct action name
@@ -67,7 +67,7 @@ jQuery(document).ready(function($) {
     });
 
     // --- Delete Action --- 
-    $('.wp-list-table').on('click', '.adc-delete-location', function(e) {
+    $('.wp-list-table').on('click', '.dm-delete-location', function(e) {
         e.preventDefault();
         var $link = $(this);
         var locationId = $link.data('id');
@@ -76,14 +76,14 @@ jQuery(document).ready(function($) {
         var $row = $link.closest('tr');
 
         // Format confirmation message
-        var confirmMessage = adcRemoteLocationsParams.confirm_delete.replace('%s', locationName);
+        var confirmMessage = dmRemoteLocationsParams.confirm_delete.replace('%s', locationName);
 
         if (confirm(confirmMessage)) {
             // Optional: Add visual indicator while deleting
             $row.css('opacity', '0.5');
 
             $.ajax({
-                url: adcRemoteLocationsParams.ajax_url,
+                url: dmRemoteLocationsParams.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'dm_delete_location',
@@ -112,7 +112,7 @@ jQuery(document).ready(function($) {
     });
 
     // --- View Sync Details Action ---
-    $('.wp-list-table').on('click', '.adc-view-sync-details', function(e) {
+    $('.wp-list-table').on('click', '.dm-view-sync-details', function(e) {
         e.preventDefault();
         var $link = $(this);
         var locationId = $link.data('id');
@@ -124,7 +124,7 @@ jQuery(document).ready(function($) {
         $link.prop('disabled', true);
 
         $.ajax({
-            url: adcRemoteLocationsParams.ajax_url,
+            url: dmRemoteLocationsParams.ajax_url,
             type: 'POST',
             data: {
                 action: 'dm_get_location_synced_info',
@@ -165,9 +165,9 @@ jQuery(document).ready(function($) {
                         // For now, let's use an alert with HTML content (browser support varies)
                         // A proper modal implementation would be better.
                         // Using a basic modal approach:
-                        var modalContent = '<div id="adc-sync-details-modal" style="position:fixed; top:10%; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000; max-height: 80vh; overflow-y: auto;">' + 
+                        var modalContent = '<div id="dm-sync-details-modal" style="position:fixed; top:10%; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000; max-height: 80vh; overflow-y: auto;">' + 
                                            detailsHtml + 
-                                           '<button class="button button-primary" style="margin-top: 15px;" onclick="jQuery(\'#adc-sync-details-modal\').remove();">Close</button>' + 
+                                           '<button class="button button-primary" style="margin-top: 15px;" onclick="jQuery(\'#dm-sync-details-modal\').remove();">Close</button>' + 
                                            '</div>';
                         $('body').append(modalContent);
 
@@ -195,7 +195,7 @@ jQuery(document).ready(function($) {
     if (noticesContainer.length === 0) {
         // If the designated notices container doesn't exist, prepend notices to the main wrap div
         // This is a fallback in case the div wasn't added in the PHP template
-        noticesContainer = $('<div id="adc-remote-locations-notices"></div>').prependTo('.wrap h1:first');
+        noticesContainer = $('<div id="dm-remote-locations-notices"></div>').prependTo('.wrap h1:first');
     }
 
 }); // End document ready

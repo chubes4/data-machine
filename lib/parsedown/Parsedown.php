@@ -595,7 +595,7 @@ class Parsedown
             $Block = array(
                 'indent' => $Line['indent'],
                 'pattern' => $pattern,
-                'data' => array(
+                'data_export' => array(
                     'type' => $name,
                     'marker' => $matches[1],
                     'markerType' => ($name === 'ul' ? $markerWithoutWhitespace : substr($markerWithoutWhitespace, -1)),
@@ -605,11 +605,11 @@ class Parsedown
                     'elements' => array(),
                 ),
             );
-            $Block['data']['markerTypeRegex'] = preg_quote($Block['data']['markerType'], '/');
+            $Block['data_export']['markerTypeRegex'] = preg_quote($Block['data_export']['markerType'], '/');
 
             if ($name === 'ol')
             {
-                $listStart = ltrim(strstr($matches[1], $Block['data']['markerType'], true), '0') ?: '0';
+                $listStart = ltrim(strstr($matches[1], $Block['data_export']['markerType'], true), '0') ?: '0';
 
                 if ($listStart !== '1')
                 {
@@ -647,16 +647,16 @@ class Parsedown
             return null;
         }
 
-        $requiredIndent = ($Block['indent'] + strlen($Block['data']['marker']));
+        $requiredIndent = ($Block['indent'] + strlen($Block['data_export']['marker']));
 
         if ($Line['indent'] < $requiredIndent
             and (
                 (
-                    $Block['data']['type'] === 'ol'
-                    and preg_match('/^[0-9]++'.$Block['data']['markerTypeRegex'].'(?:[ ]++(.*)|$)/', $Line['text'], $matches)
+                    $Block['data_export']['type'] === 'ol'
+                    and preg_match('/^[0-9]++'.$Block['data_export']['markerTypeRegex'].'(?:[ ]++(.*)|$)/', $Line['text'], $matches)
                 ) or (
-                    $Block['data']['type'] === 'ul'
-                    and preg_match('/^'.$Block['data']['markerTypeRegex'].'(?:[ ]++(.*)|$)/', $Line['text'], $matches)
+                    $Block['data_export']['type'] === 'ul'
+                    and preg_match('/^'.$Block['data_export']['markerTypeRegex'].'(?:[ ]++(.*)|$)/', $Line['text'], $matches)
                 )
             )
         ) {

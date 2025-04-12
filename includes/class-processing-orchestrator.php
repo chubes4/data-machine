@@ -120,9 +120,13 @@ class Data_Machine_Processing_Orchestrator {
 		try {
 			// Use the injected instance
 			$this->log_orchestrator_step('Step 3: Calling finalize_response', $module_id, $input_data_packet['metadata'] ?? []);
+			// Use the prompt modifier to inject category/tag instructions if needed
+			$prompt_modifier = $this->locator->get('prompt_modifier');
+			$modified_finalize_prompt = $prompt_modifier::modify_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet);
+
 			$finalize_result = $this->finalize_api->finalize_response(
 				$api_key,
-				$finalize_response_prompt,
+				$modified_finalize_prompt,
 				$process_data_prompt,
 				$initial_output,
 				$fact_checked_content,

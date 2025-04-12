@@ -38,7 +38,7 @@ class Data_Machine_Output_Data_Export implements Data_Machine_Output_Handler_Int
 	 *
 	 * @return array Associative array of field definitions (empty for this handler).
 	 */
-	public static function get_settings_fields(): array {
+	public static function get_settings_fields(array $current_config = []): array {
 		// This handler currently has no specific settings.
 		return [];
 	}
@@ -52,4 +52,14 @@ class Data_Machine_Output_Data_Export implements Data_Machine_Output_Handler_Int
 		return __( 'Data Export', 'data-machine' );
 	}
 
+	/**
+	 * Sanitize settings for the Data Export output handler.
+	 * This handler currently has no specific settings.
+	 *
+	 * @param array $raw_settings
+	 * @return array
+	 */
+	public function sanitize_settings(array $raw_settings): array {
+		return $raw_settings;
+	}
 } // End class Data_Machine_Output_Data_Export

@@ -40,8 +40,8 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		$parsed_data = [
 			'title' => $parser->get_title(),
 			'content' => $parser->get_content(),
-			'category' => $parser->get_remote_category_directive(), // Assuming directive name matches
-			'tags' => $parser->get_remote_tags_directive() ? explode(',', $parser->get_remote_tags_directive()) : [] // Assuming comma-separated
+			'category' => $parser->get_publish_category(),
+			'tags' => $parser->get_publish_tags() ? explode(',', $parser->get_publish_tags()) : []
 		];
 		// Trim tag names
         $parsed_data['tags'] = array_map('trim', $parsed_data['tags']);
@@ -179,10 +179,9 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 	 *
 	 * @return array Associative array of field definitions.
 	 */
-	public static function get_settings_fields(): array {
+	public static function get_settings_fields(array $current_config = []): array {
 		// Get users for author dropdown
 		$users = get_users( array( 'fields' => array( 'ID', 'display_name' ), 'orderby' => 'display_name' ) );
-
 		// Get available post types
 		$post_type_options = [];
 		$post_types = get_post_types( array( 'public' => true ), 'objects' );
@@ -196,31 +195,28 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		foreach ($post_types as $pt) {
 			$post_type_options[$pt->name] = $pt->label;
 		}
-
 		// Get available categories
 		$category_options = [
-            '-1' => '-- Let Model Decide --',
-            '0'  => '-- Instruct Model --' // Added Instruct Model
-        ];
+	           '-1' => '-- Let Model Decide --',
+	           '0'  => '-- Instruct Model --' // Added Instruct Model
+	       ];
 		$local_categories = get_terms(array('taxonomy' => 'category', 'hide_empty' => false));
 		if (!is_wp_error($local_categories)) {
 			foreach ($local_categories as $cat) {
 				$category_options[$cat->term_id] = $cat->name;
 			}
 		}
-
 		// Get available tags
-        $tag_options = [
-            '-1' => '-- Let Model Decide --',
-            '0'  => '-- Instruct Model --' // Added Instruct Model
-        ];
+	       $tag_options = [
+	           '-1' => '-- Let Model Decide --',
+	           '0'  => '-- Instruct Model --' // Added Instruct Model
+	       ];
 		$local_tags = get_terms(array('taxonomy' => 'post_tag', 'hide_empty' => false));
 		if (!is_wp_error($local_tags)) {
 			foreach ($local_tags as $tag) {
 				$tag_options[$tag->term_id] = $tag->name;
 			}
 		}
-
 		return [
 			'post_type' => [
 				'type' => 'select',
@@ -277,5 +273,21 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 	public static function get_label(): string {
 		return __( 'Publish Locally', 'data-machine' );
 	}
-
+	/**
+	 * Sanitize settings for the Publish Local output handler.
+	 *
+	 * @param array $raw_settings
+	 * @return array
+	 */
+	public function sanitize_settings(array $raw_settings): array {
+		$sanitized = [];
+		$sanitized['post_type'] = sanitize_text_field($raw_settings['post_type'] ?? 'post');
+		$sanitized['post_status'] = sanitize_text_field($raw_settings['post_status'] ?? 'draft');
+		$valid_date_sources = ['current_date', 'source_date'];
+		$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
+		$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
+		$sanitized['selected_local_category_id'] = intval($raw_settings['selected_local_category_id'] ?? -1);
+		$sanitized['selected_local_tag_id'] = intval($raw_settings['selected_local_tag_id'] ?? -1);
+		return $sanitized;
+	}
 } // End class Data_Machine_Output_Publish_Local

@@ -103,16 +103,16 @@ class Data_Machine_Admin_Menu_Assets {
         );
         add_submenu_page(
             'data-machine-admin-page', // Parent slug
-            'Project Dashboard', // Page title
-            'Dashboard', // Menu title
+            'Projects', // Page title
+            'Projects', // Menu title
             'manage_options', // Capability
             'data-machine-project-dashboard-page', // Menu slug
             array( $this->admin_page_handler, 'display_project_dashboard_page' ) // Use handler for callback
         );
         add_submenu_page(
             'data-machine-admin-page', // Parent slug
-            'Settings', // Page title
-            'Settings', // Menu title
+            'Modules', // Page title
+            'Modules', // Menu title
             'manage_options', // Capability
             'data-machine-settings-page', // Menu slug
             array( $this->admin_page_handler, 'display_settings_page' ) // Use handler for callback
@@ -124,17 +124,17 @@ class Data_Machine_Admin_Menu_Assets {
                   __('Manage Remote Locations', 'data-machine'), // Page title
                   __('Remote Locations', 'data-machine'), // Menu title
                   'manage_options', // Capability required
-                  'adc-remote-locations', // Menu slug
+                  'dm-remote-locations', // Menu slug
                   array($this->admin_page_handler, 'display_remote_locations_page') // Use handler for callback
               );
       
         // Add API Keys submenu page
         $this->api_keys_hook_suffix = add_submenu_page(
             'data-machine-admin-page', // Parent slug
-            __('API Keys', 'data-machine'), // Page title
-            __('API Keys', 'data-machine'), // Menu title
+            __('API / Auth', 'data-machine'), // Page title
+            __('API / Auth', 'data-machine'), // Menu title
             'manage_options', // Capability required
-            'adc-api-keys', // Menu slug
+            'dm-api-keys', // Menu slug
             array($this->admin_page_handler, 'display_api_keys_page') // Use handler for callback
         );
     }
@@ -188,7 +188,7 @@ class Data_Machine_Admin_Menu_Assets {
                     'fact_check_nonce' => wp_create_nonce( 'fact_check_nonce' ),
                     'finalize_response_nonce' => wp_create_nonce( 'finalize_response_nonce' ),
                     'data_source_type' => $current_module && isset($current_module->data_source_type) ? $current_module->data_source_type : 'files', // Default 'files'
-                    'output_type' => $current_module && isset($current_module->output_type) ? $current_module->output_type : 'data', // Default 'data'
+                    'output_type' => $current_module && isset($current_module->output_type) ? $current_module->output_type : 'data_export', // Default 'data_export'
                     'check_status_nonce' => wp_create_nonce( 'dm_check_status_nonce' ) // Nonce for checking job status
                    );
                 wp_localize_script( 'data-machine-main', 'dm_ajax_params', $params );
@@ -206,8 +206,10 @@ class Data_Machine_Admin_Menu_Assets {
                 	'get_project_modules_nonce' => wp_create_nonce( 'dm_get_project_modules_nonce' ),
                 	'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
                     'get_synced_info_nonce' => wp_create_nonce( 'dm_get_location_synced_info_nonce' ),
-                    'nonce' => wp_create_nonce('dm_settings_nonce') // Add the general settings nonce
-                );
+                    'nonce' => wp_create_nonce('dm_settings_nonce'), // Add the general settings nonce
+                    'save_module_nonce' => wp_create_nonce( 'dm_save_module_nonce' ), // Add nonce for saving modules
+                    'sync_public_api_nonce' => wp_create_nonce( 'dm_sync_public_api_nonce' ) // Add nonce for public API sync
+                    );
                 wp_localize_script( 'data-machine-settings', 'dm_settings_params', $settings_params );
             
             // Project Dashboard Page JS
@@ -231,21 +233,29 @@ class Data_Machine_Admin_Menu_Assets {
             	$js_remote_path = $plugin_base_path . 'assets/js/data-machine-remote-locations.js';
                 $js_remote_url = $plugin_base_url . 'assets/js/data-machine-remote-locations.js';
                 $js_remote_version = file_exists($js_remote_path) ? filemtime($js_remote_path) : $this->version; // Already uses filemtime
-            	wp_enqueue_script( 'adc-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true ); // Load in footer
+            	wp_enqueue_script( 'dm-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true ); // Load in footer
          
             	$remote_locations_params = array(
             		'ajax_url' => admin_url('admin-ajax.php'),
             		'confirm_delete' => __('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine')
             	);
-            	wp_localize_script('adc-remote-locations-admin-js', 'adcRemoteLocationsParams', $remote_locations_params);
+            	wp_localize_script('dm-remote-locations-admin-js', 'dmRemoteLocationsParams', $remote_locations_params);
 
-            // API Keys Page JS (Add if needed in the future)
-            // } elseif ($hook_suffix === $this->api_keys_hook_suffix) {
-            //     // Enqueue specific JS for API Keys page
-            // }
-         
+            // API Keys Page JS
+            } elseif ($hook_suffix === $this->api_keys_hook_suffix) {
+                $js_api_keys_path = $plugin_base_path . 'assets/js/data-machine-api-keys.js';
+                $js_api_keys_url = $plugin_base_url . 'assets/js/data-machine-api-keys.js';
+                $js_api_keys_version = file_exists($js_api_keys_path) ? filemtime($js_api_keys_path) : $this->version;
+                wp_enqueue_script('data-machine-api-keys', $js_api_keys_url, array('jquery'), $js_api_keys_version, true);
+
+                $api_keys_params = array(
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'nonce'    => wp_create_nonce('dm_instagram_auth_nonce'),
+                    'oauth_url' => admin_url('admin-ajax.php?action=dm_instagram_oauth_start')
+                );
+                wp_localize_script('data-machine-api-keys', 'dmInstagramAuthParams', $api_keys_params);
             }
+         
         }
     }
-
-} // End class 
+} // End class

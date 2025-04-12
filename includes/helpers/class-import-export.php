@@ -160,7 +160,7 @@ class Data_Machine_Import_Export {
 
 		// 5. Generate JSON and Trigger Download
 		$project_slug = sanitize_title( $project->project_name ?: 'project' );
-		$filename     = sprintf( 'adc-export-%s-%s.json', $project_slug, date( 'Ymd-His' ) );
+		$filename     = sprintf( 'dm-export-%s-%s.json', $project_slug, date( 'Ymd-His' ) );
 		$json_data    = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 
 		if ( $json_data === false ) {
@@ -357,7 +357,7 @@ class Data_Machine_Import_Export {
         $modules_deleted = $this->db_modules->delete_modules_for_project( $project_id ); 
         if ( $modules_deleted === false ) {
             // Log the error, but attempt to delete the project anyway? Or stop?
-            error_log("ADC Import/Export: Failed to delete modules for project ID {$project_id}. Proceeding with project deletion attempt.");
+            error_log("DM Import/Export: Failed to delete modules for project ID {$project_id}. Proceeding with project deletion attempt.");
             // Optionally redirect with a warning here if module deletion failure is critical
             // $this->redirect_with_notice( 'warning', sprintf(__( 'Failed to delete associated modules, but attempting to delete project \'%s\'. Please check manually.', 'data-machine' ), esc_html($project_name) ) );
             // return; 

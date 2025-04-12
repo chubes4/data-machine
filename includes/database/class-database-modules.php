@@ -53,7 +53,7 @@ class Data_Machine_Database_Modules {
             finalize_response_prompt longtext DEFAULT NULL,
             data_source_type varchar(50) DEFAULT 'files' NOT NULL,
             data_source_config longtext DEFAULT NULL,
-            output_type varchar(50) DEFAULT 'data' NOT NULL,
+            output_type varchar(50) DEFAULT 'data_export' NOT NULL,
             output_config longtext DEFAULT NULL,
             schedule_interval varchar(50) NOT NULL DEFAULT 'project_schedule',
             schedule_status varchar(20) NOT NULL DEFAULT 'active',
@@ -83,6 +83,17 @@ class Data_Machine_Database_Modules {
 
         // Ensure project_id is valid
         if ( empty( $project_id ) || ! is_numeric( $project_id ) ) {
+        	// Use logger if available
+        	if (class_exists('Data_Machine_Service_Locator') && isset($this->locator)) {
+        	    $logger = $this->locator->get('logger');
+        	    if ($logger) {
+        	        $logger->error('Failed to create module: Invalid project_id', [
+        	            'project_id' => $project_id,
+        	            'module_data' => $module_data
+        	        ]);
+        	    }
+        	}
+        	// Fallback to error_log
         	error_log( 'Data Machine: Attempted to create module with invalid project_id: ' . $project_id );
         	return false;
         }
@@ -96,7 +107,7 @@ class Data_Machine_Database_Modules {
             'finalize_response_prompt' => isset( $module_data['finalize_response_prompt'] ) ? wp_kses_post( $module_data['finalize_response_prompt'] ) : '',
             'data_source_type' => isset( $module_data['data_source_type'] ) ? sanitize_text_field( $module_data['data_source_type'] ) : 'files', // Default to files
             'data_source_config' => isset( $module_data['data_source_config'] ) ? wp_json_encode( $module_data['data_source_config'] ) : null, // Store config as JSON
-            'output_type' => isset( $module_data['output_type'] ) ? sanitize_text_field( $module_data['output_type'] ) : 'data', // Default to data
+            'output_type' => isset( $module_data['output_type'] ) ? sanitize_text_field( $module_data['output_type'] ) : 'data_export', // Default to data
             'output_config' => isset( $module_data['output_config'] ) ? wp_json_encode( $module_data['output_config'] ) : null, // Store config as JSON
             'schedule_interval' => isset( $module_data['schedule_interval'] ) ? sanitize_text_field( $module_data['schedule_interval'] ) : 'manual',
             'schedule_status' => isset( $module_data['schedule_status'] ) ? sanitize_text_field( $module_data['schedule_status'] ) : 'paused',

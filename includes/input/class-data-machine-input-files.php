@@ -39,51 +39,6 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
 	}
 
 	/**
-	 * Processes the file upload input.
-	 *
-	 * This method now primarily acts as the AJAX endpoint handler.
-	 * It calls get_input_data to prepare the data packet and then passes
-	 * it to the orchestrator.
-	 *
-	 * @param array $post_data Data from $_POST.
-	 * @param array $files_data Data from $_FILES.
-	 * @return void Sends JSON response and exits.
-	 */
-	public function process_input( $post_data, $files_data ) {
-		try {
-			// Prepare the standardized data packet
-			$input_data_packet = $this->get_input_data($post_data, $files_data);
-
-			// Get module ID and user ID (needed for orchestrator)
-			$module_id = isset( $post_data['module_id'] ) ? absint( $post_data['module_id'] ) : 0;
-			$user_id = get_current_user_id();
-			if ( empty( $module_id ) || empty( $user_id ) ) {
-				throw new Exception(__( 'Missing module ID or user ID.', 'data-machine' ));
-			}
-			$module = $this->db_modules->get_module( $module_id, $user_id );
-			if ( ! $module ) {
-				throw new Exception(__( 'Invalid module or permission denied.', 'data-machine' ));
-			}
-
-			// Pass the data packet and module to the orchestrator
-			$result = $this->orchestrator->run( $input_data_packet, $module, $user_id );
-
-			// Send the final result back
-			if ( is_wp_error( $result ) ) {
-				wp_send_json_error( array( 'message' => $result->get_error_message() ) );
-			} elseif ( isset( $result['status'] ) && $result['status'] === 'error' ) {
-				wp_send_json_error( array( 'message' => $result['message'] ?? __( 'An unknown error occurred during processing.', 'data-machine' ) ) );
-			} else {
-				wp_send_json_success( $result );
-			}
-
-		} catch (Exception $e) {
-			wp_send_json_error( array( 'message' => $e->getMessage() ) );
-		}
-		wp_die();
-	}
-
-	/**
 	 * Fetches and prepares the file input data into a standardized format.
 	 *
 	 * @param array $post_data Data from the $_POST superglobal.
@@ -185,14 +140,25 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
 		// This handler currently has no specific settings.
 		return [];
 	}
+/**
+ * Sanitize settings for the Files input handler.
+ * This handler currently has no specific settings.
+ *
+ * @param array $raw_settings
+ * @return array
+ */
+public function sanitize_settings(array $raw_settings): array {
+	return $raw_settings;
+}
 
-	/**
-	 * Get the user-friendly label for this handler.
-	 *
-	 * @return string The label.
-	 */
-	public static function get_label(): string {
-		return __( 'Files', 'data-machine' );
-	}
+/**
+ * Get the user-friendly label for this handler.
+ *
+ * @return string The label.
+ */
+public static function get_label(): string {
+	return __( 'Files', 'data-machine' );
+}
 
-} // End class Data_Machine_Input_Files
+}
+

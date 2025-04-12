@@ -34,7 +34,7 @@ class Data_Machine_Database_Remote_Locations {
         }
 
         if (!$key) {
-            error_log('ADC Encryption Error: Neither dm_ENCRYPTION_KEY nor AUTH_KEY is defined.');
+            error_log('DM Encryption Error: Neither dm_ENCRYPTION_KEY nor AUTH_KEY is defined.');
             return false;
         }
 
@@ -58,27 +58,35 @@ class Data_Machine_Database_Remote_Locations {
     public static function create_table() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
-        $charset_collate = $wpdb->get_charset_collate();
+        
+        // Check if the table already exists
+        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) === $table_name;
+        
+        // Only proceed if the table doesn't exist
+        if (!$table_exists) {
+            $charset_collate = $wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE $table_name (
-            location_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            user_id BIGINT UNSIGNED NOT NULL,
-            location_name VARCHAR(255) NOT NULL,
-            target_site_url VARCHAR(255) NOT NULL,
-            target_username VARCHAR(100) NOT NULL,
-            encrypted_password TEXT NOT NULL,
-            synced_site_info LONGTEXT NULL,
-            last_sync_time DATETIME NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-            
-            PRIMARY KEY (location_id),
-            INDEX idx_user_id (user_id),
-            INDEX idx_user_location_name (user_id, location_name)
-        ) $charset_collate;";
+            $sql = "CREATE TABLE {$table_name} (
+                location_id bigint unsigned NOT NULL auto_increment,
+                user_id bigint unsigned NOT NULL,
+                location_name varchar(255) NOT NULL,
+                target_site_url varchar(255) NOT NULL,
+                target_username varchar(100) NOT NULL,
+                encrypted_password text NOT NULL,
+                synced_site_info longtext NULL,
+                last_sync_time datetime NULL,
+                created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                updated_at datetime NOT NULL,
+                
+                PRIMARY KEY  (location_id),
+                KEY idx_user_id (user_id),
+                KEY idx_user_location_name (user_id,location_name(191))
+            )
+            {$charset_collate}";
 
-        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-        dbDelta( $sql );
+            require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+            dbDelta( $sql );
+        }
     }
 
     /**
@@ -98,7 +106,7 @@ class Data_Machine_Database_Remote_Locations {
 
         $encrypted_password = $this->_encrypt_password($data['password']);
         if ($encrypted_password === false) {
-            error_log('ADC Remote Location Error: Failed to encrypt password.');
+            error_log('DM Remote Location Error: Failed to encrypt password.');
             return false;
         }
 
@@ -117,7 +125,7 @@ class Data_Machine_Database_Remote_Locations {
         );
 
         if ($result === false) {
-            error_log('ADC Remote Location Error: Failed to insert location. WPDB Error: ' . $wpdb->last_error);
+            error_log('DM Remote Location Error: Failed to insert location. WPDB Error: ' . $wpdb->last_error);
             return false;
         }
 
@@ -160,7 +168,7 @@ class Data_Machine_Database_Remote_Locations {
         if (isset($data['password'])) { // Allow updating with an empty password if intended
             $encrypted_password = $this->_encrypt_password($data['password']);
             if ($encrypted_password === false) {
-                 error_log('ADC Remote Location Error: Failed to encrypt password during update.');
+                 error_log('DM Remote Location Error: Failed to encrypt password during update.');
                  return false;
             }
             $update_data['encrypted_password'] = $encrypted_password;
@@ -239,7 +247,7 @@ class Data_Machine_Database_Remote_Locations {
         if ($decrypt_password && isset($location->encrypted_password)) {
             $location->password = $this->_decrypt_password($location->encrypted_password);
             if ($location->password === false) {
-                error_log("ADC Remote Location Error: Failed to decrypt password for location ID {$location_id}.");
+                error_log("DM Remote Location Error: Failed to decrypt password for location ID {$location_id}.");
                 // Decide how to handle - return null, or return object without password?
                 // Returning object without password might be safer.
                 unset($location->password);
@@ -321,21 +329,21 @@ class Data_Machine_Database_Remote_Locations {
              if ($key === false) {
                 // Error already logged in _get_encryption_key()
              } else {
-                 error_log('ADC Encryption Error: OpenSSL extension is not available.');
+                 error_log('DM Encryption Error: OpenSSL extension is not available.');
              }
              return false; // Cannot encrypt
         }
 
         $iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
         if ($iv_length === false) {
-             error_log('ADC Encryption Error: Could not get IV length for ' . self::ENCRYPTION_METHOD);
+             error_log('DM Encryption Error: Could not get IV length for ' . self::ENCRYPTION_METHOD);
              return false;
         }
         $iv = openssl_random_pseudo_bytes($iv_length);
         $encrypted = openssl_encrypt($password, self::ENCRYPTION_METHOD, $key, OPENSSL_RAW_DATA, $iv);
 
         if ($encrypted === false) {
-            error_log('ADC Encryption Error: openssl_encrypt failed.');
+            error_log('DM Encryption Error: openssl_encrypt failed.');
             return false;
         }
 
@@ -356,24 +364,24 @@ class Data_Machine_Database_Remote_Locations {
             if ($key === false) {
                // Error already logged in _get_encryption_key()
             } else {
-                error_log('ADC Decryption Error: OpenSSL extension is not available.');
+                error_log('DM Decryption Error: OpenSSL extension is not available.');
             }
             return false; // Cannot decrypt
         }
 
         $data = base64_decode($encrypted_password);
         if ($data === false) {
-            error_log('ADC Decryption Error: base64_decode failed.');
+            error_log('DM Decryption Error: base64_decode failed.');
             return false;
         }
 
         $iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
          if ($iv_length === false) {
-             error_log('ADC Decryption Error: Could not get IV length for ' . self::ENCRYPTION_METHOD);
+             error_log('DM Decryption Error: Could not get IV length for ' . self::ENCRYPTION_METHOD);
              return false;
         }
         if (strlen($data) < $iv_length) {
-             error_log('ADC Decryption Error: Encrypted data is too short to contain IV.');
+             error_log('DM Decryption Error: Encrypted data is too short to contain IV.');
              return false;
         }
 
@@ -383,7 +391,7 @@ class Data_Machine_Database_Remote_Locations {
         $decrypted = openssl_decrypt($encrypted_text, self::ENCRYPTION_METHOD, $key, OPENSSL_RAW_DATA, $iv);
 
         if ($decrypted === false) {
-            error_log('ADC Decryption Error: openssl_decrypt failed. Check key or data integrity.');
+            error_log('DM Decryption Error: openssl_decrypt failed. Check key or data integrity.');
             return false;
         }
 

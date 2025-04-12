@@ -25,7 +25,7 @@ $template_data = $template_data ?? [];
 <div class="wrap">
 	<h1><?php echo esc_html( $page_title ); ?></h1>
 
-	<div id="adc-remote-locations-notices"></div> <!-- Area for notices -->
+	<div id="dm-remote-locations-notices"></div> <!-- Area for notices -->
 
 	<?php
 	// Load the specific content template (list or form)

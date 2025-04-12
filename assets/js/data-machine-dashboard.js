@@ -85,17 +85,16 @@
         });
 
         // --- Edit Schedule Button Handler ---
-        const $modal = $('#adc-schedule-modal');
-        const $modalProjectId = $('#adc-modal-project-id');
-        const $modalProjectName = $('#adc-modal-project-name');
-        const $modalInterval = $('#adc-modal-schedule-interval');
-        const $modalStatus = $('#adc-modal-schedule-status');
-        const $moduleListDiv = $('#adc-modal-module-list'); // Div for module rows
+        const $modal = $('#dm-schedule-modal');
+        const $modalProjectId = $('#dm-modal-project-id');
+        const $modalProjectName = $('#dm-modal-project-name');
+        const $modalInterval = $('#dm-modal-schedule-interval');
+        const $modalStatus = $('#dm-modal-schedule-status');
+        const $moduleListDiv = $('#dm-modal-module-list'); // Div for module rows
 
         // Define schedule options for module dropdowns
         const scheduleOptions = {
             'project_schedule': 'Project Schedule',
-            'manual': 'Manual Only',
             'every_5_minutes': 'Every 5 Minutes',
             'hourly': 'Hourly',
             'twicedaily': 'Twice Daily',
@@ -149,24 +148,34 @@
                         let moduleHtml = '<table class="form-table"><tbody>';
                         if (modules.length > 0) {
                             modules.forEach(module => {
+                                // Treat legacy 'manual' interval as 'project_schedule' for selection
+                                let currentModuleInterval = module.schedule_interval === 'manual' ? 'project_schedule' : module.schedule_interval;
+                                // Default status is 'active' unless explicitly 'paused'
+                                const currentModuleStatus = module.schedule_status ?? 'active'; 
+                                // Check if module input type is 'files'
+                                const isFilesInput = module.data_source_type === 'files';
+                                const disabledAttr = isFilesInput ? ' disabled' : '';
+                                const filesNotice = isFilesInput ? '<span class="description" style="margin-left: 10px; font-style: italic;">(File input: Manual run only)</span>' : '';
+
                                 moduleHtml += `
                                     <tr data-module-id="${module.module_id}">
-                                        <th scope="row" style="padding-left: 10px;">${module.module_name}</th>
+                                        <th scope="row" style="padding-left: 10px;">${module.module_name} ${filesNotice}</th>
                                         <td>
-                                            <select class="adc-module-schedule-interval" name="module_schedule[${module.module_id}][interval]">
+                                            <select class="dm-module-schedule-interval" name="module_schedule[${module.module_id}][interval]"${disabledAttr}>
                                 `; 
                                 // Add schedule options
                                 for (const [value, text] of Object.entries(scheduleOptions)) {
-                                    const selected = (value === module.schedule_interval) ? ' selected' : '';
+                                    // Select the current module interval (handling the mapping from 'manual')
+                                    const selected = (value === currentModuleInterval) ? ' selected' : '';
                                     moduleHtml += `<option value="${value}"${selected}>${text}</option>`;
                                 }
                                 moduleHtml += `
                                             </select>
                                         </td>
                                         <td>
-                                             <select class="adc-module-schedule-status" name="module_schedule[${module.module_id}][status]">
-                                                <option value="active"${(module.schedule_status === 'active') ? ' selected' : ''}>Active</option>
-                                                <option value="paused"${(module.schedule_status === 'paused') ? ' selected' : ''}>Paused</option>
+                                             <select class="dm-module-schedule-status" name="module_schedule[${module.module_id}][status]"${disabledAttr}>
+                                                <option value="active"${(currentModuleStatus === 'active') ? ' selected' : ''}>Active</option>
+                                                <option value="paused"${(currentModuleStatus === 'paused') ? ' selected' : ''}>Paused</option>
                                             </select>
                                         </td>
                                     </tr>
@@ -195,12 +204,12 @@
         });
 
         // Modal Cancel Button
-        $('#adc-modal-cancel').on('click', function() {
+        $('#dm-modal-cancel').on('click', function() {
             $modal.hide();
         });
 
         // Modal Save Button
-        $('#adc-modal-save').on('click', function() {
+        $('#dm-modal-save').on('click', function() {
             const projectId = $modalProjectId.val();
             const projectInterval = $modalInterval.val(); // Renamed variable
             const projectStatus = $modalStatus.val(); // Renamed variable
@@ -211,8 +220,8 @@
             $moduleListDiv.find('tr[data-module-id]').each(function() {
                 const $row = $(this);
                 const moduleId = $row.data('module-id');
-                const moduleInterval = $row.find('.adc-module-schedule-interval').val();
-                const moduleStatus = $row.find('.adc-module-schedule-status').val();
+                const moduleInterval = $row.find('.dm-module-schedule-interval').val();
+                const moduleStatus = $row.find('.dm-module-schedule-status').val();
                 moduleSchedules[moduleId] = {
                     interval: moduleInterval,
                     status: moduleStatus
@@ -264,60 +273,60 @@
 
     });
 
-})(jQuery); 
+    /**
+     * Helper function to make AJAX requests with consistent handling.
+     */
+    function makeAjaxRequest(config) {
+        const ajaxData = $.extend({}, config.data || {}, {
+            action: config.action,
+            nonce: config.nonce
+        });
 
-/**
- * Helper function to make AJAX requests with consistent handling.
- */
-function makeAjaxRequest(config) {
-    const ajaxData = $.extend({}, config.data || {}, {
-        action: config.action,
-        nonce: config.nonce
-    });
+        // Show spinner if provided
+        if (config.spinner) $(config.spinner).addClass('is-active');
+        // Disable button if provided
+        if (config.button) $(config.button).prop('disabled', true);
+        // Clear feedback if provided
+        if (config.feedback) $(config.feedback).text('').removeClass('notice-success notice-error').hide();
 
-    // Show spinner if provided
-    if (config.spinner) $(config.spinner).addClass('is-active');
-    // Disable button if provided
-    if (config.button) $(config.button).prop('disabled', true);
-    // Clear feedback if provided
-    if (config.feedback) $(config.feedback).text('').removeClass('notice-success notice-error').hide();
-
-    return $.ajax({
-        url: dm_dashboard_params.ajax_url, // Use dashboard params
-        type: config.type || 'POST',
-        data: ajaxData,
-        dataType: config.dataType || 'json',
-        success: function(response) {
-            if (response.success) {
-                if (config.feedback) $(config.feedback).text(response.data?.message || 'Success!').addClass('notice-success').show();
-                if (typeof config.successCallback === 'function') {
-                    config.successCallback(response.data);
+        return $.ajax({
+            url: dm_dashboard_params.ajax_url, // Use dashboard params
+            type: config.type || 'POST',
+            data: ajaxData,
+            dataType: config.dataType || 'json',
+            success: function(response) {
+                if (response.success) {
+                    if (config.feedback) $(config.feedback).text(response.data?.message || 'Success!').addClass('notice-success').show();
+                    if (typeof config.successCallback === 'function') {
+                        config.successCallback(response.data);
+                    }
+                } else {
+                    const errorMsg = response.data?.message || 'An unknown error occurred.';
+                    if (config.feedback) $(config.feedback).text(errorMsg).addClass('notice-error').show();
+                    console.error('AJAX Error for action "' + config.action + '":', errorMsg, response.data?.error_detail || '');
+                    if (typeof config.errorCallback === 'function') {
+                        config.errorCallback(response.data); // Pass error data
+                    }
                 }
-            } else {
-                const errorMsg = response.data?.message || 'An unknown error occurred.';
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                const errorMsg = 'AJAX Error: ' + textStatus + (errorThrown ? ' - ' + errorThrown : '');
                 if (config.feedback) $(config.feedback).text(errorMsg).addClass('notice-error').show();
-                console.error('AJAX Error for action "' + config.action + '":', errorMsg, response.data?.error_detail || '');
+                console.error('AJAX Transport Error for action "' + config.action + '":', textStatus, errorThrown, jqXHR.responseText);
                 if (typeof config.errorCallback === 'function') {
-                    config.errorCallback(response.data); // Pass error data
+                    config.errorCallback({ message: errorMsg }); // Pass generic error data
+                }
+            },
+            complete: function() {
+                // Hide spinner if provided
+                if (config.spinner) $(config.spinner).removeClass('is-active');
+                // Enable button if provided
+                if (config.button) $(config.button).prop('disabled', false);
+                if (typeof config.completeCallback === 'function') {
+                    config.completeCallback();
                 }
             }
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            const errorMsg = 'AJAX Error: ' + textStatus + (errorThrown ? ' - ' + errorThrown : '');
-            if (config.feedback) $(config.feedback).text(errorMsg).addClass('notice-error').show();
-            console.error('AJAX Transport Error for action "' + config.action + '":', textStatus, errorThrown, jqXHR.responseText);
-            if (typeof config.errorCallback === 'function') {
-                config.errorCallback({ message: errorMsg }); // Pass generic error data
-            }
-        },
-        complete: function() {
-            // Hide spinner if provided
-            if (config.spinner) $(config.spinner).removeClass('is-active');
-            // Enable button if provided
-            if (config.button) $(config.button).prop('disabled', false);
-            if (typeof config.completeCallback === 'function') {
-                config.completeCallback();
-            }
-        }
-    });
-} 
+        });
+    }
+
+})(jQuery); 

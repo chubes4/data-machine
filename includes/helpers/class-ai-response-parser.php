@@ -105,20 +105,36 @@ class Data_Machine_AI_Response_Parser {
     }
 
     /**
-     * Convenience method to get the remote category directive value.
+     * Get the publish category from the AI output.
+     * Looks for CATEGORY, falls back to REMOTE_CATEGORY or LOCAL_CATEGORY for backward compatibility.
      *
      * @return string|null
      */
-    public function get_remote_category_directive() {
-        return $this->get_directive('REMOTE_CATEGORY');
+    public function get_publish_category() {
+        $cat = $this->get_directive('CATEGORY');
+        if ($cat !== null) return $cat;
+        // Backward compatibility
+        $cat = $this->get_directive('REMOTE_CATEGORY');
+        if ($cat !== null) return $cat;
+        return $this->get_directive('LOCAL_CATEGORY');
     }
 
     /**
-     * Convenience method to get the remote tags directive value (comma-separated string).
+     * Get the publish tags from the AI output (comma-separated string).
+     * Looks for TAGS, falls back to REMOTE_TAGS or LOCAL_TAGS for backward compatibility.
      *
      * @return string|null
      */
-    public function get_remote_tags_directive() {
-        return $this->get_directive('REMOTE_TAGS');
+    public function get_publish_tags() {
+        $tags = $this->get_directive('TAGS');
+        if ($tags !== null) return $tags;
+        // Backward compatibility
+        $tags = $this->get_directive('REMOTE_TAGS');
+        if ($tags !== null) return $tags;
+        return $this->get_directive('LOCAL_TAGS');
     }
+
+    // Optionally, keep the old methods as aliases for backward compatibility
+    public function get_category() { return $this->get_publish_category(); }
+    public function get_tags() { return $this->get_publish_tags(); }
 }

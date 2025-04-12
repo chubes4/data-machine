@@ -92,6 +92,13 @@ class Data_Machine_Ajax_Projects {
                 continue; // Skip paused modules
             }
 
+            // Skip if the module input type is 'files'
+            $module_input_type = $module->data_source_type ?? null;
+            if ($module_input_type === 'files') {
+                error_log("Data Machine Run Now (Project: {$project_id}): Skipping module {$module->module_id} as its input type is 'files'.");
+                continue; // Skip file input modules
+            }
+
             try {
                 // --- Get Input Data using appropriate handler ---
                 $input_handler = $this->get_input_handler_for_module( $module );
@@ -227,76 +234,101 @@ class Data_Machine_Ajax_Projects {
 
         // 4. Update database (ownership check is done within the update method)
         $user_id = get_current_user_id();
-        $updated = $this->db_projects->update_project_schedule( $project_id, $interval, $status, $user_id );
 
-        if ( false === $updated ) {
-            wp_send_json_error( 'Database error or permission denied while saving schedule.', 500 );
+        // --- PRE-PROCESS MODULE SCHEDULES FOR 'FILES' INPUT --- 
+        // Fetch the modules again to securely check their data_source_type
+        $current_modules = $this->db_modules->get_modules_for_project( $project_id, $user_id );
+        $module_type_map = [];
+        if ($current_modules) {
+            foreach ($current_modules as $mod) {
+                $module_type_map[$mod->module_id] = $mod->data_source_type ?? null;
+            }
         }
 
-        if ( 0 === $updated ) {
-            // This means the WHERE clause (project_id + user_id) didn't match, or data was the same
-            // Check if project exists for user to differentiate
-             $project = $this->db_projects->get_project( $project_id, $user_id );
-             if (!$project) {
-                 wp_send_json_error( 'Project not found or permission denied.', 404 );
-             } else {
-                 // Data was likely the same, consider it a success for the user
-                // Or send a specific notice: wp_send_json_success( array( 'message' => 'Schedule was already up to date.' ) );
-             }
+        $processed_module_schedules = [];
+        foreach ($module_schedules as $mod_id => $schedule_data) {
+            $module_id = absint($mod_id);
+            if (!isset($module_type_map[$module_id])) {
+                // Module ID sent from frontend doesn't belong to this project/user, skip it.
+                continue; 
+            }
+
+            // If the module type is 'files', force schedule to paused and project_schedule
+            if ($module_type_map[$module_id] === 'files') {
+                 error_log("Data Machine Edit Schedule: Forcing schedule for file input module ID: {$module_id}");
+                 $processed_module_schedules[$module_id] = [
+                    'interval' => 'project_schedule', // Default non-running interval
+                    'status'   => 'paused'            // Always paused
+                 ];
+            } else {
+                // Sanitize and validate non-file input modules
+                $mod_interval = isset($schedule_data['interval']) ? sanitize_text_field($schedule_data['interval']) : 'project_schedule';
+                $mod_status = isset($schedule_data['status']) ? sanitize_text_field($schedule_data['status']) : 'active';
+
+                // Allow 'project_schedule' for modules, but not 'manual'
+                $allowed_module_intervals = ['project_schedule', 'every_5_minutes', 'hourly', 'twicedaily', 'daily', 'weekly'];
+                $allowed_module_statuses = ['active', 'paused'];
+
+                if (!in_array($mod_interval, $allowed_module_intervals) || !in_array($mod_status, $allowed_module_statuses)) {
+                    // Log invalid data but perhaps proceed with defaults? Or skip? For now, skip.
+                    error_log("Data Machine Edit Schedule: Invalid interval ('{$mod_interval}') or status ('{$mod_status}') for module ID: {$module_id}");
+                    continue; 
+                }
+
+                 $processed_module_schedules[$module_id] = [
+                    'interval' => $mod_interval,
+                    'status'   => $mod_status
+                 ];
+            }
         }
+        // --- END PRE-PROCESSING ---
 
-        // 5. Update Module Schedules & Manage Module Crons
-        $allowed_module_intervals = array_merge(['project_schedule'], $allowed_intervals);
-        foreach ($module_schedules as $module_id => $schedule_data) {
-            $module_id = absint($module_id);
-            $mod_interval = isset($schedule_data['interval']) ? sanitize_text_field($schedule_data['interval']) : 'project_schedule';
-            $mod_status = isset($schedule_data['status']) ? sanitize_text_field($schedule_data['status']) : 'active';
+        try {
+            // Update project schedule
+            $project_updated = $this->db_projects->update_project_schedule(
+                $project_id,
+                $user_id,
+                $interval,
+                $status
+            );
 
-            // Validate module inputs
-            if (!in_array($mod_interval, $allowed_module_intervals) || !in_array($mod_status, $allowed_statuses)) {
-                // Log error but try to continue with other modules
-                error_log("Data Machine: Invalid schedule data provided for module ID {$module_id}.");
-                continue;
+            // Update module schedules (pass the processed array)
+            $modules_updated = $this->db_modules->update_module_schedules(
+                $project_id, 
+                $user_id, 
+                $processed_module_schedules // Use the pre-processed schedules
+            );
+
+            if ( $project_updated === false || $modules_updated === false ) {
+                // Error occurred (false indicates error, 0 or more is rows affected)
+                throw new Exception('Failed to update schedule in the database.');
             }
 
-            // Update module schedule in the database
-            $module_updated = $this->db_modules->update_module_schedule($module_id, $mod_interval, $mod_status, $user_id);
-            if (false === $module_updated) {
-                error_log("Data Machine: Failed to update schedule for module ID {$module_id}.");
-                // Potentially add to $errors array to report back to user
+            // Clear relevant WP Cron schedules (safer to clear both project and individual module hooks)
+            wp_clear_scheduled_hook( 'dm_run_project_event', array( 'project_id' => $project_id ) );
+            // Re-schedule project event if it's now active
+            if ($status === 'active' && in_array($interval, $allowed_intervals)) { // Use project $allowed_intervals
+                wp_schedule_event( time(), $interval, 'dm_run_project_event', array( 'project_id' => $project_id ) );
             }
 
-            // Manage individual module cron hook
-            $module_cron_hook = 'dm_run_module_schedule';
-            $module_cron_args = array( $module_id );
-            wp_clear_scheduled_hook( $module_cron_hook, $module_cron_args );
-
-            // Schedule module hook ONLY if status is active AND interval is SPECIFIC (not project or manual)
-            if ($mod_status === 'active' && $mod_interval !== 'project_schedule' && $mod_interval !== 'manual') {
-                 if (!wp_next_scheduled( $module_cron_hook, $module_cron_args )) {
-                     wp_schedule_event( time(), $mod_interval, $module_cron_hook, $module_cron_args );
+            // Clear and potentially reschedule individual module crons
+            foreach ( $processed_module_schedules as $module_id => $schedule_data ) {
+                 wp_clear_scheduled_hook( 'dm_run_module_event', array( 'module_id' => $module_id ) );
+                 // Reschedule if module has specific interval (not project) and is active
+                 if ($schedule_data['status'] === 'active' 
+                     && $schedule_data['interval'] !== 'project_schedule'
+                     && in_array($schedule_data['interval'], $allowed_module_intervals)) 
+                 {
+                     wp_schedule_event( time(), $schedule_data['interval'], 'dm_run_module_event', array( 'module_id' => $module_id ) );
                  }
             }
+
+            wp_send_json_success( [ 'message' => 'Schedule updated successfully.' ] );
+
+        } catch (Exception $e) {
+            error_log("Data Machine Error updating schedule: " . $e->getMessage());
+            wp_send_json_error( 'Error updating schedule: ' . $e->getMessage(), 500 );
         }
-
-        // 6. Manage Project WP Cron hook (as before - handles modules set to 'project_schedule')
-        $cron_hook = 'dm_run_project_schedule';
-        $cron_args = array( $project_id ); // Pass project ID to the hook
-
-        // Always clear the existing schedule for this project first
-        wp_clear_scheduled_hook( $cron_hook, $cron_args );
-
-        // If the new status is active and interval is not manual, schedule it
-        if ( $status === 'active' && $interval !== 'manual' ) {
-            // Note: 'every_5_minutes' is not a default WP schedule
-            // We might need to add this interval using the 'cron_schedules' filter
-            if (!wp_next_scheduled( $cron_hook, $cron_args )) {
-                 wp_schedule_event( time(), $interval, $cron_hook, $cron_args );
-            }
-        }
-
-        // 7. Send success response
-        wp_send_json_success( array( 'message' => 'Project and module schedules updated successfully.' ) );
 
         wp_die();
     }
@@ -346,7 +378,8 @@ class Data_Machine_Ajax_Projects {
                 'module_id' => $module->module_id,
                 'module_name' => $module->module_name,
                 'schedule_interval' => $module->schedule_interval ?? 'project_schedule',
-                'schedule_status' => $module->schedule_status ?? 'active' // Default module status?
+                'schedule_status' => $module->schedule_status ?? 'active', // Default module status?
+                'data_source_type' => $module->data_source_type ?? null // Add data source type
              ];
         }
 
@@ -455,9 +488,9 @@ class Data_Machine_Ajax_Projects {
             case 'files':
                 // Already retrieved via locator usually, but include fallback
                 return $this->locator->get('input_files');
-            case 'helper_rest_api':
-                $handler_class = 'Data_Machine_Input_Helper_Rest_Api';
-                $handler_file = DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop-rest-api.php';
+            case 'airdrop_rest_api':
+                $handler_class = 'Data_Machine_Input_Airdrop_Rest_Api';
+                $handler_file = DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop_rest_api.php';
                 break;
             case 'public_rest_api':
                 $handler_class = 'Data_Machine_Input_Public_Rest_Api';

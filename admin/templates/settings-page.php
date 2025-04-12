@@ -8,11 +8,23 @@ $db_projects = new Data_Machine_Database_Projects();
 $projects = $db_projects->get_projects_for_user($user_id);
 
 // Determine Current Project (using user meta, fallback to first project)
+// Check for both old and new meta keys due to plugin rename
 $current_project_id = get_user_meta($user_id, 'Data_Machine_current_project', true);
+if (empty($current_project_id)) {
+    // Try the old meta key from before plugin rename
+    $current_project_id = get_user_meta($user_id, 'auto_data_collection_current_project', true);
+    
+    // If found using old key, update to new key format
+    if (!empty($current_project_id)) {
+        update_user_meta($user_id, 'Data_Machine_current_project', $current_project_id);
+    }
+}
+
+// Still empty? Default to first project
 if (empty($current_project_id) && !empty($projects)) {
     $current_project_id = $projects[0]->project_id;
-    // Optionally update user meta here if you want it to "stick"
-    // update_user_meta($user_id, 'Data_Machine_current_project', $current_project_id);
+    // Update user meta to "stick" with new key format
+    update_user_meta($user_id, 'Data_Machine_current_project', $current_project_id);
 }
 $current_project_id = absint($current_project_id); // Ensure it's an integer
 
@@ -29,6 +41,15 @@ if ($current_project_id > 0) {
 
 // Determine Current Module (using user meta, fallback to first module *in the current project*)
 $current_module_id = get_user_meta($user_id, 'Data_Machine_current_module', true);
+if (empty($current_module_id)) {
+    // Try the old meta key from before plugin rename
+    $current_module_id = get_user_meta($user_id, 'auto_data_collection_current_module', true);
+    
+    // If found using old key, update to new key format
+    if (!empty($current_module_id)) {
+        update_user_meta($user_id, 'Data_Machine_current_module', $current_module_id);
+    }
+}
 $current_module_id = absint($current_module_id);
 $current_module = null;
 
@@ -71,7 +92,7 @@ elseif (!is_array($data_source_config)) $data_source_config = array();
 
 // --- Get Current Selections (for dropdowns) ---
 $current_data_source_type = $current_module ? $current_module->data_source_type : 'files';
-$current_output_type = $current_module ? $current_module->output_type : 'data-export';
+$current_output_type = $current_module ? $current_module->output_type : 'data_export';
 
 // Get Handler Registry from locator
 $handler_registry = $locator->get('handler_registry');
@@ -122,7 +143,7 @@ if (!function_exists('dm_render_settings_field')) {
 				$select_style = $field_config['select_style'] ?? 'min-height: 100px; width: 100%;';
 				$current_values = is_array($value) ? $value : []; // Ensure it's an array
 
-				echo '<div id="' . esc_attr($wrapper_id) . '" class="adc-tags-wrapper" style="' . esc_attr($wrapper_style) . '">'; // Wrapper div
+				echo '<div id="' . esc_attr($wrapper_id) . '" class="dm-tags-wrapper" style="' . esc_attr($wrapper_style) . '">'; // Wrapper div
 				echo '<select id="' . $field_id . '" name="' . $field_name . '[]" multiple style="' . esc_attr($select_style) . '">'; // Note name[] for multiple
 				foreach ($options as $opt_value => $opt_label) {
 					$is_selected = in_array((string)$opt_value, array_map('strval', $current_values)); // Compare as strings
@@ -136,14 +157,14 @@ if (!function_exists('dm_render_settings_field')) {
 			case 'button':
 				$button_id = $field_config['button_id'] ?? $field_id . '_button';
 				$button_text = $field_config['button_text'] ?? 'Button';
-				$button_class = $field_config['button_class'] ?? 'button adc-sync-button'; // Add common class
+				$button_class = $field_config['button_class'] ?? 'button dm-sync-button'; // Add common class
 				$sync_type_attr = ($handler_type === 'data_source') ? 'data-sync-type="data_source"' : 'data-sync-type="output"';
 				$feedback_id = $field_config['feedback_id'] ?? $button_id . '_feedback';
 
 				echo '<button type="button" id="' . esc_attr($button_id) . '" class="' . esc_attr($button_class) . '" ' . $sync_type_attr . '>' . esc_html($button_text) . '</button>';
 				echo '<span class="spinner" style="float: none; vertical-align: middle;"></span>';
 				echo $description; // Description after button
-				echo '<div id="' . esc_attr($feedback_id) . '" class="adc-sync-feedback" style="margin-top: 5px;"></div>';
+				echo '<div id="' . esc_attr($feedback_id) . '" class="dm-sync-feedback" style="margin-top: 5px;"></div>';
 				$description = ''; // Clear description
 				break;
 			// Add cases for 'checkbox', 'radio' etc. if needed
@@ -165,19 +186,20 @@ settings_errors('Data_Machine_messages');
 <div class="wrap">
 	<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
-	<form method="post" action="options.php">
+	<form method="post" action="options.php" id="data-machine-settings-form">
 		<?php settings_fields('Data_Machine_settings_group'); ?>
 		<!-- Hidden fields to store the actual selected IDs for saving -->
 		<input type="hidden" id="selected_project_id_for_save" name="Data_Machine_current_project" value="<?php echo esc_attr($current_project_id); ?>">
 		<input type="hidden" id="selected_module_id_for_save" name="Data_Machine_current_module" value="<?php echo esc_attr($current_module_id); ?>">
+		<!-- Make sure $current_project_id is set correctly in your PHP template -->
+		<input type="hidden" name="project_id" value="<?php echo esc_attr($current_project_id); ?>">
 
-		<h2>Project Settings</h2>
+		<h2>Project Selection</h2>
 		<table class="form-table">
 			<tr>
 				<th scope="row"><label for="current_project">Active Project</label></th>
 				<td>
-					<select name="Data_Machine_current_project_selector" id="current_project" class="regular-text" style="min-width: 200px;"> <!-- Name doesn't matter for saving, JS uses it -->
-						<option value="new">-- New Project --</option>
+					<select name="Data_Machine_current_project_selector" id="current_project" class="regular-text" style="min-width: 200px;">
 						<?php if (!empty($projects)): ?>
 							<?php foreach ($projects as $project): ?>
 								<option value="<?php echo esc_attr($project->project_id); ?>" <?php selected($current_project_id, $project->project_id); ?>>
@@ -185,22 +207,33 @@ settings_errors('Data_Machine_messages');
 								</option>
 							<?php endforeach; ?>
 						<?php else: ?>
-							 <option value="">No projects found</option>
+							 <option value=""><?php _e('No projects found', 'data-machine'); ?></option>
 						<?php endif; ?>
 					</select>
-					<p class="description">Select the project you want to work with. New projects can be created on the Project Dashboard page.</p>
+					<p class="description"><?php _e('Select the project you want to work with. ', 'data-machine'); ?> <a href="<?php echo esc_url(admin_url('admin.php?page=data-machine-project-dashboard-page')); ?>"><?php _e('Create a new project', 'data-machine'); ?></a> <?php _e('on the Projects page to get started.', 'data-machine'); ?></p>
 				</td>
 			</tr>
 		</table>
+
+		<!-- Instagram API Integration Section -->
 		<hr>
 
 		<h2>Module Settings</h2>
-		<div id="module-section-wrapper" style="<?php echo empty($current_project_id) ? 'display:none;' : ''; ?>"> <!-- Wrapper to hide if no project selected -->
+		<?php if (empty($current_project_id)): ?>
+			<div class="notice notice-warning inline">
+				<p>
+					<strong><?php _e('No active project selected.', 'data-machine'); ?></strong> 
+					<?php _e('You need to create a project via the Projects Dashboard before configuring modules.', 'data-machine'); ?>
+					<a href="<?php echo esc_url(admin_url('admin.php?page=dm-projects')); ?>" class="button button-secondary"><?php _e('Go to Projects Dashboard', 'data-machine'); ?></a>
+				</p>
+			</div>
+		<?php endif; ?>
+		<div id="module-section-wrapper">
 			<table class="form-table">
 				 <tr>
 					<th scope="row"><label for="current_module">Active Module</label></th>
 					<td>
-						<select name="Data_Machine_current_module_selector" id="current_module" class="regular-text" style="min-width: 200px;"> <!-- Name doesn't matter for saving -->
+						<select name="Data_Machine_current_module_selector" id="current_module" class="regular-text" style="min-width: 200px;" <?php echo empty($current_project_id) ? 'disabled' : ''; ?>>
 							<option value="new">-- New Module --</option>
 							<?php if (!empty($modules)): ?>
 								<?php foreach ($modules as $module): ?>
@@ -209,15 +242,22 @@ settings_errors('Data_Machine_messages');
 									</option>
 								<?php endforeach; ?>
 							<?php else: ?>
-								 <option value="">No modules in this project</option>
+								 <option value=""><?php echo empty($current_project_id) ? __('Please create a project first', 'data-machine') : __('No modules in this project', 'data-machine'); ?></option>
 							<?php endif; ?>
 						</select>
-						<button type="button" id="create-new-module" class="button button-secondary" style="margin-left: 10px;">Create New Module</button>
+						<button type="button" id="create-new-module" class="button button-secondary" style="margin-left: 10px;" <?php echo empty($current_project_id) ? 'disabled' : ''; ?>>Create New Module</button>
 						<span class="spinner" id="module-spinner" style="float: none; vertical-align: middle;"></span>
-						<p class="description">Select the module to configure, or create a new one within the selected project.</p>
+						<p class="description">
+							<?php if (empty($current_project_id)): ?>
+								<?php _e('You must create a project first before you can create or configure modules.', 'data-machine'); ?>
+							<?php else: ?>
+								<?php _e('Select the module to configure, or create a new one within the selected project.', 'data-machine'); ?>
+							<?php endif; ?>
+						</p>
 					</td>
 				 </tr>
 			</table>
+		</div>
 
 		<!-- Tab Navigation -->
 		<h2 class="nav-tab-wrapper">
@@ -279,25 +319,30 @@ settings_errors('Data_Machine_messages');
 						<!-- Dynamic Data Source Settings -->
 						<div id="data-source-settings-container" style="margin-top: 15px; border-top: 1px solid #ccc; padding-top: 15px;">
 							<?php
-							// Loop through handlers retrieved from registry
-							foreach ($input_handlers_list as $slug => $handler_info) {
-								$class_name = $handler_info['class'];
-								// Use the settings fields service to get fields; it handles non-existent methods internally.
-								$fields = $settings_fields_service->get_fields_for_handler('input', $slug);
-									if (!empty($fields)) {
-										// Get the current config for this specific handler slug
-										$current_handler_config = $data_source_config[$slug] ?? [];
-										// Wrapper div, initially hidden by JS based on selection
-										echo '<div class="adc-settings-group adc-input-settings" data-handler-slug="' . esc_attr($slug) . '" style="display: none;">';
-										echo '<h4>' . esc_html($handler_info['label']) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use label from registry
-										echo '<table class="form-table">';
-										foreach ($fields as $key => $config) {
-											$current_value = $current_handler_config[$key] ?? null;
-											dm_render_settings_field('data_source', $slug, $key, $config, $current_value);
+							if (!$settings_fields_service || !is_object($settings_fields_service)) {
+								echo '<div class="notice notice-error inline"><p><strong>Error:</strong> Settings Fields Service not available. Cannot load handler settings.</p></div>';
+							} else {
+								// Loop through handlers retrieved from registry
+								foreach ($input_handlers_list as $slug => $handler_info) {
+									$class_name = $handler_info['class'];
+									// Get the current config for this specific handler slug FIRST
+									$current_handler_config = $data_source_config[$slug] ?? [];
+									// Use the settings fields service to get fields, passing the config
+									$fields = $settings_fields_service->get_fields_for_handler('input', $slug, $current_handler_config);
+										if (!empty($fields)) {
+											// Wrapper div, initially hidden by JS based on selection
+											echo '<div class="dm-settings-group dm-input-settings" data-handler-slug="' . esc_attr($slug) . '" style="display: none;">';
+											echo '<h4>' . esc_html($handler_info['label']) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use label from registry
+											echo '<table class="form-table">';
+											foreach ($fields as $key => $config) {
+												// Value is still determined here for rendering the selected option
+												$current_value = $current_handler_config[$key] ?? null;
+												dm_render_settings_field('data_source', $slug, $key, $config, $current_value);
+											}
+											echo '</table>';
+											echo '</div>';
 										}
-										echo '</table>';
-										echo '</div>';
-									}
+								}
 							}
 							?>
 						</div>
@@ -312,14 +357,12 @@ settings_errors('Data_Machine_messages');
 				<tr>
 					<th scope="row"><label for="output_type">Output Type</label></th>
 					<td>
-						<?php error_log("DEBUG: Current Output Type Slug = " . $current_output_type); // DEBUG LINE ?>
+						<?php // error_log("DEBUG: Current Output Type Slug = " . $current_output_type); // DEBUG LINE ?>
 						<select name="output_type" id="output_type">
 							<?php 
 							// Get handlers dynamically from the registry
 							$output_handlers_list = $handler_registry->get_output_handlers();
 							foreach ($output_handlers_list as $slug => $handler_info):
-								// DEBUG VARDUMP
-								var_dump(['Comparing for selected(): Current' => $current_output_type, 'Option Slug' => $slug]);
 							?>
 								<option value="<?php echo esc_attr($slug); ?>" <?php selected($current_output_type, $slug); ?>>
 									<?php echo esc_html($handler_info['label']); // Use label from registry ?>
@@ -331,23 +374,34 @@ settings_errors('Data_Machine_messages');
 						<!-- Dynamic Output Settings -->
 						<div id="output-settings-container" style="margin-top: 15px; border-top: 1px solid #ccc; padding-top: 15px;">
 							<?php
-							// Loop through handlers retrieved from registry
-							foreach ($output_handlers_list as $slug => $handler_info) {
-								$class_name = $handler_info['class'];
-								// Use the settings fields service to get fields; it handles non-existent methods internally.
-								$fields = $settings_fields_service->get_fields_for_handler('output', $slug);
-									if (!empty($fields)) {
-										$current_handler_config = $output_config[$slug] ?? [];
-										echo '<div class="adc-settings-group adc-output-settings" data-handler-slug="' . esc_attr($slug) . '" style="display: none;">';
-										echo '<h4>' . esc_html($handler_info['label']) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use label from registry
-										echo '<table class="form-table">';
-										foreach ($fields as $key => $config) {
-											$current_value = $current_handler_config[$key] ?? null;
-											dm_render_settings_field('output', $slug, $key, $config, $current_value);
-										}
-										echo '</table>';
-										echo '</div>';
-									}
+							if (!$settings_fields_service || !is_object($settings_fields_service)) {
+								echo '<div class="notice notice-error inline"><p><strong>Error:</strong> Settings Fields Service not available. Cannot load handler settings.</p></div>';
+							} else {
+								// Loop through handlers retrieved from registry
+								foreach ($output_handlers_list as $slug => $handler_info) {
+								    $class_name = $handler_info['class'];
+								    // Set the current handler config BEFORE calling get_fields_for_handler
+								    $current_handler_config = $output_config[$slug] ?? [];
+								    // Inject user_id for correct location lookup if available
+								    if (!empty($current_module) && property_exists($current_module, 'user_id')) {
+								        $current_handler_config['user_id'] = $current_module->user_id;
+								    }
+								    // Use the settings fields service to get fields; it handles non-existent methods internally.
+								    error_log("DM Debug Template: Calling get_fields_for_handler for output slug: " . $slug); // DEBUG LINE
+								    $fields = $settings_fields_service->get_fields_for_handler('output', $slug, $current_handler_config);
+								
+								    if (!empty($fields)) {
+								        echo '<div class="dm-settings-group dm-output-settings" data-handler-slug="' . esc_attr($slug) . '" style="display: none;">';
+								        echo '<h4>' . esc_html($handler_info['label']) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use label from registry
+								        echo '<table class="form-table">';
+								        foreach ($fields as $key => $config) {
+								            $current_value = $current_handler_config[$key] ?? null;
+								            dm_render_settings_field('output', $slug, $key, $config, $current_value);
+								        }
+								        echo '</table>';
+								        echo '</div>';
+								    }
+								}
 							}
 							?>
 						</div>
@@ -356,6 +410,7 @@ settings_errors('Data_Machine_messages');
 			</table>
 		</div>
 
-		<?php submit_button('Save Settings'); ?>
+
+	<?php submit_button('Save Settings'); ?>
 	</form>
 </div>

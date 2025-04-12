@@ -101,6 +101,6 @@
 }
 
 /* Utility class to hide settings sections initially */
-.adc-settings-hidden {
+.dm-settings-hidden {
     display: none;
 }

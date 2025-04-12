@@ -76,20 +76,12 @@ class Data_Machine_Module_Ajax_Handler {
         // TODO: Refactor this to use the locator more effectively, maybe register input handlers too?
 		if ($data_source_type === 'files') {
 			$input_handler = $this->locator->get('input_files'); // Get from locator
-		} elseif ($data_source_type === 'helper_rest_api') { // Updated slug check
-					// Instantiate the Helper REST API handler
-		            // Option 1: Register it in locator too (Recommended for consistency)
-		            // Option 2: Pass locator to its constructor (Current approach)
-		            // For now, let's assume it might need the locator
-		            if (!class_exists('Data_Machine_Input_Helper_Rest_Api')) { // Updated class name
-		                 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop-rest-api.php'; // Updated file path
-		            }
-		            // Assuming Input_Helper_Rest_Api constructor accepts the locator
-					$input_handler = new Data_Machine_Input_Helper_Rest_Api( $this->locator ); // Updated class name
+		} elseif ($data_source_type === 'airdrop_rest_api') { // Corrected slug check
+			$input_handler = $this->locator->get('input_airdrop_rest_api'); // Get from locator
 		} elseif ($data_source_type === 'public_rest_api') { // Added new handler
 					// Instantiate the Public REST API handler
 					if (!class_exists('Data_Machine_Input_Public_Rest_Api')) {
-						 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public-rest-api.php';
+						 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public_rest_api.php';
 					}
 					// Assuming constructor accepts the locator
 					$input_handler = new Data_Machine_Input_Public_Rest_Api( $this->locator );
@@ -107,6 +99,13 @@ class Data_Machine_Module_Ajax_Handler {
 									}
 									// Assuming constructor accepts the locator
 									$input_handler = new Data_Machine_Input_Reddit( $this->locator );
+								} elseif ($data_source_type === 'instagram') { // Corrected Instagram handler check
+									// Instantiate the Instagram handler
+									if (!class_exists('Data_Machine_Input_Instagram')) {
+										 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-instagram.php';
+									}
+									// Instagram handler does not need the locator currently
+									$input_handler = new Data_Machine_Input_Instagram();
 								}
 								// TODO: Add elseif blocks here for other future input types
 		else {
@@ -363,7 +362,7 @@ class Data_Machine_Module_Ajax_Handler {
 		if ($output_remote_site_info && $module->output_type === 'publish_remote') {
 		    $data_to_return['output_config'][$module->output_type]['remote_site_info'] = $output_remote_site_info;
 		}
-		if ($ds_remote_site_info && $module->data_source_type === 'rest_api') {
+		if ($ds_remote_site_info && $module->data_source_type === 'airdrop_rest_api') { // Corrected slug check
 		    $data_to_return['data_source_config'][$module->data_source_type]['remote_site_info'] = $ds_remote_site_info;
 		}
 
@@ -378,7 +377,7 @@ class Data_Machine_Module_Ajax_Handler {
 	 */
 	public function dm_run_job_callback( $job_id ) {
 		// --- Basic Log: Confirm callback start ---
-		error_log("--- ADC Job Callback STARTING for Job ID: " . $job_id . " ---");
+		error_log("--- DM Job Callback STARTING for Job ID: " . $job_id . " ---");
 		// --- End Basic Log ---
 
 		global $wpdb;
@@ -432,8 +431,8 @@ class Data_Machine_Module_Ajax_Handler {
 			}
 
 			// Log for debugging (Keep direct error_log for now? Or use logger->debug?)
-			error_log("ADC Job Callback {$job_id}: Input data AFTER json_decode: " . print_r($input_data_packet, true)); // Log after decoding
-			// $this->locator->get('logger')->debug("ADC Job Callback {$job_id}: Input data AFTER json_decode: ", $input_data_packet);
+			error_log("DM Job Callback {$job_id}: Input data AFTER json_decode: " . print_r($input_data_packet, true)); // Log after decoding
+			// $this->locator->get('logger')->debug("DM Job Callback {$job_id}: Input data AFTER json_decode: ", $input_data_packet);
 
 			if (empty($module_job_config)) { // Simplified check, input_data checked below
 				throw new Exception('Job data (module config) is missing or invalid.');
@@ -443,19 +442,19 @@ class Data_Machine_Module_Ajax_Handler {
 			if (empty($input_data_packet) || !is_array($input_data_packet) || (!isset($input_data_packet['content_string']) && !isset($input_data_packet['file_info']))) {
 				// Check if it's accidentally nested
 				if (!empty($input_data_packet) && is_array($input_data_packet) && isset($input_data_packet[0]) && is_array($input_data_packet[0]) && (isset($input_data_packet[0]['content_string']) || isset($input_data_packet[0]['file_info']))) {
-					 error_log("ADC Job Callback {$job_id}: Detected nested input_data. Correcting.");
+					 error_log("DM Job Callback {$job_id}: Detected nested input_data. Correcting.");
 					 $input_data_packet = $input_data_packet[0]; // <<< POTENTIAL FIX AREA
-					 error_log("ADC Job Callback {$job_id}: Input data AFTER correction: " . print_r($input_data_packet, true)); // Log after correction
+					 error_log("DM Job Callback {$job_id}: Input data AFTER correction: " . print_r($input_data_packet, true)); // Log after correction
 				} else {
 					// If not nested or empty, it's genuinely malformed
 					// Log with Logger Service
-					$this->locator->get('logger')->error('ADC Job Callback {$job_id}: Malformed input_data detected.', ['data' => $input_data_packet]); 
+					$this->locator->get('logger')->error('DM Job Callback {$job_id}: Malformed input_data detected.', ['data_export' => $input_data_packet]); 
 					throw new Exception('Malformed input data packet received by job runner.');
 				}
 			} else {
 				 // Keep direct error_log for simple confirmation?
-				 error_log("ADC Job Callback {$job_id}: Input data appears valid (not nested or corrected). Passing as is.");
-				 // $this->locator->get('logger')->debug("ADC Job Callback {$job_id}: Input data appears valid (not nested or corrected).");
+				 error_log("DM Job Callback {$job_id}: Input data appears valid (not nested or corrected). Passing as is.");
+				 // $this->locator->get('logger')->debug("DM Job Callback {$job_id}: Input data appears valid (not nested or corrected).");
 			}
 
 			// 4. Run the orchestrator
@@ -606,6 +605,143 @@ class Data_Machine_Module_Ajax_Handler {
 		}
 
 		wp_send_json_success( $response_data );
+	}
+
+	/**
+	 * AJAX handler for saving module settings.
+	 *
+	 * @deprecated 1.5.0 Use standard form submission for better user experience and proper admin notices.
+	 * This handler is maintained for backwards compatibility only and will be removed in a future version.
+	 */
+	public function save_module_ajax_handler() {
+		// Log deprecation warning
+		$initial_logger = $this->locator->get('logger');
+		if ($initial_logger) {
+			$initial_logger->warning('DEPRECATED: The save_module_ajax_handler is deprecated and will be removed in a future version. Use standard form submission instead.');
+		} else {
+			error_log('Data Machine Warning: save_module_ajax_handler is deprecated. Use standard form submission instead.');
+		}
+
+		// Log that the handler was reached
+		$initial_logger = $this->locator->get('logger');
+		if ($initial_logger) {
+			$initial_logger->info('Save Module AJAX: Handler reached.');
+		} else {
+			error_log('Data Machine Error: Logger service not available at start of save_module_ajax_handler.');
+		}
+
+		$nonce_action = 'dm_save_module_nonce';
+		check_ajax_referer( $nonce_action, 'nonce' );
+
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			wp_send_json_error( [ 'message' => __( 'You must be logged in.', 'data-machine' ) ] );
+			return;
+		}
+
+		// Get services from locator
+		$db_modules = $this->locator->get('database_modules');
+		$logger     = $this->locator->get('logger');
+
+		if ( ! $db_modules || ! $logger ) {
+			wp_send_json_error( [ 'message' => __( 'Internal error: Required services missing.', 'data-machine' ) ] );
+			return;
+		}
+
+		// --- Parse Form Data ---
+		// WordPress might parse the form data into nested arrays based on field names like 'output_config[handler_slug][setting]'
+		// We need to retrieve the raw POST data or rely on WP's parsing. Let's assume WP parsing for now.
+		$form_data = wp_unslash( $_POST ); // Use unslashed POST data
+
+		$module_id = isset( $form_data['Data_Machine_current_module'] ) ? absint( $form_data['Data_Machine_current_module'] ) : 0;
+		$project_id = isset( $form_data['project_id'] ) ? absint( $form_data['project_id'] ) : 0; // Need to ensure this is passed from JS
+
+		// Basic validation
+		if ( $module_id === 0 && empty( $project_id ) ) {
+			$logger->error( 'Save Module AJAX: Missing project ID for new module.', [ 'user_id' => $user_id, 'post_data' => $form_data ] );
+			wp_send_json_error( [ 'message' => __( 'Error: Project ID is missing for new module creation.', 'data-machine' ) ] );
+			return;
+		}
+
+		// --- Prepare Module Data Array ---
+		$module_data = [];
+		$module_data['module_name']              = sanitize_text_field( $form_data['module_name'] ?? '' );
+		$module_data['process_data_prompt']      = wp_kses_post( $form_data['process_data_prompt'] ?? '' );
+		$module_data['fact_check_prompt']        = wp_kses_post( $form_data['fact_check_prompt'] ?? '' );
+		$module_data['finalize_response_prompt'] = wp_kses_post( $form_data['finalize_response_prompt'] ?? '' );
+		$module_data['data_source_type']         = sanitize_text_field( $form_data['data_source_type'] ?? 'files' );
+		$module_data['output_type']              = sanitize_text_field( $form_data['output_type'] ?? 'data_export' );
+
+		// Extract nested configs - IMPORTANT: Assumes field names like "data_source_config[handler_slug][setting_key]"
+		$ds_config_raw = $form_data['data_source_config'] ?? [];
+		$out_config_raw = $form_data['output_config'] ?? [];
+
+		// We only want the config for the *selected* handlers
+		$module_data['data_source_config'] = isset( $ds_config_raw[ $module_data['data_source_type'] ] )
+											? $ds_config_raw[ $module_data['data_source_type'] ]
+											: [];
+		$module_data['output_config']      = isset( $out_config_raw[ $module_data['output_type'] ] )
+											? $out_config_raw[ $module_data['output_type'] ]
+											: [];
+											
+		// --- Sanitize Configs (Example - Needs more robust sanitization based on expected fields) ---
+		// This is a basic example. Ideally, each handler should define its expected settings and sanitize them.
+		$module_data['data_source_config'] = map_deep( $module_data['data_source_config'], 'sanitize_text_field' );
+		$module_data['output_config']      = map_deep( $module_data['output_config'], 'sanitize_text_field' );
+		// Note: Some fields might need wp_kses_post, absint, filter_var(..., FILTER_VALIDATE_URL) etc.
+		// map_deep might be too broad; specific sanitization per field is better.
+
+		$logger->info( 'Save Module AJAX: Preparing to save data.', [
+			'user_id' => $user_id,
+			'module_id' => $module_id,
+			'project_id' => $project_id,
+			'parsed_module_data' => $module_data // Log the data being saved
+		] );
+
+		// --- Perform DB Operation ---
+		try {
+			if ( $module_id > 0 ) {
+				// Update existing module (update_module handles ownership check internally)
+				$result = $db_modules->update_module( $module_id, $module_data, $user_id );
+				if ( $result === false ) {
+					// update_module returns false on DB error or permission error
+					$logger->error( 'Save Module AJAX: Failed to update module.', [ 'module_id' => $module_id, 'user_id' => $user_id ] );
+					wp_send_json_error( [ 'message' => __( 'Failed to update module. Check permissions or logs.', 'data-machine' ) ] );
+				} elseif ( $result === 0 ) {
+					// No rows affected (data might be identical)
+					wp_send_json_success( [
+						'message' => __( 'Module settings unchanged.', 'data-machine' ),
+						'module_id' => $module_id,
+						'operation' => 'update_no_change'
+					] );
+				} else {
+					// Success
+					wp_send_json_success( [
+						'message' => __( 'Module updated successfully.', 'data-machine' ),
+						'module_id' => $module_id,
+						'operation' => 'update'
+					] );
+				}
+			} else {
+				// Create new module
+				$new_module_id = $db_modules->create_module( $project_id, $module_data );
+				if ( $new_module_id ) {
+					wp_send_json_success( [
+						'message' => __( 'Module created successfully.', 'data-machine' ),
+						'module_id' => $new_module_id,
+						'operation' => 'create'
+					] );
+				} else {
+					$logger->error( 'Save Module AJAX: Failed to create module.', [ 'project_id' => $project_id, 'user_id' => $user_id ] );
+					wp_send_json_error( [ 'message' => __( 'Failed to create module. Check logs.', 'data-machine' ) ] );
+				}
+			}
+		} catch ( Exception $e ) {
+			$logger->error( 'Save Module AJAX: Exception occurred.', [ 'error' => $e->getMessage(), 'user_id' => $user_id, 'module_id' => $module_id ] );
+			wp_send_json_error( [ 'message' => __( 'An unexpected error occurred.', 'data-machine' ) . ' ' . $e->getMessage() ] );
+		}
+
+		wp_die(); // Should not be reached if wp_send_json_* is called
 	}
 
 } // End class Data_Machine_Module_Ajax_Handler

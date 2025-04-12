@@ -158,7 +158,7 @@ class Remote_Locations_List_Table extends WP_List_Table {
             );
             if (!empty($item->synced_site_info)) {
                  $sync_status .= sprintf(
-                    ' <a href="#" class="button button-small adc-view-sync-details" data-id="%d" data-nonce="%s">%s</a>', 
+                    ' <a href="#" class="button button-small dm-view-sync-details" data-id="%d" data-nonce="%s">%s</a>', 
                     $item->location_id, 
                     wp_create_nonce('dm_get_synced_info_' . $item->location_id), 
                     __('View Details', 'data-machine')
@@ -174,7 +174,7 @@ class Remote_Locations_List_Table extends WP_List_Table {
      * Render the Actions column.
      */
     function column_actions($item) {
-        $page_slug = 'adc-remote-locations'; // Use the correct slug directly
+        $page_slug = 'dm-remote-locations'; // Use the correct slug directly
 
         // --- Edit Action ---
         $edit_query_args = array(
@@ -201,7 +201,7 @@ class Remote_Locations_List_Table extends WP_List_Table {
         $delete_url = add_query_arg($delete_query_args, admin_url('admin-ajax.php')); // Example for AJAX
         // Add necessary JS data attributes for confirmation and AJAX handling
         $delete_link = sprintf(
-            '<a href="%s" class="button button-link-delete button-small adc-delete-location-link" data-id="%d" data-nonce="%s" data-location-name="%s" style="color: #d63638;">%s</a>',
+            '<a href="%s" class="button button-link-delete button-small dm-delete-location-link" data-id="%d" data-nonce="%s" data-location-name="%s" style="color: #d63638;">%s</a>',
             esc_url($delete_url), // URL might just be '#' if handled purely by JS event delegation
             $item->location_id,
             wp_create_nonce('dm_delete_location_' . $item->location_id), // Re-using nonce for JS verification
@@ -212,7 +212,7 @@ class Remote_Locations_List_Table extends WP_List_Table {
 
         // --- Sync Action ---
         $sync_button = sprintf(
-            '<button type="button" class="button button-secondary button-small adc-sync-location" data-id="%d" data-nonce="%s">%s</button>',
+            '<button type="button" class="button button-secondary button-small dm-sync-location" data-id="%d" data-nonce="%s">%s</button>',
             $item->location_id,
             wp_create_nonce('dm_sync_location_' . $item->location_id),
             __('Sync Now', 'data-machine')

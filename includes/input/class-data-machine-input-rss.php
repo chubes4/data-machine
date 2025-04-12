@@ -26,19 +26,6 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 	}
 
 	/**
-	 * Processes the input data. (Interface requirement)
-	 *
-	 * NOTE: Core logic is handled by Module_Ajax_Handler::process_data_source_ajax_handler.
-	 *
-	 * @param array $post_data Data from the $_POST superglobal.
-	 * @param array $files_data Data from the $_FILES superglobal (if applicable).
-	 * @return void
-	 */
-	public function process_input( $post_data, $files_data ) {
-		error_log('Data Machine: Input_Rss::process_input called unexpectedly.');
-	}
-
-	/**
 	 * Fetches and prepares the RSS input data into a standardized format.
 	 *
 	 * @param array $post_data Data from the $_POST superglobal (or equivalent context).
@@ -190,21 +177,6 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 		return $eligible_items_packets;
 	}
 
-	/**
-	 * Helper to get module and check ownership.
-	 * Separated for clarity and potential reuse.
-	 */
-	private function get_module_with_ownership_check(int $module_id, int $user_id): ?object {
-		$db_modules = $this->locator->get('database_modules');
-		$db_projects = $this->locator->get('database_projects');
-		if (!$db_modules || !$db_projects) return null;
-
-		$module = $db_modules->get_module($module_id);
-		if (!$module || !isset($module->project_id)) return null;
-
-		$project = $db_projects->get_project($module->project_id, $user_id);
-		return $project ? $module : null; // Return module only if project ownership is verified
-	}
 
 	/**
 	 * Get settings fields for the RSS Feed input handler.
@@ -246,6 +218,20 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 	}
 
 	/**
+	 * Sanitize settings for the RSS Feed input handler.
+	 *
+	 * @param array $raw_settings
+	 * @return array
+	 */
+	public function sanitize_settings(array $raw_settings): array {
+		$sanitized = [];
+		$sanitized['feed_url'] = esc_url_raw($raw_settings['feed_url'] ?? '');
+		$sanitized['item_count'] = max(1, absint($raw_settings['item_count'] ?? 10));
+		$sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
+		return $sanitized;
+	}
+
+	/**
 	 * Get the user-friendly label for this handler.
 	 *
 	 * @return string
@@ -253,5 +239,4 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 	public static function get_label(): string {
 		return __('RSS Feed', 'data-machine');
 	}
-
 } // End class Data_Machine_Input_Rss

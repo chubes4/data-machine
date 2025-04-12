@@ -56,7 +56,7 @@ class Data_Machine_Ajax_Locations {
         try {
             $db_locations = $this->locator->get('database_remote_locations');
         } catch (\Exception $e) {
-            error_log('ADC Error: Failed to get Database_Remote_Locations service in AJAX handler. ' . $e->getMessage());
+            error_log('DM Error: Failed to get Database_Remote_Locations service in AJAX handler. ' . $e->getMessage());
             wp_send_json_error(['message' => __('Internal server error: Could not access location data.', 'data-machine')]);
             return;
         }
@@ -65,11 +65,11 @@ class Data_Machine_Ajax_Locations {
         $locations = $db_locations->get_locations_for_user($user_id);
 
         if (is_wp_error($locations)) {
-            error_log('ADC Error: WP_Error fetching user locations. ' . $locations->get_error_message());
+            error_log('DM Error: WP_Error fetching user locations. ' . $locations->get_error_message());
             wp_send_json_error(['message' => __('Error fetching locations.', 'data-machine') . ' ' . $locations->get_error_message()]);
         } elseif ($locations === false) {
             // Handle potential false return if the method can return false on DB error
-            error_log('ADC Error: Database error fetching user locations (returned false).');
+            error_log('DM Error: Database error fetching user locations (returned false).');
             wp_send_json_error(['message' => __('Database error fetching locations.', 'data-machine')]);
         } else {
             // Success - send the location data (array of objects)
@@ -182,7 +182,7 @@ class Data_Machine_Ajax_Locations {
         // Add check for encoding failure
         if ($site_info_json === false) {
             // Log the error if possible
-            error_log('ADC Sync Error: Failed to wp_json_encode decoded data for location ID: ' . $location_id);
+            error_log('DM Sync Error: Failed to wp_json_encode decoded data for location ID: ' . $location_id);
             wp_send_json_error(['message' => __('Failed to process data received from the remote site (JSON encoding failed).', 'data-machine')]);
             return; // Exit
         }

@@ -39,7 +39,6 @@ class Data_Machine_API_Finalize {
         }
         // --- End POST_TITLE instruction ---
       
-        // Duplicate block removed.
       
         // --- Add Markdown Formatting Instruction (Conditional) ---
         // Only add this if the output type is publish (local or remote)

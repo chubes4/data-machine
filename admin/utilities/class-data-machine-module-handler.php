@@ -156,7 +156,7 @@ class Data_Machine_Module_Handler {
 
         // --- Get Selected Handler Slugs ---
         $data_source_type_slug = isset($_POST['data_source_type']) ? sanitize_key($_POST['data_source_type']) : 'files';
-        $output_type_slug = isset($_POST['output_type']) ? sanitize_key($_POST['output_type']) : 'data';
+        $output_type_slug = isset($_POST['output_type']) ? sanitize_key($_POST['output_type']) : 'data_export';
 
         // --- Prepare Config Arrays ---
         $data_source_config_to_save = [];
@@ -318,26 +318,46 @@ class Data_Machine_Module_Handler {
 
             // Get the selected project ID from the hidden field
             $project_id_for_new_module = isset($_POST['Data_Machine_current_project']) ? absint($_POST['Data_Machine_current_project']) : 0;
+            
+            // Also check 'project_id' field if it exists and 'Data_Machine_current_project' is empty
+            if (empty($project_id_for_new_module) && isset($_POST['project_id'])) {
+                $project_id_for_new_module = absint($_POST['project_id']);
+            }
 
             if (empty($project_id_for_new_module)) {
                 add_settings_error('Data_Machine_messages', 'Data_Machine_message', __('Cannot create module: No project selected.', 'data-machine'), 'error');
+                
+                // Log error details to help debugging
+                if ($this->locator && $this->locator->has('logger')) {
+                    $this->locator->get('logger')->error('Module creation failed: No project_id found in POST data', [
+                        'post_data' => $_POST,
+                        'user_id' => $user_id
+                    ]);
+                }
+                
                 return; // Stop processing
             }
 
-            // TODO: Verify user owns the selected project before creating module in it?
-            // $db_projects = new Data_Machine_Database_Projects();
-            // $project = $db_projects->get_project($project_id_for_new_module, $user_id);
-            // if (!$project) { ... error ... }
-
-            $module_id = $db_modules->create_module($project_id_for_new_module, $module_data); // Pass project_id
+            // Create Module (adjust parameters to match Database_Modules->create_module($project_id, $module_data))
+            $module_id = $db_modules->create_module($project_id_for_new_module, $module_data);
 
             if ($module_id) {
-                add_settings_error('Data_Machine_messages', 'Data_Machine_message', __('New module created and selected.', 'data-machine'), 'updated');
+                $message = __('New module created and selected.', 'data-machine');
+                add_settings_error('Data_Machine_messages', 'Data_Machine_message', $message, 'success');
+                // Add to logger
+                if ($this->locator && $this->locator->has('logger')) {
+                    $this->locator->get('logger')->add_admin_success($message);
+                }
                 // Also update the current project meta if creating a module successfully
                 update_user_meta($user_id, 'Data_Machine_current_project', $project_id_for_new_module);
                 update_user_meta($user_id, 'Data_Machine_current_module', $module_id);
             } else {
-                add_settings_error('Data_Machine_messages', 'Data_Machine_message', __('Failed to create new module.', 'data-machine'), 'error');
+                $message = __('Failed to create new module.', 'data-machine');
+                add_settings_error('Data_Machine_messages', 'Data_Machine_message', $message, 'error');
+                // Add to logger
+                if ($this->locator && $this->locator->has('logger')) {
+                    $this->locator->get('logger')->add_admin_error($message);
+                }
             }
             return; // Stop processing after handling 'new'
         }
@@ -387,11 +407,29 @@ class Data_Machine_Module_Handler {
                 $updated = $db_modules->update_module($module_id_to_update, $update_data, $user_id);
                 if ($updated === false) {
                     add_settings_error('Data_Machine_messages', 'Data_Machine_message', __('Failed to update module settings.', 'data-machine'), 'error');
+                    // Add logger message for error
+                    if ($this->locator && $this->locator->has('logger')) {
+                        $this->locator->get('logger')->add_admin_error(__('Failed to update module settings.', 'data-machine'));
+                    }
                 } else {
-                    add_settings_error('Data_Machine_messages', 'Data_Machine_message', __('Module settings updated.', 'data-machine'), $updated > 0 ? 'updated' : 'info');
+                    $message = __('Module settings updated.', 'data-machine');
+                    add_settings_error('Data_Machine_messages', 'Data_Machine_message', $message, $updated > 0 ? 'success' : 'info');
+                    // Add logger message for success
+                    if ($this->locator && $this->locator->has('logger')) {
+                        if ($updated > 0) {
+                            $this->locator->get('logger')->add_admin_success($message);
+                        } else {
+                            $this->locator->get('logger')->add_admin_info($message);
+                        }
+                    }
                 }
             } else {
-                add_settings_error('Data_Machine_messages', 'Data_Machine_message', __('Module settings saved (no changes detected).', 'data-machine'), 'info');
+                $message = __('Module settings saved (no changes detected).', 'data-machine');
+                add_settings_error('Data_Machine_messages', 'Data_Machine_message', $message, 'info');
+                // Add logger message for info
+                if ($this->locator && $this->locator->has('logger')) {
+                    $this->locator->get('logger')->add_admin_info($message);
+                }
             }
 
             // Always save the selected module ID as the user's current choice

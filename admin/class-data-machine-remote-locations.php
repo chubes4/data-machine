@@ -145,7 +145,7 @@ class Data_Machine_Remote_Locations {
             }
         }
     
-        wp_redirect(admin_url('admin.php?page=adc-remote-locations'));
+        wp_redirect(admin_url('admin.php?page=dm-remote-locations'));
         exit;
     }
    
@@ -193,7 +193,7 @@ class Data_Machine_Remote_Locations {
             }
         }
     
-        wp_redirect(admin_url('admin.php?page=adc-remote-locations'));
+        wp_redirect(admin_url('admin.php?page=dm-remote-locations'));
         exit;
     }
 } 

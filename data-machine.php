@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name:     Data Machine
- * Plugin URI:      PLUGIN_URL
+ * Plugin URI:      chubes.net
  * Description:     A plugin to automatically collect data from files using OpenAI API, fact-check it, and return a final output.
  * Version:         0.1.0
- * Author:          Your Name
- * Author URI:      YOUR_URL
+ * Author:          Chris Huber
+ * Author URI:      chubes.net
  * Text Domain:     data-machine
  * Domain Path:     /languages
  */
@@ -25,6 +25,7 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 
 // Include necessary base classes and interfaces first
 require_once DATA_MACHINE_PATH . 'includes/class-service-locator.php';
+require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php'; // Updated path
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php'; // Added projects class
@@ -38,6 +39,34 @@ require_once DATA_MACHINE_PATH . 'includes/helpers/class-import-export.php'; // 
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 
 /**
+ * Register custom rewrite endpoint for Instagram OAuth
+ */
+function dm_register_oauth_instagram_endpoint() {
+    add_rewrite_rule('^oauth-instagram/?$', 'index.php?dm_oauth_instagram=1', 'top');
+}
+add_action('init', 'dm_register_oauth_instagram_endpoint');
+
+/**
+ * Add custom query var for Instagram OAuth
+ */
+function dm_add_oauth_instagram_query_var($vars) {
+    $vars[] = 'dm_oauth_instagram';
+    return $vars;
+}
+add_filter('query_vars', 'dm_add_oauth_instagram_query_var');
+
+/**
+ * Handle the Instagram OAuth endpoint
+ */
+function dm_handle_oauth_instagram_endpoint() {
+    if (get_query_var('dm_oauth_instagram')) {
+        include_once plugin_dir_path(__FILE__) . 'includes/helpers/oauth-instagram.php';
+        exit;
+    }
+}
+add_action('template_redirect', 'dm_handle_oauth_instagram_endpoint');
+
+/**
  * Begins execution of the plugin.
  *
  * @since    0.1.0
@@ -48,6 +77,26 @@ function run_data_machine() {
 
 	// --- Register ALL Services ---
 	// Register services that DON'T depend on the main plugin instance first
+
+	// Register Handler Registry
+	require_once DATA_MACHINE_PATH . 'includes/class-handler-registry.php';
+	$locator->register('handler_registry', function($locator) {
+		return new Data_Machine_Handler_Registry(DATA_MACHINE_PATH);
+	});
+
+	// Register all output handlers with the locator
+	$handler_registry = $locator->get('handler_registry');
+	foreach ($handler_registry->get_output_handlers() as $slug => $handler_info) {
+		$key = 'output_' . $slug;
+		$class_name = $handler_info['class'];
+		$locator->register($key, function($locator) use ($class_name) {
+			// Special case: publish-remote needs the remote locations DB
+			if ($class_name === 'Data_Machine_Output_Publish_Remote') {
+				return new $class_name($locator->get('database_remote_locations'), $locator->get('logger'));
+			}
+			return new $class_name();
+		});
+	}
 
 	// Register Logger Service (No dependencies)
 	$locator->register('logger', function($locator) {
@@ -181,17 +230,18 @@ function run_data_machine() {
 	});
 
 	$locator->register('output_publish_local', function($locator) {
-		if (!class_exists('Data_Machine_Output_Publish_Local')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish-local.php';
+		if (!class_exists('Data_Machine_Output_Publish_Local')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_local.php';
 		return new Data_Machine_Output_Publish_Local();
 	});
 	$locator->register('output_publish_remote', function($locator) {
-		if (!class_exists('Data_Machine_Output_Publish_Remote')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish-remote.php';
+		if (!class_exists('Data_Machine_Output_Publish_Remote')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_remote.php';
 		return new Data_Machine_Output_Publish_Remote(
-			$locator->get('database_remote_locations') // Inject DB service
+			$locator->get('database_remote_locations'), // Inject DB service
+			$locator->get('logger') // Inject Logger service
 		);
 	});
 	$locator->register('output_data_export', function($locator) {
-		if (!class_exists('Data_Machine_Output_Data_Export')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-data-export.php';
+		if (!class_exists('Data_Machine_Output_Data_Export')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-data_export.php';
 		return new Data_Machine_Output_Data_Export();
 	});
 
@@ -222,6 +272,32 @@ function run_data_machine() {
 			$locator->get('database_modules') // Inject DB Modules (path updated above)
 			// Plugin dependency removed
 		);
+	});
+
+	$locator->register('input_airdrop_rest_api', function($locator) {
+		if (!class_exists('Data_Machine_Input_Airdrop_Rest_Api')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop_rest_api.php';
+		return new Data_Machine_Input_Airdrop_Rest_Api($locator); // Constructor needs locator
+	});
+
+	$locator->register('input_public_rest_api', function($locator) {
+		if (!class_exists('Data_Machine_Input_Public_Rest_Api')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public_rest_api.php';
+		return new Data_Machine_Input_Public_Rest_Api($locator); // Constructor needs locator
+	});
+
+	$locator->register('input_reddit', function($locator) {
+		if (!class_exists('Data_Machine_Input_Reddit')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-reddit.php';
+		return new Data_Machine_Input_Reddit($locator); // Constructor needs locator
+	});
+
+	$locator->register('input_rss', function($locator) {
+		if (!class_exists('Data_Machine_Input_Rss')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-rss.php';
+		return new Data_Machine_Input_Rss($locator); // Constructor needs locator
+	});
+
+	$locator->register('input_instagram', function($locator) {
+		if (!class_exists('Data_Machine_Input_Instagram')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-instagram.php';
+		// Assuming the Instagram handler constructor does not require the locator for now
+		return new Data_Machine_Input_Instagram();
 	});
 
 	// --- Force instantiation of admin pages/handlers to register hooks ---

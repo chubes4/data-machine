@@ -2,7 +2,7 @@
     $(document).ready(function() {
         // --- Conditional UI based on Module Settings ---
         var dataSourceType = dm_ajax_params.data_source_type || 'files';
-        var outputType = dm_ajax_params.output_type || 'data';
+        var outputType = dm_ajax_params.output_type || 'data_export';
 
         // Conditional UI Elements based on Data Source Type
         		$('#file-processing-form').hide();
@@ -10,11 +10,12 @@
         		$('#public-rest-processing-section').hide();
         				$('#rss-processing-section').hide();
         						$('#reddit-processing-section').hide(); // Added Reddit ID
+        						$('#instagram-processing-section').hide(); // Added Instagram ID
         
         		if (dataSourceType === 'files') {
         			$('#file-processing-form').show();
         			// Conditional Starting Index (Show only for Files source + Data output)
-        			if (outputType === 'data') {
+        			if (outputType === 'data_export') {
         				$('label[for="starting-index-input"]').show();
         				$('#starting-index-input').show();
         			} else {
@@ -35,6 +36,10 @@
         												$('#starting-index-input').hide();
         											} else if (dataSourceType === 'reddit') { // Added condition for Reddit
         												$('#reddit-processing-section').show();
+        												$('label[for="starting-index-input"]').hide();
+        												$('#starting-index-input').hide();
+        											} else if (dataSourceType === 'instagram') { // Added condition for Instagram
+        												$('#instagram-processing-section').show();
         												$('label[for="starting-index-input"]').hide();
         												$('#starting-index-input').hide();
         }
@@ -149,237 +154,66 @@
         // --- End File Processing Form Handler ---
 
 
-        // --- Helper REST API Processing Button Handler ---
-        		$('#process-airdrop-data-button').on('click', function(e) { // Updated ID
-        			e.preventDefault();
-        			var $button = $(this);
-        			var sourceName = 'Helper API Source'; // Updated name for UI
-        			var buttonText = 'Fetch and Process Helper API Data'; // Updated text
-        
-        			var module_id = $('#current_module_id').val();
-        			if (!module_id) {
-        				alert('Please select a module in Settings first.');
-        				return;
-        			}
-        
-        			// Disable button, clear previous results
-        			$button.prop('disabled', true).text('Processing ' + sourceName + '...');
-        			clearResults();
-        
-        			// Prepare data (no files needed)
-        			var data = {
-        				action: 'process_data',
-        				nonce: dm_ajax_params.file_processing_nonce, // Reuse same nonce for the action
-        				module_id: module_id
-        			};
-        
-        			// Make AJAX call
-        			$.ajax({
-        				url: dm_ajax_params.ajax_url,
-        				type: 'POST',
-        				dataType: 'json',
-        				data: data, // Send basic data, not FormData
-        				success: function(response) {
-        					// Create a single output section for the result
-        					var outputSection = createFileOutputSection({ name: sourceName }, 0); // Use index 0
-        					$('#bulk-processing-output-container').append(outputSection);
-        
-        					if (response.success && response.data.status === 'processing_queued' && response.data.job_id) {
-        						// Job queued successfully, start polling
-        						pollJobStatus(response.data.job_id, outputSection, sourceName);
-        						// Button remains disabled until polling completes
-        					} else {
-        						// Handle error during job creation/scheduling
-        						var errorMessage = response.data.message || 'Failed to queue processing job.';
-        						handleFileProcessingError(sourceName, { success: false, data: { message: errorMessage } }, 0, outputSection, 'Job Creation');
-        						$button.prop('disabled', false).text(buttonText); // Re-enable button on immediate failure
-        					}
-        				},
-        				error: function(jqXHR, textStatus, errorThrown) {
-        					// Handle AJAX error during the initial job creation request
-        					var outputSection = createFileOutputSection({ name: sourceName }, 0);
-        					$('#bulk-processing-output-container').append(outputSection);
-        					handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, 0, outputSection, 'Job Creation');
-        					$button.prop('disabled', false).text(buttonText); // Re-enable button on AJAX failure
-        				}
-        			});
-        		});
-        		// --- End Helper REST API Processing Button Handler ---
-        
-        		// --- Public REST API Processing Button Handler ---
-        		$('#process-public-rest-data-button').on('click', function(e) { // Added handler
-        			e.preventDefault();
-        			var $button = $(this);
-        			var sourceName = 'Public API Source';
-        			var buttonText = 'Fetch and Process Public API Data';
-        
-        			var module_id = $('#current_module_id').val();
-        			if (!module_id) {
-        				alert('Please select a module in Settings first.');
-        				return;
-        			}
-        
-        			// Disable button, clear previous results
-        			$button.prop('disabled', true).text('Processing ' + sourceName + '...');
-        			clearResults();
-        
-        			// Prepare data (no files needed)
-        			var data = {
-        				action: 'process_data',
-        				nonce: dm_ajax_params.file_processing_nonce, // Reuse same nonce for the action
-        				module_id: module_id
-        			};
-        
-        			// Make AJAX call
-        			$.ajax({
-        				url: dm_ajax_params.ajax_url,
-        				type: 'POST',
-        				dataType: 'json',
-        				data: data, // Send basic data, not FormData
-        				success: function(response) {
-        					// Create a single output section for the result
-        					var outputSection = createFileOutputSection({ name: sourceName }, 0); // Use index 0
-        					$('#bulk-processing-output-container').append(outputSection);
-        
-        					if (response.success && response.data.status === 'processing_queued' && response.data.job_id) {
-        						// Job queued successfully, start polling
-        						pollJobStatus(response.data.job_id, outputSection, sourceName);
-        						// Button remains disabled until polling completes
-        					} else {
-        						// Handle error during job creation/scheduling
-        						var errorMessage = response.data.message || 'Failed to queue processing job.';
-        						handleFileProcessingError(sourceName, { success: false, data: { message: errorMessage } }, 0, outputSection, 'Job Creation');
-        						$button.prop('disabled', false).text(buttonText); // Re-enable button on immediate failure
-        					}
-        				},
-        				error: function(jqXHR, textStatus, errorThrown) {
-        					// Handle AJAX error during the initial job creation request
-        					var outputSection = createFileOutputSection({ name: sourceName }, 0);
-        					$('#bulk-processing-output-container').append(outputSection);
-        					handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, 0, outputSection, 'Job Creation');
-        					$button.prop('disabled', false).text(buttonText); // Re-enable button on AJAX failure
-        				}
-        			});
-        		});
-        		// --- End Public REST API Processing Button Handler ---
-        		
-        				// --- RSS Feed Processing Button Handler ---
-        				$('#process-rss-feed-button').on('click', function(e) { // Added handler
-        					e.preventDefault();
-        					var $button = $(this);
-        					var sourceName = 'RSS Feed Source';
-        					var buttonText = 'Fetch and Process Feed Item';
-        		
-        					var module_id = $('#current_module_id').val();
-        					if (!module_id) {
-        						alert('Please select a module in Settings first.');
-        						return;
-        					}
-        		
-        					// Disable button, clear previous results
-        					$button.prop('disabled', true).text('Processing ' + sourceName + '...');
-        					clearResults();
-        		
-        					// Prepare data (no files needed)
-        					var data = {
-        						action: 'process_data',
-        						nonce: dm_ajax_params.file_processing_nonce, // Reuse same nonce for the action
-        						module_id: module_id
-        					};
-        		
-        					// Make AJAX call
-        					$.ajax({
-        						url: dm_ajax_params.ajax_url,
-        						type: 'POST',
-        						dataType: 'json',
-        						data: data, // Send basic data, not FormData
-        						success: function(response) {
-        							// Create a single output section for the result
-        							var outputSection = createFileOutputSection({ name: sourceName }, 0); // Use index 0
-        							$('#bulk-processing-output-container').append(outputSection);
-        		
-        							if (response.success && response.data.status === 'processing_queued' && response.data.job_id) {
-        								// Job queued successfully, start polling
-        								pollJobStatus(response.data.job_id, outputSection, sourceName);
-        								// Button remains disabled until polling completes
-        							} else {
-        								// Handle error during job creation/scheduling
-        								var errorMessage = response.data.message || 'Failed to queue processing job.';
-        								handleFileProcessingError(sourceName, { success: false, data: { message: errorMessage } }, 0, outputSection, 'Job Creation');
-        								$button.prop('disabled', false).text(buttonText); // Re-enable button on immediate failure
-        							}
-        						},
-        						error: function(jqXHR, textStatus, errorThrown) {
-        							// Handle AJAX error during the initial job creation request
-        							var outputSection = createFileOutputSection({ name: sourceName }, 0);
-        							$('#bulk-processing-output-container').append(outputSection);
-        							handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, 0, outputSection, 'Job Creation');
-        							$button.prop('disabled', false).text(buttonText); // Re-enable button on AJAX failure
-        						}
-        					});
-        				});
-        				// --- End RSS Feed Processing Button Handler ---
-        				
-        						// --- Reddit Processing Button Handler ---
-        						$('#process-reddit-button').on('click', function(e) { // Added handler
-        							e.preventDefault();
-        							var $button = $(this);
-        							var sourceName = 'Reddit Source';
-        							var buttonText = 'Fetch and Process Subreddit Post';
-        				
-        							var module_id = $('#current_module_id').val();
-        							if (!module_id) {
-        								alert('Please select a module in Settings first.');
-        								return;
-        							}
-        				
-        							// Disable button, clear previous results
-        							$button.prop('disabled', true).text('Processing ' + sourceName + '...');
-        							clearResults();
-        				
-        							// Prepare data (no files needed)
-        							var data = {
-        								action: 'process_data',
-        								nonce: dm_ajax_params.file_processing_nonce, // Reuse same nonce for the action
-        								module_id: module_id
-        							};
-        				
-        							// Make AJAX call
-        							$.ajax({
-        								url: dm_ajax_params.ajax_url,
-        								type: 'POST',
-        								dataType: 'json',
-        								data: data, // Send basic data, not FormData
-        								success: function(response) {
-        									// Create a single output section for the result
-        									var outputSection = createFileOutputSection({ name: sourceName }, 0); // Use index 0
-        									$('#bulk-processing-output-container').append(outputSection);
-        				
-        									if (response.success && response.data.status === 'processing_queued' && response.data.job_id) {
-        										// Job queued successfully, start polling
-        										pollJobStatus(response.data.job_id, outputSection, sourceName);
-        										// Button remains disabled until polling completes
-        									} else if (!response.success && response.data && response.data.message && response.data.message.includes('Successfully queued')) {
-        									    // Handle the specific case where success is false but the message indicates successful queueing
-        									    $('#error-notices').append('<div class="notice notice-success inline"><p><strong>' + sourceName + ':</strong> ' + response.data.message + '</p></div>');
-        									    $button.prop('disabled', false).text(buttonText); // Re-enable button as the initial action (queueing) was logged
-        									} else {
-        										// Handle other errors during job creation/scheduling
-        										var errorMessage = (response.data && response.data.message) ? response.data.message : 'Failed to queue processing job.';
-        										handleFileProcessingError(sourceName, { success: false, data: { message: errorMessage } }, 0, outputSection, 'Job Creation');
-        										$button.prop('disabled', false).text(buttonText); // Re-enable button on immediate failure
-        									}
-        								},
-        								error: function(jqXHR, textStatus, errorThrown) {
-        									// Handle AJAX error during the initial job creation request
-        									var outputSection = createFileOutputSection({ name: sourceName }, 0);
-        									$('#bulk-processing-output-container').append(outputSection);
-        									handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, 0, outputSection, 'Job Creation');
-        									$button.prop('disabled', false).text(buttonText); // Re-enable button on AJAX failure
-        								}
-        							});
-        						});
-        						// --- End Reddit Processing Button Handler ---
+        // --- Generic Remote Data Source Processing Button Handler ---
+        $('#process-remote-data-source-button').on('click', function(e) {
+            e.preventDefault();
+            var $button = $(this);
+            // Use the button's current text to determine the source type for UI messages
+            var originalButtonText = $button.text().trim();
+            var sourceName = dataSourceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + ' Source'; // Make a guess at a user-friendly name
+
+            var module_id = $('#current_module_id').val();
+            if (!module_id) {
+                alert('Please select a module in Settings first.');
+                return;
+            }
+
+            // Disable button, clear previous results
+            $button.prop('disabled', true).text('Processing ' + sourceName + '...');
+            clearResults();
+
+            // Prepare data (no files needed)
+            var data = {
+                action: 'process_data',
+                nonce: dm_ajax_params.file_processing_nonce, // Reuse same nonce for the action
+                module_id: module_id
+            };
+
+            // Store original text for later restoration
+            $button.data('original-text', originalButtonText);
+
+            // Make AJAX call
+            $.ajax({
+                url: dm_ajax_params.ajax_url,
+                type: 'POST',
+                dataType: 'json',
+                data: data, // Send basic data, not FormData
+                success: function(response) {
+                    // Create a single output section for the result
+                    var outputSection = createFileOutputSection({ name: sourceName }, 0); // Use index 0
+                    $('#bulk-processing-output-container').append(outputSection);
+
+                    if (response.success && response.data.status === 'processing_queued' && response.data.job_id) {
+                        // Job queued successfully, start polling
+                        pollJobStatus(response.data.job_id, outputSection, sourceName);
+                        // Button remains disabled until polling completes
+                    } else {
+                        // Handle error during job creation/scheduling
+                        var errorMessage = response.data.message || 'Failed to queue processing job.';
+                        handleFileProcessingError(sourceName, { success: false, data: { message: errorMessage } }, 0, outputSection, 'Job Creation');
+                        $button.prop('disabled', false).text($button.data('original-text')); // Re-enable button on immediate failure
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    // Handle AJAX error during the initial job creation request
+                    var outputSection = createFileOutputSection({ name: sourceName }, 0);
+                    $('#bulk-processing-output-container').append(outputSection);
+                    handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, 0, outputSection, 'Job Creation');
+                    $button.prop('disabled', false).text($button.data('original-text')); // Re-enable button on AJAX failure
+                }
+            });
+        });
+        // --- End Generic Remote Data Source Handler ---
 
 
         // --- Job Status Polling ---
@@ -426,13 +260,9 @@
 
                                 // Re-enable the main remote button if no other jobs are polling (only relevant for single remote job)
                                 // File button state is managed by the sequential processNextFile logic
-                                if ((sourceName === 'Helper API Source' || sourceName === 'Public API Source' || sourceName === 'RSS Feed Source' || sourceName === 'Reddit Source') && Object.keys(jobPollingIntervals).length === 1) { // Check if it's the only one left
-                                									 $('#process-airdrop-data-button, #process-public-rest-data-button, #process-rss-feed-button, #process-reddit-button').prop('disabled', false); // Re-enable all non-file buttons
-                                									 // Reset text based on which one might be active (though only one should be visible)
-                                									 $('#process-airdrop-data-button').text('Fetch and Process Helper API Data');
-                                									 $('#process-public-rest-data-button').text('Fetch and Process Public API Data');
-                                									 $('#process-rss-feed-button').text('Fetch and Process Feed Item');
-                                									 $('#process-reddit-button').text('Fetch and Process Subreddit Post'); // Reset Reddit button text
+                                if (!$('#process-files-button').prop('disabled') && Object.keys(jobPollingIntervals).length === 1) { // Check if file button isn't running and it's the only remote job left
+                                									 var $remoteButton = $('#process-remote-data-source-button');
+                                									 $remoteButton.prop('disabled', false).text($remoteButton.data('original-text'));
                                 }
 
                                 if (status === 'complete') {
@@ -451,12 +281,9 @@
                             shouldStopPolling = true;
                             runCallback = true; // Run callback even if status check fails
                              // Re-enable remote button on error if it was the only job
-                             if ((sourceName === 'Helper API Source' || sourceName === 'Public API Source' || sourceName === 'RSS Feed Source' || sourceName === 'Reddit Source') && Object.keys(jobPollingIntervals).length === 1) {
-                             								 $('#process-airdrop-data-button, #process-public-rest-data-button, #process-rss-feed-button, #process-reddit-button').prop('disabled', false);
-                             								 $('#process-airdrop-data-button').text('Fetch and Process Helper API Data');
-                             								 $('#process-public-rest-data-button').text('Fetch and Process Public API Data');
-                             								 $('#process-rss-feed-button').text('Fetch and Process Feed Item');
-                             								 $('#process-reddit-button').text('Fetch and Process Subreddit Post');
+                             if (!$('#process-files-button').prop('disabled') && Object.keys(jobPollingIntervals).length === 1) { // Check if file button isn't running and it's the only remote job left
+                             								 var $remoteButton = $('#process-remote-data-source-button');
+                             								 $remoteButton.prop('disabled', false).text($remoteButton.data('original-text'));
                              }
                             handleAjaxError(sourceName, null, 'error', response.data.message || 'Failed to check job status.', $outputSection.data('file-index'), $outputSection, 'Status Check');
                         }
@@ -474,12 +301,9 @@
                         clearInterval(jobPollingIntervals[jobId]);
                         delete jobPollingIntervals[jobId];
                         // Re-enable remote button on error if it was the only job
-                        if ((sourceName === 'Helper API Source' || sourceName === 'Public API Source' || sourceName === 'RSS Feed Source' || sourceName === 'Reddit Source') && Object.keys(jobPollingIntervals).length === 1) {
-                        							$('#process-airdrop-data-button, #process-public-rest-data-button, #process-rss-feed-button, #process-reddit-button').prop('disabled', false);
-                        							$('#process-airdrop-data-button').text('Fetch and Process Helper API Data');
-                        							$('#process-public-rest-data-button').text('Fetch and Process Public API Data');
-                        							$('#process-rss-feed-button').text('Fetch and Process Feed Item');
-                        							$('#process-reddit-button').text('Fetch and Process Subreddit Post');
+                        if (!$('#process-files-button').prop('disabled') && Object.keys(jobPollingIntervals).length === 1) { // Check if file button isn't running and it's the only remote job left
+                        							var $remoteButton = $('#process-remote-data-source-button');
+                        							$remoteButton.prop('disabled', false).text($remoteButton.data('original-text'));
                         }
                         handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, $outputSection.data('file-index'), $outputSection, 'Status Check');
                         // Execute callback even on AJAX error to proceed with next file if applicable
@@ -538,7 +362,7 @@
                                       '<strong>Category:</strong> <span class="assigned-remote-category"></span><br>' +
                                       '<strong>Tags:</strong> <span class="assigned-remote-tags"></span>' +
                                       '</p>');
-            } else if (outputType === 'data') {
+            } else if (outputType === 'data_export') {
                 finalOutputDiv.append('<button id="copy-output-button-' + index + '" class="button button-secondary copy-button">Copy Final Output</button>');
                 finalOutputDiv.append('<span id="copy-output-tooltip-' + index + '" style="display: none; margin-left: 10px; color: green; font-weight: bold;"></span>');
             }
@@ -607,7 +431,7 @@
                         var publishError = data.output_result.message || 'Unknown publishing error';
                         $('#error-notices').append('<div class="notice notice-error inline"><p><strong>Publish Failed (' + sourceName + '):</strong> ' + publishError + '</p></div>');
                     }
-                } else if (outputType === 'data') {
+                } else if (outputType === 'data_export') {
                     initializeCopyButton(index); // Initialize the copy button
                 }
 

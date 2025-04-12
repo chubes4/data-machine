@@ -20,12 +20,12 @@ require_once plugin_dir_path( __FILE__ ) . 'database/class-database-modules.php'
 require_once DATA_MACHINE_PATH . 'includes/class-processing-orchestrator.php'; // Added include
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php'; // Moved up
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php'; // Add correct interface back
-require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish-local.php';
-require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish-remote.php';
-require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-data-export.php';
+require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_local.php';
+require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_remote.php';
+require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-data_export.php';
 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-files.php';
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop-rest-api.php'; // Renamed from rest-api
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public-rest-api.php'; // Added new public handler
+require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop_rest_api.php'; // Renamed from rest-api
+require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public_rest_api.php'; // Added new public handler
 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-rss.php';
 require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-reddit.php';
 
@@ -213,15 +213,23 @@ class Data_Machine {
 			return $module_handler;
 		});
 		
-		// Initialize API AJAX handler
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/utilities/class-data-machine-api-ajax-handler.php';
-		$api_ajax_handler = new Data_Machine_API_AJAX_Handler($this->locator);
-		$api_ajax_handler->init_hooks();
+		// Initialize Public API AJAX handler
+		require_once plugin_dir_path( __FILE__ ) . 'ajax/class-data-machine-ajax-public-api.php';
+		$public_rest_api_ajax_handler = new Data_Machine_Ajax_Public_API($this->locator);
+		$public_rest_api_ajax_handler->init_hooks();
 		
-		// Register API AJAX handler with the service locator
-		$this->locator->register('api_ajax_handler', function() use ($api_ajax_handler) {
-			return $api_ajax_handler;
+		// Register Public API AJAX handler with the service locator
+		$this->locator->register('ajax_public_api', function() use ($public_rest_api_ajax_handler) {
+			return $public_rest_api_ajax_handler;
 		});
+		// Register Prompt Modifier helper with the service locator
+		require_once DATA_MACHINE_PATH . 'includes/helpers/class-prompt-modifier.php';
+		$this->locator->register('prompt_modifier', function() {
+			return new Data_Machine_Prompt_Modifier();
+		});
+		
+		
+		
 
 		// Register remote locations handler with the service locator
 		$this->locator->register('remote_locations', function() {
@@ -238,6 +246,7 @@ class Data_Machine {
 		add_action( 'wp_ajax_process_data', array( $module_ajax_handler, 'process_data_source_ajax_handler' ) );
 		add_action( 'wp_ajax_dm_get_module_data', array( $module_ajax_handler, 'get_module_data_ajax_handler' ) );
 		add_action( 'wp_ajax_dm_check_job_status', array( $module_ajax_handler, 'dm_check_job_status_ajax_handler' ) );
+		add_action( 'wp_ajax_dm_save_module', array( $module_ajax_handler, 'save_module_ajax_handler' ) );
 
 		// Hook Dashboard Project AJAX actions
 		add_action( 'wp_ajax_dm_run_now', array( $dashboard_ajax_handler, 'handle_run_now' ) );
@@ -328,6 +337,13 @@ class Data_Machine {
 			if ($module_status !== 'active') {
 				error_log("Data Machine Cron (Project: {$project_id}): Skipping module {$module->module_id} as its status is '{$module_status}'.");
 				continue; // Skip paused modules
+			}
+
+			// Skip if the module input type is 'files'
+			$module_input_type = $module->data_source_type ?? null;
+			if ($module_input_type === 'files') {
+				error_log("Data Machine Cron (Project: {$project_id}): Skipping module {$module->module_id} as its input type is 'files'.");
+				continue; // Skip file input modules
 			}
 
 			try {
@@ -428,6 +444,15 @@ class Data_Machine {
 			error_log("Data Machine Cron: Module {$module_id} not found, inactive, or not set for individual schedule. Aborting scheduled run.");
 			wp_clear_scheduled_hook('dm_run_module_schedule', array($module_id)); // Clear potentially orphaned hook
 			return;
+		}
+
+		// Skip if the module input type is 'files' - this shouldn't normally be scheduled, but check anyway
+		$module_input_type = $module->data_source_type ?? null;
+		if ($module_input_type === 'files') {
+			error_log("Data Machine Cron (Module: {$module_id}): Skipping module as its input type is 'files'.");
+			// Might also clear the hook again just in case
+			wp_clear_scheduled_hook('dm_run_module_schedule', array($module_id));
+			return; // Skip file input modules
 		}
 
 		// 2. Determine User ID (Project Owner)

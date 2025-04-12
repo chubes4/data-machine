@@ -55,32 +55,28 @@ class Data_Machine_Handler_Registry {
         $handlers = [];
         $directory = $this->plugin_path . 'includes/' . $sub_directory . '/';
         $pattern = $directory . 'class-data-machine-' . $type . '-*.php';
-        error_log("ADC Registry Scan: Type='$type', Pattern='$pattern'"); // DEBUG
 
         $files = glob($pattern);
         if ($files === false) {
-             error_log("ADC Registry Scan: glob() returned false for pattern: $pattern"); // DEBUG
         } else {
-             error_log("ADC Registry Scan: Type='$type', Files Found: " . print_r($files, true)); // DEBUG
         }
 
         foreach ($files as $file) {
             $filename = basename($file, '.php');
-            error_log("ADC Registry Scan: Processing File: $file | Filename: $filename"); // DEBUG
             // Expected format: class-data-machine-input-handler-slug or class-data-machine-output-handler-slug
             if (preg_match('/^class-data-machine-' . $type . '-([a-z0-9_-]+)$/', $filename, $matches)) {
-                $slug = $matches[1];
+                $slug_from_file = $matches[1];
+                // Ensure the internal registry key always uses underscores.
+                $slug = str_replace('-', '_', $slug_from_file); 
                 // Construct class name using the filename directly (assuming it matches the class definition)
+                // Note: Class name generation already correctly handles hyphens in the original filename.
                 $class_name = str_replace('-', '_', ucwords(str_replace('class-', '', $filename), '-'));
-                error_log("ADC Registry Scan: Type='$type', Slug='$slug', Constructed Class='$class_name'"); // DEBUG
 
                 if (!class_exists($class_name)) {
-                    error_log("ADC Registry Scan: Class '$class_name' not found initially. Including file: $file"); // DEBUG
                     require_once $file;
                 }
 
                 if (class_exists($class_name)) {
-                    error_log("ADC Registry Scan: Class '$class_name' exists after include."); // DEBUG
                     $label = $slug; // Default label is the slug
                     if (method_exists($class_name, 'get_label')) {
                         $label = call_user_func([$class_name, 'get_label']);
@@ -89,16 +85,12 @@ class Data_Machine_Handler_Registry {
                         'class' => $class_name,
                         'label' => $label
                     ];
-                     error_log("ADC Registry Scan: Successfully added handler: Type='$type', Slug='$slug'"); // DEBUG
                 } else {
                     // Log error: class not found after include
-                    error_log("ADC Registry Scan Error: Class {$class_name} not found in file {$file} AFTER include.");
                 }
             } else {
-                 error_log("ADC Registry Scan: Filename '$filename' did not match regex for type '$type'"); // DEBUG
             }
         }
-        error_log("ADC Registry Scan: Completed scan for type '$type'. Handlers found: " . count($handlers)); // DEBUG
         return $handlers;
     }
 

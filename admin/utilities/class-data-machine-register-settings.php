@@ -41,7 +41,7 @@ class Data_Machine_Register_Settings {
      * @access   private
      * @var      string    $settings_group    Settings group name.
      */
-    private $settings_group = 'Data_Machine_settings';
+    private $settings_group = 'Data_Machine_settings_group';
 
     /**
      * Settings sections.
@@ -217,12 +217,22 @@ class Data_Machine_Register_Settings {
             array( $this, 'sanitize_openai_api_key' ) // Sanitize callback
         );
 
+        // Register Instagram OAuth settings for the API / Auth page
+        register_setting(
+            'dm_api_keys_group',
+            'instagram_oauth_client_id'
+        );
+        register_setting(
+            'dm_api_keys_group',
+            'instagram_oauth_client_secret'
+        );
+
         // Add settings section for API key on the API Keys page
         add_settings_section(
             'api_keys_section',   // ID 
             'OpenAI API Key',     // Title
             array( $this, 'print_api_settings_section_info' ), // Callback for section description
-            'adc-api-keys'        // Page slug for the page
+            'dm-api-keys'        // Page slug for the page
         );
 
         // Add settings field for API key on the API Keys page
@@ -230,7 +240,7 @@ class Data_Machine_Register_Settings {
             'openai_api_key',    // ID
             'API Key',           // Title (simpler as section gives context)
             array( $this, 'openai_api_key_callback' ), // Callback to render the field
-            'adc-api-keys',      // Page slug for the page
+            'dm-api-keys',      // Page slug for the page
             'api_keys_section'   // Section ID
         );
     }
@@ -354,41 +364,53 @@ class Data_Machine_Register_Settings {
      */
     public function sanitize_options( $input ) {
         $sanitized = array();
-        
+
         if ( ! is_array( $input ) ) {
             return $sanitized;
         }
-        
-        foreach ( $input as $key => $value ) {
-            switch ( $key ) {
-                // Boolean values
-                case 'enable_plugin':
-                case 'debug_mode':
-                case 'enable_scheduling':
-                    $sanitized[$key] = isset( $value ) ? 1 : 0;
-                    break;
-                
-                // Text inputs
-                case 'api_key':
-                case 'api_endpoint':
-                    $sanitized[$key] = sanitize_text_field( $value );
-                    break;
-                
-                // Select inputs
-                case 'schedule_frequency':
-                    $valid_options = array( 'hourly', 'twicedaily', 'daily', 'weekly' );
-                    $sanitized[$key] = in_array( $value, $valid_options ) ? $value : 'daily';
-                    break;
-                
-                // For any other fields
-                default:
-                    if ( isset( $this->fields[$key] ) ) {
-                        $sanitized[$key] = sanitize_text_field( $value );
-                    }
-                    break;
+
+        // Handle global plugin options (booleans, API key, etc.)
+        $global_keys = ['enable_plugin', 'debug_mode', 'enable_scheduling', 'api_key', 'api_endpoint', 'schedule_frequency'];
+        foreach ($global_keys as $key) {
+            if (isset($input[$key])) {
+                switch ($key) {
+                    case 'enable_plugin':
+                    case 'debug_mode':
+                    case 'enable_scheduling':
+                        $sanitized[$key] = isset($input[$key]) ? 1 : 0;
+                        break;
+                    case 'api_key':
+                    case 'api_endpoint':
+                        $sanitized[$key] = sanitize_text_field($input[$key]);
+                        break;
+                    case 'schedule_frequency':
+                        $valid_options = array('hourly', 'twicedaily', 'daily', 'weekly');
+                        $sanitized[$key] = in_array($input[$key], $valid_options) ? $input[$key] : 'daily';
+                        break;
+                }
             }
         }
-        
+
+        // Sanitize input handler settings
+        if (isset($input['data_source_type']) && isset($input['data_source_config'])) {
+            $type = $input['data_source_type'];
+            $config = $input['data_source_config'][$type] ?? [];
+            $handler = $this->locator->get('handler_registry')->get_input_handler_instance($type);
+            if ($handler && method_exists($handler, 'sanitize_settings')) {
+                $sanitized['data_source_config'][$type] = $handler->sanitize_settings($config);
+            }
+        }
+
+        // Sanitize output handler settings
+        if (isset($input['output_type']) && isset($input['output_config'])) {
+            $type = $input['output_type'];
+            $config = $input['output_config'][$type] ?? [];
+            $handler = $this->locator->get('handler_registry')->get_output_handler_instance($type);
+            if ($handler && method_exists($handler, 'sanitize_settings')) {
+                $sanitized['output_config'][$type] = $handler->sanitize_settings($config);
+            }
+        }
+
         return $sanitized;
     }
 

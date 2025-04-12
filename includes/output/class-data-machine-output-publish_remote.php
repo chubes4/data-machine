@@ -19,11 +19,19 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
     private $db_locations;
 
     /**
+     * Logger instance.
+     * @var Data_Machine_Logger
+     */
+    private $logger;
+
+    /**
      * Constructor.
      * @param Data_Machine_Database_Remote_Locations $db_locations
+     * @param Data_Machine_Logger $logger
      */
-    public function __construct(Data_Machine_Database_Remote_Locations $db_locations) {
+    public function __construct(Data_Machine_Database_Remote_Locations $db_locations, Data_Machine_Logger $logger) {
         $this->db_locations = $db_locations;
+        $this->logger = $logger;
     }
 	/**
 	 * Handles publishing the AI output to a remote WordPress site via REST API.
@@ -35,19 +43,26 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 	 * @return array|WP_Error Result array on success, WP_Error on failure.
 	 */
 	public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array|WP_Error {
+		// Initialize variables to avoid undefined variable warnings
+		$assigned_category_name = null;
+		$assigned_category_id = null;
+		$assigned_tag_ids = [];
+		$assigned_tag_names = [];
 		// Get output config directly from the job config array
 		$output_config = $module_job_config['output_config'] ?? [];
 		if ( ! is_array( $output_config ) ) $output_config = array(); // Ensure it's an array
 
-		// Access settings within the 'publish_remote' sub-array
+		// Access settings within the 'publish_remote' sub-array (matching saved config key)
 		$config = $output_config['publish_remote'] ?? [];
 		if ( ! is_array( $config ) ) $config = array(); // Ensure publish_remote sub-array exists
 
 		// Get the selected remote location ID
-		$location_id = absint($config['remote_location_id'] ?? 0);
+		$location_id = absint($config['location_id'] ?? 0);
 
 		if (empty($location_id)) {
-			return new WP_Error('remote_publish_config_missing', __('No Remote Location selected for this module.', 'data-machine'));
+			$error_message = __('No Remote Location selected for this module.', 'data-machine');
+			$this->logger->error($error_message, ['module_job_config' => $module_job_config]);
+			return new WP_Error('remote_publish_config_missing', $error_message);
 		}
 
 		// Fetch location details (including decrypted password)
@@ -62,15 +77,21 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			// If job runs via cron, $user_id might be null. We need a user context.
 			// Try getting module owner? Requires DB Modules access... complex dependency.
 			// For now, fail if user_id is missing in this context.
-			return new WP_Error('remote_publish_user_context_missing', __('User context required to fetch remote location credentials.', 'data-machine'));
+			$error_message = __('User context required to fetch remote location credentials.', 'data-machine');
+			$this->logger->error($error_message, ['location_id' => $location_id, 'user_id' => $user_id]);
+			return new WP_Error('remote_publish_user_context_missing', $error_message);
 		}
 		$location = $this->db_locations->get_location($location_id, $user_id, true); // Decrypt password
 
 		if (!$location || empty($location->target_site_url) || empty($location->target_username) || !isset($location->password)) {
-			return new WP_Error('remote_publish_location_fetch_failed', __('Could not retrieve details for the selected Remote Location.', 'data-machine'));
+			$error_message = __('Could not retrieve details for the selected Remote Location.', 'data-machine');
+			$this->logger->error($error_message, ['location_id' => $location_id, 'user_id' => $user_id]);
+			return new WP_Error('remote_publish_location_fetch_failed', $error_message);
 		}
 		if ($location->password === false) { // Check decryption failure
-			return new WP_Error('remote_publish_decrypt_failed', __('Failed to decrypt password for the selected Remote Location.', 'data-machine'));
+			$error_message = __('Failed to decrypt password for the selected Remote Location.', 'data-machine');
+			$this->logger->error($error_message, ['location_id' => $location_id, 'user_id' => $user_id]);
+			return new WP_Error('remote_publish_decrypt_failed', $error_message);
 		}
 
 		// Use fetched credentials
@@ -91,8 +112,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		$parsed_data = [
 			'title' => $parser->get_title(),
 			'content' => $parser->get_content(),
-			'category' => $parser->get_remote_category_directive(),
-			'tags' => $parser->get_remote_tags_directive() ? array_map('trim', explode(',', $parser->get_remote_tags_directive())) : []
+			'category' => $parser->get_publish_category(),
+			'tags' => $parser->get_publish_tags() ? array_map('trim', explode(',', $parser->get_publish_tags())) : []
 		];
 
 		      // --- Convert Markdown content to HTML ---
@@ -117,7 +138,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				$post_date_iso = gmdate('Y-m-d\TH:i:s', $timestamp);
 			} else {
 				// Log an error if the format couldn't be parsed
-				error_log('Data Machine Publish Remote: Could not parse original_date_gmt: ' . $source_date_gmt_string);
+				$this->logger->warning('Could not parse original_date_gmt from input metadata.', ['original_date_gmt' => $source_date_gmt_string, 'metadata' => $input_metadata]);
 			}
 		}
 		// If source date wasn't used or invalid, $post_date_iso remains null,
@@ -176,6 +197,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			$payload['tag_names'] = $parsed_data['tags']; // Send array of names
 			$assigned_tag_names = $parsed_data['tags']; // For reporting
 			$assigned_tag_ids = []; // IDs will be determined/created by receiver
+			if (!isset($assigned_tag_names)) $assigned_tag_names = [];
 		}
 
 		// Construct the target API URL
@@ -197,7 +219,9 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 
 		// --- Handle Publish Response ---
 		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'remote_publish_request_failed', __( 'Failed to send data to the remote site.', 'data-machine' ) . ' ' . $response->get_error_message() );
+			$error_message = __( 'Failed to send data to the remote site.', 'data-machine' ) . ' ' . $response->get_error_message();
+			$this->logger->error($error_message, ['api_url' => $api_url, 'args' => $args, 'wp_error' => $response]);
+			return new WP_Error( 'remote_publish_request_failed', $error_message );
 		}
 
 		$response_code = wp_remote_retrieve_response_code( $response );
@@ -205,8 +229,10 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		$decoded_body = json_decode( $body, true );
 
 		if ( $response_code !== 201 ) { // Expect 201 Created
-			$error_message = isset( $decoded_body['message'] ) ? $decoded_body['message'] : __( 'Unknown error occurred on the remote site during publishing.', 'data-machine' );
-			return new WP_Error( 'remote_publish_failed', sprintf( __( 'Remote site returned an error (Code: %d).', 'data-machine' ), $response_code ), $error_message );
+			$error_message_detail = isset( $decoded_body['message'] ) ? $decoded_body['message'] : __( 'Unknown error occurred on the remote site during publishing.', 'data-machine' );
+			$error_message = sprintf( __( 'Remote site returned an error (Code: %d).', 'data-machine' ), $response_code );
+			$this->logger->error($error_message, ['api_url' => $api_url, 'response_code' => $response_code, 'response_body' => $body, 'error_detail' => $error_message_detail]);
+			return new WP_Error( 'remote_publish_failed', $error_message, $error_message_detail );
 		}
 
 		// Success
@@ -220,8 +246,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			'final_output'           => $payload['content'], // Return what was sent
 			'assigned_category_id'   => $assigned_category_id,
 			'assigned_category_name' => $assigned_category_name,
-			'assigned_tag_ids'       => $assigned_tag_ids,
-			'assigned_tag_names'     => $assigned_tag_names,
+			'assigned_tag_ids'       => is_array($assigned_tag_ids) ? $assigned_tag_ids : [],
+			'assigned_tag_names'     => is_array($assigned_tag_names) ? $assigned_tag_names : [],
 		);
 	}
 
@@ -230,41 +256,33 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 	 *
 	 * @return array Associative array of field definitions.
 	 */
-	public static function get_settings_fields(): array {
-		// Options will be populated by the Settings_Fields service
+	public static function get_settings_fields(array $current_config = [], ?Data_Machine_Service_Locator $locator = null): array {
 		$locations_options = ['' => '-- Select Location --'];
-		/* -- REMOVED PHP Location Fetching Logic --
-		if (class_exists('Data_Machine_Service_Locator') && class_exists('Data_Machine_Database_Remote_Locations')) {
-			// Attempt to get locations if classes exist (might not during initial load/activation)
-			try {
-				// Note: Accessing locator statically or globally isn't ideal here.
-				// This suggests the settings fields might need access to the locator instance.
-				// For now, we'll assume a global or passed locator if possible, otherwise skip population.
-				// A better approach might be to populate this via JS after the page loads.
-				// Let's prepare for JS population.
-			} catch (\Exception $e) {
-				// Handle error if locator/service not ready
-			}
-		}
-		*/
+		// Define only placeholder/default options initially. JS will populate the rest.
+		$post_type_options = [ '' => '-- Select Location First --' ];
+		$category_options = [ '' => '-- Select Location First --', '-1' => '-- Let Model Decide --', '0' => '-- Instruct Model --' ];
+		$tag_options = [ '' => '-- Select Location First --', '-1' => '-- Let Model Decide --', '0' => '-- Instruct Model --' ];
+
+		// Always set the selected value from $current_config for each field
+		$selected_post_type = $current_config['selected_remote_post_type'] ?? '';
+		$selected_category_id = $current_config['selected_remote_category_id'] ?? -1;
+		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? -1;
 
 		return [
-			// Location Selection
-			'remote_location_id' => [
+			'location_id' => [
 				'type' => 'select',
 				'label' => __('Remote Location', 'data-machine'),
-				'description' => __('Select a pre-configured remote publishing location. Manage locations <a href="' . admin_url('admin.php?page=adc-remote-locations') . '" target="_blank">here</a>.', 'data-machine'),
-				'options' => $locations_options, // Will be populated by JS mainly
-				'required' => true, // A location must be selected
+				'description' => __('Select a pre-configured remote publishing location. Manage locations <a href="' . admin_url('admin.php?page=dm-remote-locations') . '" target="_blank">here</a>.', 'data-machine'),
+				'options' => $locations_options, // Note: These are still populated by Data_Machine_Settings_Fields class
+				'required' => true,
 				'default' => '',
 			],
-			// Publish Settings Section (Dependent on selected location)
 			'selected_remote_post_type' => [
 				'type' => 'select',
 				'label' => __('Remote Post Type', 'data-machine'),
 				'description' => __('Select the post type on the target site. Populated after selecting a location.', 'data-machine'),
-				'options' => [ '' => '-- Select Location First --' ], // Default state
-				'default' => '',
+				'options' => $post_type_options, // Use simplified options
+				'default' => $selected_post_type, // Keep setting default value
 			],
 			'remote_post_status' => [
 				'type' => 'select',
@@ -292,33 +310,44 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'type' => 'select',
 				'label' => __('Remote Category', 'data-machine'),
 				'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
-				'options' => [
-				    ''   => '-- Select Location First --', // Default state
-	                   '-1' => '-- Let Model Decide --',
-	                   '0'  => '-- Instruct Model --'
-	               ],
-				'default' => -1,
+				'options' => $category_options, // Use simplified options
+				'default' => $selected_category_id, // Keep setting default value
 			],
 			'selected_remote_tag_id' => [
 				'type' => 'select',
 				'label' => __('Remote Tag', 'data-machine'),
 				'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
-				'options' => [
-	                   ''   => '-- Select Location First --', // Default state
-	                   '-1' => '-- Let Model Decide --',
-	                   '0'  => '-- Instruct Model --'
-	               ],
-				'default' => -1,
-			],		];
+				'options' => $tag_options, // Use simplified options
+				'default' => $selected_tag_id, // Keep setting default value
+			],
+		];
 	}
+/**
+ * Sanitize settings for the Publish Remote output handler.
+ *
+ * @param array $raw_settings
+ * @return array
+ */
+public function sanitize_settings(array $raw_settings): array {
+	$sanitized = [];
+	$sanitized['location_id'] = absint($raw_settings['location_id'] ?? 0);
+	$sanitized['selected_remote_post_type'] = sanitize_text_field($raw_settings['selected_remote_post_type'] ?? '');
+	$sanitized['remote_post_status'] = sanitize_text_field($raw_settings['remote_post_status'] ?? 'publish');
+	$valid_date_sources = ['current_date', 'source_date'];
+	$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
+	$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
+	$sanitized['selected_remote_category_id'] = intval($raw_settings['selected_remote_category_id'] ?? -1);
+	$sanitized['selected_remote_tag_id'] = intval($raw_settings['selected_remote_tag_id'] ?? -1);
+	return $sanitized;
+}
 
-	/**
-	 * Get the user-friendly label for this handler.
-	 *
-	 * @return string
-	 */
-	public static function get_label(): string {
-		return __( 'Publish Remotely', 'data-machine' );
-	}
+/**
+ * Get the user-friendly label for this handler.
+ *
+ * @return string
+ */
+public static function get_label(): string {
+	return __( 'Publish Remotely', 'data-machine' );
+}
 
 } // End class Data_Machine_Output_Publish_Remote

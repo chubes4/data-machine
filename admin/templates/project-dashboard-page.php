@@ -19,8 +19,8 @@ $projects = $db_projects->get_projects_for_user( $user_id );
 
 ?>
 <div class="wrap">
-    <h1>Project Management Dashboard</h1>
-    <p>This is the main dashboard for managing your data machine projects and schedules.</p>
+    <h1>Projects</h1>
+    <p>Manage your data machine projects and their schedules.</p>
     
     <div style="margin-bottom: 15px;">
         <button type="button" id="create-new-project" class="button button-primary">Create New Project</button>
@@ -166,20 +166,20 @@ $projects = $db_projects->get_projects_for_user( $user_id );
 </div>
 
 <!-- Schedule Modal -->
-<div id="adc-schedule-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
+<div id="dm-schedule-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
     <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border: 1px solid #ccc; width: 400px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
         <h2>Edit Project Schedule</h2>
-        <input type="hidden" id="adc-modal-project-id" value="">
-        <p><strong>Project:</strong> <span id="adc-modal-project-name"></span></p>
+        <input type="hidden" id="dm-modal-project-id" value="">
+        <p><strong>Project:</strong> <span id="dm-modal-project-name"></span></p>
         
         <fieldset style="margin-bottom: 20px; border: 1px solid #ddd; padding: 10px;">
             <legend style="padding: 0 5px;">Project Schedule (Default for Modules)</legend>
             <table class="form-table">
                 <tbody>
                     <tr>
-                        <th scope="row"><label for="adc-modal-schedule-interval">Run Schedule</label></th>
+                        <th scope="row"><label for="dm-modal-schedule-interval">Run Schedule</label></th>
                         <td>
-                            <select id="adc-modal-schedule-interval" name="schedule_interval">
+                            <select id="dm-modal-schedule-interval" name="schedule_interval">
                                 <option value="every_5_minutes">Every 5 Minutes</option>
                                 <option value="hourly">Hourly</option>
                                 <option value="twicedaily">Twice Daily</option>
@@ -190,9 +190,9 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="adc-modal-schedule-status">Status</label></th>
+                        <th scope="row"><label for="dm-modal-schedule-status">Status</label></th>
                         <td>
-                            <select id="adc-modal-schedule-status" name="schedule_status">
+                            <select id="dm-modal-schedule-status" name="schedule_status">
                                 <option value="active">Active</option>
                                 <option value="paused">Paused</option>
                             </select>
@@ -206,15 +206,15 @@ $projects = $db_projects->get_projects_for_user( $user_id );
         <fieldset style="border: 1px solid #ddd; padding: 10px;">
             <legend style="padding: 0 5px;">Module Schedule Overrides (Optional)</legend>
             <p class="description" style="margin-bottom: 10px;">Modules set to "Project Schedule" will use the settings above. You can override the schedule for individual modules here.</p>
-            <div id="adc-modal-module-list" style="max-height: 200px; overflow-y: auto;">
+            <div id="dm-modal-module-list" style="max-height: 200px; overflow-y: auto;">
                 <!-- Module schedule rows will be inserted here by JavaScript -->
                 <p>Loading modules...</p> 
             </div>
         </fieldset>
         
         <p class="submit">
-            <button type="button" id="adc-modal-save" class="button button-primary">Save Schedule</button>
-            <button type="button" id="adc-modal-cancel" class="button">Cancel</button>
+            <button type="button" id="dm-modal-save" class="button button-primary">Save Schedule</button>
+            <button type="button" id="dm-modal-cancel" class="button">Cancel</button>
         </p>
     </div>
 </div>

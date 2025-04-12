@@ -8,208 +8,146 @@
 
 The plugin now utilizes a significantly more modular architecture designed for extensibility and maintainability:
 
-1.  **Dependency Injection / Service Locator (`includes/class-service-locator.php`):**
-    *   A simple Service Locator manages the creation and retrieval of core service instances (Database, APIs, Handlers, Orchestrator, etc.).
-    *   Classes receive their dependencies primarily via constructor injection, reducing tight coupling.
-    *   Services are registered during plugin initialization (`data-machine.php`).
+1. **Dependency Injection / Service Locator:**
+   - A simple Service Locator (`includes/class-service-locator.php`) is implemented to manage the creation and retrieval of core service instances (Database, APIs, Handlers, Orchestrator, etc.).
+   - Classes receive their dependencies primarily via constructor injection, promoting decoupled components.
+   - Services are registered during plugin initialization in `data-machine.php`.
 
-2.  **Input Handlers (`includes/input/` & `includes/interfaces/`):**
-    *   Responsible for handling specific data sources (e.g., `Input_Files`, `Input_Rest_Api`).
-    *   Implement `Input_Handler_Interface`, including:
-        *   `get_settings_fields()`: Defines configuration fields specific to the handler for the dynamic settings UI.
-        *   `get_input_data()`: Fetches/validates source data and returns it in a **standardized data packet** (containing `content_string` or `file_info`, plus `metadata`).
-    *   The main AJAX handler (`process_data_source_ajax_handler`) calls `get_input_data()` and passes the packet to the Orchestrator (or background job system).
+2. **Input Handlers:**
+   - Located in `includes/input/` and implementing `Input_Handler_Interface` (`includes/interfaces/`).
+   - Handle various data sources: Files, Public REST APIs, Airdrop REST API, Reddit, RSS, and Instagram.
+   - Each handler implements:
+     * `get_settings_fields()`: Defines configuration fields for the dynamic settings UI.
+     * `get_input_data()`: Fetches/validates source data and returns a **standardized data packet** (`content_string` or `file_info`, and `metadata`).
+   - AJAX handlers call `get_input_data()` and pass the packet to the Orchestrator or background job system.
 
-3.  **Processing Orchestrator (`includes/class-processing-orchestrator.php`):**
-    *   Manages the core, sequential AI processing chain: **Process -> FactCheck -> Finalize**.
-    *   Receives the **standardized input data packet** (potentially via the background job system).
-    *   Injects dependencies (`Process_Data`, `API_FactCheck`, `API_Finalize`, `Service_Locator`).
-    *   Passes the relevant data from the packet (content or file info) to the `Process_Data` step.
-    *   Passes necessary data and module configuration between steps.
-    *   Delegates the final AI output string and module config to the appropriate Output Handler (retrieved via the Service Locator).
+3. **Processing Orchestrator:**
+   - The `Processing_Orchestrator` class (`includes/class-processing-orchestrator.php`) manages the core, sequential AI processing chain: **Process -> FactCheck -> Finalize**.
+   - It receives the **standardized input data packet** (potentially from the background job system).
+   - It utilizes dependency injection for `Process_Data`, `API_FactCheck`, `API_Finalize`, and `Service_Locator` instances.
+   - It passes data from the input packet to the `Process_Data` step and manages data flow between processing steps.
+   - It also handles passing module configurations between steps.
+   - Delegates the final AI output string and module config to the appropriate Output Handler (retrieved via the Service Locator).
 
-4.  **Processing Step (`includes/class-process-data.php`):**
-    *   Receives the standardized input data packet from the Orchestrator.
-    *   Checks the packet structure (`content_string` vs `file_info`).
-    *   Calls the appropriate OpenAI API method (`create_completion_from_text` or `create_response_with_file`) based on the input type.
-    *   Injects the `API_OpenAI` dependency.
+4. **Processing Step:**
+   - The `Process_Data` class (`includes/class-process-data.php`) receives the standardized input data packet from the Orchestrator.
+   - It checks the packet structure to determine if the input is `content_string` or `file_info`.
+   - Based on the input type, it calls the appropriate OpenAI API method (`create_completion_from_text` or `create_response_with_file`).
+   - It injects the `API_OpenAI` dependency for interacting with the OpenAI API.
 
-5.  **Output Handlers (`includes/output/` & `includes/interfaces/`):**
-    *   Responsible for handling specific output actions (e.g., `Publish_Local`, `Publish_Remote`, `Data_Export`).
-    *   Implement `Output_Handler_Interface`, including:
-        *   `get_settings_fields()`: Defines configuration fields for the dynamic settings UI.
-        *   `handle()`: Receives final AI output string and module config, performs the output action, and returns a structured result.
-    *   Use helper classes (`AI_Response_Parser`, `Markdown_Converter`).
+5. **Output Handlers:**
+   - Located in `includes/output/` and implementing `Output_Handler_Interface` (`includes/interfaces/`).
+   - Handle specific output actions: Publish Local, Publish Remote, and Data Export.
+   - Each handler implements `Output_Handler_Interface`, including:
+     * `get_settings_fields()`: Defines configuration fields for the dynamic settings UI.
+     * `handle()`: Receives the final AI output string and module config, performs the output action, and returns a structured result.
+   - Use helper classes (`AI_Response_Parser`, `Markdown_Converter`).
 
-6.  **API Classes (`includes/api/`):** Focused classes for interacting with external services (OpenAI, FactCheck). Dependencies minimized.
+6. **API Classes:**
+   - API classes in `includes/api/` are focused on interacting with external services like OpenAI and FactCheck.
+   - Dependencies are minimized in these classes to maintain modularity.
 
-7.  **Helper Classes (`includes/helpers/`):** Reusable utilities (`AI_Response_Parser`, `Markdown_Converter`).
+7. **Helper Classes:**
+   - The `includes/helpers/` directory contains reusable utility classes.
+   - Implemented helpers include `AI_Response_Parser`, `Markdown_Converter`, and the new `oauth-instagram.php` for Instagram OAuth.
 
-8.  **Settings UI (`admin/data-machine-settings-page.php` & `assets/js/data-machine-settings.js`):**
-    *   Settings fields are now dynamically generated based on the `get_settings_fields()` definitions in the active Input/Output handlers.
-    *   JavaScript (`settings.js`) is more generic, using data attributes to manage UI visibility and field population, reducing reliance on hardcoded IDs.
-    *   Saving logic (`admin/class-data-machine-settings.php`) dynamically processes submitted data based on selected handlers.
+8. **Settings UI:**
+   - Settings UI logic is primarily within `admin/class-data-machine-settings-fields.php` and `assets/js/data-machine-settings.js`.
+   - Settings fields are dynamically generated based on `get_settings_fields()` definitions in Input/Output handlers.
+   - JavaScript (`assets/js/data-machine-settings.js`) is more generic, using data attributes for UI management.
+   - Saving logic dynamically processes submitted data based on selected handlers.
+   - The API / Auth page now includes fields for Instagram App ID and Secret, and manages OAuth authentication via a custom rewrite endpoint.
 
-9.  **Main Page UI (`admin/data-machine-admin-page.php` & `assets/js/data-machine-main.js`):**
-    *   Conditionally displays input controls (file upload vs. remote process button) based on the active module's `data_source_type`.
-    *   JavaScript (`main.js`) handles triggering the appropriate AJAX request (potentially initiating a background job).
+9. **Main Page UI:**
+   - The Main Page UI logic is in `admin/class-data-machine-admin-page.php` and `assets/js/data-machine-main.js`.
+   - It conditionally displays input controls based on the active module's `data_source_type`.
+   - JavaScript (`main.js`) handles triggering the appropriate AJAX request (potentially initiating a background job).
 
----
-
-## Completed Development Phases
-
-*   **Phase 1: Helper Plugin (`data-machine-airdrop`):** Endpoints for site info, receiving posts, and querying posts created. *(Status: Completed)*
-*   **Phase 2: Manual Sync Implementation:** Settings UI, AJAX handler, JS for syncing remote site info implemented. *(Status: Completed)*
-*   **Phase 3: "Model Decides" Taxonomy:** Feature implemented allowing AI to select categories/tags based on dynamic prompt instructions. *(Status: Completed)*
-*   **Phase 4: Initial Architectural Refactoring:** Backend refactored into a more modular structure with: *(Status: Completed)*
-    *   **Orchestrator:** Introduced `Processing_Orchestrator` to manage the core processing flow.
-    *   **Input/Output Handlers & Interfaces:** Implemented Input and Output Handlers with standardized interfaces for extensibility.
-    *   **Helper Classes:** Created `AI_Response_Parser` and `Markdown_Converter` helper classes.
-    *   **Frontend JS Update:** Updated frontend JavaScript to use a single AJAX request flow for initiating data processing.
-*   **Phase 5: Rich Content Formatting:** Implemented conditional Markdown workflow. *(Status: Completed)*
-*   **Phase 6: Foundational Refactoring for Scalability:** *(Status: Completed)*
-    *   Implemented **Dynamic Settings UI** generation based on handler definitions.
-    *   Implemented **Standardized Input Data Packet** structure for consistent data flow from input handlers.
-    *   Implemented basic **Dependency Injection** using a Service Locator to decouple core components.
-    *   Refactored settings page JS to be more generic and data-driven.
-    *   Refactored core classes (`Process_Data`, `Orchestrator`, API classes, Handlers) to use DI and standardized data.
-    *   Resolved various bugs related to UI state, data handling, and PHP errors uncovered during refactoring.
-*   **Phase 7: Core Background Job Processing (Manual Triggers):** *(Status: Completed)*
-    *   Implemented `dm_jobs` table.
-    *   Implemented job enqueueing via AJAX handler and `wp_schedule_single_event` to trigger background processing via WP-Cron.
-    *   Implemented WP-Cron callback (`dm_run_job_callback`) to execute orchestrator and process jobs from the `dm_jobs` queue.
-    *   Implemented AJAX status check endpoint (`dm_check_job_status`).
-    *   Updated frontend JS (`main.js`) for job initiation and status polling.
-    *   Refactored job data storage to use simplified module config array.
-    *   Implemented persistent temporary file storage and cleanup for file uploads.
-    *   Fixed Markdown conversion in output handlers.
-    *   Resolved various bugs related to background processing (including `publish_local` slug and `POST_TITLE` prompt issues).
-*   **Phase 8: Project Abstraction Layer:** *(Status: Completed)*
-    *   Implemented `dm_projects` table and modified `dm_modules` table schema.
-    *   Updated Database classes (`Database_Projects`, `Database_Modules`) for project/module relationships and ownership checks.
-    *   Implemented `Project_Ajax_Handler` for fetching/creating projects and fetching modules by project.
-    *   Updated Settings UI to include Project selection and project-based Module selection.
-    *   Updated core logic (AJAX handlers, DB classes) to verify ownership via project association.
+10. **Rewrite Endpoint for OAuth:**
+    - `/oauth-instagram/` is registered as a rewrite endpoint in the main plugin file.
+    - All Instagram OAuth logic is handled in `includes/helpers/oauth-instagram.php`, ensuring no "headers already sent" errors and robust authentication.
+    - The API / Auth page provides fields for Instagram App ID and Secret, which are used in the OAuth flow.
 
 ---
 
-## Phase 9: Project Scheduling and Management Dashboard
-
-*(Status: **Completed**)*
-
-**Objective:** Implement project-level scheduling and a Project Management Dashboard to provide users with a centralized interface for configuring and managing data machine workflows.
-
-**Key Components:**
-
-1.  **Extend `dm_jobs` Table:**
-    *   Modify the `dm_jobs` table to include the following scheduling-related columns: *(Status: **Planned - Not Started**)*
-        *   `schedule_type` (ENUM: 'manual', 'scheduled', 'recurring', 'specific_time') - To store the type of schedule (manual, scheduled, etc.)
-        *   `schedule_config` (LONGTEXT, JSON) - To store schedule-specific configurations (e.g., cron expression, specific time).
-        *   `is_scheduled` (BOOLEAN) - Flag to indicate if the job is scheduled for automatic execution.
-        *   `next_scheduled_run` (DATETIME) - Timestamp for the next scheduled run.
-        *   `schedule_status` (ENUM: 'active', 'paused', 'error') - Status of the schedule (active, paused, error).
-        *   `project_id` (BIGINT UNSIGNED, NULLABLE, Foreign Key to `dm_projects`) - Nullable for project-level schedules.
-        *   `module_id` (BIGINT UNSIGNED, NULLABLE, Foreign Key to `dm_modules`) - Nullable for module-level schedules.
+## Known Issues, TODOs & Enhancements (as of 2025-04-11)
 
 
-2.  **Scheduling Mechanism (WP-Cron):**
-    *   Integrate Action Scheduler library into the plugin. *(Status: **Planned - WP-Cron Implemented Instead**)*
-    *   Implement WP-Cron based scheduling for projects and modules. *(Status: **Completed - WP-Cron Implemented**)*
-    *   WP-Cron scheduler function (`dm_run_project_schedule`, `dm_run_module_schedule`) is triggered by WP-Cron events to initiate job processing. *(Status: **Completed - WP-Cron Implemented**)*
-    *   For each due job:
-        *   If `module_id` is NOT NULL, schedule `dm_run_job_event` for that module. *(Status: **Completed - WP-Cron Implemented**)*
-        *   If `module_id` is NULL and `project_id` is NOT NULL, schedule `dm_run_job_event` for each module in the project. *(Status: **Completed - WP-Cron Implemented**)*
-        *   `next_scheduled_run` for the job is NOT used; `last_run_at` timestamp in `dm_projects` is updated instead. *(Status: **Implemented with `last_run_at` timestamp**)*
-        *   Implement robust error logging and potentially retry mechanisms within Action Scheduler. *(Status: **Completed - Error Logging Implemented for WP-Cron**)*
-
-3.  **Project Management Dashboard UI:** *(Status: **Completed**)*
-    *   Create a new WordPress admin page for the "Project Management Dashboard." *(Status: **Completed - `admin/data-machine-project-dashboard-page.php` Implemented**)*
-    *   Dashboard will initially focus on project-level scheduling, allowing users to manage scheduled jobs associated with projects. *(Status: **Completed**)*
-    *   Users will be able to view, create, edit, enable/disable, manually trigger, and view logs for scheduled jobs. *(Status: **Partially Completed - View, Edit, Enable/Disable, Manually Trigger Implemented. Basic "Last Run" display implemented, but Detailed Job Logs UI Needs Further Work**)*
-    *   Future Enhancement: Extend UI to support module-level scheduling within projects. *(Status: **Completed - Module-Level Schedule Overrides Implemented in UI**)*
-
-4.  **Project Settings Page Integration:** *(Status: **Planned - Not Started**)*
-    *   Extend Project settings to include a "Scheduling" tab or section. *(Status: **Planned - Not Started - Scheduling UI Implemented in Dashboard instead**)*
-    *   Initially focus on project-level schedule configuration within Project settings. *(Status: **Planned - Not Started - Schedule settings managed in Dashboard UI**)*
-    *   Allow users to define schedules for projects, which will trigger the execution of all modules within those projects. *(Status: **Completed - WP-Cron Project Scheduling Implemented via Dashboard UI**)*
----
-135 | ## Completed Feature: Import/Export Functionality
-136 |
-
-**Key Features:**
-*   **Export Projects:** Export project configurations (including associated modules) to a JSON file.
-*   **Import Projects:** Import projects and modules from a JSON file, recreating project and module configurations.
-*   **Delete Projects:** Implemented project deletion functionality with confirmation and module deletion.
-137 | **Description:** Implemented import and export functionality for Projects and Modules, allowing users to:
-    *   Future Enhancement: Project settings (or Module settings) can be extended to allow more granular module-level schedule configuration. *(Status: **Future Enhancement - Dashboard UI Implemented Module Overrides**)*
-
-
-*   Implemented in `includes/helpers/class-import-export.php`.
-*   Uses AJAX actions (`admin_post_dm_export_project`, `admin_post_dm_import_project`, `admin_post_dm_delete_project`) for handling requests.
-*   Includes security checks (nonces, capabilities).
-*   Provides admin notices for feedback on import/export/delete actions.
-
----
-**Implementation Details:**
+1. **Reddit Feed Filtering:**  
+   Reddit input handler needs logic to filter by a minimum number of upvotes.
+2. **Public REST API Sync:**  
+   Sync functionality for public REST APIs is not currently working.
+3. **RSS Imports:**  
+   RSS import functionality has not been fully tested.
+4. **Image Hotlinking:**  
+   Considering a system to hotlink images for remote/local publishing, with fallback for copyright/server bloat.
+5. **Custom Meta Field for Posts:**  
+   Need to add a custom meta field to posts created by the plugin to flag them for future manipulation.
+8. **Logger Helper:**  
+   Add a debug mode setting to the logger.
+9. **Import/Export Helper:**  
+   Add project/module metadata export if applicable and safe.
+10. **Project Dashboard Page:**  
+   Implement more actions (e.g., edit, delete, advanced scheduling).
+11. **Module AJAX Handler:**  
+    Refactor input handler selection to use the locator more effectively; add new input types.
+12. **Settings Page:**  
+    Ensure 'settings_fields' service is registered in the locator.
+13. **Processing Orchestrator:**  
+    Replace transient logging with a proper logging service.
+14. **RSS Input Handler:**  
+    Add order/offset options.
+15. **Import/Export Feature Review:**
+    - The import/export logic is modular and uses the Service Locator, but should be reviewed to ensure:
+      - All handler-specific settings and metadata are included in exports/imports.
+      - The config/data packet formats match the latest standardized structures.
+      - New fields and handlers are supported as the system evolves.
+      - Error handling and logging are robust and user-friendly.
+    - TODO: Review and update import/export logic for full alignment with the modular system and future extensibility.
+16. **Reddit Input Handler:**  
+    Use a proper User-Agent, add more detailed messages, and time range options for 'top'.
+16. **Public REST API Handler:**  
+    Add auth/header settings.
+17. **Files Input Handler:**  
+    Add PDF/DOCX parsing and handle fileless runs.
+18. **Database Jobs:**  
+    Add more job management methods.
+19. **API AJAX Handler:**  
+    Add nonce check.
+20. **Remote Locations List Table:**  
+    Implement sorting, pagination, and bulk actions.
+21. **Settings Fields:**  
+    Add plugin-wide filters or modifications.
+22. **General:**  
+    The plugin is nearing completion, with only a few more iteration layers needed to achieve the end goal.
+23. **Standardize Remote Location Config Key:** (Refactoring Task - 2025-04-11)
+    - **Goal:** Resolve inconsistency in the configuration key used for selecting remote locations in modules. Standardize from `remote_location_id` to `location_id`.
+    - **Files to Modify:**
+        - `includes/output/class-data-machine-output-publish-remote.php`: Update `get_settings_fields()`, `handle()`, `sanitize_settings()`.
+        - `includes/input/class-data-machine-input-helper-rest-api.php`: Update `get_settings_fields()`, `get_input_data()`, `sanitize_settings()`, and dependency definitions.
+        - `admin/class-data-machine-settings-fields.php`: Update check and option assignment logic.
+        - `assets/js/data-machine-settings.js`: Update selectors (`#output_publish_remote_location_id`, `#data_source_helper-rest-api_location_id`) and data access keys.
+    - **Note:** Backward compatibility for reading old keys is *not* required per user confirmation. Existing modules using these handlers will need to be re-saved after the change.
 
 
 ---
 
-## Current Phase: Core Background Job Processing (Refinements)
+## Recommendations for Documentation Consistency
 
-*(Status: **Planned - Next Up**)*
-
-**Objective:** Refine the background job system, potentially addressing edge cases, improving error handling, or adding UI feedback. (This phase will be revisited after Project Scheduling & Dashboard is implemented).
-
-**Key Components:** (Initial implementation done, review and refine as needed)
-
-1.  **Job Queue:** `dm_jobs` table (currently not extended for scheduling, planned for Phase 9).
-2.  **Enqueueing Logic:** Main AJAX Handler creates job records and schedules WP-Cron events (existing manual triggers).
-3.  **WP-Cron Handler:** Function retrieves job, runs `$orchestrator->run()`, updates job status/result (existing).
-4.  **Status Check Endpoint:** AJAX action to query job status (existing).
-5.  **JavaScript Polling:** `main.js` polls status endpoint and updates UI (existing).
+- **Update the documentation to explicitly mention the new rewrite endpoint for OAuth and the API / Auth page fields for Instagram credentials.**
+- **Add a section on known issues, TODOs, and planned enhancements, as listed above.**
+- **Ensure all new features (OAuth, modular settings, etc.) are reflected in the documentation.**
+- **Document the new hotlinking/image handling strategy and the custom meta field for plugin-created posts once implemented.**
 
 ---
 
-## Subsequent Priority: External API Integration
+## Summary
 
-*(Status: **Completed**)*
+The Data Machine plugin is now a highly modular, extensible, and nearly production-ready system for automated content workflows in WordPress. The architecture, handler system, and UI are robust and well-documented. The remaining issues are minor and can be addressed in the next development cycle.
 
-**Objective:** Enable fetching data from external third-party APIs as an input source. *(Status: **Completed**)*
-
-**Key Components:** *(Status: **Completed**)*
-
-1.  **Base API Handler:** Create `includes/input/class-data-machine-input-external-api-base.php`. *(Status: **Not Implemented - Not Needed, Public REST API Handler Used**)*
-2.  **Specific API Handlers:** *(Status: **Completed**)*
-    *   **First Target:** `includes/input/class-data-machine-input-congressgov-api.php`. *(Status: **Not Implemented - Generic Public REST API Handler Used**)*
-    *   **Future Targets:** Reddit API, etc. *(Status: **Completed - Reddit and RSS Input Handlers Implemented**)*
-3.  **Integration:** Register handlers, leverage background jobs. *(Status: **Completed**)*
+**Update (2025-04-11):**  
+The dynamic settings field logic for remote location-dependent fields is now robust, DRY, and fully PHP-driven. The Service Locator is reliably injected, and the codebase is clean and maintainable. This resolves a major bottleneck and architectural pain point.
 
 ---
 
-## Future Vision / Potential Features
-
-*   **Input Handlers:**
-    *   `Input_External_Api`:
-    *   `Input_Rss`: Process items from RSS feeds. *(Facilitated by Standardized Input Packet & Background Jobs)*
-    *   `Input_Text_Area`: Allow direct text input. *(Facilitated by Standardized Input Packet)*
-    *   Enhance `Input_Rest_Api`: Add offset tracking for sequential processing, more complex query options. *(May benefit from Background Jobs)*
-    *   **New Input Sources:** Consider adding more input handlers based on user needs and popular data sources.
-*   **Output Handlers:**
-    *   `Output_Update_Local`: Update existing local posts.
-    *   `Output_Update_Remote`: Update existing remote posts.
-    *   `Output_Save_File`: Save results to different file formats (CSV, JSON, etc.).
-    *   **New Output Destinations:** Explore integrations with other platforms or services as output destinations.
-*   **Further Refinements:**
-    *   Explore Fully Dynamic Handler Discovery (Current implementation uses Service Locator, but registration is still hardcoded, arrays removed).
-    *   Refactor Error Logging into a dedicated, injectable service.
-    *   Refactor Orchestrator pipeline to be more configurable and potentially support branching or parallel processing.
-    *   Abstract AI Client to support other models (Claude, Gemini, etc.).
-    *   Refine main page JS result display for non-file sources and background job status.
-    *   **Advanced Scheduling Options:** Explore more complex scheduling scenarios, such as conditional scheduling, event-based triggers, and dependencies between jobs/projects, and potentially Action Scheduler integration.
-    *   **Detailed Job Monitoring & Logging:** Enhance the dashboard to provide more in-depth job monitoring, progress indicators, and detailed logs for debugging and analysis, including features like real-time progress updates, more detailed logs, filtering/search capabilities, and UI improvements for log viewing.
-    *   **User Roles & Permissions:** Implement user roles and permissions to control access to projects, modules, schedules, and dashboard features, especially for multi-user WordPress environments.
-    *   **Import/Export Functionality:** Allow users to import and export project and module configurations for easier setup and migration.
-    *   **Template System:** Introduce templates for prompts and module configurations to streamline the creation of common data machine workflows.
-
----
+*This markdown file is up to date as of 2025-04-11 and should be used as the reference for the development team and future documentation updates.*

@@ -52,22 +52,27 @@ $data_source_type = $current_module && isset($current_module->data_source_type) 
     <?php elseif ($data_source_type === 'helper_rest_api'): // Updated slug ?>
     		<div id="airdrop-processing-section"> <?php // Updated ID ?>
     			<p>This module is configured to use a <strong>WP Site (via Helper Plugin)</strong> as the data source.</p>
-    			<button type="button" id="process-airdrop-data-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Helper API Data</button> <?php // Updated ID and text ?>
+    			<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Helper API Data</button>
     		</div>
     <?php elseif ($data_source_type === 'public_rest_api'): // Added condition for public API ?>
     		<div id="public-rest-processing-section">
     			<p>This module is configured to use a <strong>Public REST API</strong> as the data source.</p>
-    			<button type="button" id="process-public-rest-data-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Public API Data</button>
+    			<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Public API Data</button>
     		</div>
     			<?php elseif ($data_source_type === 'rss'): // Added condition for RSS ?>
     				<div id="rss-processing-section">
     					<p>This module is configured to use an <strong>RSS Feed</strong> as the data source.</p>
-    					<button type="button" id="process-rss-feed-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Feed Item</button>
+    					<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Feed Item</button>
     				</div>
     					<?php elseif ($data_source_type === 'reddit'): // Added condition for Reddit ?>
     						<div id="reddit-processing-section">
     							<p>This module is configured to use a <strong>Reddit Subreddit</strong> as the data source.</p>
-    							<button type="button" id="process-reddit-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Subreddit Post</button>
+    							<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Subreddit Post</button>
+    						</div>
+    					<?php elseif ($data_source_type === 'instagram'): // Corrected condition for Instagram ?>
+    						<div id="instagram-processing-section">
+    							<p>This module is configured to use an <strong>Instagram Profile</strong> as the data source.</p>
+    							<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Profile Posts</button>
     						</div>
     					<?php else: ?>
         <div class="notice notice-warning">
