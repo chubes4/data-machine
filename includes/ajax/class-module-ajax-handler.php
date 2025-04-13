@@ -156,6 +156,7 @@ class Data_Machine_Module_Ajax_Handler {
 						'process_data_prompt' => $module->process_data_prompt,
 						'fact_check_prompt' => $module->fact_check_prompt,
 						'finalize_response_prompt' => $module->finalize_response_prompt,
+						'log_steps' => true, // Enable stepwise logging for admin page jobs
 					);
 					$module_config_json = wp_json_encode($module_job_config);
 					if ($module_config_json === false) {
@@ -236,7 +237,8 @@ class Data_Machine_Module_Ajax_Handler {
 						wp_send_json_success( array(
 							'status' => 'processing_queued',
 							'message' => $message,
-							'job_ids' => $job_ids // Return array of queued job IDs
+							'job_ids' => $job_ids, // Return array of queued job IDs
+							'job_id' => isset($job_ids[0]) ? $job_ids[0] : null // For single-job polling compatibility
 						) );
 					} else {
 						// All items resulted in errors during job creation
@@ -461,7 +463,7 @@ class Data_Machine_Module_Ajax_Handler {
             if (!$orchestrator) {
                  throw new Exception('Orchestrator service not found.');
             }
-			$result = $orchestrator->run( $input_data_packet, $module_job_config, $job->user_id );
+			$result = $orchestrator->run( $input_data_packet, $module_job_config, $job->user_id, $job_id );
 
 			// 5. Process result
 			if ( is_wp_error( $result ) ) {
@@ -556,56 +558,6 @@ class Data_Machine_Module_Ajax_Handler {
 		// --- End Cleanup ---
 	} // End dm_run_job_callback
 
-	/**
-	 * AJAX handler to check the status of a background job.
-	 *
-	 * @since 0.10.0
-	 */
-	public function dm_check_job_status_ajax_handler() {
-		// Use a different nonce for status checking
-		check_ajax_referer( 'dm_check_status_nonce', 'nonce' );
-
-		$job_id = isset( $_POST['job_id'] ) ? absint( $_POST['job_id'] ) : 0;
-		$user_id = get_current_user_id(); // Ensure the user checking owns the job
-
-		if ( empty( $job_id ) || empty( $user_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'Missing job ID or user ID.', 'data-machine' ) ) );
-			return;
-		}
-
-		global $wpdb;
-		$jobs_table = $wpdb->prefix . 'dm_jobs';
-
-		// Retrieve only necessary fields for status check
-		$job = $wpdb->get_row( $wpdb->prepare(
-			"SELECT job_id, user_id, status, result_data FROM $jobs_table WHERE job_id = %d",
-			$job_id
-		) );
-
-		if ( ! $job ) {
-			wp_send_json_error( array( 'message' => __( 'Job not found.', 'data-machine' ) ) );
-			return;
-		}
-
-		// Security check: Ensure the current user owns the job they are checking
-		if ( $job->user_id != $user_id ) {
-			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'data-machine' ) ) );
-			return;
-		}
-
-		$response_data = array(
-			'job_id' => $job->job_id,
-			'status' => $job->status,
-			'result' => null // Default to null
-		);
-
-		// If completed or failed, include the result data
-		if ( $job->status === 'complete' || $job->status === 'failed' ) {
-			$response_data['result'] = json_decode( wp_unslash( $job->result_data ), true ); // Decode result JSON
-		}
-
-		wp_send_json_success( $response_data );
-	}
 
 	/**
 	 * AJAX handler for saving module settings.

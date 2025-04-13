@@ -32,6 +32,7 @@ require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php'
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php'; // Jobs Database Class
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php'; // Processed Items Database Class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-module-ajax-handler.php'; // Added Module AJAX Handler
+require_once DATA_MACHINE_PATH . 'includes/ajax/class-ajax-job-status.php'; // Modular Job Status AJAX Handler
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-projects.php'; // AJAX Handler for Dashboard Project Actions
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-locations.php'; // AJAX Handler for Location Actions
 require_once DATA_MACHINE_PATH . 'admin/class-data-machine-remote-locations.php'; // Admin Form Handler for Remote Locations
@@ -321,6 +322,11 @@ function run_data_machine() {
 
 }
 run_data_machine();
+
+// Ensure the job status AJAX handler is registered
+if (class_exists('Data_Machine_Ajax_Job_Status')) {
+    new Data_Machine_Ajax_Job_Status();
+}
 
 /**
  * Allow JSON file uploads for import functionality.

@@ -90,39 +90,6 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 		$orderby = $api_config['orderby'] ?? 'date';
 		$order = strtolower($api_config['order'] ?? 'desc');
 		$search_term = $api_config['search'] ?? null;
-
-		// Build query parameters (only add if not empty)
-		$query_params = [
-			'per_page' => $fetch_batch_size,
-			'orderby' => $orderby,
-			'order' => $order,
-			'search' => $search_term,
-			'_embed' => 'true'
-		];
-		$next_page_url = add_query_arg( array_filter($query_params, function($value) { return $value !== null && $value !== ''; }), $api_endpoint_url );
-
-		// Validate endpoint accessibility with a GET request (not HEAD)
-		$get_args = [
-			'timeout' => 15,
-			'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-			'headers' => [
-				'Accept' => 'application/json, text/javascript, */*; q=0.01',
-			]
-		];
-		$test_response = wp_remote_get($next_page_url, $get_args);
-		if (is_wp_error($test_response) || wp_remote_retrieve_response_code($test_response) >= 400) {
-			$error_message = sprintf(__('The provided API endpoint URL "%s" is not accessible (Code: %s).', 'data-machine'), $api_endpoint_url, is_wp_error($test_response) ? $test_response->get_error_message() : wp_remote_retrieve_response_code($test_response));
-			$logger && $logger->add_admin_error($error_message, ['api_endpoint_url' => $api_endpoint_url]);
-			throw new Exception($error_message);
-		}
-
-		// --- Fetching Parameters ---
-		$process_limit = max(1, absint( $api_config['item_count'] ?? 1 ));
-		$timeframe_limit = $api_config['timeframe_limit'] ?? 'all_time';
-		$fetch_batch_size = min(100, max(10, $process_limit * 2));
-		$orderby = $api_config['orderby'] ?? 'date';
-		$order = strtolower($api_config['order'] ?? 'desc');
-		$search_term = $api_config['search'] ?? null;
 		// Note: Category/Tag filtering might not work reliably on custom endpoints
 		$category_id = ($api_config['category'] ?? 0) ?: null;
 		$tag_id = ($api_config['tag'] ?? 0) ?: null;
@@ -144,7 +111,6 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 			'per_page' => $fetch_batch_size,
 			'orderby' => $orderby,
 			'order' => $order,
-			'search' => $search_term,
 			'_embed' => 'true'
 		];
 		$next_page_url = add_query_arg( array_filter($query_params, function($value) { return $value !== null && $value !== ''; }), $api_endpoint_url );
@@ -254,6 +220,34 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 						continue;
 					}
 				}
+
+				// --- Local Search Term Filtering ---
+				if (!empty($search_term)) {
+					$keywords = array_map('trim', explode(',', $search_term));
+					$keywords = array_filter($keywords); // Remove empty elements
+
+					if (!empty($keywords)) {
+						$title_to_check = $item['title']['rendered'] ?? $item['title'] ?? $item['headline'] ?? '';
+						$content_to_check = $item['content']['rendered'] ?? $item['content'] ?? $item['excerpt'] ?? '';
+						$text_to_search = $title_to_check . ' ' . strip_tags($content_to_check); // Combine title and content
+						$found_keyword = false;
+
+						foreach ($keywords as $keyword) {
+							// Use mb_stripos for case-insensitive multibyte search
+							if (mb_stripos($text_to_search, $keyword) !== false) {
+								$found_keyword = true;
+								break; // Found one keyword, no need to check others
+							}
+						}
+
+						if (!$found_keyword) {
+							$logger && $logger->info('Public REST API: Skipping item (does not match search terms): ' . $current_item_id . ' | Title: ' . $title_to_check);
+							continue; // Skip this item if no keywords were found
+						}
+					}
+				}
+				// --- End Local Search Term Filtering ---
+
 				if ( $db_processed_items->has_item_been_processed($module_id, 'public_rest_api', $current_item_id) ) {
 					$logger && $logger->info('Public REST API: Skipping item (already processed): ' . $current_item_id);
 					continue;
@@ -262,6 +256,22 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 				$content = $item['content']['rendered'] ?? $item['content'] ?? $item['excerpt'] ?? '';
 				$source_link = $item['link'] ?? $item['permalink'] ?? $next_page_url;
 				$original_date_gmt = $item['date_gmt'] ?? $item['post_date_gmt'] ?? $item['post_date'] ?? null;
+				// Fallback for formatted date like "Apr 11, 2025"
+				if (empty($original_date_gmt) && isset($item['meta_parts']['post_date_formatted'])) {
+				    $formatted_date = $item['meta_parts']['post_date_formatted'];
+				    // Attempt to parse into a standard format (ISO 8601 GMT)
+				    $parsed_timestamp = strtotime($formatted_date);
+				    if ($parsed_timestamp !== false) {
+				        // Convert to GMT assuming the parsed date is in the site's timezone initially
+				        // WordPress `get_gmt_from_date` might be useful if we know the site's timezone,
+				        // but for simplicity, let's format as ISO 8601 with a 'Z' assuming GMT if time is missing.
+				        // If time is present, strtotime might capture it. Best effort here.
+				        $original_date_gmt = gmdate('Y-m-d\TH:i:s\Z', $parsed_timestamp);
+				    } else {
+				        // If parsing fails, store the original formatted string
+				        $original_date_gmt = $formatted_date;
+				    }
+				}
 				$content_string = "Title: " . $title . "\n\n" . wp_strip_all_tags($content);
 				$input_data_packet = [
 					'content_string' => $content_string,
@@ -385,7 +395,7 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 			'search' => [
 				'type' => 'text',
 				'label' => __('Search Term', 'data-machine'),
-				'description' => __('Optionally filter results by a search keyword (applied after fetching).', 'data-machine'),
+				'description' => __('Optionally filter results locally by keywords (comma-separated). Only items containing at least one keyword in their title or content will be processed.', 'data-machine'),
 				'default' => '',
 			],
 			'orderby' => [

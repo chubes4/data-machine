@@ -54,7 +54,7 @@ class Data_Machine_Processing_Orchestrator {
 	 * @param int    $user_id Current user ID.
 	 * @return array|WP_Error Result from the final output handler or WP_Error on failure at any step.
 	 */
-	public function run( array $input_data_packet, array $module_job_config, $user_id ) {
+	public function run( array $input_data_packet, array $module_job_config, $user_id, $job_id = null ) {
 
 		// --- Configuration & Validation ---
 		$api_key = get_option('openai_api_key');
@@ -77,75 +77,140 @@ class Data_Machine_Processing_Orchestrator {
 
 		// --- Step 1: Initial Processing ---
 		$initial_output = '';
+		global $wpdb;
+		$jobs_table = isset($wpdb) ? $wpdb->prefix . 'dm_jobs' : null;
 		try {
-			// Use the injected instance
-			$this->log_orchestrator_step('Step 1: Calling process_data', $module_id, $input_data_packet['metadata'] ?? []);
-			$process_result = $this->process_data_handler->process_data($api_key, $process_data_prompt, $input_data_packet);
-			$this->log_orchestrator_step('Step 1: Received process_data result', $module_id, $input_data_packet['metadata'] ?? [], ['status' => $process_result['status'] ?? 'unknown', 'has_output' => !empty($process_result['json_output'])]);
+		    // Use the injected instance
+		    $this->log_orchestrator_step('Step 1: Calling process_data', $module_id, $input_data_packet['metadata'] ?? []);
+		    $process_result = $this->process_data_handler->process_data($api_key, $process_data_prompt, $input_data_packet);
+		    $this->log_orchestrator_step('Step 1: Received process_data result', $module_id, $input_data_packet['metadata'] ?? [], ['status' => $process_result['status'] ?? 'unknown', 'has_output' => !empty($process_result['json_output'])]);
 
-			if (isset($process_result['status']) && $process_result['status'] === 'error') {
-				throw new Exception($process_result['message'] ?? 'Unknown error during initial processing.');
-			}
-			$initial_output = $process_result['json_output'] ?? '';
-			if (empty($initial_output)) {
-				throw new Exception(__('Initial processing returned empty output.', 'data-machine'));
-			}
+		    if (isset($process_result['status']) && $process_result['status'] === 'error') {
+		        throw new Exception($process_result['message'] ?? 'Unknown error during initial processing.');
+		    }
+		    $initial_output = $process_result['json_output'] ?? '';
+		    if (empty($initial_output)) {
+		        throw new Exception(__('Initial processing returned empty output.', 'data-machine'));
+		    }
+		    // Stepwise logging (Update specific columns)
+		    if (!empty($module_job_config['log_steps']) && $job_id && $jobs_table) {
+		        $step1_request_data = [
+		            'api_key' => '[REDACTED]',
+		            'prompt' => $process_data_prompt,
+		            'input_data_packet' => $input_data_packet
+		        ];
+		        $wpdb->update(
+		            $jobs_table,
+		            array(
+		                'step1_initial_request' => wp_json_encode($step1_request_data),
+		                'step1_initial_response' => wp_json_encode($process_result)
+		            ),
+		            array('job_id' => $job_id),
+		            array('%s', '%s'), // Format for request and response
+		            array('%d') // Format for job_id
+		        );
+		    }
 		} catch (Exception $e) {
-			$this->log_orchestrator_step('Step 1: Exception in process_data', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-			error_log('Orchestrator - Process Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
-			return new WP_Error('process_step_failed', $e->getMessage());
+		    $this->log_orchestrator_step('Step 1: Exception in process_data', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
+		    error_log('Orchestrator - Process Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		    return new WP_Error('process_step_failed', $e->getMessage());
 		}
 
 		// --- Step 2: Fact Check ---
 		$fact_checked_content = '';
 		try {
-			// Use the injected instance
-			$this->log_orchestrator_step('Step 2: Calling fact_check_response', $module_id, $input_data_packet['metadata'] ?? []);
-			$factcheck_result = $this->factcheck_api->fact_check_response($api_key, $initial_output, $fact_check_prompt);
-			$this->log_orchestrator_step('Step 2: Received fact_check_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($factcheck_result), 'has_output' => !is_wp_error($factcheck_result) && !empty($factcheck_result['fact_check_results'])]);
+		    // Use the injected instance
+		    $this->log_orchestrator_step('Step 2: Calling fact_check_response', $module_id, $input_data_packet['metadata'] ?? []);
+		    $factcheck_result = $this->factcheck_api->fact_check_response($api_key, $initial_output, $fact_check_prompt);
+		    $this->log_orchestrator_step('Step 2: Received fact_check_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($factcheck_result), 'has_output' => !is_wp_error($factcheck_result) && !empty($factcheck_result['fact_check_results'])]);
+		    // Debug: Log the raw result immediately after the API call
+		    error_log("DM Orchestrator Debug: Raw factcheck_result after API call: " . print_r($factcheck_result, true));
 
-			if (is_wp_error($factcheck_result)) {
-				throw new Exception($factcheck_result->get_error_message(), $factcheck_result->get_error_code());
-			}
-			$fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
+		    if (is_wp_error($factcheck_result)) {
+		        throw new Exception($factcheck_result->get_error_message(), $factcheck_result->get_error_code());
+		    }
+		    $fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
+		    // Stepwise logging (Update specific columns)
+		    if (!empty($module_job_config['log_steps']) && $job_id && $jobs_table) {
+		         $step2_request_data = [
+		            'api_key' => '[REDACTED]',
+		            'initial_output' => $initial_output,
+		            'fact_check_prompt' => $fact_check_prompt
+		        ];
+		        $wpdb->update(
+		            $jobs_table,
+		            array(
+		                'step2_factcheck_request' => wp_json_encode($step2_request_data),
+		                'step2_factcheck_response' => wp_json_encode($factcheck_result)
+		            ),
+		            array('job_id' => $job_id),
+		            array('%s', '%s'),
+		            array('%d')
+		        );
+		    }
 		} catch (Exception $e) {
-			$this->log_orchestrator_step('Step 2: Exception in fact_check_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-			error_log('Orchestrator - FactCheck Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
-			return new WP_Error('factcheck_step_failed', $e->getMessage());
+		    $this->log_orchestrator_step('Step 2: Exception in fact_check_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
+		    error_log('Orchestrator - FactCheck Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		    return new WP_Error('factcheck_step_failed', $e->getMessage());
 		}
 
 
 		// --- Step 3: Finalize ---
 		$final_output_string = '';
 		try {
-			// Use the injected instance
-			$this->log_orchestrator_step('Step 3: Calling finalize_response', $module_id, $input_data_packet['metadata'] ?? []);
-			// Use the prompt modifier to inject category/tag instructions if needed
-			$prompt_modifier = $this->locator->get('prompt_modifier');
-			$modified_finalize_prompt = $prompt_modifier::modify_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet);
+		    // Use the injected instance
+		    $this->log_orchestrator_step('Step 3: Calling finalize_response', $module_id, $input_data_packet['metadata'] ?? []);
+		    // Use the prompt modifier to inject category/tag instructions if needed
+		    $prompt_modifier = $this->locator->get('prompt_modifier');
+		    $modified_finalize_prompt = $prompt_modifier::modify_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet);
 
-			$finalize_result = $this->finalize_api->finalize_response(
-				$api_key,
-				$modified_finalize_prompt,
-				$process_data_prompt,
-				$initial_output,
-				$fact_checked_content,
-				$module_job_config, // Pass the config array
-				$input_data_packet['metadata'] ?? [] // Pass input metadata
-			);
-			$this->log_orchestrator_step('Step 3: Received finalize_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($finalize_result), 'has_output' => !is_wp_error($finalize_result) && !empty($finalize_result['final_output'])]);
+		    $finalize_result = $this->finalize_api->finalize_response(
+		        $api_key,
+		        $modified_finalize_prompt,
+		        $process_data_prompt,
+		        $initial_output,
+		        $fact_checked_content,
+		        $module_job_config, // Pass the config array
+		        $input_data_packet['metadata'] ?? [] // Pass input metadata
+		    );
+		    $this->log_orchestrator_step('Step 3: Received finalize_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($finalize_result), 'has_output' => !is_wp_error($finalize_result) && !empty($finalize_result['final_output'])]);
 
-			if (is_wp_error($finalize_result)) {
-				throw new Exception($finalize_result->get_error_message(), $finalize_result->get_error_code());
-			}
-			$final_output_string = $finalize_result['final_output'] ?? '';
-			if (empty($final_output_string)) {
-				throw new Exception(__('Finalization returned empty output.', 'data-machine'));
-			}
+		    if (is_wp_error($finalize_result)) {
+		        throw new Exception($finalize_result->get_error_message(), $finalize_result->get_error_code());
+		    }
+		    $final_output_string = $finalize_result['final_output'] ?? '';
+		    if (empty($final_output_string)) {
+		        throw new Exception(__('Finalization returned empty output.', 'data-machine'));
+		    }
+		    // Stepwise logging (Update specific columns)
+		    if (!empty($module_job_config['log_steps']) && $job_id && $jobs_table) {
+		         $step3_request_data = [
+		            'api_key' => '[REDACTED]',
+		            'finalize_prompt' => $modified_finalize_prompt,
+		            'process_data_prompt' => $process_data_prompt,
+		            'initial_output' => $initial_output,
+		            'fact_checked_content' => $fact_checked_content,
+		            'module_job_config' => $module_job_config,
+		            'input_metadata' => $input_data_packet['metadata'] ?? []
+		        ];
+		        // Debug: Log data just before Step 2 update
+		        error_log("DM Orchestrator Debug: PRE-UPDATE Step 2 Request Data: " . print_r($step2_request_data, true));
+		        error_log("DM Orchestrator Debug: PRE-UPDATE Step 2 Response Data: " . print_r($factcheck_result, true));
+		        $wpdb->update(
+		            $jobs_table,
+		            array(
+		                'step3_finalize_request' => wp_json_encode($step3_request_data),
+		                'step3_finalize_response' => wp_json_encode($finalize_result)
+		            ),
+		            array('job_id' => $job_id),
+		            array('%s', '%s'),
+		            array('%d')
+		        );
+		    }
 		} catch (Exception $e) {
-			$this->log_orchestrator_step('Step 3: Exception in finalize_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-			error_log('Orchestrator - Finalize Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
-			return new WP_Error('finalize_step_failed', $e->getMessage());
+		    $this->log_orchestrator_step('Step 3: Exception in finalize_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
+		    error_log('Orchestrator - Finalize Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		    return new WP_Error('finalize_step_failed', $e->getMessage());
 		}
 
 

@@ -254,6 +254,51 @@
                              $outputSection.find('#initial-output-code-' + index)
                                           .text('Job Status: ' + status + '...');
 
+                            // --- Live Data Flow: Stepwise Logging ---
+                            var jobSteps = response.data.job_steps || [];
+                            var $liveFlowSection = $outputSection.find('.live-data-flow-section');
+                            // Ensure the section exists
+                            if ($liveFlowSection.length === 0) {
+                                $liveFlowSection = $('<div class="live-data-flow-section" style="margin-top:15px;"><h4>Live Data Flow</h4><div class="live-steps-list"></div></div>');
+                                $outputSection.append($liveFlowSection);
+                                $liveFlowSection.data('rendered-steps', 0); // Initialize rendered steps count
+                            }
+                            var $stepsList = $liveFlowSection.find('.live-steps-list');
+                            var renderedStepsCount = $liveFlowSection.data('rendered-steps') || 0;
+
+                            // Debug: Log the received job steps array
+                            console.log('Received jobSteps:', jobSteps);
+
+                            // Always clear the steps list before rendering to avoid duplicates
+                            $stepsList.empty();
+                            $liveFlowSection.data('rendered-steps', jobSteps.length); // Always update rendered steps count
+
+                            if (jobSteps.length > 0) {
+                                for (var i = 0; i < jobSteps.length; i++) {
+                                    var step = jobSteps[i];
+                                    var idx = i; // Use loop index for step number
+                                    // Debug: Log the step being rendered
+                                    console.log('Rendering step:', idx, step);
+                                    var $stepCard = $('<details class="live-step-card" style="margin-bottom:8px;"></details>');
+                                    var stepName = step.step || 'Unknown'; // Capture step name
+                                    var stepTimestamp = step.timestamp || '';
+                                    var summaryHtml = '<strong>Step ' + (idx + 1) + ': ' + stepName + '</strong> <span style="font-size:0.9em;color:#888;">(' + stepTimestamp + ')</span>';
+                                    $stepCard.append('<summary>' + summaryHtml + '</summary>'); // Use captured name
+                                    var requestData = step.request || {};
+                                    var responseData = step.response || {};
+                                    $stepCard.append('<div><strong>Request:</strong><pre style="white-space:pre-wrap;background:#f8f8f8;padding:4px;border-radius:3px;">' + JSON.stringify(requestData, null, 2) + '</pre></div>');
+                                    $stepCard.append('<div><strong>Response:</strong><pre style="white-space:pre-wrap;background:#f8f8f8;padding:4px;border-radius:3px;">' + JSON.stringify(responseData, null, 2) + '</pre></div>');
+                                    $stepsList.append($stepCard);
+                                }
+                                $liveFlowSection.data('rendered-steps', jobSteps.length); // Update rendered steps count
+                            } else if (renderedStepsCount === 0) {
+                                // If no steps rendered yet and no steps received, show message
+                                if ($stepsList.find('.no-step-data').length === 0) {
+                                     $stepsList.append('<div class="no-step-data" style="color:#888;">No step data yet.</div>');
+                                }
+                            }
+                            // --- End Live Data Flow ---
+
                             if (status === 'complete' || status === 'failed') {
                                 shouldStopPolling = true;
                                 runCallback = true; // Run callback after success/failure handling
@@ -267,7 +312,15 @@
 
                                 if (status === 'complete') {
                                     // Pass the 'result' part of the response to the existing handler
-                                    handleAjaxResponse({ success: true, data: response.data.result }, index, $outputSection, sourceName);
+                                    // Pass jobSteps array to the handler
+                                    // Wrap in try...catch to ensure polling stops on error
+                                    try {
+                                        handleAjaxResponse({ success: true, data: response.data.result }, index, $outputSection, sourceName, jobSteps);
+                                    } catch (e) {
+                                        console.error("Error in handleAjaxResponse:", e);
+                                        // Optionally display a generic error message in the UI
+                                        handleFileProcessingError(sourceName, { success: false, data: { message: "Internal UI error processing final results." } }, index, $outputSection, 'UI Error');
+                                    }
                                 } else { // status === 'failed'
                                     var errorResult = response.data.result || { error: 'Unknown error occurred.' };
                                     var errorMessage = errorResult.error || 'Unknown error occurred.';
@@ -372,73 +425,18 @@
         }
 
         // Handles processing the AJAX response (success or error) and updating the UI
-        function handleAjaxResponse(response, index, $outputSection, sourceName) {
-            if (response.success) {
-                var data = response.data;
-
-                // Update Initial Output
-                $('#initial-output-code-' + index).text(data.initial_output || '(Initial output not available)');
-                $('#results-output-section-' + index).show();
-
-                // Update Fact Check
-                $('#fact-check-results-' + index).val(data.fact_check_results || '(Fact check results not available)');
-                $('#fact-check-results-section-' + index).show();
-
-                // Update Final Output
-                var finalOutputText = data.final_output_string || '';
-                var postTitle = data.output_result.post_title || '';
-                var postContent = data.output_result.final_output || '';
-
-                // Basic parsing fallback (same as before)
-                if (!postTitle && finalOutputText) {
-                    var titleMatch = finalOutputText.match(/^POST_TITLE:\s*([^\n]*)/);
-                    if (titleMatch && titleMatch[1]) postTitle = titleMatch[1].trim();
-                }
-                if (!postContent && finalOutputText) {
-                    postContent = finalOutputText;
-                    if (postTitle) postContent = finalOutputText.substring(finalOutputText.indexOf('\n\n') + 2).trim();
-                }
-
-                // Display Title (if applicable)
-                if (outputType === 'publish' || outputType === 'publish_remote') {
-                    var $titleDisplay = $outputSection.find('.extracted-post-title');
-                    if ($titleDisplay.length === 0) { // Create if doesn't exist
-                         $titleDisplay = $('<p style="margin-bottom: 5px;"><strong>Title:</strong> <span class="extracted-post-title"></span></p>');
-                         $('#final-output-code-' + index).closest('pre').before($titleDisplay);
-                    }
-                    $titleDisplay.find('.extracted-post-title').text(postTitle || '(Title not found)');
-
-                    // Display Assigned Taxonomies
-                    var catName = data.output_result.assigned_category_name || 'None';
-                    var tagNames = data.output_result.assigned_tag_names && data.output_result.assigned_tag_names.length > 0 ? data.output_result.assigned_tag_names.join(', ') : 'None';
-                    var $taxInfo = $outputSection.find('.assigned-taxonomy-info');
-                    $taxInfo.find('.assigned-remote-category').text(catName);
-                    $taxInfo.find('.assigned-remote-tags').text(tagNames);
-                    $taxInfo.show();
-                }
-
-                // Display Final Content
-                $('#final-output-code-' + index).text(postContent);
-                $('#final-results-output-section-' + index).show();
-
-                // Update Button State
-                if (outputType === 'publish' || outputType === 'publish_remote') {
-                    var $publishButton = $('#publish-final-results-button-' + index);
-                    if (data.output_result && (data.output_result.remote_post_id || data.output_result.local_post_id)) {
-                        $publishButton.text('Published').css('background-color', 'lightgreen').prop('disabled', true);
-                    } else {
-                        $publishButton.text('Publish Failed').prop('disabled', false).css('background-color', 'lightcoral');
-                        var publishError = data.output_result.message || 'Unknown publishing error';
-                        $('#error-notices').append('<div class="notice notice-error inline"><p><strong>Publish Failed (' + sourceName + '):</strong> ' + publishError + '</p></div>');
-                    }
-                } else if (outputType === 'data_export') {
-                    initializeCopyButton(index); // Initialize the copy button
-                }
-
-            } else {
-                // Handle error from the backend processing steps
-                handleFileProcessingError(sourceName, response, index, $outputSection, 'Orchestration');
-            }
+        // New: Output raw JSON for each job step, no parsing or field extraction
+        function handleAjaxResponse(response, index, $outputSection, sourceName, jobSteps) {
+            // Clear the output section
+            $outputSection.empty();
+            // For each step, output the raw JSON
+            jobSteps.forEach(function(step, idx) {
+                var html = '<details open><summary>Step ' + (idx+1) + ': ' + (step.step || '(unnamed)') + ' (' + (step.timestamp || '') + ')</summary>';
+                html += '<div><strong>Request:</strong><pre style="white-space:pre-wrap;background:#f8f8f8;padding:4px;border-radius:3px;">' + JSON.stringify(step.request, null, 2) + '</pre></div>';
+                html += '<div><strong>Response:</strong><pre style="white-space:pre-wrap;background:#f8f8f8;padding:4px;border-radius:3px;">' + JSON.stringify(step.response, null, 2) + '</pre></div>';
+                html += '</details>';
+                $outputSection.append(html);
+            });
         }
 
         // Handles errors during the processing steps reported by the backend
@@ -576,12 +574,20 @@
 
              if (totalToPublish === 0) {
                  alert('No items available to publish.');
-                 $publishAllButton.prop('disabled', false).text('Publish All');
-                 return;
-             }
-             alert('Publish All functionality needs review for non-file sources.'); // Placeholder alert
-             $publishAllButton.prop('disabled', false).text('Publish All'); // Re-enable for now
-        });
+             $publishAllButton.prop('disabled', false).text('Publish All');
+             return;
+         }
+         alert('Publish All functionality needs review for non-file sources.'); // Placeholder alert
+         $publishAllButton.prop('disabled', false).text('Publish All'); // Re-enable for now
+     });
 
-    });
-})(jQuery);
+    }); // End of $(document).ready
+})(jQuery); // End of IIFE
+
+
+
+
+
+
+
+

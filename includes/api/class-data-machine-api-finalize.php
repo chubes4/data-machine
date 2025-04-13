@@ -208,6 +208,8 @@ class Data_Machine_API_Finalize {
             'timeout' => 120,
         );
 
+        // Debug: Log request args
+        error_log("DM Finalize Debug: Request Args: " . print_r($args, true));
         $response = wp_remote_post( $api_endpoint, $args );
 
         if ( is_wp_error( $response ) ) {
@@ -216,6 +218,8 @@ class Data_Machine_API_Finalize {
 
         $response_code = wp_remote_retrieve_response_code( $response );
         $response_body = wp_remote_retrieve_body( $response );
+        // Debug: Log raw response body
+        error_log("DM Finalize Debug: Raw Response Body: " . $response_body);
 
         if ( 200 !== $response_code ) {
             return new WP_Error( 'openai_api_error', 'o3-mini API error: ' . $response_code . ' - ' . $response_body );
@@ -233,6 +237,9 @@ class Data_Machine_API_Finalize {
         $final_output = preg_replace('/^```json\s*/i', '', $final_output);
         $final_output = preg_replace('/```$/i', '', $final_output);
         $final_output = trim($final_output);
+
+        // Debug: Log final result before returning
+        error_log("DM Finalize Debug: Final final_output: " . print_r($final_output, true));
 
         return array(
             'status'            => 'success',

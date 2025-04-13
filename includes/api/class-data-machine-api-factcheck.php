@@ -46,6 +46,8 @@ class Data_Machine_API_FactCheck {
             'timeout' => 60,
         );
 
+        // Debug: Log request args
+        error_log("DM FactCheck Debug: Request Args: " . print_r($args, true));
         $response = wp_remote_post( $api_endpoint, $args );
 
         if ( is_wp_error( $response ) ) {
@@ -54,6 +56,8 @@ class Data_Machine_API_FactCheck {
 
         $response_code = wp_remote_retrieve_response_code( $response );
         $response_body = wp_remote_retrieve_body( $response );
+        // Debug: Log raw response body
+        error_log("DM FactCheck Debug: Raw Response Body: " . $response_body);
 
         if ( 200 !== $response_code ) {
             return new WP_Error( 'openai_api_error', 'gpt-4o-search-preview API error: ' . $response_code . ' - ' . $response_body );
@@ -65,7 +69,10 @@ class Data_Machine_API_FactCheck {
             return new WP_Error( 'openai_api_response_error', 'Invalid gpt-4o-search-preview API response: ' . $response_body );
         }
 
-        $fact_check_results = $decoded_response['choices'][0]['message']['content'];
+        $fact_check_results = $decoded_response['choices'][0]['message']['content'] ?? null; // Handle potential missing content
+
+        // Debug: Log final result before returning
+        error_log("DM FactCheck Debug: Final fact_check_results: " . print_r($fact_check_results, true));
 
         return array(
             'status'             => 'success',

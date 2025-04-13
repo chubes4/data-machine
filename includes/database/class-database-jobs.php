@@ -96,6 +96,12 @@ class Data_Machine_Database_Jobs {
             module_config longtext NULL, /* JSON config used for this specific job run */
             input_data longtext NULL, /* JSON input data used */
             result_data longtext NULL, /* JSON output/result/error */
+            step1_initial_request longtext NULL,
+            step1_initial_response longtext NULL,
+            step2_factcheck_request longtext NULL,
+            step2_factcheck_response longtext NULL,
+            step3_finalize_request longtext NULL,
+            step3_finalize_response longtext NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,

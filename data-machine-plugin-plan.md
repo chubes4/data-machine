@@ -72,29 +72,16 @@ The plugin now utilizes a significantly more modular architecture designed for e
 
 ## Known Issues, TODOs & Enhancements (as of 2025-04-11)
 
-
-1. **Reddit Feed Filtering:**  
-   Reddit input handler needs logic to filter by a minimum number of upvotes.
-2. **Public REST API Sync:**  
-   Sync functionality for public REST APIs is not currently working.
 3. **RSS Imports:**  
    RSS import functionality has not been fully tested.
 4. **Image Hotlinking:**  
    Considering a system to hotlink images for remote/local publishing, with fallback for copyright/server bloat.
 5. **Custom Meta Field for Posts:**  
    Need to add a custom meta field to posts created by the plugin to flag them for future manipulation.
-8. **Logger Helper:**  
-   Add a debug mode setting to the logger.
 9. **Import/Export Helper:**  
    Add project/module metadata export if applicable and safe.
 10. **Project Dashboard Page:**  
    Implement more actions (e.g., edit, delete, advanced scheduling).
-11. **Module AJAX Handler:**  
-    Refactor input handler selection to use the locator more effectively; add new input types.
-12. **Settings Page:**  
-    Ensure 'settings_fields' service is registered in the locator.
-13. **Processing Orchestrator:**  
-    Replace transient logging with a proper logging service.
 14. **RSS Input Handler:**  
     Add order/offset options.
 15. **Import/Export Feature Review:**
@@ -104,18 +91,6 @@ The plugin now utilizes a significantly more modular architecture designed for e
       - New fields and handlers are supported as the system evolves.
       - Error handling and logging are robust and user-friendly.
     - TODO: Review and update import/export logic for full alignment with the modular system and future extensibility.
-16. **Reddit Input Handler:**  
-    Use a proper User-Agent, add more detailed messages, and time range options for 'top'.
-16. **Public REST API Handler:**  
-    Add auth/header settings.
-17. **Files Input Handler:**  
-    Add PDF/DOCX parsing and handle fileless runs.
-18. **Database Jobs:**  
-    Add more job management methods.
-19. **API AJAX Handler:**  
-    Add nonce check.
-20. **Remote Locations List Table:**  
-    Implement sorting, pagination, and bulk actions.
 21. **Settings Fields:**  
     Add plugin-wide filters or modifications.
 22. **General:**  
