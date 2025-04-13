@@ -291,8 +291,28 @@ class Data_Machine_Module_Handler {
                         }
                     }
                 }
+
+                // Add custom taxonomy fields (rest_{taxonomy_slug}) to the sanitized config
+                foreach ($current_handler_submitted_config as $key => $value) {
+                    if (
+                        !isset($sanitized_handler_config[$key]) &&
+                        preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)
+                    ) {
+                        $sanitized_handler_config[$key] = intval($value);
+                    }
+                }
                 // Assign the sanitized config for this handler slug
                 $output_config_to_save[$output_type_slug] = $sanitized_handler_config;
+            }
+        }
+
+        // --- Handle custom taxonomy fields (rest_{taxonomy_slug}) ---
+        foreach ($current_handler_submitted_config as $key => $value) {
+            if (
+                !isset($sanitized_handler_config[$key]) &&
+                preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)
+            ) {
+                $sanitized_handler_config[$key] = intval($value);
             }
         }
 

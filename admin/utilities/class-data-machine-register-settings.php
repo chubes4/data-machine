@@ -410,7 +410,6 @@ class Data_Machine_Register_Settings {
                 $sanitized['output_config'][$type] = $handler->sanitize_settings($config);
             }
         }
-
         return $sanitized;
     }
 

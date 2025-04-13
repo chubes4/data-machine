@@ -42,6 +42,31 @@ jQuery(document).ready(function($) {
 	}
 	// --- End Remember Active Tab ---
 
+	// --- Dynamic Custom Taxonomy Dropdown Visibility ---
+	function updateCustomTaxonomyDropdowns() {
+		const selectedPostType = $outputRemotePostTypeSelect.val();
+		$('.dm-taxonomy-row').each(function() {
+			const $row = $(this);
+			const $select = $row.find('select');
+			const postTypes = ($select.data('post-types') || '').split(',');
+			const selectedValue = $select.val();
+			const hasSavedValue = selectedValue && selectedValue !== '0' && selectedValue !== '' && selectedValue !== '-1';
+			if ((selectedPostType && postTypes.includes(selectedPostType)) || hasSavedValue) {
+				$row.show();
+				$select.prop('disabled', false);
+			} else {
+				$row.hide();
+				$select.prop('disabled', true);
+			}
+		});
+	}
+	
+
+	// If the select has a value on load, trigger change to ensure correct fields are shown
+	if ($outputRemotePostTypeSelect.val()) {
+		$outputRemotePostTypeSelect.trigger('change');
+	}
+
 	// --- Project/Module Selection Handling ---
 	// Ensure project_id is synchronized on page load
 	// This fixes the issue when there's only one project and no change event triggers
@@ -223,35 +248,42 @@ jQuery(document).ready(function($) {
                 }
             }
         }
-        populateSelectWithOptions(
-            $outputRemotePostTypeSelect,
-            postTypeOptionsArray,
-            postTypeDefaults,
-            savedPostType,
-            {} // Use default keys: value/text
-        );
+		populateSelectWithOptions(
+			$outputRemotePostTypeSelect,
+			postTypeOptionsArray,
+			postTypeDefaults,
+			savedPostType,
+			{} // Use default keys: value/text
+		);
+		
+		populateSelectWithOptions(
+			$outputRemoteCategorySelect,
+			siteInfo?.taxonomies?.category?.terms || [],
+			categoryDefaults,
+			savedCategoryId,
+			{ valueKey: 'term_id', textKey: 'name' }
+		);
+	
+		populateSelectWithOptions(
+			$outputRemoteTagSelect,
+			siteInfo?.taxonomies?.post_tag?.terms || [],
+			tagDefaults,
+			savedTagId,
+			{ valueKey: 'term_id', textKey: 'name' }
+		);
+			// Initial call on page load (after a short delay to ensure all values are set)
+	setTimeout(function() {
+		updateCustomTaxonomyDropdowns();
+	}, 10);
 
-        populateSelectWithOptions(
-            $outputRemoteCategorySelect,
-            siteInfo?.taxonomies?.category?.terms || [], // Use optional chaining
-            categoryDefaults,
-            savedCategoryId,
-            { valueKey: 'term_id', textKey: 'name' } // Config for term data structure
-        );
+	// Also trigger on post type change
+	$outputRemotePostTypeSelect.on('change', updateCustomTaxonomyDropdowns);
 
-        populateSelectWithOptions(
-            $outputRemoteTagSelect,
-            siteInfo?.taxonomies?.post_tag?.terms || [], // Use optional chaining
-            tagDefaults,
-            savedTagId,
-            { valueKey: 'term_id', textKey: 'name' } // Config for term data structure
-        );
-
-        // Re-enable selects after populating
-        $outputRemotePostTypeSelect.prop('disabled', false);
-        $outputRemoteCategorySelect.prop('disabled', false);
-        $outputRemoteTagSelect.prop('disabled', false);
-    } // End populateRemoteFieldsFromLocation
+		// Re-enable selects after populating
+		$outputRemotePostTypeSelect.prop('disabled', false);
+		$outputRemoteCategorySelect.prop('disabled', false);
+		$outputRemoteTagSelect.prop('disabled', false);
+	}
 
 	// Function to populate fields for INPUT (Helper REST API)
 	function populateHelperApiFieldsFromLocation(siteInfo, savedConfig) {
@@ -934,7 +966,6 @@ jQuery(document).ready(function($) {
 
 	// --- Form Submission (Save Module) ---
 	$('#data-machine-settings-form').on('submit', function(e) {
-		// Remove the e.preventDefault() to allow standard form submission
 		
 		// Basic validation only - if this fails, we'll prevent form submission
 		var moduleName = $('#module_name').val().trim();

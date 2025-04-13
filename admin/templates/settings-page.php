@@ -110,7 +110,12 @@ if (!function_exists('dm_render_settings_field')) {
 		$default = $field_config['default'] ?? '';
 		$value = $current_value ?? $default; // Use current value if set, otherwise default
 
-		echo '<tr>';
+		// Add class and data-taxonomy for taxonomy fields
+		$taxonomy_row_attrs = '';
+		if (isset($field_config['post_types'])) {
+			$taxonomy_row_attrs = ' class="dm-taxonomy-row" data-taxonomy="' . esc_attr($field_key) . '"';
+		}
+		echo '<tr' . $taxonomy_row_attrs . '>';
 		echo '<th scope="row"><label for="' . $field_id . '">' . $label . '</label></th>';
 		echo '<td>';
 
@@ -131,7 +136,12 @@ if (!function_exists('dm_render_settings_field')) {
 			case 'select':
 				$class = isset($field_config['class']) ? 'class="' . esc_attr($field_config['class']) . '"' : '';
 				$data_controls = isset($field_config['data_controls']) ? 'data-controls="' . esc_attr($field_config['data_controls']) . '"' : '';
-				echo '<select id="' . $field_id . '" name="' . $field_name . '" ' . $class . ' ' . $data_controls . '>';
+				// Add data-post-types attribute for taxonomy fields
+				$data_post_types = '';
+				if (isset($field_config['post_types']) && is_array($field_config['post_types'])) {
+					$data_post_types = 'data-post-types="' . esc_attr(implode(',', $field_config['post_types'])) . '"';
+				}
+				echo '<select id="' . $field_id . '" name="' . $field_name . '" ' . $class . ' ' . $data_controls . ' ' . $data_post_types . '>';
 				foreach ($options as $opt_value => $opt_label) {
 					echo '<option value="' . esc_attr($opt_value) . '" ' . selected($value, $opt_value, false) . '>' . esc_html($opt_label) . '</option>';
 				}

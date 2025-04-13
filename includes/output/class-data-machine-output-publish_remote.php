@@ -258,22 +258,36 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 	 */
 	public static function get_settings_fields(array $current_config = [], ?Data_Machine_Service_Locator $locator = null): array {
 		$locations_options = ['' => '-- Select Location --'];
-		// Define only placeholder/default options initially. JS will populate the rest.
 		$post_type_options = [ '' => '-- Select Location First --' ];
 		$category_options = [ '' => '-- Select Location First --', '-1' => '-- Let Model Decide --', '0' => '-- Instruct Model --' ];
 		$tag_options = [ '' => '-- Select Location First --', '-1' => '-- Let Model Decide --', '0' => '-- Instruct Model --' ];
 
-		// Always set the selected value from $current_config for each field
 		$selected_post_type = $current_config['selected_remote_post_type'] ?? '';
 		$selected_category_id = $current_config['selected_remote_category_id'] ?? -1;
 		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? -1;
 
-		return [
+		// --- NEW: Retrieve site_info for dynamic taxonomy fields ---
+		$site_info = [];
+		if (!empty($current_config['location_id']) && $locator) {
+			try {
+				$db_locations = $locator->get('database_remote_locations');
+				$user_id = get_current_user_id();
+				$location = $db_locations->get_location($current_config['location_id'], $user_id);
+				if ($location && !empty($location->synced_site_info)) {
+					$site_info = json_decode($location->synced_site_info, true);
+				}
+			} catch (\Exception $e) {
+				// Log error if needed
+			}
+		}
+
+		// --- Build base fields ---
+		$fields = [
 			'location_id' => [
 				'type' => 'select',
 				'label' => __('Remote Location', 'data-machine'),
 				'description' => __('Select a pre-configured remote publishing location. Manage locations <a href="' . admin_url('admin.php?page=dm-remote-locations') . '" target="_blank">here</a>.', 'data-machine'),
-				'options' => $locations_options, // Note: These are still populated by Data_Machine_Settings_Fields class
+				'options' => $locations_options,
 				'required' => true,
 				'default' => '',
 			],
@@ -281,8 +295,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'type' => 'select',
 				'label' => __('Remote Post Type', 'data-machine'),
 				'description' => __('Select the post type on the target site. Populated after selecting a location.', 'data-machine'),
-				'options' => $post_type_options, // Use simplified options
-				'default' => $selected_post_type, // Keep setting default value
+				'options' => $post_type_options,
+				'default' => $selected_post_type,
 			],
 			'remote_post_status' => [
 				'type' => 'select',
@@ -310,17 +324,45 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'type' => 'select',
 				'label' => __('Remote Category', 'data-machine'),
 				'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
-				'options' => $category_options, // Use simplified options
-				'default' => $selected_category_id, // Keep setting default value
+				'options' => $category_options,
+				'default' => $selected_category_id,
 			],
 			'selected_remote_tag_id' => [
 				'type' => 'select',
 				'label' => __('Remote Tag', 'data-machine'),
 				'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
-				'options' => $tag_options, // Use simplified options
-				'default' => $selected_tag_id, // Keep setting default value
+				'options' => $tag_options,
+				'default' => $selected_tag_id,
 			],
 		];
+
+		// --- NEW: Add dynamic custom taxonomy fields if site_info is available ---
+		if (!empty($site_info['taxonomies']) && is_array($site_info['taxonomies'])) {
+			foreach ($site_info['taxonomies'] as $tax_slug => $tax_data) {
+				if (in_array($tax_slug, ['category', 'post_tag'])) {
+					continue; // Already handled above
+				}
+				$tax_options = [0 => '-- Select ' . ($tax_data['label'] ?? ucfirst($tax_slug)) . ' --'];
+				if (!empty($tax_data['terms']) && is_array($tax_data['terms'])) {
+					foreach ($tax_data['terms'] as $term) {
+						if (isset($term['term_id']) && isset($term['name'])) {
+							$tax_options[$term['term_id']] = $term['name'];
+						}
+					}
+				}
+				if (count($tax_options) > 1) {
+					$fields['rest_' . $tax_slug] = [
+						'type' => 'select',
+						'label' => $tax_data['label'] ?? ucfirst($tax_slug),
+						'options' => $tax_options,
+						'post_types' => $tax_data['post_types'] ?? [],
+						'description' => 'Select a ' . ($tax_data['label'] ?? $tax_slug) . ' for this post.',
+					];
+				}
+			}
+		}
+
+		return $fields;
 	}
 /**
  * Sanitize settings for the Publish Remote output handler.
@@ -338,6 +380,15 @@ public function sanitize_settings(array $raw_settings): array {
 	$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
 	$sanitized['selected_remote_category_id'] = intval($raw_settings['selected_remote_category_id'] ?? -1);
 	$sanitized['selected_remote_tag_id'] = intval($raw_settings['selected_remote_tag_id'] ?? -1);
+	// Handle custom taxonomy fields (rest_{taxonomy_slug})
+	foreach ($raw_settings as $key => $value) {
+		if (
+			!isset($sanitized[$key]) &&
+			preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)
+		) {
+			$sanitized[$key] = intval($value);
+		}
+	}
 	return $sanitized;
 }
 
