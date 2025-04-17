@@ -76,15 +76,15 @@ class Data_Machine_Register_Settings {
         $this->sections = array(
             'general' => array(
                 'id'    => 'general',
-                'title' => __( 'General Settings', 'data-machine' ),
+                'title' => 'General Settings',
             ),
             'api' => array(
                 'id'    => 'api',
-                'title' => __( 'API Settings', 'data-machine' ),
+                'title' => 'API Settings',
             ),
             'scheduling' => array(
                 'id'    => 'scheduling',
-                'title' => __( 'Scheduling Settings', 'data-machine' ),
+                'title' => 'Scheduling Settings',
             ),
         );
 
@@ -93,45 +93,45 @@ class Data_Machine_Register_Settings {
             // General settings
             'enable_plugin' => array(
                 'id'          => 'enable_plugin',
-                'title'       => __( 'Enable Plugin', 'data-machine' ),
+                'title'       => 'Enable Plugin', // Translate later
                 'callback'    => array( $this, 'checkbox_field_callback' ),
                 'section'     => 'general',
                 'args'        => array(
                     'label_for' => 'enable_plugin',
-                    'desc'      => __( 'Enable or disable the plugin functionality.', 'data-machine' ),
+                    'desc'      => 'Enable or disable the plugin functionality.', // Translate later
                 ),
             ),
             'debug_mode' => array(
                 'id'          => 'debug_mode',
-                'title'       => __( 'Debug Mode', 'data-machine' ),
+                'title'       => 'Debug Mode', // Translate later
                 'callback'    => array( $this, 'checkbox_field_callback' ),
                 'section'     => 'general',
                 'args'        => array(
                     'label_for' => 'debug_mode',
-                    'desc'      => __( 'Enable debug mode for additional logging.', 'data-machine' ),
+                    'desc'      => 'Enable debug mode for additional logging.', // Translate later
                 ),
             ),
             
             // API settings
             'api_key' => array(
                 'id'          => 'api_key',
-                'title'       => __( 'API Key', 'data-machine' ),
+                'title'       => 'API Key', // Translate later
                 'callback'    => array( $this, 'text_field_callback' ),
                 'section'     => 'api',
                 'args'        => array(
                     'label_for' => 'api_key',
-                    'desc'      => __( 'Enter your API key.', 'data-machine' ),
+                    'desc'      => 'Enter your API key.', // Translate later
                     'class'     => 'regular-text',
                 ),
             ),
             'api_endpoint' => array(
                 'id'          => 'api_endpoint',
-                'title'       => __( 'API Endpoint', 'data-machine' ),
+                'title'       => 'API Endpoint', // Translate later
                 'callback'    => array( $this, 'text_field_callback' ),
                 'section'     => 'api',
                 'args'        => array(
                     'label_for' => 'api_endpoint',
-                    'desc'      => __( 'Enter the API endpoint URL.', 'data-machine' ),
+                    'desc'      => 'Enter the API endpoint URL.', // Translate later
                     'class'     => 'regular-text',
                 ),
             ),
@@ -139,28 +139,23 @@ class Data_Machine_Register_Settings {
             // Scheduling settings
             'enable_scheduling' => array(
                 'id'          => 'enable_scheduling',
-                'title'       => __( 'Enable Scheduling', 'data-machine' ),
+                'title'       => 'Enable Scheduling', // Translate later
                 'callback'    => array( $this, 'checkbox_field_callback' ),
                 'section'     => 'scheduling',
                 'args'        => array(
                     'label_for' => 'enable_scheduling',
-                    'desc'      => __( 'Enable scheduled data machine.', 'data-machine' ),
+                    'desc'      => 'Enable scheduled data machine.', // Translate later
                 ),
             ),
             'schedule_frequency' => array(
                 'id'          => 'schedule_frequency',
-                'title'       => __( 'Schedule Frequency', 'data-machine' ),
+                'title'       => 'Schedule Frequency', // Translate later
                 'callback'    => array( $this, 'select_field_callback' ),
                 'section'     => 'scheduling',
                 'args'        => array(
                     'label_for' => 'schedule_frequency',
-                    'desc'      => __( 'Select how often to run data machine.', 'data-machine' ),
-                    'options'   => array(
-                        'hourly'     => __( 'Hourly', 'data-machine' ),
-                        'twicedaily' => __( 'Twice Daily', 'data-machine' ),
-                        'daily'      => __( 'Daily', 'data-machine' ),
-                        'weekly'     => __( 'Weekly', 'data-machine' ),
-                    ),
+                    'desc'      => 'Select how often to run data machine.', // Translate later
+                    'options'   => Data_Machine_Constants::CRON_SCHEDULES,
                 ),
             ),
         );
@@ -192,7 +187,7 @@ class Data_Machine_Register_Settings {
         foreach ( $this->sections as $section ) {
             add_settings_section(
                 $section['id'],
-                $section['title'],
+                __( $section['title'], 'data-machine' ),
                 array( $this, 'section_callback' ),
                 $this->settings_group
             );
@@ -202,7 +197,7 @@ class Data_Machine_Register_Settings {
         foreach ( $this->fields as $field ) {
             add_settings_field(
                 $field['id'],
-                $field['title'],
+                __( $field['title'], 'data-machine' ), // Translate title here
                 $field['callback'],
                 $this->settings_group,
                 $field['section'],
@@ -227,9 +222,38 @@ class Data_Machine_Register_Settings {
             'instagram_oauth_client_secret'
         );
 
+        // Register Reddit OAuth settings for the API / Auth page (NEW)
+        register_setting(
+            'dm_api_keys_group',
+            'reddit_oauth_client_id',
+            ['sanitize_callback' => 'sanitize_text_field'] // Add basic sanitization
+        );
+        register_setting(
+            'dm_api_keys_group',
+            'reddit_oauth_client_secret',
+            ['sanitize_callback' => 'sanitize_text_field'] // Add basic sanitization
+        );
+         register_setting(
+            'dm_api_keys_group',
+            'reddit_developer_username',
+            ['sanitize_callback' => 'sanitize_text_field'] // Add basic sanitization
+        );
+
+        // Register Twitter App Keys settings
+        register_setting(
+            'dm_api_keys_group',
+            'twitter_api_key',
+            ['sanitize_callback' => 'sanitize_text_field']
+        );
+        register_setting(
+            'dm_api_keys_group',
+            'twitter_api_secret',
+            ['sanitize_callback' => 'sanitize_text_field']
+        );
+
         // Add settings section for API key on the API Keys page
         add_settings_section(
-            'api_keys_section',   // ID 
+            'api_keys_section',   // ID
             'OpenAI API Key',     // Title
             array( $this, 'print_api_settings_section_info' ), // Callback for section description
             'dm-api-keys'        // Page slug for the page
@@ -308,7 +332,7 @@ class Data_Machine_Register_Settings {
         echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="Data_Machine_options[' . esc_attr( $id ) . ']" value="1" ' . checked( 1, $checked, false ) . '/>';
         
         if ( isset( $args['desc'] ) ) {
-            echo '<p class="description">' . esc_html( $args['desc'] ) . '</p>';
+            echo '<p class="description">' . esc_html__( $args['desc'], 'data-machine' ) . '</p>'; // Translate and escape desc here
         }
     }
 
@@ -327,7 +351,7 @@ class Data_Machine_Register_Settings {
         echo '<input type="text" id="' . esc_attr( $id ) . '" name="Data_Machine_options[' . esc_attr( $id ) . ']" value="' . esc_attr( $value ) . '" class="' . esc_attr( $class ) . '" />';
         
         if ( isset( $args['desc'] ) ) {
-            echo '<p class="description">' . esc_html( $args['desc'] ) . '</p>';
+            echo '<p class="description">' . esc_html__( $args['desc'], 'data-machine' ) . '</p>'; // Translate and escape desc here
         }
     }
 
@@ -351,7 +375,7 @@ class Data_Machine_Register_Settings {
         echo '</select>';
         
         if ( isset( $args['desc'] ) ) {
-            echo '<p class="description">' . esc_html( $args['desc'] ) . '</p>';
+            echo '<p class="description">' . esc_html__( $args['desc'], 'data-machine' ) . '</p>'; // Translate and escape desc here
         }
     }
 
@@ -363,54 +387,42 @@ class Data_Machine_Register_Settings {
      * @return array Sanitized options.
      */
     public function sanitize_options( $input ) {
-        $sanitized = array();
+        $sanitized_input = array();
+        $options = get_option('Data_Machine_options', array());
 
-        if ( ! is_array( $input ) ) {
-            return $sanitized;
-        }
+        foreach ( $this->fields as $field ) {
+            $field_id = $field['id'];
+            $field_value = isset( $input[$field_id] ) ? $input[$field_id] : null;
 
-        // Handle global plugin options (booleans, API key, etc.)
-        $global_keys = ['enable_plugin', 'debug_mode', 'enable_scheduling', 'api_key', 'api_endpoint', 'schedule_frequency'];
-        foreach ($global_keys as $key) {
-            if (isset($input[$key])) {
-                switch ($key) {
-                    case 'enable_plugin':
-                    case 'debug_mode':
-                    case 'enable_scheduling':
-                        $sanitized[$key] = isset($input[$key]) ? 1 : 0;
-                        break;
-                    case 'api_key':
-                    case 'api_endpoint':
-                        $sanitized[$key] = sanitize_text_field($input[$key]);
-                        break;
-                    case 'schedule_frequency':
-                        $valid_options = array('hourly', 'twicedaily', 'daily', 'weekly');
-                        $sanitized[$key] = in_array($input[$key], $valid_options) ? $input[$key] : 'daily';
-                        break;
-                }
+            // Perform sanitization based on field type or specific logic
+            switch ($field_id) {
+                case 'enable_plugin':
+                case 'debug_mode':
+                case 'enable_scheduling':
+                    $sanitized_input[$field_id] = ($field_value === 'on') ? 1 : 0;
+                    break;
+                case 'api_key':
+                case 'api_endpoint':
+                    $sanitized_input[$field_id] = sanitize_text_field($field_value);
+                    break;
+                case 'schedule_frequency':
+                    // Sanitize against the allowed keys from constants
+                    $valid_options = Data_Machine_Constants::get_project_cron_intervals(); // Use project intervals
+                    if ( in_array($field_value, $valid_options) ) {
+                        $sanitized_input[$field_id] = $field_value;
+                    } else {
+                        // Set to default or existing value if invalid
+                        $sanitized_input[$field_id] = isset($options[$field_id]) ? $options[$field_id] : 'daily'; 
+                    }
+                    break;
+                default:
+                    // Handle other fields or provide a default sanitization
+                    $sanitized_input[$field_id] = sanitize_text_field($field_value);
+                    break;
             }
         }
 
-        // Sanitize input handler settings
-        if (isset($input['data_source_type']) && isset($input['data_source_config'])) {
-            $type = $input['data_source_type'];
-            $config = $input['data_source_config'][$type] ?? [];
-            $handler = $this->locator->get('handler_registry')->get_input_handler_instance($type);
-            if ($handler && method_exists($handler, 'sanitize_settings')) {
-                $sanitized['data_source_config'][$type] = $handler->sanitize_settings($config);
-            }
-        }
-
-        // Sanitize output handler settings
-        if (isset($input['output_type']) && isset($input['output_config'])) {
-            $type = $input['output_type'];
-            $config = $input['output_config'][$type] ?? [];
-            $handler = $this->locator->get('handler_registry')->get_output_handler_instance($type);
-            if ($handler && method_exists($handler, 'sanitize_settings')) {
-                $sanitized['output_config'][$type] = $handler->sanitize_settings($config);
-            }
-        }
-        return $sanitized;
+        return $sanitized_input;
     }
 
     /**

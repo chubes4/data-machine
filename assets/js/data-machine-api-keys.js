@@ -1,3 +1,18 @@
+/**
+ * Data Machine Instagram API Key Management Script.
+ *
+ * Handles listing, authenticating (via OAuth popup), and removing Instagram accounts
+ * associated with the current user for use within the Data Machine plugin.
+ * It interacts with WordPress AJAX handlers defined in Data_Machine_Ajax_Instagram_Auth.
+ *
+ * Key Functions:
+ * - listInstagramAccounts: Fetches accounts via AJAX.
+ * - renderInstagramAccounts: Displays the list of accounts using jQuery.
+ * - Event listener for `#instagram-authenticate-btn`: Initiates the OAuth popup flow.
+ * - Event listener for `.instagram-remove-account-btn`: Removes an account via AJAX.
+ *
+ * @since NEXT_VERSION
+ */
 jQuery(document).ready(function($) {
     function listInstagramAccounts() {
         $.post(dmInstagramAuthParams.ajax_url, {
@@ -13,22 +28,37 @@ jQuery(document).ready(function($) {
     }
 
     function renderInstagramAccounts(accounts) {
-        var html = '';
+        var $list = $('<ul></ul>');
         if (accounts.length === 0) {
-            html = '<p>No Instagram accounts authenticated yet.</p>';
-        } else {
-            html = '<ul>';
-            accounts.forEach(function(acct) {
-                html += '<li style="margin-bottom: 10px;">' +
-                    (acct.profile_pic ? '<img src="' + acct.profile_pic + '" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:8px;">' : '') +
-                    '<strong>' + acct.username + '</strong> ' +
-                    (acct.expires_at ? '<span style="color:#888;">(expires: ' + acct.expires_at + ')</span> ' : '') +
-                    '<button class="button button-small instagram-remove-account-btn" data-account-id="' + acct.id + '">Remove</button>' +
-                    '</li>';
-            });
-            html += '</ul>';
+            $('#instagram-accounts-list').html('<p>No Instagram accounts authenticated yet.</p>');
+            return;
         }
-        $('#instagram-accounts-list').html(html);
+
+        accounts.forEach(function(acct) {
+            var $listItem = $('<li>').css('margin-bottom', '10px');
+
+            if (acct.profile_pic) {
+                $('<img>').attr({
+                    src: acct.profile_pic,
+                    style: 'width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:8px;'
+                }).appendTo($listItem);
+            }
+
+            $('<strong>').text(acct.username).appendTo($listItem);
+
+            if (acct.expires_at) {
+                $('<span>').text(' (expires: ' + acct.expires_at + ') ').css('color', '#888').appendTo($listItem);
+            }
+
+            $('<button>').addClass('button button-small instagram-remove-account-btn')
+                .attr('data-account-id', acct.id)
+                .text('Remove')
+                .appendTo($listItem);
+
+            $listItem.appendTo($list);
+        });
+
+        $('#instagram-accounts-list').empty().append($list);
     }
 
     // Remove account

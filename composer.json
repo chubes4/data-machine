@@ -1,0 +1,25 @@
+{
+    "require": {
+        "erusev/parsedown": "^1.7",
+        "monolog/monolog": "^3.9",
+        "abraham/twitteroauth": "^7.0"
+    },
+    "autoload": {
+        "classmap": [
+            "includes/",
+            "admin/",
+            "airdrop-helper/",
+            "includes/database/",
+            "includes/ajax/",
+            "includes/api/",
+            "includes/engine/",
+            "includes/helpers/",
+            "includes/input/",
+            "includes/interfaces/",
+            "includes/output/"
+        ],
+        "files": [
+            "includes/class-data-machine-constants.php"
+        ]
+    }
+}

@@ -65,10 +65,14 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 		}
 
 		// --- Configuration ---
+		// The full config is nested under the handler's key
+		$handler_config = $source_config['airdrop_rest_api'] ?? [];
+
 		// Get remote location ID from source config
-		$location_id = absint($source_config['location_id'] ?? 0);
+		$location_id = absint($handler_config['location_id'] ?? 0); // Access via $handler_config
 		if (empty($location_id)) {
-			throw new Exception(__('No Remote Location selected for Helper REST API.', 'data-machine'));
+			// Updated error message for consistency
+			throw new Exception(__('No Remote Location selected for Airdrop REST API.', 'data-machine'));
 		}
 
 		// Get Remote Location details
@@ -76,8 +80,10 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 		if (!$db_remote_locations) {
 			throw new Exception(__('Remote Locations database service not available.', 'data-machine'));
 		}
-		// Fetch location data (no user ID check needed here as module ownership implies permission)
-		$location = $db_remote_locations->get_location($location_id);
+		// Fetch location data - User ID is required by the get_location method signature
+		// for ownership check, even if module ownership was checked earlier.
+		// Request decryption by setting the third argument to true
+		$location = $db_remote_locations->get_location($location_id, $user_id, true); 
 		if (!$location) {
 			throw new Exception(sprintf(__('Could not retrieve details for Remote Location ID: %d.', 'data-machine'), $location_id));
 		}
@@ -85,11 +91,12 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 		// Extract connection details from the location object
 		$endpoint_url_base = trim($location->target_site_url ?? '');
 		$remote_user = trim($location->target_username ?? '');
-		// Use the decrypted password
-		$remote_password = $db_remote_locations->get_decrypted_password($location); // Use helper method
+		// Access the decrypted password property directly from the location object
+		$remote_password = $location->password ?? null; // Password property is set when decryption is requested
 
-		$process_limit = max(1, absint( $source_config['item_count'] ?? 1 )); // Process limit
-		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
+		// Access other settings via $handler_config
+		$process_limit = max(1, absint( $handler_config['item_count'] ?? 1 )); 
+		$timeframe_limit = $handler_config['timeframe_limit'] ?? 'all_time';
 		$fetch_batch_size = min(100, max(10, $process_limit * 2)); // Fetch reasonable batches, max 100
 
 		if ( empty( $endpoint_url_base ) || ! filter_var( $endpoint_url_base, FILTER_VALIDATE_URL ) ) {
@@ -118,13 +125,14 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 		$api_url_base = trailingslashit($endpoint_url_base) . 'wp-json/dma/v1/query-posts';
 
 		// Get query parameters from config for the initial request
-		$post_type = $source_config['rest_post_type'] ?? 'post';
-		$post_status = $source_config['rest_post_status'] ?? 'publish';
-		$category_id = $source_config['rest_category'] ?? 0;
-		$tag_id = $source_config['rest_tag'] ?? 0;
-		$orderby = $source_config['rest_orderby'] ?? 'date';
-		$order = $source_config['rest_order'] ?? 'DESC';
-		$search = $source_config['search'] ?? null; // Added search term
+		// Access via $handler_config
+		$post_type = $handler_config['rest_post_type'] ?? 'post';
+		$post_status = $handler_config['rest_post_status'] ?? 'publish';
+		$category_id = $handler_config['rest_category'] ?? 0;
+		$tag_id = $handler_config['rest_tag'] ?? 0;
+		$orderby = $handler_config['rest_orderby'] ?? 'date';
+		$order = $handler_config['rest_order'] ?? 'DESC';
+		$search = $handler_config['search'] ?? null; // Added search term
 
 		$eligible_items_packets = [];
 		$current_page = 1;
@@ -149,6 +157,10 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 			];
 			$current_api_url = add_query_arg( array_filter($query_params, function($value) { return $value !== null; }), $api_url_base );
 
+			// --- DEBUG LOGGING START ---
+			error_log("[DM Airdrop Debug] Requesting URL (Page {$current_page}): {$current_api_url}");
+			// --- DEBUG LOGGING END ---
+
 			// Prepare arguments for wp_remote_get
 			$args = array(
 				'headers' => array( 'Authorization' => $auth_header ),
@@ -170,6 +182,12 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 			$response_headers = wp_remote_retrieve_headers( $response ); // Get headers for potential pagination info
 			$body = wp_remote_retrieve_body( $response );
 
+			// --- DEBUG LOGGING START ---
+			error_log("[DM Airdrop Debug] Response Code: {$response_code}");
+			// Optionally log the first part of the body for brevity, or full body if needed
+			error_log("[DM Airdrop Debug] Response Body Snippet: " . substr($body, 0, 500)); 
+			// --- DEBUG LOGGING END ---
+
 			if ( $response_code !== 200 ) {
 				$error_data = json_decode( $body, true );
 				$error_message_detail = isset( $error_data['message'] ) ? $error_data['message'] : __( 'Unknown error occurred on the remote site.', 'data-machine' );
@@ -183,6 +201,11 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 
 			// Helper returns array under 'posts' key
 			$posts_data = $response_data['posts'] ?? [];
+
+			// --- DEBUG LOGGING START ---
+			$post_count = is_array($posts_data) ? count($posts_data) : 0;
+			error_log("[DM Airdrop Debug] Found {$post_count} posts in response.");
+			// --- DEBUG LOGGING END ---
 
 			if ( empty( $posts_data ) || ! is_array( $posts_data ) ) {
 				break; // No more items found on this page, stop pagination
@@ -201,6 +224,9 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 					}
 					$item_timestamp = strtotime($post['post_date_gmt']);
 					if ($item_timestamp === false || $item_timestamp < $cutoff_timestamp) {
+						// --- DEBUG LOGGING START ---
+						error_log("[DM Airdrop Debug] Skipping Post ID {$post['ID']} due to timeframe limit.");
+						// --- DEBUG LOGGING END ---
 						// If sorting by date desc, hitting an old item means we can stop entirely
 						if ($orderby === 'date' && $order === 'DESC') {
 							$hit_time_limit_boundary = true;
@@ -214,14 +240,21 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 				// Note: The source_type 'helper_rest_api' should match the handler slug derived from the class name.
 				// If the class name/slug changes, this might need updating.
 				if ( $db_processed_items->has_item_been_processed($module_id, 'airdrop_rest_api', $current_item_id) ) {
+					// --- DEBUG LOGGING START ---
+					error_log("[DM Airdrop Debug] Skipping Post ID {$current_item_id} as already processed.");
+					// --- DEBUG LOGGING END ---
 					continue; // Skip if already processed
 				}
 
 				// --- Item is ELIGIBLE! --- 
+				// --- DEBUG LOGGING START ---
+				error_log("[DM Airdrop Debug] Adding Post ID {$current_item_id} as eligible.");
+				// --- DEBUG LOGGING END ---
 				// Extract data (assuming Helper API structure)
 				$title = $post['post_title'] ?? 'N/A';
 				$content = $post['post_content'] ?? '';
 				$source_link = $post['guid'] ?? $endpoint_url_base; // Use guid, fallback to base URL
+				$image_url = $post['featured_image_url'] ?? null; // Get image URL
 
 				$content_string = "Title: " . $title . "\n\n" . $content; // Content is raw
 				
@@ -234,7 +267,8 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 						'original_id' => $current_item_id,
 						'source_url' => $source_link,
 						'original_title' => $title,
-						// Add other relevant fields from $post if needed
+						'image_source_url' => $image_url, // Add image URL to metadata
+						'original_date_gmt' => $post['post_date_gmt'] ?? null // Ensure GMT date is passed for potential use
 					]
 				];
 				array_push($eligible_items_packets, $input_data_packet);
@@ -290,18 +324,89 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 	 * Defines the settings fields for this input handler.
 	 *
 	 * @since 0.13.0
+	 * @param array $current_config Current configuration values for this handler (optional).
+	 * @param Data_Machine_Service_Locator|null $locator Service locator for dependency fetching.
 	 * @return array An associative array defining the settings fields.
 	 */
-	public static function get_settings_fields() {
-		// Fetch available remote locations dynamically (requires JavaScript to populate)
-		// Placeholder option for when JS hasn't loaded or no locations exist
-		$location_options = ['' => __('Select a Remote Location...', 'data-machine')];
+	public static function get_settings_fields(array $current_config = [], ?Data_Machine_Service_Locator $locator = null): array {
+		// Default options
+		$location_options = [
+			'' => __('-- Select Location --', 'data-machine')
+		];
+		$post_type_options = [ '' => '-- Select Location First --' ];
+		$category_options = [ '' => '-- Select Location First --' ]; // Keep only placeholder for categories/tags initially
+		$tag_options = [ '' => '-- Select Location First --' ];
+
+		// Populate locations from DB
+		if ($locator) {
+			try {
+				$db_locations = $locator->get('database_remote_locations');
+				// Fetch locations accessible by the current user
+				$locations = $db_locations->get_locations_for_user(get_current_user_id());
+				if ($locations) {
+					foreach ($locations as $loc) {
+						$location_options[$loc->location_id] = $loc->location_name;
+					}
+				}
+			} catch (\Exception $e) {
+				// Log error if locator fails
+				error_log('Data Machine Error: Failed to get remote locations service: ' . $e->getMessage());
+			}
+		}
+
+		// --- Pre-populate based on current config and synced info ---
+		$site_info = [];
+		$selected_location_id = $current_config['location_id'] ?? 0;
+
+		if ($selected_location_id && $locator) {
+			try {
+				$db_locations = $locator->get('database_remote_locations');
+				// Fetch the specific location - user ID check might not be strictly necessary here 
+				// if we assume config belongs to the user, but it adds a layer of verification.
+				$location = $db_locations->get_location($selected_location_id, get_current_user_id()); 
+				if ($location && !empty($location->synced_site_info)) {
+					$site_info = json_decode($location->synced_site_info, true);
+					if (is_array($site_info)) {
+						// Populate Post Types
+						if (!empty($site_info['post_types']) && is_array($site_info['post_types'])) {
+							$post_type_options = ['' => '-- Select Post Type --']; // Reset options
+							foreach ($site_info['post_types'] as $pt) {
+								if (isset($pt['name']) && isset($pt['label'])) {
+									$post_type_options[$pt['name']] = $pt['label'];
+								}
+							}
+						}
+						// Populate Categories
+						if (!empty($site_info['taxonomies']['category']['terms']) && is_array($site_info['taxonomies']['category']['terms'])) {
+							$category_options = ['' => '-- Any Category --']; // Reset options
+							foreach ($site_info['taxonomies']['category']['terms'] as $term) {
+								if (isset($term['term_id']) && isset($term['name'])) {
+									$category_options[$term['term_id']] = $term['name'];
+								}
+							}
+						}
+						// Populate Tags
+						if (!empty($site_info['taxonomies']['post_tag']['terms']) && is_array($site_info['taxonomies']['post_tag']['terms'])) {
+							$tag_options = ['' => '-- Any Tag --']; // Reset options
+							foreach ($site_info['taxonomies']['post_tag']['terms'] as $term) {
+								if (isset($term['term_id']) && isset($term['name'])) {
+									$tag_options[$term['term_id']] = $term['name'];
+								}
+							}
+						}
+					}
+				}
+			} catch (\Exception $e) {
+				error_log('Data Machine Error: Failed to get location/site info for pre-population: ' . $e->getMessage());
+			}
+		}
+		// --- End Pre-population --- 
 
 		return [
 			'location_id' => [
 				'label'       => __('Remote Location', 'data-machine'),
 				'type'        => 'select',
-				'options'     => $location_options, // Will be populated by JS
+				'options'     => $location_options, // Use populated options
 				'required'    => true,
 				'description' => __('Select the pre-configured Remote Location containing the Helper Plugin.', 'data-machine') . ' <a href="' . admin_url('admin.php?page=dm-remote-locations') . '" target="_blank">' . __('Manage Locations', 'data-machine') . '</a>',
 				'attributes'  => ['data-target-for' => 'airdrop_rest_api'] // Match handler slug
@@ -309,16 +414,16 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 			'rest_post_type' => [
 				'label'       => __('Post Type', 'data-machine'),
 				'type'        => 'select',
-				'options'     => ['' => __('Loading...', 'data-machine')], // Populated by JS based on selected location
+				'options'     => $post_type_options, // Use pre-populated options
 				'required'    => true,
 				'default'     => 'post',
 				'description' => __('Select the post type to fetch from the remote site. Populated after selecting a location.', 'data-machine'),
-				'dependency'  => ['field' => 'location_id', 'value' => ''] // Initially dependent on location selection
+				'dependency'  => ['field' => 'location_id', 'value' => ''] // Dependency still needed for JS changes
 			],
 			'rest_post_status' => [
 				'label'       => __('Post Status', 'data-machine'),
 				'type'        => 'select',
-				'options'     => [ // Standard post statuses
+				'options'     => [ // Standard post statuses (not dynamic)
                     'publish' => __('Published', 'data-machine'),
                     'pending' => __('Pending Review', 'data-machine'),
                     'draft'   => __('Draft', 'data-machine'),
@@ -333,23 +438,23 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 			'rest_category' => [
 				'label'       => __('Category (Optional)', 'data-machine'),
 				'type'        => 'select',
-				'options'     => ['' => __('Loading...', 'data-machine')], // Populated by JS
+				'options'     => $category_options, // Use pre-populated options
 				'required'    => false,
 				'description' => __('Filter by a specific category from the remote site. Populated after selecting a location.', 'data-machine'),
-				'dependency'  => ['field' => 'location_id', 'value' => ''] // Initially dependent
+				'dependency'  => ['field' => 'location_id', 'value' => ''] // Dependency still needed for JS changes
 			],
 			'rest_tag' => [
 				'label'       => __('Tag (Optional)', 'data-machine'),
 				'type'        => 'select',
-				'options'     => ['' => __('Loading...', 'data-machine')], // Populated by JS
+				'options'     => $tag_options, // Use pre-populated options
 				'required'    => false,
 				'description' => __('Filter by a specific tag from the remote site. Populated after selecting a location.', 'data-machine'),
-				'dependency'  => ['field' => 'location_id', 'value' => ''] // Initially dependent
+				'dependency'  => ['field' => 'location_id', 'value' => ''] // Dependency still needed for JS changes
 			],
 			'rest_orderby' => [
 				'label'       => __('Order By', 'data-machine'),
 				'type'        => 'select',
-				'options'     => [ // Common orderby parameters
+				'options'     => [
 					'date'          => __('Date', 'data-machine'),
 					'ID'            => __('ID', 'data-machine'),
 					'author'        => __('Author', 'data-machine'),
@@ -400,12 +505,10 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
                 'required' => true,
                 'description' => __('Only fetch items published within this timeframe.', 'data-machine'),
             ],
-            // REMOVED: target_site_url, target_username, application_password
 			'location_sync_info' => [
 				'label'       => __('Location Sync Info', 'data-machine'),
-				'type'        => 'html', // Custom type for display
-				// 'html'        => $html_content, // Removed to fix undefined variable error - JS handles content
-				'attributes'  => ['data-target-for' => 'airdrop_rest_api'] // Match handler slug
+				'type'        => 'html',
+				'attributes'  => ['data-target-for' => 'airdrop_rest_api'] 
 			],
 		];
 	}
@@ -435,10 +538,10 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 	 * Returns the user-friendly label for this input handler.
 	 *
 	 * @since 0.13.0
-	 * @return string The label for the handler.
+	 * @return string
 	 */
 	public static function get_label(): string {
-		return __('Airdrop REST API (via Remote Location)', 'data-machine');
+		return 'Airdrop REST API (via Remote Location)';
 	}
 
 } // End class Data_Machine_Input_Airdrop_Rest_Api

@@ -96,12 +96,7 @@ class Data_Machine_Database_Jobs {
             module_config longtext NULL, /* JSON config used for this specific job run */
             input_data longtext NULL, /* JSON input data used */
             result_data longtext NULL, /* JSON output/result/error */
-            step1_initial_request longtext NULL,
-            step1_initial_response longtext NULL,
-            step2_factcheck_request longtext NULL,
-            step2_factcheck_response longtext NULL,
-            step3_finalize_request longtext NULL,
-            step3_finalize_response longtext NULL,
+            /* Removed stepX_request/response columns - logging moved to files */
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,
@@ -114,6 +109,80 @@ class Data_Machine_Database_Jobs {
         dbDelta( $sql );
 
         // Note: We might not need to add default jobs here unlike default modules/projects.
+    }
+
+    /**
+     * Get a specific job record by its ID.
+     *
+     * @param int $job_id The job ID.
+     * @return object|null The job data as an object, or null if not found.
+     */
+    public function get_job( int $job_id ) {
+        global $wpdb;
+        if ( empty( $job_id ) ) {
+            return null;
+        }
+        $sql = $wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE job_id = %d",
+            $job_id
+        );
+        $job = $wpdb->get_row( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $this->table_name is safe
+        return $job;
+    }
+
+    /**
+     * Update the status and started_at time for a job.
+     *
+     * @param int    $job_id The job ID.
+     * @param string $status The new status (e.g., 'processing').
+     * @return bool True on success, false on failure.
+     */
+    public function start_job( int $job_id, string $status = 'processing' ): bool {
+        global $wpdb;
+        if ( empty( $job_id ) ) {
+            return false;
+        }
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'status' => $status,
+                'started_at' => current_time( 'mysql', 1 ), // GMT time
+            ],
+            ['job_id' => $job_id],
+            ['%s', '%s'], // Format for data
+            ['%d']  // Format for WHERE
+        );
+        return $updated !== false;
+    }
+
+    /**
+     * Update the status, result_data, and completed_at time for a job.
+     *
+     * @param int    $job_id       The job ID.
+     * @param string $status       The final status ('complete' or 'failed').
+     * @param string|null $result_data JSON string of the result or error details.
+     * @return bool True on success, false on failure.
+     */
+    public function complete_job( int $job_id, string $status, ?string $result_data ): bool {
+        global $wpdb;
+        if ( empty( $job_id ) || !in_array( $status, ['complete', 'failed'] ) ) {
+            return false;
+        }
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'status' => $status,
+                'result_data' => $result_data, // Store final result or error info
+                'completed_at' => current_time( 'mysql', 1 ), // GMT time
+            ],
+            ['job_id' => $job_id],
+            ['%s', '%s', '%s'], // Format for data
+            ['%d']  // Format for WHERE
+        );
+         if ( false === $updated ) {
+            error_log( 'Data Machine DB Jobs: Failed to complete job ' . $job_id . '. DB Error: ' . $wpdb->last_error );
+        }
+        return $updated !== false;
     }
 
     // TODO: Add methods for get_job, update_job_status etc. if needed elsewhere.

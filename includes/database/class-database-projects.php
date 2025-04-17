@@ -119,11 +119,20 @@ class Data_Machine_Database_Projects {
     public function update_project_schedule( $project_id, $interval, $status, $user_id ) {
         global $wpdb;
 
+        // +++ DETAILED DEBUG LOGGING +++
+        error_log("[DM_DB_Projects::update_project_schedule] START - PID: {$project_id}, Interval: '{$interval}', Status: '{$status}', UID: {$user_id}");
+
         // Validate interval and status against allowed values if needed
-        $allowed_intervals = ['every_5_minutes', 'hourly', 'twicedaily', 'daily', 'weekly'];
+        $allowed_intervals = Data_Machine_Constants::get_project_cron_intervals();
         $allowed_statuses = ['active', 'paused'];
-        if ( !in_array($interval, $allowed_intervals) || !in_array($status, $allowed_statuses) ) {
+        $is_valid_interval = in_array($interval, $allowed_intervals);
+        $is_valid_status = in_array($status, $allowed_statuses);
+        error_log("[DM_DB_Projects::update_project_schedule] Validation - Is Interval Valid? " . ($is_valid_interval ? 'Yes' : 'No') . ", Is Status Valid? " . ($is_valid_status ? 'Yes' : 'No'));
+        // +++ END DETAILED DEBUG LOGGING +++
+
+        if ( !$is_valid_interval || !$is_valid_status ) {
             error_log('Data Machine DB Projects: Invalid interval or status provided for update_project_schedule.');
+            error_log("[DM_DB_Projects::update_project_schedule] RETURN: false (Validation Failed)"); // +++ LOG +++
             return false;
         }
 
@@ -149,11 +158,17 @@ class Data_Machine_Database_Projects {
             )
         );
 
+        // +++ DETAILED DEBUG LOGGING +++
+        error_log("[DM_DB_Projects::update_project_schedule] Result of \$wpdb->update: " . var_export($updated, true));
+        // +++ END DETAILED DEBUG LOGGING +++
+
         if ( false === $updated ) {
             error_log( 'Data Machine DB Projects: Failed to update schedule for project ID: ' . $project_id . '. DB Error: ' . $wpdb->last_error );
+            error_log("[DM_DB_Projects::update_project_schedule] RETURN: false (wpdb->update failed)"); // +++ LOG +++
             return false;
         }
 
+        error_log("[DM_DB_Projects::update_project_schedule] RETURN: " . var_export($updated, true) . " (Success/No Change)"); // +++ LOG +++
         return $updated; // Returns number of rows affected (0 or 1 usually)
     }
 
@@ -204,6 +219,7 @@ class Data_Machine_Database_Projects {
             project_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             user_id bigint(20) unsigned NOT NULL,
             project_name varchar(255) NOT NULL DEFAULT '',
+            project_prompt text NULL,
             schedule_interval varchar(50) NOT NULL DEFAULT 'manual',
             schedule_status varchar(20) NOT NULL DEFAULT 'paused',
             last_run_at datetime NULL DEFAULT NULL,

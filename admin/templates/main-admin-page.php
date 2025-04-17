@@ -49,10 +49,10 @@ $data_source_type = $current_module && isset($current_module->data_source_type) 
             <br><br>
             <button type="submit" id="process-files-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Process Files</button>
         </form>
-    <?php elseif ($data_source_type === 'helper_rest_api'): // Updated slug ?>
-    		<div id="airdrop-processing-section"> <?php // Updated ID ?>
+    <?php elseif ($data_source_type === 'airdrop_rest_api'): // Correct slug used here ?>
+    		<div id="airdrop-rest-api-processing-section"> <?php // Updated ID to be more specific ?>
     			<p>This module is configured to use a <strong>WP Site (via Helper Plugin)</strong> as the data source.</p>
-    			<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Helper API Data</button>
+    			<button type="button" id="process-remote-data-source-button" class="button button-primary" <?php echo empty($current_module_id) ? 'disabled' : ''; ?>>Fetch and Process Airdrop API Data</button>
     		</div>
     <?php elseif ($data_source_type === 'public_rest_api'): // Added condition for public API ?>
     		<div id="public-rest-processing-section">

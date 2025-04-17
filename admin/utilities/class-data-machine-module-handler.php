@@ -150,9 +150,9 @@ class Data_Machine_Module_Handler {
 
         // --- Get General Module Data ---
         $module_name = isset($_POST['module_name']) ? sanitize_text_field($_POST['module_name']) : '';
-        $process_prompt = isset($_POST['process_data_prompt']) ? wp_kses_post($_POST['process_data_prompt']) : '';
-        $fact_check_prompt = isset($_POST['fact_check_prompt']) ? wp_kses_post($_POST['fact_check_prompt']) : '';
-        $finalize_prompt = isset($_POST['finalize_response_prompt']) ? wp_kses_post($_POST['finalize_response_prompt']) : '';
+        $process_prompt = isset($_POST['process_data_prompt']) ? wp_kses_post(wp_unslash($_POST['process_data_prompt'])) : '';
+        $fact_check_prompt = isset($_POST['fact_check_prompt']) ? wp_kses_post(wp_unslash($_POST['fact_check_prompt'])) : '';
+        $finalize_prompt = isset($_POST['finalize_response_prompt']) ? wp_kses_post(wp_unslash($_POST['finalize_response_prompt'])) : '';
 
         // --- Get Selected Handler Slugs ---
         $data_source_type_slug = isset($_POST['data_source_type']) ? sanitize_key($_POST['data_source_type']) : 'files';
@@ -195,7 +195,11 @@ class Data_Machine_Module_Handler {
                             case 'rest_tag':
                             case 'category':
                             case 'tag':
-                                $sanitized_handler_config[$key] = intval($value);
+                                if ($value === 'model_decides' || $value === 'instruct_model') {
+                                    $sanitized_handler_config[$key] = $value;
+                                } else {
+                                    $sanitized_handler_config[$key] = intval($value);
+                                }
                                 break;
                             case 'rest_post_type':
                             case 'rest_post_status':
@@ -246,6 +250,10 @@ class Data_Machine_Module_Handler {
             // Check if the dynamic class exists and has the method
             if (class_exists($output_handler_class) && method_exists($output_handler_class, 'get_settings_fields')) {
                 $fields = $settings_fields_service->get_fields_for_handler('output', $output_type_slug);
+                // Ensure config is always an array to avoid undefined index notices for handlers with no settings fields
+                if (!isset($submitted_output_config[$output_type_slug]) || !is_array($submitted_output_config[$output_type_slug])) {
+                    $submitted_output_config[$output_type_slug] = [];
+                }
                 $current_handler_submitted_config = $submitted_output_config[$output_type_slug];
                 $sanitized_handler_config = []; // Temporary storage for this handler's sanitized fields
                 foreach ($fields as $key => $config) {
@@ -274,7 +282,11 @@ class Data_Machine_Module_Handler {
                             case 'selected_remote_category_id':
                             case 'selected_local_tag_id':
                             case 'selected_remote_tag_id':
-                                $sanitized_handler_config[$key] = intval($value);
+                                if ($value === 'model_decides' || $value === 'instruct_model') {
+                                    $sanitized_handler_config[$key] = $value;
+                                } else {
+                                    $sanitized_handler_config[$key] = intval($value);
+                                }
                                 break;
                             case 'post_type':
                             case 'post_status':
@@ -298,7 +310,11 @@ class Data_Machine_Module_Handler {
                         !isset($sanitized_handler_config[$key]) &&
                         preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)
                     ) {
-                        $sanitized_handler_config[$key] = intval($value);
+                        if ($value === 'model_decides' || $value === 'instruct_model') {
+                            $sanitized_handler_config[$key] = $value;
+                        } else {
+                            $sanitized_handler_config[$key] = intval($value);
+                        }
                     }
                 }
                 // Assign the sanitized config for this handler slug
@@ -307,6 +323,9 @@ class Data_Machine_Module_Handler {
         }
 
         // --- Handle custom taxonomy fields (rest_{taxonomy_slug}) ---
+        if (!isset($current_handler_submitted_config) || !is_array($current_handler_submitted_config)) {
+            $current_handler_submitted_config = [];
+        }
         foreach ($current_handler_submitted_config as $key => $value) {
             if (
                 !isset($sanitized_handler_config[$key]) &&
@@ -317,6 +336,11 @@ class Data_Machine_Module_Handler {
         }
 
         // --- Handle Module Create / Update ---
+        $logger = $this->locator->get('logger'); // Ensure logger is available here
+
+        // Log the prepared data before saving
+        $logger->debug('Save Handler: Prepared data_source_config', ['config' => $data_source_config_to_save]);
+        $logger->debug('Save Handler: Prepared output_config', ['config' => $output_config_to_save]);
 
         // Handle new module creation
         if ($submitted_value === 'new') {
@@ -421,6 +445,9 @@ class Data_Machine_Module_Handler {
             if ($new_output_config_json !== $existing_output_config_json) {
                 $update_data['output_config'] = $output_config_to_save;
             }
+
+            // Log the final update data before DB call
+            $logger->debug('Save Handler: Final update_data for DB', ['update_data' => $update_data]);
 
             // Only update the database if there are actual changes
             if (!empty($update_data)) {

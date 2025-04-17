@@ -164,6 +164,10 @@ if (!function_exists('dm_render_settings_field')) {
 				echo '</div>';
 				$description = ''; // Clear description as it's inside wrapper
 				break;
+			case 'checkbox':
+				echo '<input type="checkbox" id="' . $field_id . '" name="' . $field_name . '" value="1" ' . checked(1, $value, false) . ' />';
+				// Description is handled outside the switch for checkboxes
+				break;
 			case 'button':
 				$button_id = $field_config['button_id'] ?? $field_id . '_button';
 				$button_text = $field_config['button_text'] ?? 'Button';
@@ -255,7 +259,7 @@ settings_errors('Data_Machine_messages');
 								 <option value=""><?php echo empty($current_project_id) ? __('Please create a project first', 'data-machine') : __('No modules in this project', 'data-machine'); ?></option>
 							<?php endif; ?>
 						</select>
-						<button type="button" id="create-new-module" class="button button-secondary" style="margin-left: 10px;" <?php echo empty($current_project_id) ? 'disabled' : ''; ?>>Create New Module</button>
+						<!-- Removed redundant "Create New Module" button -->
 						<span class="spinner" id="module-spinner" style="float: none; vertical-align: middle;"></span>
 						<p class="description">
 							<?php if (empty($current_project_id)): ?>
@@ -320,7 +324,7 @@ settings_errors('Data_Machine_messages');
 							foreach ($input_handlers_list as $slug => $handler_info):
 							?>
 								<option value="<?php echo esc_attr($slug); ?>" <?php selected($current_data_source_type, $slug); ?>>
-									<?php echo esc_html($handler_info['label']); // Use label from registry ?>
+									<?php echo esc_html($handler_registry->get_input_handler_label($slug)); // Use dynamic label getter ?>
 								</option>
 							<?php endforeach; ?>
 						</select>
@@ -338,20 +342,33 @@ settings_errors('Data_Machine_messages');
 									// Get the current config for this specific handler slug FIRST
 									$current_handler_config = $data_source_config[$slug] ?? [];
 									// Use the settings fields service to get fields, passing the config
-									$fields = $settings_fields_service->get_fields_for_handler('input', $slug, $current_handler_config);
-										if (!empty($fields)) {
-											// Wrapper div, initially hidden by JS based on selection
-											echo '<div class="dm-settings-group dm-input-settings" data-handler-slug="' . esc_attr($slug) . '" style="display: none;">';
-											echo '<h4>' . esc_html($handler_info['label']) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use label from registry
-											echo '<table class="form-table">';
-											foreach ($fields as $key => $config) {
-												// Value is still determined here for rendering the selected option
-												$current_value = $current_handler_config[$key] ?? null;
-												dm_render_settings_field('data_source', $slug, $key, $config, $current_value);
-											}
-											echo '</table>';
-											echo '</div>';
+									
+									// --- DEBUGGING START ---
+									$fields = null; // Initialize fields
+									if ($settings_fields_service && is_object($settings_fields_service)) {
+										try {
+											 $fields = $settings_fields_service->get_fields_for_handler('input', $slug, $current_handler_config);
+										} catch (Exception $e) {
+											$fields = []; // Ensure fields is an array on error
 										}
+									} else {
+										 $fields = []; // Ensure fields is an array if service is invalid
+									}
+									// --- DEBUGGING END ---
+
+									if (!empty($fields)) {
+										// Wrapper div, initially hidden by JS based on selection
+										echo '<div class="dm-settings-group dm-input-settings" data-handler-slug="' . esc_attr($slug) . '">';
+										echo '<h4>' . esc_html($handler_registry->get_input_handler_label($slug)) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use dynamic label getter
+										echo '<table class="form-table">';
+										foreach ($fields as $key => $config) {
+											// Value is still determined here for rendering the selected option
+											$current_value = $current_handler_config[$key] ?? null;
+											dm_render_settings_field('data_source', $slug, $key, $config, $current_value);
+										}
+										echo '</table>';
+										echo '</div>';
+									}
 								}
 							}
 							?>
@@ -375,7 +392,7 @@ settings_errors('Data_Machine_messages');
 							foreach ($output_handlers_list as $slug => $handler_info):
 							?>
 								<option value="<?php echo esc_attr($slug); ?>" <?php selected($current_output_type, $slug); ?>>
-									<?php echo esc_html($handler_info['label']); // Use label from registry ?>
+									<?php echo esc_html($handler_registry->get_output_handler_label($slug)); // Use dynamic label getter ?>
 								</option>
 							<?php endforeach; ?>
 						</select>
@@ -397,12 +414,11 @@ settings_errors('Data_Machine_messages');
 								        $current_handler_config['user_id'] = $current_module->user_id;
 								    }
 								    // Use the settings fields service to get fields; it handles non-existent methods internally.
-								    error_log("DM Debug Template: Calling get_fields_for_handler for output slug: " . $slug); // DEBUG LINE
 								    $fields = $settings_fields_service->get_fields_for_handler('output', $slug, $current_handler_config);
 								
 								    if (!empty($fields)) {
-								        echo '<div class="dm-settings-group dm-output-settings" data-handler-slug="' . esc_attr($slug) . '" style="display: none;">';
-								        echo '<h4>' . esc_html($handler_info['label']) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use label from registry
+								        echo '<div class="dm-settings-group dm-output-settings" data-handler-slug="' . esc_attr($slug) . '">';
+								        echo '<h4>' . esc_html($handler_registry->get_output_handler_label($slug)) . ' ' . __('Settings', 'data-machine') . '</h4>'; // Use dynamic label getter
 								        echo '<table class="form-table">';
 								        foreach ($fields as $key => $config) {
 								            $current_value = $current_handler_config[$key] ?? null;

@@ -1,3 +1,23 @@
+/**
+ * Data Machine Main Processing Script.
+ *
+ * Handles the primary user interactions for initiating data processing tasks
+ * on the main Data Machine processing page.
+ * Supports file uploads and triggering processing for configured remote data sources.
+ * Manages background job queuing, status polling, and displaying results or errors.
+ *
+ * Key Components:
+ * - Conditional UI setup based on selected data source/output type.
+ * - File Processing Form Handler: Manages uploads, queues jobs sequentially.
+ * - Generic Remote Data Source Handler: Triggers jobs for non-file sources.
+ * - pollJobStatus: Periodically checks the status of background jobs.
+ * - createFileOutputSection: Generates the UI container for each processing job's output.
+ * - handleAjaxResponse/handleFileProcessingError/handleAjaxError: Manage UI updates based on job results/errors.
+ * - Clipboard functionality: Copy single/all results.
+ * - Publish functionality (placeholder/needs review).
+ *
+ * @since NEXT_VERSION
+ */
 (function($) {
     $(document).ready(function() {
         // --- Conditional UI based on Module Settings ---
@@ -64,6 +84,10 @@
         // --- End Conditional UI ---
 
         // --- File Processing Form Handler (Sequential Background Jobs) ---
+        // Handles submission of the file upload form.
+        // Validates input, clears previous results, iterates through selected files,
+        // queues a background processing job for each file sequentially using AJAX,
+        // and initiates status polling for each job.
         $('#file-processing-form').on('submit', function(e) {
             e.preventDefault();
 
@@ -113,7 +137,7 @@
 
                 // Prepare form data for job creation
                 var formData = new FormData();
-                formData.append('data_file', file); // Add the file
+                formData.append('file_upload', file); // Use 'file_upload' to match $_FILES key
                 formData.append('action', 'process_data');
                 formData.append('nonce', dm_ajax_params.file_processing_nonce);
                 formData.append('module_id', module_id);
@@ -133,8 +157,8 @@
                             pollJobStatus(response.data.job_id, fileOutputSection, file.name, processNextFile); // Pass callback
                         } else {
                             // Handle error during job creation/scheduling for this file
-                            var errorMessage = response.data.message || 'Failed to queue processing job for ' + file.name;
-                            handleFileProcessingError(file.name, { success: false, data: { message: errorMessage } }, currentFileIndex, fileOutputSection, 'Job Creation');
+                            var errorMessage = response.data.message || ('Failed to queue processing job for ' + (file.name || 'this file'));
+                            handleFileProcessingError(file.name || 'Unknown File', { success: false, data: { message: errorMessage } }, currentFileIndex, fileOutputSection, 'Job Creation');
                             // Attempt to process the next file even if one fails to queue
                             setTimeout(processNextFile, 500); // Small delay before next attempt
                         }
@@ -155,6 +179,9 @@
 
 
         // --- Generic Remote Data Source Processing Button Handler ---
+        // Handles the click event for the button used to trigger processing for
+        // non-file data sources (e.g., RSS, REST APIs).
+        // Queues a single background job via AJAX and initiates status polling.
         $('#process-remote-data-source-button').on('click', function(e) {
             e.preventDefault();
             var $button = $(this);
@@ -192,6 +219,8 @@
                     // Create a single output section for the result
                     var outputSection = createFileOutputSection({ name: sourceName }, 0); // Use index 0
                     $('#bulk-processing-output-container').append(outputSection);
+                    // Use .text() for sourceName if used in UI later
+                    outputSection.find('.file-name').text(sourceName); // Assuming .file-name class exists from refactored createFileOutputSection
 
                     if (response.success && response.data.status === 'processing_queued' && response.data.job_id) {
                         // Job queued successfully, start polling
@@ -208,6 +237,8 @@
                     // Handle AJAX error during the initial job creation request
                     var outputSection = createFileOutputSection({ name: sourceName }, 0);
                     $('#bulk-processing-output-container').append(outputSection);
+                    // Use .text() for sourceName
+                    outputSection.find('.file-name').text(sourceName); // Assuming .file-name exists
                     handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, 0, outputSection, 'Job Creation');
                     $button.prop('disabled', false).text($button.data('original-text')); // Re-enable button on AJAX failure
                 }
@@ -219,7 +250,14 @@
         // --- Job Status Polling ---
         var jobPollingIntervals = {}; // Store interval IDs { jobId: intervalId }
 
-        // Added onCompleteCallback parameter
+        /**
+         * Polls the backend for the status of a specific background job.
+         *
+         * @param {number|string} jobId The ID of the job to poll.
+         * @param {jQuery} $outputSection The jQuery object for the UI section where results should be displayed.
+         * @param {string} sourceName The name of the source being processed (e.g., file name, API type).
+         * @param {function} [onCompleteCallback] Optional callback function to execute when the job finishes (successfully or failed).
+         */
         function pollJobStatus(jobId, $outputSection, sourceName, onCompleteCallback) {
             // Clear any existing interval for this job ID just in case
             if (jobPollingIntervals[jobId]) {
@@ -254,51 +292,6 @@
                              $outputSection.find('#initial-output-code-' + index)
                                           .text('Job Status: ' + status + '...');
 
-                            // --- Live Data Flow: Stepwise Logging ---
-                            var jobSteps = response.data.job_steps || [];
-                            var $liveFlowSection = $outputSection.find('.live-data-flow-section');
-                            // Ensure the section exists
-                            if ($liveFlowSection.length === 0) {
-                                $liveFlowSection = $('<div class="live-data-flow-section" style="margin-top:15px;"><h4>Live Data Flow</h4><div class="live-steps-list"></div></div>');
-                                $outputSection.append($liveFlowSection);
-                                $liveFlowSection.data('rendered-steps', 0); // Initialize rendered steps count
-                            }
-                            var $stepsList = $liveFlowSection.find('.live-steps-list');
-                            var renderedStepsCount = $liveFlowSection.data('rendered-steps') || 0;
-
-                            // Debug: Log the received job steps array
-                            console.log('Received jobSteps:', jobSteps);
-
-                            // Always clear the steps list before rendering to avoid duplicates
-                            $stepsList.empty();
-                            $liveFlowSection.data('rendered-steps', jobSteps.length); // Always update rendered steps count
-
-                            if (jobSteps.length > 0) {
-                                for (var i = 0; i < jobSteps.length; i++) {
-                                    var step = jobSteps[i];
-                                    var idx = i; // Use loop index for step number
-                                    // Debug: Log the step being rendered
-                                    console.log('Rendering step:', idx, step);
-                                    var $stepCard = $('<details class="live-step-card" style="margin-bottom:8px;"></details>');
-                                    var stepName = step.step || 'Unknown'; // Capture step name
-                                    var stepTimestamp = step.timestamp || '';
-                                    var summaryHtml = '<strong>Step ' + (idx + 1) + ': ' + stepName + '</strong> <span style="font-size:0.9em;color:#888;">(' + stepTimestamp + ')</span>';
-                                    $stepCard.append('<summary>' + summaryHtml + '</summary>'); // Use captured name
-                                    var requestData = step.request || {};
-                                    var responseData = step.response || {};
-                                    $stepCard.append('<div><strong>Request:</strong><pre style="white-space:pre-wrap;background:#f8f8f8;padding:4px;border-radius:3px;">' + JSON.stringify(requestData, null, 2) + '</pre></div>');
-                                    $stepCard.append('<div><strong>Response:</strong><pre style="white-space:pre-wrap;background:#f8f8f8;padding:4px;border-radius:3px;">' + JSON.stringify(responseData, null, 2) + '</pre></div>');
-                                    $stepsList.append($stepCard);
-                                }
-                                $liveFlowSection.data('rendered-steps', jobSteps.length); // Update rendered steps count
-                            } else if (renderedStepsCount === 0) {
-                                // If no steps rendered yet and no steps received, show message
-                                if ($stepsList.find('.no-step-data').length === 0) {
-                                     $stepsList.append('<div class="no-step-data" style="color:#888;">No step data yet.</div>');
-                                }
-                            }
-                            // --- End Live Data Flow ---
-
                             if (status === 'complete' || status === 'failed') {
                                 shouldStopPolling = true;
                                 runCallback = true; // Run callback after success/failure handling
@@ -315,7 +308,7 @@
                                     // Pass jobSteps array to the handler
                                     // Wrap in try...catch to ensure polling stops on error
                                     try {
-                                        handleAjaxResponse({ success: true, data: response.data.result }, index, $outputSection, sourceName, jobSteps);
+                                        handleAjaxResponse({ success: true, data: response.data.result }, index, $outputSection, sourceName, response.data.job_steps);
                                     } catch (e) {
                                         console.error("Error in handleAjaxResponse:", e);
                                         // Optionally display a generic error message in the UI
@@ -372,60 +365,90 @@
 
         // --- Helper Functions ---
 
+        /**
+         * Clears the results container and error notices.
+         */
         function clearResults() {
             $('#bulk-processing-output-container').empty();
             $('#error-notices').empty();
             $('#copy-all-results-section').hide();
         }
 
-        // Creates the HTML structure for a single file/source result
+        /**
+         * Creates the HTML structure (as a jQuery object) for displaying the
+         * processing status and results for a single file or remote source.
+         *
+         * @param {object} file File object (for file uploads) or an object with a `name` property (for remote sources).
+         * @param {number} index The unique index for this processing item.
+         * @returns {jQuery} The jQuery object representing the output section.
+         */
         function createFileOutputSection(file, index) {
-            var fileOutputSection = $('<div class="file-output-section"></div>');
-            fileOutputSection.attr('data-file-index', index); // Use index for consistency
-            fileOutputSection.append('<h3 class="file-name-header">Source: ' + file.name + '</h3>'); // Changed label
+            var sectionId = 'file-output-section-' + index;
+            var initialOutputId = 'initial-output-code-' + index;
+            var finalOutputId = 'final-output-code-' + index;
+            var resultsSectionId = 'results-output-section-' + index;
+            var copyButtonId = 'copy-final-result-' + index;
+            var copyTooltipId = 'copy-tooltip-' + index;
+            var publishButtonId = 'publish-result-' + index;
+            var publishSpinnerId = 'publish-spinner-' + index;
+            var publishStatusId = 'publish-status-' + index;
 
-            // Initial Output
-            var initialOutputDiv = $('<div class="initial-output" id="results-output-section-' + index + '"></div>');
-            initialOutputDiv.append('<p>Initial Output:</p>');
-            var initialDetails = $('<details></details>');
-            initialDetails.append('<summary>Show/Hide Output</summary>');
-            initialDetails.append('<pre><code id="initial-output-code-' + index + '">Processing...</code></pre>');
-            initialOutputDiv.append(initialDetails);
-            fileOutputSection.append(initialOutputDiv);
+            var $section = $('<div>').addClass('file-output-section').attr('id', sectionId).data('file-index', index);
 
-            // Fact Check
-            var factCheckDiv = $('<div class="fact-check-output" id="fact-check-results-section-' + index + '" style="display:none;"></div>');
-            factCheckDiv.append('<p>Fact-Check Results:</p>');
-            var factCheckDetails = $('<details></details>');
-            factCheckDetails.append('<summary>Show/Hide Results</summary>');
-            factCheckDetails.append('<textarea id="fact-check-results-' + index + '" rows="5" cols="80" placeholder="Fact-check results will appear here..."></textarea>');
-            factCheckDiv.append(factCheckDetails);
-            fileOutputSection.append(factCheckDiv);
+            // File Name Header
+            $('<h3>').addClass('file-name').text(file.name || 'Remote Source').appendTo($section); // Use .text() for file name
 
-            // Final Output
-            var finalOutputDiv = $('<div class="final-output" id="final-results-output-section-' + index + '" style="display:none;"></div>');
-            finalOutputDiv.append('<p>Final Output:</p>');
-            finalOutputDiv.append('<pre><code id="final-output-code-' + index + '"></code></pre>'); // Always use pre/code
+            // Results Output Section (initially hidden)
+            var $resultsSection = $('<div>').addClass('results-output-section').attr('id', resultsSectionId).hide().appendTo($section);
 
-            // Conditionally add Copy or Publish button based on global outputType
+            // Initial Output Area
+            $('<h4>').text('Initial Output').appendTo($resultsSection);
+            $('<pre><code>').attr('id', initialOutputId).appendTo($resultsSection);
+
+            // Final Output Area
+            $('<h4>').text('Final Output').appendTo($resultsSection);
+            $('<pre><code>').attr('id', finalOutputId).appendTo($resultsSection);
+
+            // Buttons and Status Section
+            var $buttonsDiv = $('<div>').addClass('action-buttons').appendTo($resultsSection);
+
+            // Conditional Buttons based on outputType
             if (outputType === 'publish' || outputType === 'publish_remote') {
-                finalOutputDiv.append('<button id="publish-final-results-button-' + index + '" class="button button-secondary publish-button" disabled>Publish</button>');
-                // Placeholder for taxonomy info
-                finalOutputDiv.append('<p style="margin-top: 5px; display: none;" class="assigned-taxonomy-info">' +
-                                      '<strong>Category:</strong> <span class="assigned-remote-category"></span><br>' +
-                                      '<strong>Tags:</strong> <span class="assigned-remote-tags"></span>' +
-                                      '</p>');
-            } else if (outputType === 'data_export') {
-                finalOutputDiv.append('<button id="copy-output-button-' + index + '" class="button button-secondary copy-button">Copy Final Output</button>');
-                finalOutputDiv.append('<span id="copy-output-tooltip-' + index + '" style="display: none; margin-left: 10px; color: green; font-weight: bold;"></span>');
+                // Publish Button
+                $('<button>').addClass('button button-secondary publish-button')
+                    .attr('id', publishButtonId)
+                    .data('target', finalOutputId)
+                    .data('index', index)
+                    .text('Publish')
+                    .appendTo($buttonsDiv);
+                // Publish Spinner (Hidden)
+                $('<span>').addClass('spinner').attr('id', publishSpinnerId).css('visibility', 'hidden').appendTo($buttonsDiv);
+                // Publish Status
+                $('<span>').addClass('publish-status').attr('id', publishStatusId).appendTo($buttonsDiv);
+            } else {
+                // Copy Button
+                $('<button>').addClass('button button-secondary copy-button')
+                    .attr('id', copyButtonId)
+                    .data('target', finalOutputId)
+                    .text('Copy Final Output')
+                    .appendTo($buttonsDiv);
+                // Copy Tooltip
+                $('<span>').addClass('copy-tooltip').attr('id', copyTooltipId).text('Copied!').appendTo($buttonsDiv);
             }
-            fileOutputSection.append(finalOutputDiv);
 
-            return fileOutputSection;
+            return $section;
         }
 
-        // Handles processing the AJAX response (success or error) and updating the UI
-        // New: Output raw JSON for each job step, no parsing or field extraction
+        /**
+         * Handles displaying the successful results from a completed background job.
+         * Updates the UI section with the final output code.
+         *
+         * @param {object} response The success data part of the AJAX response from the status check.
+         * @param {number} index The index of the processing item.
+         * @param {jQuery} $outputSection The jQuery object for the UI section.
+         * @param {string} sourceName The name of the source.
+         * @param {Array} jobSteps Array containing request/response for each step.
+         */
         function handleAjaxResponse(response, index, $outputSection, sourceName, jobSteps) {
             // Clear the output section
             $outputSection.empty();
@@ -439,44 +462,89 @@
             });
         }
 
-        // Handles errors during the processing steps reported by the backend
+        /**
+         * Handles displaying errors reported by the backend during a background job.
+         *
+         * @param {string} sourceName The name of the source that failed.
+         * @param {object} response The error response object from the backend.
+         * @param {number} index The index of the processing item.
+         * @param {jQuery} $outputSection The jQuery object for the UI section.
+         * @param {string} step The step during which the error occurred (e.g., 'Job Creation', 'Background Job').
+         */
         function handleFileProcessingError(sourceName, response, index, $outputSection, step) {
-            var errorStepText = step.charAt(0).toUpperCase() + step.slice(1);
-            var errorMessage = (response.data && response.data.message) ? response.data.message : 'Unknown error during ' + errorStepText + ' processing.';
+            var errorStepText = step ? ' (' + step + ')' : '';
+            var errorPrefix = 'Error processing ' + (sourceName || 'item') + '#' + index + errorStepText + ': ';
+            var fullErrorMessage = errorPrefix + (response.data && response.data.message ? response.data.message : 'Unknown error during processing.');
 
             // Display error in the specific section if possible
             if (step === 'processData' || step === 'Orchestration') {
-                 $('#initial-output-code-' + index).text('Error: ' + errorMessage).css('color', 'red');
-                 $('#results-output-section-' + index).show(); // Ensure section is visible
+                 $outputSection.find('#initial-output-code-' + index).text('Error: ' + fullErrorMessage).css('color', 'red');
+                 $outputSection.find('#results-output-section-' + index).show(); // Ensure section is visible
             } else if (step === 'factCheck') {
-                 $('#fact-check-results-' + index).val('Error: ' + errorMessage).css('color', 'red');
-                 $('#fact-check-results-section-' + index).show();
+                 $outputSection.find('#fact-check-results-' + index).val('Error: ' + fullErrorMessage).css('color', 'red');
+                 $outputSection.find('#fact-check-results-section-' + index).show();
             } else if (step === 'finalizeJson') {
-                 $('#final-output-code-' + index).text('Error: ' + errorMessage).css('color', 'red');
-                 $('#final-results-output-section-' + index).show();
+                 $outputSection.find('#final-output-code-' + index).text('Error: ' + fullErrorMessage).css('color', 'red');
+                 $outputSection.find('#final-results-output-section-' + index).show();
             }
 
             // Display general error notice
-            $('#error-notices').append('<div class="notice notice-error inline"><p><strong>Error (' + sourceName + ', ' + errorStepText + '):</strong> ' + errorMessage + '</p></div>');
+            $('#error-notices').append('<div class="notice notice-error inline"><p><strong>Error (' + sourceName + ', ' + errorStepText + '):</strong> ' + fullErrorMessage + '</p></div>');
             console.error('File Processing Error (' + sourceName + ', ' + errorStepText + '):', response);
+
+            // Display error message safely
+            $outputSection.find('#final-output-code-' + index).addClass('error').text('Error: ' + fullErrorMessage);
+            $outputSection.find('#initial-output-code-' + index).empty(); // Clear initial output on error
+
+            // Optionally disable copy/publish buttons for this item
+            $outputSection.find('#copy-final-result-' + index + ', #publish-result-' + index).prop('disabled', true);
         }
 
-        // Handles AJAX communication errors
+        /**
+         * Handles AJAX communication errors (e.g., network issues, server 500) during
+         * job creation or status polling.
+         *
+         * @param {string} sourceName The name of the source being processed when the error occurred.
+         * @param {jqXHR|null} jqXHR The jQuery XHR object.
+         * @param {string} textStatus The type of error (e.g., 'timeout', 'error', 'parsererror').
+         * @param {string|null} errorThrown The textual portion of the error status.
+         * @param {number} index The index of the processing item.
+         * @param {jQuery} $outputSection The jQuery object for the UI section.
+         * @param {string} step The stage when the error occurred (e.g., 'Job Creation', 'Status Check').
+         */
         function handleAjaxError(sourceName, jqXHR, textStatus, errorThrown, index, $outputSection, step) {
-            var errorStepText = step.charAt(0).toUpperCase() + step.slice(1);
-            var errorMessage = textStatus + ': ' + errorThrown;
+            var errorStepText = step ? ' (' + step + ')' : '';
+            var errorMessage = 'AJAX Error processing ' + (sourceName || 'item') + '#' + index + errorStepText + '. Status: ' + textStatus + '. ';
+            if (errorThrown) {
+                errorMessage += 'Error Thrown: ' + errorThrown + '.';
+            }
+            // Try to get more details from jqXHR if available (like responseText for server errors)
+            if (jqXHR.responseText) {
+                errorMessage += ' Server Response: ' + jqXHR.responseText.substring(0, 200) + '...'; // Limit length
+            }
 
-             // Display error in the specific section if possible
+            // Display error in the specific section if possible
             if (step === 'processData') {
-                 $('#initial-output-code-' + index).text('AJAX Error: ' + errorMessage).css('color', 'red');
-                 $('#results-output-section-' + index).show();
+                 $outputSection.find('#initial-output-code-' + index).text('AJAX Error: ' + errorMessage).css('color', 'red');
+                 $outputSection.find('#results-output-section-' + index).show();
             } // Add else if for other steps if needed
 
-            $('#error-notices').append('<div class="notice notice-error inline"><p><strong>AJAX Error (' + sourceName + ', ' + errorStepText + '):</strong> ' + errorMessage + '</p></div>');
-            console.error('File Processing AJAX Error (' + sourceName + ', ' + errorStepText + '):', textStatus, errorThrown, jqXHR);
+            // Display the error message safely in the final output area
+            if ($outputSection) {
+                $outputSection.find('#final-output-code-' + index).addClass('error').text(errorMessage);
+                $outputSection.find('#initial-output-code-' + index).empty(); // Clear initial output on error
+            }
+            console.error('Data Machine AJAX Error:', errorMessage, jqXHR, textStatus, errorThrown);
+
+            // Optionally disable copy/publish buttons for this item
+            $outputSection.find('#copy-final-result-' + index + ', #publish-result-' + index).prop('disabled', true);
         }
 
-        // Initializes the copy button for a specific result index
+        /**
+         * Initializes the copy button for a specific result index.
+         * @deprecated This function might be obsolete if copy buttons are always present.
+         * @param {number} index The index of the result item.
+         */
         function initializeCopyButton(index) {
             var buttonId = '#copy-output-button-' + index;
             var codeId = '#final-output-code-' + index;
@@ -491,7 +559,9 @@
             });
         }
 
-        // Copy All Functionality (Modified to use final-output-code)
+        // Copy All Functionality
+        // Handles the 'Copy All Final Outputs' button click.
+        // Aggregates the final output text from all successful results and copies it to the clipboard.
         $('#copy-all-final-results-button').on('click', function(e) {
             e.preventDefault();
             var copiedText = "";
@@ -506,7 +576,7 @@
             fileSections.each(function(i) {
                 var $section = $(this);
                 var fileIndex = $section.data('file-index'); // Use the stored index
-                var headerText = $section.find('.file-name-header').text();
+                var headerText = $section.find('.file-name').text();
                 var finalOutput = $section.find('#final-output-code-' + fileIndex).text().trim(); // Use correct ID
                 var filename = headerText.replace(/Source: /, ''); // Updated label
                 var currentNumber = startIndex + i;
@@ -524,7 +594,13 @@
             }
         });
 
-        // Helper function for copying text
+        /**
+         * Copies the provided text to the clipboard, using the Clipboard API if available,
+         * falling back to the deprecated `document.execCommand` method.
+         *
+         * @param {string} text The text to copy.
+         * @param {string} tooltipSelector Selector for the tooltip element to show on success.
+         */
         function copyToClipboard(text, tooltipSelector) {
              if (navigator.clipboard && window.isSecureContext) {
                  navigator.clipboard.writeText(text).then(function() {
@@ -553,7 +629,11 @@
              }
         }
 
-        // Helper function to show the copy tooltip
+        /**
+         * Shows a temporary 'Copied!' tooltip.
+         *
+         * @param {string} tooltipSelector The CSS selector for the tooltip element.
+         */
         function showCopyTooltip(tooltipSelector) {
             var $tooltip = $(tooltipSelector);
             $tooltip.text('Copied!').fadeIn();
@@ -562,7 +642,9 @@
             }, 2000);
         }
 
-        // Publish All Button Click Handler (Remains largely the same, might need review for non-file sources)
+        // Publish All Button Click Handler
+        // Placeholder functionality - needs review and likely significant changes
+        // depending on how publishing should work, especially for non-file sources.
         $(document).on('click', '#publish-all-results-button', function(e) {
              e.preventDefault();
              // Simplified for brevity - assumes sequential triggering of individual buttons

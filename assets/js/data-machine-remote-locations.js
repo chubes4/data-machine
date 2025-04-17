@@ -1,26 +1,50 @@
+/**
+ * Data Machine Remote Locations Management Script.
+ *
+ * Handles UI interactions on the Remote Locations admin page.
+ * Allows users to sync site information (post types, taxonomies) from remote locations,
+ * delete locations, and view the details of previously synced data in a modal.
+ *
+ * Key Components:
+ * - showNotice: Displays admin notices (success/error) dynamically.
+ * - Sync Action Handler: Initiates AJAX request to sync data from a remote location.
+ * - Delete Action Handler: Handles AJAX request to delete a remote location with confirmation.
+ * - View Sync Details Handler: Fetches stored synced data via AJAX and displays it in a modal.
+ *
+ * @since NEXT_VERSION
+ */
 jQuery(document).ready(function($) {
     var noticesContainer = $('#dm-remote-locations-notices');
 
     /**
      * Display admin notices dynamically.
-     * @param {string} message The message text.
+     * Uses jQuery to create the notice element safely, preventing XSS from the message content.
+     *
+     * @param {string} message The message text (will be treated as plain text).
      * @param {string} type 'success' or 'error'.
      */
     function showNotice(message, type) {
         var noticeClass = type === 'success' ? 'notice-success' : 'notice-error';
-        var notice = $('<div class="notice ' + noticeClass + ' is-dismissible"><p>' + message + '</p><button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button></div>');
-        
+        var $notice = $('<div>').addClass('notice ' + noticeClass + ' is-dismissible');
+        var $paragraph = $('<p>').text(message);
+        var $button = $('<button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button>');
+
+        $notice.append($paragraph).append($button);
+
         // Clear previous notices and add the new one
-        noticesContainer.html(notice);
+        noticesContainer.empty().append($notice);
 
         // Handle dismiss button
-        notice.find('.notice-dismiss').on('click', function(e) {
+        $button.on('click', function(e) {
             e.preventDefault();
             $(this).closest('.notice').remove();
         });
     }
 
     // --- Sync Action --- 
+    // Handles clicks on the 'Sync' button for a remote location.
+    // Sends an AJAX request to trigger the sync process on the backend.
+    // Updates the 'Last Sync' column on success.
     $('.wp-list-table').on('click', '.dm-sync-location', function(e) {
         e.preventDefault();
         var $button = $(this);
@@ -46,9 +70,10 @@ jQuery(document).ready(function($) {
                     showNotice(response.data.message, 'success');
                     // Update the 'Last Sync' column text and title
                     // Displaying the button dynamically requires more info (new nonce) or a row refresh.
-                    var newTimeText = 'Just now'; 
+                    var newTimeText = 'Just now';
                     var newTitle = response.data.last_sync_time ? response.data.last_sync_time : 'Synced successfully';
-                    $lastSyncCell.html('<span title="' + newTitle + '">' + newTimeText + '</span>'); 
+                    var $span = $('<span>').attr('title', newTitle).text(newTimeText);
+                    $lastSyncCell.empty().append($span);
                     // NOTE: 'View Details' button will appear on page refresh if sync was successful.
                 } else {
                     showNotice(response.data.message + (response.data.error_detail ? ' (' + response.data.error_detail + ')' : ''), 'error');
@@ -67,6 +92,9 @@ jQuery(document).ready(function($) {
     });
 
     // --- Delete Action --- 
+    // Handles clicks on the 'Delete' link for a remote location.
+    // Prompts the user for confirmation before sending an AJAX request to delete the location.
+    // Fades out the table row on successful deletion.
     $('.wp-list-table').on('click', '.dm-delete-location', function(e) {
         e.preventDefault();
         var $link = $(this);
@@ -112,6 +140,10 @@ jQuery(document).ready(function($) {
     });
 
     // --- View Sync Details Action ---
+    // Handles clicks on the 'View Details' link (if available after a successful sync).
+    // Fetches the stored synced site information (post types, taxonomies) via AJAX.
+    // Parses the JSON data and displays it in a dynamically created modal window.
+    // Uses jQuery to build the modal content safely, preventing XSS from synced data.
     $('.wp-list-table').on('click', '.dm-view-sync-details', function(e) {
         e.preventDefault();
         var $link = $(this);
@@ -135,41 +167,44 @@ jQuery(document).ready(function($) {
                 if (response.success && response.data.synced_site_info) {
                     try {
                         var siteInfo = JSON.parse(response.data.synced_site_info);
-                        var detailsHtml = '<h4>Synced Data:</h4>';
-                        
+                        // Build HTML safely using jQuery
+                        var $detailsContainer = $('<div>');
+                        $detailsContainer.append('<h4>Synced Data:</h4>');
+
                         if (siteInfo.post_types) {
-                            detailsHtml += '<h5>Post Types:</h5><ul>';
+                            var $postTypeList = $('<ul>');
                             $.each(siteInfo.post_types, function(slug, name) {
-                                detailsHtml += '<li><strong>' + slug + ':</strong> ' + name + '</li>';
+                                $('<li>').append($('<strong>').text(slug + ':')).append(document.createTextNode(' ' + name)).appendTo($postTypeList);
                             });
-                            detailsHtml += '</ul>';
+                            $detailsContainer.append('<h5>Post Types:</h5>').append($postTypeList);
                         }
 
                         if (siteInfo.taxonomies) {
-                            detailsHtml += '<h5>Taxonomies:</h5><ul>';
+                            var $taxList = $('<ul>');
                             $.each(siteInfo.taxonomies, function(taxSlug, taxData) {
-                                detailsHtml += '<li><strong>' + taxSlug + ' ('+ taxData.label +'):</strong><ul>';
+                                var $taxItem = $('<li>');
+                                $('<strong>').text(taxSlug + ' (').append($('<span>').text(taxData.label)).append(')').appendTo($taxItem);
+                                var $termList = $('<ul>');
                                 if (taxData.terms && Object.keys(taxData.terms).length > 0) {
                                     $.each(taxData.terms, function(termId, termName){
-                                         detailsHtml += '<li>' + termId + ': ' + termName + '</li>';
+                                        $('<li>').text(termId + ': ' + termName).appendTo($termList);
                                     });
                                 } else {
-                                     detailsHtml += '<li>No terms found.</li>';
+                                    $('<li>').text('No terms found.').appendTo($termList);
                                 }
-                                detailsHtml += '</ul></li>';
+                                $taxItem.append($termList).appendTo($taxList);
                             });
-                            detailsHtml += '</ul>';
+                             $detailsContainer.append('<h5>Taxonomies:</h5>').append($taxList);
                         }
 
-                        // Display in a simple alert or modal
-                        // For now, let's use an alert with HTML content (browser support varies)
-                        // A proper modal implementation would be better.
                         // Using a basic modal approach:
-                        var modalContent = '<div id="dm-sync-details-modal" style="position:fixed; top:10%; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; background: white; padding: 20px; border: 1px solid #ccc; z-index: 1000; max-height: 80vh; overflow-y: auto;">' + 
-                                           detailsHtml + 
-                                           '<button class="button button-primary" style="margin-top: 15px;" onclick="jQuery(\'#dm-sync-details-modal\').remove();">Close</button>' + 
-                                           '</div>';
-                        $('body').append(modalContent);
+                        var $modalContent = $('<div>')
+                           .attr('id', 'dm-sync-details-modal')
+                           .css({ 'position':'fixed', 'top':'10%', 'left': '50%', 'transform': 'translateX(-50%)', 'width': '80%', 'max-width': '600px', 'background': 'white', 'padding': '20px', 'border': '1px solid #ccc', 'z-index': '1000', 'max-height': '80vh', 'overflow-y': 'auto' })
+                           .append($detailsContainer)
+                           .append($('<button class="button button-primary" style="margin-top: 15px;">Close</button>').on('click', function() { $(this).closest('#dm-sync-details-modal').remove(); }));
+
+                        $('body').append($modalContent);
 
                     } catch (e) {
                         showNotice('Error parsing synced data.', 'error');

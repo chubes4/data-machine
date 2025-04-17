@@ -29,6 +29,13 @@ class Data_Machine_AI_Response_Parser {
     private $directives = [];
 
     /**
+     * Cache for extracted custom taxonomy values.
+     * Format: ['taxonomy_slug' => ['Term Name 1', 'Term Name 2']]
+     * @var array
+     */
+    private $custom_taxonomies = [];
+
+    /**
      * Flag to indicate if parsing has been done.
      * @var bool
      */
@@ -45,32 +52,52 @@ class Data_Machine_AI_Response_Parser {
 
     /**
      * Parses the raw output to extract directives and content.
-     * Should be called implicitly by getter methods.
+     * Scans the entire output for directive lines.
      */
     public function parse() {
         if ($this->parsed) {
             return;
         }
 
-        $content_buffer = $this->raw_output;
-        $lines = explode("\n", $this->raw_output, 10); // Limit lines to check for performance
-        $directives_pattern = '/^([A-Z_]+):\s*(.*?)\s*$/';
-        $content_start_offset = 0;
+        $lines = explode("\n", $this->raw_output);
+        $content_lines = [];
+        $directives_pattern = '/^([A-Z_]+):\s*(.*?)\s*$/'; // Simple KEY: value
+        $taxonomy_pattern = '/^TAXONOMY\[([a-zA-Z0-9_]+)\]:\s*(.*?)\s*$/'; // TAXONOMY[slug]: value
 
         foreach ($lines as $line) {
+            $line = trim($line); // Trim whitespace from the line itself
+            $matched_directive = false;
+
+            // Check for simple directives
             if (preg_match($directives_pattern, $line, $matches)) {
                 $key = $matches[1];
                 $value = trim($matches[2]);
                 $this->directives[$key] = $value;
-                // Update offset to remove this line from content
-                $content_start_offset += strlen($line) + 1; // +1 for the newline character
-            } else {
-                // Stop processing directives once a non-matching line is found
-                break;
+                $matched_directive = true;
+            }
+            // Check for taxonomy directives
+            elseif (preg_match($taxonomy_pattern, $line, $matches)) {
+                $slug = $matches[1];
+                $value_string = trim($matches[2]);
+                // Split by comma, trim each term, filter empty
+                $term_names = array_filter(array_map('trim', explode(',', $value_string)));
+                if (!empty($term_names)) {
+                    $this->custom_taxonomies[$slug] = $term_names;
+                }
+                $matched_directive = true;
+            }
+
+            // If the line wasn't a directive, add it to content lines
+            if (!$matched_directive) {
+                $content_lines[] = $line; // Add the original (trimmed) line
             }
         }
 
-        $this->content = trim(substr($this->raw_output, $content_start_offset));
+        // Reconstruct content from non-directive lines
+        $this->content = implode("\n", $content_lines);
+        // Trim potential leading/trailing blank lines from the reconstructed content
+        $this->content = trim($this->content);
+
         $this->parsed = true;
     }
 
@@ -106,35 +133,39 @@ class Data_Machine_AI_Response_Parser {
 
     /**
      * Get the publish category from the AI output.
-     * Looks for CATEGORY, falls back to REMOTE_CATEGORY or LOCAL_CATEGORY for backward compatibility.
      *
      * @return string|null
      */
     public function get_publish_category() {
         $cat = $this->get_directive('CATEGORY');
         if ($cat !== null) return $cat;
-        // Backward compatibility
-        $cat = $this->get_directive('REMOTE_CATEGORY');
-        if ($cat !== null) return $cat;
-        return $this->get_directive('LOCAL_CATEGORY');
+        // Removed backward compatibility checks
+        return $cat;
     }
 
     /**
      * Get the publish tags from the AI output (comma-separated string).
-     * Looks for TAGS, falls back to REMOTE_TAGS or LOCAL_TAGS for backward compatibility.
      *
      * @return string|null
      */
     public function get_publish_tags() {
         $tags = $this->get_directive('TAGS');
         if ($tags !== null) return $tags;
-        // Backward compatibility
-        $tags = $this->get_directive('REMOTE_TAGS');
-        if ($tags !== null) return $tags;
-        return $this->get_directive('LOCAL_TAGS');
+        // Removed backward compatibility checks
+        return $tags;
     }
 
-    // Optionally, keep the old methods as aliases for backward compatibility
-    public function get_category() { return $this->get_publish_category(); }
-    public function get_tags() { return $this->get_publish_tags(); }
+    /**
+     * Gets the parsed custom taxonomy data.
+     *
+     * @return array Associative array where keys are taxonomy slugs and values are arrays of term names.
+     *               Example: ['location' => ['Tennessee'], 'genre' => ['Rock', 'Indie']]
+     */
+    public function get_custom_taxonomies() {
+        $this->parse(); // Ensure parsing has happened
+        return $this->custom_taxonomies;
+    }
+
+    // Removed alias methods get_category() and get_tags()
+
 }

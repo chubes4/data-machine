@@ -1,7 +1,17 @@
 /**
- * JavaScript for Data Machine Project Dashboard.
+ * Data Machine Project Dashboard Script.
  *
- * Handles button clicks for running projects and editing schedules.
+ * Handles UI interactions on the project dashboard page (/wp-admin/admin.php?page=data-machine-dashboard).
+ * Allows users to create new projects, run existing projects manually, and edit project/module schedules.
+ *
+ * Key Components:
+ * - Create New Project Button Handler: Prompts for name, creates project via AJAX.
+ * - Run Now Button Handler: Triggers an immediate run of a project via AJAX.
+ * - Edit Schedule Button Handler: Opens a modal to view/edit project and module schedules.
+ * - Modal Save/Cancel Handlers: Saves schedule changes or closes the modal.
+ * - makeAjaxRequest: Helper function for standardized AJAX calls.
+ *
+ * @since NEXT_VERSION
  */
 (function($) {
     'use strict';
@@ -10,6 +20,8 @@
         console.log('Project Dashboard JS Loaded');
 
         // --- Create New Project Button Handler ---
+        // Handles the click event for the 'Create New Project' button.
+        // Prompts the user for a project name and sends an AJAX request to create the project.
         $('#create-new-project').on('click', function() {
             var projectName = prompt('Enter a name for the new project:');
             if (projectName === null || projectName.trim() === '') {
@@ -27,11 +39,16 @@
                 button: $button, // Pass button element
                 spinner: $spinner, // Pass spinner element
                 successCallback: function(data) {
+                    // Alert message uses data returned from server if available, falling back to user input.
+                    // Server response (data.project_name) should be sanitized server-side if necessary.
+                    // The projectName variable here is the trimmed user input.
+                    // Standard browser alert boxes automatically escape HTML content.
                     alert('Project "' + (data.project_name || projectName) + '" created successfully!');
                     // Reload the page to show the new project in the table
-                    window.location.reload(); 
+                    window.location.reload();
                 },
                 errorCallback: function(errorData) {
+                    // Standard browser alert boxes automatically escape HTML content.
                     alert('Error creating project: ' + (errorData?.message || 'Unknown error'));
                     console.error("Error creating project:", errorData?.message || 'Unknown error');
                 }
@@ -85,6 +102,8 @@
         });
 
         // --- Edit Schedule Button Handler ---
+        // Handles click on 'Edit Schedule' buttons.
+        // Fetches project/module data via AJAX and populates the schedule modal.
         const $modal = $('#dm-schedule-modal');
         const $modalProjectId = $('#dm-modal-project-id');
         const $modalProjectName = $('#dm-modal-project-name');
@@ -93,13 +112,21 @@
         const $moduleListDiv = $('#dm-modal-module-list'); // Div for module rows
 
         // Define schedule options for module dropdowns
+        /* // OLD Hardcoded options
         const scheduleOptions = {
             'project_schedule': 'Project Schedule',
             'every_5_minutes': 'Every 5 Minutes',
             'hourly': 'Hourly',
+            'qtrdaily': 'Every 6 Hours',
             'twicedaily': 'Twice Daily',
             'daily': 'Daily',
             'weekly': 'Weekly'
+        };
+        */
+        // Use localized options from PHP + add module-specific ones
+        const scheduleOptions = {
+            'project_schedule': 'Project Schedule', // Add this one manually
+            ...dm_dashboard_params.cron_schedules // Spread the localized schedules
         };
 
         $('table.projects').on('click', '.edit-schedule-button', function(e) {
@@ -144,48 +171,50 @@
                         $modalInterval.val(project.schedule_interval);
                         $modalStatus.val(project.schedule_status);
 
-                        // Build module list HTML
-                        let moduleHtml = '<table class="form-table"><tbody>';
+                        // Build module list HTML safely using jQuery
+                        var $moduleTable = $('<table class="form-table"><tbody></tbody></table>');
+                        var $moduleTableBody = $moduleTable.find('tbody');
+
                         if (modules.length > 0) {
                             modules.forEach(module => {
                                 // Treat legacy 'manual' interval as 'project_schedule' for selection
                                 let currentModuleInterval = module.schedule_interval === 'manual' ? 'project_schedule' : module.schedule_interval;
                                 // Default status is 'active' unless explicitly 'paused'
-                                const currentModuleStatus = module.schedule_status ?? 'active'; 
+                                const currentModuleStatus = module.schedule_status ?? 'active';
                                 // Check if module input type is 'files'
                                 const isFilesInput = module.data_source_type === 'files';
-                                const disabledAttr = isFilesInput ? ' disabled' : '';
-                                const filesNotice = isFilesInput ? '<span class="description" style="margin-left: 10px; font-style: italic;">(File input: Manual run only)</span>' : '';
+                                const disabled = isFilesInput; // Boolean for prop
+                                const $filesNoticeSpan = isFilesInput ? $('<span>').addClass('description').css({'margin-left': '10px', 'font-style': 'italic'}).text('(File input: Manual run only)') : null;
 
-                                moduleHtml += `
-                                    <tr data-module-id="${module.module_id}">
-                                        <th scope="row" style="padding-left: 10px;">${module.module_name} ${filesNotice}</th>
-                                        <td>
-                                            <select class="dm-module-schedule-interval" name="module_schedule[${module.module_id}][interval]"${disabledAttr}>
-                                `; 
-                                // Add schedule options
-                                for (const [value, text] of Object.entries(scheduleOptions)) {
-                                    // Select the current module interval (handling the mapping from 'manual')
-                                    const selected = (value === currentModuleInterval) ? ' selected' : '';
-                                    moduleHtml += `<option value="${value}"${selected}>${text}</option>`;
+                                var $row = $('<tr>').attr('data-module-id', module.module_id);
+
+                                // Module Name Column (<th>)
+                                var $th = $('<th scope="row">').css('padding-left', '10px').text(module.module_name); // Use .text() here
+                                if ($filesNoticeSpan) {
+                                    $th.append(' ').append($filesNoticeSpan); // Append the notice span if needed
                                 }
-                                moduleHtml += `
-                                            </select>
-                                        </td>
-                                        <td>
-                                             <select class="dm-module-schedule-status" name="module_schedule[${module.module_id}][status]"${disabledAttr}>
-                                                <option value="active"${(currentModuleStatus === 'active') ? ' selected' : ''}>Active</option>
-                                                <option value="paused"${(currentModuleStatus === 'paused') ? ' selected' : ''}>Paused</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                `;
+                                $row.append($th);
+
+                                // Interval Select Column (<td>)
+                                var $intervalSelect = $('<select>').addClass('dm-module-schedule-interval').attr('name', `module_schedule[${module.module_id}][interval]`).prop('disabled', disabled);
+                                for (const [value, text] of Object.entries(scheduleOptions)) {
+                                    $intervalSelect.append($('<option>').val(value).text(text).prop('selected', value === currentModuleInterval));
+                                }
+                                $row.append($('<td>').append($intervalSelect));
+
+                                // Status Select Column (<td>)
+                                var $statusSelect = $('<select>').addClass('dm-module-schedule-status').attr('name', `module_schedule[${module.module_id}][status]`).prop('disabled', disabled);
+                                $statusSelect.append($('<option>').val('active').text('Active').prop('selected', currentModuleStatus === 'active'));
+                                $statusSelect.append($('<option>').val('paused').text('Paused').prop('selected', currentModuleStatus === 'paused'));
+                                $row.append($('<td>').append($statusSelect));
+
+                                $moduleTableBody.append($row); // Append the fully constructed row
                             });
                         } else {
-                            moduleHtml += '<tr><td colspan="3">No modules found for this project.</td></tr>';
+                            $moduleTableBody.append('<tr><td colspan="3">No modules found for this project.</td></tr>');
                         }
-                        moduleHtml += '</tbody></table>';
-                        $moduleListDiv.html(moduleHtml); // Replace loading message
+
+                        $moduleListDiv.empty().append($moduleTable); // Replace loading message with the new table
 
                     } else {
                         alert('Error fetching schedule data: ' + response.data);
@@ -209,6 +238,7 @@
         });
 
         // Modal Save Button
+        // Handles saving the edited schedule information via AJAX.
         $('#dm-modal-save').on('click', function() {
             const projectId = $modalProjectId.val();
             const projectInterval = $modalInterval.val(); // Renamed variable
@@ -249,14 +279,8 @@
                 success: function(response) {
                     if (response.success) {
                         alert('Success: ' + response.data.message);
-                        // Update table row visually (Project part)
-                        const $rowToUpdate = $('tr[data-project-id="' + projectId + '"]');
-                        if ($rowToUpdate.length) {
-                            $rowToUpdate.find('td:nth-child(3)').text( $modalInterval.find('option:selected').text() ); // Update interval text
-                            $rowToUpdate.find('td:nth-child(4)').text( $modalStatus.find('option:selected').text() ); // Update status text
-                            // TODO: Update Last Run display if affected?
-                        }
-                        $modal.hide();
+                        // Reload the page to show the updated schedule accurately
+                        window.location.reload(); 
                     } else {
                         alert('Error: ' + response.data);
                     }
@@ -274,7 +298,25 @@
     });
 
     /**
-     * Helper function to make AJAX requests with consistent handling.
+     * Helper function to make AJAX requests with consistent handling for:
+     * - Adding action and nonce.
+     * - Showing/hiding spinners.
+     * - Enabling/disabling buttons.
+     * - Displaying success/error feedback messages (using text(), not alert()).
+     * - Calling success/error/complete callbacks.
+     * @param {object} config - Configuration object for the AJAX request.
+     * @param {string} config.action - The WordPress AJAX action.
+     * @param {string} config.nonce - The nonce for the action.
+     * @param {object} [config.data={}] - Additional data to send.
+     * @param {jQuery} [config.button] - Button element to disable/enable.
+     * @param {jQuery} [config.spinner] - Spinner element to show/hide.
+     * @param {jQuery} [config.feedback] - Element to display text feedback.
+     * @param {function} [config.successCallback] - Function to call on successful response.
+     * @param {function} [config.errorCallback] - Function to call on error response (AJAX or application error).
+     * @param {function} [config.completeCallback] - Function to call on completion (after success/error).
+     * @param {string} [config.type='POST'] - AJAX request type.
+     * @param {string} [config.dataType='json'] - Expected data type.
+     * @returns {jqXHR} The jQuery AJAX request object.
      */
     function makeAjaxRequest(config) {
         const ajaxData = $.extend({}, config.data || {}, {

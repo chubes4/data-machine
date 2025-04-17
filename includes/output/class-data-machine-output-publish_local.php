@@ -11,6 +11,20 @@
 class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_Interface {
 
 	/**
+	 * Database handler for processed items.
+	 * @var Data_Machine_Database_Processed_Items
+	 */
+	private $db_processed_items;
+
+	/**
+	 * Constructor.
+	 * @param Data_Machine_Database_Processed_Items $db_processed_items
+	 */
+	public function __construct(Data_Machine_Database_Processed_Items $db_processed_items) {
+		$this->db_processed_items = $db_processed_items;
+	}
+
+	/**
 	 * Handles publishing the AI output locally as a WordPress post.
 	 *
 	 * @param string $ai_output_string The finalized string from the AI.
@@ -45,11 +59,35 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		];
 		// Trim tag names
         $parsed_data['tags'] = array_map('trim', $parsed_data['tags']);
+        $parsed_data['custom_taxonomies'] = $parser->get_custom_taxonomies(); // Get custom taxonomies
+
+        // --- Prepare Content: Prepend Image, Append Source --- 
+        $final_content = $parsed_data['content']; // Start with AI-generated content
+
+        // Prepend Image if available in metadata
+        if (!empty($input_metadata['image_source_url'])) {
+            $image_url = esc_url($input_metadata['image_source_url']);
+            $alt_text = !empty($input_metadata['original_title']) ? esc_attr($input_metadata['original_title']) : esc_attr('Source Image'); // Use title for alt
+            $image_tag = sprintf('<img src="%s" alt="%s" /><br /><br />', $image_url, $alt_text);
+            $final_content = $image_tag . $final_content;
+        }
+
+        // Append Source Link if available in metadata
+        if (!empty($input_metadata['source_url'])) {
+            $source_url = esc_url($input_metadata['source_url']);
+            $source_name = esc_html($input_metadata['original_title'] ?? 'Original Source'); // Use title or fallback
+            if (!empty($input_metadata['subreddit'])) {
+                $source_name = 'r/' . esc_html($input_metadata['subreddit']);
+            }
+            $source_link_string = sprintf('Source: <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', $source_url, $source_name);
+            $final_content .= "\n\n" . $source_link_string;
+        }
+        // --- End Prepare Content --- 
 
         // --- Convert Markdown content to HTML ---
         require_once DATA_MACHINE_PATH . 'includes/helpers/class-markdown-converter.php';
         // Call the static method directly
-        $html_content = Data_Machine_Markdown_Converter::convert_to_html($parsed_data['content']);
+        $html_content = Data_Machine_Markdown_Converter::convert_to_html($final_content);
         // --- End Markdown Conversion ---
 
 		// --- Determine Post Date ---
@@ -78,7 +116,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		// Prepare post data
 		$post_data = array(
 			'post_title'   => $parsed_data['title'] ?: __( 'Untitled Post', 'data-machine' ), // Add fallback title
-			'post_content' => $html_content, // Use converted HTML
+			'post_content' => $html_content, // Use processed HTML content
 			'post_status'  => $post_status,
 			'post_author'  => $user_id ?: get_current_user_id(), // Use provided user ID or fallback
 			'post_type'    => $post_type,
@@ -105,6 +143,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		$assigned_category_name = null;
 		$assigned_tag_ids = [];
 		$assigned_tag_names = [];
+		$assigned_custom_taxonomies = []; // Store assigned custom terms for reporting
 
 		// Category Assignment
 		if ( $category_id > 0 ) { // Manual selection
@@ -121,9 +160,17 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				$assigned_category_id = $term->term_id;
 				$assigned_category_name = $term->name;
 			} else {
-				// Optionally create the category if it doesn't exist
-				// $term_info = wp_insert_term( $parsed_data['category'], 'category' );
-				// if (!is_wp_error($term_info)) { ... }
+				// Create the category if it doesn't exist
+				$term_info = wp_insert_term( $parsed_data['category'], 'category' );
+				if (!is_wp_error($term_info) && isset($term_info['term_id'])) {
+					wp_set_post_terms( $post_id, array( $term_info['term_id'] ), 'category', false );
+					$assigned_category_id = $term_info['term_id'];
+					$assigned_category_name = $parsed_data['category']; // Use the name we tried to insert
+				} else {
+					// Log error if term creation failed
+					$error_string = is_wp_error($term_info) ? $term_info->get_error_message() : 'Unknown error';
+					error_log("Data Machine Publish Local: Failed to create category '{$parsed_data['category']}'. Error: " . $error_string);
+				}
 			}
 		}
 
@@ -146,7 +193,16 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 					$term_ids_to_assign[] = $term->term_id;
 					$term_names_to_assign[] = $term->name;
 				} else {
-					// Optionally create tag
+					// Create tag if it doesn't exist
+					$term_info = wp_insert_term( $tag_name, 'post_tag' );
+					if (!is_wp_error($term_info) && isset($term_info['term_id'])) {
+						$term_ids_to_assign[] = $term_info['term_id'];
+						$term_names_to_assign[] = $tag_name; // Use the name we tried to insert
+					} else {
+						// Log error if term creation failed
+						$error_string = is_wp_error($term_info) ? $term_info->get_error_message() : 'Unknown error';
+						error_log("Data Machine Publish Local: Failed to create tag '{$tag_name}'. Error: " . $error_string);
+					}
 				}
 			}
 			if ( ! empty( $term_ids_to_assign ) ) {
@@ -156,6 +212,49 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 			}
 		}
 		// If $tag_id is -1 and $parsed_data['tags'] is empty, no tags are assigned.
+
+		// Custom Taxonomy Assignment
+		if (!empty($parsed_data['custom_taxonomies']) && is_array($parsed_data['custom_taxonomies'])) {
+			foreach ($parsed_data['custom_taxonomies'] as $tax_slug => $term_names) {
+				if (!taxonomy_exists($tax_slug)) {
+					// Log or handle error: Taxonomy doesn't exist locally
+					error_log("Data Machine Publish Local: Taxonomy '{$tax_slug}' does not exist.");
+					continue;
+				}
+
+				$term_ids_to_assign = [];
+				$term_names_assigned = []; // Track names actually assigned for this taxonomy
+
+				foreach ($term_names as $term_name) {
+					if (empty(trim($term_name))) continue;
+
+					$term = get_term_by('name', $term_name, $tax_slug);
+
+					if ($term) {
+						// Term exists
+						$term_ids_to_assign[] = $term->term_id;
+						$term_names_assigned[] = $term->name;
+					} else {
+						// Term does not exist - create it
+						$term_info = wp_insert_term($term_name, $tax_slug);
+						if (!is_wp_error($term_info) && isset($term_info['term_id'])) {
+							$term_ids_to_assign[] = $term_info['term_id'];
+							$term_names_assigned[] = $term_name; // Use the name we just inserted
+						} else {
+							// Log error if term creation failed
+							$error_string = is_wp_error($term_info) ? $term_info->get_error_message() : 'Unknown error';
+							error_log("Data Machine Publish Local: Failed to create term '{$term_name}' in taxonomy '{$tax_slug}'. Error: " . $error_string);
+						}
+					}
+				} // End foreach term_names
+
+				// Assign the collected/created terms for this taxonomy
+				if (!empty($term_ids_to_assign)) {
+					wp_set_post_terms($post_id, $term_ids_to_assign, $tax_slug, true); // Append terms
+					$assigned_custom_taxonomies[$tax_slug] = $term_names_assigned; // Store assigned names for reporting
+				}
+			} // End foreach custom_taxonomies
+		}
 		// --- End Taxonomy Handling ---
 
 		// Success
@@ -171,6 +270,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 			'assigned_category_name' => $assigned_category_name,
 			'assigned_tag_ids'       => $assigned_tag_ids,
 			'assigned_tag_names'     => $assigned_tag_names,
+			'assigned_custom_taxonomies' => $assigned_custom_taxonomies, // Add custom tax info to result
 		);
 	}
 
@@ -197,9 +297,9 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		}
 		// Get available categories
 		$category_options = [
-	           '-1' => '-- Let Model Decide --',
-	           '0'  => '-- Instruct Model --' // Added Instruct Model
-	       ];
+		    'model_decides' => '-- Let Model Decide --', // Use string key
+		    'instruct_model' => '-- Instruct Model --' // Use string key
+		];
 		$local_categories = get_terms(array('taxonomy' => 'category', 'hide_empty' => false));
 		if (!is_wp_error($local_categories)) {
 			foreach ($local_categories as $cat) {
@@ -207,10 +307,10 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 			}
 		}
 		// Get available tags
-	       $tag_options = [
-	           '-1' => '-- Let Model Decide --',
-	           '0'  => '-- Instruct Model --' // Added Instruct Model
-	       ];
+		$tag_options = [
+		    'model_decides' => '-- Let Model Decide --', // Use string key
+		    'instruct_model' => '-- Instruct Model --' // Use string key
+		];
 		$local_tags = get_terms(array('taxonomy' => 'post_tag', 'hide_empty' => false));
 		if (!is_wp_error($local_tags)) {
 			foreach ($local_tags as $tag) {
@@ -250,17 +350,16 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 			'selected_local_category_id' => [
 				'type' => 'select',
 				'label' => __('Category', 'data-machine'),
-				'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'), // Updated description
+				'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
 				'options' => $category_options,
-				'default' => -1,
+				'default' => 'model_decides', // Default to string key
 			],
-			// 'selected_local_tag_mode' field removed
 			'selected_local_tag_id' => [ // Changed key to singular ID
 				'type' => 'select', // Changed back to select
 				'label' => __('Tag', 'data-machine'), // Changed label to singular
-				'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'), // Updated description
+				'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
 				'options' => $tag_options,
-				'default' => -1, // Default to Model Decides
+				'default' => 'model_decides', // Default to string key
 			],
 		];
 	}
@@ -271,7 +370,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 	 * @return string
 	 */
 	public static function get_label(): string {
-		return __( 'Publish Locally', 'data-machine' );
+		return 'Publish Locally';
 	}
 	/**
 	 * Sanitize settings for the Publish Local output handler.
@@ -286,8 +385,25 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		$valid_date_sources = ['current_date', 'source_date'];
 		$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
 		$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
-		$sanitized['selected_local_category_id'] = intval($raw_settings['selected_local_category_id'] ?? -1);
-		$sanitized['selected_local_tag_id'] = intval($raw_settings['selected_local_tag_id'] ?? -1);
+
+		// Sanitize Category ID/Mode
+		$cat_val = $raw_settings['selected_local_category_id'] ?? 'model_decides';
+		if ($cat_val === 'model_decides' || $cat_val === 'instruct_model') {
+			$sanitized['selected_local_category_id'] = $cat_val;
+		} else {
+			$sanitized['selected_local_category_id'] = intval($cat_val); // Treat others as int ID
+		}
+
+		// Sanitize Tag ID/Mode
+		$tag_val = $raw_settings['selected_local_tag_id'] ?? 'model_decides';
+		if ($tag_val === 'model_decides' || $tag_val === 'instruct_model') {
+			$sanitized['selected_local_tag_id'] = $tag_val;
+		} else {
+			$sanitized['selected_local_tag_id'] = intval($tag_val); // Treat others as int ID
+		}
+		
+		// Note: No custom taxonomies for local publish currently
+
 		return $sanitized;
 	}
 } // End class Data_Machine_Output_Publish_Local

@@ -102,15 +102,15 @@ class Data_Machine_Database_Modules {
         	'project_id' => absint( $project_id ), // Use project_id
         	// 'user_id' removed
             'module_name' => isset( $module_data['module_name'] ) ? sanitize_text_field( $module_data['module_name'] ) : 'New Module',
-            'process_data_prompt' => isset( $module_data['process_data_prompt'] ) ? wp_kses_post( $module_data['process_data_prompt'] ) : '',
-            'fact_check_prompt' => isset( $module_data['fact_check_prompt'] ) ? wp_kses_post( $module_data['fact_check_prompt'] ) : '',
-            'finalize_response_prompt' => isset( $module_data['finalize_response_prompt'] ) ? wp_kses_post( $module_data['finalize_response_prompt'] ) : '',
+            'process_data_prompt' => isset( $module_data['process_data_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['process_data_prompt'] ) ) : '',
+            'fact_check_prompt' => isset( $module_data['fact_check_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['fact_check_prompt'] ) ) : '',
+            'finalize_response_prompt' => isset( $module_data['finalize_response_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['finalize_response_prompt'] ) ) : '',
             'data_source_type' => isset( $module_data['data_source_type'] ) ? sanitize_text_field( $module_data['data_source_type'] ) : 'files', // Default to files
             'data_source_config' => isset( $module_data['data_source_config'] ) ? wp_json_encode( $module_data['data_source_config'] ) : null, // Store config as JSON
             'output_type' => isset( $module_data['output_type'] ) ? sanitize_text_field( $module_data['output_type'] ) : 'data_export', // Default to data
             'output_config' => isset( $module_data['output_config'] ) ? wp_json_encode( $module_data['output_config'] ) : null, // Store config as JSON
             'schedule_interval' => isset( $module_data['schedule_interval'] ) ? sanitize_text_field( $module_data['schedule_interval'] ) : 'manual',
-            'schedule_status' => isset( $module_data['schedule_status'] ) ? sanitize_text_field( $module_data['schedule_status'] ) : 'paused',
+            'schedule_status' => isset( $module_data['schedule_status'] ) ? sanitize_text_field( $module_data['schedule_status'] ) : 'active', // Default to active
         );
 
         $format = array(
@@ -151,13 +151,13 @@ class Data_Machine_Database_Modules {
     public function get_modules_for_project( $project_id, $user_id ) {
     	global $wpdb;
    
-    	// First, verify the user owns the project
-    	// Note: Assumes Database_Projects class is available/loaded.
-    	// Ideally, this dependency would be injected or retrieved via locator.
-    	if (!class_exists('Data_Machine_Database_Projects')) {
-    		require_once __DIR__ . '/class-database-projects.php';
-    	}
-    	$db_projects = new Data_Machine_Database_Projects();
+    	// First, verify the user owns the project using the locator
+        // Note: This method now relies on the locator being injected in the constructor.
+        $db_projects = $this->locator->get('database_projects');
+        if (!$db_projects) {
+            error_log("Data Machine DB Modules: Could not get database_projects service in get_modules_for_project.");
+            return null; // Cannot proceed without DB service
+        }
     	$project = $db_projects->get_project( $project_id, $user_id );
    
     	if ( ! $project ) {
@@ -241,7 +241,7 @@ class Data_Machine_Database_Modules {
     				// Assume it's already a correctly structured array/object for encoding
     				$data[ $field ] = wp_json_encode( $value );
     			} elseif ( in_array( $field, [ 'process_data_prompt', 'fact_check_prompt', 'finalize_response_prompt' ] ) ) {
-    				$data[ $field ] = wp_kses_post( $value );
+    				$data[ $field ] = wp_kses_post( wp_unslash( $value ) ); // Unslash before kses
     			} else {
     				$data[ $field ] = sanitize_text_field( $value );
     			}
@@ -356,7 +356,7 @@ class Data_Machine_Database_Modules {
         global $wpdb;
 
         // Validate interval and status against allowed values if needed
-        $allowed_intervals = ['project_schedule', 'manual', 'every_5_minutes', 'hourly', 'twicedaily', 'daily', 'weekly'];
+        $allowed_intervals = Data_Machine_Constants::get_allowed_module_intervals_for_validation();
         $allowed_statuses = ['active', 'paused'];
         if ( !in_array($interval, $allowed_intervals) || !in_array($status, $allowed_statuses) ) {
             error_log('Data Machine DB Modules: Invalid interval or status provided for update_module_schedule.');
@@ -394,6 +394,114 @@ class Data_Machine_Database_Modules {
         }
 
         return $updated;
+    }
+
+    /**
+     * Update schedule settings for multiple modules belonging to a specific project.
+     *
+     * @since    0.15.0 // Or current version
+     * @param    int      $project_id       The ID of the project.
+     * @param    int      $user_id          The ID of the user requesting the update.
+     * @param    array    $module_schedules Associative array [module_id => ['interval' => '...', 'status' => '...']].
+     * @return   bool                     True if ownership verified and updates attempted, false otherwise.
+     */
+    public function update_module_schedules( $project_id, $user_id, $module_schedules ) {
+        global $wpdb;
+
+        // Check project ownership first
+        $db_projects = $this->locator->get('database_projects');
+        if (!$db_projects || !$db_projects->get_project($project_id, $user_id)) {
+            error_log("Data Machine DB Modules: Permission denied to update schedules for project {$project_id}.");
+            return false;
+        }
+
+        // Allowed values for validation inside the loop
+        $allowed_intervals = Data_Machine_Constants::get_allowed_module_intervals_for_validation();
+        $allowed_statuses = ['active', 'paused'];
+
+        $results = [];
+        $errors = [];
+
+        // 3. Iterate and update each module
+        $success = true; // Assume success unless ownership fails
+        foreach ($module_schedules as $module_id => $schedule_data) {
+            $module_id = absint($module_id);
+            if (empty($module_id)) continue; // Skip invalid module IDs
+
+            $interval = isset($schedule_data['interval']) ? sanitize_text_field($schedule_data['interval']) : null;
+            $status = isset($schedule_data['status']) ? sanitize_text_field($schedule_data['status']) : null;
+
+            // Validate interval and status
+            if (!in_array($interval, $allowed_intervals) || !in_array($status, $allowed_statuses)) {
+                error_log("Data Machine update_module_schedules: Invalid interval ('{$interval}') or status ('{$status}') for module ID: {$module_id}");
+                continue; // Skip this module update if data is invalid
+            }
+
+            // Prepare update data
+            $data = [
+                'schedule_interval' => $interval,
+                'schedule_status' => $status,
+            ];
+            $where = [
+                'module_id' => $module_id,
+                'project_id' => $project_id // Ensure we only update module if it belongs to the specified project
+            ];
+            $format = ['%s', '%s'];
+            $where_format = ['%d', '%d'];
+
+            // Execute the update
+            $updated = $wpdb->update($this->table_name, $data, $where, $format, $where_format);
+
+            if ($updated === false) {
+                error_log("Data Machine update_module_schedules: Failed to update module ID {$module_id}. DB Error: " . $wpdb->last_error);
+                // Optionally set $success = false here if any single update failure should cause the whole operation to report failure
+            }
+             // Optional: Log successful update count?
+        }
+
+        return $success; // Return true if ownership check passed, false otherwise
+    }
+
+    /**
+     * Update the last run timestamp for a specific module.
+     *
+     * @since NEXT_VERSION
+     * @param int $module_id The ID of the module to update.
+     * @return bool True on success, false on failure.
+     */
+    public function update_module_last_run( $module_id ) {
+        global $wpdb;
+
+        $module_id = absint( $module_id );
+        if ( empty( $module_id ) ) {
+            return false;
+        }
+
+        $updated = $wpdb->update(
+            $this->table_name,
+            array(
+                'last_run_at' => current_time( 'mysql', 1 ) // Use GMT time
+            ),
+            array(
+                'module_id' => $module_id
+            ),
+            array('%s'), // Format for data
+            array('%d')  // Format for WHERE
+        );
+
+        if ( false === $updated ) {
+            // Use logger if available
+            if ($this->locator) {
+                $logger = $this->locator->get('logger');
+                if ($logger) {
+                    $logger->error('Failed to update last_run_at for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
+                }
+            } else {
+                 error_log( 'Data Machine DB Modules: Failed to update last_run_at for module ID: ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+            }
+            return false;
+        }
+        return true;
     }
 
 }

@@ -27,15 +27,23 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
 	private $db_modules;
 
 	/**
+	 * Service Locator instance.
+	 * @var Data_Machine_Service_Locator
+	 */
+	private $locator;
+
+	/**
 	 * Constructor. Dependencies are injected.
 	 *
 	 * @param Data_Machine_Processing_Orchestrator $orchestrator Processing orchestrator.
 	 * @param Data_Machine_Database_Modules $db_modules Database modules handler.
+	 * @param Data_Machine_Service_Locator $locator Service Locator.
 	 */
-	public function __construct(Data_Machine_Processing_Orchestrator $orchestrator, Data_Machine_Database_Modules $db_modules) {
+	public function __construct(Data_Machine_Processing_Orchestrator $orchestrator, Data_Machine_Database_Modules $db_modules, Data_Machine_Service_Locator $locator) {
 	 // $this->plugin = $plugin; // Removed plugin dependency
 	 $this->orchestrator = $orchestrator;
 	 $this->db_modules = $db_modules;
+	 $this->locator = $locator;
 	}
 
 	/**
@@ -108,9 +116,20 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
 				 throw new Exception(__( 'Failed to read file content.', 'data-machine' ));
 			}
 
+			// Ensure the content string is valid UTF-8 for JSON encoding -- REMOVED: This corrupts binary data needed for API
+			/*
+			if (function_exists('mb_convert_encoding')) {
+				$content_string = mb_convert_encoding($content_string, 'UTF-8', 'UTF-8');
+			} else {
+				// Fallback or warning if mbstring is not enabled
+				// For simplicity, we might just proceed, but JSON encode could still fail
+				// Alternatively, attempt basic sanitization if needed
+			}
+			*/
+
 			// Prepare packet
 			$input_data_packet = [
-				'content_string' => $content_string,
+				// 'content_string' => $content_string, // Removed: Raw content not needed for job queue, causes JSON errors. Will be read from persistent_path later.
 				'file_info' => [
 					'original_name' => $file['name'],
 					'mime_type' => $file['type'],
@@ -119,16 +138,17 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
 				],
 				'metadata' => [
 					'source_type' => 'files',
-					'module_id' => $module_id
+					'module_id' => $module_id,
+					'item_identifier_to_log' => $persistent_path // Add unique identifier for duplicate check
 				]
 			];
 		} else {
-			// Handle case where no file was uploaded (e.g., cron run expecting a pre-existing file path in config?)
-			// TODO: Define how 'files' type should work without an upload (e.g., read path from $source_config)
-			return ['error' => true, 'message' => 'no_input_data', 'details' => 'File upload data missing for \'files\' type module.']; // Or throw Exception?
+			// If no file was uploaded, throw an exception as input is missing.
+			throw new Exception(__( 'No file uploaded for processing.', 'data-machine' ));
 		}
 
-		return $input_data_packet;
+		// Return the packet wrapped in an array, as expected by the Job Executor
+		return [$input_data_packet];
 	}
 
 	/**
@@ -157,7 +177,7 @@ public function sanitize_settings(array $raw_settings): array {
  * @return string The label.
  */
 public static function get_label(): string {
-	return __( 'Files', 'data-machine' );
+	return 'Files';
 }
 
 }

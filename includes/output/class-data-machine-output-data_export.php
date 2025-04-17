@@ -49,7 +49,7 @@ class Data_Machine_Output_Data_Export implements Data_Machine_Output_Handler_Int
 	 * @return string
 	 */
 	public static function get_label(): string {
-		return __( 'Data Export', 'data-machine' );
+		return 'Data Export';
 	}
 
 	/**

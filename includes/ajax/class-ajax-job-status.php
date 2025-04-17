@@ -35,10 +35,7 @@ class Data_Machine_Ajax_Job_Status {
         $jobs_table = $wpdb->prefix . 'dm_jobs';
 
         $job = $wpdb->get_row( $wpdb->prepare(
-            "SELECT job_id, user_id, status, result_data, started_at, completed_at,
-                    step1_initial_request, step1_initial_response,
-                    step2_factcheck_request, step2_factcheck_response,
-                    step3_finalize_request, step3_finalize_response
+            "SELECT job_id, user_id, status, result_data, created_at, started_at, completed_at
              FROM $jobs_table WHERE job_id = %d",
             $job_id
         ) );
@@ -53,36 +50,8 @@ class Data_Machine_Ajax_Job_Status {
             return;
         }
 
-        // Construct the job_steps array for the frontend
+        // Step logging removed - detailed logs are now in debug files.
         $job_steps_output = [];
-        if ($job->step1_initial_request || $job->step1_initial_response) {
-            $job_steps_output[] = [
-                'step' => 'initial_processing',
-                'request' => $job->step1_initial_request ? json_decode(wp_unslash($job->step1_initial_request), true) : null,
-                'response' => $job->step1_initial_response ? json_decode(wp_unslash($job->step1_initial_response), true) : null,
-                'timestamp' => $job->started_at
-            ];
-        }
-        if ($job->step2_factcheck_request || $job->step2_factcheck_response) {
-            $step2_request = $job->step2_factcheck_request ? json_decode(wp_unslash($job->step2_factcheck_request), true) : null;
-            $step2_response = $job->step2_factcheck_response ? json_decode(wp_unslash($job->step2_factcheck_response), true) : null;
-            $job_steps_output[] = [
-                'step' => 'fact_check',
-                'request' => $step2_request,
-                'response' => $step2_response,
-                'timestamp' => $job->started_at
-            ];
-        }
-        if ($job->step3_finalize_request || $job->step3_finalize_response) {
-            $step3_request = $job->step3_finalize_request ? json_decode(wp_unslash($job->step3_finalize_request), true) : null;
-            $step3_response = $job->step3_finalize_response ? json_decode(wp_unslash($job->step3_finalize_response), true) : null;
-            $job_steps_output[] = [
-                'step' => 'finalize',
-                'request' => $step3_request,
-                'response' => $step3_response,
-                'timestamp' => $job->started_at
-            ];
-        }
 
         $response_data = array(
             'job_id' => $job->job_id,

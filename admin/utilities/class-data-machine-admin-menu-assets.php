@@ -224,7 +224,8 @@ class Data_Machine_Admin_Menu_Assets {
                      'run_now_nonce'             => wp_create_nonce( 'dm_run_now_nonce' ),
                      'get_schedule_data_nonce'   => wp_create_nonce( 'dm_get_schedule_data_nonce' ),
                      'edit_schedule_nonce'       => wp_create_nonce( 'dm_edit_schedule_nonce' ),
-                     'create_project_nonce'      => wp_create_nonce( 'dm_create_project_nonce' )
+                     'create_project_nonce'      => wp_create_nonce( 'dm_create_project_nonce' ),
+                     'cron_schedules'            => Data_Machine_Constants::get_cron_schedules_for_js()
                  );
                  wp_localize_script( 'data-machine-dashboard', 'dm_dashboard_params', $dashboard_params );
             

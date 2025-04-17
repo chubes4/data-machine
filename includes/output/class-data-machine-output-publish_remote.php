@@ -25,13 +25,25 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
     private $logger;
 
     /**
+     * Database handler for processed items.
+     * @var Data_Machine_Database_Processed_Items
+     */
+    private $db_processed_items;
+
+    /**
      * Constructor.
      * @param Data_Machine_Database_Remote_Locations $db_locations
      * @param Data_Machine_Logger $logger
+     * @param Data_Machine_Database_Processed_Items $db_processed_items
      */
-    public function __construct(Data_Machine_Database_Remote_Locations $db_locations, Data_Machine_Logger $logger) {
+    public function __construct(
+        Data_Machine_Database_Remote_Locations $db_locations,
+        Data_Machine_Logger $logger,
+        Data_Machine_Database_Processed_Items $db_processed_items
+    ) {
         $this->db_locations = $db_locations;
         $this->logger = $logger;
+        $this->db_processed_items = $db_processed_items;
     }
 	/**
 	 * Handles publishing the AI output to a remote WordPress site via REST API.
@@ -48,6 +60,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		$assigned_category_id = null;
 		$assigned_tag_ids = [];
 		$assigned_tag_names = [];
+		$assigned_custom_taxonomies = []; // Store assigned custom terms for reporting
 		// Get output config directly from the job config array
 		$output_config = $module_job_config['output_config'] ?? [];
 		if ( ! is_array( $output_config ) ) $output_config = array(); // Ensure it's an array
@@ -102,8 +115,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		// Get publish settings from the specific $config sub-array
 		$post_type   = $config['selected_remote_post_type'] ?? 'post';
 		$post_status = $config['remote_post_status'] ?? 'publish';
-		$category_id = $config['selected_remote_category_id'] ?? -1; // -1 = Model Decides
-		$tag_id      = $config['selected_remote_tag_id'] ?? -1;      // -1 = Model Decides
+		$category_id = $config['selected_remote_category_id'] ?? 'model_decides'; // Default to string
+		$tag_id      = $config['selected_remote_tag_id'] ?? 'model_decides';      // Default to string
 
 		// Parse AI output string
 		require_once DATA_MACHINE_PATH . 'includes/helpers/class-ai-response-parser.php';
@@ -113,14 +126,38 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			'title' => $parser->get_title(),
 			'content' => $parser->get_content(),
 			'category' => $parser->get_publish_category(),
-			'tags' => $parser->get_publish_tags() ? array_map('trim', explode(',', $parser->get_publish_tags())) : []
+			'tags' => $parser->get_publish_tags() ? array_map('trim', explode(',', $parser->get_publish_tags())) : [],
+			'custom_taxonomies' => $parser->get_custom_taxonomies() // Get custom taxonomies
 		];
 
-		      // --- Convert Markdown content to HTML ---
-		      require_once DATA_MACHINE_PATH . 'includes/helpers/class-markdown-converter.php';
-		      // Call the static method directly
-		      $html_content = Data_Machine_Markdown_Converter::convert_to_html($parsed_data['content']);
-		      // --- End Markdown Conversion ---
+		// --- Prepare Content: Prepend Image, Append Source --- 
+		$final_content = $parsed_data['content']; // Start with AI-generated content
+
+		// Prepend Image if available in metadata
+		if (!empty($input_metadata['image_source_url'])) {
+			$image_url = esc_url($input_metadata['image_source_url']);
+			$alt_text = !empty($input_metadata['original_title']) ? esc_attr($input_metadata['original_title']) : esc_attr('Source Image'); // Use title for alt
+			$image_tag = sprintf('<img src="%s" alt="%s" /><br /><br />', $image_url, $alt_text);
+			$final_content = $image_tag . $final_content;
+		}
+
+		// Append Source Link if available in metadata
+		if (!empty($input_metadata['source_url'])) {
+			$source_url = esc_url($input_metadata['source_url']);
+			$source_name = esc_html($input_metadata['original_title'] ?? 'Original Source'); // Use title or fallback
+			if (!empty($input_metadata['subreddit'])) {
+				$source_name = 'r/' . esc_html($input_metadata['subreddit']);
+			}
+			$source_link_string = sprintf('Source: <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', $source_url, $source_name);
+			$final_content .= "\n\n" . $source_link_string;
+		}
+		// --- End Prepare Content --- 
+
+		// --- Convert Markdown content to HTML ---
+		require_once DATA_MACHINE_PATH . 'includes/helpers/class-markdown-converter.php';
+		// Call the static method directly
+		$html_content = Data_Machine_Markdown_Converter::convert_to_html($final_content);
+		// --- End Markdown Conversion ---
 
 		// --- Determine Post Date ---
 		$post_date_source = $config['post_date_source'] ?? 'current_date'; // Get setting from $config
@@ -148,11 +185,15 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		// Prepare data payload for the remote API
 		$payload = array(
 			'title'       => $parsed_data['title'] ?: __( 'Untitled Airdropped Post', 'data-machine' ),
-			'content'     => $html_content, // Use converted HTML
+			'content'     => $html_content, // Use processed HTML content
 			'post_type'   => $post_type,
 			'status'      => $post_status, // Changed key to 'status' for REST API
 			// Taxonomy keys will be added below based on mode
 		);
+		// Add module_id for tracking
+		if (!empty($module_job_config['module_id'])) {
+			$payload['dm_module_id'] = intval($module_job_config['module_id']);
+		}
 
 		// Add date to payload if determined from source
 		if ($post_date_iso) {
@@ -166,7 +207,19 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		$remote_tags = $remote_info['taxonomies']['post_tag']['terms'] ?? [];
 
 		// Category Logic - Determine what to send
-		if ( $category_id > 0 ) { // Manual selection: Send the ID
+		if ( is_string( $category_id ) && ($category_id === 'model_decides' || $category_id === 'instruct_model') ) {
+			// Model decides or Instruct Model: Send the name parsed from AI, if any
+			if (!empty($parsed_data['category'])) {
+				$payload['category_name'] = $parsed_data['category'];
+				$assigned_category_name = $parsed_data['category']; // For reporting
+			}
+			// Additionally send the mode if instructed
+			if ($category_id === 'instruct_model') {
+				$payload['rest_category'] = 'instruct_model';
+			}
+			$assigned_category_id = null; // ID will be determined/created by receiver
+
+		} elseif ( is_numeric( $category_id ) && $category_id > 0 ) { // Manual selection: Send the ID
 			$payload['category_id'] = $category_id;
 			// Find the name locally for reporting back (optional, could get from response)
 			foreach ($remote_cats as $cat) { // Use synced info if available
@@ -176,14 +229,24 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				}
 			}
 			$assigned_category_id = $category_id;
-		} elseif ( $category_id === -1 && ! empty( $parsed_data['category'] ) ) { // Model decides: Send the name
-			$payload['category_name'] = $parsed_data['category'];
-			$assigned_category_name = $parsed_data['category']; // For reporting
-			$assigned_category_id = null; // ID will be determined/created by receiver
 		}
 
 		// Tag Logic - Determine what to send
-		if ( $tag_id > 0 ) { // Manual selection: Send the ID
+		if ( is_string( $tag_id ) && ($tag_id === 'model_decides' || $tag_id === 'instruct_model') ) {
+			// Model decides or Instruct Model: Send the names parsed from AI, if any
+			if (!empty($parsed_data['tags'])) {
+				$payload['tag_names'] = $parsed_data['tags'];
+				$assigned_tag_names = $parsed_data['tags']; // For reporting
+			} else {
+				$assigned_tag_names = [];
+			}
+			// Additionally send the mode if instructed
+			if ($tag_id === 'instruct_model') {
+				$payload['rest_post_tag'] = 'instruct_model';
+			}
+			$assigned_tag_ids = []; // IDs will be determined/created by receiver
+
+		} elseif ( is_numeric( $tag_id ) && $tag_id > 0 ) { // Manual selection: Send the ID
 			$payload['tag_ids'] = array( $tag_id ); // Send as array
 			$assigned_tag_ids = array( $tag_id );
 			// Find name locally for reporting back (optional)
@@ -193,15 +256,35 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 					break;
 				}
 			}
-		} elseif ( $tag_id === -1 && ! empty( $parsed_data['tags'] ) ) { // Model decides: Send the names
-			$payload['tag_names'] = $parsed_data['tags']; // Send array of names
-			$assigned_tag_names = $parsed_data['tags']; // For reporting
-			$assigned_tag_ids = []; // IDs will be determined/created by receiver
-			if (!isset($assigned_tag_names)) $assigned_tag_names = [];
+		}
+
+		// Add custom taxonomy selections (rest_{tax_slug}) to payload
+		// This loop ALREADY handles string modes correctly, sending the string mode itself
+		// OR the selected numeric ID.
+		foreach ($config as $key => $value) {
+		    if (preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)) {
+		        if (is_string($value) && ($value === 'model_decides' || $value === 'instruct_model')) {
+		            $payload[$key] = $value; // Send the string mode
+		        } elseif (is_numeric($value) && $value > 0) {
+		            $payload[$key] = intval($value); // Send the numeric ID
+		        }
+		    }
+		}
+
+		// Add parsed custom taxonomies to the payload (if any)
+		// This sends the NAMES parsed from AI output, regardless of mode
+		if (!empty($parsed_data['custom_taxonomies'])) {
+			$payload['custom_taxonomies'] = $parsed_data['custom_taxonomies'];
+			// Store for reporting back in the result
+			$assigned_custom_taxonomies = $parsed_data['custom_taxonomies'];
 		}
 
 		// Construct the target API URL
 		$api_url = $remote_url . '/wp-json/airdrop/v1/receive'; // Correct endpoint from helper plugin
+
+		// --- DEBUG: Log the payload before sending ---
+		$this->logger->debug('Airdrop Payload Prepared', ['api_url' => $api_url, 'payload' => $payload]);
+		// --- END DEBUG ---
 
 		// Prepare arguments for wp_remote_post
 		$args = array(
@@ -235,7 +318,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			return new WP_Error( 'remote_publish_failed', $error_message, $error_message_detail );
 		}
 
-		// Success
+		// Return success data from the remote site's response
 		return array(
 			'status'                 => 'success',
 			'message'                => $decoded_body['message'] ?? __( 'Post published remotely successfully!', 'data-machine' ),
@@ -248,6 +331,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			'assigned_category_name' => $assigned_category_name,
 			'assigned_tag_ids'       => is_array($assigned_tag_ids) ? $assigned_tag_ids : [],
 			'assigned_tag_names'     => is_array($assigned_tag_names) ? $assigned_tag_names : [],
+			'assigned_custom_taxonomies' => $assigned_custom_taxonomies, // Add custom tax info to result
 		);
 	}
 
@@ -259,12 +343,13 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 	public static function get_settings_fields(array $current_config = [], ?Data_Machine_Service_Locator $locator = null): array {
 		$locations_options = ['' => '-- Select Location --'];
 		$post_type_options = [ '' => '-- Select Location First --' ];
-		$category_options = [ '' => '-- Select Location First --', '-1' => '-- Let Model Decide --', '0' => '-- Instruct Model --' ];
-		$tag_options = [ '' => '-- Select Location First --', '-1' => '-- Let Model Decide --', '0' => '-- Instruct Model --' ];
+		$category_options = [ '' => '-- Select Location First --', 'model_decides' => '-- Let Model Decide --', 'instruct_model' => '-- Instruct Model --' ];
+		$tag_options = [ '' => '-- Select Location First --', 'model_decides' => '-- Let Model Decide --', 'instruct_model' => '-- Instruct Model --' ];
 
 		$selected_post_type = $current_config['selected_remote_post_type'] ?? '';
-		$selected_category_id = $current_config['selected_remote_category_id'] ?? -1;
-		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? -1;
+		// Use string keys for default mode
+		$selected_category_id = $current_config['selected_remote_category_id'] ?? 'model_decides';
+		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? 'model_decides';
 
 		// --- NEW: Retrieve site_info for dynamic taxonomy fields ---
 		$site_info = [];
@@ -325,14 +410,14 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'label' => __('Remote Category', 'data-machine'),
 				'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
 				'options' => $category_options,
-				'default' => $selected_category_id,
+				'default' => $selected_category_id, // Will be string or int ID
 			],
 			'selected_remote_tag_id' => [
 				'type' => 'select',
 				'label' => __('Remote Tag', 'data-machine'),
 				'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
 				'options' => $tag_options,
-				'default' => $selected_tag_id,
+				'default' => $selected_tag_id, // Will be string or int ID
 			],
 		];
 
@@ -342,7 +427,11 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				if (in_array($tax_slug, ['category', 'post_tag'])) {
 					continue; // Already handled above
 				}
-				$tax_options = [0 => '-- Select ' . ($tax_data['label'] ?? ucfirst($tax_slug)) . ' --'];
+				$tax_options = [
+					'' => '-- Select ' . ($tax_data['label'] ?? ucfirst($tax_slug)) . ' --',
+					'model_decides' => '-- Let Model Decide --',
+					'instruct_model' => '-- Instruct Model --'
+				];
 				if (!empty($tax_data['terms']) && is_array($tax_data['terms'])) {
 					foreach ($tax_data['terms'] as $term) {
 						if (isset($term['term_id']) && isset($term['name'])) {
@@ -357,6 +446,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 						'options' => $tax_options,
 						'post_types' => $tax_data['post_types'] ?? [],
 						'description' => 'Select a ' . ($tax_data['label'] ?? $tax_slug) . ' for this post.',
+						'default' => $current_config['rest_' . $tax_slug] ?? 'model_decides' // Default custom tax to string key
 					];
 				}
 			}
@@ -378,14 +468,36 @@ public function sanitize_settings(array $raw_settings): array {
 	$valid_date_sources = ['current_date', 'source_date'];
 	$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
 	$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
-	$sanitized['selected_remote_category_id'] = intval($raw_settings['selected_remote_category_id'] ?? -1);
-	$sanitized['selected_remote_tag_id'] = intval($raw_settings['selected_remote_tag_id'] ?? -1);
+
+	// Handle category/tag modes as string keys or integers
+	$cat_val = $raw_settings['selected_remote_category_id'] ?? 'model_decides';
+	if ($cat_val === 'model_decides' || $cat_val === 'instruct_model') {
+		$sanitized['selected_remote_category_id'] = $cat_val;
+	} else {
+		$sanitized['selected_remote_category_id'] = intval($cat_val);
+	}
+	$tag_val = $raw_settings['selected_remote_tag_id'] ?? 'model_decides';
+	if ($tag_val === 'model_decides' || $tag_val === 'instruct_model') {
+		$sanitized['selected_remote_tag_id'] = $tag_val;
+	} else {
+		$sanitized['selected_remote_tag_id'] = intval($tag_val);
+	}
+
 	// Handle custom taxonomy fields (rest_{taxonomy_slug})
 	foreach ($raw_settings as $key => $value) {
 		if (
-			!isset($sanitized[$key]) &&
+			!isset($sanitized[$key]) && // Avoid double processing
 			preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)
 		) {
+			// Handle both string options and numeric IDs
+			if (is_string($value)) {
+				$trimmed_value = strtolower(trim($value));
+				if ($trimmed_value === 'model_decides' || $trimmed_value === 'instruct_model') {
+					$sanitized[$key] = $trimmed_value;
+					continue; // Go to next iteration
+				}
+			}
+			// Default to integer for term IDs if not a valid string mode
 			$sanitized[$key] = intval($value);
 		}
 	}
@@ -398,7 +510,7 @@ public function sanitize_settings(array $raw_settings): array {
  * @return string
  */
 public static function get_label(): string {
-	return __( 'Publish Remotely', 'data-machine' );
+	return 'Publish Remotely';
 }
 
 } // End class Data_Machine_Output_Publish_Remote

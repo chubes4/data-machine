@@ -42,7 +42,7 @@ class Data_Machine_process_data {
 	 * @param    array     $input_data_packet   Standardized input data packet from the Input Handler.
 	 * @return   array                           API response data including 'status', 'message', and 'json_output'.
 	 */
-	public function process_data($api_key, $process_data_prompt, $input_data_packet) {
+	public function process_data($api_key, $system_prompt, $user_prompt, $input_data_packet) {
 		// Use the injected OpenAI API instance
 		$api = $this->openai_api;
 		$default_response = [
@@ -58,33 +58,37 @@ class Data_Machine_process_data {
 			if (!is_array($input_data_packet)) {
 				error_log('Data Machine - process_data: Received input_data_packet is not an array. Content: ' . print_r($input_data_packet, true));
 			} else {
-				error_log('Data Machine - process_data: Checking input_data_packet structure. Keys: ' . print_r(array_keys($input_data_packet), true));
-				// Optionally log full content for deeper debugging, but be mindful of large data:
-				// error_log('Data Machine - process_data: Full input_data_packet content: ' . print_r($input_data_packet, true));
+				// Check if file_info exists and contains a persistent_path (indicating a file to process)
+				if (!empty($input_data_packet['file_info']) && is_array($input_data_packet['file_info']) && !empty($input_data_packet['file_info']['persistent_path'])) {
+					// --- Handle File Input (Image or PDF using persistent_path) ---
+					$file_info = $input_data_packet['file_info'];
+					// Construct prompt specifically for file analysis
+					$user_message = $user_prompt; // Start with the base module prompt
+					// Optionally append text content if available (e.g., extracted text or title)
+					if (!empty($input_data_packet['content_string'])) {
+						$user_message .= "\n\nAdditional Text Content:\n" . $input_data_packet['content_string'];
+					}
+
+					// Call the API method designed for file handling using the file_info array
+					// create_response_with_file uses 'persistent_path' from $file_info
+					$response = $api->create_response_with_file($api_key, $file_info, $user_message);
+
+				} else {
+					// --- Handle Text-Only Input ---
+					// Construct prompt for text analysis
+					$user_message = $user_prompt;
+					// Append text content
+					if (!empty($input_data_packet['content_string'])) {
+						$user_message .= "\n\nPost Content:\n" . $input_data_packet['content_string'];
+					} elseif (!empty($input_data_packet['content'])) { // Fallback to 'content'
+						$user_message .= "\n\nPost Content:\n" . $input_data_packet['content'];
+					}
+
+					// Call the API method for text completion
+					$response = $api->create_completion_from_text($api_key, $user_message, $system_prompt);
+				}
 			}
-			// --- End detailed logging ---
-
-
-			// Check the structure of the input packet (Option B)
-			if (!empty($input_data_packet['content_string'])) {
-				$response = $api->create_completion_from_text(
-					$api_key,
-					$input_data_packet['content_string'],
-					$process_data_prompt
-				);
-			} elseif (!empty($input_data_packet['file_info']) && is_array($input_data_packet['file_info']) && isset($input_data_packet['file_info']['persistent_path'])) { // Check for persistent_path
-				$response = $api->create_response_with_file(
-					$api_key,
-					$input_data_packet['file_info'],
-					$process_data_prompt
-				);
-			} else {
-				// Add logging before throwing
-				error_log('Data Machine - process_data: Invalid input packet structure detected. Packet content: ' . print_r($input_data_packet, true));
-				throw new Exception('Invalid input data packet structure provided to process_data.');
-			}
-
-			// --- Process the response ---
+				// --- End detailed logging ---
 
 			if (is_wp_error($response)) {
 				$error_message = 'OpenAI API Error: ' . $response->get_error_message();

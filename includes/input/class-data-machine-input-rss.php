@@ -237,6 +237,6 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 	 * @return string
 	 */
 	public static function get_label(): string {
-		return __('RSS Feed', 'data-machine');
+		return 'RSS Feed';
 	}
 } // End class Data_Machine_Input_Rss

@@ -57,7 +57,7 @@ if (isset($_GET['code'])) {
             $accounts[] = [
                 'id' => $user_info['id'],
                 'username' => $user_info['username'],
-                'profile_pic' => $user_info['profile_picture_url'] ?? '',
+                'profile_pic' => esc_url_raw($user_info['profile_picture_url'] ?? ''),
                 'access_token' => $access_token,
                 'account_type' => $user_info['account_type'] ?? '',
                 'media_count' => $user_info['media_count'] ?? 0,

@@ -1,13 +1,20 @@
 <?php
 /**
- * Handles logging for the Data Machine plugin.
+ * Handles logging for the Data Machine plugin using Monolog.
  *
- * Provides methods for logging to the PHP error log and managing admin notices.
+ * Provides methods for logging to a dedicated file and managing admin notices.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes
+ * @subpackage Data_Machine/includes/helpers
  * @since      NEXT_VERSION
  */
+
+// Declare upfront to ensure they are available
+use Monolog\Logger as MonologLogger;
+use Monolog\Handler\StreamHandler;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Level;
+use Monolog\Handler\ErrorLogHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -22,70 +29,132 @@ class Data_Machine_Logger {
     const NOTICE_INFO       = 'info';
 
     /**
-     * Logs a message to the standard PHP error log.
+     * Monolog instance.
+     * @var MonologLogger|null
+     */
+    private $monolog_instance = null;
+
+    /**
+     * Gets the Monolog logger instance, initializing it if needed.
+     *
+     * @return MonologLogger
+     */
+    private function get_monolog(): MonologLogger {
+        if ($this->monolog_instance === null) {
+            // Define log path
+            $upload_dir = wp_upload_dir();
+            $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+
+            // Attempt to create the directory if it doesn't exist
+            if (!file_exists($log_dir)) {
+                if (!wp_mkdir_p($log_dir)) {
+                    error_log('Data Machine Logger Error: Could not create log directory: ' . $log_dir);
+                    // Fallback to basic ErrorLogHandler
+                    $this->monolog_instance = new MonologLogger('DataMachineFallback');
+                    $this->monolog_instance->pushHandler(new ErrorLogHandler());
+                    return $this->monolog_instance;
+                 }
+             }
+
+            // Check if directory is writable
+            if (!is_writable($log_dir)) {
+                error_log('Data Machine Logger Warning: Log directory is not writable: ' . $log_dir);
+            }
+
+            $log_file = $log_dir . '/data-machine.log';
+
+            // Create a logger channel
+            $this->monolog_instance = new MonologLogger('DataMachine');
+
+            try {
+                // Create a handler (writing to a file)
+                $handler = new StreamHandler($log_file, Level::Debug); // Log from DEBUG level up
+
+                // Optional: Customize log format
+                $formatter = new LineFormatter(
+                    "[%datetime%] [%channel%.%level_name%]: %message% %context% %extra%\n",
+                    "Y-m-d\TH:i:s.uP", // ISO 8601 format
+                    true, // Allow inline line breaks
+                    true  // Ignore empty context/extra
+                );
+                $handler->setFormatter($formatter);
+
+                // Push the handler
+                $this->monolog_instance->pushHandler($handler);
+
+            } catch (\Exception $e) {
+                 error_log('Data Machine Logger Error: Failed to initialize StreamHandler: ' . $e->getMessage());
+                 // Fallback to ErrorLogHandler
+                 $this->monolog_instance = new MonologLogger('DataMachineFallback');
+                 $this->monolog_instance->pushHandler(new ErrorLogHandler());
+            }
+        }
+        return $this->monolog_instance;
+    }
+
+    /**
+     * Logs a message using Monolog.
      *
      * @since NEXT_VERSION
      *
-     * @param string $level   Log level (e.g., 'ERROR', 'WARNING', 'INFO', 'DEBUG').
-     * @param string $message The message to log.
-     * @param array  $context Optional context data.
+     * @param \Monolog\Level $level   Log level (use Monolog\Level constants).
+     * @param string|\Stringable $message The message to log.
+     * @param array $context Optional context data.
      */
-    public function log( $level, $message, $context = [] ) {
-        $formatted_message = sprintf(
-            '[Data Machine][%s] %s', 
-            strtoupper($level),
-            $message
-        );
-        if (!empty($context)) {
-             // Use print_r for context as it handles arrays/objects well for logging
-            $formatted_message .= ' | Context: ' . print_r($context, true);
+    public function log(Level $level, string|\Stringable $message, array $context = [] ): void {
+        try {
+             $this->get_monolog()->log($level, $message, $context);
+        } catch (\Exception $e) {
+             // Prevent logging failures from crashing the application
+             error_log('Data Machine Logger Failure: ' . $e->getMessage() . ' | Original Message: ' . $message);
         }
-        error_log($formatted_message);
     }
 
     /**
      * Logs an error message.
      *
      * @since NEXT_VERSION
-     * @param string $message The error message.
-     * @param array  $context Optional context data.
+     * @param string|\Stringable $message The error message.
+     * @param array $context Optional context data.
      */
-    public function error( $message, $context = [] ) {
-        $this->log( 'ERROR', $message, $context );
+    public function error( string|\Stringable $message, array $context = [] ): void {
+        $this->log( Level::Error, $message, $context );
     }
 
     /**
      * Logs a warning message.
      *
      * @since NEXT_VERSION
-     * @param string $message The warning message.
-     * @param array  $context Optional context data.
+     * @param string|\Stringable $message The warning message.
+     * @param array $context Optional context data.
      */
-    public function warning( $message, $context = [] ) {
-        $this->log( 'WARNING', $message, $context );
+    public function warning( string|\Stringable $message, array $context = [] ): void {
+        $this->log( Level::Warning, $message, $context );
     }
 
     /**
      * Logs an informational message.
      *
      * @since NEXT_VERSION
-     * @param string $message The info message.
-     * @param array  $context Optional context data.
+     * @param string|\Stringable $message The info message.
+     * @param array $context Optional context data.
      */
-    public function info( $message, $context = [] ) {
-        $this->log( 'INFO', $message, $context );
+    public function info( string|\Stringable $message, array $context = [] ): void {
+        $this->log( Level::Info, $message, $context );
     }
 
     /**
-     * Logs a debug message (consider adding a setting to enable/disable debug logging).
+     * Logs a debug message.
      *
      * @since NEXT_VERSION
-     * @param string $message The debug message.
-     * @param array  $context Optional context data.
+     * @param string|\Stringable $message The debug message.
+     * @param array $context Optional context data.
      */
-    public function debug( $message, $context = [] ) {
-        // TODO: Add check for a debug mode setting if implemented
-        $this->log( 'DEBUG', $message, $context );
+    public function debug( string|\Stringable $message, array $context = [] ): void {
+        // Consider adding a check for WP_DEBUG or a custom constant
+        // if (defined('WP_DEBUG') && WP_DEBUG) {
+             $this->log( Level::Debug, $message, $context );
+        // }
     }
 
     /**

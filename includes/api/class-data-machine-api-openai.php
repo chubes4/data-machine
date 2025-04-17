@@ -27,7 +27,7 @@ public function upload_file_to_openai($api_key, $data_file) {
 
     // For file inputs, use purpose "user_data" (per docs)
     $purpose = 'user_data';
-    $filename = basename($data_file['name']);
+    $filename = basename($data_file['original_name']);
     // Use the persistent path from the file_info array
     $file_path = $data_file['persistent_path'] ?? null;
     if (empty($file_path) || !file_exists($file_path)) {
@@ -104,7 +104,7 @@ error_log('MIME type: ' . $mime_type); // Debugging line
     // Handle PDF files
     if ($mime_type === 'application/pdf') {
         $file_size = filesize($file_path);
-        $filename = basename($file['name']); // Get the original filename
+        $filename = basename($file['original_name']); // Use original_name
         $pdf_content_payload = [];
 
         if ($file_size <= $pdf_size_threshold) {
@@ -139,7 +139,7 @@ error_log('MIME type: ' . $mime_type); // Debugging line
 
         // Construct the final payload using the determined PDF content method
         $payload = [
-            'model' => 'gpt-4o-mini', // Or gpt-4o if needed for PDFs
+            'model' => Data_Machine_Constants::AI_MODEL_INITIAL,
             'input' => [
                 [
                     'role' => 'user',
@@ -157,7 +157,7 @@ error_log('MIME type: ' . $mime_type); // Debugging line
 
 
         $payload = [
-            'model' => 'gpt-4o',
+            'model' => Data_Machine_Constants::AI_MODEL_INITIAL,
             'input' => [
                 [
                     'role' => 'user',
@@ -225,26 +225,26 @@ error_log('MIME type: ' . $mime_type); // Debugging line
 	 * @param string $prompt         The prompt to guide the model.
 	 * @return array|WP_Error Parsed API response or WP_Error on failure.
 	 */
-	public function create_completion_from_text($api_key, $content_string, $prompt) {
+	public function create_completion_from_text($api_key, $user_message, $system_prompt) {
 		$endpoint = 'https://api.openai.com/v1/chat/completions';
 
-		// Basic check for empty content
-		if (empty(trim($content_string))) {
-			return new WP_Error('empty_content', 'Input content string is empty.');
+		// Basic check for empty user message
+		if (empty(trim($user_message))) {
+			return new WP_Error('empty_content', 'Input user message is empty.');
 		}
 
 		// Construct the payload for Chat Completions
-		// Combine prompt and content. Using a system prompt and user content is common.
+		// Use system prompt and user message as separate roles.
 		$payload = [
-			'model' => 'gpt-4o-mini', // Or another suitable text model
+			'model' => Data_Machine_Constants::AI_MODEL_INITIAL,
 			'messages' => [
 				[
 					'role' => 'system',
-					'content' => $prompt // System message defines the task
+					'content' => $system_prompt // System message defines the project-level context
 				],
 				[
 					'role' => 'user',
-					'content' => $content_string // User message provides the data
+					'content' => $user_message // User message provides the module/task-specific prompt and data
 				]
 			],
 			// Add other parameters like temperature, max_tokens if needed

@@ -6,6 +6,10 @@
  * @subpackage Data_Machine/includes/database
  * @since      0.16.0 // Or current version
  */
+
+// Ensure the helper class is available
+require_once dirname(__FILE__) . '/../helpers/class-data-machine-encryption-helper.php';
+
 class Data_Machine_Database_Remote_Locations {
 
     /**
@@ -13,35 +17,6 @@ class Data_Machine_Database_Remote_Locations {
      * @var Data_Machine_Service_Locator|null
      */
     private $locator;
-
-    /**
-     * Encryption key (Should be defined securely, e.g., in wp-config.php).
-     * Example: define('dm_ENCRYPTION_KEY', 'your-secure-random-32-byte-key');
-     */
-    private const ENCRYPTION_METHOD = 'aes-256-cbc';
-
-    /**
-     * Get the encryption key, preferring dm_ENCRYPTION_KEY, falling back to AUTH_KEY.
-     *
-     * @return string|false The encryption key (32 bytes) or false if unavailable.
-     */
-    private function _get_encryption_key() {
-        $key = false;
-        if (defined('dm_ENCRYPTION_KEY')) {
-            $key = dm_ENCRYPTION_KEY;
-        } elseif (defined('AUTH_KEY')) {
-            $key = AUTH_KEY;
-        }
-
-        if (!$key) {
-            error_log('DM Encryption Error: Neither dm_ENCRYPTION_KEY nor AUTH_KEY is defined.');
-            return false;
-        }
-
-        // Ensure key length is appropriate for aes-256-cbc (32 bytes)
-        // Use sha256 hash and take the first 32 bytes.
-        return substr(hash('sha256', $key, true), 0, 32);
-    }
 
     /**
      * Constructor.
@@ -104,9 +79,10 @@ class Data_Machine_Database_Remote_Locations {
             return false; // Basic validation
         }
 
-        $encrypted_password = $this->_encrypt_password($data['password']);
+        // Use the Encryption Helper
+        $encrypted_password = Data_Machine_Encryption_Helper::encrypt($data['password']);
         if ($encrypted_password === false) {
-            error_log('DM Remote Location Error: Failed to encrypt password.');
+            error_log('DM Remote Location Error: Failed to encrypt password using helper.');
             return false;
         }
 
@@ -166,9 +142,10 @@ class Data_Machine_Database_Remote_Locations {
             $update_formats[] = '%s';
         }
         if (isset($data['password'])) { // Allow updating with an empty password if intended
-            $encrypted_password = $this->_encrypt_password($data['password']);
+            // Use the Encryption Helper
+            $encrypted_password = Data_Machine_Encryption_Helper::encrypt($data['password']);
             if ($encrypted_password === false) {
-                 error_log('DM Remote Location Error: Failed to encrypt password during update.');
+                 error_log('DM Remote Location Error: Failed to encrypt password during update using helper.');
                  return false;
             }
             $update_data['encrypted_password'] = $encrypted_password;
@@ -245,11 +222,11 @@ class Data_Machine_Database_Remote_Locations {
         }
 
         if ($decrypt_password && isset($location->encrypted_password)) {
-            $location->password = $this->_decrypt_password($location->encrypted_password);
+            // Use the Encryption Helper
+            $location->password = Data_Machine_Encryption_Helper::decrypt($location->encrypted_password);
             if ($location->password === false) {
-                error_log("DM Remote Location Error: Failed to decrypt password for location ID {$location_id}.");
-                // Decide how to handle - return null, or return object without password?
-                // Returning object without password might be safer.
+                error_log("DM Remote Location Error: Failed to decrypt password using helper for location ID {$location_id}.");
+                // Optionally handle decryption failure, e.g., set password to null or an error indicator
                 unset($location->password);
             }
         }
@@ -314,88 +291,6 @@ class Data_Machine_Database_Remote_Locations {
         );
 
         return $result !== false;
-    }
-
-    /**
-     * Encrypts a password.
-     * IMPORTANT: Requires a securely defined dm_ENCRYPTION_KEY constant.
-     *
-     * @param string $password Plaintext password.
-     * @return string|false Encrypted string (base64 encoded) or false on failure.
-     */
-    private function _encrypt_password(string $password) {
-        $key = $this->_get_encryption_key();
-        if ($key === false || !function_exists('openssl_encrypt')) {
-             if ($key === false) {
-                // Error already logged in _get_encryption_key()
-             } else {
-                 error_log('DM Encryption Error: OpenSSL extension is not available.');
-             }
-             return false; // Cannot encrypt
-        }
-
-        $iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
-        if ($iv_length === false) {
-             error_log('DM Encryption Error: Could not get IV length for ' . self::ENCRYPTION_METHOD);
-             return false;
-        }
-        $iv = openssl_random_pseudo_bytes($iv_length);
-        $encrypted = openssl_encrypt($password, self::ENCRYPTION_METHOD, $key, OPENSSL_RAW_DATA, $iv);
-
-        if ($encrypted === false) {
-            error_log('DM Encryption Error: openssl_encrypt failed.');
-            return false;
-        }
-
-        // Prepend IV to the encrypted string for use during decryption
-        return base64_encode($iv . $encrypted);
-    }
-
-    /**
-     * Decrypts a password.
-     * IMPORTANT: Requires a securely defined dm_ENCRYPTION_KEY constant.
-     *
-     * @param string $encrypted_password Base64 encoded encrypted string (with IV prepended).
-     * @return string|false Plaintext password or false on failure.
-     */
-    private function _decrypt_password(string $encrypted_password) {
-        $key = $this->_get_encryption_key();
-        if ($key === false || !function_exists('openssl_decrypt')) {
-            if ($key === false) {
-               // Error already logged in _get_encryption_key()
-            } else {
-                error_log('DM Decryption Error: OpenSSL extension is not available.');
-            }
-            return false; // Cannot decrypt
-        }
-
-        $data = base64_decode($encrypted_password);
-        if ($data === false) {
-            error_log('DM Decryption Error: base64_decode failed.');
-            return false;
-        }
-
-        $iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
-         if ($iv_length === false) {
-             error_log('DM Decryption Error: Could not get IV length for ' . self::ENCRYPTION_METHOD);
-             return false;
-        }
-        if (strlen($data) < $iv_length) {
-             error_log('DM Decryption Error: Encrypted data is too short to contain IV.');
-             return false;
-        }
-
-        $iv = substr($data, 0, $iv_length);
-        $encrypted_text = substr($data, $iv_length);
-
-        $decrypted = openssl_decrypt($encrypted_text, self::ENCRYPTION_METHOD, $key, OPENSSL_RAW_DATA, $iv);
-
-        if ($decrypted === false) {
-            error_log('DM Decryption Error: openssl_decrypt failed. Check key or data integrity.');
-            return false;
-        }
-
-        return $decrypted;
     }
 
 } // End class

@@ -99,7 +99,7 @@ class Data_Machine_Ajax_Instagram_Auth {
 		$accounts[] = [
 			'id' => $user_info['id'],
 			'username' => $user_info['username'],
-			'profile_pic' => $user_info['profile_picture_url'] ?? '',
+			'profile_pic' => esc_url_raw($user_info['profile_picture_url'] ?? ''),
 			'access_token' => $access_token,
 			'account_type' => $user_info['account_type'] ?? '',
 			'media_count' => $user_info['media_count'] ?? 0,
@@ -122,7 +122,17 @@ class Data_Machine_Ajax_Instagram_Auth {
 		if ( ! is_array( $accounts ) ) {
 			$accounts = [];
 		}
-		wp_send_json_success( [ 'accounts' => $accounts ] );
+		// Prepare a safe list for the frontend (exclude token, sanitize fields)
+		$safe_accounts_list = [];
+		foreach ($accounts as $account) {
+			$safe_accounts_list[] = [
+				'id' => $account['id'] ?? null, // Assuming ID is safe (numeric from IG)
+				'username' => isset($account['username']) ? sanitize_text_field($account['username']) : 'N/A',
+				'profile_pic' => isset($account['profile_pic']) ? esc_url($account['profile_pic']) : '',
+				'expires_at' => isset($account['expires_at']) ? sanitize_text_field($account['expires_at']) : '', // Date string, basic sanitization
+			];
+		}
+		wp_send_json_success( [ 'accounts' => $safe_accounts_list ] );
 	}
 
 	/**
@@ -147,10 +157,21 @@ class Data_Machine_Ajax_Instagram_Auth {
 			$accounts = [];
 		}
 		$accounts = array_filter( $accounts, function( $acct ) use ( $account_id ) {
-			return $acct['id'] !== $account_id;
+			return ($acct['id'] ?? null) !== $account_id; // Check key exists before comparison
 		} );
 		update_user_meta( $user_id, 'data_machine_instagram_accounts', $accounts );
-		wp_send_json_success( [ 'accounts' => $accounts ] );
+
+		// Send back the updated *safe* list after removal
+		$safe_accounts_list = [];
+		foreach (array_values($accounts) as $account) { // Re-index after filter might be needed depending on usage
+			$safe_accounts_list[] = [
+				'id' => $account['id'] ?? null,
+				'username' => isset($account['username']) ? sanitize_text_field($account['username']) : 'N/A',
+				'profile_pic' => isset($account['profile_pic']) ? esc_url($account['profile_pic']) : '',
+				'expires_at' => isset($account['expires_at']) ? sanitize_text_field($account['expires_at']) : '',
+			];
+		}
+		wp_send_json_success( [ 'accounts' => $safe_accounts_list ] );
 	}
 
 	/**

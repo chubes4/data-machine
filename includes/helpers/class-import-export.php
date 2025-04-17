@@ -115,7 +115,7 @@ class Data_Machine_Import_Export {
 
 		// Define allowed fields for project (excluding project_id, user_id)
 		$allowed_project_fields = array(
-			'project_name', 'schedule_interval', 'schedule_status',
+			'project_name', 'schedule_interval', 'schedule_status', 'project_prompt',
 			// 'last_run_at', // Maybe exclude? Will be reset on import run.
 			// 'created_at', 'updated_at' // Usually reset on import
 		);

@@ -38,6 +38,20 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 	public function get_input_data(array $post_data, array $files_data, array $source_config, int $user_id): array {
 		$logger = $this->locator->get('logger');
 
+		// --- ADD THIS LOG ---
+		if ($logger) {
+			$module_id_check = isset( $post_data['module_id'] ) ? absint( $post_data['module_id'] ) : 'MISSING';
+			$logger->info('!!! PUBLIC REST API HANDLER: Entered get_input_data. Logger obtained. Module ID from post_data: ' . $module_id_check . ' User ID: ' . $user_id);
+		} else {
+			// If the logger itself failed, we can't log, but this indicates a major setup issue.
+			// We could try a basic error_log as a fallback?
+			error_log('!!! PUBLIC REST API HANDLER: Failed to obtain logger instance in get_input_data.');
+			// Let the code proceed to likely fail later when logger is used, or throw exception now?
+			// Throwing now might be clearer.
+			throw new Exception('Failed to obtain logger service.');
+		}
+		// --- END ADDITION ---
+
 		// Get module ID from context data
 		$module_id = isset( $post_data['module_id'] ) ? absint( $post_data['module_id'] ) : 0;
 		if ( empty( $module_id ) || empty( $user_id ) ) {
@@ -192,24 +206,52 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 					continue;
 				}
 				// Try to extract a unique ID, title, content, link, and date fields as flexibly as possible
-				$current_item_id = $item['id'] ?? $item['ID'] ?? null;
+				// MODIFICATION: Prioritize 'uuid' for ID
+				$current_item_id = $item['uuid'] ?? $item['id'] ?? $item['ID'] ?? null;
+				$logger && $logger->info('Public REST API: Attempting to process item with extracted ID: ' . var_export($current_item_id, true));
 				if (empty($current_item_id)) {
-					$logger && $logger->info('Public REST API: Skipping item (missing id/ID): ' . json_encode($item));
+					$logger && $logger->info('Public REST API: Skipping item (missing uuid/id/ID): ' . json_encode($item));
 					continue;
 				}
-				if ($cutoff_timestamp !== null) {
-					// Try to extract a date from various possible keys
+
+				// --- Date Handling ---
+				$item_timestamp = false;
+				$original_date_value = null; // Store the original date string
+
+				// MODIFICATION: Prioritize 'starttime' object for date
+				if (isset($item['starttime']) && is_array($item['starttime'])) {
+					if (!empty($item['starttime']['iso8601'])) {
+						$original_date_value = $item['starttime']['iso8601'];
+						$item_timestamp = strtotime($original_date_value);
+					} elseif (!empty($item['starttime']['rfc2822'])) {
+						$original_date_value = $item['starttime']['rfc2822'];
+						$item_timestamp = strtotime($original_date_value);
+					} elseif (!empty($item['starttime']['utc'])) {
+						// UTC timestamp is often in milliseconds, convert to seconds
+						$original_date_value = $item['starttime']['utc'];
+						$item_timestamp = is_numeric($original_date_value) ? (int)($original_date_value / 1000) : false;
+						// Store original value, but format timestamp as ISO for consistency if parsed
+						if ($item_timestamp !== false) $original_date_value = gmdate('Y-m-d\TH:i:s\Z', $item_timestamp);
+					}
+				}
+
+				// Fallback to existing date logic if 'starttime' is not found/parsed
+				if ($item_timestamp === false) {
 					$date_gmt = $item['date_gmt'] ?? $item['post_date_gmt'] ?? $item['post_date'] ?? null;
-					// Support meta_parts.post_date_formatted (e.g., "Apr 11, 2025")
 					if (empty($date_gmt) && isset($item['meta_parts']['post_date_formatted'])) {
 						$date_gmt = $item['meta_parts']['post_date_formatted'];
-						// Try to parse "Apr 11, 2025" into a timestamp
 						$item_timestamp = strtotime($date_gmt);
 					} else {
 						$item_timestamp = $date_gmt ? strtotime($date_gmt) : false;
 					}
-					if (empty($date_gmt) || $item_timestamp === false) {
-						$logger && $logger->info('Public REST API: Skipping item (missing date): ' . json_encode($item));
+					$original_date_value = $date_gmt; // Store the fallback date value
+				}
+				// --- End Date Handling ---
+
+				if ($cutoff_timestamp !== null) {
+					$logger && $logger->info('Public REST API: Checking date for item ID ' . $current_item_id . '. Extracted original date string: ' . var_export($original_date_value, true) . ', Parsed timestamp: ' . var_export($item_timestamp, true) . ', Cutoff timestamp: ' . $cutoff_timestamp);
+					if ($item_timestamp === false) {
+						$logger && $logger->info('Public REST API: Skipping item (missing or unparsable date): ' . json_encode($item));
 						continue;
 					}
 					if ($item_timestamp < $cutoff_timestamp) {
@@ -228,51 +270,67 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 
 					if (!empty($keywords)) {
 						$title_to_check = $item['title']['rendered'] ?? $item['title'] ?? $item['headline'] ?? '';
-						$content_to_check = $item['content']['rendered'] ?? $item['content'] ?? $item['excerpt'] ?? '';
+						// MODIFICATION: Handle content potentially being an array or simple string
+						$content_raw = $item['content']['rendered'] ?? $item['content'] ?? $item['excerpt'] ?? '';
+						$prologue_raw = $item['prologue'] ?? '';
+						$content_html = $prologue_raw;
+						if (is_array($content_raw)) {
+							$content_html .= implode("\n", $content_raw);
+						} elseif (is_string($content_raw)) {
+							$content_html .= $content_raw;
+						}
+						$content_to_check = $content_html; // Keep HTML structure for search? Or strip? Let's strip for consistency.
 						$text_to_search = $title_to_check . ' ' . strip_tags($content_to_check); // Combine title and content
+
 						$found_keyword = false;
 
 						foreach ($keywords as $keyword) {
-							// Use mb_stripos for case-insensitive multibyte search
 							if (mb_stripos($text_to_search, $keyword) !== false) {
 								$found_keyword = true;
-								break; // Found one keyword, no need to check others
+								break;
 							}
 						}
 
 						if (!$found_keyword) {
 							$logger && $logger->info('Public REST API: Skipping item (does not match search terms): ' . $current_item_id . ' | Title: ' . $title_to_check);
-							continue; // Skip this item if no keywords were found
+							continue;
 						}
 					}
 				}
 				// --- End Local Search Term Filtering ---
 
+				$logger && $logger->info('Public REST API: Checking if item ID ' . $current_item_id . ' has been processed.');
 				if ( $db_processed_items->has_item_been_processed($module_id, 'public_rest_api', $current_item_id) ) {
 					$logger && $logger->info('Public REST API: Skipping item (already processed): ' . $current_item_id);
 					continue;
 				}
+
+				// --- Data Extraction ---
 				$title = $item['title']['rendered'] ?? $item['title'] ?? $item['headline'] ?? 'N/A';
-				$content = $item['content']['rendered'] ?? $item['content'] ?? $item['excerpt'] ?? '';
-				$source_link = $item['link'] ?? $item['permalink'] ?? $next_page_url;
-				$original_date_gmt = $item['date_gmt'] ?? $item['post_date_gmt'] ?? $item['post_date'] ?? null;
-				// Fallback for formatted date like "Apr 11, 2025"
-				if (empty($original_date_gmt) && isset($item['meta_parts']['post_date_formatted'])) {
-				    $formatted_date = $item['meta_parts']['post_date_formatted'];
-				    // Attempt to parse into a standard format (ISO 8601 GMT)
-				    $parsed_timestamp = strtotime($formatted_date);
-				    if ($parsed_timestamp !== false) {
-				        // Convert to GMT assuming the parsed date is in the site's timezone initially
-				        // WordPress `get_gmt_from_date` might be useful if we know the site's timezone,
-				        // but for simplicity, let's format as ISO 8601 with a 'Z' assuming GMT if time is missing.
-				        // If time is present, strtotime might capture it. Best effort here.
-				        $original_date_gmt = gmdate('Y-m-d\TH:i:s\Z', $parsed_timestamp);
-				    } else {
-				        // If parsing fails, store the original formatted string
-				        $original_date_gmt = $formatted_date;
-				    }
+				// MODIFICATION: Handle 'content' array and 'prologue'
+				$content_parts = $item['content'] ?? []; // Assume 'content' is the array field
+				$prologue = $item['prologue'] ?? '';
+				$full_content_html = $prologue;
+				if (is_array($content_parts)) {
+					$full_content_html .= implode("\n", $content_parts);
+				} elseif (is_string($content_parts)) { // Handle case where content might just be a string
+					$full_content_html .= $content_parts;
 				}
-				$content_string = "Title: " . $title . "\n\n" . wp_strip_all_tags($content);
+				// Fallback if 'content' wasn't the right key
+				if (empty(trim(strip_tags($full_content_html)))) {
+					$content_fallback = $item['content']['rendered'] ?? $item['excerpt'] ?? '';
+					if(is_string($content_fallback)) {
+						$full_content_html = $content_fallback;
+					}
+				}
+				// MODIFICATION: Prioritize 'url' for source link
+				$source_link = $item['url'] ?? $item['link'] ?? $item['permalink'] ?? $api_endpoint_url; // Use API URL as last resort
+				// Keep the originally extracted date value (string)
+				$original_date_string_for_meta = is_string($original_date_value) ? $original_date_value : null;
+
+				$content_string = "Title: " . $title . "\n\n" . wp_strip_all_tags($full_content_html);
+				// --- End Data Extraction ---
+
 				$input_data_packet = [
 					'content_string' => $content_string,
 					'file_info' => null,
@@ -282,7 +340,8 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 						'original_id' => $current_item_id,
 						'source_url' => $source_link,
 						'original_title' => $title,
-						'original_date_gmt' => $original_date_gmt,
+						// MODIFICATION: Store the original date string we found
+						'original_date_gmt' => $original_date_string_for_meta, // Keep field name, but store the extracted value
 					]
 				];
 				$logger && $logger->info('Public REST API: Adding eligible item: ' . $current_item_id . ' | Title: ' . $title);
@@ -463,7 +522,7 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 	 * @return string
 	 */
 	public static function get_label(): string {
-		return __('Public REST API (WordPress)', 'data-machine');
+		return 'Public REST API (WordPress)';
 	}
 
 } // End class Data_Machine_Input_Public_Rest_Api

@@ -31,6 +31,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
         <thead>
             <tr>
                 <th>Project Name</th>
+                <th>Prompt</th>
                 <th>Modules</th>
                 <th>Schedule</th>
                 <th>Status</th>
@@ -76,6 +77,15 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                     ?>
                     <tr data-project-id="<?php echo esc_attr( $project->project_id ); ?>">
                         <td><?php echo esc_html( $project->project_name ); ?></td>
+                        <td>
+                            <div class="dm-project-prompt-editable"
+                                 contenteditable="true"
+                                 data-project-id="<?php echo esc_attr($project->project_id); ?>"
+                                 style="min-width:180px; min-height:32px; border:1px solid #e2e2e2; padding:4px; background:#fff; border-radius:3px;"
+                                 spellcheck="true"
+                            ><?php echo esc_html($project->project_prompt ?? ''); ?></div>
+                            <span class="dm-prompt-save-spinner spinner" style="float:none;vertical-align:middle;display:none;"></span>
+                        </td>
                         <td><?php echo $modules_display; ?></td>
                         <td><?php echo $final_schedule_display; ?></td>
                         <td><?php echo esc_html( ucfirst( $project->schedule_status ?? 'paused' ) ); ?></td>
@@ -128,6 +138,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
         <tfoot>
             <tr>
                 <th>Project Name</th>
+                <th>Prompt</th>
                 <th>Modules</th>
                 <th>Schedule</th>
                 <th>Status</th>
@@ -137,6 +148,56 @@ $projects = $db_projects->get_projects_for_user( $user_id );
         </tfoot>
     </table>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    // Add nonce to JS
+    var dmEditPromptNonce = '<?php echo esc_js(wp_create_nonce('dm_edit_project_prompt_nonce')); ?>';
+
+    // Inline editing for project prompt
+    $('.dm-project-prompt-editable').on('blur', function() {
+        var $el = $(this);
+        var projectId = $el.data('project-id');
+        var newPrompt = $el.text().trim();
+        var $spinner = $el.siblings('.dm-prompt-save-spinner');
+        $spinner.show();
+
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'dm_edit_project_prompt',
+                nonce: dmEditPromptNonce,
+                project_id: projectId,
+                project_prompt: newPrompt
+            },
+            success: function(response) {
+                $spinner.hide();
+                if (response.success) {
+                    $el.css('background', '#e6ffe6');
+                    setTimeout(function() { $el.css('background', '#fff'); }, 800);
+                } else {
+                    $el.css('background', '#ffe6e6');
+                    alert(response.data && response.data.message ? response.data.message : 'Failed to update prompt.');
+                }
+            },
+            error: function() {
+                $spinner.hide();
+                $el.css('background', '#ffe6e6');
+                alert('AJAX error: Failed to update prompt.');
+            }
+        });
+    });
+
+    // Optional: Save on Enter key (prevent line breaks)
+    $('.dm-project-prompt-editable').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $(this).blur();
+        }
+    });
+});
+</script>
 
 <hr />
 
@@ -167,7 +228,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
 
 <!-- Schedule Modal -->
 <div id="dm-schedule-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
-    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border: 1px solid #ccc; width: 400px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border: 1px solid #ccc; width: 500px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
         <h2>Edit Project Schedule</h2>
         <input type="hidden" id="dm-modal-project-id" value="">
         <p><strong>Project:</strong> <span id="dm-modal-project-name"></span></p>
@@ -180,11 +241,24 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                         <th scope="row"><label for="dm-modal-schedule-interval">Run Schedule</label></th>
                         <td>
                             <select id="dm-modal-schedule-interval" name="schedule_interval">
+                                <?php
+                                // Use the helper method to get only project-allowed intervals and labels
+                                $project_intervals = Data_Machine_Constants::get_project_cron_intervals();
+                                foreach ($project_intervals as $interval_slug) {
+                                    $label = Data_Machine_Constants::get_cron_label($interval_slug);
+                                    if ($label) { // Ensure label exists
+                                        echo '<option value="' . esc_attr($interval_slug) . '">' . esc_html($label) . '</option>';
+                                    }
+                                }
+                                ?>
+                                <?php /* // OLD Hardcoded options
                                 <option value="every_5_minutes">Every 5 Minutes</option>
                                 <option value="hourly">Hourly</option>
+                                <option value="qtrdaily">Every 6 Hours</option>
                                 <option value="twicedaily">Twice Daily</option>
                                 <option value="daily">Daily</option>
                                 <option value="weekly">Weekly</option>
+                                */ ?>
                             </select>
                             <p class="description">Select how often the project should run automatically.</p>
                         </td>

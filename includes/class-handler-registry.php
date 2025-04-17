@@ -49,7 +49,7 @@ class Data_Machine_Handler_Registry {
      *
      * @param string $sub_directory The sub-directory within includes (e.g., 'input').
      * @param string $type 'input' or 'output'.
-     * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
+     * @return array Associative array of [slug => ['class' => ClassName]].
      */
     private function scan_directory($sub_directory, $type) {
         $handlers = [];
@@ -58,7 +58,13 @@ class Data_Machine_Handler_Registry {
 
         $files = glob($pattern);
         if ($files === false) {
+            // Handle error - glob() failed
+            // error_log("Data Machine Registry: Failed to glob directory: {$directory}");
         } else {
+            // Optional: Log if no files found
+            // if (empty($files)) {
+            //     error_log("Data Machine Registry: No handler files found in: {$directory}");
+            // }
         }
 
         foreach ($files as $file) {
@@ -77,18 +83,18 @@ class Data_Machine_Handler_Registry {
                 }
 
                 if (class_exists($class_name)) {
-                    $label = $slug; // Default label is the slug
-                    if (method_exists($class_name, 'get_label')) {
-                        $label = call_user_func([$class_name, 'get_label']);
-                    }
+                    // Store only the class name, defer label retrieval
                     $handlers[$slug] = [
-                        'class' => $class_name,
-                        'label' => $label
+                        'class' => $class_name
+                        // Removed label retrieval from here
                     ];
                 } else {
                     // Log error: class not found after include
+                    // error_log("Data Machine Registry: Class {$class_name} not found in file {$file}");
                 }
             } else {
+                 // Log error: filename pattern mismatch
+                 // error_log("Data Machine Registry: Filename pattern mismatch for {$filename} in {$sub_directory}");
             }
         }
         return $handlers;
@@ -98,7 +104,7 @@ class Data_Machine_Handler_Registry {
      * Gets all registered input handlers.
      *
      * @param bool $force_rediscover Force rediscovery even if cached.
-     * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
+     * @return array Associative array of [slug => ['class' => ClassName]].
      */
     public function get_input_handlers($force_rediscover = false) {
         if ($this->input_handlers === null || $force_rediscover) {
@@ -111,7 +117,7 @@ class Data_Machine_Handler_Registry {
      * Gets all registered output handlers.
      *
      * @param bool $force_rediscover Force rediscovery even if cached.
-     * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
+     * @return array Associative array of [slug => ['class' => ClassName]].
      */
     public function get_output_handlers($force_rediscover = false) {
         if ($this->output_handlers === null || $force_rediscover) {
@@ -146,21 +152,47 @@ class Data_Machine_Handler_Registry {
      * Gets the label for a specific input handler slug.
      *
      * @param string $slug The handler slug.
-     * @return string|null The label or null if not found.
+     * @return string|null The label or the slug if label cannot be determined.
      */
     public function get_input_handler_label($slug) {
         $handlers = $this->get_input_handlers();
-        return $handlers[$slug]['label'] ?? null;
+        if (isset($handlers[$slug]['class'])) {
+            $class_name = $handlers[$slug]['class'];
+            if (class_exists($class_name) && method_exists($class_name, 'get_label')) {
+                // Call get_label dynamically when requested
+                 // Ensure WordPress translation functions are ready now
+                 if (did_action('init')) {
+                    return call_user_func([$class_name, 'get_label']);
+                 } else {
+                     // Return slug if called before init (should ideally not happen for labels)
+                     return $slug;
+                 }
+            }
+        }
+        return $slug; // Fallback to slug
     }
 
     /**
      * Gets the label for a specific output handler slug.
      *
      * @param string $slug The handler slug.
-     * @return string|null The label or null if not found.
+     * @return string|null The label or the slug if label cannot be determined.
      */
     public function get_output_handler_label($slug) {
         $handlers = $this->get_output_handlers();
-        return $handlers[$slug]['label'] ?? null;
+         if (isset($handlers[$slug]['class'])) {
+            $class_name = $handlers[$slug]['class'];
+            if (class_exists($class_name) && method_exists($class_name, 'get_label')) {
+                 // Call get_label dynamically when requested
+                 // Ensure WordPress translation functions are ready now
+                 if (did_action('init')) {
+                    return call_user_func([$class_name, 'get_label']);
+                 } else {
+                     // Return slug if called before init (should ideally not happen for labels)
+                     return $slug;
+                 }
+            }
+        }
+        return $slug; // Fallback to slug
     }
 } 
