@@ -90,6 +90,24 @@ class Data_Machine_Database_Processed_Items {
         return $count > 0;
     }
 
+ /**
+  * Checks if any item has been processed for a given module ID.
+  * Efficiently checks for at least one record.
+  *
+  * @param int $module_id The ID of the module.
+  * @return bool True if any item has been processed, false otherwise.
+  */
+ public function has_any_processed_items_for_module(int $module_id): bool {
+  global $wpdb;
+
+  $count = $wpdb->get_var( $wpdb->prepare(
+   "SELECT COUNT(*) FROM {$this->table_name} WHERE module_id = %d LIMIT 1",
+   $module_id
+  ) );
+
+  return $count > 0;
+ }
+
     /**
      * Adds a record indicating an item has been processed.
      *

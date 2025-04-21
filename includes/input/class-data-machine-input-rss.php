@@ -36,6 +36,13 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 	 * @throws Exception If input data is invalid or cannot be retrieved.
 	 */
 	public function get_input_data(array $post_data, array $files_data, array $source_config, int $user_id): array {
+		// Log the raw source_config received early, getting logger instance temporarily if needed
+		$temp_logger = $this->locator->get('logger');
+		if ($temp_logger) {
+			$temp_logger->info('RSS Input: Entering get_input_data. Raw source_config received:', $source_config);
+		}
+		unset($temp_logger); // Unset temporary logger
+
 		// Get module ID from context data
 		$module_id = isset( $post_data['module_id'] ) ? absint( $post_data['module_id'] ) : 0;
 		// Use the passed $user_id for validation
@@ -62,14 +69,41 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 		}
 
 		// --- Configuration --- 
-		$feed_url = trim( $source_config['feed_url'] ?? '' );
+		// Access settings from the 'rss' sub-array based on the logged config structure
+		$rss_config = $source_config['rss'] ?? []; // Get the 'rss' sub-array or default to empty
+		
+		$feed_url = trim( $rss_config['feed_url'] ?? '' );
 		// Interpret item_count as the target number of *new* items to find and process
-		$process_limit = max(1, absint( $source_config['item_count'] ?? 1 )); // Ensure at least 1
-		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
+		$process_limit = max(1, absint( $rss_config['item_count'] ?? 1 )); // Ensure at least 1
+		$timeframe_limit = $rss_config['timeframe_limit'] ?? 'all_time';
+		$search_term = trim( $rss_config['search'] ?? '' ); // Add search term config
+		// Parse search terms
+		$search_keywords = [];
+		if (!empty($search_term)) {
+			$search_keywords = array_map('trim', explode(',', $search_term));
+			$search_keywords = array_filter($search_keywords); // Remove empty keywords
+		}
 		// We fetch all available items at once with fetch_feed, no explicit batch size needed here
 
-		if ( empty( $feed_url ) || ! filter_var( $feed_url, FILTER_VALIDATE_URL ) ) {
-			throw new Exception(__( 'Invalid or missing RSS Feed URL configured.', 'data-machine' ));
+		// Get logger for diagnostic purposes (defined here, before first use in validation)
+		$logger = $this->locator->get('logger');
+		
+		// More robust URL validation with detailed error logging
+		if (empty($feed_url)) {
+			$logger && $logger->error('RSS Input: Empty feed URL provided');
+			throw new Exception(__('Missing RSS Feed URL. Please enter a valid URL.', 'data-machine'));
+		}
+		
+		// Make sure URL uses a valid protocol (http/https)
+		if (!preg_match('~^(https?:)?//~i', $feed_url)) {
+			$feed_url = 'https://' . ltrim($feed_url, '/');
+			$logger && $logger->info("RSS Input: Added https:// protocol to URL: {$feed_url}");
+		}
+		
+		// Validate URL format
+		if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
+			$logger && $logger->error("RSS Input: Invalid URL format: {$feed_url}");
+			throw new Exception(__('Invalid RSS Feed URL format. Please check the URL.', 'data-machine'));
 		}
 
 		// Include WordPress feed functions
@@ -88,8 +122,11 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 
 		// Get all available items from the feed object
 		$feed_items = $feed->get_items();
+		$total_items_fetched = count($feed_items);
+		$logger && $logger->info("RSS Input: Fetched {$total_items_fetched} total items from feed: {$feed_url}");
 
 		if ( empty($feed_items) ) {
+			$logger && $logger->info("RSS Input: Feed found but contains no items: {$feed_url}");
 			// Return specific indicator that no items were found in the feed
 			return ['status' => 'no_new_items', 'message' => __('No items found in the RSS feed.', 'data-machine')];
 			// Changed status to no_new_items for consistency with AJAX handler
@@ -106,6 +143,7 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 			];
 			if (isset($interval_map[$timeframe_limit])) {
 				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp'));
+				$logger && $logger->info("RSS Input: Using cutoff timestamp: {$cutoff_timestamp} for timeframe: {$timeframe_limit}");
 			}
 		}
 		// --- End Configuration ---
@@ -113,6 +151,7 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 		$eligible_items_packets = [];
 		$items_checked = 0; // Track number checked for potential debug/limits
 
+		$logger && $logger->info("RSS Input: Starting loop through {$total_items_fetched} fetched items. Process limit: {$process_limit}");
 		// Loop through ALL fetched feed items until process_limit is reached or items run out
 		foreach ($feed_items as $item) {
 			$items_checked++;
@@ -125,30 +164,64 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 				}
 			}
 
-			// 2. Check if processed (only if item is recent enough)
-			// Use get_id(true) for potentially more stable ID (hashed content/link), fallback to permalink
-			$current_item_id = $item->get_id(true) ?? $item->get_permalink();
+			// 2. Check search term filter (if keywords are provided)
+			$title = $item->get_title() ?? '';
+			$content = $item->get_content() ?? '';
+			if (!empty($search_keywords)) {
+				$text_to_search = $title . ' ' . wp_strip_all_tags($content); // Combine title and stripped content
+				$found_keyword = false;
+				foreach ($search_keywords as $keyword) {
+					if (mb_stripos($text_to_search, $keyword) !== false) {
+						$found_keyword = true;
+						break; // Found a match, no need to check other keywords
+					}
+				}
+				if (!$found_keyword) {
+					if ($logger) $logger->debug("Data Machine RSS Input: Skipping item (search filter). Title: {$title}");
+					continue; // Skip if no keyword matched
+				}
+			}
 
+			// 3. Check if processed (only if item passed other filters)
+			// Prioritize permalink as it seems more reliable based on feed structure
+			$id_from_permalink = $item->get_permalink();
+			$id_from_get_id = $item->get_id(true);
+			
+			$current_item_id = null;
+			if (!empty($id_from_permalink)) {
+				$current_item_id = $id_from_permalink;
+			} elseif (!empty($id_from_get_id)) {
+				$current_item_id = $id_from_get_id;
+				$logger && $logger->warning("RSS Input: Used get_id(true) as fallback ID for item #{$items_checked}. Permalink was empty.");
+			}
+			
 			if (empty($current_item_id)) {
-				error_log("Data Machine RSS Input: Skipping item #{$items_checked} with empty ID/Permalink in feed: " . $feed_url);
+				if ($logger) {
+					// Log the values we tried to get
+					$permalink_val = var_export($id_from_permalink, true);
+					$get_id_val = var_export($id_from_get_id, true);
+					$logger->error("RSS Input: Skipping item #{$items_checked} due to empty ID/Permalink. Permalink value: {$permalink_val}, get_id(true) value: {$get_id_val}", ['feed_url' => $feed_url]);
+				}
 				continue; // Skip items without a usable identifier
 			}
 
 			if ( $db_processed_items->has_item_been_processed($module_id, 'rss', $current_item_id) ) {
+				$logger && $logger->debug("RSS Input: Skipping item (already processed). ID: {$current_item_id}");
 				continue; // Skip if already processed
 			}
 
 			// --- Item is ELIGIBLE! --- 
-			// Extract data and create packet
-			$title = $item->get_title() ?? 'N/A';
-			$content = $item->get_content() ?? '';
+			// Extract data and create packet (Title/Content already extracted for search check)
 			$link = $item->get_permalink() ?? $feed_url; // Use feed URL as ultimate fallback
 			// Basic HTML to Text conversion for content
 			$content_string = "Title: " . $title . "\n\n" . wp_strip_all_tags($content);
 
+			// Structure the packet according to orchestrator expectations
 			$input_data_packet = [
-				'content_string' => $content_string,
-				'file_info' => null, // No file involved
+				'data' => [
+					'content_string' => $content_string,
+					'file_info' => null // Keep file_info within data, even if null for RSS
+				],
 				'metadata' => [
 					'source_type' => 'rss', // Source type identifier
 					'item_identifier_to_log' => $current_item_id, // Add the identifier to be logged later
@@ -167,6 +240,8 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 			}
 		} // End foreach ($feed_items as $item)
 
+		$logger && $logger->info("RSS Input: Finished loop. Checked {$items_checked} items. Found " . count($eligible_items_packets) . " eligible items.");
+
 		// --- Return Results --- 
 		// If no eligible items were found after checking all feed items
 		if (empty($eligible_items_packets)) {
@@ -177,6 +252,60 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 		return $eligible_items_packets;
 	}
 
+	/**
+	 * Test if an RSS feed URL is valid and accessible.
+	 * 
+	 * @param string $feed_url The RSS feed URL to test
+	 * @return array Result with status and message
+	 */
+	public function test_feed_url($feed_url) {
+		$result = [
+			'success' => false,
+			'message' => '',
+			'items_found' => 0
+		];
+		
+		// Get logger
+		$logger = $this->locator->get('logger');
+		
+		// Validate format first
+		if (empty($feed_url)) {
+			$result['message'] = __('Empty feed URL provided', 'data-machine');
+			return $result;
+		}
+		
+		// Make sure URL uses a valid protocol
+		if (!preg_match('~^(https?:)?//~i', $feed_url)) {
+			$feed_url = 'https://' . ltrim($feed_url, '/');
+		}
+		
+		// Validate URL format
+		if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
+			$result['message'] = __('Invalid URL format', 'data-machine');
+			return $result;
+		}
+		
+		// Include WordPress feed functions
+		if (!function_exists('fetch_feed')) {
+			include_once(ABSPATH . WPINC . '/feed.php');
+		}
+		
+		// Attempt to fetch the feed
+		$feed = fetch_feed($feed_url);
+		
+		if (is_wp_error($feed)) {
+			$result['message'] = $feed->get_error_message();
+			return $result;
+		}
+		
+		// Successfully fetched feed
+		$items = $feed->get_items();
+		$result['success'] = true;
+		$result['items_found'] = count($items);
+		$result['message'] = sprintf(__('Successfully fetched feed with %d items', 'data-machine'), count($items));
+		
+		return $result;
+	}
 
 	/**
 	 * Get settings fields for the RSS Feed input handler.
@@ -213,6 +342,13 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 				],
 				'default' => 'all_time',
 			],
+			// Add search term setting
+			'search' => [
+				'type' => 'text',
+				'label' => __('Search Term Filter', 'data-machine'),
+				'description' => __('Optional: Filter items locally by keywords (comma-separated). Only items containing at least one keyword in their title or content (text only) will be considered.', 'data-machine'),
+				'default' => '',
+			],
 			// TODO: Add 'Order' (Newest/Oldest)? 'Offset'?
 		];
 	}
@@ -228,6 +364,7 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 		$sanitized['feed_url'] = esc_url_raw($raw_settings['feed_url'] ?? '');
 		$sanitized['item_count'] = max(1, absint($raw_settings['item_count'] ?? 10));
 		$sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
+		$sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? ''); // Sanitize search term
 		return $sanitized;
 	}
 

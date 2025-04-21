@@ -121,29 +121,39 @@ if (!function_exists('dm_render_settings_field')) {
 
 		switch ($type) {
 			case 'text':
+				echo '<input type="text" id="' . $field_id . '" name="' . $field_name . '" value="' . esc_attr($value) . '" class="regular-text" />';
+				break;
 			case 'url':
-			case 'number':
-				$placeholder = isset($field_config['placeholder']) ? 'placeholder="' . esc_attr($field_config['placeholder']) . '"' : '';
-				echo '<input type="' . esc_attr($type) . '" id="' . $field_id . '" name="' . $field_name . '" value="' . esc_attr($value) . '" class="regular-text" ' . $placeholder . ' />';
+				echo '<input type="url" id="' . $field_id . '" name="' . $field_name . '" value="' . esc_attr($value) . '" class="regular-text" />';
 				break;
 			case 'password':
-				echo '<input type="password" id="' . $field_id . '" name="' . $field_name . '" value="' . esc_attr($value) . '" class="regular-text" />';
+				// NEVER display saved password value. Always show empty field.
+				// Add placeholder text for clarity on update behavior.
+				echo '<input type="password" id="' . $field_id . '" name="' . $field_name . '" value="" class="regular-text" placeholder="' . esc_attr__('Leave blank to keep current password', 'data-machine') . '" autocomplete="new-password" />';
+				break;
+			case 'number':
+				$min = isset($field_config['min']) ? ' min="' . esc_attr($field_config['min']) . '"' : '';
+				$max = isset($field_config['max']) ? ' max="' . esc_attr($field_config['max']) . '"' : '';
+				$step = isset($field_config['step']) ? ' step="' . esc_attr($field_config['step']) . '"' : '';
+				echo '<input type="number" id="' . $field_id . '" name="' . $field_name . '" value="' . esc_attr($value) . '" class="small-text"' . $min . $max . $step . ' />';
 				break;
 			case 'textarea':
-				$rows = $field_config['rows'] ?? 5;
-				echo '<textarea id="' . $field_id . '" name="' . $field_name . '" rows="' . esc_attr($rows) . '" class="large-text">' . esc_textarea($value) . '</textarea>';
+				$rows = isset($field_config['rows']) ? $field_config['rows'] : 5;
+				$cols = isset($field_config['cols']) ? $field_config['cols'] : 50;
+				echo '<textarea id="' . $field_id . '" name="' . $field_name . '" rows="' . esc_attr($rows) . '" cols="' . esc_attr($cols) . '">' . esc_textarea($value) . '</textarea>';
 				break;
 			case 'select':
-				$class = isset($field_config['class']) ? 'class="' . esc_attr($field_config['class']) . '"' : '';
-				$data_controls = isset($field_config['data_controls']) ? 'data-controls="' . esc_attr($field_config['data_controls']) . '"' : '';
-				// Add data-post-types attribute for taxonomy fields
-				$data_post_types = '';
+				// Add data-post-types attribute for custom taxonomy select elements
+				$select_attrs = ''; // Initialize with empty string to avoid unassigned variable error
 				if (isset($field_config['post_types']) && is_array($field_config['post_types'])) {
-					$data_post_types = 'data-post-types="' . esc_attr(implode(',', $field_config['post_types'])) . '"';
+					// Convert post_types array to comma-separated string
+					$post_types_string = implode(',', array_map('esc_attr', $field_config['post_types']));
+					$select_attrs .= ' data-post-types="' . $post_types_string . '"';
 				}
-				echo '<select id="' . $field_id . '" name="' . $field_name . '" ' . $class . ' ' . $data_controls . ' ' . $data_post_types . '>';
+				
+				echo '<select id="' . $field_id . '" name="' . $field_name . '"' . $select_attrs . '>';
 				foreach ($options as $opt_value => $opt_label) {
-					echo '<option value="' . esc_attr($opt_value) . '" ' . selected($value, $opt_value, false) . '>' . esc_html($opt_label) . '</option>';
+					echo '<option value="' . esc_attr($opt_value) . '" ' . selected($opt_value, $value, false) . '>' . esc_html($opt_label) . '</option>';
 				}
 				echo '</select>';
 				break;
@@ -194,15 +204,16 @@ if (!function_exists('dm_render_settings_field')) {
 }
 
 // --- Start Page Output ---
-settings_errors('Data_Machine_messages');
+// settings_errors('Data_Machine_messages'); // MOVED INSIDE WRAP
 ?>
 
 <div class="wrap">
+	<?php settings_errors('Data_Machine_messages'); // Display notices inside wrap ?>
 	<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
-	<form method="post" action="options.php" id="data-machine-settings-form">
-		<?php settings_fields('Data_Machine_settings_group'); ?>
-		<!-- Hidden fields to store the actual selected IDs for saving -->
+	<form method="POST" id="data-machine-settings-form">
+		<?php wp_nonce_field('dm_save_module_settings_action', '_wpnonce_dm_save_module'); ?>
+
 		<input type="hidden" id="selected_project_id_for_save" name="Data_Machine_current_project" value="<?php echo esc_attr($current_project_id); ?>">
 		<input type="hidden" id="selected_module_id_for_save" name="Data_Machine_current_module" value="<?php echo esc_attr($current_module_id); ?>">
 		<!-- Make sure $current_project_id is set correctly in your PHP template -->
@@ -384,7 +395,6 @@ settings_errors('Data_Machine_messages');
 				<tr>
 					<th scope="row"><label for="output_type">Output Type</label></th>
 					<td>
-						<?php // error_log("DEBUG: Current Output Type Slug = " . $current_output_type); // DEBUG LINE ?>
 						<select name="output_type" id="output_type">
 							<?php 
 							// Get handlers dynamically from the registry
@@ -434,9 +444,13 @@ settings_errors('Data_Machine_messages');
 					</td>
 				</tr>
 			</table>
-		</div>
+		</div> <!-- #settings-sections-wrapper -->
+		<?php // submit_button(__('Save Module Settings', 'data-machine')); // REMOVED Standard Submit ?>
+        <p class="submit">
+            <button type="submit" id="dm-save-module-button" name="dm_save_module_settings_submit" class="button button-primary">
+                <?php esc_html_e('Save Module Settings', 'data-machine'); ?>
+            </button>
+        </p>
 
-
-	<?php submit_button('Save Settings'); ?>
 	</form>
 </div>

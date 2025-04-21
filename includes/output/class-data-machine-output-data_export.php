@@ -38,8 +38,8 @@ class Data_Machine_Output_Data_Export implements Data_Machine_Output_Handler_Int
 	 *
 	 * @return array Associative array of field definitions (empty for this handler).
 	 */
-	public static function get_settings_fields(array $current_config = []): array {
-		// This handler currently has no specific settings.
+	public function get_settings_fields(array $current_config = []): array {
+		// This handler currently has no configurable settings.
 		return [];
 	}
 

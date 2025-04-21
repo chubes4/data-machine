@@ -24,7 +24,7 @@ interface Data_Machine_Output_Handler_Interface {
 	 *
 	 * @return array Associative array of field definitions.
 	 */
-	public static function get_settings_fields(array $current_config = []): array;
+	public function get_settings_fields(array $current_config = []): array;
 
     /**
      * Get the user-friendly label for this handler.

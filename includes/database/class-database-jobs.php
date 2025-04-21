@@ -165,7 +165,21 @@ class Data_Machine_Database_Jobs {
      */
     public function complete_job( int $job_id, string $status, ?string $result_data ): bool {
         global $wpdb;
-        if ( empty( $job_id ) || !in_array( $status, ['complete', 'failed'] ) ) {
+        // Update validation to include all final statuses
+        $valid_statuses = ['completed', 'failed', 'completed_with_errors', 'completed_no_items'];
+
+		// --- START: Add Detailed Logging Inside complete_job ---
+		error_log(sprintf(
+			'Data Machine DB Jobs: Entering complete_job. Job ID: %d, Received Status: [%s] (Type: %s), Valid Statuses: [%s]',
+			$job_id,
+			$status, // Log exact received status
+			gettype($status),
+			implode(', ', $valid_statuses)
+		));
+		// --- END: Add Detailed Logging ---
+
+        if ( empty( $job_id ) || !in_array( $status, $valid_statuses ) ) {
+            error_log( 'Data Machine DB Jobs: Invalid parameters validation failed for complete_job. Job ID: ' . $job_id . ' Status: [' . $status . ']'); // Updated log msg
             return false;
         }
         $updated = $wpdb->update(
@@ -181,6 +195,34 @@ class Data_Machine_Database_Jobs {
         );
          if ( false === $updated ) {
             error_log( 'Data Machine DB Jobs: Failed to complete job ' . $job_id . '. DB Error: ' . $wpdb->last_error );
+        }
+        return $updated !== false;
+    }
+
+    /**
+     * Updates the input_data for a specific job.
+     * Used after fetching data for config-based jobs.
+     *
+     * @param int    $job_id          The job ID.
+     * @param string $input_data_json JSON string of the processed input data.
+     * @return bool True on success, false on failure.
+     */
+    public function update_job_input_data( int $job_id, string $input_data_json ): bool {
+        global $wpdb;
+        if ( empty( $job_id ) ) {
+            return false;
+        }
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'input_data' => $input_data_json,
+            ],
+            ['job_id' => $job_id],
+            ['%s'], // Format for data
+            ['%d']  // Format for WHERE
+        );
+        if ( false === $updated ) {
+            error_log( 'Data Machine DB Jobs: Failed to update input_data for job ' . $job_id . '. DB Error: ' . $wpdb->last_error );
         }
         return $updated !== false;
     }

@@ -52,7 +52,7 @@ if (!class_exists('Data_Machine_Constants')) {
         /**
          * Default AI model for the initial data processing/generation step.
          */
-        const AI_MODEL_INITIAL = 'gpt-4o-mini';
+        const AI_MODEL_INITIAL = 'gpt-4.1-mini';
 
         /**
          * Default AI model for the fact-checking step.
@@ -62,7 +62,7 @@ if (!class_exists('Data_Machine_Constants')) {
         /**
          * Default AI model for the finalization/refinement step.
          */
-        const AI_MODEL_FINALIZE = 'o3-mini';
+        const AI_MODEL_FINALIZE = 'gpt-4.1-mini';
 
         /**
          * The name of the constant used to define a custom encryption key in wp-config.php.
@@ -156,27 +156,27 @@ if (!class_exists('Data_Machine_Constants')) {
             $constant_name = self::ENCRYPTION_KEY_CONSTANT_NAME;
             $raw_key = '';
 
-            if (defined($constant_name)) {
+            if (defined($constant_name) && !empty(constant($constant_name))) {
                 $raw_key = constant($constant_name);
-            } elseif (defined('AUTH_KEY')) {
+            } elseif (defined(AUTH_KEY)) {
                 $raw_key = AUTH_KEY;
             } else {
                 // Final fallback if neither constant nor AUTH_KEY is defined
                 // Using wp_salt here is okay as a last resort, but log an error.
-                $raw_key = wp_salt('data_machine_backup_salt'); 
-                error_log('Data Machine Security Warning: Could not determine encryption key from constant (' . $constant_name . ') or AUTH_KEY. Using a potentially insecure wp_salt() fallback. Please define the constant or ensure AUTH_KEY is set.');
+                $raw_key = wp_salt();
+                error_log('Data Machine Security Warning: Required encryption key constant (' . $constant_name . ') is not defined or is empty in wp-config.php. Using wp_salt as a fallback. Encryption will be weak/predictable.');
             }
 
             if (empty($raw_key)) {
-                 // This case should be rare if WP salts are configured and the constant isn't empty.
-                 error_log('Data Machine Error: Could not determine a valid raw encryption key from constant (' . $constant_name . ') or AUTH_KEY. Please ensure salts are configured in wp-config.php or define the constant.');
-                 // Return a hash of a fallback string to avoid fatal errors, though encryption will be weak/predictable.
-                 $raw_key = 'invalid_key_fallback_string'; 
+                // This case should be rare if WP salts are configured and the constant isn't empty.
+                error_log('Data Machine Security Warning: Encrypted data will be weak/predictable. Encryption key is empty.');
+                // Return a hash of a fallback string to avoid fatal errors, though encryption will be weak/predictable.
+                $raw_key = 'fallback_key_for_empty_encryption_key';
             }
 
             // Ensure the key is exactly 32 bytes for AES-256 using SHA256 hash
             // The 'true' argument returns raw binary output.
-            return hash('sha256', $raw_key, true); 
+            return hash('sha256', $raw_key, true);
         }
     }
 } 

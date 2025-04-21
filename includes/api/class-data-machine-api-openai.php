@@ -85,17 +85,29 @@ public function create_response_with_file($api_key, $file, $prompt) {
     // Use the persistent path passed from the job data
     $file_path = $file['persistent_path'] ?? null;
 
-    if (empty($file_path) || !file_exists($file_path)) {
-        // error_log('File check failed: Path empty or file does not exist.'); // Keep commented if needed later
-        return new WP_Error('missing_persistent_file', 'Persistent file path is missing or file does not exist for job. Path checked: ' . $file_path); // Add path to error
+    // --- Adjusted Check: Only check file_exists if a persistent_path was actually provided --- 
+    if (!empty($file_path) && !file_exists($file_path)) {
+        // This error should now only trigger for inputs that *do* provide a persistent_path (like file uploads, large PDFs) but the file is missing.
+        return new WP_Error('missing_persistent_file', 'Persistent file path provided but file does not exist. Path checked: ' . $file_path);
     }
-    // Use the MIME type passed in the file_info array
-    $mime_type = $file['type'] ?? null;
+    // --- End Adjusted Check ---
+
+    // Use the MIME type passed in the file_info array - Use 'mime_type' key
+    $mime_type = $file['mime_type'] ?? null;
+    // Retrieve the image URL if available (provided by Reddit handler now)
+    $image_url = $file['url'] ?? null; 
+
+    // If MIME type is missing and we have a persistent path, try detecting it (e.g., for uploaded files)
+    if (empty($mime_type) && !empty($file_path) && file_exists($file_path)) { 
+        $mime_type = mime_content_type($file_path);
+    }
+    // If MIME type is still missing, we cannot proceed reliably (applies to both path and URL inputs)
     if (empty($mime_type)) {
-         // Fallback to detecting from persistent path if not provided
-         $mime_type = mime_content_type($file_path);
+        error_log('Data Machine OpenAI API: Cannot determine MIME type for file.' . print_r($file, true));
+        return new WP_Error('mime_type_missing', 'Could not determine the MIME type for the provided file input.');
     }
-error_log('MIME type: ' . $mime_type); // Debugging line
+
+    error_log('MIME type: ' . $mime_type); // Debugging line
     // Initialize payload variable
     $payload = [];
     $pdf_size_threshold = 5 * 1024 * 1024; // 5MB threshold for switching to file upload
@@ -151,23 +163,61 @@ error_log('MIME type: ' . $mime_type); // Debugging line
             ]
         ];
     }
-    // Handle image files directly with Base64 encoding
+    // Handle image files - check for URL first, then persistent path
     elseif (in_array($mime_type, ['image/png', 'image/jpeg', 'image/webp', 'image/gif'])) {
-        $base64_image = base64_encode(file_get_contents($file_path));
-
-
-        $payload = [
-            'model' => Data_Machine_Constants::AI_MODEL_INITIAL,
-            'input' => [
-                [
-                    'role' => 'user',
-                    'content' => [
-                        ['type' => 'input_text', 'text' => $prompt],
-                        ['type' => 'input_image', 'image_url' => "data:$mime_type;base64,$base64_image"]
+        
+        if (!empty($image_url)) {
+             // --- Handle image via URL (e.g., from Reddit) --- 
+            $payload = [
+                'model' => Data_Machine_Constants::AI_MODEL_INITIAL, // Use vision model
+                'input' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            ['type' => 'input_text', 'text' => $prompt],
+                            [
+                                'type' => 'input_image',
+                                'image_url' => $image_url
+                            ]
+                        ]
                     ]
                 ]
-            ]
-        ];
+            ];
+            // --- End URL Handling ---
+
+        } elseif (!empty($file_path)) {
+            // --- Handle image via persistent path (e.g., from File Upload) --- 
+            // Ensure file still exists (redundant check, but safe)
+            if (!file_exists($file_path)) {
+                return new WP_Error('missing_persistent_file_image', 'Persistent file path for image provided but file does not exist. Path checked: ' . $file_path);
+            }
+            // Read content and encode to Base64
+            $image_content = file_get_contents($file_path);
+            if ($image_content === false) {
+                return new WP_Error('image_read_error', 'Failed to read image file content from persistent path.', ['path' => $file_path]);
+            }
+            $base64_image = base64_encode($image_content);
+            unset($image_content); // Free memory
+
+            $payload = [
+                'model' => Data_Machine_Constants::AI_MODEL_INITIAL, // Use vision model
+                'input' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            ['type' => 'input_text', 'text' => $prompt],
+                            // Send Base64 encoded data
+                            ['type' => 'input_image', 'image_url' => "data:$mime_type;base64,$base64_image"]
+                        ]
+                    ]
+                ]
+            ];
+             // --- End Base64 Handling ---
+        } else {
+            // Neither URL nor Path provided for image type - Error
+            error_log('Data Machine OpenAI API: Image MIME type provided, but no URL or persistent path found.' . print_r($file, true));
+            return new WP_Error('image_input_source_missing', 'Image input is missing both a URL and a file path.');
+        }
     }
     else {
         return new WP_Error('unsupported_file_type', 'Unsupported file type: ' . $mime_type);
@@ -215,6 +265,7 @@ error_log('MIME type: ' . $mime_type); // Debugging line
 
     return $decoded;
 }
+
 
 
 	/**

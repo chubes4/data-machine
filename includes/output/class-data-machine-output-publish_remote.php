@@ -235,8 +235,18 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		if ( is_string( $tag_id ) && ($tag_id === 'model_decides' || $tag_id === 'instruct_model') ) {
 			// Model decides or Instruct Model: Send the names parsed from AI, if any
 			if (!empty($parsed_data['tags'])) {
-				$payload['tag_names'] = $parsed_data['tags'];
-				$assigned_tag_names = $parsed_data['tags']; // For reporting
+				// --- ENFORCE SINGLE TAG FOR instruct_model/model_decides --- 
+				$first_tag_name = trim($parsed_data['tags'][0]); // Get the first tag
+				if (!empty($first_tag_name)) {
+					$payload['tag_names'] = [$first_tag_name]; // Send only the first tag name in an array
+					$assigned_tag_names = [$first_tag_name]; // For reporting
+					if (count($parsed_data['tags']) > 1) {
+						$this->logger->info("Remote Publish: Instruct/Model mode - Sending only first tag '{$first_tag_name}'. AI provided: " . implode(', ', $parsed_data['tags']), ['location_id' => $location_id]);
+					}
+				} else {
+					$assigned_tag_names = [];
+				}
+				// --- END ENFORCEMENT ---
 			} else {
 				$assigned_tag_names = [];
 			}
@@ -262,7 +272,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		// This loop ALREADY handles string modes correctly, sending the string mode itself
 		// OR the selected numeric ID.
 		foreach ($config as $key => $value) {
-		    if (preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)) {
+		    if (preg_match('/^rest_([a-zA-Z0-9_]+)$/', $key, $matches)) {
+				$tax_slug = $matches[1]; // Get slug from the key
 		        if (is_string($value) && ($value === 'model_decides' || $value === 'instruct_model')) {
 		            $payload[$key] = $value; // Send the string mode
 		        } elseif (is_numeric($value) && $value > 0) {
@@ -274,16 +285,57 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		// Add parsed custom taxonomies to the payload (if any)
 		// This sends the NAMES parsed from AI output, regardless of mode
 		if (!empty($parsed_data['custom_taxonomies'])) {
-			$payload['custom_taxonomies'] = $parsed_data['custom_taxonomies'];
-			// Store for reporting back in the result
-			$assigned_custom_taxonomies = $parsed_data['custom_taxonomies'];
+			$final_custom_tax_payload = []; // Build the payload to send
+			$assigned_custom_taxonomies = []; // Build the report data
+
+			foreach ($parsed_data['custom_taxonomies'] as $tax_slug => $term_names) {
+				if (empty($term_names)) continue;
+
+				// --- Determine if this custom taxonomy is set to 'instruct_model' or 'model_decides' --- 
+				$tax_mode = 'manual'; // Default if not found
+				$config_key = "rest_" . $tax_slug;
+				if (isset($config[$config_key])) {
+					$mode_check = $config[$config_key];
+					if (is_string($mode_check) && ($mode_check === 'instruct_model' || $mode_check === 'model_decides')) {
+						$tax_mode = $mode_check;
+					}
+				}
+				// --- End Mode Check ---
+
+				// --- ENFORCE SINGLE TERM FOR instruct_model/model_decides --- 
+				if ($tax_mode === 'instruct_model' || $tax_mode === 'model_decides') {
+					$first_term_name = trim($term_names[0]); // Get the first term name
+					if (!empty($first_term_name)) {
+						$final_custom_tax_payload[$tax_slug] = [$first_term_name]; // Send only first term
+						$assigned_custom_taxonomies[$tax_slug] = [$first_term_name]; // Report only first term
+						if (count($term_names) > 1) {
+							$this->logger->info("Remote Publish: Instruct/Model mode for taxonomy '{$tax_slug}' - Sending only first term '{$first_term_name}'. AI provided: " . implode(', ', $term_names), ['location_id' => $location_id]);
+						}
+					}
+				} else { 
+					// Manual mode (or other modes not needing enforcement): send all parsed terms
+					$valid_terms = array_filter(array_map('trim', $term_names));
+					if (!empty($valid_terms)) {
+						$final_custom_tax_payload[$tax_slug] = $valid_terms;
+						$assigned_custom_taxonomies[$tax_slug] = $valid_terms;
+					}
+				}
+				// --- END ENFORCEMENT ---
+			}
+
+			// Add the processed custom taxonomies to the main payload
+			if (!empty($final_custom_tax_payload)) {
+				$payload['custom_taxonomies'] = $final_custom_tax_payload;
+			}
+			// $assigned_custom_taxonomies is already populated for reporting
 		}
 
 		// Construct the target API URL
 		$api_url = $remote_url . '/wp-json/airdrop/v1/receive'; // Correct endpoint from helper plugin
 
 		// --- DEBUG: Log the payload before sending ---
-		$this->logger->debug('Airdrop Payload Prepared', ['api_url' => $api_url, 'payload' => $payload]);
+		// Log payload structure instead of full content
+		$this->logger->debug('Airdrop Payload Prepared', ['api_url' => $api_url, 'payload_keys' => array_keys($payload)]);
 		// --- END DEBUG ---
 
 		// Prepare arguments for wp_remote_post
@@ -340,7 +392,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 	 *
 	 * @return array Associative array of field definitions.
 	 */
-	public static function get_settings_fields(array $current_config = [], ?Data_Machine_Service_Locator $locator = null): array {
+	public function get_settings_fields(array $current_config = []): array {
 		$locations_options = ['' => '-- Select Location --'];
 		$post_type_options = [ '' => '-- Select Location First --' ];
 		$category_options = [ '' => '-- Select Location First --', 'model_decides' => '-- Let Model Decide --', 'instruct_model' => '-- Instruct Model --' ];
@@ -351,20 +403,31 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		$selected_category_id = $current_config['selected_remote_category_id'] ?? 'model_decides';
 		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? 'model_decides';
 
-		// --- NEW: Retrieve site_info for dynamic taxonomy fields ---
+		// --- NEW: Retrieve site_info using injected db_locations ---
 		$site_info = [];
-		if (!empty($current_config['location_id']) && $locator) {
+		$location_id = $current_config['location_id'] ?? null;
+		if ($location_id && $this->db_locations) { // Check if location_id is set and db_locations is injected
 			try {
-				$db_locations = $locator->get('database_remote_locations');
-				$user_id = get_current_user_id();
-				$location = $db_locations->get_location($current_config['location_id'], $user_id);
-				if ($location && !empty($location->synced_site_info)) {
-					$site_info = json_decode($location->synced_site_info, true);
+				$user_id = get_current_user_id(); // Need user context to get location
+				if ($user_id) {
+					$location = $this->db_locations->get_location($location_id, $user_id);
+					if ($location && !empty($location->synced_site_info)) {
+						$decoded_info = json_decode($location->synced_site_info, true);
+						// Verify decoding was successful and it's an array
+						if (is_array($decoded_info)) {
+							$site_info = $decoded_info;
+						} else {
+							$this->logger->warning('Failed to decode synced_site_info for location.', ['location_id' => $location_id, 'synced_info' => $location->synced_site_info]);
+						}
+					}
+				} else {
+					$this->logger->warning('Cannot retrieve site_info in get_settings_fields without user context.', ['location_id' => $location_id]);
 				}
 			} catch (\Exception $e) {
-				// Log error if needed
+				$this->logger->error('Error retrieving location or site_info in get_settings_fields.', ['location_id' => $location_id, 'exception' => $e]);
 			}
 		}
+		// --- End site_info retrieval ---
 
 		// --- Build base fields ---
 		$fields = [
@@ -427,6 +490,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				if (in_array($tax_slug, ['category', 'post_tag'])) {
 					continue; // Already handled above
 				}
+				
+				
 				$tax_options = [
 					'' => '-- Select ' . ($tax_data['label'] ?? ucfirst($tax_slug)) . ' --',
 					'model_decides' => '-- Let Model Decide --',
@@ -448,6 +513,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 						'description' => 'Select a ' . ($tax_data['label'] ?? $tax_slug) . ' for this post.',
 						'default' => $current_config['rest_' . $tax_slug] ?? 'model_decides' // Default custom tax to string key
 					];
+					
 				}
 			}
 		}
@@ -487,7 +553,7 @@ public function sanitize_settings(array $raw_settings): array {
 	foreach ($raw_settings as $key => $value) {
 		if (
 			!isset($sanitized[$key]) && // Avoid double processing
-			preg_match('/^rest_[a-zA-Z0-9_]+$/', $key)
+			preg_match('/^rest_([a-zA-Z0-9_]+)$/', $key, $matches)
 		) {
 			// Handle both string options and numeric IDs
 			if (is_string($value)) {

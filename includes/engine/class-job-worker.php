@@ -1,65 +1,30 @@
 <?php
-/**
- * Handles the execution of scheduled Data Machine jobs via WP-Cron.
- *
- * Retrieves job data, invokes the processing orchestrator, and updates job status.
- *
- * @package    Data_Machine
- * @subpackage Data_Machine/includes/engine
- * @since      1.6.0 // Or appropriate version
- */
+
 class Data_Machine_Job_Worker {
 
-    /**
-     * Service Locator instance.
-     *
-     * @var Data_Machine_Service_Locator
-     */
-    private $locator;
+	/** @var Data_Machine_Service_Locator */
+	private $locator;
 
-    /**
-     * Projects DB instance.
-     *
-     * @var Data_Machine_Database_Projects
-     */
-    private $db_projects;
+	public function __construct(Data_Machine_Service_Locator $locator) {
+		$this->locator = $locator;
+	}
 
-    /**
-     * Modules DB instance.
-     *
-     * @var Data_Machine_Database_Modules
-     */
-    private $db_modules;
-
-    /**
-     * Constructor.
-     *
-     * @param Data_Machine_Service_Locator $locator Service Locator instance.
-     */
-    public function __construct(Data_Machine_Service_Locator $locator) {
-        $this->locator = $locator;
-        // Also get DB handlers needed for timestamp updates
-        $this->db_projects = $this->locator->get('database_projects');
-        $this->db_modules = $this->locator->get('database_modules');
-    }
-
-    /**
-	 * Processes a specific job identified by its ID.
-     * This is the callback function for the 'dm_run_job_event' WP-Cron event.
-     *
+	/**
+	 * Processes a single job.
+	 *
 	 * @param int $job_id The ID of the job to process.
+	 * @return void
 	 */
 	public function process_job( $job_id ) {
-		// Retrieve the job details from the database.
-        $db_jobs = $this->locator->get('database_jobs');
-        $logger = $this->locator->get('logger'); // Get logger
+		$logger  = $this->locator->get( 'logger' );
+		$db_jobs = $this->locator->get( 'database_jobs' );
 
-        if (!$db_jobs || !$logger) {
-            error_log("Data Machine Job Worker: Failed to get required services (database_jobs or logger) for job ID: " . $job_id);
-            return; // Cannot proceed without core services
-        }
+		if ( ! $db_jobs ) {
+			$logger->error( 'Job Worker: Database jobs service not found.' );
+			return; // Cannot proceed
+		}
 
-        $job = $db_jobs->get_job($job_id);
+		$job = $db_jobs->get_job($job_id);
 
 		if ( ! $job ) {
 			$logger->error('Job Worker: Job not found in database.', ['job_id' => $job_id]);
@@ -77,37 +42,42 @@ class Data_Machine_Job_Worker {
         $logger->info("Job Worker: Starting processing.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
 
 		try {
-			// Decode the necessary data from the job record
+			// 1. Decode Module Configuration
 			$module_config = json_decode( $job->module_config, true );
-			$input_data    = json_decode( $job->input_data, true );
-
-			// Validate decoded data
-			if ( json_last_error() !== JSON_ERROR_NONE || !is_array($module_config) || !is_array($input_data) ) {
-                $json_error = json_last_error_msg();
-				throw new Exception( 'Failed to decode module configuration or input data for job. Error: ' . $json_error );
+			if ( json_last_error() !== JSON_ERROR_NONE || ! is_array( $module_config ) ) {
+				$json_error = json_last_error_msg();
+				throw new Exception( 'Failed to decode module configuration for job. Error: ' . $json_error );
 			}
 
-			// Get the Processing Orchestrator service
+			// 2. Decode Input Data from Job
+			$input_data_packet = json_decode( $job->input_data, true );
+			if ( json_last_error() !== JSON_ERROR_NONE || ! is_array( $input_data_packet ) ) {
+				$json_error = json_last_error_msg();
+				throw new Exception( 'Failed to decode input data for job. Error: ' . $json_error );
+			}
+
+			// 3. Get the Processing Orchestrator service
 			$orchestrator = $this->locator->get( 'orchestrator' );
 			if ( ! $orchestrator ) {
 				throw new Exception( 'Failed to retrieve Processing Orchestrator service.' );
 			}
 
-			// Execute the processing job via the orchestrator
-			$orchestrator_results = $orchestrator->run( $input_data, $module_config, $job->user_id, $job_id );
+			// 4. Execute the processing job via the orchestrator, passing the fetched data
+			$logger->info( "Job Worker: Calling orchestrator.", [ 'job_id' => $job_id, 'module_id' => $job->module_id ] );
+			$orchestrator_results = $orchestrator->run( $input_data_packet, $module_config, $job->user_id, $job_id );
 
-            // Check for WP_Error from Orchestrator
-            if ( is_wp_error( $orchestrator_results ) ) {
-                // Log the error from WP_Error
-                $logger->error(
-                    'Job Worker: Orchestrator returned WP_Error.',
-                    [
-                        'job_id' => $job_id,
-                        'module_id' => $job->module_id,
-                        'error_code' => $orchestrator_results->get_error_code(),
-                        'error_message' => $orchestrator_results->get_error_message()
-                    ]
-                );
+			// 5. Check for WP_Error from Orchestrator
+			if ( is_wp_error( $orchestrator_results ) ) {
+				// Log the error from WP_Error
+				$logger->error(
+					'Job Worker: Orchestrator returned WP_Error.',
+					[
+						'job_id' => $job_id,
+						'module_id' => $job->module_id,
+						'error_code' => $orchestrator_results->get_error_code(),
+						'error_message' => $orchestrator_results->get_error_message()
+					]
+				);
                 // Rethrow as an exception to be caught by the main catch block
                 throw new Exception( "Orchestrator failed: " . $orchestrator_results->get_error_message() );
             }
@@ -116,68 +86,42 @@ class Data_Machine_Job_Worker {
             $log_context = ['job_id' => $job_id, 'module_id' => $job->module_id];
             $logger->debug("Job Worker: Orchestrator run completed.", array_merge($log_context, ['result_status' => $orchestrator_results['status'] ?? 'unknown']));
 
-
 			// Prepare the final result for DB storage (using output_result from orchestrator)
             // Assuming orchestrator returns a structured array including 'output_result'
             $final_result_data = $orchestrator_results['output_result'] ?? null; // Get the result from the output handler step
-			$result_json = wp_json_encode( $final_result_data );
 
-            if ( $result_json === false ) {
-                $json_error = json_last_error_msg();
-                $logger->error('Job Worker: Failed to encode final result data for database.', array_merge($log_context, ['json_error' => $json_error]));
-                // Store the encoding error itself as the result
-                $result_json = wp_json_encode(['error' => 'Failed to encode final result', 'json_error' => $json_error]);
-            }
-
-            // Update job status to 'complete' and save final result using DB service
-            $completed = $db_jobs->complete_job($job_id, 'complete', $result_json);
-
-            if (!$completed) {
-                $logger->error('Job Worker: Failed to update job status to complete in database.', $log_context);
-                // Even if job status update fails, maybe still try to update last run?
-                // For now, we'll only update last run if the job status was successfully marked complete.
+            // Ensure we have data to encode before proceeding
+            if (is_null($final_result_data)) {
+                // Log a warning or potentially throw an error if output_result is crucial
+                $logger->warning("Job Worker: Orchestrator did not return 'output_result'. Storing null.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
+                // Decide how to handle: store null, or throw an exception? Storing null for now.
+                $result_json = null;
             } else {
-                 $logger->info('Job Worker: Processing completed successfully.', $log_context);
-
-                // --- START: Update Last Run Timestamps ---
-                $module_id = $job->module_id ?? null;
-                $project_id = $module_config['project_id'] ?? null; // Get project_id from config
-
-                if ($module_id && $this->db_modules) {
-                    $this->db_modules->update_module_last_run($module_id);
-                    $logger->debug('Job Worker: Updated module last_run_at.', ['job_id' => $job_id, 'module_id' => $module_id]);
-                } else {
-                    if (!$module_id) $logger->warning('Job Worker: Cannot update module last_run_at, module_id missing.', ['job_id' => $job_id]);
-                    if (!$this->db_modules) $logger->warning('Job Worker: Cannot update module last_run_at, db_modules service missing.', ['job_id' => $job_id]);
+                $result_json = wp_json_encode($final_result_data);
+                if ($result_json === false) {
+                    $json_error = json_last_error_msg();
+                    throw new Exception('Failed to encode orchestrator result for job. Error: ' . $json_error);
                 }
-
-                if ($project_id && $this->db_projects) {
-                    $this->db_projects->update_project_last_run($project_id);
-                    $logger->debug('Job Worker: Updated project last_run_at.', ['job_id' => $job_id, 'project_id' => $project_id]);
-                } else {
-                    if (!$project_id) $logger->warning('Job Worker: Cannot update project last_run_at, project_id missing from module config.', ['job_id' => $job_id]);
-                    if (!$this->db_projects) $logger->warning('Job Worker: Cannot update project last_run_at, db_projects service missing.', ['job_id' => $job_id]);
-                }
-                // --- END: Update Last Run Timestamps ---
             }
+
+			// Update job status to 'complete' using DB service
+            // Pass null or the encoded JSON string
+			$db_jobs->complete_job( $job_id, 'complete', $result_json );
+			$logger->info("Job Worker: Job completed successfully.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
 
 		} catch ( Exception $e ) {
-			// Log the exception
-			$logger->error('Job Worker: Exception during processing.', [
-                'job_id' => $job_id,
-                'module_id' => $job->module_id ?? 'unknown', // module_id might not be set if decoding failed early
-                'error' => $e->getMessage(),
-                // Optionally include trace for debugging, but be mindful of log size
-                // 'trace' => $e->getTraceAsString()
-            ]);
-
-			// Update job status to 'failed' and store error message using DB service
-            $error_data_json = wp_json_encode(['error' => $e->getMessage()]);
-            if ($error_data_json === false) {
-                $error_data_json = '{"error": "Failed to encode error message"}';
-            }
-            $db_jobs->complete_job($job_id, 'failed', $error_data_json);
+			// Handle exceptions during processing
+			$logger->error(
+				'Job Worker: Exception during processing.',
+				[
+					'job_id'    => $job_id,
+					'module_id' => $job->module_id,
+					'error'     => $e->getMessage(),
+					'trace'     => $e->getTraceAsString(),
+				]
+			);
+			// Update job status to 'failed' using DB service
+			$db_jobs->fail_job( $job_id, $e->getMessage() );
 		}
-	} // End process_job
-
-} // End class Data_Machine_Job_Worker 
+	}
+}

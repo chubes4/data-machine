@@ -33,6 +33,7 @@ settings_errors('Data_Machine_api_keys_messages'); // Display notices
         settings_fields('dm_api_keys_group');
         // If using settings sections, uncomment the line below
         // do_settings_sections('dm-api-keys');
+        wp_nonce_field('dm_save_api_keys_user_meta', '_wpnonce_dm_api_keys_user_meta'); // Add nonce for user meta fields
         ?>
 
         <hr>
@@ -107,6 +108,24 @@ settings_errors('Data_Machine_api_keys_messages'); // Display notices
                 <td>
                     <input type="text" id="reddit_developer_username" name="reddit_developer_username" value="<?php echo esc_attr(get_option('reddit_developer_username', '')); ?>" class="regular-text" />
                     <p class="description">Enter the Reddit username (without u/) associated with the account that registered the app above. Required for the User-Agent string in API calls.</p>
+                </td>
+            </tr>
+        </table>
+
+        <h3 style="margin-top: 20px;">Bluesky Credentials</h3>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="bluesky_username">Bluesky Handle</label></th>
+                <td>
+                    <input type="text" id="bluesky_username" name="bluesky_username" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'dm_bluesky_username', true)); ?>" class="regular-text" />
+                    <p class="description">Enter your Bluesky handle (e.g., yourname.bsky.social).</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="bluesky_app_password">Bluesky App Password</label></th>
+                <td>
+                    <input type="password" id="bluesky_app_password" name="bluesky_app_password" value="" class="regular-text" placeholder="<?php esc_attr_e('Leave blank to keep current password', 'data-machine'); ?>" autocomplete="new-password" />
+                    <p class="description">Enter a <a href="https://bsky.app/settings/app-passwords" target="_blank">Bluesky App Password</a>. Using an app password is recommended for security.</p>
                 </td>
             </tr>
         </table>

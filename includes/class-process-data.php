@@ -58,19 +58,32 @@ class Data_Machine_process_data {
 			if (!is_array($input_data_packet)) {
 				error_log('Data Machine - process_data: Received input_data_packet is not an array. Content: ' . print_r($input_data_packet, true));
 			} else {
-				// Check if file_info exists and contains a persistent_path (indicating a file to process)
-				if (!empty($input_data_packet['file_info']) && is_array($input_data_packet['file_info']) && !empty($input_data_packet['file_info']['persistent_path'])) {
-					// --- Handle File Input (Image or PDF using persistent_path) ---
+				// Check if file_info exists and indicates a file (either path or URL is present)
+				$has_file_path = !empty($input_data_packet['file_info']['persistent_path']);
+				$has_file_url = !empty($input_data_packet['file_info']['url']);
+
+				if (!empty($input_data_packet['file_info']) && is_array($input_data_packet['file_info']) && ($has_file_path || $has_file_url)) {
+					// --- Handle File Input (Image or PDF using path or URL) ---
 					$file_info = $input_data_packet['file_info'];
-					// Construct prompt specifically for file analysis
-					$user_message = $user_prompt; // Start with the base module prompt
-					// Optionally append text content if available (e.g., extracted text or title)
+					$mime_type = $file_info['type'] ?? 'application/octet-stream'; // Get mime type
+
+					// Construct base user message from the module prompt
+					$user_message = $user_prompt;
+
+					// --- Add image-specific instruction if applicable --- 
+					if (str_starts_with($mime_type, 'image/')) {
+						$image_directive = "IMPORTANT INSTRUCTION: An image has been provided. Analyze the visual content of the image carefully. Prioritize information directly observed in the image, especially for identifying people, objects, or specific visual details, over potentially conflicting information in the text below.";
+						$user_message = $image_directive . "\n\n---\n\n" . $user_message; // Prepend directive
+					}
+					// --- End image instruction ---
+
+					// Append text content if available (e.g., title, comments)
 					if (!empty($input_data_packet['content_string'])) {
-						$user_message .= "\n\nAdditional Text Content:\n" . $input_data_packet['content_string'];
+						$user_message .= "\n\nAssociated Text Content:\n" . $input_data_packet['content_string'];
 					}
 
-					// Call the API method designed for file handling using the file_info array
-					// create_response_with_file uses 'persistent_path' from $file_info
+					// Call the API method designed for file handling (path or URL)
+					error_log("--- DM Process Data Debug: File Input --- Module Config Prompts:\nSystem: " . print_r($system_prompt, true) . "\nUser (base): " . print_r($user_prompt, true) . "\nUser (final with content): " . print_r($user_message, true));
 					$response = $api->create_response_with_file($api_key, $file_info, $user_message);
 
 				} else {
@@ -83,7 +96,8 @@ class Data_Machine_process_data {
 					} elseif (!empty($input_data_packet['content'])) { // Fallback to 'content'
 						$user_message .= "\n\nPost Content:\n" . $input_data_packet['content'];
 					}
-
+					
+					error_log("--- DM Process Data Debug: Text Input --- Module Config Prompts:\nSystem: " . print_r($system_prompt, true) . "\nUser (base): " . print_r($user_prompt, true) . "\nUser (final with content): " . print_r($user_message, true));
 					// Call the API method for text completion
 					$response = $api->create_completion_from_text($api_key, $user_message, $system_prompt);
 				}

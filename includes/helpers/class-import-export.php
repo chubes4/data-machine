@@ -170,7 +170,7 @@ class Data_Machine_Import_Export {
 		// Set headers for download
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
 		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-		header( 'Pragma: no-cache' );
+		header( 'Pragma: no-' );
 		header( 'Expires: 0' );
 
 		// Output JSON - Use echo for admin-post.php handlers

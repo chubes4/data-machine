@@ -168,7 +168,7 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 			$response_data = json_decode( $body, true );
 			// Log the top-level keys and a sample of the response for debugging
 			$logger && $logger->info('Public REST API: Top-level keys in response: ' . implode(', ', is_array($response_data) ? array_keys($response_data) : []));
-			$logger && $logger->info('Public REST API: Sample of response: ' . substr(json_encode($response_data), 0, 1000));
+			$logger && $logger->debug('Public REST API: Sample of response: ' . substr(json_encode($response_data), 0, 1000));
 
 			// Extract items array using data_path if provided, or auto-detect first array
 			$data_path = $api_config['data_path'] ?? '';
@@ -202,7 +202,8 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 
 			foreach ($items as $item) {
 				if (!is_array($item)) {
-					$logger && $logger->info('Public REST API: Skipping item (not an array): ' . json_encode($item));
+					// Log keys instead of full item
+					$logger && $logger->info('Public REST API: Skipping item (not an array). Keys: ' . implode(', ', array_keys($item)));
 					continue;
 				}
 				// Try to extract a unique ID, title, content, link, and date fields as flexibly as possible
@@ -210,7 +211,8 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 				$current_item_id = $item['uuid'] ?? $item['id'] ?? $item['ID'] ?? null;
 				$logger && $logger->info('Public REST API: Attempting to process item with extracted ID: ' . var_export($current_item_id, true));
 				if (empty($current_item_id)) {
-					$logger && $logger->info('Public REST API: Skipping item (missing uuid/id/ID): ' . json_encode($item));
+					// Log keys instead of full item
+					$logger && $logger->info('Public REST API: Skipping item (missing uuid/id/ID). Keys: ' . implode(', ', array_keys($item)));
 					continue;
 				}
 
@@ -251,14 +253,16 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 				if ($cutoff_timestamp !== null) {
 					$logger && $logger->info('Public REST API: Checking date for item ID ' . $current_item_id . '. Extracted original date string: ' . var_export($original_date_value, true) . ', Parsed timestamp: ' . var_export($item_timestamp, true) . ', Cutoff timestamp: ' . $cutoff_timestamp);
 					if ($item_timestamp === false) {
-						$logger && $logger->info('Public REST API: Skipping item (missing or unparsable date): ' . json_encode($item));
+						// Log keys instead of full item
+						$logger && $logger->info('Public REST API: Skipping item (missing or unparsable date). Keys: ' . implode(', ', array_keys($item)));
 						continue;
 					}
 					if ($item_timestamp < $cutoff_timestamp) {
 						if ($orderby === 'date' && $order === 'desc') {
 							$hit_time_limit_boundary = true;
 						}
-						$logger && $logger->info('Public REST API: Skipping item (date before cutoff): ' . json_encode($item));
+						// Log keys instead of full item
+						$logger && $logger->info('Public REST API: Skipping item (date before cutoff). Keys: ' . implode(', ', array_keys($item)));
 						continue;
 					}
 				}
@@ -506,7 +510,7 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 	 */
 	public function sanitize_settings(array $raw_settings): array {
 		$sanitized = [];
-		$sanitized['api_endpoint_url'] = esc_url_raw($raw_settings['api_endpoint_url'] ?? '');
+		$sanitized['api_endpoint_url'] = sanitize_url($raw_settings['api_endpoint_url'] ?? '');
 		$sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
 		$sanitized['data_path'] = sanitize_text_field($raw_settings['data_path'] ?? '');
 		$sanitized['orderby'] = sanitize_text_field($raw_settings['orderby'] ?? 'date');

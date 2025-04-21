@@ -211,29 +211,6 @@ class Data_Machine_Scheduler {
                  return;
             }
 
-            // --- Add Last Run Time Check ---
-            $project_interval_slug = $project->schedule_interval;
-            $project_last_run_db = $project->last_run_at; // MySQL datetime string (GMT)
-
-            if (!empty($project_last_run_db)) { // Only check if it has run before
-                $interval_seconds = Data_Machine_Constants::get_cron_interval_seconds($project_interval_slug);
-                if ($interval_seconds !== null && $interval_seconds > 0) { // Ensure interval is valid
-                    $last_run_timestamp = strtotime($project_last_run_db); // Convert DB time to Unix timestamp
-                    $current_timestamp = current_time('timestamp', true); // Get current GMT timestamp
-
-                    if (($last_run_timestamp + $interval_seconds) > $current_timestamp) {
-                        // Not enough time has passed since the last run
-                        $time_to_wait = ($last_run_timestamp + $interval_seconds) - $current_timestamp;
-                        error_log($log_prefix . sprintf("Skipping run. Last run was too recent (at %s). Need to wait %d more seconds for interval '%s' (%d seconds).", $project_last_run_db, $time_to_wait, $project_interval_slug, $interval_seconds));
-                        return; // Exit the callback
-                    }
-                } else {
-                     error_log($log_prefix . "Warning: Could not determine valid interval seconds for slug '{$project_interval_slug}' during last run check.");
-                     // Decide whether to proceed or return if interval is invalid - for now, let's proceed cautiously
-                }
-            }
-            // --- End Last Run Time Check ---
-
             $project_owner_user_id = $project->user_id;
             if (!$project_owner_user_id) {
                  error_log($log_prefix . "Project owner user ID not found. Cannot proceed.");
@@ -265,12 +242,12 @@ class Data_Machine_Scheduler {
                     continue; // Skip file input modules for scheduled runs
                 }
 
-                // d. If passes filters, call trigger_job_creation -> execute_job
+                // d. If passes filters, call schedule_job_from_config to create and schedule the job event
                 error_log($log_prefix . "Processing module ID: {$module->module_id} ({$module->module_name}).");
-                $job_result = $job_executor->execute_job($module, $project_owner_user_id, 'cron_project');
+                $job_result = $job_executor->schedule_job_from_config($module, $project_owner_user_id, 'cron_project');
 
                 if (is_wp_error($job_result)) {
-                    $error_msg = $log_prefix . "Error executing job for module ID {$module->module_id}: " . $job_result->get_error_message();
+                    $error_msg = $log_prefix . "Error scheduling job for module ID {$module->module_id}: " . $job_result->get_error_message();
                     error_log($error_msg);
                     if ($logger) {
                         $logger->error($error_msg, [
@@ -300,18 +277,11 @@ class Data_Machine_Scheduler {
 
             error_log($log_prefix . "Processed {$modules_processed_count} module(s) matching criteria.");
 
-            // 5. Update project last_run_at timestamp if jobs were created
+            // 5. Log whether jobs were initiated. Timestamp updates happen in Job Worker on completion.
             if ($total_jobs_created > 0) {
-                 $updated = $db_projects->update_project_last_run($project_id);
-                 if ($updated) {
-                      error_log($log_prefix . "Successfully created {$total_jobs_created} job(s) and updated project last_run timestamp.");
-                 } else {
-                      error_log($log_prefix . "Successfully created {$total_jobs_created} job(s) BUT FAILED to update project last_run timestamp.");
-                 }
+                error_log($log_prefix . "Initiated {$total_jobs_created} job(s). Timestamp will be updated upon completion by the worker.");
             } else {
                  error_log($log_prefix . "No jobs were created for this project run.");
-                 // Optionally update last_run even if no jobs were created, to indicate the schedule *did* run?
-                 // $db_projects->update_project_last_run($project_id);
             }
 
         } catch (Exception $e) {
@@ -366,7 +336,7 @@ class Data_Machine_Scheduler {
             }
 
             // 5. Filter: Check if module->schedule_interval is NOT 'manual' or 'project_schedule'
-            $allowed_intervals = ['every_5_minutes', 'hourly', 'qtrdaily', 'twicedaily', 'daily', 'weekly']; // Same as allowed for scheduling
+            $allowed_intervals = Data_Machine_Constants::get_module_cron_intervals(); // Same as allowed for scheduling
             $module_interval = $module->schedule_interval ?? 'manual';
             if (!in_array($module_interval, $allowed_intervals)) {
                  error_log($log_prefix . sprintf("Module interval ('%s') is not a valid individual schedule. Skipping run.", $module_interval));
@@ -383,28 +353,11 @@ class Data_Machine_Scheduler {
                  return;
             }
 
-            // --- Add Last Run Time Check ---
-            $module_interval_slug = $module->schedule_interval;
-            $module_last_run_db = $module->last_run_at; // MySQL datetime string (GMT)
-
-            if (!empty($module_last_run_db)) { // Only check if it has run before
-                $interval_seconds = Data_Machine_Constants::get_cron_interval_seconds($module_interval_slug);
-                if ($interval_seconds !== null && $interval_seconds > 0) { // Ensure interval is valid
-                    $last_run_timestamp = strtotime($module_last_run_db); // Convert DB time to Unix timestamp
-                    $current_timestamp = current_time('timestamp', true); // Get current GMT timestamp
-
-                    if (($last_run_timestamp + $interval_seconds) > $current_timestamp) {
-                        // Not enough time has passed since the last run
-                        $time_to_wait = ($last_run_timestamp + $interval_seconds) - $current_timestamp;
-                        error_log($log_prefix . sprintf("Skipping run. Last run was too recent (at %s). Need to wait %d more seconds for interval '%s' (%d seconds).", $module_last_run_db, $time_to_wait, $module_interval_slug, $interval_seconds));
-                        return; // Exit the callback
-                    }
-                } else {
-                     error_log($log_prefix . "Warning: Could not determine valid interval seconds for slug '{$module_interval_slug}' during last run check.");
-                     // Decide whether to proceed or return if interval is invalid - for now, let's proceed cautiously
-                }
-            }
-            // --- End Last Run Time Check ---
+            // --- Last Run Time Check REMOVED ---
+            // The check based on $module->last_run_at was removed to prevent conflicts
+            // with WP-Cron's scheduling mechanism. The callback now runs whenever scheduled.
+            // The last_run_at timestamp (updated by the Job Worker on completion)
+            // is now primarily for informational purposes.
 
             // 7. Get project owner user_id
             $project = $db_projects->get_project($module->project_id);
@@ -414,12 +367,12 @@ class Data_Machine_Scheduler {
             }
             $project_owner_user_id = $project->user_id;
 
-            // 8. If passes filters, call $this->trigger_job_creation($module, $project_owner_user_id) -> execute_job
+            // 8. If passes filters, call schedule_job_from_config to create and schedule the job event
             error_log($log_prefix . "Processing module ({$module->module_name}).");
-            $job_result = $job_executor->execute_job($module, $project_owner_user_id, 'cron_module');
+            $job_result = $job_executor->schedule_job_from_config($module, $project_owner_user_id, 'cron_module');
 
             if (is_wp_error($job_result)) {
-                $error_msg = $log_prefix . "Error executing job for module ID {$module->module_id}: " . $job_result->get_error_message();
+                $error_msg = $log_prefix . "Error scheduling job for module ID {$module->module_id}: " . $job_result->get_error_message();
                 error_log($error_msg);
                 if ($logger) {
                     $logger->error($error_msg, [

@@ -201,7 +201,7 @@ class Data_Machine {
 		});
 		
 		// Initialize settings registration handler
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/utilities/class-data-machine-register-settings.php';
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/settings/class-data-machine-register-settings.php';
 		$register_settings = new Data_Machine_Register_Settings($this->version, $this->locator);
 		$register_settings->init_hooks();
 		
@@ -262,7 +262,18 @@ class Data_Machine {
 		add_action( 'wp_ajax_dm_get_project_schedule_data', array( $dashboard_ajax_handler, 'handle_get_project_schedule_data' ) );
 
 		// Hook for our custom cron job - NOW using Job Worker
-		add_action( 'dm_run_job_event', array( $job_worker, 'process_job' ) );
+		$job_executor = $this->locator->get('job_executor');
+		if ($job_executor) {
+			add_action( 'dm_run_job_event', array( $job_executor, 'run_scheduled_job' ), 10, 1 ); // Pass 1 argument (job_id)
+		} else {
+			// Log critical error if executor isn't available
+			$logger = $this->locator->get('logger');
+			if ($logger) {
+				$logger->critical("Job Executor service not found during hook registration.");
+			}
+			// Optionally trigger a WordPress admin notice or log to PHP error log
+			// error_log("CRITICAL: Data Machine Job Executor service failed to load.");
+		}
 
 		// Initialize Scheduler hooks
 		$scheduler = $this->locator->get('scheduler');

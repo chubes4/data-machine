@@ -183,11 +183,20 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				$assigned_tag_ids = array( $tag_id );
 				$assigned_tag_names = array( $term->name );
 			}
-		} elseif ( $tag_id === -1 && ! empty( $parsed_data['tags'] ) ) { // Model decides: Assign tags parsed from AI response
+		} elseif ( ( is_string( $tag_id ) && ( $tag_id === 'model_decides' || $tag_id === 'instruct_model' ) ) && ! empty( $parsed_data['tags'] ) ) { // Model decides or Instruct Model: Assign tags parsed from AI response
 			$term_ids_to_assign = [];
 			$term_names_to_assign = [];
+			$first_tag_processed = false;
 			foreach ( $parsed_data['tags'] as $tag_name ) {
 				if (empty(trim($tag_name))) continue;
+
+				// --- ENFORCE SINGLE TAG FOR instruct_model/model_decides --- 
+				if ($first_tag_processed && ( $tag_id === 'instruct_model' || $tag_id === 'model_decides' ) ) {
+					error_log("Data Machine Publish Local: Instruct/Model mode - Skipping subsequent tag '{$tag_name}' for post {$post_id}. Only assigning the first one.");
+					continue;
+				}
+				// --- END ENFORCEMENT ---
+
 				$term = get_term_by( 'name', $tag_name, 'post_tag' );
 				if ( $term ) {
 					$term_ids_to_assign[] = $term->term_id;
@@ -204,6 +213,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 						error_log("Data Machine Publish Local: Failed to create tag '{$tag_name}'. Error: " . $error_string);
 					}
 				}
+				$first_tag_processed = true; // Mark that we've processed the first tag
 			}
 			if ( ! empty( $term_ids_to_assign ) ) {
 				wp_set_post_terms( $post_id, $term_ids_to_assign, 'post_tag', false );
@@ -222,11 +232,29 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 					continue;
 				}
 
+				// --- Determine if this custom taxonomy is set to 'instruct_model' or 'model_decides' --- 
+				$tax_mode = 'manual'; // Default if not found
+				if (isset($module_job_config['output_config']['publish_local']["rest_" . $tax_slug])) {
+					$mode_check = $module_job_config['output_config']['publish_local']["rest_" . $tax_slug];
+					if (is_string($mode_check) && ($mode_check === 'instruct_model' || $mode_check === 'model_decides')) {
+						$tax_mode = $mode_check;
+					}
+				}
+				// --- End Mode Check ---
+
 				$term_ids_to_assign = [];
 				$term_names_assigned = []; // Track names actually assigned for this taxonomy
+				$first_term_processed = false; // Flag for single term enforcement
 
 				foreach ($term_names as $term_name) {
 					if (empty(trim($term_name))) continue;
+
+					// --- ENFORCE SINGLE TERM FOR instruct_model/model_decides --- 
+					if ($first_term_processed && ($tax_mode === 'instruct_model' || $tax_mode === 'model_decides') ) {
+						error_log("Data Machine Publish Local: Instruct/Model mode for taxonomy '{$tax_slug}' - Skipping subsequent term '{$term_name}' for post {$post_id}. Only assigning the first one.");
+						continue;
+					}
+					// --- END ENFORCEMENT ---
 
 					$term = get_term_by('name', $term_name, $tax_slug);
 
@@ -246,6 +274,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 							error_log("Data Machine Publish Local: Failed to create term '{$term_name}' in taxonomy '{$tax_slug}'. Error: " . $error_string);
 						}
 					}
+					$first_term_processed = true; // Mark first term as processed
 				} // End foreach term_names
 
 				// Assign the collected/created terms for this taxonomy
@@ -277,9 +306,10 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 	/**
 	 * Get settings fields for the Local Publish output handler.
 	 *
+	 * @param array $current_config Current configuration for this handler (used for default values).
 	 * @return array Associative array of field definitions.
 	 */
-	public static function get_settings_fields(array $current_config = []): array {
+	public function get_settings_fields(array $current_config = []): array {
 		// Get users for author dropdown
 		$users = get_users( array( 'fields' => array( 'ID', 'display_name' ), 'orderby' => 'display_name' ) );
 		// Get available post types

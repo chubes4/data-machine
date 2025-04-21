@@ -17,6 +17,11 @@ class Data_Machine_Module_Ajax_Handler {
      */
     public function __construct( Data_Machine_Service_Locator $locator ) {
         $this->locator = $locator;
+        
+        // Register AJAX hooks
+        add_action('wp_ajax_process_data_source', array($this, 'process_data_source_ajax_handler'));
+        add_action('wp_ajax_get_module_data', array($this, 'get_module_data_ajax_handler'));
+        // Add wp_ajax_nopriv_ if these actions need to be available to non-logged-in users (unlikely for module management)
     }
 
     /**
@@ -98,7 +103,18 @@ class Data_Machine_Module_Ajax_Handler {
             // Call the job executor.
             // Pass the pre-fetched data ONLY if it was fetched (i.e., for file uploads)
             // Otherwise, pass null to let the executor fetch data itself.
-            $result = $job_executor->execute_job($module, $user_id, 'manual_ajax', $input_data_for_executor);
+            $result = null;
+            if ($module->data_source_type === 'files') {
+                // Ensure $input_data_for_executor is valid before calling
+                if (empty($input_data_for_executor) || !is_array($input_data_for_executor)) {
+                    throw new Exception(__( 'File input handler did not return valid data.', 'data-machine' ));
+                }
+                // The file handler returns an array containing the single packet, use that directly.
+                $result = $job_executor->schedule_job_from_file($module, $user_id, 'manual_file', $input_data_for_executor[0]);
+            } else {
+                // For other types, call the config scheduler
+                $result = $job_executor->schedule_job_from_config($module, $user_id, 'manual_ajax');
+            }
 
             if (is_wp_error($result)) {
                 // Job Executor returned an error (e.g., input fetch failed, DB error)
@@ -244,8 +260,8 @@ class Data_Machine_Module_Ajax_Handler {
 			'data_source_config' => $final_ds_config
 		);
 
-		// Log the final structure being sent
-		$logger->debug('Get Module AJAX: Final data_to_return', ['data' => $data_to_return]);
+		// Log the structure (keys) being sent, not the full data
+		$logger->debug('Get Module AJAX: Final data_to_return keys', ['keys' => array_keys($data_to_return)]);
 
 		wp_send_json_success($data_to_return);
 	}

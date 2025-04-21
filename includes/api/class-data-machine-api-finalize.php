@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Handles interaction with the o3-mini API for JSON finalization.
+ * Handles interaction with the OpenAI API for JSON finalization.
  *
  * @link       PLUGIN_URL
  * @since      0.1.0
@@ -26,7 +26,7 @@ class Data_Machine_API_Finalize {
     }
 
     /**
-     * Finalize JSON data using o3-mini API.
+     * Finalize JSON data using  API.
      *
      * @since    0.1.0
      * @param    string    $api_key                  OpenAI API Key.
@@ -95,7 +95,7 @@ class Data_Machine_API_Finalize {
         }
         // --- End Source Link Instruction ---
 
-        // --- Direct API Call using wp_remote_post for o3-mini ---
+        // --- Direct API Call using wp_remote_post for OpenAI ---
         $model = Data_Machine_Constants::AI_MODEL_FINALIZE;
         $messages = [
             ['role' => 'system', 'content' => $system_prompt],
@@ -126,13 +126,13 @@ class Data_Machine_API_Finalize {
         $response_body = wp_remote_retrieve_body( $response );
         // Debug: Log raw response body
         if ( 200 !== $response_code ) {
-            return new WP_Error( 'openai_api_error', 'o3-mini API error: ' . $response_code . ' - ' . $response_body );
+            return new WP_Error( 'openai_api_error', 'OpenAI API error: ' . $response_code . ' - ' . $response_body );
         }
 
         $decoded_response = json_decode( $response_body, true );
 
         if ( ! is_array( $decoded_response ) || ! isset( $decoded_response['choices'][0]['message']['content'] ) ) {
-            return new WP_Error( 'openai_api_response_error', 'Invalid o3-mini API response: ' . $response_body );
+            return new WP_Error( 'openai_api_response_error', 'Invalid OpenAI API response: ' . $response_body );
         }
 
         $final_output = $decoded_response['choices'][0]['message']['content'];

@@ -259,6 +259,7 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 				$content_string = "Title: " . $title . "\n\n" . $content; // Content is raw
 				
 				$input_data_packet = [
+					'item_identifier' => $current_item_id,
 					'content_string' => $content_string,
 					'file_info' => null,
 					'metadata' => [

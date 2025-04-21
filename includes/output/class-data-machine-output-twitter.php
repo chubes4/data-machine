@@ -115,27 +115,28 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
         try {
             $tweet_params = ['status' => $tweet_text];
             $media_id = null;
+            $temp_image_path = null; // Variable to hold temporary path
 
             // --- Image Upload Logic ---
             $image_source_url = $input_metadata['image_source_url'] ?? null;
             if (!empty($image_source_url)) {
                 $this->locator->get('logger')->info('Attempting to upload image to Twitter.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
                 
-                // Fetch image content
-                $image_response = wp_remote_get($image_source_url, ['timeout' => 30]);
-                if (is_wp_error($image_response)) {
-                    $this->locator->get('logger')->warning('Failed to fetch image for Twitter upload.', ['url' => $image_source_url, 'error' => $image_response->get_error_message()]);
+                // Ensure the file containing download_url() is loaded, especially for non-admin contexts like cron
+                if (!function_exists('download_url')) {
+                    require_once(ABSPATH . 'wp-admin/includes/file.php');
+                }
+                
+                // Download the image to a temporary file
+                $temp_image_path = download_url($image_source_url, 15); // 15 second timeout
+
+                if (is_wp_error($temp_image_path)) {
+                    $this->locator->get('logger')->warning('Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message()]);
                     // Proceed without image
                 } else {
-                    $image_http_code = wp_remote_retrieve_response_code($image_response);
-                    $image_content_type = wp_remote_retrieve_header($image_response, 'content-type');
-                    $image_data = wp_remote_retrieve_body($image_response);
-
-                    if ($image_http_code === 200 && !empty($image_data) && str_starts_with($image_content_type, 'image/')) {
-                        // Upload image to Twitter
-                        // Note: Uses v1.1 media/upload endpoint. 
-                        // For large files or video, chunked upload is needed.
-                        $media_upload = $connection->upload('media/upload', ['media' => $image_data]);
+                    try {
+                        // Upload the downloaded image file
+                        $media_upload = $connection->upload('media/upload', ['media' => file_get_contents($temp_image_path)]);
                         
                         if ($connection->getLastHttpCode() === 200 && isset($media_upload->media_id_string)) {
                             $media_id = $media_upload->media_id_string;
@@ -154,57 +155,109 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
                              ]);
                             // Proceed without image if upload fails
                         }
-                    } else {
-                        $this->locator->get('logger')->warning('Failed to download valid image data for Twitter upload.', ['url' => $image_source_url, 'http_code' => $image_http_code, 'content_type' => $image_content_type]);
-                        // Proceed without image
+                    } catch (\Exception $e) {
+                        $this->locator->get('logger')->error('Twitter Output Exception: ' . $e->getMessage(), ['user_id' => $user_id]);
+                        // Ensure temp path is null so we don't try to delete a non-existent file later
+                        $temp_image_path = null;
+                    } finally {
+                        // Clean up the temporary file if it was created
+                        if ($temp_image_path && file_exists($temp_image_path)) {
+                            @unlink($temp_image_path); // Suppress errors if deletion fails
+                            $this->locator->get('logger')->debug('Temporary image file cleaned up.', ['image_url' => $image_source_url]);
+                        }
                     }
                 }
             }
             // --- End Image Upload Logic ---
 
-            // Add media_id to parameters if upload was successful
+            // --- 7. Post tweet using API v2 ---
+            $this->locator->get('logger')->info('Preparing to post tweet via API v2.', ['user_id' => $user_id]);
+            $v2_payload = [
+                'text' => $tweet_text
+            ];
             if ($media_id !== null) {
-                $tweet_params['media_ids'] = $media_id;
+                // Use the media_id obtained from the v1.1 upload endpoint
+                $v2_payload['media'] = [
+                    'media_ids' => [$media_id]
+                ];
+                $this->locator->get('logger')->info('Adding v1.1 media ID to v2 payload.', ['media_id' => $media_id, 'user_id' => $user_id]);
+            } else {
+                 $this->locator->get('logger')->info('No media ID to add to v2 payload.', ['user_id' => $user_id]);
             }
 
-            // Post the tweet (with or without media)
-            $this->locator->get('logger')->info('Posting tweet with parameters:', ['params' => $tweet_params, 'user_id' => $user_id]);
-            $response = $connection->post('statuses/update', $tweet_params);
+            // Log payload structure instead of full content
+            $this->locator->get('logger')->info('Posting tweet to v2 endpoint with payload keys:', ['payload_keys' => array_keys($v2_payload), 'user_id' => $user_id]);
+            // Use API v2 endpoint and payload structure
+            $response = $connection->post('tweets', $v2_payload);
 
-            // 8. Check for API errors
+            // 8. Check for API errors (V2 response format differs)
             $http_code = $connection->getLastHttpCode();
-            if ($http_code == 200 && isset($response->id_str)) {
+            // Remove full response body from debug log; details logged on error later
+            $this->locator->get('logger')->debug('Twitter API v2 response received', ['http_code' => $http_code, 'user_id' => $user_id]);
+
+            // V2 successful creation is typically 201 Created
+            if ($http_code == 201 && isset($response->data->id)) {
                 // Success!
-                $tweet_id = $response->id_str;
-                 $this->locator->get('logger')->info('Tweet posted successfully.', ['user_id' => $user_id, 'tweet_id' => $tweet_id, 'link' => "https://twitter.com/".($response->user->screen_name ?? 'i')."/status/".$tweet_id]);
+                $tweet_id = $response->data->id; // Use data->id from v2 response
+                $tweet_text_response = $response->data->text ?? $tweet_text;
+                 $this->locator->get('logger')->info('Tweet posted successfully (v2).', ['user_id' => $user_id, 'tweet_id' => $tweet_id, 'link' => "https://twitter.com/anyuser/status/".$tweet_id]);
+
+                 // Construct the tweet URL using the ID
+                 $tweet_url = "https://twitter.com/anyuser/status/".$tweet_id;
 
                  // 10. Return success array
                  return [
                      'success' => true,
                      'tweet_id' => $tweet_id,
-                     'tweet_url' => "https://twitter.com/".($response->user->screen_name ?? 'i')."/status/".$tweet_id,
+                     'tweet_url' => $tweet_url,
                      'message' => sprintf(__( 'Successfully posted tweet: %s', 'data-machine' ), $tweet_id),
                      'raw_response' => $response // Include raw response for potential debugging/data use
                  ];
             } else {
-                // Handle API errors
-                $error_message = 'Twitter API Error: Failed to post tweet.';
-                $error_code = 'twitter_post_failed';
+                // Handle API errors (V2 format primarily)
+                $error_message = 'Twitter API Error: Failed to post tweet.'; // Default message
+                $error_code = 'twitter_post_failed_v2'; // Default code
                 $api_errors = [];
-                if (isset($response->errors)) {
+
+                // Check V2 error format first (title, detail, type)
+                if (isset($response->title) && isset($response->detail)) { 
+                    $error_message = "Twitter API v2 Error: {$response->title} - {$response->detail}";
+                    $error_code = $response->type ?? 'twitter_v2_error';
+                     // Log specific V2 error details
+                     $this->locator->get('logger')->warning('Received structured V2 API error.', [
+                         'title' => $response->title,
+                         'detail' => $response->detail,
+                         'type' => $response->type ?? 'N/A',
+                         'status' => $response->status ?? $http_code, // Use status if available
+                         'user_id' => $user_id
+                     ]);
+                } 
+                // Check V1.1 style errors as fallback (some v2 errors might still use this structure)
+                elseif (isset($response->errors) && is_array($response->errors) && !empty($response->errors)) {
                     $api_errors = $response->errors;
-                    $first_error = reset($api_errors); // Get the first error message
+                    $first_error = reset($api_errors); 
                     $error_message .= ' Reason: ' . ($first_error->message ?? 'Unknown') . ' (Code: ' . ($first_error->code ?? 'N/A') . ')';
-                    // Specific error codes: 187 (duplicate), 186 (too long), 88 (rate limit)
                     if (isset($first_error->code)) {
                         $error_code = 'twitter_api_error_' . $first_error->code;
                     }
-                } elseif ($http_code !== 200) {
+                    $this->locator->get('logger')->warning('Received V1.1-style API error structure.', [
+                         'errors' => $api_errors,
+                         'user_id' => $user_id
+                     ]);                    
+                }
+                // Fallback to HTTP code if no structured error
+                elseif ($http_code !== 201) { // Check against 201 for v2 success
                      $error_message .= ' HTTP Status: ' . $http_code;
                      $error_code = 'twitter_http_error_' . $http_code;
+                     $this->locator->get('logger')->warning('API error detected via HTTP status code only.', [
+                         'http_code' => $http_code,
+                         'user_id' => $user_id
+                     ]);
                 }
 
+                 // Log the final determined error
                  $this->locator->get('logger')->error($error_message, [
+                    'final_error_code' => $error_code,
                     'user_id' => $user_id,
                     'http_code' => $http_code,
                     'api_response' => $response,
@@ -225,7 +278,7 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
      * @param array $current_config Current configuration values for this handler (optional).
 	 * @return array An array defining the settings fields.
 	 */
-	public static function get_settings_fields(array $current_config = []): array {
+	public function get_settings_fields(array $current_config = []): array {
         // TODO: Define settings fields as per plan
         // - Character Limit (number, default 280)
         // - Include Source Link (checkbox, default true)

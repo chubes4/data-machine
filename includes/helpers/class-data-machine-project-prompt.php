@@ -31,25 +31,39 @@ class Data_Machine_Project_Prompt {
      * @return string The modified system prompt. Returns an empty string if project not found or has no prompt.
      */
     public function get_system_prompt(int $project_id, int $user_id): string {
-        $project_prompt = '';
+        $project_prompt_base = '';
 
         if ($project_id > 0 && $this->db_projects && method_exists($this->db_projects, 'get_project')) {
             $project = $this->db_projects->get_project($project_id, $user_id);
             if ($project && !empty($project->project_prompt)) {
-                $project_prompt = $project->project_prompt;
+                $project_prompt_base = $project->project_prompt;
             }
         }
 
-        // Get the current date
-        $current_date = date('F j, Y');
+        // --- Start: Choose ONE of the stronger options ---
+        // Get current date and time with timezone using WordPress function
+        $current_datetime_str = wp_date('F j, Y, g:i a T'); // Respects WP Timezone
+        $current_date_str = wp_date('F j, Y'); // Respects WP Timezone for date logic
 
-        // Append the date instruction to the fetched prompt
-        // Add a newline before the instruction if the original prompt is not empty
-        if (!empty($project_prompt)) {
-             $project_prompt .= "\n\n";
+        $date_instruction = <<<PROMPT
+--- MANDATORY TIME CONTEXT ---
+CURRENT DATE & TIME: {$current_datetime_str}
+RULE: You MUST treat {$current_date_str} as the definitive 'today' for determining past/present/future tense.
+ACTION: Frame all events relative to {$current_date_str}. Use past tense for completed events. Use present/future tense appropriately ONLY for events happening on or after {$current_date_str}.
+CONSTRAINT: DO NOT discuss events completed before {$current_date_str} as if they are still upcoming.
+KNOWLEDGE CUTOFF: Your internal knowledge cutoff is irrelevant; operate solely based on this date and provided context.
+--- END TIME CONTEXT ---
+PROMPT;
+        // --- End: Chosen option ---
+
+        // Prepend the date instruction
+        $final_prompt = $date_instruction;
+
+        // Add the original project prompt after the date instruction, with separation
+        if (!empty($project_prompt_base)) {
+             $final_prompt .= "\n\n" . $project_prompt_base; // Add newline separation
         }
-        $project_prompt .= "IMPORTANT: The current date is {$current_date}. Please write your response from this real-time perspective, ignoring the knowledge base cutoff.";
 
-        return $project_prompt;
+        return $final_prompt;
     }
 }

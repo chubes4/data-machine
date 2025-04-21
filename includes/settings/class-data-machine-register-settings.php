@@ -168,6 +168,7 @@ class Data_Machine_Register_Settings {
      */
     public function init_hooks() {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_init', array( $this, 'handle_api_keys_page_user_meta_save' ) );
     }
 
     /**
@@ -478,6 +479,68 @@ class Data_Machine_Register_Settings {
             '<input type="text" id="openai_api_key" name="openai_api_key" value="%s" class="regular-text" />',
             esc_attr( get_option( 'openai_api_key' ) )
         );
+    }
+
+    /**
+     * Handle saving user-specific meta fields from the API Keys page.
+     * Hooks into admin_init to catch the POST request before options.php processes it.
+     *
+     * @since NEXT_VERSION
+     */
+    public function handle_api_keys_page_user_meta_save() {
+        // Check if this is a POST request for the API keys page
+        if ( 'POST' !== $_SERVER['REQUEST_METHOD'] ||
+             !isset($_POST['option_page']) || 'dm_api_keys_group' !== $_POST['option_page'] ) {
+            return; // Not our form submission
+        }
+
+        // Verify the nonce specific to user meta fields on this page
+        if ( !isset($_POST['_wpnonce_dm_api_keys_user_meta']) || 
+             !wp_verify_nonce($_POST['_wpnonce_dm_api_keys_user_meta'], 'dm_save_api_keys_user_meta') ) {
+            // Nonce failed, log or add an error notice? Silently return for now.
+            return;
+        }
+
+        // Check user capabilities
+        if ( !current_user_can('manage_options') ) { // Assuming manage_options is the capability for this page
+            return; 
+        }
+
+        $user_id = get_current_user_id();
+        $updated = false;
+
+        // Handle Bluesky Username
+        if ( isset($_POST['bluesky_username']) ) {
+            $bluesky_username = sanitize_text_field($_POST['bluesky_username']);
+            update_user_meta($user_id, 'dm_bluesky_username', $bluesky_username);
+            $updated = true;
+        }
+
+        // Handle Bluesky Password (only update if a new password was submitted)
+        if ( isset($_POST['bluesky_app_password']) && !empty($_POST['bluesky_app_password']) ) {
+            // Encrypt the password before saving
+            // Note: Password is not sanitized beyond being non-empty
+            try {
+                $encrypted_password = Data_Machine_Encryption_Helper::encrypt($_POST['bluesky_app_password']);
+                if ($encrypted_password === false) {
+                    // Log error, maybe add admin notice
+                    error_log('[Data Machine] Failed to encrypt Bluesky app password for user ' . $user_id . ' on API Keys page save.');
+                    add_settings_error('Data_Machine_api_keys_messages', 'bluesky_encrypt_fail', __('Failed to encrypt Bluesky app password. It was not saved.', 'data-machine'), 'error');
+                } else {
+                    update_user_meta($user_id, 'dm_bluesky_app_password', $encrypted_password);
+                    $updated = true;
+                }
+            } catch (\Exception $e) {
+                error_log('[Data Machine] Exception encrypting Bluesky app password for user ' . $user_id . ': ' . $e->getMessage());
+                 add_settings_error('Data_Machine_api_keys_messages', 'bluesky_encrypt_exception', __('An error occurred while encrypting the Bluesky app password. It was not saved.', 'data-machine'), 'error');
+            }
+        }
+
+        // Add a success notice if something was updated
+        // Note: This might appear alongside the standard "Settings saved." notice from options.php
+        // if ($updated) {
+        //     add_settings_error('Data_Machine_api_keys_messages', 'user_meta_saved', __('User-specific API settings updated.', 'data-machine'), 'updated');
+        // }
     }
 
 } // End class 

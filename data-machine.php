@@ -43,8 +43,9 @@ require_once DATA_MACHINE_PATH . 'includes/helpers/class-import-export.php'; // 
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
-require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-register-settings.php';
+require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-register-settings.php';
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-reddit.php';
+require_once DATA_MACHINE_PATH . 'admin/class-data-machine-admin-ajax.php';
 
 /**
  * Register custom rewrite endpoint for Instagram OAuth
@@ -102,7 +103,8 @@ function run_data_machine() {
 			if ($class_name === 'Data_Machine_Output_Publish_Remote') {
 				return new $class_name($locator->get('database_remote_locations'), $locator->get('logger'));
 			}
-			return new $class_name();
+			// Pass the locator to the default handler constructor
+			return new $class_name($locator);
 		});
 	}
 
@@ -110,6 +112,15 @@ function run_data_machine() {
 	$locator->register('logger', function($locator) {
 		// Path required above
 		return new Data_Machine_Logger();
+	});
+
+	// Register Encryption Helper
+	$locator->register('encryption_helper', function($locator) {
+		// Ensure the helper class file is included
+		if (!class_exists('Data_Machine_Encryption_Helper')) {
+			require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-encryption-helper.php';
+		}
+		return new Data_Machine_Encryption_Helper(); // Instantiate the helper
 	});
 
 	// Register Database Projects first (as Modules might depend on it later)
@@ -235,6 +246,12 @@ function run_data_machine() {
 		return new Data_Machine_OAuth_Twitter($locator);
 	});
 
+    // ADDED: Register Admin AJAX Handler
+    $locator->register('admin_ajax_handler', function($locator) {
+        // Class file is required above
+        return new Data_Machine_Admin_Ajax($locator);
+    });
+
 	// Settings class has been removed and its functionality distributed to utility classes:
 	// - Data_Machine_Register_Settings - handles WordPress settings registration
 	// - Data_Machine_Module_Handler - handles module selection and creation
@@ -242,14 +259,43 @@ function run_data_machine() {
 
 	// Explicitly register the Register Settings service
 	$locator->register('register_settings', function($locator) {
-		if (!class_exists('Data_Machine_Register_Settings')) require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-register-settings.php';
+		if (!class_exists('Data_Machine_Register_Settings')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-register-settings.php';
 		return new Data_Machine_Register_Settings(DATA_MACHINE_VERSION, $locator);
+	});
+
+	// Register Remote Location Service (for settings UI)
+	$locator->register('remote_location_service', function($locator) {
+		// Ensure class file is included
+		if (!class_exists('Data_Machine_Remote_Location_Service')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-remote-location-service.php';
+		// Ensure dependency is registered and available
+		if (!$locator->has('database_remote_locations')) {
+			 // Handle error: log or throw exception
+			 error_log('Data Machine Error: database_remote_locations service not available for remote_location_service.');
+			 return null; // Or throw new \Exception(...);
+		}
+		return new Data_Machine_Remote_Location_Service(
+			$locator->get('database_remote_locations')
+		);
 	});
 
 	// Register Settings Fields Service
 	$locator->register('settings_fields', function($locator) {
-		if (!class_exists('Data_Machine_Settings_Fields')) require_once DATA_MACHINE_PATH . 'admin/class-data-machine-settings-fields.php';
-		return new Data_Machine_Settings_Fields($locator);
+		if (!class_exists('Data_Machine_Settings_Fields')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-settings-fields.php';
+		if (!class_exists('Data_Machine_Service_Locator_Handler_Factory')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-service-locator-handler-factory.php';
+
+		// Ensure remote location service is available
+		if (!$locator->has('remote_location_service')) {
+			 error_log('Data Machine Error: remote_location_service not available for settings_fields.');
+			 return null; // Or throw exception
+		}
+
+		$handler_factory = new Data_Machine_Service_Locator_Handler_Factory($locator);
+		$remote_location_service = $locator->get('remote_location_service');
+
+		return new Data_Machine_Settings_Fields(
+			$handler_factory,
+			$remote_location_service // Inject the remote location service
+		);
 	});
 
 	// Register Handler Registry Service
@@ -399,6 +445,12 @@ function run_data_machine() {
 	// --- Run the Plugin ---
 	$plugin->run();
 
+	// Initialize Admin AJAX handler hooks
+	if ( is_admin() ) {
+		// $locator->get('admin_ajax_handler')->init_hooks(); // Removed - Hooks are registered in constructor
+		// $locator->get('module_ajax_handler')->init_hooks(); // Removed - Hooks are registered in constructor
+		// $locator->get('dashboard_ajax_handler')->init_hooks(); // Removed - Hooks are registered in constructor
+	}
 }
 run_data_machine();
 

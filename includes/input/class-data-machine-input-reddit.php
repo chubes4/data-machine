@@ -117,7 +117,7 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 			throw new Exception(__( 'Permission denied for this module.', 'data-machine' ));
 		}
 
-		// --- Configuration --- 
+		// --- Configuration ---
 		// Use the $source_config passed as an argument
 		$config_data = $source_config['reddit'] ?? $source_config; // Use 'reddit' sub-array or the main array
 
@@ -154,11 +154,11 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp'));
 			}
 		}
-		// --- End Configuration --- 
+		// --- End Configuration ---
 
 		$eligible_items_packets = [];
 		$after_param = null; // For Reddit API pagination
-		$total_checked = 0; 
+		$total_checked = 0;
 		$max_checks = 500; // Safety break to prevent infinite loops in weird scenarios
 
 		// Loop to fetch pages until enough items are found or limits are hit
@@ -172,7 +172,7 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 				$after_param ? '&after=' . urlencode($after_param) : '' // Add 'after' if available
 			);
 			$args = [
-				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)', 
+				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)',
 				'timeout' => 15,
 				'headers' => [
 					'Authorization' => 'Bearer ' . $access_token
@@ -256,7 +256,8 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 					continue; // Skip if already processed
 				}
 
-				// --- Item is ELIGIBLE! --- 
+
+				// --- Item is ELIGIBLE! ---
 				// Extract data and create packet
 				$title = $item_data['title'] ?? 'N/A';
 				$content = $item_data['selftext'] ?? '';
@@ -264,66 +265,178 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 				$source_url = $item_data['url'] ?? $link;
 				$image_source_url = null; // Initialize image URL variable
 
-				// Image detection
-				$file_info = null; // Reset file_info, we won't download
-				$image_extensions = ['jpg', 'jpeg', 'png', 'gif'];
-				$parsed_url = parse_url($source_url);
-				$ext = isset($parsed_url['path']) ? strtolower(pathinfo($parsed_url['path'], PATHINFO_EXTENSION)) : '';
+				// --- Enhanced Image Detection ---
+				$file_info = null; // Reset file_info
+				$image_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']; // Added webp
 
-				if (in_array($ext, $image_extensions)) {
-					// It's an image post - Store the URL, don't download
-					$image_source_url = $source_url;
-					// Content string for image posts is just the title
-					$content_string = "Title: " . html_entity_decode($title);
-					// $file_info remains null
-
-					// --- Download Image for AI Processing --- 
-					require_once(ABSPATH . 'wp-admin/includes/file.php'); // Ensure file functions are loaded
-					$temp_file_path = download_url($source_url, 15); // 15 second timeout
-
-					if (is_wp_error($temp_file_path)) {
-						// Download failed - log error but proceed (AI won't get image)
-						$this->locator->get('logger')->error('[Reddit Input] Failed to download image for AI processing.', [
-							'url' => $source_url,
-							'error' => $temp_file_path->get_error_message(),
-							'post_id' => $current_item_id
-						]);
-						$file_info = null; // Ensure file_info is null if download fails
-					} else {
-						// Download successful - prepare file_info with persistent_path
-						$filename = basename($parsed_url['path']);
-						$mime_type = 'image/' . ($ext === 'jpg' ? 'jpeg' : $ext);
-						$file_info = [
-							'url' => $source_url, // Original URL
-							'mime_type' => $mime_type,
-							'filename' => $filename,
-							'persistent_path' => $temp_file_path // Path to the downloaded temp file for AI
-						];
-						// Note: Content string remains just the title for image posts
+				// Priority 1: Gallery Images
+				if (isset($item_data['is_gallery']) && $item_data['is_gallery'] === true && !empty($item_data['media_metadata'])) {
+					foreach ($item_data['media_metadata'] as $media_id => $media_item) {
+						// Look for image type ('e' => 'Image' or check mimetype 'm') and URL ('s' => {'u': 'URL'})
+						if (!empty($media_item['e']) && $media_item['e'] === 'Image' && !empty($media_item['s']['u'])) {
+							$image_source_url = html_entity_decode($media_item['s']['u']); // Get highest quality URL
+							break; // Use the first image found in the gallery
+						} elseif (strpos($media_item['m'] ?? '', 'image/') === 0 && !empty($media_item['s']['u'])) {
+							 // Fallback check using MIME type if 'e' is missing/different
+							 $image_source_url = html_entity_decode($media_item['s']['u']);
+							 break;
+						}
 					}
-					// --- End Download Image --- 
+					if ($image_source_url) {
+						 $this->locator->get('logger')->debug('[Reddit Input] Found image in gallery.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
+					}
+				}
+
+				// Priority 2: Direct Image Link (URL or Overridden URL)
+				if ($image_source_url === null) {
+					$url_to_check = $item_data['url_overridden_by_dest'] ?? $item_data['url'] ?? '';
+					if (!empty($url_to_check)) {
+						$parsed_check_url = parse_url($url_to_check);
+						$check_ext = isset($parsed_check_url['path']) ? strtolower(pathinfo($parsed_check_url['path'], PATHINFO_EXTENSION)) : '';
+						if (in_array($check_ext, $image_extensions)) {
+							$image_source_url = $url_to_check;
+							 $this->locator->get('logger')->debug('[Reddit Input] Found direct image link.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
+						}
+					}
+				}
+
+				// Priority 3: Preview Image
+				if ($image_source_url === null && !empty($item_data['preview']['images'][0]['source']['url'])) {
+					$image_source_url = html_entity_decode($item_data['preview']['images'][0]['source']['url']);
+					 $this->locator->get('logger')->debug('[Reddit Input] Found preview image.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
+				}
+
+				// Priority 4: Thumbnail (Fallback)
+				if ($image_source_url === null && !empty($item_data['thumbnail']) && $item_data['thumbnail'] !== 'self' && $item_data['thumbnail'] !== 'default' && $item_data['thumbnail'] !== 'spoiler' && $item_data['thumbnail'] !== 'nsfw' && filter_var($item_data['thumbnail'], FILTER_VALIDATE_URL)) {
+					 // Check if thumbnail URL looks like a valid image URL (basic check)
+					 $parsed_thumb_url = parse_url($item_data['thumbnail']);
+					 $thumb_ext = isset($parsed_thumb_url['path']) ? strtolower(pathinfo($parsed_thumb_url['path'], PATHINFO_EXTENSION)) : '';
+					 // Only use common image extensions for thumbnails to avoid things like PHP scripts
+					 if (in_array($thumb_ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+						$image_source_url = $item_data['thumbnail'];
+						 $this->locator->get('logger')->debug('[Reddit Input] Found thumbnail image as fallback.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
+					 }
+				}
+
+				// --- Prepare Content String based on Image ---
+				$file_info = null; // Initialize file_info
+				if ($image_source_url !== null) {
+					// Image post or post with a usable image found
+					$content_string = "Title: " . html_entity_decode($title);
+
+					// --- Prepare file_info WITHOUT downloading ---
+					$parsed_image_url = parse_url($image_source_url);
+					$filename = isset($parsed_image_url['path']) ? basename($parsed_image_url['path']) : 'reddit_image.tmp'; // Fallback filename
+					$ext = isset($parsed_image_url['path']) ? strtolower(pathinfo($parsed_image_url['path'], PATHINFO_EXTENSION)) : '';
+
+					// Simplified MIME type logic based on extension only
+					$mime_type = match ($ext) {
+						'jpg', 'jpeg' => 'image/jpeg',
+						'png' => 'image/png',
+						'gif' => 'image/gif',
+						'webp' => 'image/webp',
+						default => 'application/octet-stream', // Fallback
+					};
+
+					$file_info = [
+						'url' => $image_source_url, // Original URL of the found image
+						'mime_type' => $mime_type, // Determined from extension
+						'filename' => $filename,   // Determined from URL path
+						// No persistent_path or temp_file_path needed
+					];
+					// --- End file_info preparation ---
 
 				} else {
-					// Not a direct image link - treat as text/link post
+					// No image found, treat as text/link post
 					if (empty(trim($content))) { $content = "Link Post: " . $source_url; }
 					$content_string = "Title: " . html_entity_decode($title) . "\n\n" . html_entity_decode($content);
-					// $file_info remains null
-					$file_info = null; // Explicitly null for non-image posts
-					$image_source_url = null; // Ensure image URL is null for non-image posts
+					// file_info remains null
+					// image_source_url remains null
 				}
 
 				// --- Fetch Top Comments (if enabled) ---
-				$comments_string = '';
-				if ($comment_count_setting > 0 && isset($item_data['id'])) {
-					$this->locator->get('logger')->debug('[Reddit Input] Attempting to fetch comments.', [
-						'post_id' => $item_data['id'],
+				// MOVED: Comment fetching logic is now outside this loop, after eligible items are collected.
+				$comments_string = ''; // Initialize as empty, will be populated later if needed.
+
+				$input_data_packet = [
+					'content_string' => $content_string, // Initially just title/content or title
+					'file_info' => $file_info, // This now contains download info if an image was found
+					'metadata' => [
+						'source_type' => 'reddit',
+						'item_identifier_to_log' => $current_item_id,
+						'original_id' => $current_item_id,
+						'source_url' => $link, // Keep permalink as main source_url
+						'image_source_url' => $image_source_url, // Add the URL of the image found (or null if none)
+						'original_title' => $title,
+						'subreddit' => $subreddit,
+						'external_url' => ($source_url !== $link) ? $source_url : null, // Original URL (image or link)
+						'original_creation_timestamp' => isset($item_data['created_utc']) ? (int) $item_data['created_utc'] : null,
+						'original_date_gmt' => (isset($item_data['created_utc']) && $item_data['created_utc'] > 0) ? gmdate('Y-m-d\TH:i:s', (int)$item_data['created_utc']) : null
+					]
+				];
+
+				// --- Start: Add image alt text if image exists ---
+				if ($image_source_url && isset($input_data_packet['metadata'])) {
+					$input_data_packet['metadata']['image_alt_text'] = $title; // Use post title as alt text
+				}
+				// --- End: Add image alt text ---
+
+				array_push($eligible_items_packets, $input_data_packet);
+
+				// --- ADDED: Check if limit reached AFTER adding this item ---
+				if (count($eligible_items_packets) >= $process_limit) {
+					break; // Exit the FOREACH loop immediately
+				}
+				// --- END ADDED CHECK ---
+
+			} // End foreach ($response_data['data']['children'] as $post_wrapper)
+
+			// Check if we have reached the process limit AFTER processing the batch
+			// -- NOTE: The break inside the foreach loop above makes this check somewhat redundant
+			// --       but keeping it provides a secondary exit from the WHILE loop.
+			if (count($eligible_items_packets) >= $process_limit) {
+				break; // Exit the WHILE loop now
+			}
+
+			// Update the 'after' parameter for the next page request
+			if (!empty($response_data['data']['after'])) {
+				$after_param = $response_data['data']['after'];
+			} else {
+				// No 'after' parameter means no more pages
+				break; // Exit the WHILE loop
+			}
+
+			// --- ADDED: Check if the timeframe limit was hit in this batch ---
+			// If the timeframe limit caused us to skip items, and we are sorting by time (new/top),
+			// there's no point fetching older pages.
+			if ($batch_hit_time_limit && ($sort === 'new' || $sort === 'top')) {
+				$this->locator->get('logger')->info('[Reddit Input] Stopping pagination due to hitting timeframe limit on a time-sorted feed.', [
+					'module_id' => $module_id,
+					'sort' => $sort,
+					'timeframe_limit' => $timeframe_limit
+				]);
+				break; // Exit the WHILE loop
+			}
+			// --- END TIMEFRAME CHECK ---
+
+		} // End while (count($eligible_items_packets) < $process_limit ... )
+
+		// --- Fetch Comments for Eligible Items (AFTER main loop) ---
+		if ($comment_count_setting > 0 && !empty($eligible_items_packets)) {
+			foreach ($eligible_items_packets as $index => $packet) {
+				$item_id_for_comments = $packet['metadata']['original_id'] ?? null;
+				$comments_string = ''; // Reset for each item
+
+				if ($item_id_for_comments) {
+					$this->locator->get('logger')->debug('[Reddit Input] Attempting to fetch comments for eligible post.', [
+						'post_id' => $item_id_for_comments,
 						'comments_requested' => $comment_count_setting,
 					]);
 
 					// Use oauth.reddit.com for comments endpoint
 					$comments_url = sprintf(
 						'https://oauth.reddit.com/comments/%s.json?sort=top&limit=%d&depth=1', // depth=1 for top-level comments only
-						esc_attr($item_data['id']),
+						esc_attr($item_id_for_comments),
 						$comment_count_setting
 					);
 					// Add Authorization header to comment request args
@@ -331,7 +444,7 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 						'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)', // Match primary fetch UA
 						'timeout' => 15,
 						'headers' => [
-							'Authorization' => 'Bearer ' . $access_token // Use the access token
+							'Authorization' => 'Bearer ' . $access_token // Use the access token from outer scope
 						]
 					];
 
@@ -340,8 +453,8 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 					if (isset($log_comment_headers['Authorization'])) {
 						$log_comment_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_comment_headers['Authorization']);
 					}
-					$this->locator->get('logger')->debug('[Reddit Input] Making comment API call.', [
-						'post_id' => $item_data['id'],
+					$this->locator->get('logger')->debug('[Reddit Input] Making comment API call for eligible post.', [
+						'post_id' => $item_id_for_comments,
 						'target_url' => $comments_url,
 						'request_headers' => $log_comment_headers
 					]);
@@ -351,7 +464,7 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 
 					if (!is_wp_error($comments_response) && wp_remote_retrieve_response_code($comments_response) === 200) {
 						$this->locator->get('logger')->debug('[Reddit Input] Comment API call successful (200 OK). Processing response.', [
-							'post_id' => $item_data['id'],
+							'post_id' => $item_id_for_comments,
 							'response_body_snippet' => substr($raw_comments_body, 0, 200) . (strlen($raw_comments_body) > 200 ? '...' : '') // Log snippet
 						]);
 
@@ -375,21 +488,21 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 									}
 								}
 							}
-							$this->locator->get('logger')->debug('[Reddit Input] Parsed comments.', [
-								'post_id' => $item_data['id'],
+							$this->locator->get('logger')->debug('[Reddit Input] Parsed comments for eligible post.', [
+								'post_id' => $item_id_for_comments,
 								'parsed_count' => count($fetched_comments),
 							]);
 							if (!empty($fetched_comments)) {
 								$comments_string .= "\n\n--- Top Comments (up to " . count($fetched_comments) . ") ---\n";
 								$comments_string .= implode("\n\n", $fetched_comments);
-								$this->locator->get('logger')->debug('[Reddit Input] Appending comments string.', [
-									'post_id' => $item_data['id'],
-									'comments_string_length' => strlen($comments_string),
-								]);
+							$this->locator->get('logger')->debug('[Reddit Input] Appending comments string for eligible post.', [
+								'post_id' => $item_id_for_comments,
+								'comments_string_length' => strlen($comments_string),
+							]);
 							}
 						} else {
-							$this->locator->get('logger')->warning('[Reddit Input] Comment response structure invalid or no comments found in expected location.', [
-								'post_id' => $item_data['id'],
+							$this->locator->get('logger')->warning('[Reddit Input] Comment response structure invalid or no comments found in expected location for eligible post.', [
+								'post_id' => $item_id_for_comments,
 								'response_body_snippet' => substr($raw_comments_body, 0, 200) . (strlen($raw_comments_body) > 200 ? '...' : '')
 							]);
 						}
@@ -397,68 +510,29 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 						// Log comment fetch failure but don't stop the process
 						$response_code = wp_remote_retrieve_response_code($comments_response);
 						$error_detail = is_wp_error($comments_response) ? $comments_response->get_error_message() : 'HTTP Status ' . $response_code;
-						error_log('DM Reddit Input: Failed to fetch comments for post ' . $item_data['id'] . '. Error: ' . $error_detail . ' URL: ' . $comments_url);
-						$this->locator->get('logger')->error('[Reddit Input] Failed to fetch comments.', [
-							'post_id' => $item_data['id'],
+						error_log('DM Reddit Input: Failed to fetch comments for post ' . $item_id_for_comments . '. Error: ' . $error_detail . ' URL: ' . $comments_url);
+						$this->locator->get('logger')->error('[Reddit Input] Failed to fetch comments for eligible post.', [
+							'post_id' => $item_id_for_comments,
 							'error_detail' => $error_detail,
 							'response_code' => $response_code,
 							'response_body_snippet' => substr($raw_comments_body, 0, 200) . (strlen($raw_comments_body) > 200 ? '...' : '')
 						]);
 					}
 				} else {
-					// Log if comments are skipped due to setting or missing post ID
-					$this->locator->get('logger')->debug('[Reddit Input] Skipping comment fetch.', [
-						'reason' => ($comment_count_setting <= 0) ? 'Comment count setting is 0 or less' : 'Missing post ID',
-						'post_id' => $item_data['id'] ?? null,
+					// Log if comments are skipped due to missing post ID in packet
+					$this->locator->get('logger')->warning('[Reddit Input] Skipping comment fetch for an eligible packet due to missing original ID.', [
+						'packet_index' => $index,
 						'comment_count_setting' => $comment_count_setting
 					]);
 				}
-				// --- End Fetch Top Comments ---
 
-				$input_data_packet = [
-					'content_string' => $content_string . $comments_string, // Append comments string
-					'file_info' => $file_info, // Will be null for images now -> Will contain download path if successful
-					'metadata' => [
-						'source_type' => 'reddit',
-						'item_identifier_to_log' => $current_item_id,
-						'original_id' => $current_item_id,
-						'source_url' => $link, // Keep permalink as main source_url
-						'image_source_url' => $image_source_url, // Add image URL if detected
-						'original_title' => $title,
-						'subreddit' => $subreddit,
-						'external_url' => ($source_url !== $link) ? $source_url : null, // Original URL (image or link)
-						'original_creation_timestamp' => isset($item_data['created_utc']) ? (int) $item_data['created_utc'] : null,
-						'original_date_gmt' => (isset($item_data['created_utc']) && $item_data['created_utc'] > 0) ? gmdate('Y-m-d\TH:i:s', (int)$item_data['created_utc']) : null
-					]
-				];
-				array_push($eligible_items_packets, $input_data_packet);
-				// --- End Eligible Item Handling ---
+				// Append the fetched comments (if any) to the content_string of the current packet
+				$eligible_items_packets[$index]['content_string'] .= $comments_string;
 
-				// Check if we have reached the process limit
-				if (count($eligible_items_packets) >= $process_limit) {
-					break; // Exit the inner foreach loop
-				}
+			} // End foreach ($eligible_items_packets)
+		} // End if ($comment_count_setting > 0)
 
-			} // End foreach ($response_data['data']['children'] as $post_wrapper)
-
-			// Check stopping conditions for the outer while loop
-			if (count($eligible_items_packets) >= $process_limit) {
-				break; // Exit while loop: Found enough items
-			}
-			// If sorting by 'new', stop fetching if we hit the time limit boundary
-			if ($batch_hit_time_limit && $sort === 'new' && $timeframe_limit !== 'all_time') {
-				break; // Exit while loop: Reached posts older than timeframe (assuming 'new' sort)
-			}
-			if (empty($response_data['data']['after'])) {
-				break; // Exit while loop: No more pages from Reddit
-			}
-
-			// Prepare for the next page fetch
-			$after_param = $response_data['data']['after'];
-
-		} // End while (count($eligible_items_packets) < $process_limit ... )
-
-		// --- Return Results --- 
+		// --- Return Results ---
 		// If no eligible items were found after all checks
 		if (empty($eligible_items_packets)) {
 			// Determine specific reason for no items if possible (e.g., checked max items, hit time limit early)
@@ -468,8 +542,8 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 		}
 
 		// Return the array of eligible item packets
-		return $eligible_items_packets; 
-		// Note: The structure has changed. It now returns an ARRAY of packets, 
+		return $eligible_items_packets;
+		// Note: The structure has changed. It now returns an ARRAY of packets,
 		// or a status array like ['status' => 'no_new_items'].
 		// The AJAX handler needs to be updated to handle this.
 	}
@@ -574,5 +648,12 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 	public static function get_label(): string {
 		return 'Reddit Subreddit';
 	}
+
+	/**
+	 * Cleans up temporary files created during processing.
+	 */
+	public function cleanup_temp_files(array $file_info) {
+		// REMOVED: This entire method is no longer needed as no temporary files are created.
+	} // <<< REMOVE ENTIRE cleanup_temp_files METHOD
 
 } // End class Data_Machine_Input_Reddit

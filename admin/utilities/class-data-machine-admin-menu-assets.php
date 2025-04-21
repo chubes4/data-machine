@@ -137,6 +137,16 @@ class Data_Machine_Admin_Menu_Assets {
             'dm-api-keys', // Menu slug
             array($this->admin_page_handler, 'display_api_keys_page') // Use handler for callback
         );
+
+        // Add Jobs submenu page
+        add_submenu_page(
+            'data-machine-admin-page', // Parent slug
+            __('Jobs', 'data-machine'), // Page title
+            __('Jobs', 'data-machine'), // Menu title
+            'manage_options', // Capability required
+            'dm-jobs', // Menu slug
+            array($this->admin_page_handler, 'display_jobs_page') // Callback method in Data_Machine_Admin_Page
+        );
     }
 
     /**
@@ -146,6 +156,10 @@ class Data_Machine_Admin_Menu_Assets {
      * @param    string    $hook_suffix    The current admin page hook.
      */
     public function enqueue_admin_assets( $hook_suffix ) {
+        // --- DEBUG: Log the hook suffix --- Removed ---
+        // error_log('Data Machine Admin Hook Suffix: ' . $hook_suffix);
+        // --- END DEBUG ---
+
         // Define base paths and URLs
         $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) ); // Base plugin path - adjusted for utility directory
         $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );   // Base plugin URL - adjusted for utility directory
@@ -195,10 +209,36 @@ class Data_Machine_Admin_Menu_Assets {
             
             // Settings Page JS
             } elseif ('data-machine_page_data-machine-settings-page' === $hook_suffix) {
-                $js_settings_path = $plugin_base_path . 'assets/js/data-machine-settings.js';
-                $js_settings_url = $plugin_base_url . 'assets/js/data-machine-settings.js';
+                $js_settings_path = $plugin_base_path . 'settings/js/data-machine-settings.js';
+                $js_settings_url = $plugin_base_url . 'settings/js/data-machine-settings.js';
                 $js_settings_version = file_exists($js_settings_path) ? filemtime($js_settings_path) : $this->version;
                 wp_enqueue_script( 'data-machine-settings', $js_settings_url, array( 'jquery' ), $js_settings_version, true ); // Load in footer
+
+                // Enqueue the UI helpers script
+                $ui_helpers_script_path = $plugin_base_path . 'settings/js/settings-ui-helpers.js';
+                $ui_helpers_script_url = $plugin_base_url . 'settings/js/settings-ui-helpers.js';
+                if ( file_exists( $ui_helpers_script_path ) ) {
+                    wp_enqueue_script(
+                        'data-machine-settings-ui-helpers',
+                        $ui_helpers_script_url,
+                        array( 'jquery', 'data-machine-settings' ), // Depends on jQuery and main settings script for toggleConfigSections
+                        filemtime( $ui_helpers_script_path ),
+                        true // Load in footer
+                    );
+                }
+
+                // Enqueue the remote locations script for the settings page
+                $remote_locations_script_path = $plugin_base_path . 'settings/js/settings-page-remote-locations.js'; // Use the correct filename
+                $remote_locations_script_url = $plugin_base_url . 'settings/js/settings-page-remote-locations.js'; // Use the correct filename
+                if ( file_exists( $remote_locations_script_path ) ) {
+                    wp_enqueue_script(
+                        'data-machine-settings-remote-locations', // Updated handle for clarity
+                        $remote_locations_script_url,
+                        array( 'jquery', 'data-machine-settings' ), // Depends on jQuery and the main settings script
+                        filemtime( $remote_locations_script_path ),
+                        true // Load in footer
+                    );
+                }
 
                 $settings_params = array(
                 	'ajax_url' => admin_url( 'admin-ajax.php' ),
@@ -206,11 +246,20 @@ class Data_Machine_Admin_Menu_Assets {
                 	'get_project_modules_nonce' => wp_create_nonce( 'dm_get_project_modules_nonce' ),
                 	'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
                     'get_synced_info_nonce' => wp_create_nonce( 'dm_get_location_synced_info_nonce' ),
-                    'nonce' => wp_create_nonce('dm_settings_nonce'), // Add the general settings nonce
-                    'save_module_nonce' => wp_create_nonce( 'dm_save_module_nonce' ), // Add nonce for saving modules
-                    'sync_public_api_nonce' => wp_create_nonce( 'dm_sync_public_api_nonce' ) // Add nonce for public API sync
+                    'nonce' => wp_create_nonce('dm_settings_nonce'), // General settings nonce
+                    'save_module_nonce' => wp_create_nonce( 'dm_save_module_nonce' ),
+                    'sync_public_api_nonce' => wp_create_nonce( 'dm_sync_public_api_nonce' )
                     );
+                // Localize for the main settings script
                 wp_localize_script( 'data-machine-settings', 'dm_settings_params', $settings_params );
+
+                // Localize specifically for the remote locations script
+                $remote_params = array(
+                    'ajax_url' => admin_url( 'admin-ajax.php' ),
+                    'get_synced_info_nonce' => wp_create_nonce( 'dm_get_location_synced_info_nonce' ),
+                    'nonce' => wp_create_nonce('dm_settings_nonce') // Re-use general nonce if needed for dm_get_user_locations
+                );
+                wp_localize_script( 'data-machine-settings-remote-locations', 'dm_remote_params', $remote_params );
             
             // Project Dashboard Page JS
             } elseif ('data-machine_page_data-machine-project-dashboard-page' === $hook_suffix) {

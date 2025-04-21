@@ -55,15 +55,26 @@ $projects = $db_projects->get_projects_for_user( $user_id );
 
                     // --- Schedule Display Logic ---
                     $project_interval = $project->schedule_interval ?? 'manual';
-                    $project_schedule_display = esc_html( ucfirst( str_replace( '_', ' ', $project_interval ) ) );
+                    // Use constant label for project schedule
+                    $project_schedule_label = Data_Machine_Constants::get_cron_label($project_interval);
+                    if (!$project_schedule_label && $project_interval === 'manual') {
+                        $project_schedule_label = 'Manual'; // Handle manual case explicitly if not in constants
+                    }
+                    $project_schedule_display = esc_html( $project_schedule_label ?? ucfirst( str_replace( '_', ' ', $project_interval ) ) ); // Fallback just in case
+
                     $module_exceptions = [];
 
                     if ( ! empty( $modules ) && is_array( $modules ) ) {
                         foreach ( $modules as $module ) {
                             $module_interval = $module->schedule_interval ?? 'manual';
-                            // Check if module schedule differs from project AND is not 'manual' (which inherits)
-                            if ( $module_interval !== $project_interval && $module_interval !== 'manual' ) {
-                                $module_schedule_display = esc_html( ucfirst( str_replace( '_', ' ', $module_interval ) ) );
+                            // Show module schedule if it's NOT 'project_schedule'
+                            if ( $module_interval !== 'project_schedule' ) {
+                                // Use constant label for module schedule
+                                $module_schedule_label = Data_Machine_Constants::get_cron_label($module_interval);
+                                if (!$module_schedule_label && $module_interval === 'manual') {
+                                    $module_schedule_label = 'Manual'; // Handle manual case explicitly if not in constants
+                                }
+                                $module_schedule_display = esc_html( $module_schedule_label ?? ucfirst( str_replace( '_', ' ', $module_interval ) ) ); // Fallback
                                 $module_exceptions[] = esc_html( $module->module_name ) . ': ' . $module_schedule_display;
                             }
                         }
@@ -89,10 +100,10 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                         <td><?php echo $modules_display; ?></td>
                         <td><?php echo $final_schedule_display; ?></td>
                         <td><?php echo esc_html( ucfirst( $project->schedule_status ?? 'paused' ) ); ?></td>
-                        <td><?php 
+                        <td><?php
                             if (!empty($project->last_run_at)) {
-                                // Display formatted time - adjust format as needed
-                                echo esc_html( date( 'Y-m-d H:i:s', strtotime( $project->last_run_at ) ) ); 
+                                // Display human-readable time difference
+                                echo esc_html( human_time_diff( strtotime( $project->last_run_at ), current_time( 'timestamp' ) ) . ' ago' );
                             } else {
                                 echo 'Never';
                             }

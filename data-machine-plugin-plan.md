@@ -81,6 +81,41 @@ The Data Machine plugin has significant potential for future expansion and the a
     *   Visual Data Mapping: Allow users to visually map data fields from the source to the destination.
     *   Real-time Monitoring: Provide real-time monitoring of data collection and processing tasks.
 
-## 5. Conclusion
+## 5. Known Issues and Feature Requests
+
+### 5.1. Known Issues
+
+1.  **Output Type Config Reset Issue:** When creating a new module, the output type configuration does not reset. This causes the settings from the previously selected module's output type to autofill, which is particularly problematic for remote locations and state management.
+2.  **Custom Taxonomies Loading Issue:** When creating a new module, custom taxonomies do not automatically load after a post type is selected. Users must save and refresh the page to see and select custom taxonomies. This is not the intended user experience.
+3.  **Twitter OAuth Issue:** Twitter OAuth is currently not working and needs to be investigated and fixed.
+4.  **Partial Settings Rework:** There is an ongoing, but incomplete, rework to move logic to the `/settings` directory. This rework might be changed or adjusted in the future.
+
+### 5.2. Feature Requests
+
+1.  **Reddit Source - Multiple Images:** The Reddit source should be enhanced to pull multiple images from a Reddit post, if available. At least the first image should be processed, and ideally, users should be able to select which images to use.
+2.  **Subreddit Keyword Filtering:** Implement keyword filtering for the subreddit input to allow users to filter posts based on keywords in the title or selftext, similar to the filtering available for REST and RSS inputs. This would allow for more targeted data collection from Reddit.
+3.  **Instagram Scraper:** Develop an Instagram scraper input handler to collect data from Instagram.
+
+## 6. Naming Convention Updates
+
+The following admin page slugs, file, and class naming conventions are proposed to be updated for better clarity and consistency.
+
+### 6.1. Admin Page Slugs
+
+The admin page slug "Settings" will be changed to `module-config`.
+The admin page slug "Project Dashboard" will be changed to `project-management`.
+The admin page slug "Main Admin Page" will be changed to `run-single-module`.
+
+### 6.2. File and Class Names
+
+The file `admin/templates/settings-page.php` will be renamed to `admin/templates/module-config-page.php`. Corresponding classes, such as `class-data-machine-admin-settings-page.php`, should be renamed to `class-data-machine-admin-module-config-page.php`.
+The file `admin/templates/project-dashboard-page.php` will be renamed to `admin/templates/project-management-page.php`. Corresponding classes, such as `class-data-machine-admin-project-dashboard-page.php`, should be renamed to `class-data-machine-admin-project-management-page.php`.
+The file `admin/templates/main-admin-page.php` will be renamed to `admin/templates/run-single-module-page.php`. Corresponding classes, such as `class-data-machine-admin-main-admin-page.php`, should be renamed to `class-data-machine-admin-run-single-module-page.php`.
+
+### 6.3. Directory Names
+
+There are currently no plans to rename any directories.
+
+## 7. Conclusion
 
 The Data Machine plugin is a versatile and powerful tool for automating data workflows in WordPress. Its modular architecture, AI-powered processing capabilities, and diverse output options make it a valuable asset for anyone who needs to collect, transform, and publish data. With continued development and the addition of new features, the Data Machine plugin has the potential to become an indispensable tool for data-driven organizations and individuals.
