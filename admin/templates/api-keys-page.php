@@ -13,19 +13,55 @@
 // Check for Auth success/error messages
 if (isset($_GET['auth_success'])) {
     $service = sanitize_text_field($_GET['auth_success']);
-    add_settings_error('Data_Machine_api_keys_messages', 'auth_success', ucfirst($service) . __(' account authenticated successfully!', 'data-machine'), 'success');
+    if (isset($admin_notices)) $admin_notices->success(ucfirst($service) . __(' account authenticated successfully!', 'data-machine'));
 }
 if (isset($_GET['auth_error'])) {
      $error_code = sanitize_text_field($_GET['auth_error']);
-     // Add more user-friendly messages based on error codes if needed
-    add_settings_error('Data_Machine_api_keys_messages', 'auth_error', __('Failed to authenticate account. Error: ', 'data-machine') . esc_html($error_code), 'error');
+     if (isset($admin_notices)) $admin_notices->error(__('Failed to authenticate account. Error: ', 'data-machine') . esc_html($error_code));
 }
-
-
-settings_errors('Data_Machine_api_keys_messages'); // Display notices
 ?>
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+    <?php
+    // Display admin notices from logger
+    if (isset($logger) && method_exists($logger, 'get_pending_notices')) {
+        $notices = $logger->get_pending_notices();
+        if (!empty($notices)) {
+            foreach ($notices as $notice) {
+                if (empty($notice['message']) || empty($notice['type'])) continue;
+                $type = esc_attr($notice['type']);
+                $is_dismissible = isset($notice['is_dismissible']) && $notice['is_dismissible'] ? ' is-dismissible' : '';
+                $message = $notice['message'];
+                $details = $notice['details'] ?? [];
+                $time = $notice['time'] ?? null;
+                $css_class = 'notice-' . $type;
+                ?>
+                <div class="notice <?php echo esc_attr($css_class); ?><?php echo esc_attr($is_dismissible); ?>">
+                    <p><?php echo wp_kses_post($message); ?></p>
+                    <?php if ($type === 'error' && !empty($details)) : ?>
+                        <p><strong><?php esc_html_e('Details:', 'data-machine'); ?></strong></p>
+                        <ul class="error-details" style="margin-left: 20px; margin-bottom: 10px;">
+                            <?php foreach ($details as $key => $value) : ?>
+                                <li><strong><?php echo esc_html(ucfirst($key)); ?>:</strong> <?php
+                                    if (is_array($value) || is_object($value)) {
+                                        echo '<pre style="white-space: pre-wrap; word-wrap: break-word;">' . esc_html(print_r($value, true)) . '</pre>';
+                                    } else {
+                                        echo esc_html($value);
+                                    }
+                                ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                    <?php if ($time): ?>
+                        <p><small>Timestamp: <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $time)); ?></small></p>
+                    <?php endif; ?>
+                </div>
+                <?php
+            }
+        }
+    }
+    ?>
 
     <form method="post" action="options.php">
         <?php
@@ -266,197 +302,6 @@ settings_errors('Data_Machine_api_keys_messages'); // Display notices
     <?php endif; ?>
 </div>
 
-<?php
-// Add JavaScript for handling the popup window (using admin-post.php)
-?>
-<script type="text/javascript">
-    jQuery(document).ready(function($) {
-
-        // Function to open OAuth popup and monitor closure
-        function openOAuthPopup(url, windowName, width, height) {
-            var left = (screen.width / 2) - (width / 2);
-            var top = (screen.height / 2) - (height / 2);
-            var popup = window.open(url, windowName, 'width=' + width + ',height=' + height + ',top=' + top + ',left=' + left);
-            
-            // Monitor popup closure (basic example)
-            var timer = setInterval(function() {
-                if (popup.closed) {
-                    clearInterval(timer);
-                    // Optionally, reload the page to see changes
-                    // window.location.reload(); 
-                    // Or show a message asking the user to refresh
-                    $('#instagram-auth-feedback').text('Authentication window closed. Please refresh if needed.');
-                    $('#reddit-auth-feedback').text('Authentication window closed. Please refresh if needed.');
-                    $('#twitter-auth-feedback').text('Authentication window closed. Please refresh if needed.'); // Add for Twitter
-                }
-            }, 1000);
-
-            return popup;
-        }
-
-        // Instagram Authentication
-        $('#instagram-authenticate-btn').on('click', function() {
-            var clientId = $('#instagram_oauth_client_id').val();
-            var clientSecret = $('#instagram_oauth_client_secret').val();
-            if (!clientId || !clientSecret) {
-                alert('Please save your Instagram Client ID and Secret first.');
-                return;
-            }
-             // Use admin-post.php for initiating the flow
-            var instagramInitUrl = '<?php echo esc_url(admin_url("admin-post.php?action=dm_instagram_oauth_init")); ?>';
-             // Add nonce for security
-            instagramInitUrl += '&_wpnonce=<?php echo wp_create_nonce("dm_instagram_oauth_init_nonce"); ?>';
-
-            openOAuthPopup(instagramInitUrl, 'instagramOAuth', 600, 600);
-        });
-
-        // Reddit Authentication
-        $('#reddit-authenticate-btn').on('click', function() {
-             var clientId = $('#reddit_oauth_client_id').val();
-             var clientSecret = $('#reddit_oauth_client_secret').val();
-             if (!clientId || !clientSecret) {
-                 alert('Please save your Reddit Client ID and Secret first.');
-                 return;
-             }
-             // Use admin-post.php for initiating the flow
-             var redditInitUrl = '<?php echo esc_url(admin_url("admin-post.php?action=dm_reddit_oauth_init")); ?>';
-             // Add nonce for security
-             redditInitUrl += '&_wpnonce=<?php echo wp_create_nonce("dm_reddit_oauth_init_nonce"); ?>';
-
-            openOAuthPopup(redditInitUrl, 'redditOAuth', 600, 700);
-        });
-
-        // Twitter Authentication
-        $('#twitter-authenticate-btn').on('click', function() {
-            var button = $(this);
-            button.prop('disabled', true);
-            $('#twitter-auth-feedback').text('Initiating authentication...');
-
-            // Simple Nonce generation (use wp_localize_script for robust nonces ideally)
-            // For now, generate a basic nonce for the init action
-            $.post(ajaxurl, { action: 'dm_generate_nonce', id: 'dm_twitter_oauth_init_nonce' }, function(response) {
-                if (response.success && response.data.nonce) {
-                    var nonce = response.data.nonce;
-                    var authUrl = '<?php echo esc_url(admin_url("admin-post.php")); ?>?action=dm_twitter_oauth_init&_wpnonce=' + nonce;
-                    $('#twitter-auth-feedback').text('Redirecting to Twitter...');
-                    openOAuthPopup(authUrl, 'twitterAuth', 600, 700);
-                } else {
-                     $('#twitter-auth-feedback').text('Error: Could not generate security token.').css('color', 'red');
-                     button.prop('disabled', false);
-                }
-            }).fail(function() {
-                 $('#twitter-auth-feedback').text('Error: AJAX request failed.').css('color', 'red');
-                 button.prop('disabled', false);
-            });
-        });
-
-        // --- Remove Account Buttons --- 
-
-        // Instagram Remove
-        $('#instagram-accounts-list').on('click', '.instagram-remove-account-btn', function() {
-            e.preventDefault();
-            if (!confirm('<?php esc_html_e("Are you sure you want to remove this Instagram account authorization?", "data-machine"); ?>')) return;
-
-            var button = $(this);
-            var accountId = button.data('account-id');
-            var nonce = button.data('nonce');
-
-            button.prop('disabled', true).text('Removing...');
-
-            $.post(ajaxurl, {
-                action: 'dm_remove_instagram_account', // Define this action hook in PHP
-                account_id: accountId,
-                _ajax_nonce: nonce
-            }, function(response) {
-                if (response.success) {
-                     button.closest('li').fadeOut(300, function() { $(this).remove(); });
-                     // Check if list is now empty
-                     if ($('#instagram-accounts-list ul li').length === 1) { // Check if only the removed one was left (li itself is removed after fadeOut)
-                        // Use timeout to ensure removal is complete before check
-                        setTimeout(function() {
-                             if ($('#instagram-accounts-list ul li').length === 0) {
-                                $('#instagram-accounts-list').html('<p>No Instagram accounts authenticated yet.</p>');
-                             }
-                        }, 350);
-                     }
-                } else {
-                    alert('Error removing account: ' + (response.data ? response.data.message : 'Unknown error'));
-                    button.prop('disabled', false).text('Remove');
-                }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                 console.error("AJAX Error: ", textStatus, errorThrown);
-                 alert('Error removing account: Request failed. Check browser console.');
-                 button.prop('disabled', false).text('Remove');
-            });
-        });
-
-        // Reddit Remove
-        $('#reddit-accounts-list').on('click', '.reddit-remove-account-btn', function() {
-            e.preventDefault();
-            if (!confirm('<?php esc_html_e("Are you sure you want to remove this Reddit account authorization? This will remove stored tokens.", "data-machine"); ?>')) return;
-
-            var button = $(this);
-            var accountUsername = button.data('account-username'); // Using username as identifier
-            var nonce = button.data('nonce');
-
-            button.prop('disabled', true).text('Removing...');
-
-            $.post(ajaxurl, {
-                action: 'dm_remove_reddit_account', // Define this action hook in PHP
-                account_username: accountUsername,
-                _ajax_nonce: nonce
-            }, function(response) {
-                if (response.success) {
-                    // Fade out, remove, and then reload the page to reset state
-                    button.closest('li').fadeOut(300, function() {
-                        location.reload();
-                    });
-                } else {
-                    alert('Error removing account: ' + (response.data ? response.data.message : 'Unknown error'));
-                     button.prop('disabled', false).text('Remove');
-                }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error("AJAX Error: ", textStatus, errorThrown);
-                alert('Error removing account: Request failed. Check browser console.');
-                 button.prop('disabled', false).text('Remove');
-            });
-        });
-
-        // Twitter Remove
-        $('#twitter-accounts-list').on('click', '.twitter-remove-account-btn', function() {
-            var button = $(this);
-            var nonce = button.data('nonce');
-
-            if (!confirm('<?php esc_html_e("Are you sure you want to remove this Twitter account connection?", "data-machine"); ?>')) {
-                return;
-            }
-
-            button.prop('disabled', true);
-            $('#twitter-auth-feedback').text('Removing account...').css('color', ''); // Clear previous errors
-
-            $.post(ajaxurl, {
-                action: 'dm_remove_twitter_account',
-                _ajax_nonce: nonce // WordPress checks this field by default
-            }, function(response) {
-                if (response.success) {
-                    // Reload page to update UI
-                    window.location.reload();
-                } else {
-                    var errorMessage = response.data && response.data.message ? response.data.message : 'Unknown error occurred.';
-                    $('#twitter-auth-feedback').text('Error: ' + errorMessage).css('color', 'red');
-                    button.prop('disabled', false);
-                    alert('<?php esc_html_e("Error removing Twitter account:", "data-machine"); ?> ' + errorMessage);
-                }
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                 var error = 'AJAX request failed: ' + textStatus + ', ' + errorThrown;
-                 $('#twitter-auth-feedback').text('Error: ' + error).css('color', 'red');
-                 button.prop('disabled', false);
-                 alert('<?php esc_html_e("An error occurred while trying to remove the account. Please try again.", "data-machine"); ?>');
-            });
-        });
-
-    });
-</script>
 <style>
 /* Simple styling for account lists */
 .dm-account-list {

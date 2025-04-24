@@ -168,4 +168,20 @@ class Data_Machine_AI_Response_Parser {
 
     // Removed alias methods get_category() and get_tags()
 
+    /**
+     * Returns a summary of the main content, truncated to a maximum number of characters.
+     * Appends an ellipsis if truncated.
+     *
+     * @param int $max_length Maximum number of characters for the summary.
+     * @return string
+     */
+    public function get_content_summary($max_length = 50) {
+        $this->parse(); // Ensure parsing has happened
+        $content = $this->content ?? '';
+        if (mb_strlen($content, 'UTF-8') > $max_length) {
+            return mb_substr($content, 0, $max_length - 1, 'UTF-8') . '…';
+        }
+        return $content;
+    }
+
 }

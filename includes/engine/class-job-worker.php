@@ -2,11 +2,30 @@
 
 class Data_Machine_Job_Worker {
 
-	/** @var Data_Machine_Service_Locator */
-	private $locator;
+	/** @var Data_Machine_Logger */
+	private $logger;
 
-	public function __construct(Data_Machine_Service_Locator $locator) {
-		$this->locator = $locator;
+	/** @var Data_Machine_Database_Jobs */
+	private $db_jobs;
+
+	/** @var Data_Machine_Processing_Orchestrator */
+	private $orchestrator;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Data_Machine_Logger $logger Logger service.
+	 * @param Data_Machine_Database_Jobs $db_jobs Jobs DB service.
+	 * @param Data_Machine_Processing_Orchestrator $orchestrator Processing Orchestrator service.
+	 */
+	public function __construct(
+		Data_Machine_Logger $logger,
+		Data_Machine_Database_Jobs $db_jobs,
+		Data_Machine_Processing_Orchestrator $orchestrator
+	) {
+		$this->logger = $logger;
+		$this->db_jobs = $db_jobs;
+		$this->orchestrator = $orchestrator;
 	}
 
 	/**
@@ -16,11 +35,12 @@ class Data_Machine_Job_Worker {
 	 * @return void
 	 */
 	public function process_job( $job_id ) {
-		$logger  = $this->locator->get( 'logger' );
-		$db_jobs = $this->locator->get( 'database_jobs' );
+		// Use injected logger and db_jobs
+		$logger  = $this->logger;
+		$db_jobs = $this->db_jobs;
 
-		if ( ! $db_jobs ) {
-			$logger->error( 'Job Worker: Database jobs service not found.' );
+		if ( ! $db_jobs ) { // This check might be redundant now with type hinting, but leave for safety? Or remove? Let's remove.
+			$logger->error( 'Job Worker: Database jobs service not properly injected.' );
 			return; // Cannot proceed
 		}
 
@@ -38,8 +58,8 @@ class Data_Machine_Job_Worker {
 		}
 
 		// Update job status to 'processing' and set start time using DB service
-        $db_jobs->start_job($job_id);
-        $logger->info("Job Worker: Starting processing.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
+		$db_jobs->start_job($job_id);
+		$logger->info("Job Worker: Starting processing.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
 
 		try {
 			// 1. Decode Module Configuration
@@ -56,10 +76,10 @@ class Data_Machine_Job_Worker {
 				throw new Exception( 'Failed to decode input data for job. Error: ' . $json_error );
 			}
 
-			// 3. Get the Processing Orchestrator service
-			$orchestrator = $this->locator->get( 'orchestrator' );
-			if ( ! $orchestrator ) {
-				throw new Exception( 'Failed to retrieve Processing Orchestrator service.' );
+			// 3. Use the injected Processing Orchestrator service
+			$orchestrator = $this->orchestrator; // No need to check, ensured by constructor
+			if ( ! $orchestrator ) { // This check is redundant now with type hinting
+				 throw new Exception( 'Failed to retrieve Processing Orchestrator service (should be injected).' );
 			}
 
 			// 4. Execute the processing job via the orchestrator, passing the fetched data
@@ -78,34 +98,34 @@ class Data_Machine_Job_Worker {
 						'error_message' => $orchestrator_results->get_error_message()
 					]
 				);
-                // Rethrow as an exception to be caught by the main catch block
-                throw new Exception( "Orchestrator failed: " . $orchestrator_results->get_error_message() );
-            }
+				// Rethrow as an exception to be caught by the main catch block
+				throw new Exception( "Orchestrator failed: " . $orchestrator_results->get_error_message() );
+			}
 
-            // Log successful orchestrator run details if available (example, adjust as needed)
-            $log_context = ['job_id' => $job_id, 'module_id' => $job->module_id];
-            $logger->debug("Job Worker: Orchestrator run completed.", array_merge($log_context, ['result_status' => $orchestrator_results['status'] ?? 'unknown']));
+			// Log successful orchestrator run details if available (example, adjust as needed)
+			$log_context = ['job_id' => $job_id, 'module_id' => $job->module_id];
+			$logger->debug("Job Worker: Orchestrator run completed.", array_merge($log_context, ['result_status' => $orchestrator_results['status'] ?? 'unknown']));
 
 			// Prepare the final result for DB storage (using output_result from orchestrator)
-            // Assuming orchestrator returns a structured array including 'output_result'
-            $final_result_data = $orchestrator_results['output_result'] ?? null; // Get the result from the output handler step
+			// Assuming orchestrator returns a structured array including 'output_result'
+			$final_result_data = $orchestrator_results['output_result'] ?? null; // Get the result from the output handler step
 
-            // Ensure we have data to encode before proceeding
-            if (is_null($final_result_data)) {
-                // Log a warning or potentially throw an error if output_result is crucial
-                $logger->warning("Job Worker: Orchestrator did not return 'output_result'. Storing null.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
-                // Decide how to handle: store null, or throw an exception? Storing null for now.
-                $result_json = null;
-            } else {
-                $result_json = wp_json_encode($final_result_data);
-                if ($result_json === false) {
-                    $json_error = json_last_error_msg();
-                    throw new Exception('Failed to encode orchestrator result for job. Error: ' . $json_error);
-                }
-            }
+			// Ensure we have data to encode before proceeding
+			if (is_null($final_result_data)) {
+				// Log a warning or potentially throw an error if output_result is crucial
+				$logger->warning("Job Worker: Orchestrator did not return 'output_result'. Storing null.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
+				// Decide how to handle: store null, or throw an exception? Storing null for now.
+				$result_json = null;
+			} else {
+				$result_json = wp_json_encode($final_result_data);
+				if ($result_json === false) {
+					$json_error = json_last_error_msg();
+					throw new Exception('Failed to encode orchestrator result for job. Error: ' . $json_error);
+				}
+			}
 
 			// Update job status to 'complete' using DB service
-            // Pass null or the encoded JSON string
+			// Pass null or the encoded JSON string
 			$db_jobs->complete_job( $job_id, 'complete', $result_json );
 			$logger->info("Job Worker: Job completed successfully.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
 
@@ -115,7 +135,7 @@ class Data_Machine_Job_Worker {
 				'Job Worker: Exception during processing.',
 				[
 					'job_id'    => $job_id,
-					'module_id' => $job->module_id,
+					'module_id' => isset($job->module_id) ? $job->module_id : 'unknown', // Ensure module_id exists
 					'error'     => $e->getMessage(),
 					'trace'     => $e->getTraceAsString(),
 				]

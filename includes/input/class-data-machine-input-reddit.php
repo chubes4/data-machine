@@ -10,134 +10,158 @@
  */
 class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface {
 
-	/**
-	 * Service Locator instance.
-	 * @var Data_Machine_Service_Locator
-	 */
-	private $locator;
+	use Data_Machine_Base_Input_Handler;
+
+	/** @var Data_Machine_OAuth_Reddit */
+	private $oauth_reddit;
+
+	/** @var Data_Machine_Database_Processed_Items */
+	private $db_processed_items;
+
+	/** @var Data_Machine_Database_Modules */
+	private $db_modules;
+
+	/** @var Data_Machine_Database_Projects */
+	private $db_projects;
+
+	/** @var ?Data_Machine_Logger */
+	private $logger;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Data_Machine_Service_Locator $locator Service Locator instance.
+	 * @param Data_Machine_OAuth_Reddit $oauth_reddit Reddit OAuth handler.
+	 * @param Data_Machine_Database_Processed_Items $db_processed_items Processed items DB.
+	 * @param Data_Machine_Database_Modules $db_modules Modules DB.
+	 * @param Data_Machine_Database_Projects $db_projects Projects DB.
+	 * @param Data_Machine_Logger|null $logger Optional logger.
 	 */
-	public function __construct(Data_Machine_Service_Locator $locator) {
-		$this->locator = $locator;
+	public function __construct(
+		Data_Machine_OAuth_Reddit $oauth_reddit,
+		Data_Machine_Database_Processed_Items $db_processed_items,
+		Data_Machine_Database_Modules $db_modules,
+		Data_Machine_Database_Projects $db_projects,
+		?Data_Machine_Logger $logger = null
+	) {
+		$this->oauth_reddit = $oauth_reddit;
+		$this->db_processed_items = $db_processed_items;
+		$this->db_modules = $db_modules;
+		$this->db_projects = $db_projects;
+		$this->logger = $logger;
 	}
 
 	/**
 	 * Fetches and prepares input data packets from a specified subreddit.
 	 *
-	 * @param array $post_data Data from the $_POST superglobal (or equivalent context).
-	 * @param array $files_data Data from the $_FILES superglobal (not used).
-	 * @param array $source_config Decoded data_source_config for the specific module run.
-	 * @param int   $user_id The ID of the user context.
-	 * @return array The standardized input data packet.
-	 * @throws Exception If input data is invalid or cannot be retrieved.
+	 * @param object $module The full module object containing configuration and context.
+	 * @param array  $source_config Decoded data_source_config specific to this handler.
+	 * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
+	 * @return array An array of standardized input data packets, or an array indicating no new items (e.g., ['status' => 'no_new_items']).
+	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_input_data(array $post_data, array $files_data, array $source_config, int $user_id): array {
-		// Get module ID from context data
-		$module_id = isset( $post_data['module_id'] ) ? absint( $post_data['module_id'] ) : 0;
+	public function get_input_data(object $module, array $source_config, int $user_id): array {
+		$this->logger?->info('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
 
-		if ( empty( $module_id ) || empty( $user_id ) ) { // Check remains valid
-			throw new Exception(__( 'Missing module ID or user ID.', 'data-machine' ));
+		// Get module ID from the passed module object
+		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
+
+		if ( empty( $module_id ) || empty( $user_id ) ) {
+			$this->logger?->error('Reddit Input: Missing module ID or user ID.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			throw new Exception(__( 'Missing module ID or user ID provided to Reddit handler.', 'data-machine' ));
 		}
 
-		// --- Retrieve Reddit OAuth Token ---
+		// Check if essential dependencies were injected correctly
+		if (!$this->oauth_reddit || !$this->db_processed_items || !$this->db_modules || !$this->db_projects) {
+			$this->logger?->error('Reddit Input: Required service dependency missing.', [
+				'module_id' => $module_id,
+				'oauth_missing' => !$this->oauth_reddit,
+				'db_processed_missing' => !$this->db_processed_items,
+				'db_modules_missing' => !$this->db_modules,
+				'db_projects_missing' => !$this->db_projects
+			]);
+			throw new Exception(__( 'Required service not available in Reddit handler.', 'data-machine' ));
+		}
+
+		// --- Retrieve Reddit OAuth Token & Refresh if needed ---
 		$reddit_account = get_user_meta($user_id, 'data_machine_reddit_account', true);
 		$needs_refresh = false;
 		if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['access_token'])) {
-			 // If token is missing, but we have a refresh token, try refreshing anyway
 			 if (!empty($reddit_account['refresh_token'])) {
+				$this->logger?->info('Reddit Input: Token missing or empty, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				  $needs_refresh = true;
 			 } else {
+				$this->logger?->error('Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				throw new Exception(__( 'Reddit account not authenticated or token missing. Please authenticate on the API Keys page.', 'data-machine' ));
 			}
 		} else {
-			 // Token exists, check expiry
 			 $token_expires_at = $reddit_account['token_expires_at'] ?? 0;
-			  // Check if expired or close to expiring (e.g., within 5 minutes)
-			 if (time() >= ($token_expires_at - 300)) {
+			if (time() >= ($token_expires_at - 300)) { // Check if expired or within 5 mins
+				$this->logger?->info('Reddit Input: Token expired or expiring soon, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id, 'expiry' => $token_expires_at]);
 				$needs_refresh = true;
 			 }
 		}
 
 		if ($needs_refresh) {
-			// --- Attempt Token Refresh ---
-			$oauth_reddit_service = $this->locator->get('oauth_reddit'); // Get the service
-			if (!$oauth_reddit_service) {
-				 throw new Exception(__( 'Reddit OAuth service handler not found.', 'data-machine' ));
-			}
-
-			$refreshed = $oauth_reddit_service->refresh_token($user_id);
+			$this->logger?->info('Reddit Input: Attempting token refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			// Use the injected OAuth service
+			$refreshed = $this->oauth_reddit->refresh_token($user_id);
 
 			if (!$refreshed) {
-				// Refresh failed (e.g., invalid refresh token, API error).
-				// User needs to manually re-authenticate. The refresh_token method already logged the error.
+				// Error already logged by refresh_token method
+				$this->logger?->error('Reddit Input: Token refresh failed.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				throw new Exception(__( 'Failed to refresh expired Reddit access token. Please re-authenticate the Reddit account on the API Keys page.', 'data-machine' ));
 			}
 
-			// If refresh succeeded, re-fetch the updated account data
+			// Re-fetch updated account data after successful refresh
 			$reddit_account = get_user_meta($user_id, 'data_machine_reddit_account', true);
-			// Basic check again after refresh
 			if (empty($reddit_account['access_token'])) {
+				$this->logger?->error('Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				 throw new Exception(__( 'Reddit token refresh seemed successful, but failed to retrieve new token data.', 'data-machine' ));
 			}
+			$this->logger?->info('Reddit Input: Token refresh successful.', ['module_id' => $module_id, 'user_id' => $user_id]);
 		}
 
-		// Ensure we have a valid token after potential refresh
-		$access_token = $reddit_account['access_token'];
+		$access_token = $reddit_account['access_token'] ?? null;
+		if (empty($access_token)) {
+			$this->logger?->error('Reddit Input: Access token is still empty after checks/refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			throw new Exception(__( 'Could not obtain valid Reddit access token.', 'data-machine' ));
+		}
 		// --- End Token Retrieval & Refresh ---
 
-		// +++ DEBUG LOGGING +++
-		$this->locator->get('logger')->info('[Reddit Input] Attempting fetch.', [
+		$this->logger?->debug('Reddit Input: Token check complete.', [
 			'module_id' => $module_id,
-			'user_id_context' => $user_id,
 			'token_present' => !empty($access_token),
-			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A',
-			'stored_username' => $reddit_account['username'] ?? 'N/A',
+			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
 		]);
-		// +++ END DEBUG LOGGING +++
 
-		// --- Get Dependencies & Verify Module Ownership ---
-		$db_modules = $this->locator->get('database_modules');
-		$db_projects = $this->locator->get('database_projects');
-		$db_processed_items = $this->locator->get('database_processed_items'); // Get processed items DB
-		if (!$db_modules || !$db_projects || !$db_processed_items) {
-			throw new Exception(__( 'Required database service not found.', 'data-machine' ));
-		}
-
-		// Need to check ownership via project
-		$module = $db_modules->get_module( $module_id ); // Fetch module using ID from post_data
-		if (!$module || !isset($module->project_id)) {
-			throw new Exception(__( 'Invalid module or project association missing.', 'data-machine' ));
-		}
-		$project = $db_projects->get_project($module->project_id, $user_id); // Use passed $user_id for ownership check
+		// --- Verify Module Ownership (using injected services) ---
+		$project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
 		if (!$project) {
-			throw new Exception(__( 'Permission denied for this module.', 'data-machine' ));
+			$this->logger?->error('Reddit Input: Permission denied for module.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			throw new Exception(__( 'Permission denied for this module (Reddit handler).', 'data-machine' ));
 		}
 
-		// --- Configuration ---
-		// Use the $source_config passed as an argument
-		$config_data = $source_config['reddit'] ?? $source_config; // Use 'reddit' sub-array or the main array
-
-		$subreddit = trim( $config_data['subreddit'] ?? '' );
-		$sort = $config_data['sort_by'] ?? 'hot';
-		// Rename for clarity: This is the target number of *new* items to find and process
-		$process_limit = max(1, absint( $config_data['item_count'] ?? 1 )); // Ensure at least 1
-		$timeframe_limit = $config_data['timeframe_limit'] ?? 'all_time';
-		$min_upvotes = isset($config_data['min_upvotes']) ? absint($config_data['min_upvotes']) : 0;
+		// --- Configuration (from $source_config) ---
+		$subreddit = trim( $source_config['subreddit'] ?? '' );
+		$sort = $source_config['sort_by'] ?? 'hot';
+		$process_limit = max(1, absint( $source_config['item_count'] ?? 1 ));
+		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
+		$min_upvotes = isset($source_config['min_upvotes']) ? absint($source_config['min_upvotes']) : 0;
 		$fetch_batch_size = 100; // Max items per Reddit API request
-		$comment_count_setting = isset($config_data['comment_count']) ? absint($config_data['comment_count']) : 0; // Get comment count setting
+		$min_comment_count = isset($source_config['min_comment_count']) ? absint($source_config['min_comment_count']) : 0;
+		$comment_count_setting = isset($source_config['comment_count']) ? absint($source_config['comment_count']) : 0;
 
 		if ( empty( $subreddit ) ) {
+			$this->logger?->error('Reddit Input: Subreddit name not configured.', ['module_id' => $module_id]);
 			throw new Exception(__( 'Subreddit name is not configured.', 'data-machine' ));
 		}
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
+			$this->logger?->error('Reddit Input: Invalid subreddit name format.', ['module_id' => $module_id, 'subreddit' => $subreddit]);
 			throw new Exception(__( 'Invalid subreddit name format.', 'data-machine' ));
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		if (!in_array($sort, $valid_sorts)) {
+			$this->logger?->warning('Reddit Input: Invalid sort parameter, defaulting to hot.', ['module_id' => $module_id, 'invalid_sort' => $sort]);
 			$sort = 'hot'; // Default to hot if invalid
 		}
 
@@ -159,63 +183,65 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 		$eligible_items_packets = [];
 		$after_param = null; // For Reddit API pagination
 		$total_checked = 0;
-		$max_checks = 500; // Safety break to prevent infinite loops in weird scenarios
+		$max_checks = 500; // Safety break
+		$pages_fetched = 0;
+		$max_pages = 10; // Limit pages to prevent excessive calls
 
 		// Loop to fetch pages until enough items are found or limits are hit
-		while (count($eligible_items_packets) < $process_limit && $total_checked < $max_checks) {
+		while (count($eligible_items_packets) < $process_limit && $total_checked < $max_checks && $pages_fetched < $max_pages) {
+			$pages_fetched++;
 			// Construct the Reddit JSON API URL with pagination using the OAuth domain
 			$reddit_url = sprintf(
 				'https://oauth.reddit.com/r/%s/%s.json?limit=%d%s',
 				esc_attr($subreddit),
 				esc_attr($sort),
 				$fetch_batch_size,
-				$after_param ? '&after=' . urlencode($after_param) : '' // Add 'after' if available
+				$after_param ? '&after=' . urlencode($after_param) : ''
 			);
 			$args = [
-				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)',
+				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)', // Use constant
 				'timeout' => 15,
 				'headers' => [
 					'Authorization' => 'Bearer ' . $access_token
 				]
 			];
 
-			// +++ DEBUG LOGGING +++
 			$log_headers = $args['headers'];
-			// Mask the token partially for logs
 			if (isset($log_headers['Authorization'])) {
 				$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
 			}
-			$this->locator->get('logger')->info('[Reddit Input] Making first API call.', [
-				'target_url' => $reddit_url, // Log full URL
-				'request_headers' => $log_headers // Log headers (masked token)
+			$this->logger?->info('Reddit Input: Making API call.', [
+				'module_id' => $module_id,
+				'page' => $pages_fetched,
+				'url' => $reddit_url,
+				'headers' => $log_headers
 			]);
-			// +++ END DEBUG LOGGING +++
 
 			// Make the API request
 			$response = wp_remote_get( $reddit_url, $args );
 
 			// --- Handle API Response & Errors ---
 			if ( is_wp_error( $response ) ) {
-				$error_message = __( 'Failed to connect to the Reddit API during pagination.', 'data-machine' ) . ' ' . $response->get_error_message();
-				error_log( 'DM Reddit Input: API Request Failed. URL: ' . $reddit_url . ' Error: ' . $response->get_error_message() );
-				// If it's the first fetch and it fails, throw exception. Otherwise, just log and return what we have?
-				if (empty($eligible_items_packets) && $after_param === null) throw new Exception($error_message);
-				else break; // Stop fetching if subsequent page fails
+				$error_message = __( 'Failed to connect to the Reddit API.', 'data-machine' ) . ' ' . $response->get_error_message();
+				$this->logger?->error('Reddit Input: API Request Failed.', ['url' => $reddit_url, 'error' => $response->get_error_message(), 'module_id' => $module_id]);
+				if ($pages_fetched === 1) throw new Exception($error_message); // Throw only if first request fails
+				else break; // Stop fetching
 			}
 			$response_code = wp_remote_retrieve_response_code( $response );
 			$body = wp_remote_retrieve_body( $response );
+			$this->logger?->debug('Reddit Input: API Response Code', ['code' => $response_code, 'url' => $reddit_url, 'module_id' => $module_id]);
+
 			if ( $response_code !== 200 ) {
-				// Handle non-200 response similarly to above
 				$error_data = json_decode( $body, true );
 				$error_message_detail = isset( $error_data['message'] ) ? $error_data['message'] : __( 'Unknown error on Reddit API.', 'data-machine' );
 				$error_message = sprintf( __( 'Reddit API error (Code: %d).', 'data-machine' ), $response_code ) . ' ' . $error_message_detail;
-				error_log( 'DM Reddit Input: API Error. URL: ' . $reddit_url . ' Code: ' . $response_code . ' Body: ' . $body );
-				if (empty($eligible_items_packets) && $after_param === null) throw new Exception($error_message . ' Raw Body: ' . $body);
+				$this->logger?->error('Reddit Input: API Error Response.', ['url' => $reddit_url, 'code' => $response_code, 'body' => substr($body, 0, 500), 'module_id' => $module_id]);
+				if ($pages_fetched === 1) throw new Exception($error_message . ' Raw Body: ' . $body); // Throw only if first request fails
 				else break; // Stop fetching
 			}
 			$response_data = json_decode( $body, true );
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
-				// No more posts found on this page or invalid data
+				$this->logger?->info('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'module_id' => $module_id]);
 				break; // Stop fetching
 			}
 			// --- End API Response Handling ---
@@ -225,327 +251,234 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 			foreach ($response_data['data']['children'] as $post_wrapper) {
 				$total_checked++;
 				if (empty($post_wrapper['data']) || empty($post_wrapper['data']['id']) || empty($post_wrapper['kind'])) {
-					error_log("DM Reddit Input: Skipping post with missing data in subreddit: " . $subreddit);
+					$this->logger?->warning('Reddit Input: Skipping post with missing data.', ['subreddit' => $subreddit, 'module_id' => $module_id]);
 					continue; // Skip malformed posts
 				}
 				$item_data = $post_wrapper['data'];
 				$current_item_id = $item_data['id'];
-				// $current_item_fullname = $post_wrapper['kind'] . '_' . $current_item_id; // e.g., t3_abcdef // Not needed for processing check
 
 				// 1. Check timeframe limit first
 				if ($cutoff_timestamp !== null) {
 					if (empty($item_data['created_utc'])) {
+						$this->logger?->debug('Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 						continue; // Skip if no creation time available
 					}
 					$item_timestamp = (int) $item_data['created_utc'];
 					if ($item_timestamp < $cutoff_timestamp) {
+						$this->logger?->debug('Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'module_id' => $module_id]);
 						$batch_hit_time_limit = true;
 						continue; // Skip item if it's too old
 					}
 				}
 
-				// 2.5. Check minimum upvotes (score)
+				// 2. Check minimum upvotes (score)
 				if ($min_upvotes > 0) {
 					if (!isset($item_data['score']) || $item_data['score'] < $min_upvotes) {
+						$this->logger?->debug('Reddit Input: Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'module_id' => $module_id]);
 						continue; // Skip if not enough upvotes
 					}
 				}
 
-				// 2. Check if processed (only if recent enough)
-				if ( $db_processed_items->has_item_been_processed($module_id, 'reddit', $current_item_id) ) {
+				// 3. Check if already processed (using injected service)
+				if ($this->db_processed_items->has_item_been_processed($module_id, 'reddit', $current_item_id)) {
+					$this->logger?->debug('Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 					continue; // Skip if already processed
 				}
 
-
-				// --- Item is ELIGIBLE! ---
-				// Extract data and create packet
-				$title = $item_data['title'] ?? 'N/A';
-				$content = $item_data['selftext'] ?? '';
-				$link = 'https://www.reddit.com' . ($item_data['permalink'] ?? '');
-				$source_url = $item_data['url'] ?? $link;
-				$image_source_url = null; // Initialize image URL variable
-
-				// --- Enhanced Image Detection ---
-				$file_info = null; // Reset file_info
-				$image_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']; // Added webp
-
-				// Priority 1: Gallery Images
-				if (isset($item_data['is_gallery']) && $item_data['is_gallery'] === true && !empty($item_data['media_metadata'])) {
-					foreach ($item_data['media_metadata'] as $media_id => $media_item) {
-						// Look for image type ('e' => 'Image' or check mimetype 'm') and URL ('s' => {'u': 'URL'})
-						if (!empty($media_item['e']) && $media_item['e'] === 'Image' && !empty($media_item['s']['u'])) {
-							$image_source_url = html_entity_decode($media_item['s']['u']); // Get highest quality URL
-							break; // Use the first image found in the gallery
-						} elseif (strpos($media_item['m'] ?? '', 'image/') === 0 && !empty($media_item['s']['u'])) {
-							 // Fallback check using MIME type if 'e' is missing/different
-							 $image_source_url = html_entity_decode($media_item['s']['u']);
-							 break;
-						}
-					}
-					if ($image_source_url) {
-						 $this->locator->get('logger')->debug('[Reddit Input] Found image in gallery.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
+				// 4. Check minimum comment count
+				if ($min_comment_count > 0) {
+					if (!isset($item_data['num_comments']) || $item_data['num_comments'] < $min_comment_count) {
+						$this->logger?->debug('Reddit Input: Skipping item (min comment count).', [
+							'item_id' => $current_item_id,
+							'comments' => $item_data['num_comments'] ?? 'N/A',
+							'min_required' => $min_comment_count,
+							'module_id' => $module_id
+						]);
+						continue; // Skip if not enough comments
 					}
 				}
 
-				// Priority 2: Direct Image Link (URL or Overridden URL)
-				if ($image_source_url === null) {
-					$url_to_check = $item_data['url_overridden_by_dest'] ?? $item_data['url'] ?? '';
-					if (!empty($url_to_check)) {
-						$parsed_check_url = parse_url($url_to_check);
-						$check_ext = isset($parsed_check_url['path']) ? strtolower(pathinfo($parsed_check_url['path'], PATHINFO_EXTENSION)) : '';
-						if (in_array($check_ext, $image_extensions)) {
-							$image_source_url = $url_to_check;
-							 $this->locator->get('logger')->debug('[Reddit Input] Found direct image link.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
-						}
-					}
+				// --- Item is ELIGIBLE! --- 
+				$this->logger?->debug('Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'module_id' => $module_id]);
+
+				// Prepare content string (Title and selftext/body)
+				$title = $item_data['title'] ?? '';
+				$selftext = $item_data['selftext'] ?? ''; // For self-posts
+				$body = $item_data['body'] ?? ''; // For comments (if fetching comments later)
+
+				$content_string = "Title: " . trim($title) . "\n\n";
+				if (!empty($selftext)) {
+					$content_string .= "Content:\n" . trim($selftext) . "\n";
+				} elseif (!empty($body)) {
+					$content_string .= "Content:\n" . trim($body) . "\n";
 				}
 
-				// Priority 3: Preview Image
-				if ($image_source_url === null && !empty($item_data['preview']['images'][0]['source']['url'])) {
-					$image_source_url = html_entity_decode($item_data['preview']['images'][0]['source']['url']);
-					 $this->locator->get('logger')->debug('[Reddit Input] Found preview image.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
+				// Add URL if it's not a self-post
+				if (!($item_data['is_self'] ?? false) && !empty($item_data['url'])) {
+					$content_string .= "\nSource URL: " . $item_data['url'];
 				}
 
-				// Priority 4: Thumbnail (Fallback)
-				if ($image_source_url === null && !empty($item_data['thumbnail']) && $item_data['thumbnail'] !== 'self' && $item_data['thumbnail'] !== 'default' && $item_data['thumbnail'] !== 'spoiler' && $item_data['thumbnail'] !== 'nsfw' && filter_var($item_data['thumbnail'], FILTER_VALIDATE_URL)) {
-					 // Check if thumbnail URL looks like a valid image URL (basic check)
-					 $parsed_thumb_url = parse_url($item_data['thumbnail']);
-					 $thumb_ext = isset($parsed_thumb_url['path']) ? strtolower(pathinfo($parsed_thumb_url['path'], PATHINFO_EXTENSION)) : '';
-					 // Only use common image extensions for thumbnails to avoid things like PHP scripts
-					 if (in_array($thumb_ext, ['jpg', 'jpeg', 'png', 'gif'])) {
-						$image_source_url = $item_data['thumbnail'];
-						 $this->locator->get('logger')->debug('[Reddit Input] Found thumbnail image as fallback.', ['post_id' => $current_item_id, 'url' => $image_source_url]);
-					 }
-				}
-
-				// --- Prepare Content String based on Image ---
-				$file_info = null; // Initialize file_info
-				if ($image_source_url !== null) {
-					// Image post or post with a usable image found
-					$content_string = "Title: " . html_entity_decode($title);
-
-					// --- Prepare file_info WITHOUT downloading ---
-					$parsed_image_url = parse_url($image_source_url);
-					$filename = isset($parsed_image_url['path']) ? basename($parsed_image_url['path']) : 'reddit_image.tmp'; // Fallback filename
-					$ext = isset($parsed_image_url['path']) ? strtolower(pathinfo($parsed_image_url['path'], PATHINFO_EXTENSION)) : '';
-
-					// Simplified MIME type logic based on extension only
-					$mime_type = match ($ext) {
-						'jpg', 'jpeg' => 'image/jpeg',
-						'png' => 'image/png',
-						'gif' => 'image/gif',
-						'webp' => 'image/webp',
-						default => 'application/octet-stream', // Fallback
-					};
-
-					$file_info = [
-						'url' => $image_source_url, // Original URL of the found image
-						'mime_type' => $mime_type, // Determined from extension
-						'filename' => $filename,   // Determined from URL path
-						// No persistent_path or temp_file_path needed
-					];
-					// --- End file_info preparation ---
-
-				} else {
-					// No image found, treat as text/link post
-					if (empty(trim($content))) { $content = "Link Post: " . $source_url; }
-					$content_string = "Title: " . html_entity_decode($title) . "\n\n" . html_entity_decode($content);
-					// file_info remains null
-					// image_source_url remains null
-				}
-
-				// --- Fetch Top Comments (if enabled) ---
-				// MOVED: Comment fetching logic is now outside this loop, after eligible items are collected.
-				$comments_string = ''; // Initialize as empty, will be populated later if needed.
-
-				$input_data_packet = [
-					'content_string' => $content_string, // Initially just title/content or title
-					'file_info' => $file_info, // This now contains download info if an image was found
-					'metadata' => [
-						'source_type' => 'reddit',
-						'item_identifier_to_log' => $current_item_id,
-						'original_id' => $current_item_id,
-						'source_url' => $link, // Keep permalink as main source_url
-						'image_source_url' => $image_source_url, // Add the URL of the image found (or null if none)
-						'original_title' => $title,
-						'subreddit' => $subreddit,
-						'external_url' => ($source_url !== $link) ? $source_url : null, // Original URL (image or link)
-						'original_creation_timestamp' => isset($item_data['created_utc']) ? (int) $item_data['created_utc'] : null,
-						'original_date_gmt' => (isset($item_data['created_utc']) && $item_data['created_utc'] > 0) ? gmdate('Y-m-d\TH:i:s', (int)$item_data['created_utc']) : null
-					]
-				];
-
-				// --- Start: Add image alt text if image exists ---
-				if ($image_source_url && isset($input_data_packet['metadata'])) {
-					$input_data_packet['metadata']['image_alt_text'] = $title; // Use post title as alt text
-				}
-				// --- End: Add image alt text ---
-
-				array_push($eligible_items_packets, $input_data_packet);
-
-				// --- ADDED: Check if limit reached AFTER adding this item ---
-				if (count($eligible_items_packets) >= $process_limit) {
-					break; // Exit the FOREACH loop immediately
-				}
-				// --- END ADDED CHECK ---
-
-			} // End foreach ($response_data['data']['children'] as $post_wrapper)
-
-			// Check if we have reached the process limit AFTER processing the batch
-			// -- NOTE: The break inside the foreach loop above makes this check somewhat redundant
-			// --       but keeping it provides a secondary exit from the WHILE loop.
-			if (count($eligible_items_packets) >= $process_limit) {
-				break; // Exit the WHILE loop now
-			}
-
-			// Update the 'after' parameter for the next page request
-			if (!empty($response_data['data']['after'])) {
-				$after_param = $response_data['data']['after'];
-			} else {
-				// No 'after' parameter means no more pages
-				break; // Exit the WHILE loop
-			}
-
-			// --- ADDED: Check if the timeframe limit was hit in this batch ---
-			// If the timeframe limit caused us to skip items, and we are sorting by time (new/top),
-			// there's no point fetching older pages.
-			if ($batch_hit_time_limit && ($sort === 'new' || $sort === 'top')) {
-				$this->locator->get('logger')->info('[Reddit Input] Stopping pagination due to hitting timeframe limit on a time-sorted feed.', [
-					'module_id' => $module_id,
-					'sort' => $sort,
-					'timeframe_limit' => $timeframe_limit
-				]);
-				break; // Exit the WHILE loop
-			}
-			// --- END TIMEFRAME CHECK ---
-
-		} // End while (count($eligible_items_packets) < $process_limit ... )
-
-		// --- Fetch Comments for Eligible Items (AFTER main loop) ---
-		if ($comment_count_setting > 0 && !empty($eligible_items_packets)) {
-			foreach ($eligible_items_packets as $index => $packet) {
-				$item_id_for_comments = $packet['metadata']['original_id'] ?? null;
-				$comments_string = ''; // Reset for each item
-
-				if ($item_id_for_comments) {
-					$this->locator->get('logger')->debug('[Reddit Input] Attempting to fetch comments for eligible post.', [
-						'post_id' => $item_id_for_comments,
-						'comments_requested' => $comment_count_setting,
-					]);
-
-					// Use oauth.reddit.com for comments endpoint
-					$comments_url = sprintf(
-						'https://oauth.reddit.com/comments/%s.json?sort=top&limit=%d&depth=1', // depth=1 for top-level comments only
-						esc_attr($item_id_for_comments),
-						$comment_count_setting
-					);
-					// Add Authorization header to comment request args
+				// --- Fetch and append top comments if requested ---
+				if ($comment_count_setting > 0 && !empty($item_data['permalink'])) {
+					$comments_url = 'https://oauth.reddit.com' . $item_data['permalink'] . '.json?limit=' . $comment_count_setting . '&sort=top';
 					$comment_args = [
-						'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)', // Match primary fetch UA
+						'user-agent' => $args['user-agent'],
 						'timeout' => 15,
 						'headers' => [
-							'Authorization' => 'Bearer ' . $access_token // Use the access token from outer scope
+							'Authorization' => 'Bearer ' . $access_token
 						]
 					];
-
-					// Mask token for logging
-					$log_comment_headers = $comment_args['headers'];
-					if (isset($log_comment_headers['Authorization'])) {
-						$log_comment_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_comment_headers['Authorization']);
-					}
-					$this->locator->get('logger')->debug('[Reddit Input] Making comment API call for eligible post.', [
-						'post_id' => $item_id_for_comments,
-						'target_url' => $comments_url,
-						'request_headers' => $log_comment_headers
-					]);
-
-					$comments_response = wp_remote_get($comments_url, $comment_args);
-					$raw_comments_body = wp_remote_retrieve_body($comments_response); // Get body regardless of status for logging
-
-					if (!is_wp_error($comments_response) && wp_remote_retrieve_response_code($comments_response) === 200) {
-						$this->locator->get('logger')->debug('[Reddit Input] Comment API call successful (200 OK). Processing response.', [
-							'post_id' => $item_id_for_comments,
-							'response_body_snippet' => substr($raw_comments_body, 0, 200) . (strlen($raw_comments_body) > 200 ? '...' : '') // Log snippet
-						]);
-
-						$comments_data = json_decode($raw_comments_body, true);
-
-						// Comments are typically in the second element (index 1) of the response array
-						if (isset($comments_data[1]['data']['children']) && is_array($comments_data[1]['data']['children'])) {
-							$fetched_comments = [];
-							$comments_to_fetch = $comment_count_setting;
-							foreach ($comments_data[1]['data']['children'] as $comment_wrapper) {
-								if (count($fetched_comments) >= $comments_to_fetch) break;
-
-								if (isset($comment_wrapper['kind']) && $comment_wrapper['kind'] === 't1' && isset($comment_wrapper['data'])) {
-									$comment = $comment_wrapper['data'];
-									$comment_body = $comment['body'] ?? '';
-									$comment_author = $comment['author'] ?? 'unknown';
-
-									// Skip deleted/removed comments or very short ones
-									if (!empty($comment_body) && $comment_body !== '[deleted]' && $comment_body !== '[removed]' && strlen($comment_body) > 5) {
-										$fetched_comments[] = "Author: " . $comment_author . "\nComment: " . html_entity_decode(strip_tags($comment_body)); // Simple format
+					try {
+						$comments_response = wp_remote_get($comments_url, $comment_args);
+						if (!is_wp_error($comments_response) && wp_remote_retrieve_response_code($comments_response) === 200) {
+							$comments_body = wp_remote_retrieve_body($comments_response);
+							$comments_data = json_decode($comments_body, true);
+							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
+								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
+								if (!empty($top_comments)) {
+									$content_string .= "\n\nTop Comments:\n";
+									$comment_num = 1;
+									foreach ($top_comments as $comment_wrapper) {
+										if (isset($comment_wrapper['data']['body']) && !$comment_wrapper['data']['stickied']) {
+											$author = $comment_wrapper['data']['author'] ?? '[deleted]';
+											$body = trim($comment_wrapper['data']['body']);
+											if ($body !== '') {
+												$content_string .= "- {$author}: {$body}\n";
+												$comment_num++;
+											}
+										}
+										if ($comment_num > $comment_count_setting) break;
 									}
 								}
 							}
-							$this->locator->get('logger')->debug('[Reddit Input] Parsed comments for eligible post.', [
-								'post_id' => $item_id_for_comments,
-								'parsed_count' => count($fetched_comments),
-							]);
-							if (!empty($fetched_comments)) {
-								$comments_string .= "\n\n--- Top Comments (up to " . count($fetched_comments) . ") ---\n";
-								$comments_string .= implode("\n\n", $fetched_comments);
-							$this->locator->get('logger')->debug('[Reddit Input] Appending comments string for eligible post.', [
-								'post_id' => $item_id_for_comments,
-								'comments_string_length' => strlen($comments_string),
-							]);
-							}
 						} else {
-							$this->locator->get('logger')->warning('[Reddit Input] Comment response structure invalid or no comments found in expected location for eligible post.', [
-								'post_id' => $item_id_for_comments,
-								'response_body_snippet' => substr($raw_comments_body, 0, 200) . (strlen($raw_comments_body) > 200 ? '...' : '')
+							$this->logger?->warning('Reddit Input: Failed to fetch comments for post.', [
+								'item_id' => $current_item_id,
+								'comments_url' => $comments_url,
+								'response_code' => is_wp_error($comments_response) ? $comments_response->get_error_code() : wp_remote_retrieve_response_code($comments_response),
+								'module_id' => $module_id
 							]);
 						}
-					} else {
-						// Log comment fetch failure but don't stop the process
-						$response_code = wp_remote_retrieve_response_code($comments_response);
-						$error_detail = is_wp_error($comments_response) ? $comments_response->get_error_message() : 'HTTP Status ' . $response_code;
-						error_log('DM Reddit Input: Failed to fetch comments for post ' . $item_id_for_comments . '. Error: ' . $error_detail . ' URL: ' . $comments_url);
-						$this->locator->get('logger')->error('[Reddit Input] Failed to fetch comments for eligible post.', [
-							'post_id' => $item_id_for_comments,
-							'error_detail' => $error_detail,
-							'response_code' => $response_code,
-							'response_body_snippet' => substr($raw_comments_body, 0, 200) . (strlen($raw_comments_body) > 200 ? '...' : '')
+					} catch (Exception $e) {
+						$this->logger?->error('Reddit Input: Exception while fetching comments.', [
+							'item_id' => $current_item_id,
+							'comments_url' => $comments_url,
+							'exception' => $e->getMessage(),
+							'module_id' => $module_id
 						]);
 					}
-				} else {
-					// Log if comments are skipped due to missing post ID in packet
-					$this->locator->get('logger')->warning('[Reddit Input] Skipping comment fetch for an eligible packet due to missing original ID.', [
-						'packet_index' => $index,
-						'comment_count_setting' => $comment_count_setting
-					]);
 				}
+				// --- End fetch/append comments ---
 
-				// Append the fetched comments (if any) to the content_string of the current packet
-				$eligible_items_packets[$index]['content_string'] .= $comments_string;
+				// --- Detect image post and set file_info if applicable ---
+				$file_info = null;
+				$url = $item_data['url'] ?? '';
+				$is_imgur = preg_match('#^https?://(www\.)?imgur\.com/([^./]+)$#i', $url, $imgur_matches);
 
-			} // End foreach ($eligible_items_packets)
-		} // End if ($comment_count_setting > 0)
+				// 1. Gallery support (Reddit API: is_gallery + media_metadata)
+				if (!empty($item_data['is_gallery']) && !empty($item_data['media_metadata']) && is_array($item_data['media_metadata'])) {
+					// Get the first image in the gallery
+					$first_media = reset($item_data['media_metadata']);
+					if (!empty($first_media['s']['u'])) {
+						$direct_url = html_entity_decode($first_media['s']['u']);
+						$mime_type = 'image/jpeg'; // Most Reddit gallery images are JPEG
+						$file_info = [
+							'url' => $direct_url,
+							'type' => $mime_type,
+							'mime_type' => $mime_type,
+						];
+					}
+				}
+				// 2. Imgur or direct image
+				elseif (
+					!empty($url) &&
+					(
+						(isset($item_data['post_hint']) && $item_data['post_hint'] === 'image') ||
+						preg_match('/\\.(jpg|jpeg|png|webp|gif)$/i', $url) ||
+						$is_imgur
+					)
+				) {
+					if ($is_imgur) {
+						// Convert to direct image link
+						$direct_url = $url . '.jpg';
+						$mime_type = 'image/jpeg';
+					} else {
+						$direct_url = $url;
+						$ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+						$mime_map = [
+							'jpg' => 'image/jpeg',
+							'jpeg' => 'image/jpeg',
+							'png' => 'image/png',
+							'webp' => 'image/webp',
+							'gif' => 'image/gif',
+						];
+						$mime_type = $mime_map[$ext] ?? 'application/octet-stream';
+					}
+					$file_info = [
+						'url' => $direct_url,
+						'type' => $mime_type,
+						'mime_type' => $mime_type,
+					];
+				}
+				// --- End image detection ---
 
-		// --- Return Results ---
-		// If no eligible items were found after all checks
+				// Format metadata
+				$metadata = [
+					'source_type' => 'reddit',
+					'item_identifier_to_log' => (string) $current_item_id,
+					'original_id' => $current_item_id,
+					'source_url' => 'https://www.reddit.com' . ($item_data['permalink'] ?? ''),
+					'original_title' => $title,
+					'original_date_gmt' => gmdate('Y-m-d\TH:i:s\Z', (int)($item_data['created_utc'] ?? time())),
+					'subreddit' => $subreddit,
+					'upvotes' => $item_data['score'] ?? 0,
+					'comment_count' => $item_data['num_comments'] ?? 0,
+					'author' => $item_data['author'] ?? '[deleted]',
+					'is_self_post' => $item_data['is_self'] ?? false,
+					'external_url' => (!($item_data['is_self'] ?? false) && !empty($item_data['url'])) ? $item_data['url'] : null,
+					'image_source_url' => $file_info['url'] ?? null,
+				];
+				$metadata['raw_reddit_data'] = $item_data; // Include raw data
+
+				// Create the standardized packet
+				$input_data_packet = [
+					'data' => [
+						'content_string' => $content_string,
+						'file_info' => $file_info
+					],
+					'metadata' => $metadata
+				];
+				array_push($eligible_items_packets, $input_data_packet);
+
+				if (count($eligible_items_packets) >= $process_limit) {
+					$this->logger?->debug('Reddit Input: Reached process limit.', ['limit' => $process_limit, 'module_id' => $module_id]);
+					break; // Stop processing this batch
+				}
+			} // End foreach ($response_data...)
+
+			// Stop pagination if we hit the time limit boundary in the batch
+			if ($batch_hit_time_limit) {
+				$this->logger?->debug('Reddit Input: Stopping pagination due to hitting time limit within batch.', ['module_id' => $module_id]);
+				break;
+			}
+
+			// Prepare for the next page fetch
+			$after_param = $response_data['data']['after'] ?? null;
+			if (!$after_param) {
+				$this->logger?->debug("Reddit Input: No 'after' parameter found, ending pagination.", ['module_id' => $module_id]);
+				break; // No more pages indicated by Reddit
+			}
+
+		} // End while loop
+
+		$found_count = count($eligible_items_packets);
+		$this->logger?->info('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'module_id' => $module_id]);
+
 		if (empty($eligible_items_packets)) {
-			// Determine specific reason for no items if possible (e.g., checked max items, hit time limit early)
-            $message = __('No new items found matching the criteria after checking.', 'data-machine');
-            // TODO: Could potentially add more detail to the message based on why the loop stopped.
-			return ['status' => 'no_new_items', 'message' => $message];
+			return ['status' => 'no_new_items', 'message' => __('No new items found from the Reddit source matching the criteria.', 'data-machine')];
 		}
 
-		// Return the array of eligible item packets
 		return $eligible_items_packets;
-		// Note: The structure has changed. It now returns an ARRAY of packets,
-		// or a status array like ['status' => 'no_new_items'].
-		// The AJAX handler needs to be updated to handle this.
 	}
 
 	/**
@@ -603,13 +536,21 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 				'min' => 0,
 				'max' => 100000,
 			],
+			'min_comment_count' => [
+				'type' => 'number',
+				'label' => __('Minimum Comment Count', 'data-machine'),
+				'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'data-machine'),
+				'default' => 0,
+				'min' => 0,
+				'max' => 100000,
+			],
 			'comment_count' => [
 				'type' => 'number',
-				'label' => __('Number of Top Comments', 'data-machine'),
-				'description' => __('Number of top-level comments to fetch for each post (0-20). Set to 0 to disable.', 'data-machine'),
-				'default' => 10,
+				'label' => __('Top Comments to Fetch', 'data-machine'),
+				'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'data-machine'),
+				'default' => 0,
 				'min' => 0,
-				'max' => 20, // Keep max reasonable to avoid overly long content & slow fetches
+				'max' => 100,
 			],
 			// Note: No API key needed for basic public access. Add later if needed.
 		];
@@ -634,9 +575,10 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 		$sanitized['timeframe_limit'] = in_array($timeframe, $valid_timeframes) ? $timeframe : 'all_time';
 		$min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
 		$sanitized['min_upvotes'] = max(0, $min_upvotes);
-		// Sanitize comment count
-		$comment_count = isset($raw_settings['comment_count']) ? absint($raw_settings['comment_count']) : 3;
-		$sanitized['comment_count'] = min(20, max(0, $comment_count)); // Ensure between 0 and 20
+		$min_comment_count = isset($raw_settings['min_comment_count']) ? absint($raw_settings['min_comment_count']) : 0;
+		$sanitized['min_comment_count'] = max(0, $min_comment_count);
+		$comment_count = isset($raw_settings['comment_count']) ? absint($raw_settings['comment_count']) : 0;
+		$sanitized['comment_count'] = max(0, $comment_count);
 		return $sanitized;
 	}
 
@@ -649,11 +591,5 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 		return 'Reddit Subreddit';
 	}
 
-	/**
-	 * Cleans up temporary files created during processing.
-	 */
-	public function cleanup_temp_files(array $file_info) {
-		// REMOVED: This entire method is no longer needed as no temporary files are created.
-	} // <<< REMOVE ENTIRE cleanup_temp_files METHOD
 
 } // End class Data_Machine_Input_Reddit

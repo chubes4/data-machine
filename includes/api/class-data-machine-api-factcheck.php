@@ -35,6 +35,17 @@ class Data_Machine_API_FactCheck {
      * @return   array|WP_Error                API response data or WP_Error on failure.
      */
     public function fact_check_response( $api_key, $system_prompt, $user_prompt, $content_to_check ) {
+        // Add robust, universal fact-checking directive
+        $fact_check_directive = <<<PROMPT
+FACT-CHECKING DIRECTIVE:
+- When fact-checking, treat the user-provided content and post content as the primary source of truth unless you find a direct, credible, and more recent source that clearly disproves it.
+- Do not hedge, speculate, or state that information is "not officially announced" or "unconfirmed" unless you find a direct, credible source explicitly stating so.
+- If the user-provided content is a news announcement, event, update, or other factual statement, and you do not find a credible contradiction, you must treat it as accurate and confirmed.
+- If in doubt, defer to the user-provided content and do not introduce uncertainty.
+- Always cite any source that directly contradicts or disproves the user-provided content.
+PROMPT;
+        $system_prompt = $fact_check_directive . "\n\n" . $system_prompt;
+
         $api_endpoint = 'https://api.openai.com/v1/responses'; // Use Responses API endpoint
 
         // Construct the user message by combining the module prompt and the content to check
@@ -80,16 +91,11 @@ class Data_Machine_API_FactCheck {
         error_log("DM FactCheck Debug: Request Args: " . print_r($args, true));
         $response = wp_remote_post( $api_endpoint, $args );
 
-        if ( is_wp_error( $response ) ) {
-            return $response; // Return WP_Error
-        }
-
         $response_code = wp_remote_retrieve_response_code( $response );
         $response_body = wp_remote_retrieve_body( $response );
-        // Debug: Log raw response body
-        error_log("DM FactCheck Debug: Raw Response Body: " . $response_body);
-
+        // Log raw response body only if not 200
         if ( 200 !== $response_code ) {
+            error_log("DM FactCheck Debug: Raw Response Body (Non-200): " . $response_body);
             return new WP_Error( 'openai_api_error', $model . ' API error: ' . $response_code . ' - ' . $response_body );
         }
 
@@ -120,8 +126,8 @@ class Data_Machine_API_FactCheck {
              return new WP_Error( 'openai_api_response_error', 'Invalid or unexpected ' . $model . ' API response format: ' . $response_body );
         }
 
-        // Debug: Log final result before returning
-        error_log("DM FactCheck Debug: Final fact_check_results: " . print_r($fact_check_results, true));
+        // Log final result before returning
+        error_log("DM FactCheck Debug: Final fact_check_results: " . $fact_check_results);
 
         return array(
             'status'             => 'success',

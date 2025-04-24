@@ -13,18 +13,12 @@ require_once dirname(__FILE__) . '/../helpers/class-data-machine-encryption-help
 class Data_Machine_Database_Remote_Locations {
 
     /**
-     * Service Locator instance.
-     * @var Data_Machine_Service_Locator|null
-     */
-    private $locator;
-
-    /**
      * Constructor.
      *
-     * @param Data_Machine_Service_Locator|null $locator Service Locator instance.
+     * No longer requires the Service Locator.
      */
-    public function __construct(Data_Machine_Service_Locator $locator = null) {
-        $this->locator = $locator;
+    public function __construct() {
+        // No dependencies needed in constructor currently.
     }
 
     /**
@@ -34,34 +28,29 @@ class Data_Machine_Database_Remote_Locations {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
         
-        // Check if the table already exists
-        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) === $table_name;
-        
-        // Only proceed if the table doesn't exist
-        if (!$table_exists) {
-            $charset_collate = $wpdb->get_charset_collate();
+        // dbDelta handles table creation and updates.
+        $charset_collate = $wpdb->get_charset_collate();
 
-            $sql = "CREATE TABLE {$table_name} (
-                location_id bigint unsigned NOT NULL auto_increment,
-                user_id bigint unsigned NOT NULL,
-                location_name varchar(255) NOT NULL,
-                target_site_url varchar(255) NOT NULL,
-                target_username varchar(100) NOT NULL,
-                encrypted_password text NOT NULL,
-                synced_site_info longtext NULL,
-                last_sync_time datetime NULL,
-                created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                updated_at datetime NOT NULL,
-                
-                PRIMARY KEY  (location_id),
-                KEY idx_user_id (user_id),
-                KEY idx_user_location_name (user_id,location_name(191))
-            )
-            {$charset_collate}";
+        $sql = "CREATE TABLE {$table_name} (
+            location_id bigint unsigned NOT NULL auto_increment,
+            user_id bigint unsigned NOT NULL,
+            location_name varchar(255) NOT NULL,
+            target_site_url varchar(255) NOT NULL,
+            target_username varchar(100) NOT NULL,
+            encrypted_password text NOT NULL,
+            synced_site_info longtext NULL,
+            enabled_post_types longtext NULL,
+            enabled_taxonomies longtext NULL,
+            last_sync_time datetime NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (location_id),
+            KEY idx_user_id (user_id),
+            KEY idx_user_location_name (user_id, location_name(191))
+        ) {$charset_collate};";
 
-            require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-            dbDelta( $sql );
-        }
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
     }
 
     /**
@@ -151,8 +140,24 @@ class Data_Machine_Database_Remote_Locations {
             $update_data['encrypted_password'] = $encrypted_password;
             $update_formats[] = '%s';
         }
+        // Add enabled post types if present in $data
+        if (isset($data['enabled_post_types'])) {
+            // Assume it's already JSON encoded by the handler
+            $update_data['enabled_post_types'] = $data['enabled_post_types'];
+            $update_formats[] = '%s';
+        }
+        // Add enabled taxonomies if present in $data
+        if (isset($data['enabled_taxonomies'])) {
+             // Assume it's already JSON encoded by the handler
+            $update_data['enabled_taxonomies'] = $data['enabled_taxonomies'];
+            $update_formats[] = '%s';
+        }
 
         if (empty($update_data)) {
+            // Check if only password was potentially updated (as it doesn't require other fields)
+            // If only password was set, $update_data might still be empty here if other fields were blank.
+            // However, the logic above ensures password is added if set.
+            // This check remains valid: if no fields were provided for update, return false.
             return false; // Nothing to update
         }
 
@@ -254,7 +259,19 @@ class Data_Machine_Database_Remote_Locations {
             $user_id
         ));
 
-        return $results ?: [];
+        // Check if results is null (indicates DB error) or empty
+        if (is_null($results)) {
+            // Log the WPDB error
+            error_log("WPDB error fetching remote locations for user {$user_id}: " . $wpdb->last_error);
+            return []; // Return empty on error
+        }
+        if (empty($results)) {
+             error_log("No remote locations found in DB for user {$user_id}");
+             return []; // Return empty if no locations found
+        }
+
+        // Return the results directly (array of objects by default)
+        return $results;
     }
 
     /**

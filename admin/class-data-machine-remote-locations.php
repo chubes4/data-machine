@@ -13,26 +13,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Data_Machine_Remote_Locations {
 
-    /**
-     * Service Locator instance.
-     * @var Data_Machine_Service_Locator
-     */
-    private $locator;
+    /** @var Data_Machine_Database_Remote_Locations */
+    private $db_locations;
+
+    /** @var ?Data_Machine_Logger */
+    private $logger;
+
+    // Note: We don't store the list table instance, it's created on demand in display_page.
 
     /**
      * Initialize hooks and dependencies.
      *
-     * @param Data_Machine_Service_Locator $locator Service Locator instance.
+     * @param Data_Machine_Database_Remote_Locations $db_locations DB Handler for remote locations.
+     * @param Data_Machine_Logger|null $logger Logger service (optional).
      */
-    public function __construct(Data_Machine_Service_Locator $locator) {
-        $this->locator = $locator;
-        
+    public function __construct(
+        Data_Machine_Database_Remote_Locations $db_locations,
+        ?Data_Machine_Logger $logger = null
+    ) {
+        $this->db_locations = $db_locations;
+        $this->logger = $logger;
+
         // Add hooks for form handlers
         add_action('admin_post_dm_add_location', array($this, 'handle_add_location'));
         add_action('admin_post_dm_update_location', array($this, 'handle_update_location'));
         add_action('admin_post_dm_instagram_accounts', array($this, 'dm_handle_instagram_accounts'));
     }
-    
+
     /**
      * Displays the Remote Locations admin page.
      * 
@@ -52,20 +59,18 @@ class Data_Machine_Remote_Locations {
             if ($is_editing) {
                 // Verify nonce for editing
                 if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'edit_location_' . $location_id)) {
-                    // Add an admin notice instead of wp_die
-                    $this->locator->get('logger')->add_admin_error(
+                    // Add an admin notice using injected logger
+                    $this->logger?->add_admin_error(
                         __('Nonce verification failed! Cannot edit location.', 'data-machine')
                     );
-                    // Set to load the list view instead of the broken form
                     $action = 'list'; 
                 } else {
-                    // Fetch existing location data
-                    $db_locations = $this->locator->get('database_remote_locations');
-                    $location = $db_locations->get_location($location_id, get_current_user_id(), false); // Don't decrypt password
+                    // Fetch existing location data using injected db_locations
+                    $location = $this->db_locations->get_location($location_id, get_current_user_id(), false); // Don't decrypt password
 
                     if (!$location) {
-                        // Add an admin notice
-                        $this->locator->get('logger')->add_admin_error(
+                        // Add an admin notice using injected logger
+                        $this->logger?->add_admin_error(
                             sprintf(__('Location %d not found or permission denied.', 'data-machine'), $location_id)
                         );
                         $action = 'list'; // Revert to list view
@@ -81,7 +86,6 @@ class Data_Machine_Remote_Locations {
                     'location_id' => $location_id,
                     'location' => $location,
                 ];
-                // Update page title for Add/Edit screens
                 $page_title = $is_editing ? __('Edit Location', 'data-machine') : __('Add New Location', 'data-machine');
             }
         }
@@ -92,8 +96,8 @@ class Data_Machine_Remote_Locations {
             if (!class_exists('Remote_Locations_List_Table')) {
                 require_once plugin_dir_path(dirname(__FILE__)) . 'admin/class-remote-locations-list-table.php';
             }
-            // Instantiate, prepare the list table
-            $list_table = new Remote_Locations_List_Table($this->locator);
+            // Instantiate list table, passing the required DB dependency
+            $list_table = new Remote_Locations_List_Table($this->db_locations);
             $list_table->prepare_items();
 
             $template_to_load = plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/remote-locations-list-table.php';
@@ -104,7 +108,6 @@ class Data_Machine_Remote_Locations {
         // Now load the main wrapper template, passing it the specific template and data
         $main_template = plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/remote-locations-page.php';
         if (file_exists($main_template)) {
-            // Pass variables to the main template
             include $main_template; 
         } else {
             echo '<div class="notice notice-error"><p>' . esc_html__('Main locations template missing.', 'data-machine') . '</p></div>';
@@ -131,23 +134,38 @@ class Data_Machine_Remote_Locations {
         );
     
         if (empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username']) || !isset($data['password']) || $data['password'] === '') {
-            // Use logger for admin notice
-            $this->locator->get('logger')->add_admin_error(__('Error: All fields are required.', 'data-machine'));
-        } else {
-            $db_locations = $this->locator->get('database_remote_locations');
-            $result = $db_locations->add_location(get_current_user_id(), $data);
-    
-            if ($result) {
-                // Use logger for admin notice
-                $this->locator->get('logger')->add_admin_success(__('Remote location added successfully.', 'data-machine'));
-            } else {
-                // Use logger for admin notice
-                $this->locator->get('logger')->add_admin_error(__('Error: Could not add remote location.', 'data-machine'));
-            }
+            // Use injected logger for admin notice
+            $this->logger?->add_admin_error(__('Error: All fields are required.', 'data-machine'));
+            // Redirect back to the add form if initial validation failed
+            wp_redirect(admin_url('admin.php?page=dm-remote-locations&action=add&message=validation_failed'));
+            exit;
         }
-    
-        wp_redirect(admin_url('admin.php?page=dm-remote-locations'));
-        exit;
+        
+        // Use injected db_locations
+        $result = $this->db_locations->add_location(get_current_user_id(), $data);
+
+        if ($result) { // $result contains the new location_id
+            // Add success message to be displayed on the edit page
+            $redirect_url = add_query_arg(
+                array(
+                    'page' => 'dm-remote-locations',
+                    'action' => 'edit',
+                    'location_id' => $result,
+                    'message' => 'added' // Add a success indicator
+                ),
+                admin_url('admin.php')
+            );
+            $this->logger?->add_admin_success(__('Remote location added successfully.', 'data-machine'));
+            wp_redirect($redirect_url);
+            exit;
+        } else {
+            // Use logger for admin notice
+            $this->logger?->add_admin_error(__('Error: Could not add remote location.', 'data-machine'));
+            // Redirect back to the add form on failure
+            wp_redirect(admin_url('admin.php?page=dm-remote-locations&action=add&message=add_failed'));
+            exit;
+        }
+        // No fallback redirect needed here as all paths above include exit;
     }
    
     /**
@@ -169,33 +187,56 @@ class Data_Machine_Remote_Locations {
         if (!empty($_POST['target_site_url'])) $data['target_site_url'] = esc_url_raw($_POST['target_site_url']);
         if (!empty($_POST['target_username'])) $data['target_username'] = sanitize_text_field($_POST['target_username']);
         if (isset($_POST['password']) && $_POST['password'] !== '') {
-            $data['password'] = $_POST['password'];
+            $data['password'] = $_POST['password']; // Keep raw for encryption in DB class
         }
+
+        // Handle enabled post types and taxonomies
+        $enabled_post_types = isset($_POST['enabled_post_types']) && is_array($_POST['enabled_post_types'])
+            ? array_map('sanitize_key', $_POST['enabled_post_types'])
+            : [];
+        $data['enabled_post_types'] = wp_json_encode($enabled_post_types);
+
+        $enabled_taxonomies = isset($_POST['enabled_taxonomies']) && is_array($_POST['enabled_taxonomies'])
+            ? array_map('sanitize_key', $_POST['enabled_taxonomies'])
+            : [];
+        $data['enabled_taxonomies'] = wp_json_encode($enabled_taxonomies);
     
+        // Basic validation for core fields (password is optional on update)
         if (empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username'])) {
              // Use logger for admin notice
-             $this->locator->get('logger')->add_admin_error(__('Error: Name, URL, and Username are required.', 'data-machine'));
-        } else {
-            $db_locations = $this->locator->get('database_remote_locations');
-            $result = $db_locations->update_location($location_id, get_current_user_id(), $data);
+             $this->logger?->add_admin_error(__('Error: Name, URL, and Username are required.', 'data-machine'));
+        } else { // Validation passed
+            // Use injected db_locations
+            $result = $this->db_locations->update_location($location_id, get_current_user_id(), $data);
     
             if ($result) {
-                // Use logger for admin notice
-                $this->locator->get('logger')->add_admin_success(__('Remote location updated successfully.', 'data-machine'));
+                // Change redirect to the list page
+                $redirect_url = add_query_arg(
+                    array(
+                        'page' => 'dm-remote-locations',
+                        // Remove 'action' => 'edit' and 'location_id' to go to list view
+                        'message' => 'updated' // Keep success indicator
+                    ),
+                    admin_url('admin.php')
+                );
+                $this->logger?->add_admin_success(__('Remote location updated successfully.', 'data-machine'));
+                wp_redirect($redirect_url);
+                exit;
             } else {
                 // Use logger for admin notice
-                // Provide slightly more context in the log message
                 $log_message = 'Failed to update remote location.';
                 $admin_message = __('Error: Could not update remote location (or no changes made).', 'data-machine');
-                if (!$result && $db_locations->get_last_error()) { // Assuming DB class might store specific error
-                    $log_message .= ' DB Error: ' . $db_locations->get_last_error();
+                // Check if the DB class has a method to get the last error (assuming it might)
+                if (method_exists($this->db_locations, 'get_last_error') && $this->db_locations->get_last_error()) {
+                    $log_message .= ' DB Error: ' . $this->db_locations->get_last_error();
                 }
-                $this->locator->get('logger')->add_admin_error($admin_message, ['location_id' => $location_id, 'raw_db_error' => $log_message]);
+                $this->logger?->add_admin_error($admin_message, ['location_id' => $location_id, 'raw_db_error' => $log_message]);
+                // Redirect back to the edit form on failure
+                 wp_redirect(admin_url('admin.php?page=dm-remote-locations&action=edit&location_id=' . $location_id . '&message=update_failed'));
+                 exit;
             }
         }
-    
-        wp_redirect(admin_url('admin.php?page=dm-remote-locations'));
-        exit;
+        // No fallback redirect needed here as all paths above include exit;
     }
 
     /**

@@ -23,47 +23,30 @@ class Data_Machine_Prompt_Modifier
         $output_type = $module_job_config['output_type'] ?? '';
         $output_config = $module_job_config['output_config'] ?? [];
 
-        $directive_block = ""; // Initialize directive block
-
-        // --- Build the Combined Directive and Instruction Block ---
-        $directive_block = "
---- RESPONSE FORMATTING AND INSTRUCTIONS ---";
+        $directive_block = "\n--- RESPONSE FORMATTING AND INSTRUCTIONS ---";
 
         // --- General Content Instructions (Apply to all types requiring structured output) ---
-        $directive_block .= "
-1.  **Strict Adherence:** Follow all instructions below precisely.";
-        $directive_block .= "
-2.  **Content Formatting:** Use standard Markdown for the main content body.";
-        $directive_block .= "
-3.  **Title Exclusion:** If a POST_TITLE directive is required below, do NOT repeat the title within the main content body itself (NO H1).";
+        $directive_block .= "\n1.  **Strict Adherence:** Follow all instructions below precisely.";
 
         // --- Specific Instructions based on Output Type ---
-
-        // Twitter/Bluesky: Length Constraints
         if ($output_type === 'twitter') {
             $twitter_config = $output_config['twitter'] ?? [];
             $char_limit = $twitter_config['twitter_char_limit'] ?? 280;
-            // Assume a placeholder length for the link for instruction purposes
             $link_placeholder_length = 25; // Generous estimate for t.co link + space
             $text_limit = $char_limit - $link_placeholder_length;
-            $directive_block .= "
-4.  **Twitter Length Limit:** Keep the MAIN content text under {$text_limit} characters. The system will add a source link later.";
-            $directive_block .= "
-5.  **Begin Content:** Provide the tweet content immediately after these instructions.";
+            $directive_block .= "\n2.  **Twitter Length Limit:** Keep the MAIN content text under {$text_limit} characters. The system will add a source link later.";
+            $directive_block .= "\n3.  **Begin Content:** Provide the tweet content immediately after these instructions.";
         } elseif ($output_type === 'bluesky') {
-            // Bluesky limit is 300 graphemes. Use characters as approximation.
             $char_limit = 300;
-             // Assume a placeholder length for the link for instruction purposes
-             // Link is often appended with 
             $link_placeholder_length = 30; // Estimate for newline, newline, avg URL
             $text_limit = $char_limit - $link_placeholder_length;
-             $directive_block .= "
-4.  **Bluesky Length Limit:** Keep the MAIN content text under {$text_limit} characters. The system will add a source link later.";
-             $directive_block .= "
-5.  **Begin Content:** Provide the post content immediately after these instructions.";
+            $directive_block .= "\n2.  **Bluesky Length Limit:** Keep the MAIN content text under {$text_limit} characters. The system will add a source link later.";
+            $directive_block .= "\n3.  **Begin Content:** Provide the post content immediately after these instructions.";
         }
-        // Post/Remote Publish: Title/Taxonomy Directives
+        // Post/Remote Publish: Title/Taxonomy/Markdown Directives
         elseif ($output_type === 'publish_remote' || $output_type === 'publish_local') {
+            $directive_block .= "\n2.  **Content Formatting:** Use standard Markdown for the main content body.";
+            $directive_block .= "\n3.  **Title Exclusion:** If a POST_TITLE directive is required below, do NOT repeat the title within the main content body itself (NO H1).";
             $category_mode = null;
             $tag_mode = null;
             $site_info = [];
@@ -80,14 +63,12 @@ class Data_Machine_Prompt_Modifier
                 $publish_config = $output_config['publish_local'] ?? [];
                 $category_mode = $publish_config['selected_local_category_id'] ?? 'model_decides';
                 $tag_mode = $publish_config['selected_local_tag_id'] ?? 'model_decides';
-                // Local site info (terms) will be fetched directly if needed
             }
 
             // Extract custom taxonomy configs (rest_...)
             foreach ($publish_config as $key => $value) {
                 if (preg_match('/^rest_([a-zA-Z0-9_]+)$/', $key, $matches)) {
                     $tax_slug = $matches[1];
-                    // Ensure value is a string mode or int ID
                     if (is_string($value) && ($value === 'model_decides' || $value === 'instruct_model')) {
                          $custom_tax_configs[$tax_slug] = $value;
                     } elseif (is_numeric($value)) {
@@ -97,18 +78,15 @@ class Data_Machine_Prompt_Modifier
             }
 
             // Adjusting numbering for clarity
-            $directive_block .= "
-4.  **Format:** Your response MUST start *immediately* with the following directives, each on a new line. Do NOT include any other text before these lines:";
-            $directive_block .= "
-    POST_TITLE: [Your calculated post title]"; // Always needed
+            $directive_block .= "\n4.  **Format:** Your response MUST start *immediately* with the following directives, each on a new line. Do NOT include any other text before these lines:";
+            $directive_block .= "\n    POST_TITLE: [Your calculated post title]"; // Always needed
 
             $taxonomy_instructions = []; // Collect instructions here
             $directive_counter = 5; // Start further instructions from 5
 
             // Category
             if (is_string($category_mode) && ($category_mode === 'model_decides' || $category_mode === 'instruct_model')) {
-                $directive_block .= "
-    CATEGORY: [Your chosen category name]";
+                $directive_block .= "\n    CATEGORY: [Your chosen category name]";
                 if ($category_mode === 'model_decides') {
                     $terms_to_list = []; $term_names = [];
                     if ($output_type === 'publish_local') {$fetched_terms = get_terms(['taxonomy' => 'category', 'hide_empty' => false]); if (!is_wp_error($fetched_terms)) $terms_to_list = $fetched_terms; }
@@ -124,8 +102,7 @@ class Data_Machine_Prompt_Modifier
 
             // Tags
             if (is_string($tag_mode) && ($tag_mode === 'model_decides' || $tag_mode === 'instruct_model')) {
-                $directive_block .= "
-    TAGS: [Your chosen comma-separated tags]";
+                $directive_block .= "\n    TAGS: [Your chosen comma-separated tags]";
                  if ($tag_mode === 'model_decides') {
                     $terms_to_list = []; $term_names = [];
                     if ($output_type === 'publish_local') { $fetched_terms = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => false]); if (!is_wp_error($fetched_terms)) $terms_to_list = $fetched_terms; }
@@ -142,8 +119,7 @@ class Data_Machine_Prompt_Modifier
             // Custom Taxonomies
             foreach ($custom_tax_configs as $tax_slug => $tax_mode) {
                 if (is_string($tax_mode) && ($tax_mode === 'model_decides' || $tax_mode === 'instruct_model')) {
-                    $directive_block .= "
-    TAXONOMY[{$tax_slug}]: [Your chosen comma-separated '{$tax_slug}' terms]";
+                    $directive_block .= "\n    TAXONOMY[{$tax_slug}]: [Your chosen comma-separated '{$tax_slug}' terms]";
                     $tax_label = ucfirst(str_replace('_', ' ', $tax_slug));
                      if ($tax_mode === 'model_decides') {
                         $terms_to_list = $site_info['taxonomies'][$tax_slug]['terms'] ?? [];
@@ -159,42 +135,30 @@ class Data_Machine_Prompt_Modifier
             }
 
             // Adding the Taxonomy Selection block
-            $directive_block .= "
-
-{$directive_counter}.  **Taxonomy Selection Instructions (if applicable):** Follow these instructions VERY carefully.";
+            $directive_block .= "\n\n{$directive_counter}.  **Taxonomy Selection Instructions (if applicable):** Follow these instructions VERY carefully.";
             if (!empty($taxonomy_instructions)) {
-                 $directive_block .= "
-" . implode("
-", $taxonomy_instructions);
+                 $directive_block .= "\n" . implode("\n", $taxonomy_instructions);
             } else {
                 $directive_block .= " N/A";
             }
             $directive_counter++;
 
             // Adding the Strict Adherence block
-            $directive_block .= "
-
-{$directive_counter}.  **Taxonomy Precision:** If taxonomy instructions above mention 'based ONLY on the user instructions', you MUST follow the user's prompt below precisely regarding those taxonomies. Do not add terms not requested or implied by the user prompt.";
+            $directive_block .= "\n\n{$directive_counter}.  **Taxonomy Precision:** If taxonomy instructions above mention 'based ONLY on the user instructions', you MUST follow the user's prompt below precisely regarding those taxonomies. Do not add terms not requested or implied by the user prompt.";
              $directive_counter++;
 
             // Adding the Begin Content block
-            $directive_block .= "
-
-{$directive_counter}.  **Begin Content:** Immediately following the directives above, provide the main post content using standard Markdown (No H1 title).";
+            $directive_block .= "\n\n{$directive_counter}.  **Begin Content:** Immediately following the directives above, provide the main post content using standard Markdown (No H1 title).";
 
         } else {
              // Default for other output types (e.g., raw text)
-             $directive_block .= "
-4.  **Begin Content:** Provide the content immediately after these instructions.";
+             $directive_block .= "\n2.  **Begin Content:** Provide the content immediately after these instructions.";
         }
 
-        $directive_block .= "
---- END RESPONSE FORMATTING AND INSTRUCTIONS ---";
+        $directive_block .= "\n--- END RESPONSE FORMATTING AND INSTRUCTIONS ---";
 
         // Prepend the instructions to the original prompt
-        $final_prompt = $directive_block . "
-
-" . $original_prompt;
+        $final_prompt = $directive_block . "\n\n" . $original_prompt;
 
         return $final_prompt;
     }

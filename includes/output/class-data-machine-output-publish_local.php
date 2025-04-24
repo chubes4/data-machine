@@ -10,6 +10,8 @@
  */
 class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_Interface {
 
+	use Data_Machine_Base_Output_Handler;
+
 	/**
 	 * Database handler for processed items.
 	 * @var Data_Machine_Database_Processed_Items
@@ -62,26 +64,8 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
         $parsed_data['custom_taxonomies'] = $parser->get_custom_taxonomies(); // Get custom taxonomies
 
         // --- Prepare Content: Prepend Image, Append Source --- 
-        $final_content = $parsed_data['content']; // Start with AI-generated content
-
-        // Prepend Image if available in metadata
-        if (!empty($input_metadata['image_source_url'])) {
-            $image_url = esc_url($input_metadata['image_source_url']);
-            $alt_text = !empty($input_metadata['original_title']) ? esc_attr($input_metadata['original_title']) : esc_attr('Source Image'); // Use title for alt
-            $image_tag = sprintf('<img src="%s" alt="%s" /><br /><br />', $image_url, $alt_text);
-            $final_content = $image_tag . $final_content;
-        }
-
-        // Append Source Link if available in metadata
-        if (!empty($input_metadata['source_url'])) {
-            $source_url = esc_url($input_metadata['source_url']);
-            $source_name = esc_html($input_metadata['original_title'] ?? 'Original Source'); // Use title or fallback
-            if (!empty($input_metadata['subreddit'])) {
-                $source_name = 'r/' . esc_html($input_metadata['subreddit']);
-            }
-            $source_link_string = sprintf('Source: <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', $source_url, $source_name);
-            $final_content .= "\n\n" . $source_link_string;
-        }
+        $final_content = $this->prepend_image_if_available($parsed_data['content'], $input_metadata);
+        $final_content = $this->append_source_if_available($final_content, $input_metadata);
         // --- End Prepare Content --- 
 
         // --- Convert Markdown content to HTML ---

@@ -16,10 +16,10 @@ use Abraham\TwitterOAuth\TwitterOAuth;
 class Data_Machine_OAuth_Twitter {
 
     /**
-	 * Service Locator instance.
-	 * @var Data_Machine_Service_Locator
+	 * Logger instance.
+	 * @var ?Data_Machine_Logger
 	 */
-	private $locator;
+	private $logger;
 
     const OAUTH_CALLBACK_ACTION = 'dm_twitter_oauth_callback';
     const TEMP_TOKEN_SECRET_TRANSIENT_PREFIX = 'dm_twitter_req_secret_'; // Prefix + request_token
@@ -28,10 +28,10 @@ class Data_Machine_OAuth_Twitter {
     /**
 	 * Initialize hooks and dependencies.
 	 *
-	 * @param Data_Machine_Service_Locator $locator Service Locator instance.
+	 * @param Data_Machine_Logger|null $logger Optional Logger instance.
 	 */
-	public function __construct(Data_Machine_Service_Locator $locator) {
-		$this->locator = $locator;
+	public function __construct(?Data_Machine_Logger $logger = null) {
+		$this->logger = $logger;
 		// Hooks should be registered where this class is instantiated.
 	}
 
@@ -81,7 +81,7 @@ class Data_Machine_OAuth_Twitter {
             if ($connection->getLastHttpCode() != 200 || !isset($request_token['oauth_token']) || !isset($request_token['oauth_token_secret'])) {
                 $error_message = 'Failed to get request token from Twitter.';
                 $response_info = $connection->getLastXHeaders(); // Or other debug info
-                $this->locator->get('logger')->error('Twitter OAuth Error: ' . $error_message, [
+                $this->logger?->error('Twitter OAuth Error: ' . $error_message, [
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody(), // Log response body if available
                     'headers' => $response_info
@@ -103,7 +103,7 @@ class Data_Machine_OAuth_Twitter {
             exit;
 
         } catch (\Exception $e) {
-            $this->locator->get('logger')->error('Twitter OAuth Exception during init: ' . $e->getMessage());
+            $this->logger?->error('Twitter OAuth Exception during init: ' . $e->getMessage());
             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_init_exception'));
             exit;
         }
@@ -126,14 +126,14 @@ class Data_Machine_OAuth_Twitter {
             $denied_token = sanitize_text_field($_GET['denied']);
             // Clean up transient if we can identify it (optional)
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
-            $this->locator->get('logger')->warning('Twitter OAuth Warning: User denied access.', ['user_id' => $user_id, 'denied_token' => $denied_token]);
+            $this->logger?->warning('Twitter OAuth Warning: User denied access.', ['user_id' => $user_id, 'denied_token' => $denied_token]);
             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_access_denied'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['oauth_token']) || !isset($_GET['oauth_verifier'])) {
-            $this->locator->get('logger')->error('Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['user_id' => $user_id, 'query_params' => $_GET]);
+            $this->logger?->error('Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['user_id' => $user_id, 'query_params' => $_GET]);
             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_missing_callback_params'));
             exit;
         }
@@ -147,7 +147,7 @@ class Data_Machine_OAuth_Twitter {
         delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);
 
         if (empty($oauth_token_secret)) {
-            $this->locator->get('logger')->error('Twitter OAuth Error: Request token secret missing or expired in transient.', ['user_id' => $user_id, 'oauth_token' => $oauth_token]);
+            $this->logger?->error('Twitter OAuth Error: Request token secret missing or expired in transient.', ['user_id' => $user_id, 'oauth_token' => $oauth_token]);
             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_token_secret_expired'));
             exit;
         }
@@ -155,7 +155,7 @@ class Data_Machine_OAuth_Twitter {
         $apiKey = get_option('twitter_api_key');
         $apiSecret = get_option('twitter_api_secret');
         if (empty($apiKey) || empty($apiSecret)) {
-            $this->locator->get('logger')->error('Twitter OAuth Error: API Key/Secret missing during callback.', ['user_id' => $user_id]);
+            $this->logger?->error('Twitter OAuth Error: API Key/Secret missing during callback.', ['user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_missing_app_keys'));
             exit;
         }
@@ -170,7 +170,7 @@ class Data_Machine_OAuth_Twitter {
 
             // Check for errors during token exchange
             if ($connection->getLastHttpCode() != 200 || !isset($access_token_data['oauth_token']) || !isset($access_token_data['oauth_token_secret'])) {
-                $this->locator->get('logger')->error('Twitter OAuth Error: Failed to get access token.', [
+                $this->logger?->error('Twitter OAuth Error: Failed to get access token.', [
                     'user_id' => $user_id,
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
@@ -196,7 +196,7 @@ class Data_Machine_OAuth_Twitter {
             exit;
 
         } catch (\Exception $e) {
-            $this->locator->get('logger')->error('Twitter OAuth Exception during callback: ' . $e->getMessage(), ['user_id' => $user_id]);
+            $this->logger?->error('Twitter OAuth Exception during callback: ' . $e->getMessage(), ['user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_callback_exception'));
             exit;
         }
@@ -227,42 +227,66 @@ class Data_Machine_OAuth_Twitter {
         return delete_user_meta($user_id, self::USER_META_KEY);
     }
 
-     /**
-     * Gets an authenticated TwitterOAuth instance for a user.
+    /**
+     * Gets an authenticated TwitterOAuth connection object for a specific user.
      *
-     * @param int $user_id The WordPress user ID.
-     * @return TwitterOAuth|WP_Error Authenticated TwitterOAuth instance or WP_Error on failure.
+     * @param int $user_id The user ID.
+     * @return TwitterOAuth|WP_Error Authenticated connection object or WP_Error on failure.
      */
-    public static function get_authenticated_connection(int $user_id): TwitterOAuth|WP_Error {
-        $apiKey = get_option('twitter_api_key');
-        $apiSecret = get_option('twitter_api_secret');
-        $account = self::get_account_details($user_id);
+    public function get_connection_for_user(int $user_id): TwitterOAuth|WP_Error {
+        $this->logger?->info('Attempting to get authenticated Twitter connection for user.', ['user_id' => $user_id]);
 
-        if (empty($apiKey) || empty($apiSecret)) {
-            return new WP_Error('twitter_missing_app_keys', __('Twitter API Key or Secret is not configured in settings.', 'data-machine'));
+        $credentials = get_user_meta($user_id, 'data_machine_twitter_account', true);
+        if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
+            $this->logger?->error('Missing Twitter credentials in user meta.', ['user_id' => $user_id]);
+            return new WP_Error('twitter_missing_credentials', __('Twitter credentials not found for this user. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
-        if (!$account) {
-            return new WP_Error('twitter_account_not_authenticated', __('The user has not authenticated their Twitter account.', 'data-machine'));
+        $consumer_key = get_option('twitter_api_key');
+        $consumer_secret = get_option('twitter_api_secret');
+        if (empty($consumer_key) || empty($consumer_secret)) {
+            $this->logger?->error('Missing Twitter API key/secret in site options.', ['user_id' => $user_id]);
+            return new WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
         }
 
-        $connection = new TwitterOAuth(
-            $apiKey,
-            $apiSecret,
-            $account['access_token'],
-            $account['access_token_secret']
-        );
-
-        // Set API version if needed (defaults might be okay for v1.1 posting)
-        // $connection->setApiVersion('2'); // For API v2 endpoints
-
-        // Test connection? Optional.
-        // $connection->get("account/verify_credentials");
-        // if ($connection->getLastHttpCode() != 200) {
-        //     return new WP_Error('twitter_invalid_credentials', __('Failed to verify Twitter credentials. Please re-authenticate.', 'data-machine'), ['http_code' => $connection->getLastHttpCode()]);
-        // }
-
-        return $connection;
+        try {
+            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $credentials['access_token'], $credentials['access_token_secret']);
+            // Optionally verify credentials work
+            // $user = $connection->get("account/verify_credentials");
+            // if ($connection->getLastHttpCode() != 200) { ... handle error ... }
+            
+            $this->logger?->info('Successfully created authenticated Twitter connection for user.', ['user_id' => $user_id]);
+            return $connection;
+        } catch (\Exception $e) {
+            $this->logger?->error('Exception creating TwitterOAuth connection: ' . $e->getMessage(), ['user_id' => $user_id]);
+            return new WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'data-machine'));
+        }
     }
+
+	/**
+	 * Static method to get an authenticated connection (Deprecated - Use instance method get_connection_for_user)
+	 *
+	 * @deprecated Use instance method ->get_connection_for_user() after getting the service from the locator.
+	 * @param int $user_id
+	 * @return TwitterOAuth|WP_Error
+	 */
+	public static function get_authenticated_connection($user_id) {
+        // TODO: Remove this method in a future release. Use get_connection_for_user instead.
+        $credentials = get_user_meta($user_id, 'data_machine_twitter_account', true);
+        if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
+            return new WP_Error('twitter_missing_credentials', __('Twitter credentials not found for this user. Please authenticate on the API Keys page.', 'data-machine'));
+        }
+        $consumer_key = get_option('twitter_api_key');
+        $consumer_secret = get_option('twitter_api_secret');
+        if (empty($consumer_key) || empty($consumer_secret)) {
+            return new WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
+        }
+        try {
+            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $credentials['access_token'], $credentials['access_token_secret']);
+            return $connection;
+        } catch (\Exception $e) {
+            return new WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'data-machine'));
+        }
+	}
 
 } 

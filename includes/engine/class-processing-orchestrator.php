@@ -21,11 +21,14 @@ class Data_Machine_Processing_Orchestrator {
 	/** @var Data_Machine_API_Finalize */
 	private $finalize_api;
 
-	/** @var Data_Machine_Service_Locator */
-	private $locator; // Inject locator to get output handlers
+	/** @var Data_Machine_Handler_Factory */
+	private $handler_factory;
 
 	/** @var Data_Machine_Project_Prompt */
 	private $project_prompt_service;
+
+	/** @var Data_Machine_Prompt_Modifier */
+	private $prompt_modifier;
 
 	/** @var Data_Machine_Logger */
 	private $logger;
@@ -36,24 +39,27 @@ class Data_Machine_Processing_Orchestrator {
 	 * @param Data_Machine_process_data $process_data_handler Instance of Process Data handler.
 	 * @param Data_Machine_API_FactCheck $factcheck_api Instance of FactCheck API handler.
 	 * @param Data_Machine_API_Finalize $finalize_api Instance of Finalize API handler.
-	 * @param Data_Machine_Service_Locator $locator Service Locator instance.
+	 * @param Data_Machine_Handler_Factory $handler_factory Handler Factory instance.
 	 * @param Data_Machine_Project_Prompt $project_prompt_service Instance of Project Prompt service.
+	 * @param Data_Machine_Prompt_Modifier $prompt_modifier Instance of Prompt Modifier service.
 	 * @param Data_Machine_Logger $logger Logger instance.
 	 */
 	public function __construct(
 		Data_Machine_process_data $process_data_handler,
 		Data_Machine_API_FactCheck $factcheck_api,
 		Data_Machine_API_Finalize $finalize_api,
-		Data_Machine_Service_Locator $locator, // Inject locator
+		Data_Machine_Handler_Factory $handler_factory,
 		Data_Machine_Project_Prompt $project_prompt_service,
-		Data_Machine_Logger $logger // Inject logger
+		Data_Machine_Prompt_Modifier $prompt_modifier,
+		Data_Machine_Logger $logger
 	) {
 		$this->process_data_handler = $process_data_handler;
 		$this->factcheck_api = $factcheck_api;
 		$this->finalize_api = $finalize_api;
-		$this->locator = $locator; // Store locator
+		$this->handler_factory = $handler_factory;
 		$this->project_prompt_service = $project_prompt_service;
-		$this->logger = $logger; // Store logger
+		$this->prompt_modifier = $prompt_modifier;
+		$this->logger = $logger;
 	}
 
 	/**
@@ -145,8 +151,7 @@ class Data_Machine_Processing_Orchestrator {
 		    // Use $input_data_packet for logging and prompt modification
 		    $this->log_orchestrator_step('Step 3: Calling finalize_response', $module_id, $input_data_packet['metadata'] ?? []);
 		    // Use the prompt modifier to inject category/tag instructions if needed
-		    $prompt_modifier = $this->locator->get('prompt_modifier');
-		    $modified_finalize_prompt = $prompt_modifier::modify_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet); // Pass actual packet
+		    $modified_finalize_prompt = $this->prompt_modifier::modify_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet); // Pass actual packet
 
 		    $finalize_result = $this->finalize_api->finalize_response(
 		        $api_key,
@@ -177,26 +182,29 @@ class Data_Machine_Processing_Orchestrator {
 		// --- Step 4: Output Delegation ---
 		$output_handler_result = null;
 		$output_type = $module_job_config['output_type'] ?? null;
-		$output_handler_key = 'output_' . $output_type; // Construct key for locator
 
 		try {
 			// Ensure helper class is loaded
 			require_once DATA_MACHINE_PATH . 'includes/helpers/class-ai-response-parser.php';
 
-			// Get the appropriate output handler from the locator
-			if ($this->locator->has($output_handler_key)) {
-				$output_handler = $this->locator->get($output_handler_key);
-				if ($output_handler instanceof Data_Machine_Output_Handler_Interface) {
-					// Pass the simplified config array AND input metadata to the handler
-					// Use $input_data_packet for metadata
-					$this->log_orchestrator_step('Step 4: Calling output handler handle()', $module_id, $input_data_packet['metadata'] ?? [], ['handler_key' => $output_handler_key]);
-					$output_handler_result = $output_handler->handle( $final_output_string, $module_job_config, $user_id, $input_data_packet['metadata'] ?? [] );
-					$this->log_orchestrator_step('Step 4: Received output handler result', $module_id, $input_data_packet['metadata'] ?? [], ['handler_key' => $output_handler_key, 'is_wp_error' => is_wp_error($output_handler_result), 'result_status' => is_array($output_handler_result) ? ($output_handler_result['status'] ?? 'unknown') : 'non-array']);
-				} else {
-					throw new Exception('Registered output service is not a valid handler: ' . $output_handler_key);
-				}
+			// Get the appropriate output handler using the handler factory
+            if (empty($output_type)) {
+                throw new Exception('Output type is not defined in module configuration.');
+            }
+            
+            $output_handler = $this->handler_factory->create_handler('output', $output_type);
+
+			if ($output_handler instanceof Data_Machine_Output_Handler_Interface) {
+				// Pass the simplified config array AND input metadata to the handler
+				// Use $input_data_packet for metadata
+				$this->log_orchestrator_step('Step 4: Calling output handler handle()', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type]);
+				$output_handler_result = $output_handler->handle( $final_output_string, $module_job_config, $user_id, $input_data_packet['metadata'] ?? [] );
+				$this->log_orchestrator_step('Step 4: Received output handler result', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type, 'is_wp_error' => is_wp_error($output_handler_result), 'result_status' => is_array($output_handler_result) ? ($output_handler_result['status'] ?? 'unknown') : 'non-array']);
 			} else {
-				throw new Exception('Unsupported or unregistered output type configured: ' . $output_type);
+                // Log error if handler creation failed or returned wrong type
+                $error_details = is_wp_error($output_handler) ? $output_handler->get_error_message() : 'Invalid handler type returned by factory.';
+                $this->logger?->error('Failed to create or retrieve a valid output handler from factory.', ['output_type' => $output_type, 'error' => $error_details]);
+				throw new Exception('Could not create or retrieve a valid output handler for type: ' . $output_type);
 			}
 
 			// Check if the handler returned an error

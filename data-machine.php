@@ -27,25 +27,34 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Include necessary base classes and interfaces first
-require_once DATA_MACHINE_PATH . 'includes/class-service-locator.php';
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php';
+require_once DATA_MACHINE_PATH . 'includes/input/trait-data-machine-base-input-handler.php';
+require_once DATA_MACHINE_PATH . 'includes/output/trait-data-machine-base-output-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php'; // Updated path
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php'; // Added projects class
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php'; // Jobs Database Class
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php'; // Processed Items Database Class
-require_once DATA_MACHINE_PATH . 'includes/ajax/class-module-ajax-handler.php'; // Added Module AJAX Handler
-require_once DATA_MACHINE_PATH . 'includes/ajax/class-ajax-job-status.php'; // Modular Job Status AJAX Handler
-require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-projects.php'; // AJAX Handler for Dashboard Project Actions
+require_once DATA_MACHINE_PATH . 'module-config/ajax/class-module-config-ajax.php'; // Updated Module AJAX Handler path
+require_once DATA_MACHINE_PATH . 'includes/ajax/class-project-management-ajax.php'; // Corrected AJAX Handler path for Dashboard Project Actions
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-locations.php'; // AJAX Handler for Location Actions
 require_once DATA_MACHINE_PATH . 'admin/class-data-machine-remote-locations.php'; // Admin Form Handler for Remote Locations
-require_once DATA_MACHINE_PATH . 'includes/helpers/class-import-export.php'; // Added Import/Export Helper
+require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-import-export.php'; // Added Import/Export Helper
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
-require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-register-settings.php';
+require_once DATA_MACHINE_PATH . 'module-config/RegisterSettings.php';
+require_once DATA_MACHINE_PATH . 'module-config/HandlerFactoryInterface.php'; // Ensure factory interface is loaded
+require_once DATA_MACHINE_PATH . 'module-config/HandlerFactory.php';
+require_once DATA_MACHINE_PATH . 'module-config/remote-locations/RemoteLocationService.php';
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-reddit.php';
-require_once DATA_MACHINE_PATH . 'admin/class-data-machine-admin-ajax.php';
+require_once DATA_MACHINE_PATH . 'includes/engine/class-job-worker.php'; // Ensure worker class is loaded
+require_once DATA_MACHINE_PATH . 'module-config/SettingsFields.php';
+require_once DATA_MACHINE_PATH . 'module-config/class-dm-module-config-handler.php';
+require_once DATA_MACHINE_PATH . 'includes/ajax/run-single-module-ajax.php';
+require_once DATA_MACHINE_PATH . 'module-config/ajax/module-config-remote-locations-ajax.php';
+// Include the new module config assets file
+// require_once DATA_MACHINE_PATH . 'module-config/module-config-enqueue-assets.php';
 
 /**
  * Register custom rewrite endpoint for Instagram OAuth
@@ -81,383 +90,189 @@ add_action('template_redirect', 'dm_handle_oauth_instagram_endpoint');
  * @since    0.1.0
  */
 function run_data_machine() {
-	// Create the Service Locator instance
-	$locator = new Data_Machine_Service_Locator();
+    // --- Instantiate core dependencies ---
+    $logger = new Data_Machine_Logger();
+    $encryption_helper = new Data_Machine_Encryption_Helper();
 
-	// --- Register ALL Services ---
-	// Register services that DON'T depend on the main plugin instance first
+    // Hook the logger's display method to admin notices
+    if (is_admin()) { // Only hook in the admin area
+        add_action( 'admin_notices', array( $logger, 'display_admin_notices' ) );
+    }
 
-	// Register Handler Registry
-	require_once DATA_MACHINE_PATH . 'includes/class-handler-registry.php';
-	$locator->register('handler_registry', function($locator) {
-		return new Data_Machine_Handler_Registry(DATA_MACHINE_PATH);
-	});
+    // Database classes
+    $db_projects = new Data_Machine_Database_Projects();
+    $db_modules = new Data_Machine_Database_Modules($db_projects, $logger);
+    $db_jobs = new Data_Machine_Database_Jobs();
+    $db_processed_items = new Data_Machine_Database_Processed_Items($logger);
+    $db_remote_locations = new Data_Machine_Database_Remote_Locations();
 
-	// Register all output handlers with the locator
-	$handler_registry = $locator->get('handler_registry');
-	foreach ($handler_registry->get_output_handlers() as $slug => $handler_info) {
-		$key = 'output_' . $slug;
-		$class_name = $handler_info['class'];
-		$locator->register($key, function($locator) use ($class_name) {
-			// Special case: publish-remote needs the remote locations DB
-			if ($class_name === 'Data_Machine_Output_Publish_Remote') {
-				return new $class_name($locator->get('database_remote_locations'), $locator->get('logger'));
-			}
-			// Pass the locator to the default handler constructor
-			return new $class_name($locator);
-		});
-	}
+    // OAuth handlers
+    $oauth_twitter = new Data_Machine_OAuth_Twitter($logger);
+    $oauth_reddit = new Data_Machine_OAuth_Reddit($logger);
 
-	// Register Logger Service (No dependencies)
-	$locator->register('logger', function($locator) {
-		// Path required above
-		return new Data_Machine_Logger();
-	});
+    // Project prompt service
+    $project_prompt_service = new Data_Machine_Project_Prompt($db_projects);
 
-	// Register Encryption Helper
-	$locator->register('encryption_helper', function($locator) {
-		// Ensure the helper class file is included
-		if (!class_exists('Data_Machine_Encryption_Helper')) {
-			require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-encryption-helper.php';
-		}
-		return new Data_Machine_Encryption_Helper(); // Instantiate the helper
-	});
+    // Handler registry
+    $handler_registry = new Data_Machine_Handler_Registry();
 
-	// Register Database Projects first (as Modules might depend on it later)
-	$locator->register('database_projects', function($locator) {
-		// Path already required above
-		return new Data_Machine_Database_Projects($locator);
-	});
+    // Output handlers
+    $output_publish_local = new Data_Machine_Output_Publish_Local($db_processed_items);
+    $output_publish_remote = new Data_Machine_Output_Publish_Remote($db_remote_locations, $logger, $db_processed_items);
+    $output_data_export = new Data_Machine_Output_Data_Export();
+    $output_twitter = new Data_Machine_Output_Twitter($oauth_twitter, $logger);
+    // Add other output handlers as needed
 
-	// Register Database Modules
-	$locator->register('database_modules', function($locator) {
-		// Path already required above
-		return new Data_Machine_Database_Modules($locator); // Pass locator
-	});
+    // Input handlers
+    $input_files = new Data_Machine_Input_Files($db_modules, $db_projects, $logger);
+    $input_airdrop_rest_api = new Data_Machine_Input_Airdrop_Rest_Api($db_processed_items, $db_modules, $db_projects, $db_remote_locations, $logger);
+    $input_public_rest_api = new Data_Machine_Input_Public_Rest_Api($db_processed_items, $db_modules, $db_projects, $logger);
+    $input_reddit = new Data_Machine_Input_Reddit($oauth_reddit, $db_processed_items, $db_modules, $db_projects, $logger);
+    $input_rss = new Data_Machine_Input_Rss($db_processed_items, $db_modules, $db_projects, $logger);
+    // Add other input handlers as needed
 
-	// Register Database Jobs
-	$locator->register('database_jobs', function($locator) {
-		// Path required above
-		return new Data_Machine_Database_Jobs($locator);
-	});
+    // API services
+    $openai_api = new Data_Machine_API_OpenAI();
+    $factcheck_api = new Data_Machine_API_FactCheck($openai_api);
+    $finalize_api = new Data_Machine_API_Finalize($openai_api);
 
-	// Register Processed Items
-	$locator->register('database_processed_items', function($locator) {
-		// Path required above
-		return new Data_Machine_Database_Processed_Items($locator);
-	});
+    // Process data
+    $process_data = new Data_Machine_process_data($openai_api);
 
-	// Register Database Remote Locations
-	$locator->register('database_remote_locations', function($locator) {
-		// Path required in activation hook, ensure it's loaded if needed elsewhere too
-		if (!class_exists('Data_Machine_Database_Remote_Locations')) require_once DATA_MACHINE_PATH . 'includes/database/class-database-remote-locations.php';
-		return new Data_Machine_Database_Remote_Locations($locator);
-	});
+    // Prompt modifier
+    $prompt_modifier = new Data_Machine_Prompt_Modifier();
 
-	// ADDED: Register Job Executor Service (Moved here for earlier access)
-	$locator->register('job_executor', function($locator) {
-	    // Ensure the class file is included before instantiation
-	    // Use global class name
-	    if (!class_exists('Data_Machine_Job_Executor')) {
-            require_once DATA_MACHINE_PATH . 'includes/engine/class-job-executor.php';
-        }
-	    // Instantiate using the global class name
-	    return new Data_Machine_Job_Executor($locator);
-	});
+    // Handler factory (replace with DI version if available)
+    $handler_factory = new Dependency_Injection_Handler_Factory(
+        $handler_registry,
+        $logger,
+        $db_processed_items,
+        $encryption_helper,
+        $oauth_twitter,
+        $oauth_reddit,
+                    $db_remote_locations,
+        $db_modules,
+        $db_projects
+    );
 
-	// Register Scheduler Service
-	$locator->register('scheduler', function($locator) {
-		// Path required above
-		return new Data_Machine_Scheduler($locator);
-	});
+    // Remote location service
+    $remote_location_service = new Data_Machine_Remote_Location_Service($db_remote_locations);
 
-	// Register Import/Export Handler (depends on locator, and DB classes being registered)
-	$locator->register('import_export_handler', function($locator) {
-		// Path already required above
-		return new Data_Machine_Import_Export($locator); // Pass locator
-	});
+    // Settings fields
+    $settings_fields = new Data_Machine_Settings_Fields($handler_factory, $remote_location_service);
 
-	// --- Force instantiation to register hooks --- 
-	$locator->get('import_export_handler');
-	// --- End force instantiation ---
+    // Remote locations admin handler
+    $remote_locations_admin = new Data_Machine_Remote_Locations($db_remote_locations, $logger);
 
-	// Register Module AJAX Handler (depends on Locator)
-	$locator->register('module_ajax_handler', function($locator) {
-		return new Data_Machine_Module_Ajax_Handler(
-			$locator // Pass the locator itself
+    // Admin page
+    $admin_page = new Data_Machine_Admin_Page(
+        DATA_MACHINE_VERSION,
+        $db_modules,
+        $db_projects,
+        $logger,
+        $handler_registry,
+        $settings_fields,
+        $handler_factory,
+        $remote_locations_admin
+    );
+
+    // Register settings - Handled in Data_Machine class
+
+    // Module handler
+    $module_handler = new Data_Machine_Module_Handler(
+        $db_modules,
+        $handler_registry,
+        $handler_factory,
+        $logger
+    );
+    $module_handler->init_hooks();
+
+    // Public API AJAX handler
+
+    // Prompt modifier (already instantiated above)
+
+    // Job worker, orchestrator, job executor, scheduler
+    $orchestrator = new Data_Machine_Processing_Orchestrator(
+        $process_data,
+        $factcheck_api,
+        $finalize_api,
+        $handler_factory,
+        $project_prompt_service,
+        $prompt_modifier,
+        $logger
+    );
+    $job_worker = new Data_Machine_Job_Worker($logger, $db_jobs, $orchestrator);
+    $job_executor = new Data_Machine_Job_Executor(
+        $db_processed_items,
+        $db_jobs,
+        $db_modules,
+        $db_projects,
+        $orchestrator,
+        $handler_factory,
+        $job_worker,
+        $logger
+    );
+    $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $logger);
+
+    // Import/export handler
+    $import_export_handler = new Data_Machine_Import_Export($db_projects, $db_modules);
+
+    // AJAX handlers
+    $module_ajax_handler = new Data_Machine_Module_Config_Ajax($db_modules, $db_projects, $job_executor, $input_files, $db_remote_locations, $logger);
+    $dashboard_ajax_handler = new Data_Machine_Project_Management_Ajax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_executor, $logger);
+    $locations_ajax_handler = new Data_Machine_Ajax_Locations($db_remote_locations, $logger);
+    $ajax_scheduler = new Data_Machine_Ajax_Scheduler($db_projects, $db_modules, $scheduler);
+    $ajax_auth = new Data_Machine_Ajax_Auth();
+    $run_single_module_ajax_handler = new Data_Machine_Run_Single_Module_Ajax($db_modules, $db_projects, $job_executor, $input_files, $logger);
+    $remote_locations_ajax_handler = new Data_Machine_Module_Config_Remote_Locations_Ajax($db_remote_locations, $logger);
+
+    // --- Instantiate Main Plugin ---
+    if (!class_exists('Data_Machine')) require_once DATA_MACHINE_PATH . 'includes/class-data-machine.php';
+    $register_settings = new Data_Machine_Register_Settings(DATA_MACHINE_VERSION);
+    $plugin = new Data_Machine(
+            DATA_MACHINE_VERSION,
+        $register_settings,
+        $admin_page,
+        $openai_api,
+        $factcheck_api,
+        $finalize_api,
+        $process_data,
+            $db_modules,
+        $orchestrator,
+        $output_publish_local,
+        $output_publish_remote,
+        $output_data_export,
+        $input_files,
+        $oauth_reddit,
+			$db_remote_locations,
+			$logger
 		);
-	});
-
-	// Register Dashboard Project AJAX Handler
-	$locator->register('dashboard_ajax_handler', function($locator) {
-		// Ensure dependencies are loaded if not already
-		if (!class_exists('Data_Machine_Database_Jobs')) require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php';
-        // Make sure Job Executor is loaded (should be registered above)
-	    if (!class_exists('Data_Machine_Job_Executor')) {
-            require_once DATA_MACHINE_PATH . 'includes/engine/class-job-executor.php';
-        }
-
-		return new Data_Machine_Ajax_Projects(
-			$locator->get('database_projects'),
-			$locator->get('database_modules'),
-			$locator->get('database_jobs'),
-			$locator,
-            $locator->get('job_executor') // Inject global Job Executor
-		);
-	});
-
-	// Register Locations AJAX Handler
-	$locator->register('locations_ajax_handler', function($locator) {
-		// File already required at the top of this file
-		return new Data_Machine_Ajax_Locations(
-			$locator // Pass locator for service access
-		);
-	});
-
-	// Register Remote Locations Admin Form Handler
-	$locator->register('remote_locations_admin', function($locator) {
-		// File already required at the top of this file
-		return new Data_Machine_Remote_Locations(
-			$locator // Pass locator for service access
-		);
-	});
-
-	// Register AJAX Scheduler Handler
-	$locator->register('ajax_scheduler', function($locator) {
-		// File already required above
-		return new Data_Machine_Ajax_Scheduler($locator);
-	});
-
-    // Register Auth AJAX Handler
-    $locator->register('ajax_auth', function($locator) {
-        if (!class_exists('Data_Machine_Ajax_Auth')) require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-auth.php';
-        return new Data_Machine_Ajax_Auth($locator);
-    });
-
-	// Register Reddit OAuth Handler
-	$locator->register('oauth_reddit', function($locator) {
-		// Assumes the require_once is done above
-		return new Data_Machine_OAuth_Reddit($locator);
-	});
-
-	// Register Twitter OAuth Handler
-	$locator->register('oauth_twitter', function($locator) {
-		if (!class_exists('Data_Machine_OAuth_Twitter')) require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-twitter.php';
-		return new Data_Machine_OAuth_Twitter($locator);
-	});
-
-    // ADDED: Register Admin AJAX Handler
-    $locator->register('admin_ajax_handler', function($locator) {
-        // Class file is required above
-        return new Data_Machine_Admin_Ajax($locator);
-    });
-
-	// Settings class has been removed and its functionality distributed to utility classes:
-	// - Data_Machine_Register_Settings - handles WordPress settings registration
-	// - Data_Machine_Module_Handler - handles module selection and creation
-	// - Data_Machine_API_AJAX_Handler - handles API-related AJAX operations
-
-	// Explicitly register the Register Settings service
-	$locator->register('register_settings', function($locator) {
-		if (!class_exists('Data_Machine_Register_Settings')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-register-settings.php';
-		return new Data_Machine_Register_Settings(DATA_MACHINE_VERSION, $locator);
-	});
-
-	// Register Remote Location Service (for settings UI)
-	$locator->register('remote_location_service', function($locator) {
-		// Ensure class file is included
-		if (!class_exists('Data_Machine_Remote_Location_Service')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-remote-location-service.php';
-		// Ensure dependency is registered and available
-		if (!$locator->has('database_remote_locations')) {
-			 // Handle error: log or throw exception
-			 error_log('Data Machine Error: database_remote_locations service not available for remote_location_service.');
-			 return null; // Or throw new \Exception(...);
-		}
-		return new Data_Machine_Remote_Location_Service(
-			$locator->get('database_remote_locations')
-		);
-	});
-
-	// Register Settings Fields Service
-	$locator->register('settings_fields', function($locator) {
-		if (!class_exists('Data_Machine_Settings_Fields')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-settings-fields.php';
-		if (!class_exists('Data_Machine_Service_Locator_Handler_Factory')) require_once DATA_MACHINE_PATH . 'includes/settings/class-data-machine-service-locator-handler-factory.php';
-
-		// Ensure remote location service is available
-		if (!$locator->has('remote_location_service')) {
-			 error_log('Data Machine Error: remote_location_service not available for settings_fields.');
-			 return null; // Or throw exception
-		}
-
-		$handler_factory = new Data_Machine_Service_Locator_Handler_Factory($locator);
-		$remote_location_service = $locator->get('remote_location_service');
-
-		return new Data_Machine_Settings_Fields(
-			$handler_factory,
-			$remote_location_service // Inject the remote location service
-		);
-	});
-
-	// Register Handler Registry Service
-	$locator->register('handler_registry', function($locator) {
-		if (!class_exists('Data_Machine_Handler_Registry')) require_once DATA_MACHINE_PATH . 'includes/class-handler-registry.php';
-		return new Data_Machine_Handler_Registry();
-	});
-
-	$locator->register('admin_page', function($locator) {
-		if (!class_exists('Data_Machine_Admin_Page')) require_once DATA_MACHINE_PATH . 'admin/class-data-machine-admin-page.php';
-		return new Data_Machine_Admin_Page(
-			DATA_MACHINE_VERSION,
-			$locator->get('database_modules'), // Inject the DB Modules instance
-			$locator->get('database_projects'), // Inject the DB Projects instance
-			$locator // Pass the locator itself
-		);
-	});
-
-	$locator->register('openai_api', function($locator) {
-		if (!class_exists('Data_Machine_API_OpenAI')) require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-openai.php';
-		return new Data_Machine_API_OpenAI();
-	});
-
-	$locator->register('factcheck_api', function($locator) {
-		if (!class_exists('Data_Machine_API_FactCheck')) require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-factcheck.php';
-		return new Data_Machine_API_FactCheck($locator->get('openai_api'));
-	});
-
-	$locator->register('finalize_api', function($locator) {
-		if (!class_exists('Data_Machine_API_Finalize')) require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-finalize.php';
-		return new Data_Machine_API_Finalize($locator->get('openai_api'));
-	});
-
-	$locator->register('output_publish_local', function($locator) {
-		if (!class_exists('Data_Machine_Output_Publish_Local')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_local.php';
-		// Inject database_processed_items service
-		return new Data_Machine_Output_Publish_Local(
-			$locator->get('database_processed_items')
-		);
-	});
-	$locator->register('output_publish_remote', function($locator) {
-		if (!class_exists('Data_Machine_Output_Publish_Remote')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_remote.php';
-		// Inject DB locations, logger, AND database_processed_items service
-		return new Data_Machine_Output_Publish_Remote(
-			$locator->get('database_remote_locations'),
-			$locator->get('logger'),
-			$locator->get('database_processed_items') 
-		);
-	});
-	$locator->register('output_data_export', function($locator) {
-		if (!class_exists('Data_Machine_Output_Data_Export')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-data_export.php';
-		return new Data_Machine_Output_Data_Export();
-	});
-
-    // Register Twitter Output Handler
-    $locator->register('output_twitter', function($locator) {
-        if (!class_exists('Data_Machine_Output_Twitter')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-twitter.php';
-        // Pass the locator to the constructor
-        return new Data_Machine_Output_Twitter($locator);
-    });
-
-	// Register Project Prompt Service (depends on database_projects)
-	$locator->register('project_prompt_service', function($locator) {
-		if (!class_exists('Data_Machine_Project_Prompt')) require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-project-prompt.php';
-		return new Data_Machine_Project_Prompt(
-			$locator->get('database_projects') // Inject DB Projects
-		);
-	});
-
-	// Register services that depend on OTHER services (but not the main plugin yet)
-
-	$locator->register('process_data', function($locator) {
-		if (!class_exists('Data_Machine_process_data')) require_once DATA_MACHINE_PATH . 'includes/class-process-data.php';
-		return new Data_Machine_process_data(
-			$locator->get('openai_api') // Inject OpenAI API
-			// Logger dependency removed
-		);
-	});
-
-	$locator->register('orchestrator', function($locator) {
-		if (!class_exists('Data_Machine_Processing_Orchestrator')) require_once DATA_MACHINE_PATH . 'includes/engine/class-processing-orchestrator.php';
-		return new Data_Machine_Processing_Orchestrator(
-			$locator->get('process_data'), // Inject Process_Data
-			$locator->get('factcheck_api'), // Inject FactCheck_API
-			$locator->get('finalize_api'),  // Inject Finalize_API
-			$locator, // Inject Locator itself (to get output handlers later)
-			$locator->get('project_prompt_service'), // Inject Project Prompt Service
-			$locator->get('logger') // Inject Logger
-		);
-	});
-
-	$locator->register('input_files', function($locator) {
-		if (!class_exists('Data_Machine_Input_Files')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-files.php';
-		return new Data_Machine_Input_Files(
-			$locator->get('orchestrator'), 
-			$locator->get('database_modules'),
-			$locator // Pass the locator itself
-		);
-	});
-	$locator->register('input_airdrop_rest_api', function($locator) {
-		if (!class_exists('Data_Machine_Input_Airdrop_Rest_Api')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop_rest_api.php';
-		return new Data_Machine_Input_Airdrop_Rest_Api($locator);
-	});
-	$locator->register('input_public_rest_api', function($locator) {
-		if (!class_exists('Data_Machine_Input_Public_Rest_Api')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public_rest_api.php';
-		return new Data_Machine_Input_Public_Rest_Api($locator);
-	});
-	$locator->register('input_reddit', function($locator) {
-		if (!class_exists('Data_Machine_Input_Reddit')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-reddit.php';
-		return new Data_Machine_Input_Reddit($locator);
-	});
-	$locator->register('input_rss', function($locator) {
-		if (!class_exists('Data_Machine_Input_Rss')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-rss.php';
-		return new Data_Machine_Input_Rss($locator);
-	});
-	$locator->register('input_instagram', function($locator) {
-		if (!class_exists('Data_Machine_Input_Instagram')) require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-instagram.php';
-		return new Data_Machine_Input_Instagram(); // Assuming no locator needed
-	});
-
-	// --- Force instantiation of admin pages/handlers to register hooks ---
-	// Get services that need their hooks registered in their constructors.
-	$locator->get('import_export_handler');
-	$locator->get('settings_fields');
-	$locator->get('admin_page'); // Main settings/dashboard page
-	$locator->get('module_ajax_handler');
-	$locator->get('dashboard_ajax_handler');
-	$locator->get('locations_ajax_handler'); // Force instantiate the locations AJAX handler
-	$locator->get('remote_locations_admin'); // Force instantiate the remote locations admin handler
-	$locator->get('ajax_scheduler'); // Force instantiate the AJAX scheduler handler
-	$locator->get('ajax_auth'); // Force instantiate the Auth AJAX handler
-	// $locator->get('remote_locations_admin_page'); // Removed - Handled by admin_page service now
-
-	// Force instantiate OAuth handlers to register their hooks
-	if ($locator->has('oauth_reddit')) {
-		$locator->get('oauth_reddit')->register_hooks();
-	}
-	if ($locator->has('oauth_twitter')) {
-		$locator->get('oauth_twitter')->register_hooks();
-	}
-
-	// --- Instantiate Main Plugin ---
-	// Now that all dependencies are registered, instantiate the main plugin
-	if (!class_exists('Data_Machine')) require_once DATA_MACHINE_PATH . 'includes/class-data-machine.php';
-	$plugin = new Data_Machine($locator); // Pass the locator
 
 	// --- Run the Plugin ---
 	$plugin->run();
 
-	// Initialize Admin AJAX handler hooks
-	if ( is_admin() ) {
-		// $locator->get('admin_ajax_handler')->init_hooks(); // Removed - Hooks are registered in constructor
-		// $locator->get('module_ajax_handler')->init_hooks(); // Removed - Hooks are registered in constructor
-		// $locator->get('dashboard_ajax_handler')->init_hooks(); // Removed - Hooks are registered in constructor
-	}
+    // Register hooks for AJAX handlers
+    add_action( 'wp_ajax_process_data', array( $run_single_module_ajax_handler, 'process_data_source_ajax_handler' ) );
+    add_action( 'wp_ajax_dm_get_module_data', array( $module_ajax_handler, 'get_module_data_ajax_handler' ) );
+
+    add_action( 'wp_ajax_dm_run_now', array( $dashboard_ajax_handler, 'handle_run_now' ) );
+    add_action( 'wp_ajax_dm_edit_schedule', array( $dashboard_ajax_handler, 'handle_edit_schedule' ) );
+    add_action( 'wp_ajax_dm_get_project_schedule_data', array( $dashboard_ajax_handler, 'handle_get_project_schedule_data' ) );
+
+    add_action( 'dm_run_job_event', array( $job_executor, 'run_scheduled_job' ), 10, 1 );
+
+    $scheduler->init_hooks();
+
+    if (is_admin()) {
+        require_once DATA_MACHINE_PATH . 'includes/database/class-database-dashboard.php';
+        require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-dashboard-ajax.php';
+        if (class_exists('Data_Machine_Dashboard_Ajax')) {
+            new Data_Machine_Dashboard_Ajax();
+        }
+    }
 }
 run_data_machine();
 
-// Ensure the job status AJAX handler is registered
-if (class_exists('Data_Machine_Ajax_Job_Status')) {
-    new Data_Machine_Ajax_Job_Status();
-}
 
 /**
  * Allow JSON file uploads for import functionality.

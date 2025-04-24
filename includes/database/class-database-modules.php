@@ -19,18 +19,24 @@ class Data_Machine_Database_Modules {
      */
     private $table_name;
 
-    /** @var Data_Machine_Service_Locator */
-    private $locator;
+    /** @var Data_Machine_Database_Projects */
+    private $db_projects;
+
+    /** @var ?Data_Machine_Logger */
+    private $logger;
 
     /**
      * Initialize the class and set its properties.
      *
-     * @since    0.2.0
+     * @since    0.2.0 (Refactored for DI 0.13.0)
+     * @param Data_Machine_Database_Projects $db_projects The database projects service.
+     * @param Data_Machine_Logger|null $logger The logger service (optional).
      */
-    public function __construct(Data_Machine_Service_Locator $locator) {
+    public function __construct(Data_Machine_Database_Projects $db_projects, ?Data_Machine_Logger $logger = null) {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_modules';
-        $this->locator = $locator;
+        $this->db_projects = $db_projects;
+        $this->logger = $logger;
     }
 
     /**
@@ -68,8 +74,6 @@ class Data_Machine_Database_Modules {
 
     }
 
-
-
     /**
      * Create a new module associated with a project.
      *
@@ -83,24 +87,20 @@ class Data_Machine_Database_Modules {
 
         // Ensure project_id is valid
         if ( empty( $project_id ) || ! is_numeric( $project_id ) ) {
-        	// Use logger if available
-        	if (class_exists('Data_Machine_Service_Locator') && isset($this->locator)) {
-        	    $logger = $this->locator->get('logger');
-        	    if ($logger) {
-        	        $logger->error('Failed to create module: Invalid project_id', [
-        	            'project_id' => $project_id,
-        	            'module_data' => $module_data
-        	        ]);
-        	    }
-        	}
-        	// Fallback to error_log
-        	error_log( 'Data Machine: Attempted to create module with invalid project_id: ' . $project_id );
-        	return false;
+            if ($this->logger) {
+                $this->logger->error('Failed to create module: Invalid project_id', [
+                    'project_id' => $project_id,
+                    'module_data' => $module_data
+                ]);
+            } else {
+                error_log( 'Data Machine: Attempted to create module with invalid project_id: ' . $project_id );
+            }
+            return false;
         }
       
         $data = array(
-        	'project_id' => absint( $project_id ), // Use project_id
-        	// 'user_id' removed
+            'project_id' => absint( $project_id ), // Use project_id
+            // 'user_id' removed
             'module_name' => isset( $module_data['module_name'] ) ? sanitize_text_field( $module_data['module_name'] ) : 'New Module',
             'process_data_prompt' => isset( $module_data['process_data_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['process_data_prompt'] ) ) : '',
             'fact_check_prompt' => isset( $module_data['fact_check_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['fact_check_prompt'] ) ) : '',
@@ -114,8 +114,8 @@ class Data_Machine_Database_Modules {
         );
 
         $format = array(
-        	'%d', // project_id
-        	// '%d', // user_id format removed
+            '%d', // project_id
+            // '%d', // user_id format removed
             '%s', // module_name
             '%s', // process_data_prompt
             '%s', // fact_check_prompt
@@ -133,9 +133,11 @@ class Data_Machine_Database_Modules {
         if ( $result ) {
             return $wpdb->insert_id;
         } else {
-            // --- Add Logging Here ---
-            error_log( 'Data Machine: Failed to insert new module. DB Error: ' . $wpdb->last_error );
-            // --- End Logging ---
+            if ($this->logger) {
+                $this->logger->error('Failed to insert new module.', ['db_error' => $wpdb->last_error, 'data' => $data]);
+            } else {
+                error_log( 'Data Machine: Failed to insert new module. DB Error: ' . $wpdb->last_error );
+            }
             return false;
         }
     }
@@ -143,33 +145,27 @@ class Data_Machine_Database_Modules {
     /**
      * Retrieve all modules for a specific project, verifying user ownership.
      *
-     * @since    0.2.0 (Refactored 0.12.0)
+     * @since    0.2.0 (Refactored 0.12.0, DI 0.13.0)
      * @param    int      $project_id   The ID of the project.
      * @param    int      $user_id      The ID of the user requesting the modules.
      * @return   array|null             An array of module objects or null if none found or user doesn't own project.
      */
     public function get_modules_for_project( $project_id, $user_id ) {
-    	global $wpdb;
+        global $wpdb;
    
-    	// First, verify the user owns the project using the locator
-        // Note: This method now relies on the locator being injected in the constructor.
-        $db_projects = $this->locator->get('database_projects');
-        if (!$db_projects) {
-            error_log("Data Machine DB Modules: Could not get database_projects service in get_modules_for_project.");
-            return null; // Cannot proceed without DB service
+        // First, verify the user owns the project using the injected dependency
+        $project = $this->db_projects->get_project( $project_id, $user_id );
+   
+        if ( ! $project ) {
+            return null; // Project not found or user doesn't own it
         }
-    	$project = $db_projects->get_project( $project_id, $user_id );
    
-    	if ( ! $project ) {
-    		return null; // Project not found or user doesn't own it
-    	}
-   
-    	// User owns the project, now get the modules
-    	$results = $wpdb->get_results( $wpdb->prepare(
-    		"SELECT * FROM $this->table_name WHERE project_id = %d ORDER BY module_name ASC",
-    		absint( $project_id )
-    	) );
-    	return $results;
+        // User owns the project, now get the modules
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $this->table_name WHERE project_id = %d ORDER BY module_name ASC",
+            absint( $project_id )
+        ) );
+        return $results;
     }
 
     /**
@@ -180,9 +176,9 @@ class Data_Machine_Database_Modules {
      * @return   object|null            The module object or null if not found.
      */
     public function get_module( $module_id ) { // Removed $user_id parameter
-     global $wpdb;
-     // Query only by module_id
-     $query = $wpdb->prepare( "SELECT * FROM $this->table_name WHERE module_id = %d", absint( $module_id ) );
+        global $wpdb;
+        // Query only by module_id
+        $query = $wpdb->prepare( "SELECT * FROM $this->table_name WHERE module_id = %d", absint( $module_id ) );
 
         $module = $wpdb->get_row( $query );
         return $module;
@@ -198,75 +194,84 @@ class Data_Machine_Database_Modules {
      * @return   int|false              The number of rows updated or false on failure or ownership mismatch.
      */
     public function update_module( $module_id, $module_data, $user_id ) {
-    	global $wpdb;
+        global $wpdb;
    
-    	// Get the module first to find its project_id
-    	$existing_module = $this->get_module( $module_id );
-    	if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
-    		return false; // Module not found or missing project ID
-    	}
+        // Get the module first to find its project_id
+        $existing_module = $this->get_module( $module_id );
+        if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
+            if ($this->logger) {
+                $this->logger->warning('Attempted to update non-existent module or module missing project ID.', ['module_id' => $module_id]);
+            } else {
+                error_log('Data Machine: Attempted to update non-existent module or module missing project ID. Module ID: ' . $module_id);
+            }
+            return false; // Module not found or missing project ID
+        }
    
-    	// Verify the user owns the project associated with the module
-    	// Note: Assumes Database_Projects class is available/loaded.
-    	if ( ! class_exists( 'Data_Machine_Database_Projects' ) ) {
-    		require_once __DIR__ . '/class-database-projects.php';
-    	}
-    	$db_projects = new Data_Machine_Database_Projects();
-    	$project     = $db_projects->get_project( $existing_module->project_id, $user_id );
+        // Verify the user owns the project associated with the module using injected dependency
+        $project = $this->db_projects->get_project( $existing_module->project_id, $user_id );
    
-    	if ( ! $project ) {
-    		return false; // User doesn't own the project this module belongs to
-    	}
+        if ( ! $project ) {
+            if ($this->logger) {
+                $this->logger->warning('User attempted to update module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
+            } else {
+                error_log('Data Machine: User attempted to update module they do not own. Module ID: ' . $module_id . ', User ID: ' . $user_id);
+            }
+            return false; // User doesn't own the project this module belongs to
+        }
    
-    	// Prepare data for update
-    	$data   = array();
-    	$format = array();
+        // Prepare data for update
+        $data   = array();
+        $format = array();
    
-    	$fields_to_update = [
-    		'module_name'              => '%s',
-    		'process_data_prompt'      => '%s',
-    		'fact_check_prompt'        => '%s',
-    		'finalize_response_prompt' => '%s',
-    		'data_source_type'         => '%s',
-    		'data_source_config'       => '%s', // Expects JSON encoded string
-    		'output_type'              => '%s',
-    		'output_config'            => '%s', // Expects JSON encoded string
-    	];
+        $fields_to_update = [
+            'module_name'              => '%s',
+            'process_data_prompt'      => '%s',
+            'fact_check_prompt'        => '%s',
+            'finalize_response_prompt' => '%s',
+            'data_source_type'         => '%s',
+            'data_source_config'       => '%s', // Expects JSON encoded string
+            'output_type'              => '%s',
+            'output_config'            => '%s', // Expects JSON encoded string
+        ];
    
-    	foreach ( $fields_to_update as $field => $fmt ) {
-    		if ( isset( $module_data[ $field ] ) ) {
-    			$value = $module_data[ $field ];
-    			// Sanitize based on field type
-    			if ( in_array( $field, [ 'data_source_config', 'output_config' ] ) ) {
-    				// Assume it's already a correctly structured array/object for encoding
-    				$data[ $field ] = wp_json_encode( $value );
-    			} elseif ( in_array( $field, [ 'process_data_prompt', 'fact_check_prompt', 'finalize_response_prompt' ] ) ) {
-    				$data[ $field ] = wp_kses_post( wp_unslash( $value ) ); // Unslash before kses
-    			} else {
-    				$data[ $field ] = sanitize_text_field( $value );
-    			}
-    			$format[] = $fmt;
-    		}
-    	}
+        foreach ( $fields_to_update as $field => $fmt ) {
+            if ( isset( $module_data[ $field ] ) ) {
+                $value = $module_data[ $field ];
+                // Sanitize based on field type
+                if ( in_array( $field, [ 'data_source_config', 'output_config' ] ) ) {
+                    // Assume it's already a correctly structured array/object for encoding
+                    $data[ $field ] = wp_json_encode( $value );
+                } elseif ( in_array( $field, [ 'process_data_prompt', 'fact_check_prompt', 'finalize_response_prompt' ] ) ) {
+                    $data[ $field ] = wp_kses_post( wp_unslash( $value ) ); // Unslash before kses
+                } else {
+                    $data[ $field ] = sanitize_text_field( $value );
+                }
+                $format[] = $fmt;
+            }
+        }
    
-    	if ( empty( $data ) ) {
-    		return 0; // Nothing to update, return 0 rows affected
-    	}
+        if ( empty( $data ) ) {
+            return 0; // Nothing to update, return 0 rows affected
+        }
    
-    	// updated_at is handled automatically by the database
+        // updated_at is handled automatically by the database
    
-    	// Update based only on module_id, ownership already verified
-    	$where        = array( 'module_id' => $module_id );
-    	$where_format = array( '%d' );
+        // Update based only on module_id, ownership already verified
+        $where        = array( 'module_id' => $module_id );
+        $where_format = array( '%d' );
    
-    	$result = $wpdb->update( $this->table_name, $data, $where, $format, $where_format );
+        $result = $wpdb->update( $this->table_name, $data, $where, $format, $where_format );
    
-    	// Log errors on failure
-    	if ( $result === false ) {
-    		error_log( 'Data Machine: Failed to update module (ID: ' . $module_id . '). DB Error: ' . $wpdb->last_error );
-    	}
+        // Log errors on failure
+        if ( $result === false ) {
+            if ($this->logger) {
+                $this->logger->error('Failed to update module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
+            } else {
+                error_log( 'Data Machine: Failed to update module (ID: ' . $module_id . '). DB Error: ' . $wpdb->last_error );
+            }
+        }
    
-    	return $result; // Returns number of rows affected or false on error
+        return $result; // Returns number of rows affected or false on error
     }
 
     /**
@@ -278,39 +283,48 @@ class Data_Machine_Database_Modules {
      * @return   int|false              The number of rows deleted or false on failure or ownership mismatch.
      */
     public function delete_module( $module_id, $user_id ) {
-    	global $wpdb;
+        global $wpdb;
    
-    	// Get the module first to find its project_id
-    	$existing_module = $this->get_module( $module_id );
-    	if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
-    		return false; // Module not found or missing project ID
-    	}
+        // Get the module first to find its project_id
+        $existing_module = $this->get_module( $module_id );
+        if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
+            if ($this->logger) {
+                $this->logger->warning('Attempted to delete non-existent module or module missing project ID.', ['module_id' => $module_id]);
+            } else {
+                error_log('Data Machine: Attempted to delete non-existent module or module missing project ID. Module ID: ' . $module_id);
+            }
+            return false; // Module not found
+        }
    
-    	// Verify the user owns the project associated with the module
-    	if ( ! class_exists( 'Data_Machine_Database_Projects' ) ) {
-    		require_once __DIR__ . '/class-database-projects.php';
-    	}
-    	$db_projects = new Data_Machine_Database_Projects();
-    	$project     = $db_projects->get_project( $existing_module->project_id, $user_id );
+        // Verify the user owns the project associated with the module using injected dependency
+        $project = $this->db_projects->get_project( $existing_module->project_id, $user_id );
    
-    	if ( ! $project ) {
-    		return false; // User doesn't own the project this module belongs to
-    	}
+        if ( ! $project ) {
+            if ($this->logger) {
+                $this->logger->warning('User attempted to delete module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
+            } else {
+                error_log('Data Machine: User attempted to delete module they do not own. Module ID: ' . $module_id . ', User ID: ' . $user_id);
+            }
+            return false; // User doesn't own the project
+        }
    
-    	// Prevent deleting the last module for a user? Maybe add later.
+        // User owns the project, proceed with deletion
+        // Delete based only on module_id, ownership already verified
+        $where        = array( 'module_id' => $module_id );
+        $where_format = array( '%d' );
    
-    	// Delete based only on module_id, ownership already verified
-    	$where        = array( 'module_id' => $module_id );
-    	$where_format = array( '%d' );
+        $result = $wpdb->delete( $this->table_name, $where, $where_format );
    
-    	$result = $wpdb->delete( $this->table_name, $where, $where_format );
+        // Log errors on failure
+        if ( $result === false ) {
+            if ($this->logger) {
+                $this->logger->error('Failed to delete module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
+            } else {
+                error_log( 'Data Machine: Failed to delete module (ID: ' . $module_id . '). DB Error: ' . $wpdb->last_error );
+            }
+        }
    
-    	// Log errors on failure
-    	if ( $result === false ) {
-    		error_log( 'Data Machine: Failed to delete module (ID: ' . $module_id . '). DB Error: ' . $wpdb->last_error );
-    	}
-   
-    	return $result; // Returns number of rows affected or false on error
+        return $result; // Returns number of rows affected or false on error
     }
 
     /**
@@ -355,25 +369,35 @@ class Data_Machine_Database_Modules {
     public function update_module_schedule($module_id, $interval, $status, $user_id) {
         global $wpdb;
 
+        // Get the module first to find its project_id
+        $existing_module = $this->get_module( $module_id );
+        if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
+            if ($this->logger) {
+                $this->logger->warning('Attempted to update schedule for non-existent module or module missing project ID.', ['module_id' => $module_id]);
+            } else {
+                error_log('Data Machine: Attempted to update schedule for non-existent module or module missing project ID. Module ID: ' . $module_id);
+            }
+            return false;
+        }
+
+        // Verify the user owns the project associated with the module using injected dependency
+        $project = $this->db_projects->get_project( $existing_module->project_id, $user_id );
+
+        if ( ! $project ) {
+            if ($this->logger) {
+                $this->logger->warning('User attempted to update schedule for module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
+            } else {
+                error_log('Data Machine: User attempted to update schedule for module they do not own. Module ID: ' . $module_id . ', User ID: ' . $user_id);
+            }
+            return false;
+        }
+
         // Validate interval and status against allowed values if needed
         $allowed_intervals = Data_Machine_Constants::get_allowed_module_intervals_for_validation();
         $allowed_statuses = ['active', 'paused'];
         if ( !in_array($interval, $allowed_intervals) || !in_array($status, $allowed_statuses) ) {
             error_log('Data Machine DB Modules: Invalid interval or status provided for update_module_schedule.');
             return false;
-        }
-
-        // Need to verify ownership before update. Get the project_id first.
-        $module = $this->get_module( $module_id );
-        if (!$module || !isset($module->project_id)) {
-             error_log("Data Machine DB Modules: Cannot update schedule, module {$module_id} not found.");
-             return false; // Module not found
-        }
-        // Check if user owns the project this module belongs to
-        $db_projects = $this->locator->get('database_projects'); // Assumes locator is available (needs injection)
-        if (!$db_projects || !$db_projects->get_project($module->project_id, $user_id)) {
-             error_log("Data Machine DB Modules: Permission denied to update schedule for module {$module_id}.");
-             return false; // Permission denied
         }
 
         // Perform the update
@@ -389,7 +413,11 @@ class Data_Machine_Database_Modules {
         );
 
         if ( false === $updated ) {
-            error_log( 'Data Machine DB Modules: Failed to update schedule for module ID: ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+            if ($this->logger) {
+                $this->logger->error('Failed to update schedule for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
+            } else {
+                error_log( 'Data Machine DB Modules: Failed to update schedule for module ID: ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+            }
             return false;
         }
 
@@ -408,58 +436,61 @@ class Data_Machine_Database_Modules {
     public function update_module_schedules( $project_id, $user_id, $module_schedules ) {
         global $wpdb;
 
-        // Check project ownership first
-        $db_projects = $this->locator->get('database_projects');
-        if (!$db_projects || !$db_projects->get_project($project_id, $user_id)) {
-            error_log("Data Machine DB Modules: Permission denied to update schedules for project {$project_id}.");
+        // Verify the user owns the project using the injected dependency
+        $project = $this->db_projects->get_project( $project_id, $user_id );
+        if ( ! $project ) {
+            if ($this->logger) {
+                $this->logger->warning('User attempted to update schedules for project they do not own.', ['project_id' => $project_id, 'user_id' => $user_id]);
+            } else {
+                 error_log('Data Machine: User attempted to update schedules for project they do not own. Project ID: ' . $project_id . ', User ID: ' . $user_id);
+            }
             return false;
         }
 
-        // Allowed values for validation inside the loop
-        $allowed_intervals = Data_Machine_Constants::get_allowed_module_intervals_for_validation();
-        $allowed_statuses = ['active', 'paused'];
-
-        $results = [];
-        $errors = [];
-
-        // 3. Iterate and update each module
-        $success = true; // Assume success unless ownership fails
-        foreach ($module_schedules as $module_id => $schedule_data) {
-            $module_id = absint($module_id);
-            if (empty($module_id)) continue; // Skip invalid module IDs
-
-            $interval = isset($schedule_data['interval']) ? sanitize_text_field($schedule_data['interval']) : null;
-            $status = isset($schedule_data['status']) ? sanitize_text_field($schedule_data['status']) : null;
-
-            // Validate interval and status
-            if (!in_array($interval, $allowed_intervals) || !in_array($status, $allowed_statuses)) {
-                error_log("Data Machine update_module_schedules: Invalid interval ('{$interval}') or status ('{$status}') for module ID: {$module_id}");
-                continue; // Skip this module update if data is invalid
-            }
-
-            // Prepare update data
-            $data = [
-                'schedule_interval' => $interval,
-                'schedule_status' => $status,
-            ];
-            $where = [
-                'module_id' => $module_id,
-                'project_id' => $project_id // Ensure we only update module if it belongs to the specified project
-            ];
-            $format = ['%s', '%s'];
-            $where_format = ['%d', '%d'];
-
-            // Execute the update
-            $updated = $wpdb->update($this->table_name, $data, $where, $format, $where_format);
-
-            if ($updated === false) {
-                error_log("Data Machine update_module_schedules: Failed to update module ID {$module_id}. DB Error: " . $wpdb->last_error);
-                // Optionally set $success = false here if any single update failure should cause the whole operation to report failure
-            }
-             // Optional: Log successful update count?
+        if ( ! is_array( $module_schedules ) || empty( $module_schedules ) ) {
+            return false; // Nothing to update
         }
 
-        return $success; // Return true if ownership check passed, false otherwise
+        $rows_affected = 0;
+        foreach ( $module_schedules as $module_id => $schedule_data ) {
+            if ( ! is_numeric( $module_id ) || ! isset( $schedule_data['interval'] ) || ! isset( $schedule_data['status'] ) ) {
+                continue; // Skip invalid data
+            }
+
+            // Get the module to ensure it belongs to the correct project (redundant check, but safe)
+             $existing_module = $this->get_module( $module_id );
+             if ( ! $existing_module || $existing_module->project_id != $project_id ) {
+                 if ($this->logger) {
+                    $this->logger->warning('Attempted to update schedule for module not belonging to the specified project.', ['module_id' => $module_id, 'project_id' => $project_id, 'user_id' => $user_id]);
+                 } else {
+                    error_log('Data Machine: Attempted to update schedule for module not belonging to the specified project. Module ID: ' . $module_id . ', Project ID: ' . $project_id);
+                 }
+                 continue;
+             }
+
+            $data = array(
+                'schedule_interval' => sanitize_text_field( $schedule_data['interval'] ),
+                'schedule_status'   => sanitize_text_field( $schedule_data['status'] ),
+            );
+            $where = array( 'module_id' => absint( $module_id ) );
+            $format = array( '%s', '%s' );
+            $where_format = array( '%d' );
+
+            $updated = $wpdb->update( $this->table_name, $data, $where, $format, $where_format );
+
+            if ( $updated !== false ) {
+                $rows_affected += $updated;
+            } else {
+                 if ($this->logger) {
+                    $this->logger->error('Failed to update module schedule in batch.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
+                 } else {
+                    error_log( 'Data Machine: Failed to update module schedule for module_id ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+                 }
+                // Optionally decide if the entire operation should fail
+            }
+        }
+
+        return $rows_affected;
     }
 
     /**
@@ -491,11 +522,8 @@ class Data_Machine_Database_Modules {
 
         if ( false === $updated ) {
             // Use logger if available
-            if ($this->locator) {
-                $logger = $this->locator->get('logger');
-                if ($logger) {
-                    $logger->error('Failed to update last_run_at for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
-                }
+            if ($this->logger) {
+                $this->logger->error('Failed to update last_run_at for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             } else {
                  error_log( 'Data Machine DB Modules: Failed to update last_run_at for module ID: ' . $module_id . '. DB Error: ' . $wpdb->last_error );
             }

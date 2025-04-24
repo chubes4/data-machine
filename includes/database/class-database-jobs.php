@@ -22,11 +22,19 @@ class Data_Machine_Database_Jobs {
     private $table_name;
 
     /**
-     * Initialize the class.
+     * Optional reference to the projects database class.
+     * @var Data_Machine_Database_Projects|null
      */
-    public function __construct() {
+    private $db_projects;
+
+    /**
+     * Initialize the class.
+     * @param Data_Machine_Database_Projects|null $db_projects Optional projects DB for updating last_run_at.
+     */
+    public function __construct($db_projects = null) {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_jobs';
+        $this->db_projects = $db_projects;
     }
 
     /**
@@ -96,7 +104,6 @@ class Data_Machine_Database_Jobs {
             module_config longtext NULL, /* JSON config used for this specific job run */
             input_data longtext NULL, /* JSON input data used */
             result_data longtext NULL, /* JSON output/result/error */
-            /* Removed stepX_request/response columns - logging moved to files */
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,
@@ -157,6 +164,7 @@ class Data_Machine_Database_Jobs {
 
     /**
      * Update the status, result_data, and completed_at time for a job.
+     * Also updates the last_run_at field in the related project if possible.
      *
      * @param int    $job_id       The job ID.
      * @param string $status       The final status ('complete' or 'failed').
@@ -195,6 +203,29 @@ class Data_Machine_Database_Jobs {
         );
          if ( false === $updated ) {
             error_log( 'Data Machine DB Jobs: Failed to complete job ' . $job_id . '. DB Error: ' . $wpdb->last_error );
+        } else {
+            // --- Update last_run_at in the related project ---
+            // 1. Get module_id for this job
+            $job = $this->get_job($job_id);
+            if ($job && !empty($job->module_id)) {
+                // 2. Get project_id from modules table
+                $modules_table = $wpdb->prefix . 'dm_modules';
+                $project_id = $wpdb->get_var($wpdb->prepare("SELECT project_id FROM $modules_table WHERE module_id = %d", $job->module_id));
+                if ($project_id) {
+                    // 3. Update last_run_at in projects table
+                    $projects_table = $wpdb->prefix . 'dm_projects';
+                    $project_updated = $wpdb->update(
+                        $projects_table,
+                        ['last_run_at' => current_time('mysql', 1)],
+                        ['project_id' => $project_id],
+                        ['%s'],
+                        ['%d']
+                    );
+                    if (false === $project_updated) {
+                        error_log('Data Machine DB Jobs: Failed to update last_run_at for project_id ' . $project_id . '. DB Error: ' . $wpdb->last_error);
+                    }
+                }
+            }
         }
         return $updated !== false;
     }

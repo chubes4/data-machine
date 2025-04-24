@@ -195,4 +195,26 @@ class Data_Machine_Handler_Registry {
         }
         return $slug; // Fallback to slug
     }
+
+    /**
+     * Gets the handler info array for a specific input handler slug.
+     *
+     * @param string $slug The handler slug.
+     * @return array|null The handler info array or null if not found.
+     */
+    public function get_input_handler($slug) {
+        $handlers = $this->get_input_handlers();
+        return $handlers[$slug] ?? null;
+    }
+
+    /**
+     * Gets the handler info array for a specific output handler slug.
+     *
+     * @param string $slug The handler slug.
+     * @return array|null The handler info array or null if not found.
+     */
+    public function get_output_handler($slug) {
+        $handlers = $this->get_output_handlers();
+        return $handlers[$slug] ?? null;
+    }
 } 

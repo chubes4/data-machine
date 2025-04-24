@@ -13,20 +13,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Data_Machine_Ajax_Scheduler {
 
-    private $locator;
+    /** @var Data_Machine_Database_Projects */
     private $db_projects;
+
+    /** @var Data_Machine_Database_Modules */
     private $db_modules;
+
+    /** @var Data_Machine_Scheduler */
+    private $scheduler;
 
     /**
      * Constructor.
      *
-     * @param Data_Machine_Service_Locator $locator Service Locator instance.
+     * @param Data_Machine_Database_Projects $db_projects Projects DB service.
+     * @param Data_Machine_Database_Modules $db_modules Modules DB service.
+     * @param Data_Machine_Scheduler $scheduler Scheduler service.
      */
-    public function __construct(Data_Machine_Service_Locator $locator) {
-        $this->locator = $locator;
-        // Get dependencies needed by the moved methods
-        $this->db_projects = $this->locator->get('database_projects');
-        $this->db_modules = $this->locator->get('database_modules');
+    public function __construct(
+        Data_Machine_Database_Projects $db_projects,
+        Data_Machine_Database_Modules $db_modules,
+        Data_Machine_Scheduler $scheduler
+    ) {
+        $this->db_projects = $db_projects;
+        $this->db_modules = $db_modules;
+        $this->scheduler = $scheduler;
 
         // Register AJAX hooks for scheduling actions
         add_action('wp_ajax_dm_edit_schedule', [$this, 'handle_edit_schedule']);
@@ -148,9 +158,8 @@ class Data_Machine_Ajax_Scheduler {
                 throw new Exception('Failed to update schedule settings in the database.');
             }
 
-            // Get scheduler and update WP Cron schedules
-            $scheduler = $this->locator->get('scheduler');
-            $schedule_updated = $scheduler->update_schedules_for_project(
+            // Get scheduler from property and update WP Cron schedules
+            $schedule_updated = $this->scheduler->update_schedules_for_project(
                 $project_id,
                 $interval, // Project interval from POST
                 $status,   // Project status from POST
@@ -159,7 +168,6 @@ class Data_Machine_Ajax_Scheduler {
             );
 
             if (!$schedule_updated) {
-                 // Throw exception or handle error if scheduler fails
                  throw new Exception('Failed to update WP Cron schedules via Scheduler.');
             }
 

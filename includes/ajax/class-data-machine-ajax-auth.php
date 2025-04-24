@@ -14,21 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Data_Machine_Ajax_Auth {
 
     /**
-     * Service Locator instance.
-     *
-     * @since    NEXT_VERSION
-     * @access   private
-     * @var      Data_Machine_Service_Locator    $locator    Service Locator instance.
-     */
-    private $locator;
-
-    /**
      * Constructor.
-     *
-     * @param Data_Machine_Service_Locator $locator Service Locator instance.
      */
-    public function __construct(Data_Machine_Service_Locator $locator) {
-        $this->locator = $locator;
+    public function __construct() {
+        // No locator needed
         $this->register_hooks();
     }
 

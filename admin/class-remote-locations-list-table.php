@@ -14,12 +14,6 @@ if (!class_exists('WP_List_Table')) {
 class Remote_Locations_List_Table extends WP_List_Table {
 
     /**
-     * Service Locator instance.
-     * @var Data_Machine_Service_Locator
-     */
-    private $locator;
-
-    /**
      * Database handler for remote locations.
      * @var Data_Machine_Database_Remote_Locations
      */
@@ -28,11 +22,10 @@ class Remote_Locations_List_Table extends WP_List_Table {
     /**
      * Constructor.
      *
-     * @param Data_Machine_Service_Locator $locator Service Locator instance.
+     * @param Data_Machine_Database_Remote_Locations $db_locations Injected DB handler.
      */
-    public function __construct(Data_Machine_Service_Locator $locator) {
-        $this->locator = $locator;
-        $this->db_locations = $this->locator->get('database_remote_locations'); // Assumes service is registered
+    public function __construct(Data_Machine_Database_Remote_Locations $db_locations) {
+        $this->db_locations = $db_locations;
 
         parent::__construct(array(
             'singular' => __('Remote Location', 'data-machine'), // Singular name of the listed records

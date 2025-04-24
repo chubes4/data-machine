@@ -114,12 +114,50 @@ class Data_Machine_Jobs_List_Table extends WP_List_Table {
     public function column_default($item, $column_name) {
         switch ($column_name) {
             case 'job_id':
+                return esc_html($item['job_id']);
             case 'status':
+                return esc_html($item['status']);
+            case 'result_data':
+                $result_data = $item['result_data'] ?? null;
+                if (!empty($result_data)) {
+                    $decoded_result = json_decode($result_data, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded_result)) {
+                        $output = '';
+                        if (isset($decoded_result['status'])) {
+                            $output .= 'Status: ' . esc_html($decoded_result['status']) . '<br/>';
+                        }
+                        if (isset($decoded_result['message'])) {
+                            $output .= 'Message: ' . esc_html($decoded_result['message']) . '<br/>';
+                        }
+                        if (!empty($decoded_result['item_errors']) && is_array($decoded_result['item_errors'])) {
+                            $output .= 'Item Errors:<br/><ul>';
+                            foreach ($decoded_result['item_errors'] as $item_id => $error_msg) {
+                                $output .= '<li><strong>' . esc_html($item_id) . ':</strong> ' . esc_html($error_msg) . '</li>';
+                            }
+                            $output .= '</ul>';
+                        }
+                        if (empty($output)) {
+                            return 'Raw Data: ' . esc_html($result_data);
+                        }
+                        return $output;
+
+                    } else {
+                        // JSON decode failed or not an array, show raw data
+                        return 'Invalid Data: ' . esc_html($result_data);
+                    }
+                }
+                return 'N/A'; // Return N/A if result_data is empty
             case 'created_at':
             case 'started_at':
             case 'completed_at':
-            case 'result_data':
-                return $item[$column_name] ?? 'N/A';
+                if (!empty($item[$column_name]) && $item[$column_name] !== '0000-00-00 00:00:00') {
+                    // Use wp_date to format in WP timezone, fallback to MySQL datetime parse
+                    $timestamp = strtotime($item[$column_name]);
+                    if ($timestamp) {
+                        return esc_html(wp_date('F j, Y g:i a', $timestamp));
+                    }
+                }
+                return 'N/A';
             case 'module_id': // Handle the combined display for module
                 $module_name = $item['module_name'] ?? 'Unknown Module';
                 $module_id = $item['module_id'] ?? 'N/A';

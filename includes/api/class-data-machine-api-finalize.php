@@ -118,14 +118,11 @@ class Data_Machine_API_Finalize {
         $response = wp_remote_post($api_endpoint, $args);
         // --- End Direct API Call ---
 
-        if ( is_wp_error( $response ) ) {
-            return $response; // Return WP_Error object.
-        }
-
         $response_code = wp_remote_retrieve_response_code( $response );
         $response_body = wp_remote_retrieve_body( $response );
-        // Debug: Log raw response body
+        // Log raw response body only if not 200
         if ( 200 !== $response_code ) {
+            error_log("DM Finalize Debug: Raw Response Body (Non-200): " . $response_body);
             return new WP_Error( 'openai_api_error', 'OpenAI API error: ' . $response_code . ' - ' . $response_body );
         }
 
@@ -142,8 +139,8 @@ class Data_Machine_API_Finalize {
         $final_output = preg_replace('/```$/i', '', $final_output);
         $final_output = trim($final_output);
 
-        // Debug: Log final result before returning
-        error_log("DM Finalize Debug: Final final_output: " . print_r($final_output, true));
+        // Log final result before returning
+        error_log("DM Finalize Debug: Final final_output: " . $final_output);
 
         return array(
             'status'            => 'success',

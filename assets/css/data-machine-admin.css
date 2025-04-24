@@ -104,3 +104,60 @@
 .dm-settings-hidden {
     display: none;
 }
+
+/* Dashboard Styles */
+.dm-dashboard-wrapper {
+    margin: 32px 0;
+    padding: 0 24px;
+}
+
+.dm-dashboard-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.dm-dashboard-project-select {
+    min-width: 220px;
+    padding: 6px 12px;
+    font-size: 16px;
+}
+
+.dm-dashboard-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 24px;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+    .dm-dashboard-cards-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+}
+
+.dm-dashboard-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    padding: 24px 20px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+}
+
+.dm-dashboard-card h2 {
+    font-size: 1.1em;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.dm-card-content {
+    flex: 1;
+    font-size: 1em;
+    color: #222;
+}

@@ -158,6 +158,17 @@ class Data_Machine_Logger {
     }
 
     /**
+     * Logs a critical message.
+     *
+     * @since NEXT_VERSION
+     * @param string|\Stringable $message The critical message.
+     * @param array $context Optional context data.
+     */
+    public function critical( string|\Stringable $message, array $context = [] ): void {
+        $this->log( Level::Critical, $message, $context );
+    }
+
+    /**
      * Adds an admin notice to be displayed on the next admin page load.
      *
      * @since NEXT_VERSION
@@ -237,14 +248,57 @@ class Data_Machine_Logger {
 
     /**
      * Retrieves all stored admin notices and clears the transient.
-     *
+     * 
+     * Important: Call this method *before* adding new notices for the current request 
+     * if you intend to display notices from the *previous* request.
+     * 
      * @since NEXT_VERSION
-     *
-     * @return array An array of notice arrays.
+     * @return array The array of notice data, or an empty array if none found.
      */
     public function get_pending_notices() {
         $notices = get_transient( self::TRANSIENT_NOTICES );
-        delete_transient( self::TRANSIENT_NOTICES );
-        return is_array( $notices ) ? $notices : [];
+        if ( is_array( $notices ) ) {
+            delete_transient( self::TRANSIENT_NOTICES );
+            return $notices;
+        }
+        return [];
     }
-} 
+
+    /**
+     * Displays pending admin notices stored in the transient.
+     * Should be hooked to the 'admin_notices' action.
+     *
+     * @since NEXT_VERSION
+     */
+    public function display_admin_notices() {
+        $notices = $this->get_pending_notices(); // Use the existing getter which also deletes
+
+        if ( ! empty( $notices ) ) {
+            foreach ( $notices as $notice ) {
+                if ( empty( $notice['message'] ) || empty( $notice['type'] ) ) {
+                    continue;
+                }
+                $type = sanitize_key( $notice['type'] );
+                $is_dismissible = ! empty( $notice['is_dismissible'] );
+                $class = 'notice notice-' . $type;
+                if ( $is_dismissible ) {
+                    $class .= ' is-dismissible';
+                }
+                
+                // Basic message output
+                printf(
+                    '<div class="%s"><p>%s</p></div>',
+                    esc_attr( $class ),
+                    wp_kses_post( $notice['message'] ) // Allow basic HTML in message
+                );
+                
+                // Optional: Output details for errors (consider formatting)
+                if ($type === self::NOTICE_ERROR && !empty($notice['details'])) {
+                     // Simple output for now, could be formatted better
+                     echo '<pre style="margin-left: 2em; font-size: 0.9em;">' . esc_html( print_r( $notice['details'], true ) ) . '</pre>';
+                }
+            }
+        }
+    }
+
+} // End class 

@@ -15,20 +15,20 @@ class Data_Machine_Database_Processed_Items {
     private $table_name;
 
     /**
-     * Service Locator instance.
-     * @var Data_Machine_Service_Locator|null
+     * Logger instance (optional).
+     * @var Data_Machine_Logger|null
      */
-    private $locator;
+    private $logger;
 
     /**
      * Constructor.
      *
-     * @param Data_Machine_Service_Locator|null $locator Service Locator instance.
+     * @param Data_Machine_Logger|null $logger Logger Service instance (optional).
      */
-    public function __construct( ?Data_Machine_Service_Locator $locator = null ) {
+    public function __construct( ?Data_Machine_Logger $logger = null ) {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_processed_items';
-        $this->locator = $locator; // Store locator if provided
+        $this->logger = $logger; // Store logger if provided
     }
 
     /**
@@ -142,13 +142,18 @@ class Data_Machine_Database_Processed_Items {
         if ($result === false) {
              // Log error
              $db_error = $wpdb->last_error;
-             // Use Logger Service
-             $this->locator->get('logger')->error("Failed to insert processed item.", [
-                 'module_id' => $module_id,
-                 'source_type' => $source_type,
-                 'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
-                 'db_error' => $db_error
-             ]);
+             // Use Logger Service if available
+             if ($this->logger) {
+                 $this->logger->error("Failed to insert processed item.", [
+                     'module_id' => $module_id,
+                     'source_type' => $source_type,
+                     'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
+                     'db_error' => $db_error
+                 ]);
+             } else {
+                 // Fallback if logger not injected
+                  error_log("Data Machine: Failed to insert processed item. Module: {$module_id}, Type: {$source_type}, DB Error: {$db_error}");
+             }
              return false;
         }
 

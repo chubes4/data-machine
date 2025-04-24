@@ -11,7 +11,16 @@
  */
 interface Data_Machine_Input_Handler_Interface {
 
-	public function get_input_data(array $post_data, array $files_data, array $source_config, int $user_id): array;
+	/**
+	 * Fetches and prepares input data from the specific source.
+	 *
+	 * @param object $module The full module object containing configuration and context.
+	 * @param array  $source_config Decoded data_source_config specific to this handler.
+	 * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
+	 * @return array An array of standardized input data packets, or an array indicating no new items (e.g., ['status' => 'no_new_items']).
+	 * @throws Exception If data cannot be retrieved or is invalid.
+	 */
+	public function get_input_data(object $module, array $source_config, int $user_id): array;
 
  /**
   * Get the settings fields specific to this input handler.

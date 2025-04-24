@@ -98,5 +98,110 @@ jQuery(document).ready(function($) {
         }, 1000);
     });
 
+    // --- OAuth Popup Helper ---
+    function openOAuthPopup(url, windowName, width, height) {
+        var left = (screen.width / 2) - (width / 2);
+        var top = (screen.height / 2) - (height / 2);
+        var popup = window.open(url, windowName, 'width=' + width + ',height=' + height + ',top=' + top + ',left=' + left);
+        var timer = setInterval(function() {
+            if (popup.closed) {
+                clearInterval(timer);
+                $('#instagram-auth-feedback').text('Authentication window closed. Please refresh if needed.');
+                $('#reddit-auth-feedback').text('Authentication window closed. Please refresh if needed.');
+                $('#twitter-auth-feedback').text('Authentication window closed. Please refresh if needed.');
+            }
+        }, 1000);
+        return popup;
+    }
+
+    // --- Reddit Authentication ---
+    $('#reddit-authenticate-btn').on('click', function() {
+        var clientId = $('#reddit_oauth_client_id').val();
+        var clientSecret = $('#reddit_oauth_client_secret').val();
+        if (!clientId || !clientSecret) {
+            alert('Please save your Reddit Client ID and Secret first.');
+            return;
+        }
+        var redditInitUrl = dmApiKeysParams.reddit_oauth_url; // Localized URL
+        redditInitUrl += '&_wpnonce=' + dmApiKeysParams.reddit_oauth_nonce;
+        openOAuthPopup(redditInitUrl, 'redditOAuth', 600, 700);
+    });
+
+    // --- Twitter Authentication ---
+    $('#twitter-authenticate-btn').on('click', function() {
+        var button = $(this);
+        button.prop('disabled', true);
+        $('#twitter-auth-feedback').text('Initiating authentication...');
+        $.post(dmApiKeysParams.ajax_url, { action: 'dm_generate_nonce', id: 'dm_twitter_oauth_init_nonce' }, function(response) {
+            if (response.success && response.data.nonce) {
+                var nonce = response.data.nonce;
+                var authUrl = dmApiKeysParams.twitter_oauth_url + '&_wpnonce=' + nonce;
+                $('#twitter-auth-feedback').text('Redirecting to Twitter...');
+                openOAuthPopup(authUrl, 'twitterAuth', 600, 700);
+            } else {
+                $('#twitter-auth-feedback').text('Error: Could not generate security token.').css('color', 'red');
+                button.prop('disabled', false);
+            }
+        }).fail(function() {
+            $('#twitter-auth-feedback').text('Error: AJAX request failed.').css('color', 'red');
+            button.prop('disabled', false);
+        });
+    });
+
+    // --- Remove Reddit Account ---
+    $('#reddit-accounts-list').on('click', '.reddit-remove-account-btn', function(e) {
+        e.preventDefault();
+        if (!confirm('Are you sure you want to remove this Reddit account authorization? This will remove stored tokens.')) return;
+        var button = $(this);
+        var accountUsername = button.data('account-username');
+        var nonce = button.data('nonce');
+        button.prop('disabled', true).text('Removing...');
+        $.post(dmApiKeysParams.ajax_url, {
+            action: 'dm_remove_reddit_account',
+            account_username: accountUsername,
+            _ajax_nonce: nonce
+        }, function(response) {
+            if (response.success) {
+                button.closest('li').fadeOut(300, function() { location.reload(); });
+            } else {
+                alert('Error removing account: ' + (response.data ? response.data.message : 'Unknown error'));
+                button.prop('disabled', false).text('Remove');
+            }
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            console.error('AJAX Error: ', textStatus, errorThrown);
+            alert('Error removing account: Request failed. Check browser console.');
+            button.prop('disabled', false).text('Remove');
+        });
+    });
+
+    // --- Remove Twitter Account ---
+    $('#twitter-accounts-list').on('click', '.twitter-remove-account-btn', function() {
+        var button = $(this);
+        var nonce = button.data('nonce');
+        if (!confirm('Are you sure you want to remove this Twitter account connection?')) {
+            return;
+        }
+        button.prop('disabled', true);
+        $('#twitter-auth-feedback').text('Removing account...').css('color', '');
+        $.post(dmApiKeysParams.ajax_url, {
+            action: 'dm_remove_twitter_account',
+            _ajax_nonce: nonce
+        }, function(response) {
+            if (response.success) {
+                window.location.reload();
+            } else {
+                var errorMessage = response.data && response.data.message ? response.data.message : 'Unknown error occurred.';
+                $('#twitter-auth-feedback').text('Error: ' + errorMessage).css('color', 'red');
+                button.prop('disabled', false);
+                alert('Error removing Twitter account: ' + errorMessage);
+            }
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            var error = 'AJAX request failed: ' + textStatus + ', ' + errorThrown;
+            $('#twitter-auth-feedback').text('Error: ' + error).css('color', 'red');
+            button.prop('disabled', false);
+            alert('An error occurred while trying to remove the account. Please try again.');
+        });
+    });
+
     // Do not fetch accounts on initial load; list is rendered server-side.
 });
