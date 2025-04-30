@@ -85,12 +85,10 @@ $dependents_disabled = empty($selected_location_id);
 // Default options (still needed)
 $category_default_opts = [
     ['value' => '', 'text' => '-- Select Category --'],
-    ['value' => 'model_decides', 'text' => '-- Let Model Decide --'],
     ['value' => 'instruct_model', 'text' => '-- Instruct Model --']
 ];
 $tag_default_opts = [
      ['value' => '', 'text' => '-- Select Tag --'],
-    ['value' => 'model_decides', 'text' => '-- Let Model Decide --'],
     ['value' => 'instruct_model', 'text' => '-- Instruct Model --']
 ];
 
@@ -180,7 +178,6 @@ $tag_default_opts = [
             $current_custom_tax_value = $selected_custom_tax[$slug] ?? null;
             $tax_default_opts = [
                 ['value' => '', 'text' => '-- Select ' . $tax_label . ' --'],
-                ['value' => 'model_decides', 'text' => '-- Let Model Decide --'],
                 ['value' => 'instruct_model', 'text' => '-- Instruct Model --']
             ];
     ?>

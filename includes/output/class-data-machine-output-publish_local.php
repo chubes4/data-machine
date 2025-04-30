@@ -167,16 +167,16 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				$assigned_tag_ids = array( $tag_id );
 				$assigned_tag_names = array( $term->name );
 			}
-		} elseif ( ( is_string( $tag_id ) && ( $tag_id === 'model_decides' || $tag_id === 'instruct_model' ) ) && ! empty( $parsed_data['tags'] ) ) { // Model decides or Instruct Model: Assign tags parsed from AI response
+		} elseif ( ( is_string( $tag_id ) && ( $tag_id === 'instruct_model' ) ) && ! empty( $parsed_data['tags'] ) ) { // Model decides or Instruct Model: Assign tags parsed from AI response
 			$term_ids_to_assign = [];
 			$term_names_to_assign = [];
 			$first_tag_processed = false;
 			foreach ( $parsed_data['tags'] as $tag_name ) {
 				if (empty(trim($tag_name))) continue;
 
-				// --- ENFORCE SINGLE TAG FOR instruct_model/model_decides --- 
-				if ($first_tag_processed && ( $tag_id === 'instruct_model' || $tag_id === 'model_decides' ) ) {
-					error_log("Data Machine Publish Local: Instruct/Model mode - Skipping subsequent tag '{$tag_name}' for post {$post_id}. Only assigning the first one.");
+				// --- ENFORCE SINGLE TAG FOR instruct_model --- 
+				if ($first_tag_processed && ( $tag_id === 'instruct_model' ) ) {
+					error_log("Data Machine Publish Local: Instruct mode - Skipping subsequent tag '{$tag_name}' for post {$post_id}. Only assigning the first one.");
 					continue;
 				}
 				// --- END ENFORCEMENT ---
@@ -220,7 +220,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				$tax_mode = 'manual'; // Default if not found
 				if (isset($module_job_config['output_config']['publish_local']["rest_" . $tax_slug])) {
 					$mode_check = $module_job_config['output_config']['publish_local']["rest_" . $tax_slug];
-					if (is_string($mode_check) && ($mode_check === 'instruct_model' || $mode_check === 'model_decides')) {
+					if (is_string($mode_check) && ($mode_check === 'instruct_model' )) {
 						$tax_mode = $mode_check;
 					}
 				}
@@ -233,9 +233,9 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				foreach ($term_names as $term_name) {
 					if (empty(trim($term_name))) continue;
 
-					// --- ENFORCE SINGLE TERM FOR instruct_model/model_decides --- 
-					if ($first_term_processed && ($tax_mode === 'instruct_model' || $tax_mode === 'model_decides') ) {
-						error_log("Data Machine Publish Local: Instruct/Model mode for taxonomy '{$tax_slug}' - Skipping subsequent term '{$term_name}' for post {$post_id}. Only assigning the first one.");
+					// --- ENFORCE SINGLE TERM FOR instruct_model --- 
+					if ($first_term_processed && ($tax_mode === 'instruct_model') ) {
+						error_log("Data Machine Publish Local: Instruct mode for taxonomy '{$tax_slug}' - Skipping subsequent term '{$term_name}' for post {$post_id}. Only assigning the first one.");
 						continue;
 					}
 					// --- END ENFORCEMENT ---

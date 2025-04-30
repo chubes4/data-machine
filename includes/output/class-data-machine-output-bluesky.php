@@ -25,26 +25,22 @@ if ( ! interface_exists( 'Data_Machine_Output_Handler_Interface' ) ) {
     }
 }
 
-use Data_Machine_Encryption_Helper;
-use Data_Machine_Logger;
-
 class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interface {
 
     use Data_Machine_Base_Output_Handler;
 
+    /** @var Data_Machine_Encryption_Helper|null */
+    private $encryption_helper;
     /** @var Data_Machine_Logger|null */
     private $logger;
-
-    /** @var Data_Machine_Encryption_Helper */
-    private $encryption_helper;
 
     /**
      * Constructor.
      *
-     * @param Data_Machine_Encryption_Helper $encryption_helper Encryption service.
+     * @param Data_Machine_Encryption_Helper|null $encryption_helper Encryption helper instance.
      * @param Data_Machine_Logger|null $logger Optional Logger instance.
      */
-    public function __construct(Data_Machine_Encryption_Helper $encryption_helper, ?Data_Machine_Logger $logger = null) {
+    public function __construct(?Data_Machine_Encryption_Helper $encryption_helper = null, ?Data_Machine_Logger $logger = null) {
         $this->encryption_helper = $encryption_helper;
         $this->logger = $logger;
     }
@@ -149,48 +145,68 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
 
         // --- 6. Format Post Text & Handle Facets ---
         $source_url = $input_metadata['source_url'] ?? null;
-        $facets = [];
 
-        $bluesky_char_limit = 300;
+        // Prepare text and handle truncation *before* detecting facets
+        $bluesky_char_limit = 300; // Grapheme limit
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
-        $link_prefix = "\n\n";
-        $link = ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) ? $link_prefix . $source_url : '';
-        $link_length = mb_strlen($link, 'UTF-8');
-        $available_main_text_len = $bluesky_char_limit - $link_length;
+        $link_prefix = "\n\n"; // Add space before the source link if included
+        $link_text = '';
+
+        // Only prepare link text if source is included and valid
+        if ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
+            $link_text = $link_prefix . $source_url;
+        }
+
+        $link_text_len = mb_strlen($link_text, 'UTF-8');
+        $available_main_text_len = $bluesky_char_limit - $link_text_len;
+
+        // Ensure there's space for the main text + ellipsis if needed
         if ($available_main_text_len < $ellipsis_len) {
-            // If the link itself is too long, hard truncate it (rare)
-            $post_text = mb_substr($link, 0, $bluesky_char_limit);
-        } else {
-            if (mb_strlen($post_text, 'UTF-8') > $available_main_text_len) {
-                $post_text = mb_substr($post_text, 0, $available_main_text_len - $ellipsis_len) . $ellipsis;
-            }
-            $post_text .= $link;
-        }
-        $post_text = trim($post_text);
-
-        $main_text_len = mb_strlen($post_text, 'UTF-8');
-
-        if ($main_text_len > $available_main_text_len) {
-            $this->logger?->warning('Bluesky main post text truncated.', [
+            // Not enough space even for ellipsis + link, just use the link truncated
+            $final_post_text = mb_substr($link_text, 0, $bluesky_char_limit, 'UTF-8');
+            $this->logger?->warning('Bluesky post text severely truncated due to long source link.', [
                 'user_id' => $user_id,
-                'original_length' => $main_text_len,
-                'truncated_length' => mb_strlen($post_text, 'UTF-8'),
-                'limit_for_text' => $available_main_text_len,
+                'limit' => $bluesky_char_limit,
+                'link_length' => $link_text_len,
             ]);
+        } else {
+            // Truncate main content if necessary
+            $main_text_len = mb_strlen($post_text, 'UTF-8');
+            if ($main_text_len > $available_main_text_len) {
+                $post_text = mb_substr($post_text, 0, $available_main_text_len - $ellipsis_len, 'UTF-8') . $ellipsis;
+                $this->logger?->info('Bluesky main post text truncated.', [
+                    'user_id' => $user_id,
+                    'original_length' => $main_text_len,
+                    'truncated_length' => mb_strlen($post_text, 'UTF-8'),
+                    'limit_for_text' => $available_main_text_len,
+                ]);
+            }
+            // Combine truncated main text and the link text
+            $final_post_text = $post_text . $link_text;
         }
 
-        $final_char_count = mb_strlen($post_text, 'UTF-8');
-        if ($final_char_count > $bluesky_char_limit) {
-             $this->logger?->error('Post text still exceeds limit after truncation logic.', [
+        // Final trim and check (should ideally not exceed limit now)
+        $final_post_text = trim($final_post_text);
+        $final_grapheme_count = mb_strlen($final_post_text, 'UTF-8');
+
+        if ($final_grapheme_count > $bluesky_char_limit) {
+            $this->logger?->error('Bluesky post text still exceeds grapheme limit after final assembly.', [
                 'user_id' => $user_id,
-                'final_length' => $final_char_count,
-                'limit' => $bluesky_char_limit
-             ]);
-            // Hard truncate as a final measure (shouldn't happen)
-             $post_text = mb_substr($post_text, 0, $bluesky_char_limit, 'UTF-8');
-            $facets = []; // Invalidate facets if hard truncated
+                'final_length' => $final_grapheme_count,
+                'limit' => $bluesky_char_limit,
+            ]);
+            // Hard truncate graphemes as a last resort
+            $final_post_text = mb_substr($final_post_text, 0, $bluesky_char_limit, 'UTF-8');
         }
+
+        // --- Detect Facets (Links) ---
+        // Detect facets based on the *final* text content that will be posted.
+        $facets = $this->_detect_link_facets($final_post_text);
+        if (!empty($facets)) {
+             $this->logger?->debug('Detected link facets for Bluesky post.', ['user_id' => $user_id, 'count' => count($facets)]);
+        }
+
 
         // --- 7. Handle Images (Optional) ---
         $embed_data = null;
@@ -221,28 +237,31 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
                 ]
             ];
         } elseif (is_wp_error($uploaded_image_blob)){
-             $this->logger?->error('Bluesky image upload failed.', [
+             $this->logger?->warning('Bluesky image upload failed, proceeding without image.', [
                 'user_id' => $user_id,
                 'error_code' => $uploaded_image_blob->get_error_code(),
                 'error_message' => $uploaded_image_blob->get_error_message(),
                 'image_url' => $image_url_from_input ?? 'N/A'
              ]);
-             // Optionally, decide whether to fail the whole post or just post without the image.
-             // For now, let's post without the image if upload fails.
-             $embed_data = null;
+             // If there was an image error (including download failed, invalid type, read failed, or upload failed),
+             // log it as a warning and proceed without the image.
+             $embed_data = null; // Always set embed_data to null on image error
+             // Do NOT return the WP_Error here, allow the post to continue.
         }
 
         // --- 8. Prepare Post Record ---
         $current_time = gmdate("Y-m-d\TH:i:s.v\Z"); // AT Protocol timestamp format
         $record = [
             '$type'     => 'app.bsky.feed.post',
-            'text'      => $post_text,
+            'text'      => $final_post_text, // Use the final text with potential truncation/link
             'createdAt' => $current_time,
             'langs'     => ['en'], // TODO: Detect language?
         ];
+        // Add facets if any were detected
         if (!empty($facets)) {
             $record['facets'] = $facets;
         }
+        // Add embed if image was processed
         if (!empty($embed_data)) {
             $record['embed'] = $embed_data;
         }
@@ -405,10 +424,19 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
      * @param string $repo_did The user's DID.
      * @param string $image_url The URL of the image to upload.
      * @param string $alt_text Alt text for the image.
-     * @return array|WP_Error Upload result array (containing blob) on success, WP_Error on failure.
+     * @return array|WP_Error Upload result array (containing blob) on success, WP_Error on failure (including 'bluesky_image_too_large' if size exceeds limit).
      */
     private function _upload_bluesky_image(string $pds_url, string $access_token, string $repo_did, string $image_url, string $alt_text): array|WP_Error {
         $this->logger?->info('Attempting to upload image to Bluesky.', ['image_url' => $image_url, 'did' => $repo_did]);
+        
+        // Define Bluesky image size limit (approx 976.56KB)
+        $max_image_size_bytes = 1000000; // 1MB
+
+        // START: Ensure download_url() is available
+        if (!function_exists('download_url')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        // END: Ensure download_url() is available
 
         // 1. Download the image temporarily
         $temp_file_path = download_url($image_url, 30); // 30 second timeout
@@ -417,6 +445,33 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
             return new WP_Error('bluesky_image_download_failed', __('Could not download image from source URL.', 'data-machine') . ' ' . $temp_file_path->get_error_message());
         }
         $this->logger?->debug('Image downloaded temporarily.', ['image_url' => $image_url, 'temp_path' => $temp_file_path]);
+
+        // --- Check file size BEFORE reading content ---
+        $file_size = @filesize($temp_file_path); // Use @ to suppress warnings if file doesn't exist (shouldn't happen here)
+        if ($file_size === false) {
+            unlink($temp_file_path); // Clean up
+            $this->logger?->error('Could not get file size of downloaded image.', ['temp_path' => $temp_file_path]);
+            return new WP_Error('bluesky_image_size_check_failed', __('Could not determine size of downloaded image.', 'data-machine'));
+        }
+
+        if ($file_size > $max_image_size_bytes) {
+            unlink($temp_file_path); // Clean up oversized file
+            $this->logger?->warning('Downloaded image exceeds Bluesky size limit, skipping upload.', [
+                'url' => $image_url,
+                'size_bytes' => $file_size,
+                'limit_bytes' => $max_image_size_bytes
+            ]);
+            // Return a specific error code so the main handle method can decide to proceed without the image
+            return new WP_Error(
+                'bluesky_image_too_large',
+                sprintf(
+                    __('Image size (%1$s) exceeds Bluesky limit (%2$s).', 'data-machine'),
+                    size_format($file_size),
+                    size_format($max_image_size_bytes)
+                )
+            );
+        }
+        // --- End file size check ---
 
         // 2. Get image mime type and read content
         $mime_type = mime_content_type($temp_file_path);
@@ -563,4 +618,97 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
         return null; // Invalid URI format
     }
 
-} 
+    /**
+     * Detects links in text and returns Bluesky facet objects.
+     * Uses byte offsets for indexing.
+     *
+     * @param string $text The UTF-8 encoded text to parse.
+     * @return array An array of facet objects.
+     */
+    private function _detect_link_facets(string $text): array {
+        $facets = [];
+        // Regex to find URLs (handles http, https, and domain-only links like example.com)
+        // Loosely based on Bluesky TS SDK and common patterns. Includes lookbehind/ahead for boundaries.
+        // PREG_OFFSET_CAPTURE provides byte offsets.
+        $url_pattern = '/(?<=\s|^|\()(https?:\/\/[\S]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[\S]*)?)/i';
+
+        if (preg_match_all($url_pattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
+            $text_bytes = $text; // Work directly with the UTF-8 string for byte offsets
+
+            foreach ($matches[0] as $match) {
+                $url = $match[0];
+                $byteStart = $match[1]; // Byte offset provided by PREG_OFFSET_CAPTURE
+
+                // Clean trailing punctuation common in prose: .,;!?
+                // Also handle trailing ')' if there isn't a matching '(' within the URL itself.
+                $cleaned_url = preg_replace('/[.,;!?]+$/', '', $url);
+                if (substr($cleaned_url, -1) === ')' && strpos($cleaned_url, '(') === false) {
+                    $cleaned_url = substr($cleaned_url, 0, -1);
+                }
+
+                // Calculate byteEnd based on the *cleaned* URL's byte length
+                $byteEnd = $byteStart + strlen($cleaned_url); // strlen gives byte length
+
+                // Ensure the URI has a scheme for the facet
+                $uri = $cleaned_url;
+                if (!preg_match('/^https?:\/\//i', $uri)) {
+                    // Basic check if it looks like a domain before adding https://
+                    if (preg_match('/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $uri)) {
+                         $uri = 'https://' . $uri;
+                    } else {
+                        // Skip if it doesn't look like a domain and has no scheme
+                        $this->logger?->debug('Skipping potential facet, does not look like a valid domain/URL.', ['match' => $url]);
+                        continue;
+                    }
+                }
+
+                // Validate the final URI structure (simple check)
+                if (!filter_var($uri, FILTER_VALIDATE_URL)) {
+                     $this->logger?->debug('Skipping potential facet, final URI failed validation.', ['uri' => $uri]);
+                     continue;
+                }
+
+
+                $facets[] = [
+                    'index' => [
+                        'byteStart' => $byteStart,
+                        'byteEnd'   => $byteEnd,
+                    ],
+                    'features' => [[
+                        '$type' => 'app.bsky.richtext.facet#link',
+                        'uri'   => $uri,
+                    ]],
+                ];
+            }
+        }
+
+        // TODO: Add mention and tag detection here if needed in the future.
+
+        // Sort facets by byteStart (recommended by Bluesky spec)
+        // And remove overlapping facets (keeping the first one encountered in a conflict)
+        if (!empty($facets)) {
+            usort($facets, function ($a, $b) {
+                return $a['index']['byteStart'] <=> $b['index']['byteStart'];
+            });
+
+            $non_overlapping_facets = [];
+            $last_byte_end = -1;
+            foreach ($facets as $facet) {
+                if ($facet['index']['byteStart'] >= $last_byte_end) {
+                    $non_overlapping_facets[] = $facet;
+                    $last_byte_end = $facet['index']['byteEnd'];
+                } else {
+                    $this->logger?->warning('Skipping overlapping Bluesky facet.', [
+                        'skipped_start' => $facet['index']['byteStart'],
+                        'previous_end' => $last_byte_end
+                    ]);
+                }
+            }
+            return $non_overlapping_facets;
+        }
+
+
+        return $facets;
+    }
+
+}

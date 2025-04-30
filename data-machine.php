@@ -94,6 +94,12 @@ function run_data_machine() {
     $logger = new Data_Machine_Logger();
     $encryption_helper = new Data_Machine_Encryption_Helper();
 
+    // Register API/Auth admin_post handlers
+    if (is_admin()) {
+        require_once DATA_MACHINE_PATH . 'admin/class-dm-api-auth-page.php';
+        new Data_Machine_Api_Auth_Page($logger);
+    }
+
     // Hook the logger's display method to admin notices
     if (is_admin()) { // Only hook in the admin area
         add_action( 'admin_notices', array( $logger, 'display_admin_notices' ) );
@@ -244,9 +250,10 @@ function run_data_machine() {
         $output_data_export,
         $input_files,
         $oauth_reddit,
-			$db_remote_locations,
-			$logger
-		);
+        $oauth_twitter,
+		$db_remote_locations,
+		$logger
+	);
 
 	// --- Run the Plugin ---
 	$plugin->run();

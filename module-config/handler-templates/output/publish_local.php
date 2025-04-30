@@ -18,7 +18,6 @@ foreach ($post_types as $pt) {
 }
 
 $category_options = [
-    'model_decides' => '-- Let Model Decide --',
     'instruct_model' => '-- Instruct Model --'
 ];
 $local_categories = get_terms(['taxonomy' => 'category', 'hide_empty' => false]);
@@ -29,7 +28,6 @@ if (!is_wp_error($local_categories)) {
 }
 
 $tag_options = [
-    'model_decides' => '-- Let Model Decide --',
     'instruct_model' => '-- Instruct Model --'
 ];
 $local_tags = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => false]);

@@ -117,6 +117,10 @@ class Data_Machine_Module_Handler {
         $process_prompt = isset($_POST['process_data_prompt']) ? wp_kses_post(wp_unslash($_POST['process_data_prompt'])) : '';
         $fact_check_prompt = isset($_POST['fact_check_prompt']) ? wp_kses_post(wp_unslash($_POST['fact_check_prompt'])) : '';
         $finalize_prompt = isset($_POST['finalize_response_prompt']) ? wp_kses_post(wp_unslash($_POST['finalize_response_prompt'])) : '';
+        // START: Add skip_fact_check retrieval and sanitization
+        // Checkbox value is '1' if checked, otherwise the hidden field sends '0'
+        $skip_fact_check = isset($_POST['skip_fact_check']) ? absint($_POST['skip_fact_check']) : 0;
+        // END: Add skip_fact_check retrieval and sanitization
         // Get types from hidden fields (synced by JS)
         $data_source_type_slug = isset($_POST['data_source_type']) ? sanitize_key($_POST['data_source_type']) : 'files';
         $output_type_slug = isset($_POST['output_type']) ? sanitize_key($_POST['output_type']) : 'data_export';
@@ -157,12 +161,12 @@ class Data_Machine_Module_Handler {
 
         // --- Handle Module Create / Update ---
         if ($submitted_module_id === 'new') {
-            $this->handle_new_module_create($project_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id);
+            $this->handle_new_module_create($project_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id);
             // Redirect is handled within handle_new_module_create
             return;
         }
 
-        $this->handle_existing_module_update($submitted_module_id, $user_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id);
+        $this->handle_existing_module_update($submitted_module_id, $user_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id);
         // Redirect is handled within handle_existing_module_update
     }
 
@@ -188,12 +192,13 @@ class Data_Machine_Module_Handler {
      * Handles creation of a new module.
      * Uses class properties for dependencies ($db_modules, $logger).
      */
-    private function handle_new_module_create($project_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id) {
+    private function handle_new_module_create($project_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id) {
         $module_data = array(
             'module_name' => $module_name,
             'process_data_prompt' => $process_prompt,
             'fact_check_prompt' => $fact_check_prompt,
             'finalize_response_prompt' => $finalize_prompt,
+            'skip_fact_check' => $skip_fact_check,
             'data_source_type' => $data_source_type_slug,
             'data_source_config' => $final_clean_ds_config,
             'output_type' => $output_type_slug,
@@ -226,7 +231,7 @@ class Data_Machine_Module_Handler {
      * Handles update of an existing module.
      * Uses class properties for dependencies ($db_modules, $logger).
      */
-    private function handle_existing_module_update($submitted_module_id, $user_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id) {
+    private function handle_existing_module_update($submitted_module_id, $user_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id) {
         $module_id_to_update = absint($submitted_module_id);
         // Use class property db_modules
         $existing_module = $this->db_modules->get_module($module_id_to_update); // Pass user ID for ownership check in get_module if implemented there
@@ -254,6 +259,7 @@ class Data_Machine_Module_Handler {
             if ($process_prompt !== $existing_module->process_data_prompt) $update_data['process_data_prompt'] = $process_prompt;
             if ($fact_check_prompt !== $existing_module->fact_check_prompt) $update_data['fact_check_prompt'] = $fact_check_prompt;
             if ($finalize_prompt !== $existing_module->finalize_response_prompt) $update_data['finalize_response_prompt'] = $finalize_prompt;
+            if ($skip_fact_check !== (int)$existing_module->skip_fact_check) $update_data['skip_fact_check'] = $skip_fact_check;
             if ($data_source_type_slug !== $existing_module->data_source_type) $update_data['data_source_type'] = $data_source_type_slug;
             if ($output_type_slug !== $existing_module->output_type) $update_data['output_type'] = $output_type_slug;
 

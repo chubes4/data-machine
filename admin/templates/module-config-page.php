@@ -230,6 +230,14 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 						<textarea id="fact_check_prompt" name="fact_check_prompt" rows="5" cols="60" class="large-text"><?php echo esc_textarea($current_module ? $current_module->fact_check_prompt : ''); ?></textarea>
 					</td>
 				</tr>
+				<tr id="skip-fact-check-row">
+					<th scope="row"><label for="skip_fact_check">Skip Fact Check Step</label></th>
+					<td>
+						<input type="hidden" name="skip_fact_check" value="0"> <!-- Default value when unchecked -->
+						<input type="checkbox" id="skip_fact_check" name="skip_fact_check" value="1" <?php checked(1, $current_module ? (int)$current_module->skip_fact_check : 0); ?>>
+						<p class="description"><?php _e('If checked, the fact-checking step (including web search) will be skipped during processing to save API costs.', 'data-machine'); ?></p>
+					</td>
+				</tr>
 				<tr id="finalize-prompt-row">
 					<th scope="row"><label for="finalize_response_prompt">Finalize Prompt</label></th>
 					<td>
@@ -322,6 +330,7 @@ $initial_state = array(
     'selectedOutputSlug' => $current_output_type,
     'data_source_config' => $data_source_config,
     'output_config' => $output_config,
+    'skip_fact_check' => $current_module ? (int)$current_module->skip_fact_check : 0,
     'remoteHandlers' => array(
         'publish_remote' => array(
             'selectedLocationId' => $output_config['publish_remote']['location_id'] ?? null,

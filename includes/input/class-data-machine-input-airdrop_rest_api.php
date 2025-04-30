@@ -225,6 +225,19 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 				$source_link = $post['guid'] ?? $endpoint_url_base;
 				$image_url = $post['featured_image_url'] ?? null;
 
+				// --- Fallback: Try to get the first image from content if no featured image ---
+				if (empty($image_url) && !empty($content)) {
+					if (preg_match('/<img.*?src=[\'"](.*?)[\'"].*?>/i', $content, $matches)) {
+						$first_image_src = $matches[1];
+						// Basic validation - check if it looks like a URL
+						if (filter_var($first_image_src, FILTER_VALIDATE_URL)) {
+							$image_url = $first_image_src;
+							$this->logger?->debug('Airdrop Input: Using first image from content as fallback.', ['found_url' => $image_url, 'item_id' => $current_item_id]);
+						}
+					}
+				}
+				// --- End Fallback ---
+
 				$content_string = "Title: " . $title . "\n\n" . $content;
 				$input_data_packet = [
 					'item_identifier' => $current_item_id,

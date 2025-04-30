@@ -91,11 +91,41 @@ class Data_Machine_Ajax_Locations {
              wp_send_json_error(['message' => __('Received invalid data format from the remote site.', 'data-machine')]);
              return;
         }
-   
-        $site_info_json = wp_json_encode($decoded_data);
+
+        // Get enabled taxonomies for this location (as slugs)
+        $enabled_taxonomies = [];
+        if (!empty($location->enabled_taxonomies)) {
+            $enabled_taxonomies = json_decode($location->enabled_taxonomies, true);
+            if (!is_array($enabled_taxonomies)) {
+                $enabled_taxonomies = [];
+            }
+        }
+
+        // Always keep all post types and taxonomies (names/labels)
+        // For taxonomies, only keep terms for enabled taxonomies (or all if none enabled)
+        $filtered_taxonomies = [];
+        foreach ($decoded_data['taxonomies'] as $slug => $tax_data) {
+            $filtered = [
+                'label' => $tax_data['label'] ?? $slug,
+                'post_types' => $tax_data['post_types'] ?? [],
+            ];
+            // Only include terms if this taxonomy is enabled, or if no taxonomies are enabled (first sync)
+            if (empty($enabled_taxonomies) || in_array($slug, $enabled_taxonomies, true)) {
+                if (isset($tax_data['terms'])) {
+                    $filtered['terms'] = $tax_data['terms'];
+                }
+            }
+            $filtered_taxonomies[$slug] = $filtered;
+        }
+        $filtered_data = [
+            'post_types' => $decoded_data['post_types'],
+            'taxonomies' => $filtered_taxonomies,
+        ];
+
+        $site_info_json = wp_json_encode($filtered_data);
 
         if ($site_info_json === false) {
-            error_log('DM Sync Error: Failed to wp_json_encode decoded data for location ID: ' . $location_id);
+            error_log('DM Sync Error: Failed to wp_json_encode filtered data for location ID: ' . $location_id);
             wp_send_json_error(['message' => __('Failed to process data received from the remote site (JSON encoding failed).', 'data-machine')]);
             return;
         }

@@ -135,7 +135,8 @@ class Data_Machine_Module_Config_Ajax {
 			// Add prompts
 			'process_data_prompt' => $module->process_data_prompt ?? '',
 			'fact_check_prompt' => $module->fact_check_prompt ?? '',
-			'finalize_response_prompt' => $module->finalize_response_prompt ?? ''
+			'finalize_response_prompt' => $module->finalize_response_prompt ?? '',
+			'skip_fact_check' => isset($module->skip_fact_check) ? (int)$module->skip_fact_check : 0
 		);
 
 		wp_send_json_success( $data_to_return );

@@ -150,6 +150,12 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 		$fetch_batch_size = 100; // Max items per Reddit API request
 		$min_comment_count = isset($source_config['min_comment_count']) ? absint($source_config['min_comment_count']) : 0;
 		$comment_count_setting = isset($source_config['comment_count']) ? absint($source_config['comment_count']) : 0;
+		$search_term = trim( $source_config['search'] ?? '' );
+		$search_keywords = [];
+		if (!empty($search_term)) {
+			$search_keywords = array_map('trim', explode(',', $search_term));
+			$search_keywords = array_filter($search_keywords); // Remove empty keywords
+		}
 
 		if ( empty( $subreddit ) ) {
 			$this->logger?->error('Reddit Input: Subreddit name not configured.', ['module_id' => $module_id]);
@@ -298,7 +304,25 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 					}
 				}
 
-				// --- Item is ELIGIBLE! --- 
+				// 5. Check search term filter
+				if (!empty($search_keywords)) {
+					$title_to_check = $item_data['title'] ?? '';
+					$selftext_to_check = $item_data['selftext'] ?? '';
+					$text_to_search = $title_to_check . ' ' . $selftext_to_check;
+					$found_keyword = false;
+					foreach ($search_keywords as $keyword) {
+						if (mb_stripos($text_to_search, $keyword) !== false) {
+							$found_keyword = true;
+							break;
+						}
+					}
+					if (!$found_keyword) {
+						$this->logger?->debug('Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
+						continue; // Skip if no keyword found
+					}
+				}
+
+				// --- Item is ELIGIBLE! ---
 				$this->logger?->debug('Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 
 				// Prepare content string (Title and selftext/body)
@@ -552,6 +576,12 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 				'min' => 0,
 				'max' => 100,
 			],
+			'search' => [
+				'type' => 'text',
+				'label' => __('Search Term Filter', 'data-machine'),
+				'description' => __('Optional: Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'data-machine'),
+				'default' => '',
+			],
 			// Note: No API key needed for basic public access. Add later if needed.
 		];
 	}
@@ -579,6 +609,7 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 		$sanitized['min_comment_count'] = max(0, $min_comment_count);
 		$comment_count = isset($raw_settings['comment_count']) ? absint($raw_settings['comment_count']) : 0;
 		$sanitized['comment_count'] = max(0, $comment_count);
+		$sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? ''); // Sanitize search term
 		return $sanitized;
 	}
 

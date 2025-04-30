@@ -25,6 +25,99 @@ class Data_Machine_Api_Auth_Page {
     public function __construct( $admin_notices = null ) {
         $this->admin_notices = $admin_notices;
         add_action( 'admin_init', array( $this, 'handle_api_keys_page_user_meta_save' ) );
+        add_action('admin_post_dm_save_openai_user_meta', function() {
+            // Debug: Log POST and SERVER data
+            file_put_contents(
+                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
+                date('c') . "\n[dm_save_openai_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
+                FILE_APPEND
+            );
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_openai_user_meta_action');
+            $user_id = get_current_user_id();
+            update_user_meta($user_id, 'dm_openai_api_key', sanitize_text_field($_POST['openai_api_key_user'] ?? ''));
+            wp_redirect(add_query_arg('openai_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
+
+        add_action('admin_post_dm_save_bluesky_user_meta', function() {
+            file_put_contents(
+                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
+                date('c') . "\n[dm_save_bluesky_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
+                FILE_APPEND
+            );
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_bluesky_user_meta_action');
+            $user_id = get_current_user_id();
+            update_user_meta($user_id, 'dm_bluesky_username', sanitize_text_field($_POST['bluesky_username'] ?? ''));
+            if (isset($_POST['bluesky_app_password']) && $_POST['bluesky_app_password'] !== '') {
+                $encrypted_password = Data_Machine_Encryption_Helper::encrypt($_POST['bluesky_app_password']);
+                update_user_meta($user_id, 'dm_bluesky_app_password', $encrypted_password);
+            }
+            wp_redirect(add_query_arg('bluesky_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
+
+        add_action('admin_post_dm_save_instagram_user_meta', function() {
+            file_put_contents(
+                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
+                date('c') . "\n[dm_save_instagram_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
+                FILE_APPEND
+            );
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_instagram_user_meta_action');
+            $user_id = get_current_user_id();
+            $instagram_account = get_user_meta($user_id, 'data_machine_instagram_account', true);
+            if (!is_array($instagram_account)) $instagram_account = [];
+            $instagram_account = array_merge($instagram_account, [
+                'client_id' => sanitize_text_field($_POST['instagram_oauth_client_id'] ?? ''),
+                'client_secret' => sanitize_text_field($_POST['instagram_oauth_client_secret'] ?? ''),
+            ]);
+            update_user_meta($user_id, 'data_machine_instagram_account', $instagram_account);
+            wp_redirect(add_query_arg('instagram_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
+
+        add_action('admin_post_dm_save_twitter_user_meta', function() {
+            file_put_contents(
+                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
+                date('c') . "\n[dm_save_twitter_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
+                FILE_APPEND
+            );
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_twitter_user_meta_action');
+            $user_id = get_current_user_id();
+            $twitter_account = get_user_meta($user_id, 'data_machine_twitter_account', true);
+            if (!is_array($twitter_account)) $twitter_account = [];
+            $twitter_account = array_merge($twitter_account, [
+                'api_key' => sanitize_text_field($_POST['twitter_api_key'] ?? ''),
+                'api_secret' => sanitize_text_field($_POST['twitter_api_secret'] ?? ''),
+            ]);
+            update_user_meta($user_id, 'data_machine_twitter_account', $twitter_account);
+            wp_redirect(add_query_arg('twitter_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
+
+        add_action('admin_post_dm_save_reddit_user_meta', function() {
+            file_put_contents(
+                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
+                date('c') . "\n[dm_save_reddit_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
+                FILE_APPEND
+            );
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_reddit_user_meta_action');
+            $user_id = get_current_user_id();
+            $reddit_account = get_user_meta($user_id, 'data_machine_reddit_account', true);
+            if (!is_array($reddit_account)) $reddit_account = [];
+            $reddit_account = array_merge($reddit_account, [
+                'client_id' => sanitize_text_field($_POST['reddit_oauth_client_id'] ?? ''),
+                'client_secret' => sanitize_text_field($_POST['reddit_oauth_client_secret'] ?? ''),
+                'developer_username' => sanitize_text_field($_POST['reddit_developer_username'] ?? ''),
+            ]);
+            update_user_meta($user_id, 'data_machine_reddit_account', $reddit_account);
+            wp_redirect(add_query_arg('reddit_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
     }
 
     /**
@@ -62,8 +155,8 @@ class Data_Machine_Api_Auth_Page {
             $updated = true;
         }
 
-        // Handle Bluesky Password (only update if a new password was submitted)
-        if ( isset($_POST['bluesky_app_password']) && !empty($_POST['bluesky_app_password']) ) {
+        // Handle Bluesky Password (always update on save)
+        if ( isset($_POST['bluesky_app_password']) ) {
             try {
                 $encrypted_password = Data_Machine_Encryption_Helper::encrypt($_POST['bluesky_app_password']);
                 if ($encrypted_password === false) {
@@ -77,6 +170,13 @@ class Data_Machine_Api_Auth_Page {
                 error_log('[Data Machine] Exception encrypting Bluesky app password for user ' . $user_id . ': ' . $e->getMessage());
                 if ($this->admin_notices) $this->admin_notices->error(__('An error occurred while encrypting the Bluesky app password. It was not saved.', 'data-machine'));
             }
+        }
+
+        // Handle OpenAI API Key (per-user)
+        if (isset($_POST['openai_api_key_user'])) {
+            $openai_api_key = sanitize_text_field($_POST['openai_api_key_user']);
+            update_user_meta($user_id, 'dm_openai_api_key', $openai_api_key);
+            $updated = true;
         }
 
         // Add a success notice if something was updated
@@ -93,34 +193,11 @@ class Data_Machine_Api_Auth_Page {
     }
 
     /**
-     * Sanitize the OpenAI API Key input.
-     *
-     * @since    NEXT_VERSION
-     * @param    string    $input    The unsanitized input.
-     * @return   string              The sanitized input.
-     */
-    public function sanitize_openai_api_key( $input ) {
-        return sanitize_text_field( $input );
-    }
-
-    /**
      * Print the API Settings section information.
      *
      * @since    NEXT_VERSION
      */
     public function print_api_settings_section_info() {
         echo '<p>Enter your OpenAI API key below. This key is required for features utilizing OpenAI models.</p>';
-    }
-
-    /**
-     * OpenAI API Key field callback.
-     *
-     * @since    NEXT_VERSION
-     */
-    public function openai_api_key_callback() {
-        printf(
-            '<input type="text" id="openai_api_key" name="openai_api_key" value="%s" class="regular-text" />',
-            esc_attr( get_option( 'openai_api_key' ) )
-        );
     }
 } 

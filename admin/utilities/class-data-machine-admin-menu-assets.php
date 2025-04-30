@@ -161,246 +161,174 @@ class Data_Machine_Admin_Menu_Assets {
      * @param    string    $hook_suffix    The current admin page hook.
      */
     public function enqueue_admin_assets( $hook_suffix ) {
-        error_log('[Data Machine] enqueue_admin_assets hook_suffix: ' . $hook_suffix);
-
-        // Define base paths and URLs
-        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) ); // Base plugin path - adjusted for utility directory
-        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );   // Base plugin URL - adjusted for utility directory
-
-        // Dashboard page hook suffix
         $dashboard_hook = 'toplevel_page_data-machine-dashboard';
         $run_one_hooks = [
             'data-machine-dashboard_page_dm-run-single-module',
-            'data-machine_page_dm-run-single-module', // Compatibility for legacy/alternate parent slug
+            'data-machine_page_dm-run-single-module',
+        ];
+        $project_management_hooks = [
+            'data-machine-dashboard_page_dm-project-management',
+            'data-machine_page_dm-project-management',
+        ];
+        $module_config_hooks = [
+            'data-machine-dashboard_page_dm-module-config',
+            'data-machine_page_dm-module-config',
         ];
 
         if ( $hook_suffix === $dashboard_hook ) {
-            // Enqueue dashboard CSS
-            $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-            $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-            $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-            wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
-
-            // Enqueue dashboard JS
-            $js_path = $plugin_base_path . 'assets/js/data-machine-dashboard.js';
-            $js_url = $plugin_base_url . 'assets/js/data-machine-dashboard.js';
-            $js_version = file_exists($js_path) ? filemtime($js_path) : $this->version;
-            wp_enqueue_script( 'data-machine-dashboard-js', $js_url, array( 'jquery' ), $js_version, true );
-
-            // Localize script with AJAX URL and nonce
-            wp_localize_script( 'data-machine-dashboard-js', 'dm_dashboard_params', array(
-                'ajax_url' => admin_url( 'admin-ajax.php' ),
-                'dm_dashboard_nonce' => wp_create_nonce( 'dm_dashboard_nonce' ),
-            ) );
+            $this->enqueue_dashboard_assets();
+        } elseif ( in_array($hook_suffix, $run_one_hooks, true) ) {
+            $this->enqueue_run_single_module_assets();
+        } elseif ( in_array($hook_suffix, $project_management_hooks, true) ) {
+            $this->enqueue_project_management_assets();
+        } elseif ( in_array($hook_suffix, $module_config_hooks, true) ) {
+            $this->enqueue_module_config_assets();
+        } elseif ( $hook_suffix === $this->remote_locations_hook_suffix ) {
+            $this->enqueue_remote_locations_assets();
+        } elseif ( $hook_suffix === $this->api_keys_hook_suffix ) {
+            $this->enqueue_api_keys_assets();
         }
+    }
 
-        if ( in_array($hook_suffix, $run_one_hooks, true) ) {
-            // Enqueue admin CSS
-            $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-            $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-            $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-            wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+    private function enqueue_dashboard_assets() {
+        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
+        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
+        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        $js_path = $plugin_base_path . 'assets/js/data-machine-dashboard.js';
+        $js_url = $plugin_base_url . 'assets/js/data-machine-dashboard.js';
+        $js_version = file_exists($js_path) ? filemtime($js_path) : $this->version;
+        wp_enqueue_script( 'data-machine-dashboard-js', $js_url, array( 'jquery' ), $js_version, true );
+        wp_localize_script( 'data-machine-dashboard-js', 'dm_dashboard_params', array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'dm_dashboard_nonce' => wp_create_nonce( 'dm_dashboard_nonce' ),
+        ) );
+    }
 
-            // Enqueue Run One JS
-            $js_main_path = $plugin_base_path . 'assets/js/run-single-module.js';
-            $js_main_url = $plugin_base_url . 'assets/js/run-single-module.js';
-            $js_main_version = file_exists($js_main_path) ? filemtime($js_main_path) : $this->version;
-            wp_enqueue_script( 'dm-run-single-module', $js_main_url, array( 'jquery' ), $js_main_version, false );
+    private function enqueue_run_single_module_assets() {
+        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
+        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
+        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        $js_main_path = $plugin_base_path . 'assets/js/run-single-module.js';
+        $js_main_url = $plugin_base_url . 'assets/js/run-single-module.js';
+        $js_main_version = file_exists($js_main_path) ? filemtime($js_main_path) : $this->version;
+        wp_enqueue_script( 'dm-run-single-module', $js_main_url, array( 'jquery' ), $js_main_version, false );
+        $db_modules = $this->db_modules;
+        $user_id = get_current_user_id();
+        $current_module_id = get_user_meta($user_id, 'Data_Machine_current_module', true);
+        $current_module = $db_modules ? $db_modules->get_module($current_module_id, $user_id) : null;
+        $params = array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'file_processing_nonce' => wp_create_nonce( 'file_processing_nonce' ),
+            'fact_check_nonce' => wp_create_nonce( 'fact_check_nonce' ),
+            'finalize_response_nonce' => wp_create_nonce( 'finalize_response_nonce' ),
+            'data_source_type' => $current_module && isset($current_module->data_source_type) ? $current_module->data_source_type : 'files',
+            'output_type' => $current_module && isset($current_module->output_type) ? $current_module->output_type : 'data_export',
+            'check_status_nonce' => wp_create_nonce( 'dm_check_status_nonce' )
+        );
+        wp_localize_script( 'dm-run-single-module', 'dm_ajax_params', $params );
+    }
 
-            // Get dependencies via locator
-            $db_modules = $this->db_modules;
-            $user_id = get_current_user_id();
-            $current_module_id = get_user_meta($user_id, 'Data_Machine_current_module', true);
-            $current_module = $db_modules ? $db_modules->get_module($current_module_id, $user_id) : null;
+    private function enqueue_project_management_assets() {
+        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
+        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
+        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        $js_project_management_path = $plugin_base_path . 'assets/js/data-machine-project-management.js';
+        $js_project_management_url = $plugin_base_url . 'assets/js/data-machine-project-management.js';
+        $js_project_management_version = file_exists($js_project_management_path) ? filemtime($js_project_management_path) : $this->version;
+        wp_enqueue_script( 'data-machine-project-management-js', $js_project_management_url, array( 'jquery' ), $js_project_management_version, true );
+        wp_localize_script( 'data-machine-project-management-js', 'dm_dashboard_params', array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
+            'run_now_nonce' => wp_create_nonce( 'dm_run_now_nonce' ),
+            'get_schedule_data_nonce' => wp_create_nonce( 'dm_get_schedule_data_nonce' ),
+            'edit_schedule_nonce' => wp_create_nonce( 'dm_edit_schedule_nonce' ),
+            'cron_schedules' => \Data_Machine_Constants::get_cron_schedules_for_js(),
+        ) );
+    }
 
-            $params = array(
-                'ajax_url' => admin_url( 'admin-ajax.php' ),
-                'file_processing_nonce' => wp_create_nonce( 'file_processing_nonce' ),
-                'fact_check_nonce' => wp_create_nonce( 'fact_check_nonce' ),
-                'finalize_response_nonce' => wp_create_nonce( 'finalize_response_nonce' ),
-                'data_source_type' => $current_module && isset($current_module->data_source_type) ? $current_module->data_source_type : 'files',
-                'output_type' => $current_module && isset($current_module->output_type) ? $current_module->output_type : 'data_export',
-                'check_status_nonce' => wp_create_nonce( 'dm_check_status_nonce' )
-            );
-            wp_localize_script( 'dm-run-single-module', 'dm_ajax_params', $params );
+    private function enqueue_module_config_assets() {
+        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
+        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
+        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        $settings_params = array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'module_config_nonce' => wp_create_nonce( 'dm_module_config_actions_nonce' ),
+        );
+        $js_path = $plugin_base_path . 'module-config/js/dm-module-config.js';
+        $js_url  = $plugin_base_url . 'module-config/js/dm-module-config.js';
+        if ( file_exists( $js_path ) ) {
+            $js_version = filemtime( $js_path );
+            wp_enqueue_script( 'dm-module-config', $js_url, array(), $js_version, true );
+            wp_localize_script( 'dm-module-config', 'dm_settings_params', $settings_params );
         }
-
-    	// Check if the current page is one of the plugin's pages
-        // Note: Hook names are like 'toplevel_page_MENU_SLUG' or 'PARENT_SLUG_page_SUBMENU_SLUG'
-    	$plugin_pages = [
-    		'toplevel_page_dm-run-single-module',
-            'dm-run-single-module_page_dm-project-management', // Matches parent slug 'dm-run-single-module'
-            'dm-run-single-module_page_dm-module-config', // Matches parent slug 'dm-run-single-module'
-            'data-machine_page_dm-project-management', // Support alternate/legacy parent slug
-            'data-machine_page_dm-module-config', // Support alternate/legacy parent slug
-            $this->remote_locations_hook_suffix, // Hook suffix stored during menu creation
-            $this->api_keys_hook_suffix // Hook suffix for API Keys page
-    	];
-
-    	if ( in_array($hook_suffix, $plugin_pages) ) {
-            // Admin CSS
-            $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-            $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-            $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-            wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
-            
-            // Main Admin Page JS
-            if ('toplevel_page_dm-run-single-module' === $hook_suffix) {
-                error_log('[Data Machine] Loading assets for: toplevel_page_dm-run-single-module');
-                $js_main_path = $plugin_base_path . 'assets/js/run-single-module.js';
-                $js_main_url = $plugin_base_url . 'assets/js/run-single-module.js';
-                $js_main_version = file_exists($js_main_path) ? filemtime($js_main_path) : $this->version;
-                wp_enqueue_script( 'dm-run-single-module', $js_main_url, array( 'jquery' ), $js_main_version, false ); // Load in header
-
-                // Get dependencies via locator
-                $db_modules = $this->db_modules;
-
-                // Get current module settings for JS
-                $user_id = get_current_user_id();
-                $current_module_id = get_user_meta($user_id, 'Data_Machine_current_module', true);
-                $current_module = $db_modules ? $db_modules->get_module($current_module_id, $user_id) : null;
-
-                $params = array(
-                    'ajax_url' => admin_url( 'admin-ajax.php' ),
-                    'file_processing_nonce' => wp_create_nonce( 'file_processing_nonce' ),
-                    'fact_check_nonce' => wp_create_nonce( 'fact_check_nonce' ),
-                    'finalize_response_nonce' => wp_create_nonce( 'finalize_response_nonce' ),
-                    'data_source_type' => $current_module && isset($current_module->data_source_type) ? $current_module->data_source_type : 'files', // Default 'files'
-                    'output_type' => $current_module && isset($current_module->output_type) ? $current_module->output_type : 'data_export', // Default 'data_export'
-                    'check_status_nonce' => wp_create_nonce( 'dm_check_status_nonce' ) // Nonce for checking job status
-                   );
-                wp_localize_script( 'dm-run-single-module', 'dm_ajax_params', $params );
-            
-            // Remote Locations Page JS
-            } elseif ($hook_suffix === $this->remote_locations_hook_suffix) {
-            	$js_remote_path = $plugin_base_path . 'assets/js/data-machine-remote-locations.js';
-                $js_remote_url = $plugin_base_url . 'assets/js/data-machine-remote-locations.js';
-                $js_remote_version = file_exists($js_remote_path) ? filemtime($js_remote_path) : $this->version; // Already uses filemtime
-            	wp_enqueue_script( 'dm-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true ); // Load in footer
-         
-            	$remote_locations_params = array(
-            		'ajax_url' => admin_url('admin-ajax.php'),
-            		'confirm_delete' => __('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine')
-            	);
-            	wp_localize_script('dm-remote-locations-admin-js', 'dmRemoteLocationsParams', $remote_locations_params);
-
-            // API Keys Page JS
-            } elseif ($hook_suffix === $this->api_keys_hook_suffix) {
-                $js_api_keys_path = $plugin_base_path . 'assets/js/data-machine-api-keys.js';
-                $js_api_keys_url = $plugin_base_url . 'assets/js/data-machine-api-keys.js';
-                $js_api_keys_version = file_exists($js_api_keys_path) ? filemtime($js_api_keys_path) : $this->version;
-                wp_enqueue_script('data-machine-api-keys', $js_api_keys_url, array('jquery'), $js_api_keys_version, true);
-
-                $api_keys_params = array(
-                    'ajax_url' => admin_url('admin-ajax.php'),
-                    'nonce'    => wp_create_nonce('dm_instagram_auth_nonce'),
-                    'oauth_url' => admin_url('admin-ajax.php?action=dm_instagram_oauth_start')
-                );
-                wp_localize_script('data-machine-api-keys', 'dmInstagramAuthParams', $api_keys_params);
-            } elseif ( in_array( $hook_suffix, array( 'data-machine-dashboard_page_dm-project-management', 'data-machine_page_dm-project-management' ), true ) ) {
-                // Enqueue Project Management JS
-                $js_project_management_path = $plugin_base_path . 'assets/js/data-machine-project-management.js';
-                $js_project_management_url = $plugin_base_url . 'assets/js/data-machine-project-management.js';
-                $js_project_management_version = file_exists($js_project_management_path) ? filemtime($js_project_management_path) : $this->version;
-                wp_enqueue_script( 'data-machine-project-management-js', $js_project_management_url, array( 'jquery' ), $js_project_management_version, true );
-
-                // Localize script with AJAX URL and nonces needed for project management
-                wp_localize_script( 'data-machine-project-management-js', 'dm_dashboard_params', array(
-                    'ajax_url' => admin_url( 'admin-ajax.php' ),
-                    'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
-                    'run_now_nonce' => wp_create_nonce( 'dm_run_now_nonce' ),
-                    'get_schedule_data_nonce' => wp_create_nonce( 'dm_get_schedule_data_nonce' ),
-                    'edit_schedule_nonce' => wp_create_nonce( 'dm_edit_schedule_nonce' ),
-                    'cron_schedules' => wp_get_schedules(), // Pass available cron schedules
-                ) );
-            }
-         
-            // --- BEGIN: Add ES module support for module-config/js scripts ---
-            add_filter('script_loader_tag', function($tag, $handle) {
-                $module_handles = array(
-                    'dm-module-config',
-                    'dm-module-config-state',
-                    'dm-module-config-ajax',
-                    'dm-module-config-remote-locations',
-                    'dm-module-config-ui-helpers',
-                    'module-state-controller',
-                    'project-module-selector',
-                    'handler-template-manager',
-                );
-                if (in_array($handle, $module_handles)) {
-                    // Only add type="module" if not already present
-                    if (strpos($tag, 'type="module"') === false) {
-                        $tag = str_replace('src=', 'type="module" src=', $tag);
-                    }
-                }
-                return $tag;
-            }, 10, 2);
-            // --- END: Add ES module support ---
-        }
-
-        // --- BEGIN: Enqueue Module Config Assets (Consolidated) ---
-        // Only enqueue on the module config page
-        $screen = get_current_screen();
-        if ( ! empty( $screen->id ) && strpos( $screen->id, 'dm-module-config' ) !== false ) {
-            error_log('[Data Machine] Loading assets for: Module Config Page');
-
-            $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) ); // Base plugin path
-            $plugin_base_url  = plugin_dir_url( dirname( dirname( __FILE__ ) ) );   // Base plugin URL
-
-            // Prepare settings params for localization
-            $settings_params = array(
-                'ajax_url' => admin_url( 'admin-ajax.php' ),
-                // Standardized nonce for all module config actions
-                'module_config_nonce' => wp_create_nonce( 'dm_module_config_actions_nonce' ),
-            );
-
-            // Enqueue JS assets in dependency order
-            $js_files = array(
-                // Ensure module-config-ajax is enqueued FIRST or early
-                'dm-module-config-ajax' => array('path' => 'module-config/js/module-config-ajax.js', 'deps' => array('jquery')),
-                'dm-module-config-state' => array('path' => 'module-config/js/module-config-state.js', 'deps' => array('jquery')),
-                'module-state-controller' => array('path' => 'module-config/js/module-state-controller.js', 'deps' => array('dm-module-config-state', 'dm-module-config-ajax')),
-                'project-module-selector' => array('path' => 'module-config/js/project-module-selector.js', 'deps' => array('jquery', 'dm-module-config-ajax')),
-                'handler-template-manager' => array('path' => 'module-config/js/handler-template-manager.js', 'deps' => array('jquery', 'dm-module-config-ajax')),
-                // Ensure dm-module-config depends on the ajax handler
-                'dm-module-config' => array('path' => 'module-config/js/dm-module-config.js', 'deps' => array('jquery', 'dm-module-config-ajax', 'dm-module-config-state', 'project-module-selector', 'handler-template-manager')),
-                'dm-module-config-ui-helpers' => array('path' => 'module-config/js/dm-module-config-ui-helpers.js', 'deps' => array('jquery', 'dm-module-config')),
-                // Ensure remote locations depends on the ajax handler
-                'dm-module-config-remote-locations' => array('path' => 'module-config/js/dm-module-config-remote-locations.js', 'deps' => array('jquery', 'dm-module-config', 'dm-module-config-ajax')),
-            );
-
-            foreach ( $js_files as $handle => $info ) {
-                $js_path = $plugin_base_path . $info['path'];
-                $js_url  = $plugin_base_url . $info['path'];
-                if ( file_exists( $js_path ) ) {
-                    wp_enqueue_script( $handle, $js_url, $info['deps'], filemtime( $js_path ), true );
+        add_filter('script_loader_tag', function($tag, $handle) {
+            if ($handle === 'dm-module-config') {
+                if (strpos($tag, 'type="module"') === false) {
+                    $tag = str_replace('src=', 'type="module" src=', $tag);
                 }
             }
+            return $tag;
+        }, 10, 2);
+    }
 
-            // Localize params for the main AJAX handler script
-            wp_localize_script( 'dm-module-config-ajax', 'dm_settings_params', $settings_params );
+    private function enqueue_remote_locations_assets() {
+        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
+        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
+        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        $js_remote_path = $plugin_base_path . 'assets/js/data-machine-remote-locations.js';
+        $js_remote_url = $plugin_base_url . 'assets/js/data-machine-remote-locations.js';
+        $js_remote_version = file_exists($js_remote_path) ? filemtime($js_remote_path) : $this->version;
+        wp_enqueue_script( 'dm-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true );
+        $remote_locations_params = array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'confirm_delete' => __('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine')
+        );
+        wp_localize_script('dm-remote-locations-admin-js', 'dmRemoteLocationsParams', $remote_locations_params);
+    }
 
-            // Add type="module" to all module-config scripts for ES module support
-            // This filter is now applied only when module config assets are enqueued
-            add_filter('script_loader_tag', function($tag, $handle) {
-                $module_handles = array(
-                    'dm-module-config',
-                    'dm-module-config-state',
-                    'dm-module-config-ajax',
-                    'dm-module-config-remote-locations',
-                    'dm-module-config-ui-helpers',
-                    'module-state-controller',
-                    'project-module-selector',
-                    'handler-template-manager',
-                );
-                if (in_array($handle, $module_handles)) {
-                    if (strpos($tag, 'type="module"') === false) {
-                        $tag = str_replace('src=', 'type="module" src=', $tag);
-                    }
-                }
-                return $tag;
-            }, 10, 2);
-        }
-        // --- END: Enqueue Module Config Assets ---
+    private function enqueue_api_keys_assets() {
+        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
+        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
+        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
+        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        $js_api_keys_path = $plugin_base_path . 'assets/js/data-machine-api-keys.js';
+        $js_api_keys_url = $plugin_base_url . 'assets/js/data-machine-api-keys.js';
+        $js_api_keys_version = file_exists($js_api_keys_path) ? filemtime($js_api_keys_path) : $this->version;
+        wp_enqueue_script('data-machine-api-keys', $js_api_keys_url, array('jquery'), $js_api_keys_version, true);
+        $api_keys_params = array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('dm_instagram_auth_nonce'),
+            'oauth_url' => admin_url('admin-ajax.php?action=dm_instagram_oauth_start')
+        );
+        wp_localize_script('data-machine-api-keys', 'dmInstagramAuthParams', $api_keys_params);
+
+        // Add localization for Reddit and Twitter (dmApiKeysParams)
+        $dm_api_keys_params = array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            // Reddit OAuth
+            'reddit_oauth_url' => admin_url('admin-ajax.php?action=dm_reddit_oauth_start'),
+            'reddit_oauth_nonce' => wp_create_nonce('dm_reddit_oauth_nonce'),
+            // Twitter OAuth
+            'twitter_oauth_url' => admin_url('admin-post.php?action=dm_twitter_oauth_init'),
+            // Twitter nonce is generated dynamically via AJAX in JS
+        );
+        wp_localize_script('data-machine-api-keys', 'dmApiKeysParams', $dm_api_keys_params);
     }
 } // End class

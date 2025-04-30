@@ -1,9 +1,12 @@
+console.log('Loaded: module-config-ajax.js');
+let AjaxHandler;
+try {
 /**
  * Data Machine Module Config AJAX Handler.
  *
  * Consolidates AJAX calls for the module config page.
  */
-class AjaxHandler {
+AjaxHandler = class {
     constructor() {
         // Ensure localized params are available
         if (typeof dm_settings_params === 'undefined') {
@@ -100,28 +103,8 @@ class AjaxHandler {
         return this._makeAjaxRequest('dm_get_location_synced_info', { location_id: locationId });
     }
 
-    // --- Optional/Future Actions (Add implementations as needed) ---
-
-    // async createProject(projectName) {
-    //     return this._makeAjaxRequest('dm_create_project', { project_name: projectName });
-    // }
-
-
-    // async getRemoteCustomTaxonomies(locationId) {
-    //     return this._makeAjaxRequest('dm_get_remote_custom_taxonomies', { location_id: locationId });
-    // }
-
-    // async saveCustomTaxonomySelection(locationId, postTypeId, selections) {
-    //     return this._makeAjaxRequest('dm_save_custom_taxonomy_selection', {
-    //         location_id: locationId,
-    //         post_type_id: postTypeId,
-    //         selections: JSON.stringify(selections) // Assuming selections is an object/array
-    //     });
-    // }
-
-    // async getRemotePostTypes(locationId) {
-    //     return this._makeAjaxRequest('dm_get_remote_post_types', { location_id: locationId });
-    // }
+};
+} catch (e) {
+  console.error('Error in module-config-ajax.js:', e);
 }
-
 export default AjaxHandler; 

@@ -210,6 +210,47 @@ class Data_Machine_Remote_Locations {
             $result = $this->db_locations->update_location($location_id, get_current_user_id(), $data);
     
             if ($result) {
+                // Clean synced_site_info to only include enabled post types/taxonomies, but keep all keys with a disabled placeholder for unselected
+                $location = $this->db_locations->get_location($location_id, get_current_user_id(), false);
+                if ($location && !empty($location->synced_site_info)) {
+                    $site_info = json_decode($location->synced_site_info, true);
+                    $enabled_post_types = json_decode($location->enabled_post_types ?? '[]', true);
+                    $enabled_taxonomies = json_decode($location->enabled_taxonomies ?? '[]', true);
+
+                    if (is_array($site_info)) {
+                        $filtered = [
+                            'post_types' => [],
+                            'taxonomies' => [],
+                        ];
+                        // Post types: keep all keys, only keep details for enabled
+                        if (!empty($site_info['post_types']) && is_array($site_info['post_types'])) {
+                            foreach ($site_info['post_types'] as $slug => $info) {
+                                if (in_array($slug, $enabled_post_types, true)) {
+                                    $filtered['post_types'][$slug] = $info;
+                                } else {
+                                    $filtered['post_types'][$slug] = ['disabled' => true];
+                                }
+                            }
+                        }
+                        // Taxonomies: keep all keys, only keep details for enabled
+                        if (!empty($site_info['taxonomies']) && is_array($site_info['taxonomies'])) {
+                            foreach ($site_info['taxonomies'] as $slug => $info) {
+                                if (in_array($slug, $enabled_taxonomies, true)) {
+                                    $filtered['taxonomies'][$slug] = $info;
+                                } else {
+                                    // Only keep the label (if present) and the disabled flag
+                                    $label = is_array($info) && isset($info['label']) ? $info['label'] : '';
+                                    $filtered['taxonomies'][$slug] = [
+                                        'label' => $label,
+                                        'disabled' => true
+                                    ];
+                                }
+                            }
+                        }
+                        // Save the filtered site info
+                        $this->db_locations->update_synced_info($location_id, get_current_user_id(), wp_json_encode($filtered));
+                    }
+                }
                 // Change redirect to the list page
                 $redirect_url = add_query_arg(
                     array(

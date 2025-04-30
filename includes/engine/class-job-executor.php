@@ -342,6 +342,7 @@ class Data_Machine_Job_Executor {
 			'process_data_prompt' => $module->process_data_prompt,
 			'fact_check_prompt' => $module->fact_check_prompt,
 			'finalize_response_prompt' => $module->finalize_response_prompt,
+			'skip_fact_check' => isset($module->skip_fact_check) ? (int)$module->skip_fact_check : 0,
 			'data_source_type' => $module->data_source_type,
 			'output_type' => $module->output_type,
 			// Decode JSON config fields
@@ -466,6 +467,55 @@ class Data_Machine_Job_Executor {
 			}
 			$module_id = $module_job_config['module_id'];
 			$user_id = $job->user_id;
+
+			// --- START: Populate enabled_taxonomies for the handler --- 
+			$enabled_taxonomies_for_job = [];
+			if (isset($module_job_config['output_type']) && ($module_job_config['output_type'] === 'publish_remote' || $module_job_config['output_type'] === 'publish_local')) {
+				$output_config = $module_job_config['output_config'] ?? [];
+				$output_type_slug = $module_job_config['output_type']; // e.g., 'publish_remote'
+
+				// --- START Granular Debugging ---
+				$this->logger?->debug("Entered enabled_taxonomies population block.", ['job_id' => $job_id, 'output_type' => $output_type_slug]);
+				$this->logger?->debug("Output Config received:", ['job_id' => $job_id, 'output_config' => $output_config]);
+				// --- END Granular Debugging ---
+
+				// For publish_local, fetch local public taxonomies
+				if ($output_type_slug === 'publish_local') {
+					$local_taxonomies = get_taxonomies(['public' => true], 'names');
+					$enabled_taxonomies_for_job = array_values($local_taxonomies);
+					$this->logger?->debug("Fetched local public taxonomies for publish_local", ['job_id' => $job_id, 'taxonomies' => $enabled_taxonomies_for_job]);
+				} 
+				// For publish_remote, extract from the *nested* remote_site_info
+				elseif ($output_type_slug === 'publish_remote') {
+					// Get the specific config for the 'publish_remote' handler
+					$publish_remote_config = $output_config[$output_type_slug] ?? [];
+					// --- START Granular Debugging ---
+					$this->logger?->debug("Checking for publish_remote config.", ['job_id' => $job_id, 'publish_remote_config_exists' => isset($output_config[$output_type_slug]), 'publish_remote_config' => $publish_remote_config]);
+					// --- END Granular Debugging ---
+
+					// Access remote_site_info within that handler's config
+					$remote_site_info = $publish_remote_config['remote_site_info'] ?? [];
+					// --- START Granular Debugging ---
+					$this->logger?->debug("Checking for remote_site_info.", ['job_id' => $job_id, 'remote_site_info_exists' => isset($publish_remote_config['remote_site_info']), 'remote_site_info' => $remote_site_info]);
+					// --- END Granular Debugging ---
+
+					$remote_taxonomies = $remote_site_info['taxonomies'] ?? [];
+					// --- START Granular Debugging ---
+					$this->logger?->debug("Checking for remote_taxonomies.", ['job_id' => $job_id, 'remote_taxonomies_exist' => isset($remote_site_info['taxonomies']), 'remote_taxonomies' => $remote_taxonomies]);
+					// --- END Granular Debugging ---
+
+					if (!empty($remote_taxonomies) && is_array($remote_taxonomies)) {
+						$enabled_taxonomies_for_job = array_keys($remote_taxonomies);
+						$this->logger?->debug("Extracted remote taxonomies from synced data", ['job_id' => $job_id, 'taxonomies' => $enabled_taxonomies_for_job]);
+					} else {
+						$this->logger?->warning("Remote site info or taxonomies missing/invalid in output_config for publish_remote.", ['job_id' => $job_id, 'output_config_keys' => array_keys($output_config)]);
+					}
+				}
+			}
+			// Add the determined list to the config that gets passed down
+			$module_job_config['enabled_taxonomies'] = $enabled_taxonomies_for_job;
+			$this->logger?->debug("Populated enabled_taxonomies in job config", ['job_id' => $job_id, 'enabled_taxonomies' => $enabled_taxonomies_for_job]);
+			// --- END: Populate enabled_taxonomies --- 
 
 			// 2. Determine Items to Process
 			$items_to_process = [];

@@ -19,6 +19,28 @@ if (isset($_GET['auth_error'])) {
      $error_code = sanitize_text_field($_GET['auth_error']);
      if (isset($admin_notices)) $admin_notices->error(__('Failed to authenticate account. Error: ', 'data-machine') . esc_html($error_code));
 }
+
+// Check for per-form success notices
+if (isset($_GET['openai_saved'])) {
+    echo '<div class="notice notice-success is-dismissible"><p>OpenAI API key saved.</p></div>';
+}
+if (isset($_GET['bluesky_saved'])) {
+    echo '<div class="notice notice-success is-dismissible"><p>Bluesky credentials saved.</p></div>';
+}
+if (isset($_GET['instagram_saved'])) {
+    echo '<div class="notice notice-success is-dismissible"><p>Instagram credentials saved.</p></div>';
+}
+if (isset($_GET['twitter_saved'])) {
+    echo '<div class="notice notice-success is-dismissible"><p>Twitter credentials saved.</p></div>';
+}
+if (isset($_GET['reddit_saved'])) {
+    echo '<div class="notice notice-success is-dismissible"><p>Reddit credentials saved.</p></div>';
+}
+
+$twitter_account = get_user_meta(get_current_user_id(), 'data_machine_twitter_account', true);
+$reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_account', true);
+$instagram_accounts = get_user_meta(get_current_user_id(), 'data_machine_instagram_accounts', true);
+if (!is_array($instagram_accounts)) $instagram_accounts = [];
 ?>
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -63,92 +85,32 @@ if (isset($_GET['auth_error'])) {
     }
     ?>
 
-    <form method="post" action="options.php">
-        <?php
-        // Use the correct option group name defined during setting registration
-        settings_fields('dm_api_keys_group');
-        // If using settings sections, uncomment the line below
-        // do_settings_sections('dm-api-keys');
-        wp_nonce_field('dm_save_api_keys_user_meta', '_wpnonce_dm_api_keys_user_meta'); // Add nonce for user meta fields
-        ?>
+    <hr>
+    <h2>API Credentials</h2>
+    <p>Enter the API credentials for the services you want to use as data sources. Each section saves independently.</p>
 
-        <hr>
-        <h2>API Credentials</h2>
-        <p>Enter the API credentials for the services you want to use as data sources.</p>
-
-        <h3 style="margin-top: 20px;">OpenAI API Key</h3>
+    <!-- OpenAI API Key -->
+    <h3 style="margin-top: 20px;">OpenAI API Key</h3>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_openai_user_meta" />
+        <?php wp_nonce_field('dm_save_openai_user_meta_action'); ?>
         <table class="form-table">
             <tr>
-                <th scope="row"><label for="openai_api_key">OpenAI API Key</label></th>
+                <th scope="row"><label for="openai_api_key_user">OpenAI API Key</label></th>
                 <td>
-                    <input type="text" id="openai_api_key" name="openai_api_key" value="<?php echo esc_attr(get_option('openai_api_key', '')); ?>" class="regular-text" />
+                    <input type="text" id="openai_api_key_user" name="openai_api_key_user" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'dm_openai_api_key', true)); ?>" class="regular-text" />
                     <p class="description">Enter your API key from OpenAI for features like content generation or analysis.</p>
                 </td>
             </tr>
         </table>
+        <button type="submit" class="button button-primary">Save OpenAI API Key</button>
+    </form>
 
-        <h3 style="margin-top: 20px;">Instagram API Credentials</h3>
-        <table class="form-table">
-            <tr>
-                <th scope="row"><label for="instagram_oauth_client_id">Instagram App ID (Client ID)</label></th>
-                <td>
-                    <input type="text" id="instagram_oauth_client_id" name="instagram_oauth_client_id" value="<?php echo esc_attr(get_option('instagram_oauth_client_id', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your Instagram App ID (Client ID) from the Facebook Developer Console.</p>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="instagram_oauth_client_secret">Instagram App Secret (Client Secret)</label></th>
-                <td>
-                    <input type="text" id="instagram_oauth_client_secret" name="instagram_oauth_client_secret" value="<?php echo esc_attr(get_option('instagram_oauth_client_secret', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your Instagram App Secret (Client Secret) from the Facebook Developer Console.</p>
-                </td>
-            </tr>
-        </table>
-
-        <h3 style="margin-top: 20px;">Twitter API Credentials (App Keys)</h3>
-        <table class="form-table">
-            <tr>
-                <th scope="row"><label for="twitter_api_key">Twitter API Key (Consumer Key)</label></th>
-                <td>
-                    <input type="text" id="twitter_api_key" name="twitter_api_key" value="<?php echo esc_attr(get_option('twitter_api_key', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your Twitter App's API Key (sometimes called Consumer Key).</p>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="twitter_api_secret">Twitter API Secret (Consumer Secret)</label></th>
-                <td>
-                    <input type="text" id="twitter_api_secret" name="twitter_api_secret" value="<?php echo esc_attr(get_option('twitter_api_secret', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your Twitter App's API Secret (sometimes called Consumer Secret).</p>
-                </td>
-            </tr>
-        </table>
-
-        <h3 style="margin-top: 20px;">Reddit API Credentials</h3>
-        <table class="form-table">
-            <tr>
-                <th scope="row"><label for="reddit_oauth_client_id">Reddit Client ID</label></th>
-                <td>
-                    <input type="text" id="reddit_oauth_client_id" name="reddit_oauth_client_id" value="<?php echo esc_attr(get_option('reddit_oauth_client_id', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your Reddit App Client ID (found under your app details on Reddit's app preferences page - it's the string under the app name/type).</p>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="reddit_oauth_client_secret">Reddit Client Secret</label></th>
-                <td>
-                    <input type="text" id="reddit_oauth_client_secret" name="reddit_oauth_client_secret" value="<?php echo esc_attr(get_option('reddit_oauth_client_secret', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your Reddit App Client Secret.</p>
-                </td>
-            </tr>
-             <tr>
-                <th scope="row"><label for="reddit_developer_username">Reddit Developer Username</label></th>
-                <td>
-                    <input type="text" id="reddit_developer_username" name="reddit_developer_username" value="<?php echo esc_attr(get_option('reddit_developer_username', '')); ?>" class="regular-text" />
-                    <p class="description">Enter the Reddit username (without u/) associated with the account that registered the app above. Required for the User-Agent string in API calls.</p>
-                </td>
-            </tr>
-        </table>
-
-        <h3 style="margin-top: 20px;">Bluesky Credentials</h3>
+    <!-- Bluesky Credentials -->
+    <h3 style="margin-top: 20px;">Bluesky Credentials</h3>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_bluesky_user_meta" />
+        <?php wp_nonce_field('dm_save_bluesky_user_meta_action'); ?>
         <table class="form-table">
             <tr>
                 <th scope="row"><label for="bluesky_username">Bluesky Handle</label></th>
@@ -165,11 +127,91 @@ if (isset($_GET['auth_error'])) {
                 </td>
             </tr>
         </table>
-
-        <?php
-        submit_button('Save API Credentials');
-        ?>
+        <button type="submit" class="button button-primary">Save Bluesky Credentials</button>
     </form>
+
+    <!-- Instagram Credentials -->
+    <h3 style="margin-top: 20px;">Instagram Credentials</h3>
+    <?php $instagram_account = get_user_meta(get_current_user_id(), 'data_machine_instagram_account', true); if (!is_array($instagram_account)) $instagram_account = []; ?>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_instagram_user_meta" />
+        <?php wp_nonce_field('dm_save_instagram_user_meta_action'); ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="instagram_oauth_client_id">Instagram App ID (Client ID)</label></th>
+                <td>
+                    <input type="text" id="instagram_oauth_client_id" name="instagram_oauth_client_id" value="<?php echo esc_attr($instagram_account['client_id'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Instagram App ID (Client ID) from the Facebook Developer Console.</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="instagram_oauth_client_secret">Instagram App Secret (Client Secret)</label></th>
+                <td>
+                    <input type="text" id="instagram_oauth_client_secret" name="instagram_oauth_client_secret" value="<?php echo esc_attr($instagram_account['client_secret'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Instagram App Secret (Client Secret) from the Facebook Developer Console.</p>
+                </td>
+            </tr>
+        </table>
+        <button type="submit" class="button button-primary">Save Instagram Credentials</button>
+    </form>
+
+    <!-- Twitter Credentials (Manual Entry Only) -->
+    <h3 style="margin-top: 20px;">Twitter Account</h3>
+    <?php $twitter_account = get_user_meta(get_current_user_id(), 'data_machine_twitter_account', true); if (!is_array($twitter_account)) $twitter_account = []; ?>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_twitter_user_meta" />
+        <?php wp_nonce_field('dm_save_twitter_user_meta_action'); ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="twitter_api_key">Twitter API Key (Consumer Key)</label></th>
+                <td>
+                    <input type="text" id="twitter_api_key" name="twitter_api_key" value="<?php echo esc_attr($twitter_account['api_key'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Twitter App's API Key (sometimes called Consumer Key).</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="twitter_api_secret">Twitter API Secret (Consumer Secret)</label></th>
+                <td>
+                    <input type="text" id="twitter_api_secret" name="twitter_api_secret" value="<?php echo esc_attr($twitter_account['api_secret'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Twitter App's API Secret (sometimes called Consumer Secret).</p>
+                </td>
+            </tr>
+        </table>
+        <button type="submit" class="button button-primary">Save Twitter Credentials</button>
+    </form>
+
+    <!-- Reddit Credentials (Manual Entry Only) -->
+    <h3 style="margin-top: 20px;">Reddit Account</h3>
+    <?php $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_account', true); if (!is_array($reddit_account)) $reddit_account = []; ?>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_reddit_user_meta" />
+        <?php wp_nonce_field('dm_save_reddit_user_meta_action'); ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="reddit_oauth_client_id">Reddit Client ID</label></th>
+                <td>
+                    <input type="text" id="reddit_oauth_client_id" name="reddit_oauth_client_id" value="<?php echo esc_attr($reddit_account['client_id'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Reddit App Client ID (found under your app details on Reddit's app preferences page - it's the string under the app name/type).</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="reddit_oauth_client_secret">Reddit Client Secret</label></th>
+                <td>
+                    <input type="text" id="reddit_oauth_client_secret" name="reddit_oauth_client_secret" value="<?php echo esc_attr($reddit_account['client_secret'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Reddit App Client Secret.</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="reddit_developer_username">Reddit Developer Username</label></th>
+                <td>
+                    <input type="text" id="reddit_developer_username" name="reddit_developer_username" value="<?php echo esc_attr($reddit_account['developer_username'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter the Reddit username (without u/) associated with the account that registered the app above. Required for the User-Agent string in API calls.</p>
+                </td>
+            </tr>
+        </table>
+        <button type="submit" class="button button-primary">Save Reddit Credentials</button>
+    </form>
+
 </div>
 
 <!-- Authenticated Accounts Section -->

@@ -77,7 +77,7 @@ PROMPT;
                 'tools' => [
                     [
                         'type' => 'web_search_preview',
-                        'search_context_size' => 'medium' // Set context size to medium
+                        'search_context_size' => 'low' // Set context size to low to save $
                     ]
                 ],
                 // Optionally force tool usage if needed

@@ -281,7 +281,7 @@ class Data_Machine_Scheduler {
             // Update project's last run time (only if at least one eligible module was processed)
             // IMPORTANT: Timestamp updates happen HERE now, not in Job Worker.
             if ($modules_processed_count > 0) {
-                 $db_projects->update_last_run_time($project_id);
+                 $db_projects->update_project_last_run($project_id);
                  error_log($log_prefix . "Project last run time updated.");
                  $logger?->info($log_prefix . "Project last run time updated.", ['project_id' => $project_id]);
             }

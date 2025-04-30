@@ -79,7 +79,10 @@ class Data_Machine_Processing_Orchestrator {
 		$project_prompt = $this->project_prompt_service->get_system_prompt($project_id, $user_id);
 
 		// --- Configuration & Validation ---
-		$api_key = get_option('openai_api_key');
+		$api_key = get_user_meta($user_id, 'dm_openai_api_key', true);
+		if (empty($api_key)) {
+			$api_key = get_option('openai_api_key'); // Fallback for backward compatibility
+		}
 		if (empty($api_key)) {
 			return new WP_Error('missing_api_key', __('OpenAI API Key is missing.', 'data-machine'));
 		}
@@ -123,25 +126,34 @@ class Data_Machine_Processing_Orchestrator {
 
 		// --- Step 2: Fact Check ---
 		$fact_checked_content = '';
-		try {
-		    // Use the injected instance
-		    // Use $input_data_packet for logging
-		    $this->log_orchestrator_step('Step 2: Calling fact_check_response', $module_id, $input_data_packet['metadata'] ?? []);
-		    $factcheck_result = $this->factcheck_api->fact_check_response($api_key, $project_prompt, $fact_check_prompt, $initial_output);
-		    $this->log_orchestrator_step('Step 2: Received fact_check_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($factcheck_result), 'has_output' => !is_wp_error($factcheck_result) && !empty($factcheck_result['fact_check_results'])]);
-		    // Debug: Log the raw result immediately after the API call
-		    error_log("DM Orchestrator Debug: Raw factcheck_result after API call: " . print_r($factcheck_result, true));
+		// START: Add conditional check for skip_fact_check
+		$skip_fact_check = isset($module_job_config['skip_fact_check']) ? (bool)$module_job_config['skip_fact_check'] : false;
 
-		    if (is_wp_error($factcheck_result)) {
-		        // Use only the error message, and set code to 0 (Exception expects int)
-		        throw new Exception($factcheck_result->get_error_message(), 0);
+		if (!$skip_fact_check) {
+		    $this->log_orchestrator_step('Step 2: Running Fact Check (skip_fact_check is false)', $module_id, $input_data_packet['metadata'] ?? []);
+		    try {
+		        // Use the injected instance
+		        // Use $input_data_packet for logging
+		        $this->log_orchestrator_step('Step 2a: Calling fact_check_response API', $module_id, $input_data_packet['metadata'] ?? []);
+		        $factcheck_result = $this->factcheck_api->fact_check_response($api_key, $project_prompt, $fact_check_prompt, $initial_output);
+		        $this->log_orchestrator_step('Step 2b: Received fact_check_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($factcheck_result), 'has_output' => !is_wp_error($factcheck_result) && !empty($factcheck_result['fact_check_results'])]);
+		        // Debug: Log the raw result immediately after the API call
+
+		        if (is_wp_error($factcheck_result)) {
+		            // Use only the error message, and set code to 0 (Exception expects int)
+		            throw new Exception($factcheck_result->get_error_message(), 0);
+		        }
+		        $fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
+		    } catch (Exception $e) {
+		        $this->log_orchestrator_step('Step 2c: Exception in fact_check_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
+		        error_log('Orchestrator - FactCheck Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		        return new WP_Error('factcheck_step_failed', $e->getMessage());
 		    }
-		    $fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
-		} catch (Exception $e) {
-		    $this->log_orchestrator_step('Step 2: Exception in fact_check_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		    error_log('Orchestrator - FactCheck Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
-		    return new WP_Error('factcheck_step_failed', $e->getMessage());
+		} else {
+		    $this->log_orchestrator_step('Step 2: Skipping Fact Check (skip_fact_check is true)', $module_id, $input_data_packet['metadata'] ?? []);
+		    // $fact_checked_content remains empty as initialized
 		}
+		// END: Add conditional check for skip_fact_check
 
 
 		// --- Step 3: Finalize ---

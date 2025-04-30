@@ -57,6 +57,7 @@ class Data_Machine_Database_Modules {
             process_data_prompt longtext DEFAULT NULL,
             fact_check_prompt longtext DEFAULT NULL,
             finalize_response_prompt longtext DEFAULT NULL,
+            skip_fact_check TINYINT(1) NOT NULL DEFAULT 0,
             data_source_type varchar(50) DEFAULT 'files' NOT NULL,
             data_source_config longtext DEFAULT NULL,
             output_type varchar(50) DEFAULT 'data_export' NOT NULL,
@@ -111,6 +112,7 @@ class Data_Machine_Database_Modules {
             'output_config' => isset( $module_data['output_config'] ) ? wp_json_encode( $module_data['output_config'] ) : null, // Store config as JSON
             'schedule_interval' => isset( $module_data['schedule_interval'] ) ? sanitize_text_field( $module_data['schedule_interval'] ) : 'project_schedule', // Default to project schedule
             'schedule_status' => isset( $module_data['schedule_status'] ) ? sanitize_text_field( $module_data['schedule_status'] ) : 'active', // Default to active
+            'skip_fact_check' => isset( $module_data['skip_fact_check'] ) ? absint( $module_data['skip_fact_check'] ) : 0 // Default to 0 (false)
         );
 
         $format = array(
@@ -126,6 +128,7 @@ class Data_Machine_Database_Modules {
             '%s', // output_config (JSON string)
             '%s', // schedule_interval
             '%s', // schedule_status
+            '%d'  // skip_fact_check (integer 0 or 1)
         );
 
         $result = $wpdb->insert( $this->table_name, $data, $format );
@@ -232,6 +235,7 @@ class Data_Machine_Database_Modules {
             'data_source_config'       => '%s', // Expects JSON encoded string
             'output_type'              => '%s',
             'output_config'            => '%s', // Expects JSON encoded string
+            'skip_fact_check'        => '%d'  // Integer 0 or 1
         ];
    
         foreach ( $fields_to_update as $field => $fmt ) {
@@ -243,6 +247,8 @@ class Data_Machine_Database_Modules {
                     $data[ $field ] = wp_json_encode( $value );
                 } elseif ( in_array( $field, [ 'process_data_prompt', 'fact_check_prompt', 'finalize_response_prompt' ] ) ) {
                     $data[ $field ] = wp_kses_post( wp_unslash( $value ) ); // Unslash before kses
+                } elseif ( $field === 'skip_fact_check' ) {
+                    $data[ $field ] = absint( $value ); // Ensure it's 0 or 1
                 } else {
                     $data[ $field ] = sanitize_text_field( $value );
                 }

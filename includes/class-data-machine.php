@@ -141,6 +141,12 @@ class Data_Machine {
 	public $logger;
 
 	/**
+	 * Twitter OAuth handler instance.
+	 * @var Data_Machine_OAuth_Twitter
+	 */
+	public $oauth_twitter;
+
+	/**
 	 * Initialize the class and set its properties.
 	 * @since    0.1.0
 	 */
@@ -160,6 +166,7 @@ class Data_Machine {
 		$output_data_export,
 		$input_files,
 		$oauth_reddit,
+		$oauth_twitter,
 		$db_remote_locations,
 		$logger
 	) {
@@ -178,8 +185,10 @@ class Data_Machine {
 		$this->input_files = $input_files;
 		$this->db_remote_locations = $db_remote_locations;
 		$this->logger = $logger;
+		$this->oauth_twitter = $oauth_twitter;
 		// Register hooks for OAuth handlers
 		$oauth_reddit->register_hooks();
+		$oauth_twitter->register_hooks();
 		// TODO: Add Instagram hook registration once its handler is refactored
 		// $oauth_instagram->register_hooks(); 
 	}

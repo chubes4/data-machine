@@ -10,11 +10,8 @@
  * @since      0.7.0
  */
 
-use Data_Machine_Base_Output_Handler;
-
 class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_Interface {
-
-    use Data_Machine_Base_Output_Handler;
+	use Data_Machine_Base_Output_Handler;
 
     /**
      * Database handler for remote locations.
@@ -72,6 +69,14 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		// Access settings within the 'publish_remote' sub-array (matching saved config key)
 		$config = $output_config['publish_remote'] ?? [];
 		if ( ! is_array( $config ) ) $config = array(); // Ensure publish_remote sub-array exists
+
+		// --- Map selected_custom_taxonomy_values to rest_{tax_slug} keys for handler compatibility ---
+		if (isset($config['selected_custom_taxonomy_values']) && is_array($config['selected_custom_taxonomy_values'])) {
+			foreach ($config['selected_custom_taxonomy_values'] as $tax_slug => $value) {
+				$config['rest_' . $tax_slug] = $value;
+			}
+		}
+		// --- End mapping ---
 
 		// Get the selected remote location ID
 		$location_id = absint($config['location_id'] ?? 0);
@@ -174,7 +179,16 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			'content'     => $html_content, // Use processed HTML content
 			'post_type'   => $post_type,
 			'status'      => $post_status, // Changed key to 'status' for REST API
-			// Taxonomy keys will be added below based on mode
+            // --- Initialize Taxonomy Keys ---
+            'category_id' => null,
+            'category_name' => null,
+            'rest_category' => null,
+            'tag_ids' => [],
+            'tag_names' => [],
+            'rest_post_tag' => null,
+            'custom_taxonomies' => [],
+            // rest_{slug} keys for manual custom taxonomies are added dynamically later
+            // --- End Initialize ---
 		);
 		// Add module_id for tracking
 		if (!empty($module_job_config['module_id'])) {
@@ -193,7 +207,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		$remote_tags = $remote_info['taxonomies']['post_tag']['terms'] ?? [];
 
 		// Category Logic - Determine what to send
-		if ( is_string( $category_id ) && ($category_id === 'model_decides' || $category_id === 'instruct_model') ) {
+		if ( is_string( $category_id ) && ($category_id === 'instruct_model') ) {
 			// Model decides or Instruct Model: Send the name parsed from AI, if any
 			if (!empty($parsed_data['category'])) {
 				$payload['category_name'] = $parsed_data['category'];
@@ -218,7 +232,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		}
 
 		// Tag Logic - Determine what to send
-		if ( is_string( $tag_id ) && ($tag_id === 'model_decides' || $tag_id === 'instruct_model') ) {
+		if ( is_string( $tag_id ) && ($tag_id === 'instruct_model') ) {
 			// Model decides or Instruct Model: Send the names parsed from AI, if any
 			if (!empty($parsed_data['tags'])) {
 				// --- ENFORCE SINGLE TAG FOR instruct_model/model_decides --- 
@@ -243,7 +257,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			$assigned_tag_ids = []; // IDs will be determined/created by receiver
 
 		} elseif ( is_numeric( $tag_id ) && $tag_id > 0 ) { // Manual selection: Send the ID
-			$payload['tag_ids'] = array( $tag_id ); // Send as array
+			$payload['tag_ids'] = array( $tag_id );
 			$assigned_tag_ids = array( $tag_id );
 			// Find name locally for reporting back (optional)
 			foreach ($remote_tags as $tag) {
@@ -254,74 +268,61 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			}
 		}
 
-		// Add custom taxonomy selections (rest_{tax_slug}) to payload
-		// This loop ALREADY handles string modes correctly, sending the string mode itself
-		// OR the selected numeric ID.
-		foreach ($config as $key => $value) {
-		    if (preg_match('/^rest_([a-zA-Z0-9_]+)$/', $key, $matches)) {
-				$tax_slug = $matches[1]; // Get slug from the key
-		        if (is_string($value) && ($value === 'model_decides' || $value === 'instruct_model')) {
-		            $payload[$key] = $value; // Send the string mode
-		        } elseif (is_numeric($value) && $value > 0) {
-		            $payload[$key] = intval($value); // Send the numeric ID
-		        }
-		    }
-		}
+		// Custom Taxonomy Logic
+		// --- MODIFIED: Iterate directly over configured custom tax values ---
+		$selected_custom_tax_values = $config['selected_custom_taxonomy_values'] ?? [];
 
-		// Add parsed custom taxonomies to the payload (if any)
-		// This sends the NAMES parsed from AI output, regardless of mode
-		if (!empty($parsed_data['custom_taxonomies'])) {
-			$final_custom_tax_payload = []; // Build the payload to send
-			$assigned_custom_taxonomies = []; // Build the report data
+		$this->logger->debug('Starting custom taxonomy payload loop (using selected_custom_taxonomy_values)', ['selected_values' => $selected_custom_tax_values]); // DEBUG
 
-			foreach ($parsed_data['custom_taxonomies'] as $tax_slug => $term_names) {
-				if (empty($term_names)) continue;
+		// Iterate over the taxonomies actually configured for this module job
+		foreach ( $selected_custom_tax_values as $tax_slug => $tax_value ) {
+			// Basic validation
+			if ( empty($tax_slug) || empty($tax_value) ) {
+				continue;
+			}
 
-				// --- Determine if this custom taxonomy is set to 'instruct_model' or 'model_decides' --- 
-				$tax_mode = 'manual'; // Default if not found
-				$config_key = "rest_" . $tax_slug;
-				if (isset($config[$config_key])) {
-					$mode_check = $config[$config_key];
-					if (is_string($mode_check) && ($mode_check === 'instruct_model' || $mode_check === 'model_decides')) {
-						$tax_mode = $mode_check;
-					}
-				}
-				// --- End Mode Check ---
-
-				// --- ENFORCE SINGLE TERM FOR instruct_model/model_decides --- 
-				if ($tax_mode === 'instruct_model' || $tax_mode === 'model_decides') {
+			// Determine what to send for this custom taxonomy
+			if ( is_string( $tax_value ) && ( $tax_value === 'instruct_model' ) ) {
+				// Instruct Model: Send the names parsed from AI for this taxonomy, if any
+				$term_names = $parsed_data['custom_taxonomies'][$tax_slug] ?? [];
+				if (!empty($term_names)) {
+					// --- RE-APPLY SINGLE TERM Enforcement ---
 					$first_term_name = trim($term_names[0]); // Get the first term name
 					if (!empty($first_term_name)) {
-						$final_custom_tax_payload[$tax_slug] = [$first_term_name]; // Send only first term
-						$assigned_custom_taxonomies[$tax_slug] = [$first_term_name]; // Report only first term
-						if (count($term_names) > 1) {
-							$this->logger->info("Remote Publish: Instruct/Model mode for taxonomy '{$tax_slug}' - Sending only first term '{$first_term_name}'. AI provided: " . implode(', ', $term_names), ['location_id' => $location_id]);
-						}
+						// Send only first term, using the key expected by airdrop receiver
+						$payload['custom_taxonomies'][$tax_slug] = [$first_term_name];
+						$assigned_custom_taxonomies[$tax_slug] = [$first_term_name]; // For reporting
+					} else {
+						$assigned_custom_taxonomies[$tax_slug] = []; // Ensure key exists if no terms parsed for reporting
 					}
-				} else { 
-					// Manual mode (or other modes not needing enforcement): send all parsed terms
-					$valid_terms = array_filter(array_map('trim', $term_names));
-					if (!empty($valid_terms)) {
-						$final_custom_tax_payload[$tax_slug] = $valid_terms;
-						$assigned_custom_taxonomies[$tax_slug] = $valid_terms;
-					}
+				} else {
+					$assigned_custom_taxonomies[$tax_slug] = []; // Ensure key exists if no terms parsed for reporting
 				}
-				// --- END ENFORCEMENT ---
+			} elseif ( is_numeric( $tax_value ) ) {
+				// Specific Term ID selected: Send the term ID
+				$term_id = intval( $tax_value );
+				$payload['custom_taxonomies'][$tax_slug] = [$term_id]; // Send as ID
+				// Attempt to get term name for reporting (best effort)
+				$term = get_term($term_id);
+				$assigned_custom_taxonomies[$tax_slug] = $term ? [$term->name] : ["ID: {$term_id}"];
+			} else {
+				// Handle other cases or log warning if value is unexpected
+				$this->logger->warning("Unexpected value type for custom taxonomy in selected_custom_taxonomy_values.", ['tax_slug' => $tax_slug, 'value' => $tax_value]);
 			}
+		} // End foreach selected_custom_tax_values
 
-			// Add the processed custom taxonomies to the main payload
-			if (!empty($final_custom_tax_payload)) {
-				$payload['custom_taxonomies'] = $final_custom_tax_payload;
-			}
-			// $assigned_custom_taxonomies is already populated for reporting
-		}
+		$this->logger->debug('Finished custom taxonomy payload loop.', ['current_payload' => $payload]); // DEBUG
 
 		// Construct the target API URL
 		$api_url = $remote_url . '/wp-json/airdrop/v1/receive'; // Correct endpoint from helper plugin
 
-		// --- DEBUG: Log the payload before sending ---
-		// Log payload structure instead of full content
-		$this->logger->debug('Airdrop Payload Prepared', ['api_url' => $api_url, 'payload_keys' => array_keys($payload)]);
+		// --- DEBUG: Log the full payload before sending ---
+		// Create a safe payload copy for logging, excluding potentially huge content
+		$log_payload = $payload;
+		if (isset($log_payload['content'])) {
+			$log_payload['content'] = '[Content length: ' . strlen($log_payload['content']) . ']';
+		}
+		$this->logger->debug('Airdrop Payload Prepared (Full)', ['api_url' => $api_url, 'payload' => $log_payload]);
 		// --- END DEBUG ---
 
 		// Prepare arguments for wp_remote_post
@@ -331,7 +332,9 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'Authorization' => 'Basic ' . base64_encode( $remote_user . ':' . $remote_password ),
 				'Content-Type'  => 'application/json; charset=utf-8',
 			),
-			'body'    => json_encode( $payload ),
+            // --- FINAL PAYLOAD LOG BEFORE ENCODING ---
+            'body'    => $this->log_and_encode_payload($payload), // Use helper method
+            // --- END FINAL PAYLOAD LOG ---
 			'timeout' => 60, // Increased timeout
 		);
 
@@ -372,6 +375,16 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			'assigned_custom_taxonomies' => $assigned_custom_taxonomies, // Add custom tax info to result
 		);
 	}
+
+    /**
+     * Helper method to log payload right before JSON encoding.
+     *
+     * @param array $payload The payload array.
+     * @return string JSON encoded payload.
+     */
+    private function log_and_encode_payload(array $payload): string {
+        return json_encode($payload);
+    }
 
 	/**
 	 * Get settings fields for the Remote Publish output handler.

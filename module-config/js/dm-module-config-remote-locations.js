@@ -6,18 +6,18 @@
  * Fetches its own location list on initialization.
  */
 
+import { ACTIONS } from './module-state-controller.js';
+import DMState from './module-config-state.js';
+
+console.log('Loaded: dm-module-config-remote-locations.js');
+let dmRemoteLocationManager;
+try {
 // import CustomTaxonomyHandler from './dm-custom-taxonomy-handler.js'; // REMOVED - Logic moved
-// Removed imports for deleted ajax files:
-// import { fetchRemoteLocations, fetchLocationSyncedInfo as fetchLocationSyncedInfoAjax } from './ajax/remote-locations-ajax.js';
-// import { fetchRemotePostTypes } from './ajax/remote-location-post-types-ajax.js';
-// import { fetchRemoteCustomTaxonomies, saveCustomTaxonomySelection } from './ajax/custom-taxonomies-ajax.js';
 
 // Import the central state module
-import DMState from './module-config-state.js';
-// Import Action types
-import { ACTIONS } from './module-state-controller.js';
+// import DMState from './module-config-state.js';
 
-const dmRemoteLocationManager = (function() {
+dmRemoteLocationManager = (function() {
     // --- Handler Configs ---
     const handlerConfigs = {
         publish_remote: {
@@ -268,5 +268,12 @@ const dmRemoteLocationManager = (function() {
     };
 
 })();
+} catch (e) {
+  console.error('Error in dm-module-config-remote-locations.js:', e);
+}
+
+export default function createRemoteLocationManager(DMState, ACTIONS) {
+    return dmRemoteLocationManager;
+}
 
 window.dmRemoteLocationManager = dmRemoteLocationManager; 

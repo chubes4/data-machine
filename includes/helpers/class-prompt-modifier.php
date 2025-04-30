@@ -65,17 +65,23 @@ class Data_Machine_Prompt_Modifier
                 $tag_mode = $publish_config['selected_local_tag_id'] ?? 'model_decides';
             }
 
-            // Extract custom taxonomy configs (rest_...)
-            foreach ($publish_config as $key => $value) {
-                if (preg_match('/^rest_([a-zA-Z0-9_]+)$/', $key, $matches)) {
-                    $tax_slug = $matches[1];
-                    if (is_string($value) && ($value === 'model_decides' || $value === 'instruct_model')) {
-                         $custom_tax_configs[$tax_slug] = $value;
-                    } elseif (is_numeric($value)) {
-                        $custom_tax_configs[$tax_slug] = intval($value);
-                    }
+            // --- CORRECTED: Extract custom taxonomy configs from selected_custom_taxonomy_values ---
+            $custom_tax_configs = []; // Reset just in case
+            if (isset($publish_config['selected_custom_taxonomy_values']) && is_array($publish_config['selected_custom_taxonomy_values'])) {
+                foreach ($publish_config['selected_custom_taxonomy_values'] as $tax_slug => $value) {
+                    // Sanitize slug just in case
+                    $tax_slug = sanitize_key($tax_slug); 
+                    if (empty($tax_slug)) continue;
+
+                    // Check if the value is instruct_model or a numeric ID
+                    if (is_string($value) && ($value === 'instruct_model')) {
+                        $custom_tax_configs[$tax_slug] = $value; // Store 'instruct_model'
+                    } elseif (is_numeric($value) && $value > 0) {
+                        $custom_tax_configs[$tax_slug] = intval($value); // Store numeric ID
+                    } // Ignore empty strings or 0
                 }
             }
+            // --- End Corrected Extraction ---
 
             // Adjusting numbering for clarity
             $directive_block .= "\n4.  **Format:** Your response MUST start *immediately* with the following directives, each on a new line. Do NOT include any other text before these lines:";
@@ -85,52 +91,23 @@ class Data_Machine_Prompt_Modifier
             $directive_counter = 5; // Start further instructions from 5
 
             // Category
-            if (is_string($category_mode) && ($category_mode === 'model_decides' || $category_mode === 'instruct_model')) {
+            if (is_string($category_mode) && ($category_mode === 'instruct_model')) {
                 $directive_block .= "\n    CATEGORY: [Your chosen category name]";
-                if ($category_mode === 'model_decides') {
-                    $terms_to_list = []; $term_names = [];
-                    if ($output_type === 'publish_local') {$fetched_terms = get_terms(['taxonomy' => 'category', 'hide_empty' => false]); if (!is_wp_error($fetched_terms)) $terms_to_list = $fetched_terms; }
-                    else {$terms_to_list = $site_info['taxonomies']['category']['terms'] ?? [];}
-                    foreach ($terms_to_list as $term) { if (is_object($term) && isset($term->name)) $term_names[] = $term->name; elseif (is_array($term) && isset($term['name'])) $term_names[] = $term['name']; }
-                    $term_names = array_filter($term_names);
-                    if (!empty($term_names)) { $taxonomy_instructions[] = "- CATEGORY: Choose ONE category from: [" . implode(', ', $term_names) . "]"; }
-                    else { $taxonomy_instructions[] = "- CATEGORY: Determine the single most appropriate category."; }
-                } else { // instruct_model
                     $taxonomy_instructions[] = "- CATEGORY: Determine the category based on the user instructions in the prompt below.";
-                }
             }
 
             // Tags
-            if (is_string($tag_mode) && ($tag_mode === 'model_decides' || $tag_mode === 'instruct_model')) {
+            if (is_string($tag_mode) && ($tag_mode === 'instruct_model')) {
                 $directive_block .= "\n    TAGS: [Your chosen comma-separated tags]";
-                 if ($tag_mode === 'model_decides') {
-                    $terms_to_list = []; $term_names = [];
-                    if ($output_type === 'publish_local') { $fetched_terms = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => false]); if (!is_wp_error($fetched_terms)) $terms_to_list = $fetched_terms; }
-                    else { $terms_to_list = $site_info['taxonomies']['post_tag']['terms'] ?? []; }
-                    foreach ($terms_to_list as $term) { if (is_object($term) && isset($term->name)) $term_names[] = $term->name; elseif (is_array($term) && isset($term['name'])) $term_names[] = $term['name']; }
-                    $term_names = array_filter($term_names);
-                     if (!empty($term_names)) { $taxonomy_instructions[] = "- TAGS: Choose relevant tags from: [" . implode(', ', $term_names) . "]. Output comma-separated."; }
-                     else { $taxonomy_instructions[] = "- TAGS: Determine relevant tags. Output comma-separated."; }
-                } else { // instruct_model
-                    $taxonomy_instructions[] = "- TAGS: Determine the SINGLE most appropriate tag based ONLY on the user instructions in the prompt below. Output only this single tag name.";
-                }
+                    $taxonomy_instructions[] = "- TAGS: Determine the most appropriate tag(s) based ONLY on the user instructions in the prompt below. Output comma-separated.";
             }
 
             // Custom Taxonomies
             foreach ($custom_tax_configs as $tax_slug => $tax_mode) {
-                if (is_string($tax_mode) && ($tax_mode === 'model_decides' || $tax_mode === 'instruct_model')) {
+                if (is_string($tax_mode) && ($tax_mode === 'instruct_model')) {
                     $directive_block .= "\n    TAXONOMY[{$tax_slug}]: [Your chosen comma-separated '{$tax_slug}' terms]";
                     $tax_label = ucfirst(str_replace('_', ' ', $tax_slug));
-                     if ($tax_mode === 'model_decides') {
-                        $terms_to_list = $site_info['taxonomies'][$tax_slug]['terms'] ?? [];
-                        $term_names = [];
-                        foreach ($terms_to_list as $term) { if (is_array($term) && isset($term['name'])) $term_names[] = $term['name']; }
-                        $term_names = array_filter($term_names);
-                        if (!empty($term_names)) { $taxonomy_instructions[] = "- TAXONOMY[{$tax_slug}]: Choose relevant {$tax_label} terms from: [" . implode(', ', $term_names) . "]. Output comma-separated."; }
-                        else { $taxonomy_instructions[] = "- TAXONOMY[{$tax_slug}]: Determine relevant {$tax_label} terms. Output comma-separated."; }
-                    } else { // instruct_model
-                        $taxonomy_instructions[] = "- TAXONOMY[{$tax_slug}]: Determine the SINGLE most appropriate {$tax_label} term based ONLY on the user instructions in the prompt below. Output only this single term name.";
-                    }
+                        $taxonomy_instructions[] = "- TAXONOMY[{$tax_slug}]: Determine the most appropriate {$tax_label} term(s) based ONLY on the user instructions in the prompt below. Output comma-separated.";
                 }
             }
 

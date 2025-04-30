@@ -62,6 +62,13 @@
         <td>
             <input type="number" id="data_source_reddit_min_comment_count" name="data_source_config[reddit][min_comment_count]" value="0" class="small-text" min="0" max="100000">
             <p class="description"><?php _e('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'data-machine'); ?></p>
-        </td>
-    </tr>
-</table> 
+           </td>
+          </tr>
+          <tr>
+           <th scope="row"><label for="data_source_reddit_search"><?php _e('Search Term Filter', 'data-machine'); ?></label></th>
+           <td>
+            <input type="text" id="data_source_reddit_search" name="data_source_config[reddit][search]" value="" class="regular-text" placeholder="keyword1, keyword2">
+            <p class="description"><?php _e('Optional: Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'data-machine'); ?></p>
+           </td>
+          </tr>
+         </table>
