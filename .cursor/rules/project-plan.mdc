@@ -1,0 +1,279 @@
+---
+description: Data Machine Plugin - Project Plan and Development Roadmap
+globs: 
+alwaysApply: true
+---
+
+# Data Machine Plugin - Project Plan
+
+## Immediate Tasks (WordPress Repository Submission)
+
+### 1. Extract Airdrop Helper Plugin
+**Priority**: Critical for submission
+**Description**: The airdrop-helper functionality must be separated into its own standalone plugin for WordPress repository submission.
+
+**Tasks**:
+- Create new `data-machine-airdrop` plugin structure
+- Move `airdrop-helper/data-machine-airdrop.php` to new plugin
+- Update plugin headers and dependencies
+- Remove airdrop-helper directory from main plugin
+- Update composer.json to remove airdrop-helper from autoload classmap
+- Test remote publishing functionality with separated plugin
+
+**Dependencies**: Complete architecture documentation
+
+### 2. Clean Development Documentation
+**Priority**: Critical for submission
+**Description**: Remove development-specific markdown files that are not suitable for end users.
+
+**Files to Remove**:
+- `data-machine-context-overview.md`
+- `data-machine-dashboard-technical-breakdown.md`
+- `data-machine-output-handler-addition.md`
+- `data-machine-plugin-plan.md`
+- `data-machine-publishing-refactor-analysis.md`
+- `data-machine-taxonomy-instruction-analysis.md`
+- `Threads Use Case - Meta App Development.pdf`
+
+**Keep**:
+- `README.md` (update for WordPress standards)
+- `LICENSE`
+- `.gitignore`
+
+### 3. WordPress Repository Standards Compliance
+**Priority**: Critical for submission
+
+**Plugin Header Review**:
+- Verify plugin name: "Data Machine"
+- Confirm author: "Chris Huber"
+- Verify author URI: "https://chubes.net"
+- Check version: Currently 0.1.0 (appropriate for initial submission)
+- Confirm license: GPL v2 or later
+- Verify text domain: "data-machine"
+
+**Security Audit**:
+- Review all input sanitization using WordPress functions
+- Verify nonce usage for all AJAX endpoints
+- Check capability requirements for admin functions
+- Ensure proper escaping for all output
+- Review file upload restrictions
+- Verify API key encryption implementation
+
+**Dependency Management**:
+- Review composer dependencies for WordPress compatibility
+- Ensure vendor directory is properly included
+- Verify no conflicting dependencies with common plugins
+
+### 4. Update README.md for WordPress Repository
+**Priority**: High for submission
+**Description**: Current README.md is good but needs WordPress repository specific formatting.
+
+**Required Sections** (already present but may need enhancement):
+- Description
+- Installation
+- Frequently Asked Questions
+- Screenshots (needs actual screenshots)
+- Changelog
+- Upgrade Notice
+
+**Enhancements Needed**:
+- Add more detailed FAQ entries
+- Include actual screenshot files and descriptions
+- Expand system requirements section
+- Add contributing guidelines if applicable
+
+### 5. Test Uninstall Functionality
+**Priority**: High for submission
+**Description**: Verify `uninstall.php` properly removes all plugin data.
+
+**Verification Tasks**:
+- Test database table cleanup
+- Verify option cleanup
+- Check scheduled event removal
+- Ensure no orphaned data remains
+
+## High Priority Tasks
+
+### 1. Repository Rename ✅
+**Description**: Change GitHub repository name from "auto-data-collection" to "data-machine" to match plugin name.
+
+**Tasks**:
+- ✅ Update GitHub repository settings
+- ✅ Update any hardcoded references to old repository name
+- ✅ Update documentation links if any
+
+### 2. Production Testing
+**Description**: Comprehensive testing in production-like environment before submission.
+
+**Test Areas**:
+- All input handlers with real data sources
+- All output handlers with various destinations
+- OAuth flows for all social media integrations
+- Scheduled job execution via WP-Cron
+- Import/export functionality
+- Multi-user scenarios
+- Plugin activation/deactivation
+
+### 3. Performance Optimization
+**Description**: Ensure plugin performs well under load.
+
+**Optimization Areas**:
+- Database query optimization
+- Memory usage during large data processing
+- API rate limiting implementation
+- Background job processing efficiency
+
+## Medium Priority Tasks
+
+### 1. Enhanced Error Handling
+**Description**: Improve error reporting and user feedback throughout the plugin.
+
+**Improvements**:
+- More descriptive error messages for common issues
+- Better handling of API failures
+- User-friendly error display in admin interface
+- Enhanced logging for debugging
+
+### 2. Documentation Improvements
+**Description**: Create comprehensive user documentation.
+
+**Documentation Needs**:
+- Getting started guide
+- Configuration tutorials for each handler
+- OAuth setup guides
+- Troubleshooting guide
+- API documentation for developers
+
+### 3. UI/UX Enhancements
+**Description**: Improve admin interface usability.
+
+**Enhancements**:
+- Better visual feedback during processing
+- Improved module configuration flow
+- Enhanced dashboard with more metrics
+- Mobile-responsive admin interface
+
+## Low Priority Tasks
+
+### 1. Additional Input Handlers
+**Description**: Expand data source options.
+
+**Potential Handlers**:
+- YouTube API integration
+- Email/IMAP integration
+- Database direct connections
+- FTP/SFTP file sources
+- Web scraping capabilities
+
+### 2. Additional Output Handlers
+**Description**: Expand publishing destinations.
+
+**Potential Handlers**:
+- LinkedIn publishing
+- Mastodon integration
+- Discord webhooks
+- Telegram channels
+- Email newsletters
+
+### 3. Advanced Scheduling
+**Description**: Enhanced scheduling capabilities beyond WP-Cron.
+
+**Features**:
+- More granular time controls
+- Event-based triggers
+- Conditional execution
+- Batch processing optimization
+
+## Ideas for Future Development
+
+### 1. Visual Workflow Builder
+**Description**: Drag-and-drop interface for creating data pipelines.
+- Node-based workflow editor
+- Visual data mapping
+- Real-time preview capabilities
+- Template sharing system
+
+### 2. Advanced AI Features
+**Description**: Enhanced AI processing capabilities.
+- Multiple AI provider support (Anthropic, Google, etc.)
+- Custom model fine-tuning
+- Advanced prompt engineering tools
+- AI-powered content optimization
+
+### 3. Analytics and Reporting
+**Description**: Comprehensive analytics dashboard.
+- Processing performance metrics
+- Content engagement tracking
+- Error rate monitoring
+- Usage analytics
+
+### 4. Multi-Site Support
+**Description**: Enhanced WordPress multisite capabilities.
+- Network-wide configuration
+- Site-specific modules
+- Cross-site data sharing
+- Centralized management
+
+### 5. API and Webhook System
+**Description**: External integration capabilities.
+- REST API for external access
+- Webhook triggers for events
+- Third-party integration framework
+- Developer SDK
+
+### 6. Content Templates and Themes
+**Description**: Predefined content formats and styling.
+- Template marketplace
+- Custom content formatting
+- Brand-consistent publishing
+- Dynamic content insertion
+
+### 7. Collaboration Features
+**Description**: Multi-user workflow management.
+- User role management
+- Approval workflows
+- Content review system
+- Team notifications
+
+### 8. Advanced Data Processing
+**Description**: Enhanced data manipulation capabilities.
+- Custom PHP code execution
+- Data transformation rules
+- Advanced filtering options
+- Data validation frameworks
+
+## Completed Tasks
+
+Tasks completed should be removed from this document and documented in the project-architecture.mdc file where relevant.
+
+## Development Guidelines
+
+### Code Quality Standards
+- Follow WordPress coding standards
+- Maintain SOLID principles
+- Use dependency injection patterns
+- Implement comprehensive error handling
+- Write self-documenting code with proper comments
+
+### Testing Standards
+- Test all new features thoroughly
+- Maintain backward compatibility
+- Test across different WordPress versions
+- Verify multisite compatibility
+- Performance testing for large datasets
+
+### Documentation Standards
+- Update architecture documentation immediately
+- Maintain inline code documentation
+- Create user-friendly help text
+- Document configuration options clearly
+- Keep changelogs updated
+
+### Security Standards
+- Sanitize all inputs using WordPress functions
+- Escape all outputs appropriately
+- Use nonces for all form submissions
+- Implement proper capability checks
+- Regular security audits
+
+This project plan should be updated regularly as tasks are completed and new requirements emerge. All completed tasks should be documented in the architecture file and removed from this plan to maintain clarity and focus on forward-looking development.

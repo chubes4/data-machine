@@ -1,0 +1,28 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are now creating, updating, or refining .mdc files in the .cursor/rules directory. You must follow these documentation rules closely. Strict adherance to this document is paramount.   
+
+The project should ALWAYS contain at least two main .mdc files:
+
+1. .cursor/rules/project-architecture.mdc - this file outlines the codebase and provides a very detailed overview of how everything works in the CURRENT CODEBASE. It is developer-facing documentation designed to provide context. It provides complete clarity on the functionality, purpose, and data flow. It provides an overview of the inner workings and file stucture, then gets into the nitty gritty breakdown of existing major features, including specific filenames, dependencies, functions, nonce names, database keys, and logical philosophy. This document should not contain any future plans. Those belong in document two. Complex features are broken into detailed individual documentation modules and directly referenced from here when relevant (see below for more).
+
+2. .cursor/rules/project-plan.mdc  - This file contains the immediate action plan and future outlook for features, bugs, and refactor ideas. It is organized by priority in 4 sections: immediate (the very next step), high, medium, low, and ideas. This document should ONLY contain forward-looking steps, and should NOT contain any architecture. All completed steps should be deleted from this file and documented in the appropriate rule. This document helps us track our development plan and future outlook for the codebase. 
+
+These two main .mdc files are tightly coupled and always accurate and up-to-date. If you find that there is discrepancy between the documentation and the codebase, you should always update the documentation to be explicitly accurate. 
+
+For large refactors or complex feature ideas, we will create dedicated .mdc files that will encapsulate the plan for that specific refactor, and after completing, we will update the file to provide a detailed architecture of the feature itself. We will update the main @project-architecture.mdc file to reference the modular documentation for more details where relevant. These .mdc files will be created at the request of the user, and will be equally detailed and accurate, providing clarity and efficiency. 
+
+##Key Considerations
+
+When updating .mdc files, ALWAYS make sure that the flow is clear. You should NEVER simply append new information to the end unless it makes sense to do so. The document is LIVING, and BREATHING, and always clear and clean. 
+
+Always clearly specify the required naming convention for data keys passed from PHP to JS.
+
+The definition and frequency block at the very top of the file between the three dashes (---) should be set to alwaysApply:true for the plan, architecture, and documentation rules. All other cursor rules are set to manual
+
+You MUST note any contradictions or redundancies you discover and note them and make plans to repair them. 
+
+We should focus on detailed, step-by-step, and bite-sized chunks to ensure accuracy when using AI tools.

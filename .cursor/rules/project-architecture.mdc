@@ -1,0 +1,349 @@
+# Data Machine Plugin - Architecture Documentation
+
+## Overview
+
+The Data Machine plugin is a sophisticated WordPress tool designed to automate data collection, AI-powered processing, and multi-platform publishing. Built with a modular architecture following SOLID principles, it enables users to create custom data pipelines that collect from various sources, process through OpenAI APIs, and publish to multiple destinations.
+
+## Core Workflow
+
+The plugin follows a structured 5-step processing workflow:
+
+1. **Input Collection**: Gather data from various sources (files, RSS, Reddit, Instagram, REST APIs)
+2. **Initial Processing**: Send data to OpenAI API for initial analysis and transformation
+3. **Fact Checking**: Validate processed content through AI-powered fact-checking
+4. **Content Finalization**: Generate final output using AI with project-specific prompts
+5. **Output Publishing**: Distribute content to configured destinations (WordPress, social media, exports)
+
+## Project Structure
+
+### Main Plugin File
+- **`data-machine.php`**: Plugin header, initialization, dependency loading, and WordPress hooks
+  - Defines constants: `DATA_MACHINE_VERSION`, `DATA_MACHINE_PATH`
+  - Handles Composer autoloading
+  - Registers OAuth endpoints for Instagram
+  - Orchestrates dependency injection and service instantiation
+
+### Core Architecture (`includes/`)
+
+#### Database Layer (`includes/database/`)
+Handles all data persistence with dedicated classes:
+
+- **`class-database-projects.php`**: Project management (CRUD operations, user associations)
+- **`class-database-modules.php`**: Module configuration storage and retrieval
+- **`class-database-jobs.php`**: Job queue management and execution tracking
+- **`class-database-processed-items.php`**: Deduplication and processing history
+- **`class-database-remote-locations.php`**: Remote publishing endpoint management
+- **`class-database-dashboard.php`**: Dashboard data aggregation
+
+**Database Table Structure:**
+- `{prefix}_dm_projects`: Project metadata and user associations
+- `{prefix}_dm_modules`: Module configurations with serialized handler settings
+- `{prefix}_dm_jobs`: Job queue with status tracking
+- `{prefix}_dm_processed_items`: Content deduplication by hash
+- `{prefix}_dm_remote_locations`: Remote publishing endpoints with encrypted credentials
+
+#### Processing Engine (`includes/engine/`)
+Core data processing orchestration:
+
+- **`class-processing-orchestrator.php`**: Main processing coordinator
+  - Method: `run()` - Orchestrates the complete processing workflow
+  - Integrates with OpenAI APIs for content processing
+  - Handles project prompts and content finalization
+
+- **`class-job-executor.php`**: Job lifecycle management
+  - Method: `execute_job()` - Single job execution
+  - Method: `run_scheduled_job()` - Scheduled job handling via WP-Cron
+  - Manages job state transitions and error handling
+
+- **`class-job-worker.php`**: Individual job processing
+  - Method: `run()` - Executes complete processing workflow for a single job
+  - Handles input data fetching, AI processing, and output delegation
+
+#### Input Handlers (`includes/input/`)
+Data collection from various sources:
+
+- **`trait-data-machine-base-input-handler.php`**: Common input functionality
+- **`class-data-machine-input-files.php`**: Local file processing (CSV, JSON, TXT)
+- **`class-data-machine-input-rss.php`**: RSS feed consumption with filtering
+- **`class-data-machine-input-reddit.php`**: Reddit API integration with OAuth
+- **`class-data-machine-input-instagram.php`**: Instagram Basic Display API
+- **`class-data-machine-input-public_rest_api.php`**: Generic REST API consumption
+- **`class-data-machine-input-airdrop_rest_api.php`**: Airdrop helper integration
+
+**Key Input Handler Methods:**
+- `get_input_data()`: Fetch and standardize data
+- `sanitize_settings()`: Validate configuration
+- `get_settings_fields()`: Define UI configuration fields
+
+#### Output Handlers (`includes/output/`)
+Content publishing to various destinations:
+
+- **`trait-data-machine-base-output-handler.php`**: Common output functionality
+- **`class-data-machine-output-publish_local.php`**: WordPress post creation
+- **`class-data-machine-output-publish_remote.php`**: Remote WordPress publishing
+- **`class-data-machine-output-data_export.php`**: File exports (CSV, JSON)
+- **`class-data-machine-output-twitter.php`**: Twitter/X posting via OAuth
+- **`class-data-machine-output-facebook.php`**: Facebook posting
+- **`class-data-machine-output-threads.php`**: Meta Threads publishing
+- **`class-data-machine-output-bluesky.php`**: Bluesky social posting
+
+**Key Output Handler Methods:**
+- `send_output()`: Process and publish content
+- `sanitize_settings()`: Validate configuration
+- `get_settings_fields()`: Define UI configuration fields
+
+#### API Integration (`includes/api/`)
+External service communication:
+
+- **`class-data-machine-api-openai.php`**: OpenAI API client using responses API
+- **`class-data-machine-api-factcheck.php`**: AI-powered fact checking
+- **`class-data-machine-api-finalize.php`**: Content finalization processing
+
+**Key API Methods:**
+- `send_request()`: Execute API calls with error handling
+- `process_content()`: Content transformation workflows
+
+#### Helper Classes (`includes/helpers/`)
+Utility and support functionality:
+
+- **`class-data-machine-logger.php`**: Centralized logging with admin notices
+- **`class-data-machine-encryption-helper.php`**: API key encryption/decryption
+- **`class-data-machine-project-prompt.php`**: Project-specific prompt management
+- **`class-ai-response-parser.php`**: AI response directive parsing
+- **`class-markdown-converter.php`**: Markdown to HTML conversion
+- **`class-prompt-modifier.php`**: Dynamic prompt enhancement
+
+#### AJAX Handlers (`includes/ajax/`)
+Frontend-backend communication:
+
+- **`class-data-machine-dashboard-ajax.php`**: Dashboard interactions
+- **`class-project-management-ajax.php`**: Project CRUD operations
+- **`class-data-machine-ajax-locations.php`**: Remote location management
+- **`class-data-machine-ajax-scheduler.php`**: Schedule management
+- **`run-single-module-ajax.php`**: Manual module execution
+
+### Admin Interface (`admin/`)
+
+#### Core Admin Classes
+- **`class-data-machine-admin-page.php`**: Main admin controller and menu registration
+- **`class-data-machine-remote-locations.php`**: Remote publishing endpoint management
+- **`class-dm-api-auth-page.php`**: API key management interface
+
+#### OAuth Integration (`admin/oauth/`)
+Social media authentication:
+
+- **`class-data-machine-oauth-reddit.php`**: Reddit OAuth flow
+- **`class-data-machine-oauth-twitter.php`**: Twitter/X OAuth 1.0a
+- **`class-data-machine-oauth-threads.php`**: Meta Threads OAuth
+- **`class-data-machine-oauth-facebook.php`**: Facebook OAuth
+
+#### Admin Templates (`admin/templates/`)
+UI page templates:
+
+- **`dashboard-page.php`**: Main dashboard overview
+- **`project-management-page.php`**: Project CRUD interface
+- **`module-config-page.php`**: Module configuration forms
+- **`run-single-module-page.php`**: Manual execution interface
+- **`remote-locations-page.php`**: Remote endpoint management
+- **`api-keys-page.php`**: API credential management
+
+### Module Configuration System (`module-config/`)
+
+#### Core Configuration Classes
+- **`class-dm-module-config-handler.php`**: Module configuration processing
+- **`RegisterSettings.php`**: WordPress settings API integration
+- **`SettingsFields.php`**: Dynamic form field generation
+- **`HandlerFactory.php`**: Dependency injection for handlers
+- **`Handler_Config_Helper.php`**: Configuration extraction utilities
+
+#### Handler Templates (`module-config/handler-templates/`)
+Dynamic UI templates for handler configuration:
+
+**Input Templates:**
+- `input/files.php`, `input/rss.php`, `input/reddit.php`, etc.
+
+**Output Templates:**
+- `output/publish_local.php`, `output/twitter.php`, `output/facebook.php`, etc.
+
+#### Remote Location Service
+- **`RemoteLocationService.php`**: Remote publishing endpoint management
+
+### Frontend Assets (`assets/`)
+
+#### CSS (`assets/css/`)
+- **`data-machine-admin.css`**: Admin interface styling with modern WordPress design
+
+#### JavaScript (`assets/js/`)
+- **`data-machine-dashboard.js`**: Dashboard interactivity
+- **`data-machine-project-management.js`**: Project management UI
+- **`data-machine-api-keys.js`**: API key management
+- **`data-machine-remote-locations.js`**: Remote location configuration
+- **`run-single-module.js`**: Manual execution interface
+
+#### Module Configuration JavaScript (`module-config/js/`)
+- **`dm-module-config.js`**: Main configuration interface
+- **`module-config-state.js`**: State management
+- **`handler-template-manager.js`**: Dynamic template loading
+- **`module-config-ajax.js`**: AJAX communication
+
+## Key Design Patterns
+
+### Dependency Injection
+All major classes use constructor injection for dependencies, managed through `HandlerFactory.php`.
+
+### Strategy Pattern
+Input and output handlers implement respective interfaces, allowing runtime selection and configuration.
+
+### Observer Pattern
+WordPress hooks and actions for loosely coupled component communication.
+
+### Factory Pattern
+Handler creation through factory classes with dependency resolution.
+
+## Data Flow Architecture
+
+### Input Data Standardization
+All input handlers produce standardized `$input_data_packet` arrays:
+```php
+[
+    'title' => 'Content title',
+    'content' => 'Main content body',
+    'metadata' => [...], // Source-specific data
+    'file_info' => [...] // Image/file information
+]
+```
+
+### Configuration Management
+Handler configurations stored as serialized arrays in module database records, with runtime sanitization and validation.
+
+### Job Processing Pipeline
+1. Job creation in database with pending status
+2. WP-Cron scheduled execution
+3. Input handler data collection
+4. AI processing pipeline (initial → fact-check → finalize)
+5. Output handler publishing
+6. Job completion and logging
+
+### Error Handling
+Centralized logging through `Data_Machine_Logger` with admin notice display and persistent log storage.
+
+### Security Implementation
+- API key encryption using WordPress salts
+- Nonce verification for all AJAX requests
+- Input sanitization and validation
+- Capability checks for admin functions
+- OAuth token secure storage
+
+## Database Schema
+
+### Projects Table (`wp_dm_projects`)
+- `id`: Primary key
+- `user_id`: WordPress user association
+- `name`: Project name
+- `description`: Project description
+- `prompt`: AI processing prompt
+- `created_at`: Creation timestamp
+- `updated_at`: Last modification
+
+### Modules Table (`wp_dm_modules`)
+- `id`: Primary key
+- `project_id`: Foreign key to projects
+- `user_id`: WordPress user association
+- `name`: Module name
+- `input_handler`: Input handler class name
+- `output_handler`: Output handler class name
+- `input_config`: Serialized input settings
+- `output_config`: Serialized output settings
+- `schedule_config`: Serialized schedule settings
+- `created_at`: Creation timestamp
+
+### Jobs Table (`wp_dm_jobs`)
+- `id`: Primary key
+- `project_id`: Foreign key to projects
+- `module_id`: Foreign key to modules
+- `user_id`: WordPress user association
+- `status`: Job status (pending, processing, completed, failed)
+- `input_data`: Serialized input data
+- `output_data`: Serialized output data
+- `created_at`: Creation timestamp
+- `completed_at`: Completion timestamp
+
+## Integration Points
+
+### WordPress Core Integration
+- Uses WordPress database layer ($wpdb)
+- Leverages WordPress settings API
+- Integrates with WordPress media library
+- Uses WordPress user system for permissions
+- Employs WordPress nonce system for security
+
+### Third-Party Services
+- **OpenAI API**: Content processing and AI capabilities
+- **Social Media APIs**: Twitter, Facebook, Instagram, Reddit, Threads, Bluesky
+- **Remote WordPress Sites**: REST API publishing
+
+### Composer Dependencies
+- `erusev/parsedown`: Markdown processing
+- `monolog/monolog`: Enhanced logging
+- `abraham/twitteroauth`: Twitter API integration
+
+## Security Considerations
+
+### Data Protection
+- API keys encrypted before database storage
+- Sensitive configuration data sanitized
+- User capability checks for all admin actions
+- CSRF protection via WordPress nonces
+
+### Input Validation
+- All user inputs sanitized using WordPress functions
+- Configuration validation through handler-specific methods
+- File upload restrictions and validation
+
+### Output Sanitization
+- Content sanitized before publishing
+- URL validation for external API calls
+- XSS prevention in admin interface
+
+## Performance Optimizations
+
+### Caching Strategy
+- Minimal database queries through efficient data structures
+- Handler instantiation only when needed
+- Configuration caching during execution
+
+### Async Processing
+- Background job processing via WP-Cron
+- Non-blocking API calls where possible
+- Batch processing for multiple items
+
+### Database Optimization
+- Indexed foreign keys for efficient queries
+- Minimal table structure with necessary relationships
+- Efficient deduplication through content hashing
+
+## Development Notes
+
+### Naming Conventions
+- **PHP Classes**: PascalCase with underscores (`Data_Machine_Class_Name`)
+- **Database Keys**: snake_case (`data_source_config`)
+- **JavaScript**: camelCase (`modulConfigState`)
+- **CSS**: kebab-case (`data-machine-admin`)
+
+### File Organization
+- Handler classes grouped by functionality (input/, output/)
+- Admin functionality separated from core logic
+- JavaScript and CSS organized by feature
+- Templates separated from logic
+
+### Extensibility Points
+- Interface-based handler system for easy extension
+- Factory pattern for handler instantiation
+- Hook system for custom functionality integration
+- Configuration templates for new handlers
+
+This architecture documentation reflects the current state of the Data Machine plugin as of the latest codebase analysis. All architectural decisions should be reflected in this documentation immediately to maintain accuracy and provide clear guidance for development.
+description:
+globs:
+alwaysApply: false
+---
