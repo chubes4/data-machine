@@ -30,7 +30,6 @@ class Data_Machine_Encryption_Helper {
 	 */
 	public static function encrypt( $data ) {
 		if ( ! function_exists( 'openssl_encrypt' ) || ! function_exists('openssl_random_pseudo_bytes') || ! function_exists('openssl_cipher_iv_length') ) {
-			error_log( 'Data Machine Error: Required OpenSSL functions are not available for encryption.' );
 			return false;
 		}
 		if ( empty( $data ) ) {
@@ -40,13 +39,11 @@ class Data_Machine_Encryption_Helper {
 		$key = Data_Machine_Constants::get_encryption_key(); // Get the key from Constants
 		$iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
 		if (false === $iv_length) {
-			error_log( 'Data Machine Error: Could not get IV length for ' . self::ENCRYPTION_METHOD );
 			return false;
 		}
 
 		$iv = openssl_random_pseudo_bytes($iv_length);
 		if (false === $iv) {
-			error_log( 'Data Machine Error: Could not generate IV.' );
 			return false;
 		}
 
@@ -55,7 +52,6 @@ class Data_Machine_Encryption_Helper {
 
 		if ( false === $encrypted_raw ) {
 			// Optionally log the OpenSSL error
-			error_log( 'Data Machine Error: OpenSSL encryption failed. ' . openssl_error_string() );
 			return false;
 		}
 
@@ -71,7 +67,6 @@ class Data_Machine_Encryption_Helper {
 	 */
 	public static function decrypt( $encrypted_data_with_iv ) {
 		if ( ! function_exists( 'openssl_decrypt' ) || ! function_exists('openssl_cipher_iv_length') ) {
-			error_log( 'Data Machine Error: Required OpenSSL functions are not available for decryption.' );
 			return false;
 		}
 		if ( empty( $encrypted_data_with_iv ) ) {
@@ -80,20 +75,17 @@ class Data_Machine_Encryption_Helper {
 
 		$decoded_data = base64_decode( $encrypted_data_with_iv );
 		if ( false === $decoded_data ) {
-			error_log( 'Data Machine Error: Failed to base64 decode encrypted data.' );
 			return false; // Invalid Base64 string
 		}
 
 		$key = Data_Machine_Constants::get_encryption_key(); // Get the key from Constants
 		$iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
 		if (false === $iv_length) {
-			error_log( 'Data Machine Error: Could not get IV length for ' . self::ENCRYPTION_METHOD );
 			return false;
 		}
 
 		// Check if decoded data is long enough to contain the IV
 		if (strlen($decoded_data) < $iv_length) {
-			error_log( 'Data Machine Error: Encrypted data is too short to contain IV.' );
 			return false;
 		}
 
@@ -107,7 +99,6 @@ class Data_Machine_Encryption_Helper {
 
 		if ( false === $decrypted ) {
 			// Optionally log the OpenSSL error - this is where the 'bad decrypt' often shows up if key/IV is wrong
-			error_log( 'Data Machine Error: OpenSSL decryption failed. ' . openssl_error_string() );
 			return false;
 		}
 

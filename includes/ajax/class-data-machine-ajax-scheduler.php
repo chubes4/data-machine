@@ -130,15 +130,6 @@ class Data_Machine_Ajax_Scheduler {
 
         try {
             // Update project schedule
-            // --- DEBUG LOGGING --- 
-            error_log(sprintf(
-                "Data Machine AJAX: Calling update_project_schedule with Project ID: %s, User ID: %s, Interval: '%s', Status: '%s'",
-                $project_id,
-                $user_id,
-                $interval, 
-                $status
-            ));
-            // --- END DEBUG LOGGING ---
             $project_updated = $this->db_projects->update_project_schedule(
                 $project_id,
                 $interval, 

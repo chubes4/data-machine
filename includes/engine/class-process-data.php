@@ -44,7 +44,7 @@ class Data_Machine_process_data {
 	 */
 	public function process_data($api_key, $system_prompt, $user_prompt, $input_data_packet) {
 		// Log the full input_data_packet for debugging
-		error_log('DM Debug: input_data_packet: ' . print_r($input_data_packet, true));
+		        // Debug logging removed for production
 		// Use the injected OpenAI API instance
 		$api = $this->openai_api;
 		$default_response = [
@@ -57,7 +57,7 @@ class Data_Machine_process_data {
 			$response = null;
 
 			if (!is_array($input_data_packet)) {
-				error_log('Data Machine - process_data: Received input_data_packet is not an array. Content: ' . print_r($input_data_packet, true));
+				        // Error logging removed for production
 			} else {
 				// Use standardized structure: look under 'data' for file_info and content_string
 				$file_info = $input_data_packet['file_info'] ?? ($input_data_packet['data']['file_info'] ?? null);
@@ -90,7 +90,7 @@ class Data_Machine_process_data {
 					}
 
 					// Log only once for file input
-					error_log("DM Process Data: File Input | System Prompt: " . print_r($system_prompt, true) . " | User Message: " . print_r($user_message, true));
+					        // Debug logging removed for production
 					$response = $api->create_response_with_file($api_key, $file_info, $user_message);
 
 				} else {
@@ -100,7 +100,7 @@ class Data_Machine_process_data {
 						$user_message .= "\n\nPost Content:\n" . $content_string;
 					}
 					// Log only once for text input
-					error_log("DM Process Data: Text Input | System Prompt: " . print_r($system_prompt, true) . " | User Message: " . print_r($user_message, true));
+					        // Debug logging removed for production
 					$response = $api->create_completion_from_text($api_key, $user_message, $system_prompt);
 				}
 			}
@@ -109,7 +109,7 @@ class Data_Machine_process_data {
 				$error_message = 'OpenAI API Error: ' . $response->get_error_message();
 				$default_response['message'] = $error_message;
 				// Use basic error_log instead of injected logger
-				error_log($error_message . ' | Context: ' . print_r(['error_code' => $response->get_error_code(), 'metadata' => $input_data_packet['metadata'] ?? []], true));
+				        // Error logging removed for production
 				return $default_response;
 			}
 
@@ -118,8 +118,7 @@ class Data_Machine_process_data {
 				$default_response['message'] = $error_message;
 				$log_details = array_intersect_key($response, array_flip(['status_code', 'body']));
 				$log_details['metadata'] = $input_data_packet['metadata'] ?? [];
-				// Use basic error_log
-				error_log($error_message . ' | Context: ' . print_r($log_details, true));
+				// Error logging removed for production
 				return $default_response;
 			}
 
@@ -135,8 +134,7 @@ class Data_Machine_process_data {
 			$default_response['message'] = $error_message;
 			$log_details = $response;
 			$log_details['metadata'] = $input_data_packet['metadata'] ?? [];
-			// Use basic error_log
-			error_log($error_message . ' | Context: ' . print_r($log_details, true));
+			// Error logging removed for production
 			return $default_response;
 
 		} catch (Exception $e) {
@@ -151,8 +149,7 @@ class Data_Machine_process_data {
 			} else {
 				 $log_details['problematic_packet_type'] = gettype($input_data_packet); // Log type if not array
 			}
-			// Use basic error_log
-			error_log($error_message . ' | Context: ' . print_r($log_details, true));
+			// Error logging removed for production
 			return $default_response;
 		}
 	} // End process_data method

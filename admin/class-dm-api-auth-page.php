@@ -27,11 +27,7 @@ class Data_Machine_Api_Auth_Page {
         add_action( 'admin_init', array( $this, 'handle_api_keys_page_user_meta_save' ) );
         add_action('admin_post_dm_save_openai_user_meta', function() {
             // Debug: Log POST and SERVER data
-            file_put_contents(
-                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
-                date('c') . "\n[dm_save_openai_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
-                FILE_APPEND
-            );
+            // Debug logging removed for production
             if (!current_user_can('manage_options')) wp_die('Unauthorized');
             check_admin_referer('dm_save_openai_user_meta_action');
             $user_id = get_current_user_id();
@@ -41,11 +37,7 @@ class Data_Machine_Api_Auth_Page {
         });
 
         add_action('admin_post_dm_save_bluesky_user_meta', function() {
-            file_put_contents(
-                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
-                date('c') . "\n[dm_save_bluesky_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
-                FILE_APPEND
-            );
+            // Debug logging removed for production
             if (!current_user_can('manage_options')) wp_die('Unauthorized');
             check_admin_referer('dm_save_bluesky_user_meta_action');
             $user_id = get_current_user_id();
@@ -59,11 +51,7 @@ class Data_Machine_Api_Auth_Page {
         });
 
         add_action('admin_post_dm_save_instagram_user_meta', function() {
-            file_put_contents(
-                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
-                date('c') . "\n[dm_save_instagram_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
-                FILE_APPEND
-            );
+            // Debug logging removed for production
             if (!current_user_can('manage_options')) wp_die('Unauthorized');
             check_admin_referer('dm_save_instagram_user_meta_action');
             $user_id = get_current_user_id();
@@ -79,11 +67,7 @@ class Data_Machine_Api_Auth_Page {
         });
 
         add_action('admin_post_dm_save_twitter_user_meta', function() {
-            file_put_contents(
-                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
-                date('c') . "\n[dm_save_twitter_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
-                FILE_APPEND
-            );
+            // Debug logging removed for production
             if (!current_user_can('manage_options')) wp_die('Unauthorized');
             check_admin_referer('dm_save_twitter_user_meta_action');
             $user_id = get_current_user_id();
@@ -99,11 +83,7 @@ class Data_Machine_Api_Auth_Page {
         });
 
         add_action('admin_post_dm_save_reddit_user_meta', function() {
-            file_put_contents(
-                WP_CONTENT_DIR . '/debug_dm_api_auth.log',
-                date('c') . "\n[dm_save_reddit_user_meta] POST: " . print_r($_POST, true) . "\nSERVER: " . print_r($_SERVER, true) . "\n\n",
-                FILE_APPEND
-            );
+            // Debug logging removed for production
             if (!current_user_can('manage_options')) wp_die('Unauthorized');
             check_admin_referer('dm_save_reddit_user_meta_action');
             $user_id = get_current_user_id();
@@ -116,6 +96,38 @@ class Data_Machine_Api_Auth_Page {
             ]);
             update_user_meta($user_id, 'data_machine_reddit_account', $reddit_account);
             wp_redirect(add_query_arg('reddit_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
+
+        add_action('admin_post_dm_save_threads_user_meta', function() {
+            // Debug logging removed for production
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_threads_user_meta_action');
+            $user_id = get_current_user_id();
+            $threads_account = get_user_meta($user_id, 'data_machine_threads_account', true);
+            if (!is_array($threads_account)) $threads_account = [];
+            $threads_account = array_merge($threads_account, [
+                'app_id' => sanitize_text_field($_POST['threads_app_id'] ?? ''),
+                'app_secret' => sanitize_text_field($_POST['threads_app_secret'] ?? ''), // Consider encryption if needed later
+            ]);
+            update_user_meta($user_id, 'data_machine_threads_account', $threads_account);
+            wp_redirect(add_query_arg('threads_saved', 1, admin_url('admin.php?page=dm-api-keys')));
+            exit;
+        });
+
+        add_action('admin_post_dm_save_facebook_user_meta', function() {
+            // Debug logging removed for production
+            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            check_admin_referer('dm_save_facebook_user_meta_action');
+            $user_id = get_current_user_id();
+            $facebook_account = get_user_meta($user_id, 'data_machine_facebook_account', true);
+            if (!is_array($facebook_account)) $facebook_account = [];
+            $facebook_account = array_merge($facebook_account, [
+                'app_id' => sanitize_text_field($_POST['facebook_app_id'] ?? ''),
+                'app_secret' => sanitize_text_field($_POST['facebook_app_secret'] ?? ''), // Consider encryption if needed later
+            ]);
+            update_user_meta($user_id, 'data_machine_facebook_account', $facebook_account);
+            wp_redirect(add_query_arg('facebook_saved', 1, admin_url('admin.php?page=dm-api-keys')));
             exit;
         });
     }
@@ -160,14 +172,14 @@ class Data_Machine_Api_Auth_Page {
             try {
                 $encrypted_password = Data_Machine_Encryption_Helper::encrypt($_POST['bluesky_app_password']);
                 if ($encrypted_password === false) {
-                    error_log('[Data Machine] Failed to encrypt Bluesky app password for user ' . $user_id . ' on API Keys page save.');
+                    // Error logging removed for production
                     if ($this->admin_notices) $this->admin_notices->error(__('Failed to encrypt Bluesky app password. It was not saved.', 'data-machine'));
                 } else {
                     update_user_meta($user_id, 'dm_bluesky_app_password', $encrypted_password);
                     $updated = true;
                 }
             } catch (\Exception $e) {
-                error_log('[Data Machine] Exception encrypting Bluesky app password for user ' . $user_id . ': ' . $e->getMessage());
+                // Error logging removed for production
                 if ($this->admin_notices) $this->admin_notices->error(__('An error occurred while encrypting the Bluesky app password. It was not saved.', 'data-machine'));
             }
         }

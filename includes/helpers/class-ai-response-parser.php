@@ -166,8 +166,6 @@ class Data_Machine_AI_Response_Parser {
         return $this->custom_taxonomies;
     }
 
-    // Removed alias methods get_category() and get_tags()
-
     /**
      * Returns a summary of the main content, truncated to a maximum number of characters.
      * Appends an ellipsis if truncated.

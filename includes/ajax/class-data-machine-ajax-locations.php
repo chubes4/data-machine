@@ -125,7 +125,6 @@ class Data_Machine_Ajax_Locations {
         $site_info_json = wp_json_encode($filtered_data);
 
         if ($site_info_json === false) {
-            error_log('DM Sync Error: Failed to wp_json_encode filtered data for location ID: ' . $location_id);
             wp_send_json_error(['message' => __('Failed to process data received from the remote site (JSON encoding failed).', 'data-machine')]);
             return;
         }

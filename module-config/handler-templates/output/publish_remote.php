@@ -20,13 +20,9 @@ $custom_taxonomies = $GLOBALS['dm_template_filtered_custom_taxonomies'] ?? []; /
 if (!function_exists('dm_generate_options')) {
     function dm_generate_options($options, $selected_value = '', $use_key_as_value = false) {
         $html = '';
-        // Add initial log for the whole options array
-        // error_log('[dm_generate_options] Received options: ' . print_r($options, true)); 
         foreach ($options as $key => $option) {
             $value = null; 
             $label = null; 
-            // Log the individual option being processed
-            // error_log('[dm_generate_options] Processing option [' . $key . ']: ' . print_r($option, true));
 
             if ($use_key_as_value) {
                 $value = $key;
@@ -47,7 +43,6 @@ if (!function_exists('dm_generate_options')) {
             // Ensure value and label are treated as strings for comparison and output
             // Check BEFORE casting if extraction failed (null)
              if ($value === null || $label === null) {
-                 error_log('[dm_generate_options] Skipping option due to failed value/label extraction: ' . print_r($option, true)); // DEBUG
                  continue; // Skip this iteration
              }
 
@@ -58,8 +53,6 @@ if (!function_exists('dm_generate_options')) {
             // Check if empty AFTER casting, in case '0' is a valid value
             if ($label !== '') { // Only really need a label to display
                 $html .= '<option value="' . esc_attr($value) . '" ' . selected($selected_value, $value, false) . '>' . esc_html($label) . '</option>';
-            } else {
-                 error_log('[dm_generate_options] Skipping option due to empty label after casting: ' . print_r($option, true)); // DEBUG
             }
         }
         return $html;

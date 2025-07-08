@@ -1,13 +1,15 @@
 <?php
 /**
  * Plugin Name:     Data Machine
- * Plugin URI:      chubes.net
+ * Plugin URI:      https://chubes.net
  * Description:     A plugin to automatically collect data from files using OpenAI API, fact-check it, and return a final output.
  * Version:         0.1.0
  * Author:          Chris Huber
- * Author URI:      chubes.net
+ * Author URI:      https://chubes.net
  * Text Domain:     data-machine
  * Domain Path:     /languages
+ * License:         GPL v2 or later
+ * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 // If this file is called directly, abort.
@@ -48,6 +50,9 @@ require_once DATA_MACHINE_PATH . 'module-config/HandlerFactoryInterface.php'; //
 require_once DATA_MACHINE_PATH . 'module-config/HandlerFactory.php';
 require_once DATA_MACHINE_PATH . 'module-config/remote-locations/RemoteLocationService.php';
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-reddit.php';
+require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-twitter.php'; // Added missing include
+require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-threads.php'; // Add Threads OAuth
+require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-facebook.php'; // Add Facebook OAuth
 require_once DATA_MACHINE_PATH . 'includes/engine/class-job-worker.php'; // Ensure worker class is loaded
 require_once DATA_MACHINE_PATH . 'module-config/SettingsFields.php';
 require_once DATA_MACHINE_PATH . 'module-config/class-dm-module-config-handler.php';
@@ -113,8 +118,20 @@ function run_data_machine() {
     $db_remote_locations = new Data_Machine_Database_Remote_Locations();
 
     // OAuth handlers
-    $oauth_twitter = new Data_Machine_OAuth_Twitter($logger);
-    $oauth_reddit = new Data_Machine_OAuth_Reddit($logger);
+    $oauth_twitter = new Data_Machine_OAuth_Twitter($logger); // Assumes constructor handles missing credentials gracefully or fetches globally if needed
+    $oauth_reddit = new Data_Machine_OAuth_Reddit($logger);   // Assumes constructor handles missing credentials gracefully or fetches globally if needed
+
+    // Get Threads app credentials from options
+    $threads_app_credentials = get_option('dm_threads_app_credentials', []);
+    $threads_client_id = $threads_app_credentials['client_id'] ?? '';
+    $threads_client_secret = $threads_app_credentials['client_secret'] ?? '';
+    $oauth_threads = new Data_Machine_OAuth_Threads($threads_client_id, $threads_client_secret, $logger);
+
+    // Get Facebook app credentials from options
+    $facebook_app_credentials = get_option('dm_facebook_app_credentials', []);
+    $facebook_client_id = $facebook_app_credentials['client_id'] ?? '';
+    $facebook_client_secret = $facebook_app_credentials['client_secret'] ?? '';
+    $oauth_facebook = new Data_Machine_OAuth_Facebook($facebook_client_id, $facebook_client_secret, $logger);
 
     // Project prompt service
     $project_prompt_service = new Data_Machine_Project_Prompt($db_projects);
@@ -156,7 +173,9 @@ function run_data_machine() {
         $encryption_helper,
         $oauth_twitter,
         $oauth_reddit,
-                    $db_remote_locations,
+        $oauth_threads,
+        $oauth_facebook,
+        $db_remote_locations,
         $db_modules,
         $db_projects
     );
@@ -251,8 +270,10 @@ function run_data_machine() {
         $input_files,
         $oauth_reddit,
         $oauth_twitter,
-		$db_remote_locations,
-		$logger
+        $oauth_threads,  // Pass new handler
+        $oauth_facebook, // Pass new handler
+  $db_remote_locations,
+  $logger
 	);
 
 	// --- Run the Plugin ---
@@ -280,19 +301,12 @@ function run_data_machine() {
 }
 run_data_machine();
 
-
 /**
- * Allow JSON file uploads for import functionality.
- *
- * @param array $mime_types Existing allowed MIME types.
- * @return array Modified MIME types.
+ * Allows JSON file uploads.
  */
-function dm_allow_json_upload( $mime_types ) {
-	// Only allow JSON uploads for users who can manage options (or adjust capability)
-	if ( current_user_can( 'manage_options' ) ) {
-		$mime_types['json'] = 'application/json';
-	}
-	return $mime_types;
+function dm_allow_json_upload($mimes) {
+    $mimes['json'] = 'application/json';
+    return $mimes;
 }
 add_filter( 'upload_mimes', 'dm_allow_json_upload' );
 

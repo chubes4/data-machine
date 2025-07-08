@@ -48,7 +48,6 @@ class Data_Machine_Logger {
             // Attempt to create the directory if it doesn't exist
             if (!file_exists($log_dir)) {
                 if (!wp_mkdir_p($log_dir)) {
-                    error_log('Data Machine Logger Error: Could not create log directory: ' . $log_dir);
                     // Fallback to basic ErrorLogHandler
                     $this->monolog_instance = new MonologLogger('DataMachineFallback');
                     $this->monolog_instance->pushHandler(new ErrorLogHandler());
@@ -58,7 +57,10 @@ class Data_Machine_Logger {
 
             // Check if directory is writable
             if (!is_writable($log_dir)) {
-                error_log('Data Machine Logger Warning: Log directory is not writable: ' . $log_dir);
+                // Fallback to basic ErrorLogHandler
+                $this->monolog_instance = new MonologLogger('DataMachineFallback');
+                $this->monolog_instance->pushHandler(new ErrorLogHandler());
+                return $this->monolog_instance;
             }
 
             $log_file = $log_dir . '/data-machine.log';
@@ -83,7 +85,6 @@ class Data_Machine_Logger {
                 $this->monolog_instance->pushHandler($handler);
 
             } catch (\Exception $e) {
-                 error_log('Data Machine Logger Error: Failed to initialize StreamHandler: ' . $e->getMessage());
                  // Fallback to ErrorLogHandler
                  $this->monolog_instance = new MonologLogger('DataMachineFallback');
                  $this->monolog_instance->pushHandler(new ErrorLogHandler());
@@ -106,7 +107,6 @@ class Data_Machine_Logger {
              $this->get_monolog()->log($level, $message, $context);
         } catch (\Exception $e) {
              // Prevent logging failures from crashing the application
-             error_log('Data Machine Logger Failure: ' . $e->getMessage() . ' | Original Message: ' . $message);
         }
     }
 

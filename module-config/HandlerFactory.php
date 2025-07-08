@@ -31,6 +31,8 @@ class Dependency_Injection_Handler_Factory implements Data_Machine_Handler_Facto
     private $encryption_helper;
     private $oauth_twitter;
     private $oauth_reddit;
+    private $oauth_threads; // Added
+    private $oauth_facebook; // Added
     private $db_remote_locations;
     private $db_modules;
     private $db_projects;
@@ -45,6 +47,8 @@ class Dependency_Injection_Handler_Factory implements Data_Machine_Handler_Facto
         Data_Machine_Encryption_Helper $encryption_helper,
         Data_Machine_OAuth_Twitter $oauth_twitter,
         Data_Machine_OAuth_Reddit $oauth_reddit,
+        Data_Machine_OAuth_Threads $oauth_threads, // Added
+        Data_Machine_OAuth_Facebook $oauth_facebook, // Added
         Data_Machine_Database_Remote_Locations $db_remote_locations,
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Database_Projects $db_projects
@@ -55,6 +59,8 @@ class Dependency_Injection_Handler_Factory implements Data_Machine_Handler_Facto
         $this->encryption_helper = $encryption_helper;
         $this->oauth_twitter = $oauth_twitter;
         $this->oauth_reddit = $oauth_reddit;
+        $this->oauth_threads = $oauth_threads;   // Added
+        $this->oauth_facebook = $oauth_facebook; // Added
         $this->db_remote_locations = $db_remote_locations;
         $this->db_modules = $db_modules;
         $this->db_projects = $db_projects;
@@ -130,6 +136,14 @@ class Dependency_Injection_Handler_Factory implements Data_Machine_Handler_Facto
                     return new Data_Machine_Output_Data_Export(); // No dependencies
                 case 'publish_local':
                      return new Data_Machine_Output_Publish_Local($this->db_processed_items); // Only needs processed items DB
+                case 'threads':
+                     // Ensure the class file is loaded (should be handled by registry/autoload)
+                     if (!class_exists('Data_Machine_Output_Threads')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-threads.php';
+                     return new Data_Machine_Output_Threads($this->logger); // Pass logger
+                case 'facebook':
+                     // Ensure the class file is loaded (should be handled by registry/autoload)
+                     if (!class_exists('Data_Machine_Output_Facebook')) require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-facebook.php';
+                     return new Data_Machine_Output_Facebook($this->logger); // Pass logger
 
                 // Default case for unhandled or new handlers
                 default:

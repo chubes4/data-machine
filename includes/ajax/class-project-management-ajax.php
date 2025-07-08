@@ -256,8 +256,6 @@ class Data_Machine_Project_Management_Ajax {
 			$msg
 		);
 
-		error_log( $line );
-
 		if ( $logger && method_exists( $logger, $level ) ) {
 			$logger->{$level}(
 				$line,

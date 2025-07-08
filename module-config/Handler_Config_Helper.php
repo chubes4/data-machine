@@ -22,15 +22,11 @@ class Handler_Config_Helper {
      */
     public static function get_handler_config($module, $handler_type) {
         if (!isset($module->data_source_config) || !is_array($module->data_source_config)) {
-            error_log("Handler_Config_Helper: data_source_config missing or not an array for module_id: " . ($module->module_id ?? 'unknown'));
             throw new Exception('Module configuration is missing or invalid.');
         }
         if (!isset($module->data_source_config[$handler_type]) || !is_array($module->data_source_config[$handler_type])) {
-            error_log("Handler_Config_Helper: No config found for handler type '{$handler_type}' in module_id: " . ($module->module_id ?? 'unknown'));
             throw new Exception("No configuration found for handler type: {$handler_type}");
         }
-        // Optionally log the config for debugging
-        // error_log("Handler_Config_Helper: Extracted config for handler '{$handler_type}': " . print_r($module->data_source_config[$handler_type], true));
         return $module->data_source_config[$handler_type];
     }
 

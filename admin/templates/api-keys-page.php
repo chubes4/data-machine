@@ -67,7 +67,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
                             <?php foreach ($details as $key => $value) : ?>
                                 <li><strong><?php echo esc_html(ucfirst($key)); ?>:</strong> <?php
                                     if (is_array($value) || is_object($value)) {
-                                        echo '<pre style="white-space: pre-wrap; word-wrap: break-word;">' . esc_html(print_r($value, true)) . '</pre>';
+                                        echo '<pre style="white-space: pre-wrap; word-wrap: break-word;">' . esc_html('Debug output removed for production') . '</pre>';
                                     } else {
                                         echo esc_html($value);
                                     }
@@ -212,6 +212,56 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
         <button type="submit" class="button button-primary">Save Reddit Credentials</button>
     </form>
 
+    <!-- Threads Credentials -->
+    <h3 style="margin-top: 20px;">Threads Credentials (Required for Posting)</h3>
+    <?php $threads_account = get_user_meta(get_current_user_id(), 'data_machine_threads_account', true); if (!is_array($threads_account)) $threads_account = []; ?>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_threads_user_meta" />
+        <?php wp_nonce_field('dm_save_threads_user_meta_action'); ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="threads_app_id">Threads App ID</label></th>
+                <td>
+                    <input type="text" id="threads_app_id" name="threads_app_id" value="<?php echo esc_attr($threads_account['app_id'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Threads App ID (likely obtained via Facebook Developer Console).</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="threads_app_secret">Threads App Secret</label></th>
+                <td>
+                    <input type="text" id="threads_app_secret" name="threads_app_secret" value="<?php echo esc_attr($threads_account['app_secret'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Threads App Secret.</p>
+                </td>
+            </tr>
+        </table>
+        <button type="submit" class="button button-primary">Save Threads Credentials</button>
+    </form>
+
+    <!-- Facebook Credentials -->
+    <h3 style="margin-top: 20px;">Facebook Credentials (Required for Posting)</h3>
+    <?php $facebook_account = get_user_meta(get_current_user_id(), 'data_machine_facebook_account', true); if (!is_array($facebook_account)) $facebook_account = []; ?>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="dm_save_facebook_user_meta" />
+        <?php wp_nonce_field('dm_save_facebook_user_meta_action'); ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="facebook_app_id">Facebook App ID</label></th>
+                <td>
+                    <input type="text" id="facebook_app_id" name="facebook_app_id" value="<?php echo esc_attr($facebook_account['app_id'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Facebook App ID from the Facebook Developer Console.</p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="facebook_app_secret">Facebook App Secret</label></th>
+                <td>
+                    <input type="text" id="facebook_app_secret" name="facebook_app_secret" value="<?php echo esc_attr($facebook_account['app_secret'] ?? ''); ?>" class="regular-text" />
+                    <p class="description">Enter your Facebook App Secret.</p>
+                </td>
+            </tr>
+        </table>
+        <button type="submit" class="button button-primary">Save Facebook Credentials</button>
+    </form>
+
 </div>
 
 <!-- Authenticated Accounts Section -->
@@ -341,6 +391,81 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
     <p class="description">Authenticate the Reddit account you want to use for fetching data. Requires saved Reddit Client ID and Secret above.</p>
     <?php else: ?>
      <p class="description">Reddit account is authenticated. Remove the existing account to authenticate a different one.</p>
+    <?php endif; ?>
+</div>
+
+<!-- Threads Accounts Section -->
+<div class="accounts-section" id="threads-accounts-section" style="margin-top: 40px;">
+    <h3>Threads Account</h3>
+    <div id="threads-accounts-list">
+        <?php
+        // TODO: Implement logic to retrieve and display authenticated Threads account(s)
+        $threads_auth_account = get_user_meta(get_current_user_id(), 'data_machine_threads_auth_account', true); // Example meta key
+        if (empty($threads_auth_account) || !is_array($threads_auth_account) || empty($threads_auth_account['username'])) {
+            echo '<p>No Threads account authenticated yet.</p>';
+        } else {
+             echo '<ul class="dm-account-list">';
+             echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
+             // Display Threads username/ID
+             echo '<strong>' . esc_html($threads_auth_account['username'] ?? 'Unknown') . '</strong> '; // Placeholder
+             // TODO: Display token expiry if applicable
+             // Add nonce for security
+             $remove_nonce_threads = wp_create_nonce('dm_remove_threads_account_' . ($threads_auth_account['user_id'] ?? 'unknown')); // Use user_id if available
+             echo '<button class="button button-small button-danger threads-remove-account-btn" data-account-id="' . esc_attr($threads_auth_account['user_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_threads) . '" style="float: right;">Remove</button>';
+             echo '</li>';
+             echo '</ul>';
+        }
+        ?>
+    </div>
+    <?php if (empty($threads_auth_account['username'])): // Only show auth button if not already authenticated ?>
+    <button type="button" id="threads-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_user_meta(get_current_user_id(), 'data_machine_threads_account', true)['app_id']) || empty(get_user_meta(get_current_user_id(), 'data_machine_threads_account', true)['app_secret'])); ?>>
+        Authenticate Threads Account
+    </button>
+     <span id="threads-auth-feedback" style="margin-left: 10px;"></span>
+    <p class="description">Authenticate the Threads account you want to post to. Requires saved Threads App ID and Secret above.</p>
+    <?php else: ?>
+     <p class="description">Threads account is authenticated. Remove the existing account to authenticate a different one.</p>
+    <?php endif; ?>
+</div>
+
+<!-- Facebook Accounts Section -->
+<div class="accounts-section" id="facebook-accounts-section" style="margin-top: 40px;">
+    <h3>Facebook Account</h3>
+    <div id="facebook-accounts-list">
+        <?php
+        // TODO: Implement logic to retrieve and display authenticated Facebook account(s)/page(s)
+        $facebook_auth_account = get_user_meta(get_current_user_id(), 'data_machine_facebook_auth_account', true); // Example meta key
+        // Check using user_id as the primary identifier for an established connection
+        if (empty($facebook_auth_account) || !is_array($facebook_auth_account) || empty($facebook_auth_account['user_id'])):
+            echo '<p>No Facebook account/page authenticated yet.</p>';
+        else:
+             echo '<ul class="dm-account-list">';
+             echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
+             // Display Facebook User Name and Page Name (Reverting to ?? operator)
+             echo '<strong>User:</strong> ' . esc_html($facebook_auth_account['user_name'] ?? 'Unknown User') . ' (ID: ' . esc_html($facebook_auth_account['user_id'] ?? 'N/A') . ')<br>';
+             echo '<strong>Page:</strong> ' . esc_html($facebook_auth_account['page_name'] ?? 'Unknown Page') . ' (ID: ' . esc_html($facebook_auth_account['page_id'] ?? 'N/A') . ') ';
+             
+             // TODO: Display token expiry if applicable - Needs page token expiry check
+
+             // Add nonce for security - Use the Facebook User ID for consistency with the AJAX handler
+             $remove_nonce_facebook = wp_create_nonce('dm_remove_facebook_account_' . ($facebook_auth_account['user_id'] ?? 'unknown'));
+             // Pass the actual Facebook User ID in data-account-id for clarity, though nonce relies on it too
+             echo '<button class="button button-small button-danger facebook-remove-account-btn" data-account-id="' . esc_attr($facebook_auth_account['user_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_facebook) . '" style="float: right;">Remove</button>';
+             echo '</li>';
+             echo '</ul>';
+        endif;
+        ?>
+    </div>
+    <?php // Check using user_id
+    if (empty($facebook_auth_account['user_id'])):
+    ?>
+    <button type="button" id="facebook-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_user_meta(get_current_user_id(), 'data_machine_facebook_account', true)['app_id']) || empty(get_user_meta(get_current_user_id(), 'data_machine_facebook_account', true)['app_secret'])); ?>>
+        Authenticate Facebook Account/Page
+    </button>
+     <span id="facebook-auth-feedback" style="margin-left: 10px;"></span>
+    <p class="description">Authenticate the Facebook account or Page you want to post to. Requires saved Facebook App ID and Secret above.</p>
+    <?php else: ?>
+     <p class="description">Facebook account/page is authenticated. Remove the existing account to authenticate a different one.</p>
     <?php endif; ?>
 </div>
 

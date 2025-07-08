@@ -197,13 +197,11 @@ class Data_Machine_Scheduler {
     public function dm_run_project_schedule_callback(int $project_id) {
         $logger = $this->logger; // Use injected logger
         $log_prefix = "Data Machine Scheduler (Project Callback: {$project_id}): ";
-        error_log($log_prefix . "Triggered.");
 
         // Get the Job Executor service from property
         $job_executor = $this->job_executor;
         if (!$job_executor) { // Should not happen if constructor enforces type
              $error_message = $log_prefix . "Job Executor service not available (should be injected).";
-             error_log($error_message);
              $logger?->critical($error_message, ['project_id' => $project_id]);
              return; // Cannot proceed without the executor
         }
@@ -216,27 +214,23 @@ class Data_Machine_Scheduler {
             // 2. Verify project exists and is active (using DB method - get project without user check)
             $project = $db_projects->get_project($project_id);
             if (!$project) {
-                error_log($log_prefix . "Project not found. Unscheduling potentially orphaned event.");
                 $this->unschedule_project($project_id); // Clean up
                 return;
             }
 
             // Check if project schedule is actually active (Cron might run once after deactivation)
             if (($project->schedule_status ?? 'paused') !== 'active' || ($project->schedule_interval ?? 'manual') === 'manual') {
-                 error_log($log_prefix . sprintf("Project is inactive (Status: %s, Interval: %s). Skipping run.", $project->schedule_status ?? 'N/A', $project->schedule_interval ?? 'N/A'));
                  return;
             }
 
             $project_owner_user_id = $project->user_id;
             if (!$project_owner_user_id) {
-                 error_log($log_prefix . "Project owner user ID not found. Cannot proceed.");
                  return;
             }
 
             // 3. Fetch modules for project (using DB method, needs project owner context)
             $modules = $db_modules->get_modules_for_project($project_id, $project_owner_user_id);
             if (empty($modules)) {
-                error_log($log_prefix . "Project has no modules.");
                 return;
             }
 
@@ -259,13 +253,10 @@ class Data_Machine_Scheduler {
                 }
 
                 // d. If passes filters, call schedule_job_from_config to create and schedule the job event
-                error_log($log_prefix . "Processing module ID: {$module->module_id} ({$module->module_name}).");
                 $job_result = $job_executor->schedule_job_from_config($module, $project_owner_user_id, 'cron_project');
 
                 if (is_wp_error($job_result)) {
-                    $error_msg = $log_prefix . "Error scheduling job for module ID {$module->module_id}: " . $job_result->get_error_message();
-                    error_log($error_msg);
-                    $logger?->error($error_msg, ['module_id' => $module->module_id, 'project_id' => $project_id]);
+                    $logger?->error($log_prefix . "Error scheduling job for module ID {$module->module_id}: " . $job_result->get_error_message(), ['module_id' => $module->module_id, 'project_id' => $project_id]);
                     // Potentially continue to next module or stop? Continuing for now.
                 } elseif ($job_result > 0) {
                     $total_jobs_created++;
@@ -282,16 +273,11 @@ class Data_Machine_Scheduler {
             // IMPORTANT: Timestamp updates happen HERE now, not in Job Worker.
             if ($modules_processed_count > 0) {
                  $db_projects->update_project_last_run($project_id);
-                 error_log($log_prefix . "Project last run time updated.");
                  $logger?->info($log_prefix . "Project last run time updated.", ['project_id' => $project_id]);
             }
 
-            error_log($log_prefix . "Finished processing. Modules processed: {$modules_processed_count}. Jobs created: {$total_jobs_created}.");
-
         } catch (Exception $e) {
-            $error_message = $log_prefix . "Exception: " . $e->getMessage();
-            error_log($error_message);
-            $logger?->error($error_message, [
+            $logger?->error($log_prefix . "Exception: " . $e->getMessage(), [
                 'project_id' => $project_id,
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -306,13 +292,11 @@ class Data_Machine_Scheduler {
     public function dm_run_module_schedule_callback(int $module_id) {
         $logger = $this->logger; // Use injected logger
         $log_prefix = "Data Machine Scheduler (Module Callback: {$module_id}): ";
-        error_log($log_prefix . "Triggered.");
 
         // Get the Job Executor service from property
         $job_executor = $this->job_executor;
         if (!$job_executor) { // Should not happen
              $error_message = $log_prefix . "Job Executor service not available (should be injected).";
-             error_log($error_message);
              $logger?->critical($error_message, ['module_id' => $module_id]);
              return; // Cannot proceed
         }
@@ -327,14 +311,12 @@ class Data_Machine_Scheduler {
 
             // 3. Filter: Check if module exists
             if (!$module) {
-                error_log($log_prefix . "Module not found. Unscheduling potentially orphaned event.");
                 $this->unschedule_module($module_id); // Clean up
                 return;
             }
 
             // 4. Filter: Check if module->schedule_status === 'active'
             if (($module->schedule_status ?? 'paused') !== 'active') {
-                error_log($log_prefix . "Module status is not active. Skipping run.");
                 return;
             }
 
@@ -342,16 +324,11 @@ class Data_Machine_Scheduler {
             $allowed_intervals = Data_Machine_Constants::get_module_cron_intervals(); // Same as allowed for scheduling
             $module_interval = $module->schedule_interval ?? 'manual';
             if (!in_array($module_interval, $allowed_intervals)) {
-                 error_log($log_prefix . sprintf("Module interval ('%s') is not a valid individual schedule. Skipping run.", $module_interval));
-                 // If the interval is invalid, maybe unschedule it?
-                 // $this->unschedule_module($module_id);
                  return;
             }
 
             // 6. Filter: Check if module->data_source_type !== 'files'
             if (($module->data_source_type ?? null) === 'files') {
-                 error_log($log_prefix . "Module is a 'files' input type. Skipping scheduled run.");
-                 // Also unschedule if a file type somehow got scheduled individually
                  $this->unschedule_module($module_id);
                  return;
             }
@@ -359,34 +336,26 @@ class Data_Machine_Scheduler {
             // 7. Get project owner user_id
             $project = $db_projects->get_project($module->project_id);
             if (!$project || !$project->user_id) {
-                 error_log($log_prefix . "Could not find project or project owner for module. Cannot proceed.");
                  return;
             }
             $project_owner_user_id = $project->user_id;
 
             // 8. If passes filters, call schedule_job_from_config to create and schedule the job event
-            error_log($log_prefix . "Processing module ({$module->module_name}).");
             $job_result = $job_executor->schedule_job_from_config($module, $project_owner_user_id, 'cron_module');
 
             if (is_wp_error($job_result)) {
-                $error_msg = $log_prefix . "Error scheduling job: " . $job_result->get_error_message();
-                error_log($error_msg);
-                $logger?->error($error_msg, ['module_id' => $module_id]);
+                $logger?->error($log_prefix . "Error scheduling job: " . $job_result->get_error_message(), ['module_id' => $module_id]);
             } elseif ($job_result > 0) {
                 // Update module's last run time only if a job was created
-                $db_modules->update_last_run_time($module_id); // Update module last run time
-                error_log($log_prefix . "Successfully created job ID {$job_result}. Module last run time updated.");
+                $db_modules->update_module_last_run($module_id); // Update module last run time
                 $logger?->info($log_prefix . "Successfully created job ID {$job_result}. Module last run time updated.", ['job_id' => $job_result, 'module_id' => $module_id]);
             } else {
                  // Job result was 0, meaning no new items to process
-                 error_log($log_prefix . "No job created (likely no new items). Module last run time NOT updated.");
                  $logger?->info($log_prefix . "No job created (likely no new items). Module last run time NOT updated.", ['module_id' => $module_id]);
             }
 
         } catch (Exception $e) {
-            $error_message = $log_prefix . "Exception: " . $e->getMessage();
-            error_log($error_message);
-            $logger?->error($error_message, [
+            $logger?->error($log_prefix . "Exception: " . $e->getMessage(), [
                 'module_id' => $module_id,
                 'trace' => $e->getTraceAsString(),
             ]);

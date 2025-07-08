@@ -7,6 +7,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
+// Ensure the required database class is loaded
+require_once DATA_MACHINE_PATH . 'includes/database/class-database-dashboard.php';
+
 class Data_Machine_Dashboard_Ajax {
     /**
      * @var Data_Machine_Database_Dashboard

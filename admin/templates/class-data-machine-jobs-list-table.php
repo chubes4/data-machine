@@ -163,7 +163,7 @@ class Data_Machine_Jobs_List_Table extends WP_List_Table {
                 $module_id = $item['module_id'] ?? 'N/A';
                 return esc_html($module_name) . ' (ID: ' . esc_html($module_id) . ')';
             default:
-                return print_r($item, true); // Show the whole array for troubleshooting
+                return esc_html($item[$column_name]); // Show the whole array for troubleshooting
         }
     }
 

@@ -146,6 +146,18 @@ class Data_Machine {
 	 */
 	public $oauth_twitter;
 
+	   /**
+	 * Threads OAuth handler instance.
+	 * @var Data_Machine_OAuth_Threads
+	 */
+	public $oauth_threads;
+
+	   /**
+	 * Facebook OAuth handler instance.
+	 * @var Data_Machine_OAuth_Facebook
+	 */
+	public $oauth_facebook;
+
 	/**
 	 * Initialize the class and set its properties.
 	 * @since    0.1.0
@@ -167,6 +179,8 @@ class Data_Machine {
 		$input_files,
 		$oauth_reddit,
 		$oauth_twitter,
+		      $oauth_threads,  // Added
+		      $oauth_facebook, // Added
 		$db_remote_locations,
 		$logger
 	) {
@@ -185,12 +199,16 @@ class Data_Machine {
 		$this->input_files = $input_files;
 		$this->db_remote_locations = $db_remote_locations;
 		$this->logger = $logger;
-		$this->oauth_twitter = $oauth_twitter;
+		$this->oauth_twitter = $oauth_twitter; // Corrected potential typo if present
+		$this->oauth_threads = $oauth_threads;   // Ensure assignment
+		$this->oauth_facebook = $oauth_facebook; // Ensure assignment
 		// Register hooks for OAuth handlers
 		$oauth_reddit->register_hooks();
 		$oauth_twitter->register_hooks();
+		$oauth_threads->register_hooks();  // Ensure hook registration
+		$oauth_facebook->register_hooks(); // Ensure hook registration
 		// TODO: Add Instagram hook registration once its handler is refactored
-		// $oauth_instagram->register_hooks(); 
+		// $oauth_instagram->register_hooks();
 	}
 
 	/**

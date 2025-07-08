@@ -139,24 +139,69 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
                 }
                 
-                $temp_image_path = download_url($image_source_url, 15);
+                $temp_image_path = download_url($image_source_url, 15); // 15 second timeout
 
                 if (is_wp_error($temp_image_path)) {
-                    $this->logger?->warning('Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message()]);
+                    $this->logger?->warning('Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message(), 'user_id' => $user_id]);
                     $temp_image_path = null; // Ensure path is null on error
                 } else {
                     try {
-                        $image_content = file_get_contents($temp_image_path);
-                        if ($image_content === false) {
-                            throw new Exception('Failed to read image content from temporary file.');
+                        // Determine MIME type for media_type parameter
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime_type = finfo_file($finfo, $temp_image_path);
+                        finfo_close($finfo);
+
+                        if (empty($mime_type) || !preg_match('/^image\/(jpeg|png|gif|webp)$/', $mime_type)) {
+                            $this->logger?->warning('Could not determine a valid image MIME type for Twitter upload, or type not supported.', ['path' => $temp_image_path, 'detected_mime' => $mime_type ?: 'N/A', 'user_id' => $user_id]);
+                            throw new Exception('Invalid or unsupported image type for Twitter.');
                         }
-                        
-                        // Upload the downloaded image file using media/upload (v1.1)
-                        $media_upload = $connection->upload('media/upload', ['media' => $image_content]);
-                        unset($image_content); // Free memory
+
+                        $this->logger?->info('Attempting chunked media upload to Twitter.', ['path' => $temp_image_path, 'mime_type' => $mime_type, 'user_id' => $user_id]);
+
+                        // Pass media_type and media_category directly in the parameters for the upload method.
+                        // The library should handle chunking automatically for the media/upload endpoint.
+                        $media_upload_params = [
+                            'media' => $temp_image_path,
+                            'media_type' => $mime_type,
+                            'media_category' => 'tweet_image' // For standard image tweets
+                        ];
+                        $media_upload = $connection->upload('media/upload', $media_upload_params);
+
+                        $this->logger?->debug('Twitter chunked media/upload response', [ // Enhanced logging
+                            'user_id' => $user_id,
+                            'http_code' => $connection->getLastHttpCode(),
+                            'response_body' => $media_upload // Log the entire response object
+                        ]);
                         
                         if ($connection->getLastHttpCode() === 200 && isset($media_upload->media_id_string)) {
                             $media_id = $media_upload->media_id_string;
+
+                            // Check for media processing information
+                            if (isset($media_upload->processing_info)) {
+                                $this->logger?->info('Twitter media/upload processing_info found', [
+                                    'user_id' => $user_id,
+                                    'media_id' => $media_id,
+                                    'processing_state' => $media_upload->processing_info->state ?? 'N/A',
+                                    'check_after_secs' => $media_upload->processing_info->check_after_secs ?? 'N/A',
+                                    'progress_percent' => $media_upload->processing_info->progress_percent ?? 'N/A'
+                                ]);
+                                if (isset($media_upload->processing_info->state) && $media_upload->processing_info->state === 'failed') {
+                                    $processing_error_message = 'Twitter media processing failed after upload.';
+                                    if (!empty($media_upload->processing_info->error->message)) {
+                                        $processing_error_message .= ' Reason: ' . $media_upload->processing_info->error->message;
+                                    }
+                                    $this->logger?->error($processing_error_message, [
+                                        'user_id' => $user_id,
+                                        'media_id' => $media_id,
+                                        'processing_error_details' => $media_upload->processing_info->error ?? null
+                                    ]);
+                                    // Throw an exception to stop further processing if media definitely failed
+                                    throw new Exception($processing_error_message);
+                                }
+                                // If state is 'pending' or 'in_progress', it might ideally need a waiting loop with STATUS checks,
+                                // but for now, we'll log and let it proceed to see if v2 handles it or still fails.
+                            }
+                            
                              // --- Add Alt Text (v1.1) --- 
                              if (!empty($media_id) && !empty($image_alt_text)) {
                                  $alt_text_params = ['media_id' => $media_id, 'alt_text' => ['text' => mb_substr($image_alt_text, 0, 1000)]]; // Limit alt text

@@ -59,12 +59,8 @@ class Data_Machine_Handler_Registry {
         $files = glob($pattern);
         if ($files === false) {
             // Handle error - glob() failed
-            // error_log("Data Machine Registry: Failed to glob directory: {$directory}");
         } else {
             // Optional: Log if no files found
-            // if (empty($files)) {
-            //     error_log("Data Machine Registry: No handler files found in: {$directory}");
-            // }
         }
 
         foreach ($files as $file) {
@@ -90,11 +86,9 @@ class Data_Machine_Handler_Registry {
                     ];
                 } else {
                     // Log error: class not found after include
-                    // error_log("Data Machine Registry: Class {$class_name} not found in file {$file}");
                 }
             } else {
                  // Log error: filename pattern mismatch
-                 // error_log("Data Machine Registry: Filename pattern mismatch for {$filename} in {$sub_directory}");
             }
         }
         return $handlers;

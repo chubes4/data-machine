@@ -87,15 +87,12 @@ PROMPT;
             'timeout' => 60,
         );
 
-        // Debug: Log request args
-        error_log("DM FactCheck Debug: Request Args: " . print_r($args, true));
         $response = wp_remote_post( $api_endpoint, $args );
 
         $response_code = wp_remote_retrieve_response_code( $response );
         $response_body = wp_remote_retrieve_body( $response );
         // Log raw response body only if not 200
         if ( 200 !== $response_code ) {
-            error_log("DM FactCheck Debug: Raw Response Body (Non-200): " . $response_body);
             return new WP_Error( 'openai_api_error', $model . ' API error: ' . $response_code . ' - ' . $response_body );
         }
 
@@ -125,9 +122,6 @@ PROMPT;
         if ($fact_check_results === null) {
              return new WP_Error( 'openai_api_response_error', 'Invalid or unexpected ' . $model . ' API response format: ' . $response_body );
         }
-
-        // Log final result before returning
-        error_log("DM FactCheck Debug: Final fact_check_results: " . $fact_check_results);
 
         return array(
             'status'             => 'success',

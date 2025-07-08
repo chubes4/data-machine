@@ -103,11 +103,11 @@ public function create_response_with_file($api_key, $file, $prompt) {
     }
     // If MIME type is still missing, we cannot proceed reliably (applies to both path and URL inputs)
     if (empty($mime_type)) {
-        error_log('Data Machine OpenAI API: Cannot determine MIME type for file.' . print_r($file, true));
+                    // Error logging removed for production
         return new WP_Error('mime_type_missing', 'Could not determine the MIME type for the provided file input.');
     }
 
-    error_log('MIME type: ' . $mime_type); // Debugging line
+            // Debug logging removed for production
     // Initialize payload variable
     $payload = [];
     $pdf_size_threshold = 5 * 1024 * 1024; // 5MB threshold for switching to file upload
@@ -215,7 +215,7 @@ public function create_response_with_file($api_key, $file, $prompt) {
              // --- End Base64 Handling ---
         } else {
             // Neither URL nor Path provided for image type - Error
-            error_log('Data Machine OpenAI API: Image MIME type provided, but no URL or persistent path found.' . print_r($file, true));
+            // Error logging removed for production
             return new WP_Error('image_input_source_missing', 'Image input is missing both a URL and a file path.');
         }
     }
@@ -252,9 +252,7 @@ public function create_response_with_file($api_key, $file, $prompt) {
         }
     }
 
-    // --- Log raw content before trimming ---
-    error_log('OpenAI API: Raw content received: [START]' . $output_text . '[END]');
-    // --- End Log ---
+    // Debug logging removed for production
 
     // Clean formatting: Remove potential backticks and "json" markers.
     $output_text = preg_replace('/^```json\s*/i', '', $output_text);
@@ -313,20 +311,11 @@ public function create_response_with_file($api_key, $file, $prompt) {
 			'timeout' => 300, // Increased timeout to 5 minutes for testing
 		];
 
-		// --- Logging before API call ---
-		error_log('OpenAI API: Calling chat completions endpoint. Timeout: 300s');
-		// --- End Logging ---
+		// Debug logging removed for production
 
 		$response = wp_remote_post($endpoint, $args);
 
-		// --- Logging after API call ---
-		$response_log_details = [
-			'is_wp_error' => is_wp_error($response),
-			'wp_error_code' => is_wp_error($response) ? $response->get_error_code() : null,
-			'response_code' => !is_wp_error($response) ? wp_remote_retrieve_response_code($response) : null,
-		];
-		error_log('OpenAI API: Received response from chat completions endpoint. Details: ' . print_r($response_log_details, true));
-		// --- End Logging ---
+		// Debug logging removed for production
 
 		$decoded = $this->parse_response($response);
 
@@ -340,9 +329,7 @@ public function create_response_with_file($api_key, $file, $prompt) {
              $output_text = $decoded['output_text'];
         }
 
-		// --- Log raw content before trimming ---
-		error_log('OpenAI API: Raw content received: [START]' . $output_text . '[END]');
-		// --- End Log ---
+		// Debug logging removed for production
 
 		// Clean formatting (optional, but good practice)
 		$output_text = preg_replace('/^```json\s*/i', '', $output_text);
@@ -372,7 +359,7 @@ public function create_response_with_file($api_key, $file, $prompt) {
                 'error_code'    => $response->get_error_code(),
                 'error_message' => $response->get_error_message(),
             );
-            error_log($error_message . ' | Details: ' . print_r($error_data, true)); // Basic error log
+            // Error logging removed for production
             $decoded_response['is_error'] = true; // Set error flag
             $decoded_response['error_message'] = $error_message; // Include error message in response
             return $decoded_response; // Return with error flag set
@@ -384,7 +371,7 @@ public function create_response_with_file($api_key, $file, $prompt) {
 
         if ($status !== 200) {
             $error_message = "API request failed with status $status";
-            error_log($error_message . ' | Status: ' . $status . ' | Body: ' . $body); // Basic error log
+            // Error logging removed for production
             $decoded_response['is_error'] = true; // Set error flag
             $decoded_response['error_message'] = $error_message; // Include error message
             $decoded_response['status_code'] = $status; // Include status code
@@ -398,7 +385,7 @@ public function create_response_with_file($api_key, $file, $prompt) {
         } else {
             $decoded_response['is_error'] = true; // Indicate JSON decode error
             $decoded_response['error_message'] = 'Failed to decode JSON response body';
-            error_log($decoded_response['error_message'] . ' | Body: ' . $body); // Basic error log
+            // Error logging removed for production
             return $decoded_response;
         }
     }
