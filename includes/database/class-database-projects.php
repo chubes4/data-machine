@@ -37,7 +37,7 @@ class Data_Machine_Database_Projects {
         global $wpdb;
 
         if ( empty( $user_id ) || empty( $project_name ) ) {
-            error_log( 'Data Machine DB Projects: Missing user_id or project_name for create_project.' );
+            		// Debug logging removed for production
             return false;
         }
 
@@ -66,7 +66,7 @@ class Data_Machine_Database_Projects {
         $inserted = $wpdb->insert( $this->table_name, $data, $format );
 
         if ( false === $inserted ) {
-            error_log( 'Data Machine DB Projects: Failed to insert project. DB Error: ' . $wpdb->last_error );
+            			// Debug logging removed for production
             return false;
         }
 
@@ -120,19 +120,18 @@ class Data_Machine_Database_Projects {
         global $wpdb;
 
         // +++ DETAILED DEBUG LOGGING +++
-        error_log("[DM_DB_Projects::update_project_schedule] START - PID: {$project_id}, Interval: '{$interval}', Status: '{$status}', UID: {$user_id}");
+        		// Debug logging removed for production
 
         // Validate interval and status against allowed values if needed
         $allowed_intervals = Data_Machine_Constants::get_project_cron_intervals();
         $allowed_statuses = ['active', 'paused'];
         $is_valid_interval = in_array($interval, $allowed_intervals);
         $is_valid_status = in_array($status, $allowed_statuses);
-        error_log("[DM_DB_Projects::update_project_schedule] Validation - Is Interval Valid? " . ($is_valid_interval ? 'Yes' : 'No') . ", Is Status Valid? " . ($is_valid_status ? 'Yes' : 'No'));
+        		// Debug logging removed for production
         // +++ END DETAILED DEBUG LOGGING +++
 
         if ( !$is_valid_interval || !$is_valid_status ) {
-            error_log('Data Machine DB Projects: Invalid interval or status provided for update_project_schedule.');
-            error_log("[DM_DB_Projects::update_project_schedule] RETURN: false (Validation Failed)"); // +++ LOG +++
+            		// Debug logging removed for production
             return false;
         }
 
@@ -159,16 +158,15 @@ class Data_Machine_Database_Projects {
         );
 
         // +++ DETAILED DEBUG LOGGING +++
-        error_log("[DM_DB_Projects::update_project_schedule] Result of \$wpdb->update: " . var_export($updated, true));
+        		// Debug logging removed for production
         // +++ END DETAILED DEBUG LOGGING +++
 
         if ( false === $updated ) {
-            error_log( 'Data Machine DB Projects: Failed to update schedule for project ID: ' . $project_id . '. DB Error: ' . $wpdb->last_error );
-            error_log("[DM_DB_Projects::update_project_schedule] RETURN: false (wpdb->update failed)"); // +++ LOG +++
+            		// Debug logging removed for production
             return false;
         }
 
-        error_log("[DM_DB_Projects::update_project_schedule] RETURN: " . var_export($updated, true) . " (Success/No Change)"); // +++ LOG +++
+        		// Debug logging removed for production
         return $updated; // Returns number of rows affected (0 or 1 usually)
     }
 
@@ -194,7 +192,7 @@ class Data_Machine_Database_Projects {
         );
 
         if ( false === $updated ) {
-            error_log( 'Data Machine DB Projects: Failed to update last_run_at for project ID: ' . $project_id . '. DB Error: ' . $wpdb->last_error );
+            		// Debug logging removed for production
             return false;
         }
         return true;
@@ -247,7 +245,7 @@ class Data_Machine_Database_Projects {
         $user_id = absint( $user_id );
 
         if ( empty( $project_id ) || empty( $user_id ) ) {
-            error_log("Data Machine DB Projects: Invalid project_id or user_id provided to delete_project.");
+            		// Debug logging removed for production
             return false;
         }
 
@@ -266,10 +264,10 @@ class Data_Machine_Database_Projects {
 
         // $wpdb->delete returns number of rows affected or false on error.
         if ( false === $deleted ) {
-            error_log( 'Data Machine DB Projects: Failed to delete project ID: ' . $project_id . '. DB Error: ' . $wpdb->last_error );
+            		// Debug logging removed for production
         } elseif ( $deleted === 0 ) {
             // This might happen if the project existed but didn't belong to the user, or was already deleted.
-            error_log( 'Data Machine DB Projects: Attempted to delete project ID: ' . $project_id . ' for user ID: ' . $user_id . ' but no matching row was found (possibly permission issue or already deleted).' );
+		// Debug logging removed for production;
              // We might still return false here as the intended action didn't complete as expected.
              return false; 
         }

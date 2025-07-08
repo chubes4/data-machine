@@ -295,7 +295,7 @@ class Data_Machine_Logger {
                 // Optional: Output details for errors (consider formatting)
                 if ($type === self::NOTICE_ERROR && !empty($notice['details'])) {
                      // Simple output for now, could be formatted better
-                     echo '<pre style="margin-left: 2em; font-size: 0.9em;">' . esc_html( print_r( $notice['details'], true ) ) . '</pre>';
+                     				echo '<pre style="margin-left: 2em; font-size: 0.9em;">' . esc_html( json_encode( $notice['details'], JSON_PRETTY_PRINT ) ) . '</pre>';
                 }
             }
         }

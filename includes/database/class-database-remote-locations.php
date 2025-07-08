@@ -71,7 +71,7 @@ class Data_Machine_Database_Remote_Locations {
         // Use the Encryption Helper
         $encrypted_password = Data_Machine_Encryption_Helper::encrypt($data['password']);
         if ($encrypted_password === false) {
-            error_log('DM Remote Location Error: Failed to encrypt password using helper.');
+            			// Debug logging removed for production
             return false;
         }
 
@@ -90,7 +90,7 @@ class Data_Machine_Database_Remote_Locations {
         );
 
         if ($result === false) {
-            error_log('DM Remote Location Error: Failed to insert location. WPDB Error: ' . $wpdb->last_error);
+            			// Debug logging removed for production
             return false;
         }
 
@@ -134,7 +134,7 @@ class Data_Machine_Database_Remote_Locations {
             // Use the Encryption Helper
             $encrypted_password = Data_Machine_Encryption_Helper::encrypt($data['password']);
             if ($encrypted_password === false) {
-                 error_log('DM Remote Location Error: Failed to encrypt password during update using helper.');
+                 			// Debug logging removed for production
                  return false;
             }
             $update_data['encrypted_password'] = $encrypted_password;
@@ -230,7 +230,7 @@ class Data_Machine_Database_Remote_Locations {
             // Use the Encryption Helper
             $location->password = Data_Machine_Encryption_Helper::decrypt($location->encrypted_password);
             if ($location->password === false) {
-                error_log("DM Remote Location Error: Failed to decrypt password using helper for location ID {$location_id}.");
+                			// Debug logging removed for production
                 // Optionally handle decryption failure, e.g., set password to null or an error indicator
                 unset($location->password);
             }
@@ -262,11 +262,11 @@ class Data_Machine_Database_Remote_Locations {
         // Check if results is null (indicates DB error) or empty
         if (is_null($results)) {
             // Log the WPDB error
-            error_log("WPDB error fetching remote locations for user {$user_id}: " . $wpdb->last_error);
+            			// Debug logging removed for production
             return []; // Return empty on error
         }
         if (empty($results)) {
-             error_log("No remote locations found in DB for user {$user_id}");
+             			// Debug logging removed for production
              return []; // Return empty if no locations found
         }
 

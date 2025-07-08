@@ -86,11 +86,11 @@ class Data_Machine_Settings_Fields {
 
             } else {
                 // Log if method doesn't exist on the retrieved instance
-                error_log("DM Settings Fields Info: Handler '{$handler_key}' retrieved but has no get_settings_fields method.");
+                			// Debug logging removed for production
             }
         } catch (\Exception $e) {
             // Catch errors from create_handler (handler not found) or get_settings_fields
-            error_log("DM Settings Fields Error: Failed to get settings fields for handler '{$handler_key}': " . $e->getMessage());
+            			// Debug logging removed for production
             $fields = []; // Default to empty on error
         }
 

@@ -164,12 +164,12 @@ if (!class_exists('Data_Machine_Constants')) {
                 // Final fallback if neither constant nor AUTH_KEY is defined
                 // Using wp_salt here is okay as a last resort, but log an error.
                 $raw_key = wp_salt();
-                error_log('Data Machine Security Warning: Required encryption key constant (' . $constant_name . ') is not defined or is empty in wp-config.php. Using wp_salt as a fallback. Encryption will be weak/predictable.');
+                // Security warning logging removed for production
             }
 
             if (empty($raw_key)) {
                 // This case should be rare if WP salts are configured and the constant isn't empty.
-                error_log('Data Machine Security Warning: Encrypted data will be weak/predictable. Encryption key is empty.');
+                // Security warning logging removed for production
                 // Return a hash of a fallback string to avoid fatal errors, though encryption will be weak/predictable.
                 $raw_key = 'fallback_key_for_empty_encryption_key';
             }

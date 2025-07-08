@@ -20,7 +20,7 @@ if ( ! interface_exists( 'Data_Machine_Output_Handler_Interface' ) ) {
         require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php';
     } else {
         // Fallback or error if path constant is not available
-        error_log('Data Machine Error: DATA_MACHINE_PATH not defined. Cannot load Output Handler Interface.');
+        // Error logging removed for production
         return; // Or trigger a more specific error
     }
 }

@@ -28,7 +28,7 @@ class Data_Machine_Markdown_Converter {
 
         if ( ! class_exists( 'Parsedown' ) ) {
             // Log error or handle missing library case
-            // error_log('Parsedown library not found at: ' . $parsedown_path);
+    
             // Return raw input or trigger an error? For now, return unsanitized input.
             // Consider adding a check earlier in the process.
             return $markdown_string; // Fallback, though ideally this shouldn't happen

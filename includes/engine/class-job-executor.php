@@ -601,7 +601,7 @@ class Data_Machine_Job_Executor {
 						// Use wp_json_encode for better readability and depth control if needed
 						'item_packet_json' => wp_json_encode($item_packet, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
 						// Fallback if JSON encode fails or for very complex structures
-						'item_packet_print_r' => print_r($item_packet, true)
+						                                            'item_packet_debug' => 'Debug output removed for production'
 					]);
 					// --- End log ---
 

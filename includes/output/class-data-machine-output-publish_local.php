@@ -90,7 +90,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				$post_date = get_date_from_gmt( $post_date_gmt ); 
 			} else {
 				// Log an error if the format is unexpected
-				error_log('Data Machine Publish Local: Invalid original_date_gmt format received: ' . $source_date_gmt_string);
+				                            // Error logging removed for production
 			}
 		}
 		// If source date wasn't used or invalid, $post_date and $post_date_gmt remain null,
@@ -153,7 +153,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				} else {
 					// Log error if term creation failed
 					$error_string = is_wp_error($term_info) ? $term_info->get_error_message() : 'Unknown error';
-					error_log("Data Machine Publish Local: Failed to create category '{$parsed_data['category']}'. Error: " . $error_string);
+					                                    // Error logging removed for production
 				}
 			}
 		}
@@ -176,7 +176,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 
 				// --- ENFORCE SINGLE TAG FOR instruct_model --- 
 				if ($first_tag_processed && ( $tag_id === 'instruct_model' ) ) {
-					error_log("Data Machine Publish Local: Instruct mode - Skipping subsequent tag '{$tag_name}' for post {$post_id}. Only assigning the first one.");
+					                                    // Debug logging removed for production
 					continue;
 				}
 				// --- END ENFORCEMENT ---
@@ -194,7 +194,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 					} else {
 						// Log error if term creation failed
 						$error_string = is_wp_error($term_info) ? $term_info->get_error_message() : 'Unknown error';
-						error_log("Data Machine Publish Local: Failed to create tag '{$tag_name}'. Error: " . $error_string);
+						                                            // Error logging removed for production
 					}
 				}
 				$first_tag_processed = true; // Mark that we've processed the first tag
@@ -212,7 +212,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 			foreach ($parsed_data['custom_taxonomies'] as $tax_slug => $term_names) {
 				if (!taxonomy_exists($tax_slug)) {
 					// Log or handle error: Taxonomy doesn't exist locally
-					error_log("Data Machine Publish Local: Taxonomy '{$tax_slug}' does not exist.");
+					                                    // Error logging removed for production
 					continue;
 				}
 
@@ -235,7 +235,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 
 					// --- ENFORCE SINGLE TERM FOR instruct_model --- 
 					if ($first_term_processed && ($tax_mode === 'instruct_model') ) {
-						error_log("Data Machine Publish Local: Instruct mode for taxonomy '{$tax_slug}' - Skipping subsequent term '{$term_name}' for post {$post_id}. Only assigning the first one.");
+						                                            // Debug logging removed for production
 						continue;
 					}
 					// --- END ENFORCEMENT ---
@@ -255,7 +255,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 						} else {
 							// Log error if term creation failed
 							$error_string = is_wp_error($term_info) ? $term_info->get_error_message() : 'Unknown error';
-							error_log("Data Machine Publish Local: Failed to create term '{$term_name}' in taxonomy '{$tax_slug}'. Error: " . $error_string);
+							                                                    // Error logging removed for production
 						}
 					}
 					$first_term_processed = true; // Mark first term as processed

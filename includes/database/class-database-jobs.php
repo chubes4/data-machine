@@ -51,7 +51,7 @@ class Data_Machine_Database_Jobs {
 
         // Basic validation
         if ( empty( $module_id ) || empty( $user_id ) || ! is_string( $module_config_json ) ) {
-            error_log('Data Machine DB Jobs: Invalid parameters for create_job.');
+            		// Debug logging removed for production
             return false;
         }
 
@@ -76,7 +76,7 @@ class Data_Machine_Database_Jobs {
         $inserted = $wpdb->insert( $this->table_name, $data, $format );
 
         if ( false === $inserted ) {
-            error_log( 'Data Machine DB Jobs: Failed to insert job. DB Error: ' . $wpdb->last_error );
+            		// Debug logging removed for production
             return false;
         }
 
@@ -177,17 +177,11 @@ class Data_Machine_Database_Jobs {
         $valid_statuses = ['completed', 'failed', 'completed_with_errors', 'completed_no_items'];
 
 		// --- START: Add Detailed Logging Inside complete_job ---
-		error_log(sprintf(
-			'Data Machine DB Jobs: Entering complete_job. Job ID: %d, Received Status: [%s] (Type: %s), Valid Statuses: [%s]',
-			$job_id,
-			$status, // Log exact received status
-			gettype($status),
-			implode(', ', $valid_statuses)
-		));
+		// Debug logging removed for production
 		// --- END: Add Detailed Logging ---
 
         if ( empty( $job_id ) || !in_array( $status, $valid_statuses ) ) {
-            error_log( 'Data Machine DB Jobs: Invalid parameters validation failed for complete_job. Job ID: ' . $job_id . ' Status: [' . $status . ']'); // Updated log msg
+            // Debug logging removed for production
             return false;
         }
         $updated = $wpdb->update(
@@ -202,7 +196,7 @@ class Data_Machine_Database_Jobs {
             ['%d']  // Format for WHERE
         );
          if ( false === $updated ) {
-            error_log( 'Data Machine DB Jobs: Failed to complete job ' . $job_id . '. DB Error: ' . $wpdb->last_error );
+            // Debug logging removed for production
         } else {
             // --- Update last_run_at in the related project ---
             // 1. Get module_id for this job
@@ -222,7 +216,7 @@ class Data_Machine_Database_Jobs {
                         ['%d']
                     );
                     if (false === $project_updated) {
-                        error_log('Data Machine DB Jobs: Failed to update last_run_at for project_id ' . $project_id . '. DB Error: ' . $wpdb->last_error);
+                        // Debug logging removed for production
                     }
                 }
             }
@@ -253,7 +247,7 @@ class Data_Machine_Database_Jobs {
             ['%d']  // Format for WHERE
         );
         if ( false === $updated ) {
-            error_log( 'Data Machine DB Jobs: Failed to update input_data for job ' . $job_id . '. DB Error: ' . $wpdb->last_error );
+            // Debug logging removed for production
         }
         return $updated !== false;
     }

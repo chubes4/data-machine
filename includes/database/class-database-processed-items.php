@@ -58,11 +58,11 @@ class Data_Machine_Database_Processed_Items {
             dbDelta( $sql );
 
             // Log table creation (optional)
-            // error_log("Data Machine: Created table {$this->table_name}");
+    
 
         } else {
              // Optional: Check for schema updates needed if table already exists
-             // error_log("Data Machine: Table {$this->table_name} already exists.");
+ 
              // You could add dbDelta() call here as well to handle updates if needed.
              // require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
              // dbDelta( $sql ); // dbDelta is safe to run even if table exists
@@ -152,7 +152,7 @@ class Data_Machine_Database_Processed_Items {
                  ]);
              } else {
                  // Fallback if logger not injected
-                  error_log("Data Machine: Failed to insert processed item. Module: {$module_id}, Type: {$source_type}, DB Error: {$db_error}");
+                  // Error logging removed for production
              }
              return false;
         }

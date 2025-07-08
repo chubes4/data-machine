@@ -92,14 +92,14 @@ class Data_Machine_Ajax_Scheduler {
 
             // Basic check if module exists. More robust check happens during DB update.
             if (!$module) {
-                error_log("Data Machine Edit Schedule: Module ID {$module_id} not found during processing. Skipping.");
+                			// Debug logging removed for production
                 continue;
             }
             $module_type = $module->data_source_type ?? null;
 
             // If the module type is 'files', force schedule to paused and project_schedule
             if ($module_type === 'files') {
-                 error_log("Data Machine Edit Schedule: Forcing schedule for file input module ID: {$module_id}");
+                 			// Debug logging removed for production
                  $processed_module_schedules[$module_id] = [
                     'interval' => 'project_schedule', // Default non-running interval
                     'status'   => 'paused'            // Always paused
@@ -116,7 +116,7 @@ class Data_Machine_Ajax_Scheduler {
 
                 if (!in_array($mod_interval, $allowed_module_intervals) || !in_array($mod_status, $allowed_module_statuses)) {
                     // Log invalid data but perhaps proceed with defaults? Or skip? For now, skip.
-                    error_log("Data Machine Edit Schedule: Invalid interval ('{$mod_interval}') or status ('{$mod_status}') for module ID: {$module_id}");
+                    			// Debug logging removed for production
                     continue;
                 }
 
@@ -165,7 +165,7 @@ class Data_Machine_Ajax_Scheduler {
             wp_send_json_success( [ 'message' => 'Schedule updated successfully.' ] );
 
         } catch (Exception $e) {
-            error_log("Data Machine Error updating schedule: " . $e->getMessage());
+            		// Debug logging removed for production
             wp_send_json_error( 'Error updating schedule: ' . $e->getMessage(), 500 );
         }
 

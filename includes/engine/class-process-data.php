@@ -108,7 +108,7 @@ class Data_Machine_process_data {
 			if (is_wp_error($response)) {
 				$error_message = 'OpenAI API Error: ' . $response->get_error_message();
 				$default_response['message'] = $error_message;
-				// Use basic error_log instead of injected logger
+				// Error logging removed for production
 				        // Error logging removed for production
 				return $default_response;
 			}

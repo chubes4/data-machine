@@ -229,7 +229,7 @@ class Data_Machine_OAuth_Threads {
     public static function get_access_token(int $user_id): ?string {
         $account = get_user_meta($user_id, 'data_machine_threads_auth_account', true);
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
-            error_log("Threads Auth: No account data found for user $user_id");
+            			// Debug logging removed for production
             return null;
         }
 
@@ -239,11 +239,11 @@ class Data_Machine_OAuth_Threads {
             $expiry_timestamp = intval($account['token_expires_at']);
             $seven_days_in_seconds = 7 * 24 * 60 * 60;
             if (time() > $expiry_timestamp) {
-                 error_log("Threads Auth: Token already expired for user $user_id at " . date('Y-m-d H:i:s', $expiry_timestamp));
+                 			// Debug logging removed for production
                  // Attempt refresh even if expired, might still work shortly after.
                  $needs_refresh = true;
             } elseif (($expiry_timestamp - time()) < $seven_days_in_seconds) {
-                 error_log("Threads Auth: Token for user $user_id expires soon (" . date('Y-m-d H:i:s', $expiry_timestamp) . "), attempting refresh.");
+                 			// Debug logging removed for production
                  $needs_refresh = true;
             }
         }
@@ -251,7 +251,7 @@ class Data_Machine_OAuth_Threads {
         // Decrypt the current token first
         $current_token = Data_Machine_Encryption_Helper::decrypt($account['access_token']);
         if ($current_token === false) {
-            error_log("Threads Auth: Failed to decrypt current token for user $user_id");
+            			// Debug logging removed for production
             return null;
         }
 
@@ -263,17 +263,17 @@ class Data_Machine_OAuth_Threads {
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
                 // Update the user meta immediately
                 update_user_meta($user_id, 'data_machine_threads_auth_account', $account);
-                error_log("Threads Auth: Successfully refreshed token for user $user_id. New expiry: " . date('Y-m-d H:i:s', $account['token_expires_at']));
+                			// Debug logging removed for production
                 return $refreshed_data['access_token']; // Return the new plaintext token
             } else {
-                 error_log("Threads Auth: Failed to refresh token for user $user_id. Error: " . $refreshed_data->get_error_message());
+                 			// Debug logging removed for production
                  // If refresh fails and token is already expired, return null
                  if (isset($account['token_expires_at']) && time() > intval($account['token_expires_at'])) {
-                     error_log("Threads Auth: Token for user $user_id is expired and refresh failed.");
+                     			// Debug logging removed for production
                      return null;
                  }
                  // Otherwise, return the old (but potentially soon-to-expire) token
-                 error_log("Threads Auth: Using potentially stale token for user $user_id as refresh failed.");
+                 			// Debug logging removed for production
                  return $current_token;
             }
         }
@@ -340,7 +340,7 @@ class Data_Machine_OAuth_Threads {
      * @return array|WP_Error ['access_token' => ..., 'expires_at' => timestamp] or WP_Error
      */
     private static function refresh_access_token(string $access_token, int $user_id): array|WP_Error {
-         error_log("Threads Auth: Attempting to refresh token for user $user_id");
+         		// Debug logging removed for production
          $params = [
              'grant_type' => 'th_refresh_token', // Correct grant type for Threads
              'access_token' => $access_token,
@@ -350,7 +350,7 @@ class Data_Machine_OAuth_Threads {
          $response = wp_remote_get($url, ['timeout' => 15]);
 
          if (is_wp_error($response)) {
-             error_log("Threads Auth Refresh Error (HTTP): user $user_id, error: " . $response->get_error_message());
+             			// Debug logging removed for production
              return new WP_Error('threads_refresh_http_error', $response->get_error_message(), $response);
          }
 
@@ -360,7 +360,7 @@ class Data_Machine_OAuth_Threads {
 
          if ($http_code !== 200 || empty($data['access_token'])) {
              $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to refresh Threads access token.';
-             error_log("Threads Auth Refresh Error (API): user $user_id, code: $http_code, response: " . $body);
+             			// Debug logging removed for production
              return new WP_Error('threads_refresh_api_error', $error_message, $data);
          }
 
@@ -368,7 +368,7 @@ class Data_Machine_OAuth_Threads {
          $expires_in = $data['expires_in'] ?? 3600 * 24 * 60; // Default to 60 days
          $expires_at = time() + intval($expires_in);
 
-         error_log("Threads Auth: Token refresh successful for user $user_id. New expiry: " . date('Y-m-d H:i:s', $expires_at));
+         		// Debug logging removed for production
 
          return [
              'access_token' => $data['access_token'],

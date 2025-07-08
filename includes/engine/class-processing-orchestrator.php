@@ -120,7 +120,7 @@ class Data_Machine_Processing_Orchestrator {
 		    }
 		} catch (Exception $e) {
 		    $this->log_orchestrator_step('Step 1: Exception in process_data', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		    error_log('Orchestrator - Process Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		                    // Error logging removed for production
 		    return new WP_Error('process_step_failed', $e->getMessage());
 		}
 
@@ -146,7 +146,7 @@ class Data_Machine_Processing_Orchestrator {
 		        $fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
 		    } catch (Exception $e) {
 		        $this->log_orchestrator_step('Step 2c: Exception in fact_check_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		        error_log('Orchestrator - FactCheck Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		                            // Error logging removed for production
 		        return new WP_Error('factcheck_step_failed', $e->getMessage());
 		    }
 		} else {
@@ -186,7 +186,7 @@ class Data_Machine_Processing_Orchestrator {
 		    }
 		} catch (Exception $e) {
 		    $this->log_orchestrator_step('Step 3: Exception in finalize_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		    error_log('Orchestrator - Finalize Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+		                    // Error logging removed for production
 		    return new WP_Error('finalize_step_failed', $e->getMessage());
 		}
 
@@ -226,7 +226,7 @@ class Data_Machine_Processing_Orchestrator {
 
 		} catch (Exception $e) {
 			$this->log_orchestrator_step('Step 4: Exception in output handling', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-			error_log('Orchestrator - Output Step Error: ' . $e->getMessage() . ' | Context: ' . print_r(['module_id' => $module_id, 'output_type' => $output_type, 'metadata' => $input_data_packet['metadata'] ?? []], true));
+			// Error logging removed for production
 			$error_code = method_exists($e, 'getCode') && $e->getCode() ? $e->getCode() : 'output_step_failed';
 			return new WP_Error($error_code, $e->getMessage());
 		}

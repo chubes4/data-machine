@@ -172,14 +172,14 @@ class Data_Machine_Scheduler {
                  }
             } else {
                  // If no module schedules were provided, maybe log this?
-                 // error_log("DM Scheduler: No module schedules provided to update_schedules_for_project for project {$project_id}.");
+         
                  // It might be valid if a project has no modules, so perhaps no log needed.
             }
 
             return true;
 
         } catch (Exception $e) {
-            error_log("Data Machine Error updating WP Cron schedules via Scheduler: " . $e->getMessage());
+            // Error logging removed for production
             // Log error using injected logger service if available
             $this->logger?->error("Error updating WP Cron schedules", [
                 'project_id' => $project_id,

@@ -94,7 +94,7 @@ class Data_Machine_Database_Modules {
                     'module_data' => $module_data
                 ]);
             } else {
-                error_log( 'Data Machine: Attempted to create module with invalid project_id: ' . $project_id );
+                		// Debug logging removed for production
             }
             return false;
         }
@@ -139,7 +139,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->error('Failed to insert new module.', ['db_error' => $wpdb->last_error, 'data' => $data]);
             } else {
-                error_log( 'Data Machine: Failed to insert new module. DB Error: ' . $wpdb->last_error );
+                		// Debug logging removed for production
             }
             return false;
         }
@@ -205,7 +205,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('Attempted to update non-existent module or module missing project ID.', ['module_id' => $module_id]);
             } else {
-                error_log('Data Machine: Attempted to update non-existent module or module missing project ID. Module ID: ' . $module_id);
+                		// Debug logging removed for production
             }
             return false; // Module not found or missing project ID
         }
@@ -217,7 +217,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('User attempted to update module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
             } else {
-                error_log('Data Machine: User attempted to update module they do not own. Module ID: ' . $module_id . ', User ID: ' . $user_id);
+                		// Debug logging removed for production
             }
             return false; // User doesn't own the project this module belongs to
         }
@@ -273,7 +273,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->error('Failed to update module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             } else {
-                error_log( 'Data Machine: Failed to update module (ID: ' . $module_id . '). DB Error: ' . $wpdb->last_error );
+                		// Debug logging removed for production
             }
         }
    
@@ -297,7 +297,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('Attempted to delete non-existent module or module missing project ID.', ['module_id' => $module_id]);
             } else {
-                error_log('Data Machine: Attempted to delete non-existent module or module missing project ID. Module ID: ' . $module_id);
+                		// Debug logging removed for production
             }
             return false; // Module not found
         }
@@ -309,7 +309,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('User attempted to delete module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
             } else {
-                error_log('Data Machine: User attempted to delete module they do not own. Module ID: ' . $module_id . ', User ID: ' . $user_id);
+                		// Debug logging removed for production
             }
             return false; // User doesn't own the project
         }
@@ -326,7 +326,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->error('Failed to delete module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             } else {
-                error_log( 'Data Machine: Failed to delete module (ID: ' . $module_id . '). DB Error: ' . $wpdb->last_error );
+                		// Debug logging removed for production
             }
         }
    
@@ -344,7 +344,7 @@ class Data_Machine_Database_Modules {
 
         $project_id = absint( $project_id );
         if ( empty( $project_id ) ) {
-            error_log("Data Machine DB Modules: Invalid project_id provided to delete_modules_for_project.");
+            		// Debug logging removed for production
             return false;
         }
 
@@ -357,7 +357,7 @@ class Data_Machine_Database_Modules {
 
         // $wpdb->delete returns number of rows affected or false on error.
         if ( false === $deleted ) {
-             error_log( 'Data Machine DB Modules: Failed to delete modules for project ID: ' . $project_id . '. DB Error: ' . $wpdb->last_error );
+             		// Debug logging removed for production
         }
 
         return $deleted; 
@@ -381,7 +381,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('Attempted to update schedule for non-existent module or module missing project ID.', ['module_id' => $module_id]);
             } else {
-                error_log('Data Machine: Attempted to update schedule for non-existent module or module missing project ID. Module ID: ' . $module_id);
+                		// Debug logging removed for production
             }
             return false;
         }
@@ -393,7 +393,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('User attempted to update schedule for module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
             } else {
-                error_log('Data Machine: User attempted to update schedule for module they do not own. Module ID: ' . $module_id . ', User ID: ' . $user_id);
+                		// Debug logging removed for production
             }
             return false;
         }
@@ -402,7 +402,7 @@ class Data_Machine_Database_Modules {
         $allowed_intervals = Data_Machine_Constants::get_allowed_module_intervals_for_validation();
         $allowed_statuses = ['active', 'paused'];
         if ( !in_array($interval, $allowed_intervals) || !in_array($status, $allowed_statuses) ) {
-            error_log('Data Machine DB Modules: Invalid interval or status provided for update_module_schedule.');
+            		// Debug logging removed for production
             return false;
         }
 
@@ -422,7 +422,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->error('Failed to update schedule for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             } else {
-                error_log( 'Data Machine DB Modules: Failed to update schedule for module ID: ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+                // Debug logging removed for production
             }
             return false;
         }
@@ -448,7 +448,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->warning('User attempted to update schedules for project they do not own.', ['project_id' => $project_id, 'user_id' => $user_id]);
             } else {
-                 error_log('Data Machine: User attempted to update schedules for project they do not own. Project ID: ' . $project_id . ', User ID: ' . $user_id);
+                 // Debug logging removed for production
             }
             return false;
         }
@@ -469,7 +469,7 @@ class Data_Machine_Database_Modules {
                  if ($this->logger) {
                     $this->logger->warning('Attempted to update schedule for module not belonging to the specified project.', ['module_id' => $module_id, 'project_id' => $project_id, 'user_id' => $user_id]);
                  } else {
-                    error_log('Data Machine: Attempted to update schedule for module not belonging to the specified project. Module ID: ' . $module_id . ', Project ID: ' . $project_id);
+                    // Debug logging removed for production
                  }
                  continue;
              }
@@ -490,7 +490,7 @@ class Data_Machine_Database_Modules {
                  if ($this->logger) {
                     $this->logger->error('Failed to update module schedule in batch.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
                  } else {
-                    error_log( 'Data Machine: Failed to update module schedule for module_id ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+                    // Debug logging removed for production
                  }
                 // Optionally decide if the entire operation should fail
             }
@@ -531,7 +531,7 @@ class Data_Machine_Database_Modules {
             if ($this->logger) {
                 $this->logger->error('Failed to update last_run_at for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             } else {
-                 error_log( 'Data Machine DB Modules: Failed to update last_run_at for module ID: ' . $module_id . '. DB Error: ' . $wpdb->last_error );
+                 // Debug logging removed for production
             }
             return false;
         }
