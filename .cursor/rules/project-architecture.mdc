@@ -286,6 +286,32 @@ Centralized logging through `Data_Machine_Logger` with admin notice display and 
 - **Better Debugging**: Enhanced error metadata for troubleshooting
 - **Proactive Support**: Prevents user confusion with authentication failures
 
+#### Skip Fact Check UX Enhancement
+**NEW**: Improved user experience for the "Skip Fact Check" functionality with conditional validation and UI updates.
+
+**Backend Validation (class-processing-orchestrator.php):**
+- **Conditional prompt validation**: Fact check prompt only required when `skip_fact_check` is false
+- **Early validation**: `skip_fact_check` setting checked during prompt validation phase (line 93-100)
+- **Clear error messages**: Specific guidance when fact check prompt is missing but required
+
+**Frontend UI Enhancement (dm-module-config.js):**
+- **Visual feedback**: Fact check prompt field becomes disabled and semi-transparent when skip is enabled
+- **Dynamic updates**: Visibility changes in real-time as user toggles the checkbox
+- **State synchronization**: UI updates properly when switching between modules
+- **Accessibility**: Field properly disabled to prevent user confusion
+
+**User Experience Flow:**
+1. User enables "Skip Fact Check" checkbox
+2. Fact check prompt field becomes visually disabled (50% opacity, pointer-events disabled)
+3. Form validation no longer requires fact check prompt to be filled
+4. Processing logic properly skips fact checking step when enabled
+
+**Technical Implementation:**
+- **`toggleFactCheckPromptVisibility()`**: JavaScript function managing UI state changes
+- **Event-driven updates**: Checkbox changes trigger immediate visual feedback
+- **State management**: Skip fact check setting properly synchronized across UI and backend
+- **Validation logic**: Moved `skip_fact_check` evaluation earlier in processing pipeline
+
 ### Security Implementation
 - API key encryption using WordPress salts
 - Nonce verification for all AJAX requests

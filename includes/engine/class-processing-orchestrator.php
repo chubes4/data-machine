@@ -90,9 +90,14 @@ class Data_Machine_Processing_Orchestrator {
 		$process_data_prompt = $module_job_config['process_data_prompt'] ?? '';
 		$fact_check_prompt = $module_job_config['fact_check_prompt'] ?? '';
 		$finalize_response_prompt = $module_job_config['finalize_response_prompt'] ?? '';
+		$skip_fact_check = isset($module_job_config['skip_fact_check']) ? (bool)$module_job_config['skip_fact_check'] : false;
 
-		if (empty($process_data_prompt) || empty($fact_check_prompt) || empty($finalize_response_prompt)) {
-			return new WP_Error('missing_prompts', __('One or more required prompts are missing in the module settings.', 'data-machine'));
+		// Validate required prompts - fact check prompt is only required if skip_fact_check is false
+		if (empty($process_data_prompt) || empty($finalize_response_prompt)) {
+			return new WP_Error('missing_prompts', __('Process data prompt and finalize response prompt are required in the module settings.', 'data-machine'));
+		}
+		if (!$skip_fact_check && empty($fact_check_prompt)) {
+			return new WP_Error('missing_fact_check_prompt', __('Fact check prompt is required when fact checking is enabled. Either provide a fact check prompt or enable "Skip Fact Check" in the module settings.', 'data-machine'));
 		}
 
 		// --- Step 1: Initial Processing ---
@@ -122,8 +127,7 @@ class Data_Machine_Processing_Orchestrator {
 
 		// --- Step 2: Fact Check ---
 		$fact_checked_content = '';
-		// START: Add conditional check for skip_fact_check
-		$skip_fact_check = isset($module_job_config['skip_fact_check']) ? (bool)$module_job_config['skip_fact_check'] : false;
+		// START: Add conditional check for skip_fact_check (variable already declared above)
 
 		if (!$skip_fact_check) {
 		    $this->log_orchestrator_step('Step 2: Running Fact Check (skip_fact_check is false)', $module_id, $input_data_packet['metadata'] ?? []);

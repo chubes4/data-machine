@@ -335,11 +335,15 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 						populateHandlerFields(state.output_config[outputSlug], 'output', outputSlug, outputContainerElement);
 					}
 				}
-				// START: Restore Update skip_fact_check checkbox logic (After handler population)
+				                // START: Restore Update skip_fact_check checkbox logic (After handler population)
                 const skipCheckboxUpdate = document.getElementById('skip_fact_check'); // Use different var name
                 if (skipCheckboxUpdate) {
                     console.log(`[UI Subscription] Updating skip_fact_check checkbox (after templates). State value: ${state.skip_fact_check}`);
                     skipCheckboxUpdate.checked = !!state.skip_fact_check; // Convert 0/1 to boolean
+                    // Update fact check prompt visibility after setting checkbox
+                    if (typeof toggleFactCheckPromptVisibility === 'function') {
+                        toggleFactCheckPromptVisibility();
+                    }
                 }
                 // END: Restore Update skip_fact_check checkbox logic
 			} else if (state.uiState === 'default' && state.currentModuleId === 'new') {
@@ -349,10 +353,14 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 				document.getElementById('process_data_prompt').value = '';
 				document.getElementById('fact_check_prompt').value = '';
 				document.getElementById('finalize_response_prompt').value = '';
-				// START: Restore Reset skip_fact_check checkbox for new module
+				                // START: Restore Reset skip_fact_check checkbox for new module
                 const skipCheckboxNew = document.getElementById('skip_fact_check');
                 if (skipCheckboxNew) {
                     skipCheckboxNew.checked = false;
+                    // Update fact check prompt visibility after resetting checkbox
+                    if (typeof toggleFactCheckPromptVisibility === 'function') {
+                        toggleFactCheckPromptVisibility();
+                    }
                 }
                 // END: Restore Reset skip_fact_check checkbox for new module
 				// Set dropdowns to state defaults, not blank
@@ -420,6 +428,43 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 				}
 			}
 		});
+
+		// --- Skip Fact Check Toggle Logic ---
+		function toggleFactCheckPromptVisibility() {
+			const skipFactCheckbox = document.getElementById('skip_fact_check');
+			const factCheckPromptRow = document.getElementById('fact-check-prompt-row');
+			
+			if (skipFactCheckbox && factCheckPromptRow) {
+				if (skipFactCheckbox.checked) {
+					factCheckPromptRow.style.opacity = '0.5';
+					factCheckPromptRow.style.pointerEvents = 'none';
+					const textarea = factCheckPromptRow.querySelector('textarea');
+					if (textarea) {
+						textarea.disabled = true;
+					}
+				} else {
+					factCheckPromptRow.style.opacity = '1';
+					factCheckPromptRow.style.pointerEvents = 'auto';
+					const textarea = factCheckPromptRow.querySelector('textarea');
+					if (textarea) {
+						textarea.disabled = false;
+					}
+				}
+			}
+		}
+
+		// Initialize fact check visibility based on current state
+		toggleFactCheckPromptVisibility();
+
+		// Add event listener for skip fact check checkbox
+		const skipFactCheckbox = document.getElementById('skip_fact_check');
+		if (skipFactCheckbox) {
+			skipFactCheckbox.addEventListener('change', function() {
+				toggleFactCheckPromptVisibility();
+				// Update state when checkbox changes
+				dispatch({ type: ACTIONS.UPDATE_CONFIG, payload: { skip_fact_check: this.checked ? 1 : 0, isDirty: true } });
+			});
+		}
 
 		// --- Initial Module Load Logic (Check if initial template fetch is needed) ---
 		console.log('[DOMContentLoaded] Starting Initial Module/Template Load Logic...');
