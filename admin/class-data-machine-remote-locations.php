@@ -37,7 +37,6 @@ class Data_Machine_Remote_Locations {
         // Add hooks for form handlers
         add_action('admin_post_dm_add_location', array($this, 'handle_add_location'));
         add_action('admin_post_dm_update_location', array($this, 'handle_update_location'));
-        add_action('admin_post_dm_instagram_accounts', array($this, 'dm_handle_instagram_accounts'));
     }
 
     /**
@@ -280,28 +279,6 @@ class Data_Machine_Remote_Locations {
         // No fallback redirect needed here as all paths above include exit;
     }
 
-    /**
-     * Handles the admin-post action for updating Instagram accounts.
-     */
-    public function dm_handle_instagram_accounts() {
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'dm_instagram_accounts')) {
-            wp_die(__('Nonce verification failed!', 'data-machine'));
-        }
-    
-        if (!current_user_can('manage_options')) { // Check capability
-            wp_die(__('Permission denied!', 'data-machine'));
-        }
-    
-        $user_id = get_current_user_id();
-        $accounts = array_map('sanitize_text_field', $_POST['accounts'] ?? []);
-        $account_id = isset($_POST['account_id']) ? absint($_POST['account_id']) : null;
 
-        $accounts = array_filter($accounts, function($acct) use ($account_id) {
-            return ($acct['id'] ?? null) !== $account_id; // Check key exists before comparison
-        });
-        update_user_meta($user_id, 'data_machine_instagram_accounts', $accounts);
-
-        wp_send_json_success();
-    }
 
 } 

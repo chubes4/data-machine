@@ -207,8 +207,6 @@ class Data_Machine {
 		$oauth_twitter->register_hooks();
 		$oauth_threads->register_hooks();  // Ensure hook registration
 		$oauth_facebook->register_hooks(); // Ensure hook registration
-		// TODO: Add Instagram hook registration once its handler is refactored
-		// $oauth_instagram->register_hooks();
 	}
 
 	/**
@@ -245,9 +243,7 @@ class Data_Machine {
 
 		// (AJAX handler hooks and scheduler logic should be handled in the main bootstrap, not here)
 
-		// Register Prompt Modifier helper (if needed elsewhere, move to bootstrap)
-		require_once DATA_MACHINE_PATH . 'includes/helpers/class-prompt-modifier.php';
-		$prompt_modifier = new Data_Machine_Prompt_Modifier();
+		// Note: Prompt Builder is instantiated in main bootstrap file and injected into orchestrator
 
 		// Remote locations handler (if needed elsewhere, move to bootstrap)
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-data-machine-remote-locations.php';

@@ -14,7 +14,6 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 delete_option( 'dm_openai_api_key' );
 delete_option( 'dm_openai_user_meta' );
 delete_option( 'dm_bluesky_user_meta' );
-delete_option( 'dm_instagram_user_meta' );
 delete_option( 'dm_twitter_user_meta' );
 delete_option( 'dm_reddit_user_meta' );
 delete_option( 'dm_threads_user_meta' );

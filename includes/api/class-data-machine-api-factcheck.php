@@ -35,16 +35,8 @@ class Data_Machine_API_FactCheck {
      * @return   array|WP_Error                API response data or WP_Error on failure.
      */
     public function fact_check_response( $api_key, $system_prompt, $user_prompt, $content_to_check ) {
-        // Add robust, universal fact-checking directive
-        $fact_check_directive = <<<PROMPT
-FACT-CHECKING DIRECTIVE:
-- When fact-checking, treat the user-provided content and post content as the primary source of truth unless you find a direct, credible, and more recent source that clearly disproves it.
-- Do not hedge, speculate, or state that information is "not officially announced" or "unconfirmed" unless you find a direct, credible source explicitly stating so.
-- If the user-provided content is a news announcement, event, update, or other factual statement, and you do not find a credible contradiction, you must treat it as accurate and confirmed.
-- If in doubt, defer to the user-provided content and do not introduce uncertainty.
-- Always cite any source that directly contradicts or disproves the user-provided content.
-PROMPT;
-        $system_prompt = $fact_check_directive . "\n\n" . $system_prompt;
+        // NOTE: Fact-checking directive is now handled by the centralized PromptBuilder class.
+        // The system_prompt parameter now contains the complete, enhanced prompt.
 
         $api_endpoint = 'https://api.openai.com/v1/responses'; // Use Responses API endpoint
 

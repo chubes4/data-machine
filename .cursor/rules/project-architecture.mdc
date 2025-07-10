@@ -8,7 +8,7 @@ The Data Machine plugin is a sophisticated WordPress tool designed to automate d
 
 The plugin follows a structured 5-step processing workflow:
 
-1. **Input Collection**: Gather data from various sources (files, RSS, Reddit, Instagram, REST APIs)
+1. **Input Collection**: Gather data from various sources (files, RSS, Reddit, REST APIs)
 2. **Initial Processing**: Send data to OpenAI API for initial analysis and transformation
 3. **Fact Checking**: Validate processed content through AI-powered fact-checking
 4. **Content Finalization**: Generate final output using AI with project-specific prompts
@@ -20,7 +20,6 @@ The plugin follows a structured 5-step processing workflow:
 - **`data-machine.php`**: Plugin header, initialization, dependency loading, and WordPress hooks
   - Defines constants: `DATA_MACHINE_VERSION`, `DATA_MACHINE_PATH`
   - Handles Composer autoloading
-  - Registers OAuth endpoints for Instagram
   - Orchestrates dependency injection and service instantiation
 
 ### Core Architecture (`includes/`)
@@ -66,7 +65,6 @@ Data collection from various sources:
 - **`class-data-machine-input-files.php`**: Local file processing (CSV, JSON, TXT)
 - **`class-data-machine-input-rss.php`**: RSS feed consumption with filtering
 - **`class-data-machine-input-reddit.php`**: Reddit API integration with OAuth
-- **`class-data-machine-input-instagram.php`**: Instagram Basic Display API
 - **`class-data-machine-input-public_rest_api.php`**: Generic REST API consumption
 - **`class-data-machine-input-airdrop_rest_api.php`**: Airdrop helper integration
 
@@ -108,10 +106,32 @@ Utility and support functionality:
 
 - **`class-data-machine-logger.php`**: Centralized logging with admin notices
 - **`class-data-machine-encryption-helper.php`**: API key encryption/decryption
-- **`class-data-machine-project-prompt.php`**: Project-specific prompt management
+- **`class-data-machine-prompt-builder.php`**: **NEW** Centralized prompt construction system
 - **`class-ai-response-parser.php`**: AI response directive parsing
-- **`class-markdown-converter.php`**: Markdown to HTML conversion
-- **`class-prompt-modifier.php`**: Dynamic prompt enhancement
+- **`class-markdown-converter.php`**: Markdown to HTML/Gutenberg conversion
+
+#### Centralized Prompt System
+The plugin now uses a unified **PromptBuilder** class that consolidates all AI prompt construction logic:
+
+**`class-data-machine-prompt-builder.php`** - Single source of truth for all prompt building:
+- `build_system_prompt()`: Project prompts with date/time context
+- `build_process_data_prompt()`: Enhanced processing prompts with image analysis instructions
+- `build_fact_check_prompt()`: Fact-checking prompts with robust directives
+- `build_finalize_prompt()`: Output-specific formatting (Twitter char limits, Gutenberg blocks, taxonomy)
+- `build_finalize_user_message()`: Complete user messages with context and source links
+
+**Database Integration**: Prompt fields stored across multiple tables:
+- **Project Level**: `project_prompt` field in `dm_projects` table
+- **Module Level**: Three prompt fields in `dm_modules` table:
+  - `process_data_prompt`: Initial AI processing instructions
+  - `fact_check_prompt`: Content fact-checking instructions  
+  - `finalize_response_prompt`: Final output generation instructions
+
+**Key Benefits**:
+- **Eliminates Scattered Logic**: Replaced ~200+ lines across 6+ files with single class
+- **Consistent Prompt Handling**: All AI interactions use standardized prompt building
+- **Maintainable Architecture**: Single location for prompt logic changes
+- **Enhanced Functionality**: Intelligent content detection (HTML vs Gutenberg vs Markdown)
 
 #### AJAX Handlers (`includes/ajax/`)
 Frontend-backend communication:
@@ -227,6 +247,45 @@ Handler configurations stored as serialized arrays in module database records, w
 ### Error Handling
 Centralized logging through `Data_Machine_Logger` with admin notice display and persistent log storage.
 
+#### Enhanced Authentication Error Handling
+**NEW**: Advanced authentication failure detection and user guidance system implemented in `class-job-executor.php`.
+
+**Key Components:**
+- **`enhance_authentication_error_message()`**: Provides service-specific guidance for authentication failures
+- **`is_authentication_error()`**: Pattern-based detection of authentication-related errors
+- **Enhanced job status tracking**: Failed jobs now distinguished between `'failed'` and `'failed_auth'`
+
+**Authentication Error Detection Patterns:**
+- HTTP 401 status codes (`Code: 401`)
+- "Not currently logged in" messages
+- Authentication failure keywords
+- Token expiration indicators
+- Permission denied scenarios
+
+**Service-Specific Error Messages:**
+- **Airdrop REST API**: Guides users to check Remote Location settings, application passwords, and helper plugin status
+- **Reddit**: Directs to API Keys page for re-authentication
+- **Twitter/Facebook/Threads**: OAuth re-authentication guidance
+- **Public REST API**: Credential verification instructions
+- **Generic**: Fallback guidance for unknown services
+
+**Enhanced Job Error Data:**
+```php
+[
+    'error' => 'Original error message',
+    'trace' => 'Stack trace',
+    'is_authentication_error' => true,
+    'module_type' => 'airdrop_rest_api',
+    'timestamp' => '2024-01-01 12:00:00'
+]
+```
+
+**Benefits:**
+- **User-Friendly Messages**: Clear, actionable guidance instead of cryptic error codes
+- **Faster Problem Resolution**: Specific instructions for each service type
+- **Better Debugging**: Enhanced error metadata for troubleshooting
+- **Proactive Support**: Prevents user confusion with authentication failures
+
 ### Security Implementation
 - API key encryption using WordPress salts
 - Nonce verification for all AJAX requests
@@ -279,7 +338,7 @@ Centralized logging through `Data_Machine_Logger` with admin notice display and 
 
 ### Third-Party Services
 - **OpenAI API**: Content processing and AI capabilities
-- **Social Media APIs**: Twitter, Facebook, Instagram, Reddit, Threads, Bluesky
+- **Social Media APIs**: Twitter, Facebook, Reddit, Threads, Bluesky
 - **Remote WordPress Sites**: REST API publishing
 
 ### Composer Dependencies

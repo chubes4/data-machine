@@ -70,8 +70,10 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 
         // --- Convert Markdown content to HTML ---
         require_once DATA_MACHINE_PATH . 'includes/helpers/class-markdown-converter.php';
+        // Check if Gutenberg blocks should be used
+        $use_gutenberg = ($config['use_gutenberg_blocks'] ?? '1') === '1';
         // Call the static method directly
-        $html_content = Data_Machine_Markdown_Converter::convert_to_html($final_content);
+        $html_content = Data_Machine_Markdown_Converter::convert_to_html($final_content, $use_gutenberg);
         // --- End Markdown Conversion ---
 
 		// --- Determine Post Date ---
@@ -339,6 +341,16 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 				'options' => $post_type_options,
 				'default' => 'post',
 			],
+			'use_gutenberg_blocks' => [
+				'type' => 'select',
+				'label' => __('Editor Format', 'data-machine'),
+				'description' => __('Choose whether to format content for Gutenberg block editor or classic editor.', 'data-machine'),
+				'options' => [
+					'1' => __('Gutenberg Block Editor (Recommended)', 'data-machine'),
+					'0' => __('Classic Editor', 'data-machine'),
+				],
+				'default' => '1',
+			],
 			'post_status' => [
 				'type' => 'select',
 				'label' => __('Post Status', 'data-machine'),
@@ -396,6 +408,7 @@ class Data_Machine_Output_Publish_Local implements Data_Machine_Output_Handler_I
 		$sanitized = [];
 		$sanitized['post_type'] = sanitize_text_field($raw_settings['post_type'] ?? 'post');
 		$sanitized['post_status'] = sanitize_text_field($raw_settings['post_status'] ?? 'draft');
+		$sanitized['use_gutenberg_blocks'] = in_array($raw_settings['use_gutenberg_blocks'] ?? '1', ['0', '1']) ? $raw_settings['use_gutenberg_blocks'] : '1';
 		$valid_date_sources = ['current_date', 'source_date'];
 		$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
 		$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';

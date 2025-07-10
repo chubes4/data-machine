@@ -404,15 +404,18 @@ class Data_Machine_OAuth_Threads {
             $code = sanitize_text_field($_GET['code']);
             $received_state = sanitize_text_field($_GET['state']);
 
-            // Verify state
-            $stored_state = get_transient('dm_oauth_state_threads');
-            if (!$stored_state || $stored_state !== $received_state) {
-                $this->logger?->error('Threads OAuth Error (Callback): State mismatch.', ['received' => $received_state, 'stored' => $stored_state]);
+            // Get current user ID for state verification
+            $user_id = get_current_user_id();
+            
+            // Verify state - use user_meta consistently
+            $stored_state = get_user_meta($user_id, 'dm_threads_oauth_state', true);
+            if (!$stored_state || !hash_equals($stored_state, $received_state)) {
+                $this->logger?->error('Threads OAuth Error (Callback): State mismatch.', ['user_id' => $user_id, 'received' => $received_state, 'stored' => $stored_state]);
                 set_transient('dm_oauth_error_threads', 'Threads authentication failed: Invalid state parameter. Please try again.', 60);
                 wp_redirect(admin_url('admin.php?page=dm-api-keys&dm_oauth_status=error_state'));
                 exit;
             }
-            delete_transient('dm_oauth_state_threads'); // State verified, clear it
+            // State verified, it will be cleaned up in handle_callback()
 
             // Exchange code for token
             // Call the main handle_callback method which now includes page ID fetching

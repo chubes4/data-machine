@@ -4,11 +4,11 @@ A powerful WordPress plugin that automatically collects data from various source
 
 ## Description
 
-Data Machine is a comprehensive data processing and publishing solution for WordPress. It can automatically collect data from files, RSS feeds, Reddit, Instagram, and other sources, process it through OpenAI's API for fact-checking and content generation, and publish the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and more.
+Data Machine is a comprehensive data processing and publishing solution for WordPress. It can automatically collect data from files, RSS feeds, Reddit, and other sources, process it through OpenAI's API for fact-checking and content generation, and publish the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and more.
 
 ## Features
 
-- **Multi-Source Data Collection**: Import data from files, RSS feeds, Reddit, Instagram, and REST APIs
+- **Multi-Source Data Collection**: Import data from files, RSS feeds, Reddit, and REST APIs
 - **AI-Powered Processing**: Uses OpenAI API for content generation and fact-checking
 - **Multi-Platform Publishing**: Publish to WordPress, Twitter, Facebook, Threads, Bluesky, and more
 - **Scheduled Automation**: Set up automated workflows with custom scheduling

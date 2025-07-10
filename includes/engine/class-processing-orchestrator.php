@@ -24,11 +24,8 @@ class Data_Machine_Processing_Orchestrator {
 	/** @var Data_Machine_Handler_Factory */
 	private $handler_factory;
 
-	/** @var Data_Machine_Project_Prompt */
-	private $project_prompt_service;
-
-	/** @var Data_Machine_Prompt_Modifier */
-	private $prompt_modifier;
+	/** @var Data_Machine_Prompt_Builder */
+	private $prompt_builder;
 
 	/** @var Data_Machine_Logger */
 	private $logger;
@@ -40,8 +37,7 @@ class Data_Machine_Processing_Orchestrator {
 	 * @param Data_Machine_API_FactCheck $factcheck_api Instance of FactCheck API handler.
 	 * @param Data_Machine_API_Finalize $finalize_api Instance of Finalize API handler.
 	 * @param Data_Machine_Handler_Factory $handler_factory Handler Factory instance.
-	 * @param Data_Machine_Project_Prompt $project_prompt_service Instance of Project Prompt service.
-	 * @param Data_Machine_Prompt_Modifier $prompt_modifier Instance of Prompt Modifier service.
+	 * @param Data_Machine_Prompt_Builder $prompt_builder Instance of centralized prompt builder.
 	 * @param Data_Machine_Logger $logger Logger instance.
 	 */
 	public function __construct(
@@ -49,16 +45,14 @@ class Data_Machine_Processing_Orchestrator {
 		Data_Machine_API_FactCheck $factcheck_api,
 		Data_Machine_API_Finalize $finalize_api,
 		Data_Machine_Handler_Factory $handler_factory,
-		Data_Machine_Project_Prompt $project_prompt_service,
-		Data_Machine_Prompt_Modifier $prompt_modifier,
+		Data_Machine_Prompt_Builder $prompt_builder,
 		Data_Machine_Logger $logger
 	) {
 		$this->process_data_handler = $process_data_handler;
 		$this->factcheck_api = $factcheck_api;
 		$this->finalize_api = $finalize_api;
 		$this->handler_factory = $handler_factory;
-		$this->project_prompt_service = $project_prompt_service;
-		$this->prompt_modifier = $prompt_modifier;
+		$this->prompt_builder = $prompt_builder;
 		$this->logger = $logger;
 	}
 
@@ -74,10 +68,6 @@ class Data_Machine_Processing_Orchestrator {
 	 */
 	public function run( array $input_data_packet, array $module_job_config, $user_id, $job_id = null ) {
 
-		// --- Fetch Project Prompt for System Message using the dedicated service ---
-		$project_id = absint($module_job_config['project_id'] ?? 0);
-		$project_prompt = $this->project_prompt_service->get_system_prompt($project_id, $user_id);
-
 		// --- Configuration & Validation ---
 		$api_key = get_user_meta($user_id, 'dm_openai_api_key', true);
 		if (empty($api_key)) {
@@ -92,6 +82,11 @@ class Data_Machine_Processing_Orchestrator {
 		}
 		$module_id = $module_job_config['module_id']; // For logging
 
+		// --- Build System Prompt using centralized builder ---
+		$project_id = absint($module_job_config['project_id'] ?? 0);
+		$system_prompt = $this->prompt_builder->build_system_prompt($project_id, $user_id);
+
+		// --- Extract and validate base prompts ---
 		$process_data_prompt = $module_job_config['process_data_prompt'] ?? '';
 		$fact_check_prompt = $module_job_config['fact_check_prompt'] ?? '';
 		$finalize_response_prompt = $module_job_config['finalize_response_prompt'] ?? '';
@@ -108,7 +103,8 @@ class Data_Machine_Processing_Orchestrator {
 		    // Use the injected instance
 		    // Use $input_data_packet for logging and processing
 		    $this->log_orchestrator_step('Step 1: Calling process_data', $module_id, $input_data_packet['metadata'] ?? []);
-		    $process_result = $this->process_data_handler->process_data($api_key, $project_prompt, $process_data_prompt, $input_data_packet);
+		    $enhanced_process_prompt = $this->prompt_builder->build_process_data_prompt($process_data_prompt, $input_data_packet);
+		    $process_result = $this->process_data_handler->process_data($api_key, $system_prompt, $enhanced_process_prompt, $input_data_packet);
 		    $this->log_orchestrator_step('Step 1: Received process_data result', $module_id, $input_data_packet['metadata'] ?? [], ['status' => $process_result['status'] ?? 'unknown', 'has_output' => !empty($process_result['json_output'])]);
 
 		    if (isset($process_result['status']) && $process_result['status'] === 'error') {
@@ -135,7 +131,8 @@ class Data_Machine_Processing_Orchestrator {
 		        // Use the injected instance
 		        // Use $input_data_packet for logging
 		        $this->log_orchestrator_step('Step 2a: Calling fact_check_response API', $module_id, $input_data_packet['metadata'] ?? []);
-		        $factcheck_result = $this->factcheck_api->fact_check_response($api_key, $project_prompt, $fact_check_prompt, $initial_output);
+		        $enhanced_fact_check_prompt = $this->prompt_builder->build_fact_check_prompt($fact_check_prompt);
+		        $factcheck_result = $this->factcheck_api->fact_check_response($api_key, $system_prompt, $enhanced_fact_check_prompt, $initial_output);
 		        $this->log_orchestrator_step('Step 2b: Received fact_check_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($factcheck_result), 'has_output' => !is_wp_error($factcheck_result) && !empty($factcheck_result['fact_check_results'])]);
 		        // Debug: Log the raw result immediately after the API call
 
@@ -162,15 +159,16 @@ class Data_Machine_Processing_Orchestrator {
 		    // Use the injected instance
 		    // Use $input_data_packet for logging and prompt modification
 		    $this->log_orchestrator_step('Step 3: Calling finalize_response', $module_id, $input_data_packet['metadata'] ?? []);
-		    // Use the prompt modifier to inject category/tag instructions if needed
-		    $modified_finalize_prompt = $this->prompt_modifier::modify_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet); // Pass actual packet
+		    // Use the centralized prompt builder to create enhanced finalize prompt
+		    $enhanced_finalize_prompt = $this->prompt_builder->build_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet);
+		    $finalize_user_message = $this->prompt_builder->build_finalize_user_message($enhanced_finalize_prompt, $initial_output, $fact_checked_content, $module_job_config, $input_data_packet['metadata'] ?? []);
 
 		    $finalize_result = $this->finalize_api->finalize_response(
 		        $api_key,
-		        $project_prompt,
-		        $modified_finalize_prompt,
-		        $initial_output,
-		        $fact_checked_content,
+		        $system_prompt,
+		        $finalize_user_message,
+		        '', // Initial output already included in user message
+		        '', // Fact check results already included in user message
 		        $module_job_config, // Pass the config array
 		        $input_data_packet['metadata'] ?? [] // Pass metadata from actual packet
 		    );

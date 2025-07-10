@@ -38,62 +38,11 @@ class Data_Machine_API_Finalize {
      * @param    array     $input_metadata           Metadata from the original input data packet (optional).
      * @return   array|WP_Error                       API response data or WP_Error on failure.
      */
-    public function finalize_response( $api_key, $system_prompt, $user_prompt, $process_data_results, $fact_check_results, array $module_job_config, array $input_metadata = [] ) {
+    public function finalize_response( $api_key, $system_prompt, $user_message, $process_data_results, $fact_check_results, array $module_job_config, array $input_metadata = [] ) {
         $api_endpoint = 'https://api.openai.com/v1/chat/completions'; // OpenAI Chat Completions API endpoint
 
-        // Construct the user message by chaining all relevant data
-        $user_message = $user_prompt; // Start with the module prompt
-        if (!empty($process_data_results)) {
-            $user_message .= "\n\nInitial Response:\n" . $process_data_results;
-        }
-        if (!empty($fact_check_results)) {
-            $user_message .= "\n\nFact Check Results:\n" . $fact_check_results;
-        }
-
-        // --- Add POST_TITLE instruction if needed ---
-        $output_type = $module_job_config['output_type'] ?? null;
-        $output_config = $module_job_config['output_config'] ?? []; // Already decoded array
-        if ($output_type === 'publish_local' || $output_type === 'publish_remote') {
-        	$user_message .= "\n\nIMPORTANT: Please ensure the response starts *immediately* with a suitable post title formatted exactly like this (with no preceding text or blank lines):\nPOST_TITLE: [Your Suggested Title Here]\n\nFollow this title line immediately with the rest of your output. Do not print the post title again in the response.";
-        }
-        // --- End POST_TITLE instruction ---
-
-        // --- Add Markdown Formatting Instruction (Conditional) ---
-        if ($output_type === 'publish_local' || $output_type === 'publish_remote') {
-        	$user_message .= "\n\nFormat the main content body using standard Markdown syntax (e.g., # H1, ## H2, *italic*, **bold**, - list item, [link text](URL), ```code```). Do not use Markdown for the initial directive lines (POST_TITLE, CATEGORY, TAGS).";
-        } // End Markdown Instruction if block.
-
-        // --- Append Source Link Instruction ---
-        $source_link_string = '';
-        if (!empty($input_metadata['source_url'])) {
-            $source_url = esc_url($input_metadata['source_url']);
-            $source_name = '';
-            if (!empty($input_metadata['subreddit'])) {
-                $source_name = 'r/' . esc_html($input_metadata['subreddit']);
-            } elseif (!empty($input_metadata['feed_url'])) {
-                $parsed_url = wp_parse_url($input_metadata['feed_url']);
-                if (!empty($parsed_url['host'])) {
-                    $source_name = esc_html($parsed_url['host']);
-                } else {
-                    $source_name = 'Original Feed';
-                }
-            } elseif (!empty($input_metadata['original_title'])) {
-                 $source_name = esc_html($input_metadata['original_title']);
-            } else {
-                 $parsed_url = wp_parse_url($source_url);
-                 if (!empty($parsed_url['host'])) {
-                     $source_name = esc_html($parsed_url['host']);
-                 } else {
-                    $source_name = 'Original Source';
-                 }
-            }
-            $source_link_string = sprintf(
-                'Source: <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
-                $source_url,
-                $source_name
-            );
-        }
-        // --- End Source Link Instruction ---
+        // NOTE: All prompt building logic has been moved to the centralized PromptBuilder class.
+        // The user_message parameter now contains the complete, ready-to-use prompt.
 
         // --- Direct API Call using wp_remote_post for OpenAI ---
         $model = Data_Machine_Constants::AI_MODEL_FINALIZE;

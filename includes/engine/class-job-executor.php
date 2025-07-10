@@ -318,14 +318,118 @@ class Data_Machine_Job_Executor {
 			// Call the handler's method with only its config
 			return $input_handler->get_input_data($module, $handler_config, $user_id);
 		} catch (Exception $e) {
-			$error_message = "Error fetching input data: " . $e->getMessage();
-			$this->logger?->error($error_message, [
+			// Enhanced error handling for authentication issues
+			$error_message = $e->getMessage();
+			$enhanced_error_message = $this->enhance_authentication_error_message($error_message, $module);
+			
+			$this->logger?->error("Error fetching input data: " . $enhanced_error_message, [
 				'module_id' => $module->module_id,
 				'handler_class' => get_class($input_handler),
-				'error' => $e->getMessage()
+				'handler_type' => $module->data_source_type ?? 'unknown',
+				'error' => $error_message,
+				'user_id' => $user_id
 			]);
-			return new WP_Error('input_fetch_error', $error_message);
+			return new WP_Error('input_fetch_error', "Error fetching input data: " . $enhanced_error_message);
 		}
+	}
+
+	/**
+	 * Enhances authentication error messages to provide better user guidance.
+	 *
+	 * @param string $original_error_message The original error message from the input handler.
+	 * @param object $module The module object.
+	 * @return string Enhanced error message with specific guidance.
+	 */
+	private function enhance_authentication_error_message(string $original_error_message, object $module): string {
+		$handler_type = $module->data_source_type ?? 'unknown';
+		$module_name = $module->module_name ?? "Module {$module->module_id}";
+		
+		// Check if this is a 401 authentication error
+		if (preg_match('/Code:\s*401/i', $original_error_message) || 
+			preg_match('/not currently logged in/i', $original_error_message) ||
+			preg_match('/authentication/i', $original_error_message)) {
+			
+			switch ($handler_type) {
+				case 'airdrop_rest_api':
+					return $original_error_message . "\n\n" . 
+						__('Authentication failed for the remote WordPress site. This usually means:', 'data-machine') . "\n" .
+						__('• The application password was changed or deleted on the remote site', 'data-machine') . "\n" .
+						__('• The username was changed on the remote site', 'data-machine') . "\n" .
+						__('• The Data Machine Airdrop helper plugin was disabled on the remote site', 'data-machine') . "\n" .
+						__('• The remote site\'s authentication settings have changed', 'data-machine') . "\n\n" .
+						sprintf(__('Please check the Remote Location settings for "%s" and verify the credentials are still valid.', 'data-machine'), $module_name);
+				
+				case 'reddit':
+					return $original_error_message . "\n\n" . 
+						sprintf(__('Reddit authentication failed for "%s". Please re-authenticate your Reddit account on the API Keys page.', 'data-machine'), $module_name);
+				
+				case 'twitter':
+					return $original_error_message . "\n\n" . 
+						sprintf(__('Twitter authentication failed for "%s". Please re-authenticate your Twitter account on the API Keys page.', 'data-machine'), $module_name);
+				
+				case 'facebook':
+					return $original_error_message . "\n\n" . 
+						sprintf(__('Facebook authentication failed for "%s". Please re-authenticate your Facebook account on the API Keys page.', 'data-machine'), $module_name);
+				
+				case 'threads':
+					return $original_error_message . "\n\n" . 
+						sprintf(__('Threads authentication failed for "%s". Please re-authenticate your Threads account on the API Keys page.', 'data-machine'), $module_name);
+				
+				case 'public_rest_api':
+					return $original_error_message . "\n\n" . 
+						sprintf(__('Authentication failed for the public REST API in "%s". Please check if the API endpoint requires authentication and verify your credentials.', 'data-machine'), $module_name);
+				
+				default:
+					return $original_error_message . "\n\n" . 
+						sprintf(__('Authentication failed for "%s". Please check your authentication settings and credentials.', 'data-machine'), $module_name);
+			}
+		}
+		
+		// Check for other common network/connection errors
+		if (preg_match('/Failed to connect/i', $original_error_message) || 
+			preg_match('/connection/i', $original_error_message)) {
+			return $original_error_message . "\n\n" . 
+				sprintf(__('Connection failed for "%s". Please check that the remote service is accessible and your network connection is stable.', 'data-machine'), $module_name);
+		}
+		
+		// Check for rate limiting errors
+		if (preg_match('/rate limit/i', $original_error_message) || 
+			preg_match('/Code:\s*429/i', $original_error_message)) {
+			return $original_error_message . "\n\n" . 
+				sprintf(__('Rate limit exceeded for "%s". The service is temporarily blocking requests. This job will be retried automatically later.', 'data-machine'), $module_name);
+		}
+		
+		// Return original message with module context if no specific enhancement applies
+		return sprintf(__('Error in "%s": %s', 'data-machine'), $module_name, $original_error_message);
+	}
+
+	/**
+	 * Determines if an error message indicates an authentication failure.
+	 *
+	 * @param string $error_message The error message to check.
+	 * @return bool True if the error appears to be authentication-related, false otherwise.
+	 */
+	private function is_authentication_error(string $error_message): bool {
+		$auth_patterns = [
+			'/Code:\s*401/i',
+			'/not currently logged in/i',
+			'/authentication.*failed/i',
+			'/invalid.*credentials/i',
+			'/unauthorized/i',
+			'/access.*denied/i',
+			'/permission.*denied/i',
+			'/token.*expired/i',
+			'/token.*invalid/i',
+			'/login.*required/i'
+		];
+		
+		foreach ($auth_patterns as $pattern) {
+			if (preg_match($pattern, $error_message)) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
 	/**
@@ -750,15 +854,30 @@ class Data_Machine_Job_Executor {
 			}
 
 		} catch (Exception $e) {
+			// Determine if this is an authentication-related error
+			$is_auth_error = $this->is_authentication_error($e->getMessage());
+			$job_status = $is_auth_error ? 'failed_auth' : 'failed';
+			
 			$error_message = "Critical error during job execution: " . $e->getMessage();
-			$this->logger?->error($error_message, ['job_id' => $job_id, 'module_id' => $module_job_config['module_id'] ?? 'N/A', 'trace' => $e->getTraceAsString()]);
+			$this->logger?->error($error_message, [
+				'job_id' => $job_id, 
+				'module_id' => $module_job_config['module_id'] ?? 'N/A', 
+				'is_auth_error' => $is_auth_error,
+				'final_status' => $job_status,
+				'trace' => $e->getTraceAsString()
+			]);
+			
 			// Ensure status is marked as failed if exception occurs before final update
 			if ($job && $this->db_jobs) {
-				// Prepare error data for storage
-				$error_data_for_db = json_encode(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-				$this->db_jobs->complete_job($job_id, 'failed', $error_data_for_db);
-				// Optionally add error message to job record if a field exists
-				// $this->db_jobs->update_job_error_message($job_id, $error_message);
+				// Prepare enhanced error data for storage
+				$error_data_for_db = json_encode([
+					'error' => $e->getMessage(), 
+					'trace' => $e->getTraceAsString(),
+					'is_authentication_error' => $is_auth_error,
+					'module_type' => $module_job_config['data_source_type'] ?? 'unknown',
+					'timestamp' => current_time('mysql', true)
+				]);
+				$this->db_jobs->complete_job($job_id, $job_status, $error_data_for_db);
 			}
 		}
 	}
@@ -846,9 +965,6 @@ class Data_Machine_Job_Executor {
 				// This handler puts it at the top level
 				$item_identifier = $item['item_identifier'] ?? null;
 				break;
-			// case 'instagram': // Add if Instagram has a specific identifier structure
-			//     $item_identifier = $item['metadata']['instagram_id'] ?? null;
-			//     break;
 			default:
 				// Attempt common fallbacks for unknown types
 				$item_identifier = $item['id'] ?? $item['guid'] ?? $item['url'] ?? $item['link'] ?? null;

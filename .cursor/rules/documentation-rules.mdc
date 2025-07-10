@@ -1,7 +1,5 @@
 ---
-description: 
-globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 You are now creating, updating, or refining .mdc files in the .cursor/rules directory. You must follow these documentation rules closely. Strict adherance to this document is paramount.   
 

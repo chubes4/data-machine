@@ -122,8 +122,6 @@ class Dependency_Injection_Handler_Factory implements Data_Machine_Handler_Facto
                     return new Data_Machine_Input_Reddit($this->oauth_reddit, $this->db_processed_items, $this->db_modules, $this->db_projects, $this->logger);
                 case 'rss':
                     return new Data_Machine_Input_Rss($this->db_processed_items, $this->db_modules, $this->db_projects, $this->logger);
-                case 'instagram':
-                     return new Data_Machine_Input_Instagram($this->db_processed_items, $this->db_modules, $this->db_projects, $this->logger);
 
                 // --- Output Handlers ---
                 case 'publish_remote':

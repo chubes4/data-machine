@@ -50,21 +50,7 @@ class Data_Machine_Api_Auth_Page {
             exit;
         });
 
-        add_action('admin_post_dm_save_instagram_user_meta', function() {
-            // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
-            check_admin_referer('dm_save_instagram_user_meta_action');
-            $user_id = get_current_user_id();
-            $instagram_account = get_user_meta($user_id, 'data_machine_instagram_account', true);
-            if (!is_array($instagram_account)) $instagram_account = [];
-            $instagram_account = array_merge($instagram_account, [
-                'client_id' => sanitize_text_field($_POST['instagram_oauth_client_id'] ?? ''),
-                'client_secret' => sanitize_text_field($_POST['instagram_oauth_client_secret'] ?? ''),
-            ]);
-            update_user_meta($user_id, 'data_machine_instagram_account', $instagram_account);
-            wp_redirect(add_query_arg('instagram_saved', 1, admin_url('admin.php?page=dm-api-keys')));
-            exit;
-        });
+
 
         add_action('admin_post_dm_save_twitter_user_meta', function() {
             // Debug logging removed for production

@@ -43,6 +43,7 @@ require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-location
 require_once DATA_MACHINE_PATH . 'admin/class-data-machine-remote-locations.php'; // Admin Form Handler for Remote Locations
 require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-import-export.php'; // Added Import/Export Helper
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
+require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-prompt-builder.php'; // Centralized prompt builder
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
 require_once DATA_MACHINE_PATH . 'module-config/RegisterSettings.php';
@@ -61,33 +62,7 @@ require_once DATA_MACHINE_PATH . 'module-config/ajax/module-config-remote-locati
 // Include the new module config assets file
 // require_once DATA_MACHINE_PATH . 'module-config/module-config-enqueue-assets.php';
 
-/**
- * Register custom rewrite endpoint for Instagram OAuth
- */
-function dm_register_oauth_instagram_endpoint() {
-    add_rewrite_rule('^oauth-instagram/?$', 'index.php?dm_oauth_instagram=1', 'top');
-}
-add_action('init', 'dm_register_oauth_instagram_endpoint');
 
-/**
- * Add custom query var for Instagram OAuth
- */
-function dm_add_oauth_instagram_query_var($vars) {
-    $vars[] = 'dm_oauth_instagram';
-    return $vars;
-}
-add_filter('query_vars', 'dm_add_oauth_instagram_query_var');
-
-/**
- * Handle the Instagram OAuth endpoint
- */
-function dm_handle_oauth_instagram_endpoint() {
-    if (get_query_var('dm_oauth_instagram')) {
-        include_once plugin_dir_path(__FILE__) . 'includes/helpers/oauth-instagram.php';
-        exit;
-    }
-}
-add_action('template_redirect', 'dm_handle_oauth_instagram_endpoint');
 
 /**
  * Begins execution of the plugin.
@@ -133,8 +108,8 @@ function run_data_machine() {
     $facebook_client_secret = $facebook_app_credentials['client_secret'] ?? '';
     $oauth_facebook = new Data_Machine_OAuth_Facebook($facebook_client_id, $facebook_client_secret, $logger);
 
-    // Project prompt service
-    $project_prompt_service = new Data_Machine_Project_Prompt($db_projects);
+    // Centralized prompt builder
+    $prompt_builder = new Data_Machine_Prompt_Builder($db_projects);
 
     // Handler registry
     $handler_registry = new Data_Machine_Handler_Registry();
@@ -162,8 +137,7 @@ function run_data_machine() {
     // Process data
     $process_data = new Data_Machine_process_data($openai_api);
 
-    // Prompt modifier
-    $prompt_modifier = new Data_Machine_Prompt_Modifier();
+
 
     // Handler factory (replace with DI version if available)
     $handler_factory = new Dependency_Injection_Handler_Factory(
@@ -214,16 +188,13 @@ function run_data_machine() {
 
     // Public API AJAX handler
 
-    // Prompt modifier (already instantiated above)
-
     // Job worker, orchestrator, job executor, scheduler
     $orchestrator = new Data_Machine_Processing_Orchestrator(
         $process_data,
         $factcheck_api,
         $finalize_api,
         $handler_factory,
-        $project_prompt_service,
-        $prompt_modifier,
+        $prompt_builder,
         $logger
     );
     $job_worker = new Data_Machine_Job_Worker($logger, $db_jobs, $orchestrator);

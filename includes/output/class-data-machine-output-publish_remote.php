@@ -146,8 +146,10 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 
 		// --- Convert Markdown content to HTML ---
 		require_once DATA_MACHINE_PATH . 'includes/helpers/class-markdown-converter.php';
+		// Check if Gutenberg blocks should be used
+		$use_gutenberg = ($config['use_gutenberg_blocks'] ?? '1') === '1';
 		// Call the static method directly
-		$html_content = Data_Machine_Markdown_Converter::convert_to_html($final_content);
+		$html_content = Data_Machine_Markdown_Converter::convert_to_html($final_content, $use_gutenberg);
 		// --- End Markdown Conversion ---
 
 		// --- Determine Post Date ---
@@ -457,6 +459,16 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				],
 				'default' => 'publish',
 			],
+			'use_gutenberg_blocks' => [
+				'type' => 'select',
+				'label' => __('Editor Format', 'data-machine'),
+				'description' => __('Choose whether to format content for Gutenberg block editor or classic editor on the remote site.', 'data-machine'),
+				'options' => [
+					'1' => __('Gutenberg Block Editor (Recommended)', 'data-machine'),
+					'0' => __('Classic Editor', 'data-machine'),
+				],
+				'default' => '1',
+			],
 			'post_date_source' => [
 				'type' => 'select',
 				'label' => __( 'Post Date Setting', 'data-machine' ),
@@ -530,6 +542,7 @@ public function sanitize_settings(array $raw_settings): array {
 	$sanitized['location_id'] = absint($raw_settings['location_id'] ?? 0);
 	$sanitized['selected_remote_post_type'] = sanitize_text_field($raw_settings['selected_remote_post_type'] ?? '');
 	$sanitized['remote_post_status'] = sanitize_text_field($raw_settings['remote_post_status'] ?? 'publish');
+	$sanitized['use_gutenberg_blocks'] = in_array($raw_settings['use_gutenberg_blocks'] ?? '1', ['0', '1']) ? $raw_settings['use_gutenberg_blocks'] : '1';
 	$valid_date_sources = ['current_date', 'source_date'];
 	$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
 	$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';

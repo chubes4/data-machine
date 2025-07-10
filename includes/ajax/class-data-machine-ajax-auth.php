@@ -38,7 +38,6 @@ class Data_Machine_Ajax_Auth {
         // Actions for removing accounts
         add_action('wp_ajax_dm_remove_threads_account', array($this, 'handle_remove_threads_account'));
         add_action('wp_ajax_dm_remove_facebook_account', array($this, 'handle_remove_facebook_account'));
-        // TODO: Add actions for removing Instagram/Reddit accounts here for consistency?
     }
 
     /**
@@ -103,8 +102,6 @@ class Data_Machine_Ajax_Auth {
         $account = Data_Machine_OAuth_Twitter::get_account_details($user_id);
         return $account['user_id'] ?? null;
     }
-
-    // TODO: Add similar remove handlers for Instagram/Reddit if centralizing.
 
     /**
      * Handles AJAX request to initiate Threads OAuth flow.

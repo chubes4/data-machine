@@ -71,18 +71,8 @@ class Data_Machine_process_data {
 					// Construct base user message from the module prompt
 					$user_message = $user_prompt;
 
-					// --- Add image-specific instruction if we are about to send an image --- 
-					$is_image = false;
-					if (!empty($file_info['url'])) {
-						$is_image = true;
-					}
-					// Optionally, also check for persistent_path if you support file uploads for images
-					// if (!empty($file_info['persistent_path'])) { $is_image = true; }
-					if ($is_image) {
-						$image_directive = "IMPORTANT INSTRUCTION: An image has been provided. Analyze the visual content of the image carefully. Prioritize information directly observed in the image, especially for identifying people, objects, or specific visual details, over potentially conflicting information in the text below.";
-						$user_message = $image_directive . "\n\n---\n\n" . $user_message; // Prepend directive
-					}
-					// --- End image instruction ---
+					// NOTE: Image analysis instructions are now handled by the centralized PromptBuilder class.
+					// The user_message parameter already contains any necessary image-specific instructions.
 
 					// Append text content if available (e.g., title, comments)
 					if (!empty($content_string)) {

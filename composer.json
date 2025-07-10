@@ -8,6 +8,7 @@
         "classmap": [
             "includes/",
             "admin/",
+            "data-machine-airdrop/",
             "includes/database/",
             "includes/ajax/",
             "includes/api/",
