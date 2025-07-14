@@ -28,6 +28,9 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 // Include the Composer autoloader
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Load Action Scheduler library
+require_once __DIR__ . '/libraries/action-scheduler/action-scheduler.php';
+
 // Include necessary base classes and interfaces first
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php';
@@ -283,19 +286,7 @@ register_activation_hook( __FILE__, 'activate_data_machine' );
 register_deactivation_hook( __FILE__, array( 'Data_Machine', 'deactivate' ) );
 
 function activate_data_machine() {
-	// Check for Action Scheduler dependency
-	if ( ! function_exists( 'as_schedule_single_action' ) ) {
-		// Deactivate this plugin
-		deactivate_plugins( plugin_basename( __FILE__ ) );
-		wp_die( 
-			'<h1>Action Scheduler Required</h1>' .
-			'<p>Data Machine requires the Action Scheduler plugin to function properly.</p>' .
-			'<p>Please install and activate Action Scheduler before activating Data Machine.</p>' .
-			'<p><a href="' . admin_url( 'plugin-install.php?s=action+scheduler&tab=search&type=term' ) . '">Install Action Scheduler</a></p>',
-			'Plugin Dependency Error',
-			array( 'back_link' => true )
-		);
-	}
+	// Action Scheduler is now bundled as a library - no dependency check needed
 
 	// Include database class files directly as autoloading might not be ready
 	require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php';
