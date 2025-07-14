@@ -110,7 +110,7 @@ class Data_Machine_Database_Remote_Locations {
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
         // Verify ownership first
-        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM $table_name WHERE location_id = %d", $location_id));
+        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
         if (!$owner_id || (int)$owner_id !== $user_id) {
             return false; // Permission denied or location not found
         }
@@ -189,7 +189,7 @@ class Data_Machine_Database_Remote_Locations {
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
         // Optional: Verify ownership before deleting (good practice)
-        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM $table_name WHERE location_id = %d", $location_id));
+        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
         if (!$owner_id || (int)$owner_id !== $user_id) {
             return false; // Permission denied or location not found
         }
@@ -287,7 +287,7 @@ class Data_Machine_Database_Remote_Locations {
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
         // Verify ownership first
-        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM $table_name WHERE location_id = %d", $location_id));
+        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
         if (!$owner_id || (int)$owner_id !== $user_id) {
             return false; // Permission denied or location not found
         }

@@ -117,9 +117,9 @@ class Data_Machine_Admin_Page {
         // Instantiate the module config handler with all required dependencies
         require_once plugin_dir_path(__FILE__) . '../module-config/class-dm-module-config-handler.php';
         $this->module_config_handler = new Data_Machine_Module_Handler($db_modules, $handler_registry, $handler_factory, $logger);
-        // Hook for project dashboard page (if any form processing is needed in future)
-        add_action( 'load-dm-run-single-module_page_dm-project-management', array( $this, 'process_project_dashboard_page' ) );
-        add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_dashboard_page' ) );
+        // Hook for project management page (if any form processing is needed in future)
+        add_action( 'load-dm-run-single-module_page_dm-project-management', array( $this, 'process_project_management_page' ) );
+        add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_management_page' ) );
         // Hook for API keys page (if any form processing is needed in future)
         add_action( 'load-dm-run-single-module_page_dm-api-keys', array( $this, 'process_api_keys_page' ) );
         add_action( 'load-data-machine_page_dm-api-keys', array( $this, 'process_api_keys_page' ) );
@@ -170,9 +170,9 @@ class Data_Machine_Admin_Page {
     }
 
     /**
-     * Display the project dashboard page content.
+     * Display the project management page content.
      */
-    public function display_project_dashboard_page() {
+    public function display_project_management_page() {
         // Make DB instances available to the included template file
         $db_projects = $this->db_projects;
         $db_modules = $this->db_modules;
@@ -250,16 +250,10 @@ class Data_Machine_Admin_Page {
         <?php
     }
 
-    /**
-     * Display the dashboard page content.
-     */
-    public function display_dashboard_page() {
-        // Load the dashboard template file
-        include_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/dashboard-page.php';
-    }
+
 
     // Stub methods for future form processing on other admin pages
-    public function process_project_dashboard_page() {}
+    public function process_project_management_page() {}
     public function process_api_keys_page() {}
     public function process_remote_locations_page() {}
     public function process_jobs_page() {}

@@ -181,7 +181,7 @@ class Data_Machine_Database_Modules {
     public function get_module( $module_id ) { // Removed $user_id parameter
         global $wpdb;
         // Query only by module_id
-        $query = $wpdb->prepare( "SELECT * FROM $this->table_name WHERE module_id = %d", absint( $module_id ) );
+        $query = $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE module_id = %d", absint( $module_id ) );
 
         $module = $wpdb->get_row( $query );
         return $module;

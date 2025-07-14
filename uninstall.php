@@ -32,8 +32,15 @@ $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_jobs" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_processed_items" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_remote_locations" );
 
-// Clear any scheduled cron jobs
+// Clear any scheduled cron jobs (legacy WP Cron)
 wp_clear_scheduled_hook( 'dm_run_job_event' );
+wp_clear_scheduled_hook( 'dm_run_project_schedule_callback' );
+wp_clear_scheduled_hook( 'dm_run_module_schedule_callback' );
+
+// Clear Action Scheduler jobs if available
+if ( function_exists( 'as_unschedule_all_actions' ) ) {
+	as_unschedule_all_actions( '', array(), 'data-machine' );
+}
 
 // Clear transients
 delete_transient( 'dm_activation_notice' ); 

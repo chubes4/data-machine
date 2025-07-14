@@ -97,7 +97,7 @@ class Data_Machine_Database_Projects {
      */
     public function get_project( $project_id, $user_id = null ) {
         global $wpdb;
-        $query = $wpdb->prepare( "SELECT * FROM $this->table_name WHERE project_id = %d", absint( $project_id ) );
+        $query = $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE project_id = %d", absint( $project_id ) );
 
         if ( $user_id !== null ) {
             $query .= $wpdb->prepare( " AND user_id = %d", absint( $user_id ) );

@@ -63,6 +63,12 @@ class Data_Machine_Job_Executor {
 	private $logger;
 
 	/**
+	 * Action Scheduler service.
+	 * @var Data_Machine_Action_Scheduler
+	 */
+	private $action_scheduler;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Data_Machine_Database_Processed_Items $db_processed_items Processed Items DB service.
@@ -72,6 +78,7 @@ class Data_Machine_Job_Executor {
 	 * @param Data_Machine_Processing_Orchestrator $processing_orchestrator Processing Orchestrator service.
 	 * @param Data_Machine_Handler_Factory $handler_factory Handler Factory service.
 	 * @param Data_Machine_Job_Worker $job_worker Job Worker service.
+	 * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
 	 * @param Data_Machine_Logger|null $logger Logger service (optional).
 	 */
 	public function __construct(
@@ -82,6 +89,7 @@ class Data_Machine_Job_Executor {
 		Data_Machine_Processing_Orchestrator $processing_orchestrator,
 		Data_Machine_Handler_Factory $handler_factory,
 		Data_Machine_Job_Worker $job_worker,
+		Data_Machine_Action_Scheduler $action_scheduler,
 		?Data_Machine_Logger $logger = null
 	) {
 		$this->db_processed_items = $db_processed_items;
@@ -91,6 +99,7 @@ class Data_Machine_Job_Executor {
 		$this->processing_orchestrator = $processing_orchestrator;
 		$this->handler_factory = $handler_factory;
 		$this->job_worker = $job_worker;
+		$this->action_scheduler = $action_scheduler;
 		$this->logger = $logger;
 	}
 
@@ -998,6 +1007,15 @@ class Data_Machine_Job_Executor {
 				throw new Exception("Database service for jobs (db_jobs) is not available.");
 			}
 
+			// Check for existing active jobs for this module to prevent duplicates
+			if ($this->db_jobs->has_active_jobs_for_module($module->module_id)) {
+				$this->logger?->info("Skipping job creation - module already has active jobs.", [
+					'module_id' => $module->module_id,
+					'module_name' => $module->module_name ?? 'Unknown'
+				]);
+				return 0; // Return 0 to indicate no new job was created (consistent with existing behavior)
+			}
+
 			// Encode the config snapshot
 			$config_snapshot_json = wp_json_encode($module_config_data);
 			if ($config_snapshot_json === false) {
@@ -1021,7 +1039,7 @@ class Data_Machine_Job_Executor {
 
 			// Schedule the single event to run the job worker
 			// Pass only the job_id as the argument
-			$scheduled = wp_schedule_single_event(time(), 'dm_run_job_event', array($job_id));
+			$scheduled = $this->action_scheduler->schedule_single_job('dm_run_job_event', array($job_id));
 
 			if ($scheduled === false) {
 				// Attempt to mark job as failed if scheduling fails
@@ -1078,7 +1096,7 @@ class Data_Machine_Job_Executor {
 				throw new Exception(is_wp_error($job_id) ? $job_id->get_error_message() : "Failed to create job in DB.");
 			}
 
-			$scheduled = wp_schedule_single_event(time(), 'dm_run_job_event', array($job_id));
+			$scheduled = $this->action_scheduler->schedule_single_job('dm_run_job_event', array($job_id));
 			if ($scheduled === false) {
 				// Attempt deletion if schedule fails
 				$this->db_jobs->delete_job($job_id);

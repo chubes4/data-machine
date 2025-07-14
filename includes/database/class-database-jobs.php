@@ -84,6 +84,24 @@ class Data_Machine_Database_Jobs {
     }
 
     /**
+     * Check if there are any active (pending or running) jobs for a specific module.
+     *
+     * @param int $module_id The ID of the module to check.
+     * @return bool True if there are active jobs, false otherwise.
+     */
+    public function has_active_jobs_for_module( $module_id ) {
+        global $wpdb;
+
+        $count = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table_name} 
+             WHERE module_id = %d AND status IN ('pending', 'running')",
+            absint( $module_id )
+        ) );
+
+        return $count > 0;
+    }
+
+    /**
      * Create the jobs database table on plugin activation.
      *
      * @since 0.13.0 // Match the class version
@@ -203,13 +221,11 @@ class Data_Machine_Database_Jobs {
             $job = $this->get_job($job_id);
             if ($job && !empty($job->module_id)) {
                 // 2. Get project_id from modules table
-                $modules_table = $wpdb->prefix . 'dm_modules';
-                $project_id = $wpdb->get_var($wpdb->prepare("SELECT project_id FROM $modules_table WHERE module_id = %d", $job->module_id));
+                $project_id = $wpdb->get_var($wpdb->prepare("SELECT project_id FROM {$wpdb->prefix}dm_modules WHERE module_id = %d", $job->module_id));
                 if ($project_id) {
                     // 3. Update last_run_at in projects table
-                    $projects_table = $wpdb->prefix . 'dm_projects';
                     $project_updated = $wpdb->update(
-                        $projects_table,
+                        "{$wpdb->prefix}dm_projects",
                         ['last_run_at' => current_time('mysql', 1)],
                         ['project_id' => $project_id],
                         ['%s'],

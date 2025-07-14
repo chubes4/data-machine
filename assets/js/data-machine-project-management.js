@@ -1,7 +1,7 @@
 /**
- * Data Machine Project Dashboard Script.
+ * Data Machine Project Management Script.
  *
- * Handles UI interactions on the project dashboard page (/wp-admin/admin.php?page=data-machine-dashboard).
+ * Handles UI interactions on the project management page (/wp-admin/admin.php?page=dm-project-management).
  * Allows users to create new projects, run existing projects manually, and edit project/module schedules.
  *
  * Key Components:
@@ -17,7 +17,7 @@
     'use strict';
 
     $(document).ready(function() {
-        console.log('Project Dashboard JS Loaded');
+        console.log('Project Management JS Loaded');
 
         // --- Create New Project Button Handler ---
         // Handles the click event for the 'Create New Project' button.
@@ -34,7 +34,7 @@
 
             makeAjaxRequest({
                 action: 'dm_create_project',
-                nonce: dm_dashboard_params.create_project_nonce, // Use dashboard nonce
+                nonce: dm_project_params.create_project_nonce, // Use project nonce
                 data: { project_name: projectName },
                 button: $button, // Pass button element
                 spinner: $spinner, // Pass spinner element
@@ -74,11 +74,11 @@
             $row.css('opacity', 0.7);
 
             $.ajax({
-                url: dm_dashboard_params.ajax_url,
+                url: dm_project_params.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'dm_run_now', // Matches WP AJAX hook
-                    nonce: dm_dashboard_params.run_now_nonce, // Security nonce
+                    nonce: dm_project_params.run_now_nonce, // Security nonce
                     project_id: projectId
                 },
                 success: function(response) {
@@ -128,7 +128,7 @@
         // Use localized options from PHP + add module-specific ones
         const scheduleOptions = {
             'project_schedule': 'Project Schedule', // Add this one manually
-            ...dm_dashboard_params.cron_schedules // Spread the localized schedules
+            ...dm_project_params.cron_schedules // Spread the localized schedules
         };
 
         $('table.projects').on('click', '.edit-schedule-button', function(e) {
@@ -155,11 +155,11 @@
 
             // AJAX call to get project and module schedule data
             $.ajax({
-                url: dm_dashboard_params.ajax_url,
+                url: dm_project_params.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'dm_get_project_schedule_data',
-                    nonce: dm_dashboard_params.get_schedule_data_nonce,
+                    nonce: dm_project_params.get_schedule_data_nonce,
                     project_id: projectId
                 },
                 success: function(response) {
@@ -268,11 +268,11 @@
             $saveButton.prop('disabled', true).text('Saving...');
 
             $.ajax({
-                url: dm_dashboard_params.ajax_url,
+                url: dm_project_params.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'dm_edit_schedule', // Matches WP AJAX hook
-                    nonce: dm_dashboard_params.edit_schedule_nonce,
+                    nonce: dm_project_params.edit_schedule_nonce,
                     project_id: projectId,
                     schedule_interval: projectInterval, // Project schedule
                     schedule_status: projectStatus,     // Project status
@@ -334,7 +334,7 @@
         if (config.feedback) $(config.feedback).text('').removeClass('notice-success notice-error').hide();
 
         return $.ajax({
-            url: dm_dashboard_params.ajax_url, // Use dashboard params
+            url: dm_project_params.ajax_url, // Use project params
             type: config.type || 'POST',
             data: ajaxData,
             dataType: config.dataType || 'json',

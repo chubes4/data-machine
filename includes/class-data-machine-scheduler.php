@@ -25,23 +25,29 @@ class Data_Machine_Scheduler {
     /** @var Data_Machine_Database_Modules */
     private $db_modules;
 
+    /** @var Data_Machine_Action_Scheduler */
+    private $action_scheduler;
+
     /**
      * Constructor.
      *
      * @param Data_Machine_Job_Executor $job_executor Job Executor service.
      * @param Data_Machine_Database_Projects $db_projects Projects DB service.
      * @param Data_Machine_Database_Modules $db_modules Modules DB service.
+     * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
      * @param Data_Machine_Logger|null $logger Logger service (optional).
      */
     public function __construct(
         Data_Machine_Job_Executor $job_executor,
         Data_Machine_Database_Projects $db_projects,
         Data_Machine_Database_Modules $db_modules,
+        Data_Machine_Action_Scheduler $action_scheduler,
         ?Data_Machine_Logger $logger = null
     ) {
         $this->job_executor = $job_executor;
         $this->db_projects = $db_projects;
         $this->db_modules = $db_modules;
+        $this->action_scheduler = $action_scheduler;
         $this->logger = $logger;
     }
 
@@ -89,13 +95,14 @@ class Data_Machine_Scheduler {
         $args = ['project_id' => $project_id];
 
         // Always clear the existing hook first
-        wp_clear_scheduled_hook( $hook, $args );
+        $this->action_scheduler->cancel_scheduled_jobs( $hook, $args );
 
         // Schedule if active and interval is valid
-        // $allowed_intervals = ['every_5_minutes', 'hourly', 'qtrdaily', 'twicedaily', 'daily', 'weekly']; // OLD
-        $allowed_intervals = Data_Machine_Constants::get_project_cron_intervals(); // NEW
+        $allowed_intervals = Data_Machine_Constants::get_project_cron_intervals();
         if ($status === 'active' && in_array($interval, $allowed_intervals)) {
-            wp_schedule_event( time(), $interval, $hook, $args );
+            // Get interval in seconds from constants
+            $interval_seconds = Data_Machine_Constants::CRON_SCHEDULES[$interval]['interval'];
+            $this->action_scheduler->schedule_recurring_job( time(), $interval_seconds, $hook, $args );
         }
     }
 
@@ -110,13 +117,14 @@ class Data_Machine_Scheduler {
         $args = ['module_id' => $module_id];
 
         // Always clear the existing hook first
-        wp_clear_scheduled_hook( $hook, $args );
+        $this->action_scheduler->cancel_scheduled_jobs( $hook, $args );
 
         // Schedule if active and interval is valid AND NOT project_schedule/manual
-        // $allowed_intervals = ['every_5_minutes', 'hourly', 'qtrdaily', 'twicedaily', 'daily', 'weekly']; // OLD
-        $allowed_intervals = Data_Machine_Constants::get_module_cron_intervals(); // NEW - Gets all slugs
+        $allowed_intervals = Data_Machine_Constants::get_module_cron_intervals();
         if ($status === 'active' && in_array($interval, $allowed_intervals)) {
-             wp_schedule_event( time(), $interval, $hook, $args );
+            // Get interval in seconds from constants
+            $interval_seconds = Data_Machine_Constants::CRON_SCHEDULES[$interval]['interval'];
+            $this->action_scheduler->schedule_recurring_job( time(), $interval_seconds, $hook, $args );
         }
     }
 
@@ -125,7 +133,7 @@ class Data_Machine_Scheduler {
      * @param int $project_id The project ID.
      */
     public function unschedule_project(int $project_id) {
-        wp_clear_scheduled_hook( 'dm_run_project_schedule_callback', ['project_id' => $project_id] );
+        $this->action_scheduler->cancel_scheduled_jobs( 'dm_run_project_schedule_callback', ['project_id' => $project_id] );
     }
 
     /**
@@ -133,7 +141,7 @@ class Data_Machine_Scheduler {
      * @param int $module_id The module ID.
      */
     public function unschedule_module(int $module_id) {
-        wp_clear_scheduled_hook( 'dm_run_module_schedule_callback', ['module_id' => $module_id] );
+        $this->action_scheduler->cancel_scheduled_jobs( 'dm_run_module_schedule_callback', ['module_id' => $module_id] );
     }
 
     /**
@@ -240,15 +248,18 @@ class Data_Machine_Scheduler {
             // 4. Loop through modules:
             foreach ($modules as $module) {
                 // a. Filter: Check if module->schedule_interval === 'project_schedule'
-                if (($module->schedule_interval ?? 'manual') !== 'project_schedule') {
+                if (($module->schedule_interval ?? 'project_schedule') !== 'project_schedule') {
+                    $logger?->debug($log_prefix . "Module {$module->module_id} skipped: schedule_interval is '{$module->schedule_interval}', not 'project_schedule'", ['module_id' => $module->module_id]);
                     continue; // Skip modules not set to run with the project schedule
                 }
                 // b. Filter: Check if module->schedule_status === 'active'
-                if (($module->schedule_status ?? 'paused') !== 'active') {
+                if (($module->schedule_status ?? 'active') !== 'active') {
+                    $logger?->debug($log_prefix . "Module {$module->module_id} skipped: schedule_status is '{$module->schedule_status}', not 'active'", ['module_id' => $module->module_id]);
                     continue; // Skip paused modules
                 }
                 // c. Filter: Check if module->data_source_type !== 'files'
                 if (($module->data_source_type ?? null) === 'files') {
+                    $logger?->debug($log_prefix . "Module {$module->module_id} skipped: data_source_type is 'files' (files not allowed in scheduled runs)", ['module_id' => $module->module_id]);
                     continue; // Skip file input modules for scheduled runs
                 }
 
@@ -316,19 +327,22 @@ class Data_Machine_Scheduler {
             }
 
             // 4. Filter: Check if module->schedule_status === 'active'
-            if (($module->schedule_status ?? 'paused') !== 'active') {
+            if (($module->schedule_status ?? 'active') !== 'active') {
+                $logger?->debug($log_prefix . "Module {$module_id} skipped: schedule_status is '{$module->schedule_status}', not 'active'", ['module_id' => $module_id]);
                 return;
             }
 
             // 5. Filter: Check if module->schedule_interval is NOT 'manual' or 'project_schedule'
             $allowed_intervals = Data_Machine_Constants::get_module_cron_intervals(); // Same as allowed for scheduling
-            $module_interval = $module->schedule_interval ?? 'manual';
+            $module_interval = $module->schedule_interval ?? 'project_schedule';
             if (!in_array($module_interval, $allowed_intervals)) {
+                 $logger?->debug($log_prefix . "Module {$module_id} skipped: schedule_interval '{$module_interval}' not in allowed intervals", ['module_id' => $module_id, 'allowed' => $allowed_intervals]);
                  return;
             }
 
             // 6. Filter: Check if module->data_source_type !== 'files'
             if (($module->data_source_type ?? null) === 'files') {
+                 $logger?->debug($log_prefix . "Module {$module_id} skipped: data_source_type is 'files' (files not allowed in scheduled runs)", ['module_id' => $module_id]);
                  $this->unschedule_module($module_id);
                  return;
             }

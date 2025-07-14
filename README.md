@@ -46,7 +46,7 @@ Yes, you can set up automated workflows with custom scheduling for each project.
 
 ## Screenshots
 
-1. Dashboard overview
+1. Project management
 2. Project configuration
 3. Module settings
 4. API key management

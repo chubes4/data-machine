@@ -33,6 +33,13 @@ public function upload_file_to_openai($api_key, $data_file) {
     if (empty($file_path) || !file_exists($file_path)) {
         return new WP_Error('missing_persistent_file_for_upload', 'Persistent file path is missing or file does not exist for upload.');
     }
+    
+    // Check memory safety before loading file
+    $memory_guard = new Data_Machine_Memory_Guard();
+    if (!$memory_guard->can_load_file($file_path, 2.0)) {
+        return new WP_Error('memory_limit', 'File too large to upload safely. Please reduce file size or increase server memory limit.');
+    }
+    
     $file_contents = file_get_contents($file_path);
     // Use the MIME type passed in the file_info array
     $mime_type = $data_file['type'] ?? null;
@@ -120,6 +127,12 @@ public function create_response_with_file($api_key, $file, $prompt) {
         $pdf_content_payload = [];
 
         if ($file_size <= $pdf_size_threshold) {
+            // Check memory safety before loading file
+            $memory_guard = new Data_Machine_Memory_Guard();
+            if (!$memory_guard->can_load_file($file_path, 2.5)) {
+                return new WP_Error('memory_limit', 'File too large to process safely. Consider increasing memory limit or using file upload method.');
+            }
+            
             // Use Base64 for smaller PDFs
             $pdf_data = file_get_contents($file_path);
             if ($pdf_data === false) {

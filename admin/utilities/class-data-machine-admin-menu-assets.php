@@ -88,46 +88,46 @@ class Data_Machine_Admin_Menu_Assets {
      * @since    NEXT_VERSION
      */
     public function add_admin_menu() {
-        // Main Dashboard Page
+        // Main menu now points to Projects (most logical starting point)
         add_menu_page(
             'Data Machine',
             'Data Machine', // Menu title
             'manage_options', // Capability
-            'data-machine-dashboard', // New main menu slug
-            array( $this->admin_page_handler, 'display_dashboard_page' ), // Dashboard callback
+            'dm-project-management', // Main menu now points to Projects
+            array( $this->admin_page_handler, 'display_project_management_page' ), // Projects callback
             'dashicons-database-import', // Icon slug
             6 // Position
         );
-        // Run One (Single Module) Page
+        // Projects (will be the default/main page)
         add_submenu_page(
-            'data-machine-dashboard', // Parent slug
-            'Run Single Module', // Page title
-            'Run Single Module', // Menu title
-            'manage_options', // Capability
-            'dm-run-single-module', // Keep old slug for compatibility
-            array( $this->admin_page_handler, 'display_admin_page' ) // Old callback
-        );
-        // Projects
-        add_submenu_page(
-            'data-machine-dashboard', // Parent slug
+            'dm-project-management', // Parent slug
             'Projects',
             'Projects',
             'manage_options',
-            'dm-project-management',
-            array( $this->admin_page_handler, 'display_project_dashboard_page' )
+            'dm-project-management', // Same slug as parent for clean URLs
+            array( $this->admin_page_handler, 'display_project_management_page' )
         );
         // Modules
         add_submenu_page(
-            'data-machine-dashboard', // Parent slug
+            'dm-project-management', // Parent slug
             'Module Config',
             'Module Config',
             'manage_options',
             'dm-module-config',
             array( $this->admin_page_handler, 'display_settings_page' )
         );
+        // Run One (Single Module) Page
+        add_submenu_page(
+            'dm-project-management', // Parent slug
+            'Run Single Module', // Page title
+            'Run Single Module', // Menu title
+            'manage_options', // Capability
+            'dm-run-single-module', // Keep old slug for compatibility
+            array( $this->admin_page_handler, 'display_admin_page' ) // Old callback
+        );
         // Remote Locations
         $this->remote_locations_hook_suffix = add_submenu_page(
-            'data-machine-dashboard',
+            'dm-project-management',
             __('Manage Remote Locations', 'data-machine'),
             __('Remote Locations', 'data-machine'),
             'manage_options',
@@ -136,7 +136,7 @@ class Data_Machine_Admin_Menu_Assets {
         );
         // API Keys
         $this->api_keys_hook_suffix = add_submenu_page(
-            'data-machine-dashboard',
+            'dm-project-management',
             __('API / Auth', 'data-machine'),
             __('API / Auth', 'data-machine'),
             'manage_options',
@@ -145,7 +145,7 @@ class Data_Machine_Admin_Menu_Assets {
         );
         // Jobs
         add_submenu_page(
-            'data-machine-dashboard',
+            'dm-project-management',
             __('Jobs', 'data-machine'),
             __('Jobs', 'data-machine'),
             'manage_options',
@@ -161,23 +161,18 @@ class Data_Machine_Admin_Menu_Assets {
      * @param    string    $hook_suffix    The current admin page hook.
      */
     public function enqueue_admin_assets( $hook_suffix ) {
-        $dashboard_hook = 'toplevel_page_data-machine-dashboard';
         $run_one_hooks = [
-            'data-machine-dashboard_page_dm-run-single-module',
             'data-machine_page_dm-run-single-module',
         ];
         $project_management_hooks = [
-            'data-machine-dashboard_page_dm-project-management',
+            'toplevel_page_dm-project-management', // Main menu page
             'data-machine_page_dm-project-management',
         ];
         $module_config_hooks = [
-            'data-machine-dashboard_page_dm-module-config',
             'data-machine_page_dm-module-config',
         ];
 
-        if ( $hook_suffix === $dashboard_hook ) {
-            $this->enqueue_dashboard_assets();
-        } elseif ( in_array($hook_suffix, $run_one_hooks, true) ) {
+        if ( in_array($hook_suffix, $run_one_hooks, true) ) {
             $this->enqueue_run_single_module_assets();
         } elseif ( in_array($hook_suffix, $project_management_hooks, true) ) {
             $this->enqueue_project_management_assets();
@@ -190,22 +185,7 @@ class Data_Machine_Admin_Menu_Assets {
         }
     }
 
-    private function enqueue_dashboard_assets() {
-        $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
-        $plugin_base_url = plugin_dir_url( dirname( dirname( __FILE__ ) ) );
-        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
-        $js_path = $plugin_base_path . 'assets/js/data-machine-dashboard.js';
-        $js_url = $plugin_base_url . 'assets/js/data-machine-dashboard.js';
-        $js_version = file_exists($js_path) ? filemtime($js_path) : $this->version;
-        wp_enqueue_script( 'data-machine-dashboard-js', $js_url, array( 'jquery' ), $js_version, true );
-        wp_localize_script( 'data-machine-dashboard-js', 'dm_dashboard_params', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'dm_dashboard_nonce' => wp_create_nonce( 'dm_dashboard_nonce' ),
-        ) );
-    }
+
 
     private function enqueue_run_single_module_assets() {
         $plugin_base_path = plugin_dir_path( dirname( dirname( __FILE__ ) ) );
@@ -245,7 +225,7 @@ class Data_Machine_Admin_Menu_Assets {
         $js_project_management_url = $plugin_base_url . 'assets/js/data-machine-project-management.js';
         $js_project_management_version = file_exists($js_project_management_path) ? filemtime($js_project_management_path) : $this->version;
         wp_enqueue_script( 'data-machine-project-management-js', $js_project_management_url, array( 'jquery' ), $js_project_management_version, true );
-        wp_localize_script( 'data-machine-project-management-js', 'dm_dashboard_params', array(
+        wp_localize_script( 'data-machine-project-management-js', 'dm_project_params', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
             'run_now_nonce' => wp_create_nonce( 'dm_run_now_nonce' ),

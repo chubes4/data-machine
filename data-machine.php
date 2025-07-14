@@ -44,6 +44,8 @@ require_once DATA_MACHINE_PATH . 'admin/class-data-machine-remote-locations.php'
 require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-import-export.php'; // Added Import/Export Helper
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-prompt-builder.php'; // Centralized prompt builder
+require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-action-scheduler.php'; // Action Scheduler service
+require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-memory-guard.php'; // Memory protection service
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
 require_once DATA_MACHINE_PATH . 'module-config/RegisterSettings.php';
@@ -73,6 +75,8 @@ function run_data_machine() {
     // --- Instantiate core dependencies ---
     $logger = new Data_Machine_Logger();
     $encryption_helper = new Data_Machine_Encryption_Helper();
+    $action_scheduler = new Data_Machine_Action_Scheduler($logger);
+    $memory_guard = new Data_Machine_Memory_Guard($logger);
 
     // Register API/Auth admin_post handlers
     if (is_admin()) {
@@ -206,9 +210,10 @@ function run_data_machine() {
         $orchestrator,
         $handler_factory,
         $job_worker,
+        $action_scheduler,
         $logger
     );
-    $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $logger);
+    $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $action_scheduler, $logger);
 
     // Import/export handler
     $import_export_handler = new Data_Machine_Import_Export($db_projects, $db_modules);
@@ -261,14 +266,6 @@ function run_data_machine() {
     add_action( 'dm_run_job_event', array( $job_executor, 'run_scheduled_job' ), 10, 1 );
 
     $scheduler->init_hooks();
-
-    if (is_admin()) {
-        require_once DATA_MACHINE_PATH . 'includes/database/class-database-dashboard.php';
-        require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-dashboard-ajax.php';
-        if (class_exists('Data_Machine_Dashboard_Ajax')) {
-            new Data_Machine_Dashboard_Ajax();
-        }
-    }
 }
 run_data_machine();
 
@@ -286,6 +283,20 @@ register_activation_hook( __FILE__, 'activate_data_machine' );
 register_deactivation_hook( __FILE__, array( 'Data_Machine', 'deactivate' ) );
 
 function activate_data_machine() {
+	// Check for Action Scheduler dependency
+	if ( ! function_exists( 'as_schedule_single_action' ) ) {
+		// Deactivate this plugin
+		deactivate_plugins( plugin_basename( __FILE__ ) );
+		wp_die( 
+			'<h1>Action Scheduler Required</h1>' .
+			'<p>Data Machine requires the Action Scheduler plugin to function properly.</p>' .
+			'<p>Please install and activate Action Scheduler before activating Data Machine.</p>' .
+			'<p><a href="' . admin_url( 'plugin-install.php?s=action+scheduler&tab=search&type=term' ) . '">Install Action Scheduler</a></p>',
+			'Plugin Dependency Error',
+			array( 'back_link' => true )
+		);
+	}
+
 	// Include database class files directly as autoloading might not be ready
 	require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php';
 	require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php';

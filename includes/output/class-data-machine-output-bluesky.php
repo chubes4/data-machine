@@ -146,8 +146,17 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
         // --- 6. Format Post Text & Handle Facets ---
         $source_url = $input_metadata['source_url'] ?? null;
 
+        // OPTIMIZATION NOTE: Bluesky counts URLs as exactly 22 characters regardless of actual length
+        // This allows us to be less conservative with character limits compared to counting full URLs
+        // 
+        // Example improvement:
+        // URL: "https://example.com/very/long/path/to/article?param=value&another=param" (72 chars)
+        // OLD: 2 (prefix) + 72 (full URL) = 74 characters reserved → 226 available for content
+        // NEW: 2 (prefix) + 22 (URL count) = 24 characters reserved → 276 available for content
+        // GAIN: +50 characters for actual content!
+        
         // Prepare text and handle truncation *before* detecting facets
-        $bluesky_char_limit = 300; // Grapheme limit
+        $bluesky_char_limit = 300; // Official Bluesky character limit
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
         $link_prefix = "\n\n"; // Add space before the source link if included
@@ -158,28 +167,37 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
             $link_text = $link_prefix . $source_url;
         }
 
-        $link_text_len = mb_strlen($link_text, 'UTF-8');
+        // Calculate proper character count for Bluesky
+        // URLs are counted as exactly 22 characters regardless of actual length
+        $link_text_len = 0;
+        if (!empty($link_text)) {
+            $prefix_len = mb_strlen($link_prefix, 'UTF-8'); // Count actual prefix length
+            $url_char_count = 22; // Bluesky counts all URLs as 22 characters
+            $link_text_len = $prefix_len + $url_char_count;
+        }
         $available_main_text_len = $bluesky_char_limit - $link_text_len;
 
         // Ensure there's space for the main text + ellipsis if needed
         if ($available_main_text_len < $ellipsis_len) {
             // Not enough space even for ellipsis + link, just use the link truncated
             $final_post_text = mb_substr($link_text, 0, $bluesky_char_limit, 'UTF-8');
-            $this->logger?->warning('Bluesky post text severely truncated due to long source link.', [
+            $this->logger?->warning('Bluesky post text severely truncated due to source link.', [
                 'user_id' => $user_id,
                 'limit' => $bluesky_char_limit,
-                'link_length' => $link_text_len,
+                'link_count_for_bluesky' => $link_text_len, // What Bluesky counts (prefix + 22 for URL)
+                'actual_link_length' => mb_strlen($link_text, 'UTF-8'), // Actual text length
             ]);
         } else {
             // Truncate main content if necessary
             $main_text_len = mb_strlen($post_text, 'UTF-8');
             if ($main_text_len > $available_main_text_len) {
                 $post_text = mb_substr($post_text, 0, $available_main_text_len - $ellipsis_len, 'UTF-8') . $ellipsis;
-                $this->logger?->info('Bluesky main post text truncated.', [
+                $this->logger?->info('Bluesky main post text truncated to fit with source link.', [
                     'user_id' => $user_id,
                     'original_length' => $main_text_len,
                     'truncated_length' => mb_strlen($post_text, 'UTF-8'),
-                    'limit_for_text' => $available_main_text_len,
+                    'available_for_text' => $available_main_text_len,
+                    'reserved_for_link' => $link_text_len, // Prefix (2) + URL (22) = 24 chars
                 ]);
             }
             // Combine truncated main text and the link text
@@ -652,8 +670,8 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
                 // Ensure the URI has a scheme for the facet
                 $uri = $cleaned_url;
                 if (!preg_match('/^https?:\/\//i', $uri)) {
-                    // Basic check if it looks like a domain before adding https://
-                    if (preg_match('/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $uri)) {
+                    // Basic check if it looks like a domain (with optional path) before adding https://
+                    if (preg_match('/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/.*)?$/', $uri)) {
                          $uri = 'https://' . $uri;
                     } else {
                         // Skip if it doesn't look like a domain and has no scheme

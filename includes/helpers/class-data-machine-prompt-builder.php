@@ -145,15 +145,17 @@ PROMPT;
             $taxonomy_instructions = [];
             $directive_counter = 5;
 
-            // Category instructions
-            $category_mode = $output_config[$output_type]['category_mode'] ?? null;
+            // Category instructions - check both local and remote publishing keys
+            $category_mode = $output_config[$output_type]['category_mode'] ?? 
+                            $output_config[$output_type]['selected_remote_category_id'] ?? null;
             if (is_string($category_mode) && ($category_mode === 'instruct_model')) {
                 $directive_block .= "\n    CATEGORY: [Your chosen category name]";
                 $taxonomy_instructions[] = "- CATEGORY: Determine the category based on the user instructions in the prompt below.";
             }
 
-            // Tag instructions
-            $tag_mode = $output_config[$output_type]['tag_mode'] ?? null;
+            // Tag instructions - check both local and remote publishing keys
+            $tag_mode = $output_config[$output_type]['tag_mode'] ?? 
+                       $output_config[$output_type]['selected_remote_tag_id'] ?? null;
             if (is_string($tag_mode) && ($tag_mode === 'instruct_model')) {
                 $directive_block .= "\n    TAGS: [Your chosen comma-separated tags]";
                 $taxonomy_instructions[] = "- TAGS: Determine the most appropriate tag(s) based ONLY on the user instructions in the prompt below. Output comma-separated.";

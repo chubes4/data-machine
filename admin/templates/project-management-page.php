@@ -1,6 +1,6 @@
 <?php
 /**
- * Template for the Project Management Dashboard page.
+ * Template for the Project Management page.
  */
 
 // // Ensure the database classes are available (No longer needed here)

@@ -312,6 +312,41 @@ Centralized logging through `Data_Machine_Logger` with admin notice display and 
 - **State management**: Skip fact check setting properly synchronized across UI and backend
 - **Validation logic**: Moved `skip_fact_check` evaluation earlier in processing pipeline
 
+#### Bluesky Character Limit Optimization
+**NEW**: Corrected Bluesky URL character counting to match platform behavior, increasing available content space.
+
+**The Issue:**
+- **Previous implementation**: Counted full URL length (50-100+ characters)
+- **Bluesky reality**: All URLs counted as exactly 22 characters regardless of actual length
+- **Result**: Users lost 20-50+ characters unnecessarily per URL
+
+**The Fix (class-data-machine-output-bluesky.php):**
+```php
+// Before: $link_text_len = mb_strlen($link_text, 'UTF-8'); // Could be 50+ chars
+// After: URL counted as exactly 22 characters + prefix length
+$url_char_count = 22; // Bluesky counts all URLs as 22 characters
+$link_text_len = $prefix_len + $url_char_count; // Typically 24 total
+```
+
+**Impact:**
+- **More content space**: Users gain 20-50+ characters for actual content per URL
+- **Better user experience**: Less aggressive truncation of AI-generated content  
+- **Accurate counting**: Character limits now match Bluesky's actual behavior
+- **Improved logging**: Clear distinction between actual text length vs Bluesky counting
+
+**Real-World Example:**
+- **Long URL**: `https://example.com/very/long/path/to/article?param=value` (62 characters)
+- **Before**: 2 (prefix) + 62 (full URL) = 64 characters reserved → 236 available for content
+- **After**: 2 (prefix) + 22 (URL count) = 24 characters reserved → 276 available for content  
+- **User gains**: +40 characters for actual content
+
+**Technical Details:**
+- **URL normalization**: All URLs counted as exactly 22 characters (Bluesky standard)
+- **Prefix handling**: `\n\n` prefix counted at actual length (2 characters)
+- **Total link cost**: 24 characters instead of 50-100+
+- **Character limit**: Maintained at official 300 character limit
+- **Backwards compatible**: No breaking changes to existing functionality
+
 ### Security Implementation
 - API key encryption using WordPress salts
 - Nonce verification for all AJAX requests

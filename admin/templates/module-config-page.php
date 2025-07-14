@@ -165,8 +165,8 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 			<div class="notice notice-warning inline">
 				<p>
 					<strong><?php _e('No active project selected.', 'data-machine'); ?></strong> 
-					<?php _e('You need to create a project via the Projects Dashboard before configuring modules.', 'data-machine'); ?>
-					<a href="<?php echo esc_url(admin_url('admin.php?page=dm-projects')); ?>" class="button button-secondary"><?php _e('Go to Projects Dashboard', 'data-machine'); ?></a>
+									<?php _e('You need to create a project via the Projects page before configuring modules.', 'data-machine'); ?>
+				<a href="<?php echo esc_url(admin_url('admin.php?page=dm-project-management')); ?>" class="button button-secondary"><?php _e('Go to Projects', 'data-machine'); ?></a>
 				</p>
 			</div>
 		<?php endif; ?>

@@ -88,22 +88,8 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
 			throw new Exception($error_message);
 		}
 
-		// Validate file type (using config from $source_config if provided - though files handler has no settings currently)
-		// For now, let's keep a broad default
-        $allowed_types = [
-            'text/plain', 
-            'application/pdf', 
-            'application/msword', 
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/csv',
-            'application/json'
-            // Add more as needed
-        ]; 
-		if ( ! in_array( $file['type'], $allowed_types ) ) {
-            $error_message = sprintf( __( 'Invalid file type: %s. Allowed types: %s', 'data-machine' ), $file['type'], implode(', ', $allowed_types) );
-            $this->logger?->error('Files Input: Invalid file type.', ['module_id' => $module_id, 'uploaded_type' => $file['type']]);
-			throw new Exception( $error_message );
-		}
+		// Comprehensive file security validation
+		$this->validate_file_security($file, $module_id);
 
 		// Move uploaded file to a persistent location
 		$upload_dir = wp_upload_dir();
@@ -213,6 +199,212 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
                 break;
         }
         return $message;
+    }
+
+    /**
+     * Comprehensive file security validation.
+     *
+     * @param array $file The uploaded file array from $_FILES
+     * @param int $module_id Module ID for logging context
+     * @throws Exception If file fails security validation
+     */
+    private function validate_file_security(array $file, int $module_id): void {
+        // 1. File size validation
+        $max_file_size = $this->get_max_file_size();
+        if ($file['size'] > $max_file_size) {
+            $error_message = sprintf(
+                __('File too large: %s. Maximum allowed size: %s', 'data-machine'),
+                size_format($file['size']),
+                size_format($max_file_size)
+            );
+            $this->logger?->error('Files Input: File too large.', [
+                'module_id' => $module_id,
+                'file_size' => $file['size'],
+                'max_size' => $max_file_size
+            ]);
+            throw new Exception($error_message);
+        }
+
+        // 2. File extension validation
+        $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed_extensions = $this->get_allowed_file_extensions();
+        if (!in_array($file_extension, $allowed_extensions)) {
+            $error_message = sprintf(
+                __('Invalid file extension: %s. Allowed extensions: %s', 'data-machine'),
+                $file_extension,
+                implode(', ', $allowed_extensions)
+            );
+            $this->logger?->error('Files Input: Invalid file extension.', [
+                'module_id' => $module_id,
+                'extension' => $file_extension,
+                'allowed' => $allowed_extensions
+            ]);
+            throw new Exception($error_message);
+        }
+
+        // 3. MIME type validation with magic byte checking
+        $this->validate_mime_type($file, $file_extension, $module_id);
+
+        // 4. Filename sanitization check
+        $this->validate_filename($file['name'], $module_id);
+
+        // 5. Content scanning for basic malware patterns
+        $this->scan_file_content($file['tmp_name'], $module_id);
+    }
+
+    /**
+     * Get maximum allowed file size in bytes.
+     *
+     * @return int Maximum file size in bytes
+     */
+    private function get_max_file_size(): int {
+        // Default 10MB, but respect PHP limits
+        $default_max = 10 * 1024 * 1024; // 10MB
+        $php_max = wp_max_upload_size();
+        return min($default_max, $php_max);
+    }
+
+    /**
+     * Get allowed file extensions.
+     *
+     * @return array Array of allowed file extensions
+     */
+    private function get_allowed_file_extensions(): array {
+        return [
+            'txt',
+            'csv',
+            'json',
+            'pdf',
+            'doc',
+            'docx'
+        ];
+    }
+
+    /**
+     * Validate MIME type against file extension using magic bytes.
+     *
+     * @param array $file The uploaded file array
+     * @param string $extension File extension
+     * @param int $module_id Module ID for logging
+     * @throws Exception If MIME type validation fails
+     */
+    private function validate_mime_type(array $file, string $extension, int $module_id): void {
+        // Get expected MIME types for this extension
+        $extension_mime_map = [
+            'txt' => ['text/plain'],
+            'csv' => ['text/csv', 'text/plain', 'application/csv'],
+            'json' => ['application/json', 'text/plain'],
+            'pdf' => ['application/pdf'],
+            'doc' => ['application/msword'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        ];
+
+        if (!isset($extension_mime_map[$extension])) {
+            throw new Exception(__('Unsupported file extension.', 'data-machine'));
+        }
+
+        // Check reported MIME type
+        $reported_mime = $file['type'];
+        $expected_mimes = $extension_mime_map[$extension];
+        
+        if (!in_array($reported_mime, $expected_mimes)) {
+            $this->logger?->error('Files Input: MIME type mismatch.', [
+                'module_id' => $module_id,
+                'reported_mime' => $reported_mime,
+                'expected_mimes' => $expected_mimes
+            ]);
+            throw new Exception(__('File type does not match extension.', 'data-machine'));
+        }
+
+        // Magic byte validation using fileinfo
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $actual_mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+
+            if ($actual_mime && !in_array($actual_mime, $expected_mimes)) {
+                $this->logger?->error('Files Input: Magic byte MIME type mismatch.', [
+                    'module_id' => $module_id,
+                    'actual_mime' => $actual_mime,
+                    'expected_mimes' => $expected_mimes
+                ]);
+                throw new Exception(__('File content does not match declared type.', 'data-machine'));
+            }
+        }
+    }
+
+    /**
+     * Validate and sanitize filename.
+     *
+     * @param string $filename Original filename
+     * @param int $module_id Module ID for logging
+     * @throws Exception If filename contains dangerous patterns
+     */
+    private function validate_filename(string $filename, int $module_id): void {
+        // Check for dangerous patterns
+        $dangerous_patterns = [
+            '/\.php$/i',
+            '/\.exe$/i',
+            '/\.bat$/i',
+            '/\.cmd$/i',
+            '/\.scr$/i',
+            '/\.htaccess$/i',
+            '/\.\./i',  // Path traversal
+            '/[<>:"|?*]/i'  // Invalid filename characters
+        ];
+
+        foreach ($dangerous_patterns as $pattern) {
+            if (preg_match($pattern, $filename)) {
+                $this->logger?->error('Files Input: Dangerous filename pattern detected.', [
+                    'module_id' => $module_id,
+                    'filename' => $filename,
+                    'pattern' => $pattern
+                ]);
+                throw new Exception(__('Filename contains unsafe characters or patterns.', 'data-machine'));
+            }
+        }
+
+        // Check filename length
+        if (strlen($filename) > 255) {
+            throw new Exception(__('Filename too long. Maximum 255 characters allowed.', 'data-machine'));
+        }
+    }
+
+    /**
+     * Basic content scanning for malware patterns.
+     *
+     * @param string $file_path Path to uploaded file
+     * @param int $module_id Module ID for logging
+     * @throws Exception If suspicious content is detected
+     */
+    private function scan_file_content(string $file_path, int $module_id): void {
+        // Only scan first 8KB for performance
+        $content = file_get_contents($file_path, false, null, 0, 8192);
+        if ($content === false) {
+            throw new Exception(__('Unable to read uploaded file for security scanning.', 'data-machine'));
+        }
+
+        // Basic malware patterns (extend as needed)
+        $suspicious_patterns = [
+            '/<script[^>]*>/i',
+            '/javascript:/i',
+            '/on\w+\s*=/i',  // onload, onclick, etc.
+            '/eval\s*\(/i',
+            '/base64_decode\s*\(/i',
+            '/shell_exec\s*\(/i',
+            '/system\s*\(/i',
+            '/exec\s*\(/i'
+        ];
+
+        foreach ($suspicious_patterns as $pattern) {
+            if (preg_match($pattern, $content)) {
+                $this->logger?->error('Files Input: Suspicious content pattern detected.', [
+                    'module_id' => $module_id,
+                    'pattern' => $pattern
+                ]);
+                throw new Exception(__('Uploaded file contains suspicious content and cannot be processed.', 'data-machine'));
+            }
+        }
     }
 }
 
