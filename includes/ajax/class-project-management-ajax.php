@@ -183,7 +183,7 @@ class Data_Machine_Project_Management_Ajax {
 					$scheduled_names[] = $module_name;
 					$this->log($logger, $project_id, $module_id, $module_name, "Job ID {$job_id} scheduled via Job Executor.");
 				} elseif ($job_id === 0) {
-					$this->log($logger, $project_id, $module_id, $module_name, "Job not created - module already has active jobs or no new items to process.", 'info');
+					$this->log($logger, $project_id, $module_id, $module_name, "Job not created - module has active jobs (check jobs table for stuck jobs).", 'info');
 				} else {
 					$this->log($logger, $project_id, $module_id, $module_name, "Job scheduling via Job Executor did not return a valid Job ID.", 'warning');
 				}

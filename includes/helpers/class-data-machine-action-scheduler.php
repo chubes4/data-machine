@@ -41,6 +41,12 @@ class Data_Machine_Action_Scheduler {
 	 * Initialize Action Scheduler hooks and settings
 	 */
 	private function init_hooks() {
+		// Only initialize if Action Scheduler is available
+		if ( ! $this->is_available() ) {
+			$this->logger?->warning( 'Action Scheduler not available, skipping hook initialization' );
+			return;
+		}
+
 		// Set concurrent queue limit
 		add_filter( 'action_scheduler_queue_runner_concurrent_batches', array( $this, 'set_concurrent_limit' ) );
 		

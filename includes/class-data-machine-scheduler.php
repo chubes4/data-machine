@@ -239,8 +239,11 @@ class Data_Machine_Scheduler {
             // 3. Fetch modules for project (using DB method, needs project owner context)
             $modules = $db_modules->get_modules_for_project($project_id, $project_owner_user_id);
             if (empty($modules)) {
+                $logger?->info($log_prefix . "No modules found for project {$project_id}.", ['project_id' => $project_id]);
                 return;
             }
+
+            $logger?->info($log_prefix . "Found " . count($modules) . " modules for project {$project_id}. Starting filtering...", ['project_id' => $project_id, 'module_count' => count($modules)]);
 
             $total_jobs_created = 0;
             $modules_processed_count = 0;
@@ -279,6 +282,14 @@ class Data_Machine_Scheduler {
 
                 $modules_processed_count++;
             }
+
+            // Log final summary
+            $logger?->info($log_prefix . "Project schedule completed: {$modules_processed_count} modules processed, {$total_jobs_created} jobs created.", [
+                'project_id' => $project_id,
+                'total_modules' => count($modules),
+                'modules_processed' => $modules_processed_count,
+                'jobs_created' => $total_jobs_created
+            ]);
 
             // Update project's last run time (only if at least one eligible module was processed)
             // IMPORTANT: Timestamp updates happen HERE now, not in Job Worker.

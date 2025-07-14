@@ -35,9 +35,11 @@ public function upload_file_to_openai($api_key, $data_file) {
     }
     
     // Check memory safety before loading file
-    $memory_guard = new Data_Machine_Memory_Guard();
-    if (!$memory_guard->can_load_file($file_path, 2.0)) {
-        return new WP_Error('memory_limit', 'File too large to upload safely. Please reduce file size or increase server memory limit.');
+    if (class_exists('Data_Machine_Memory_Guard')) {
+        $memory_guard = new Data_Machine_Memory_Guard();
+        if (!$memory_guard->can_load_file($file_path, 2.0)) {
+            return new WP_Error('memory_limit', 'File too large to upload safely. Please reduce file size or increase server memory limit.');
+        }
     }
     
     $file_contents = file_get_contents($file_path);
@@ -128,9 +130,11 @@ public function create_response_with_file($api_key, $file, $prompt) {
 
         if ($file_size <= $pdf_size_threshold) {
             // Check memory safety before loading file
-            $memory_guard = new Data_Machine_Memory_Guard();
-            if (!$memory_guard->can_load_file($file_path, 2.5)) {
-                return new WP_Error('memory_limit', 'File too large to process safely. Consider increasing memory limit or using file upload method.');
+            if (class_exists('Data_Machine_Memory_Guard')) {
+                $memory_guard = new Data_Machine_Memory_Guard();
+                if (!$memory_guard->can_load_file($file_path, 2.5)) {
+                    return new WP_Error('memory_limit', 'File too large to process safely. Consider increasing memory limit or using file upload method.');
+                }
             }
             
             // Use Base64 for smaller PDFs

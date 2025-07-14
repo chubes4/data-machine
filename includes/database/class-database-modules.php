@@ -235,7 +235,9 @@ class Data_Machine_Database_Modules {
             'data_source_config'       => '%s', // Expects JSON encoded string
             'output_type'              => '%s',
             'output_config'            => '%s', // Expects JSON encoded string
-            'skip_fact_check'        => '%d'  // Integer 0 or 1
+            'skip_fact_check'        => '%d',  // Integer 0 or 1
+            'schedule_interval'        => '%s',
+            'schedule_status'          => '%s'
         ];
    
         foreach ( $fields_to_update as $field => $fmt ) {

@@ -130,8 +130,8 @@ class Data_Machine_Module_Config_Ajax {
 			'output_type' => $module->output_type,
 			'data_source_config' => $final_ds_config, // Return nested
 			'output_config' => $final_output_config, // Return nested
-			'schedule_interval' => $module->schedule_interval ?? 'manual',
-			'schedule_status' => $module->schedule_status ?? 'paused',
+			'schedule_interval' => $module->schedule_interval ?? 'project_schedule',
+			'schedule_status' => $module->schedule_status ?? 'active',
 			// Add prompts
 			'process_data_prompt' => $module->process_data_prompt ?? '',
 			'fact_check_prompt' => $module->fact_check_prompt ?? '',
