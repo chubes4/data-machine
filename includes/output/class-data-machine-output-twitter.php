@@ -259,7 +259,7 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
             }
 
             $this->logger?->info('Posting tweet to v2 endpoint with payload keys:', ['payload_keys' => array_keys($v2_payload), 'user_id' => $user_id]);
-            $this->logger?->debug('Twitter API v2 Request Payload', ['payload' => $v2_payload, 'user_id' => $user_id]); // Log the full payload
+            // Sending Twitter API v2 request
             $response = $connection->post('tweets', $v2_payload, ['json' => true]); // Use JSON payload for V2
 
             // 8. Check for API errors (V2 response format differs)

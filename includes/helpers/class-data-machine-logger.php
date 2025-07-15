@@ -301,4 +301,72 @@ class Data_Machine_Logger {
         }
     }
 
+    /**
+     * Cleans up log files based on size or age criteria.
+     * 
+     * @param int $max_size_mb Maximum log file size in MB (default 10MB)
+     * @param int $max_age_days Maximum log file age in days (default 30 days)
+     * @return bool True if cleanup was performed, false otherwise
+     */
+    public function cleanup_log_files( $max_size_mb = 10, $max_age_days = 30 ) {
+        $upload_dir = wp_upload_dir();
+        $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+        $log_file = $log_dir . '/data-machine.log';
+
+        if ( ! file_exists( $log_file ) ) {
+            return false;
+        }
+
+        $cleanup_needed = false;
+        $max_size_bytes = $max_size_mb * 1024 * 1024;
+        
+        // Check file size
+        if ( filesize( $log_file ) > $max_size_bytes ) {
+            $cleanup_needed = true;
+            $this->info( "Log file cleanup triggered: Size " . round( filesize( $log_file ) / 1024 / 1024, 2 ) . "MB exceeds limit of {$max_size_mb}MB" );
+        }
+        
+        // Check file age
+        $file_age_days = ( time() - filemtime( $log_file ) ) / DAY_IN_SECONDS;
+        if ( $file_age_days > $max_age_days ) {
+            $cleanup_needed = true;
+            $this->info( "Log file cleanup triggered: Age " . round( $file_age_days, 1 ) . " days exceeds limit of {$max_age_days} days" );
+        }
+
+        if ( $cleanup_needed ) {
+            return $this->rotate_log_file( $log_file );
+        }
+
+        return false;
+    }
+
+    /**
+     * Rotates the log file by archiving the current file and starting fresh.
+     * 
+     * @param string $log_file Path to the log file
+     * @return bool True on success, false on failure
+     */
+    private function rotate_log_file( $log_file ) {
+        try {
+            $backup_file = $log_file . '.old';
+            
+            // Remove old backup if it exists
+            if ( file_exists( $backup_file ) ) {
+                unlink( $backup_file );
+            }
+            
+            // Move current log to backup
+            if ( rename( $log_file, $backup_file ) ) {
+                $this->info( "Log file rotated successfully. Old log archived as data-machine.log.old" );
+                return true;
+            } else {
+                $this->error( "Failed to rotate log file" );
+                return false;
+            }
+        } catch ( \Exception $e ) {
+            $this->error( "Exception during log file rotation: " . $e->getMessage() );
+            return false;
+        }
+    }
+
 } // End class 

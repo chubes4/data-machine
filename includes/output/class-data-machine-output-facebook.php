@@ -116,7 +116,6 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
                 'caption' => $content, // Content (with appended link) becomes the caption
                 'url' => $image_url // Post image by URL
             ];
-            $this->logger?->debug('Facebook API: Preparing photo post.', ['image_url' => $image_url, 'user_id' => $user_id]);
 
         } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL)) {
             // --- Video Post (Fallback to Text) --- 
@@ -126,7 +125,6 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
             $this->logger?->warning('Facebook API: Video posting not yet fully implemented, posting as text.', ['video_url' => $video_url, 'user_id' => $user_id]);
             $endpoint = "/{$page_id}/feed"; // Fallback to page feed post
             $api_params['message'] = $content; // Ensure message uses content with appended link
-            $this->logger?->debug('Facebook API: Posting text only (video fallback).', ['user_id' => $user_id]);
 
         } else {
             // --- Text-Only Post --- 
@@ -134,22 +132,17 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
             // The source link (if any) is already appended to $content.
             $endpoint = "/{$page_id}/feed"; // Post to page feed
             $api_params['message'] = $content; // Ensure message uses content with appended link
-            $this->logger?->debug('Facebook API: Preparing text-only post (link appended to message).', ['user_id' => $user_id]);
         }
 
         // Add the Page Access Token to parameters
         $api_params['access_token'] = $page_access_token;
 
         // 6. Post to Facebook using wp_remote_post
-        $this->logger?->debug('Facebook API: Preparing to make API request.', ['user_id' => $user_id, 'endpoint' => $endpoint]); // Log before try block
         try {
             $graph_api_url = 'https://graph.facebook.com/' . self::FACEBOOK_API_VERSION;
             $url = $graph_api_url . $endpoint;
 
-            // Log request details (excluding sensitive token)
-            $log_params = $api_params;
-            unset($log_params['access_token']); // Don't log token
-            $this->logger?->debug('Facebook API: Making wp_remote_post request.', ['url' => $url, 'params' => $log_params, 'user_id' => $user_id]); 
+            // Making Facebook API request 
 
             $response = wp_remote_post($url, [
                 'method' => 'POST',
@@ -157,7 +150,6 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
                 'timeout' => 45, // Increased timeout for potential image/video processing
             ]);
 
-            $this->logger?->debug('Facebook API: wp_remote_post call completed.', ['user_id' => $user_id]); // Log after call completes
 
             if (is_wp_error($response)) {
                 $error_code = $response->get_error_code();
@@ -200,7 +192,6 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
                         'access_token' => $page_access_token,
                     ];
 
-                    $this->logger?->debug('Facebook API: Attempting to post source link as comment.', ['post_id' => $post_id, 'source_link' => $source_link, 'user_id' => $user_id]);
                     
                     $comment_url = $graph_api_url . $comment_endpoint;
                     $comment_response = wp_remote_post($comment_url, [

@@ -138,6 +138,16 @@ class Data_Machine_Project_Management_Ajax {
 			wp_die();
 		}
 
+		// Clean up stuck jobs before processing (12 hour timeout)
+		$stuck_jobs_cleaned = $this->db_jobs->cleanup_stuck_jobs(12);
+		if ($stuck_jobs_cleaned > 0 && $this->logger) {
+			$this->logger->info("Run Now: Cleaned up {$stuck_jobs_cleaned} stuck jobs (>12 hours old).", [
+				'project_id' => $project_id, 
+				'cleaned_count' => $stuck_jobs_cleaned,
+				'context' => 'run_now'
+			]);
+		}
+
 		$jobs_scheduled  = 0;
 		$scheduled_names = [];
 		$errors          = [];

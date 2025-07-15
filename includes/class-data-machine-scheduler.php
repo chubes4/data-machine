@@ -28,6 +28,9 @@ class Data_Machine_Scheduler {
     /** @var Data_Machine_Action_Scheduler */
     private $action_scheduler;
 
+    /** @var Data_Machine_Database_Jobs */
+    private $db_jobs;
+
     /**
      * Constructor.
      *
@@ -35,6 +38,7 @@ class Data_Machine_Scheduler {
      * @param Data_Machine_Database_Projects $db_projects Projects DB service.
      * @param Data_Machine_Database_Modules $db_modules Modules DB service.
      * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
+     * @param Data_Machine_Database_Jobs $db_jobs Jobs DB service.
      * @param Data_Machine_Logger|null $logger Logger service (optional).
      */
     public function __construct(
@@ -42,12 +46,14 @@ class Data_Machine_Scheduler {
         Data_Machine_Database_Projects $db_projects,
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Action_Scheduler $action_scheduler,
+        Data_Machine_Database_Jobs $db_jobs,
         ?Data_Machine_Logger $logger = null
     ) {
         $this->job_executor = $job_executor;
         $this->db_projects = $db_projects;
         $this->db_modules = $db_modules;
         $this->action_scheduler = $action_scheduler;
+        $this->db_jobs = $db_jobs;
         $this->logger = $logger;
     }
 
@@ -236,7 +242,28 @@ class Data_Machine_Scheduler {
                  return;
             }
 
-            // 3. Fetch modules for project (using DB method, needs project owner context)
+            // 3. Clean up stuck jobs before processing (safety net)
+            $stuck_jobs_cleaned = $this->db_jobs->cleanup_stuck_jobs(12); // 12 hour timeout
+            if ($stuck_jobs_cleaned > 0) {
+                $logger?->info($log_prefix . "Cleaned up {$stuck_jobs_cleaned} stuck jobs (>12 hours old).", ['project_id' => $project_id, 'cleaned_count' => $stuck_jobs_cleaned]);
+            }
+
+            // 4. Periodic maintenance: cleanup old jobs and log files (run once per day per project)
+            if ($this->should_run_maintenance($project_id)) {
+                $old_jobs_cleaned = $this->db_jobs->cleanup_old_jobs(30); // 30 days
+                if ($old_jobs_cleaned > 0) {
+                    $logger?->info($log_prefix . "Cleaned up {$old_jobs_cleaned} old completed/failed jobs (>30 days old).", ['project_id' => $project_id, 'cleaned_count' => $old_jobs_cleaned]);
+                }
+                
+                if ($logger?->cleanup_log_files(10, 30)) { // 10MB or 30 days
+                    $logger?->info($log_prefix . "Log file cleanup completed.", ['project_id' => $project_id]);
+                }
+                
+                // Mark maintenance as done for this project today
+                $this->mark_maintenance_done($project_id);
+            }
+
+            // 5. Fetch modules for project (using DB method, needs project owner context)
             $modules = $db_modules->get_modules_for_project($project_id, $project_owner_user_id);
             if (empty($modules)) {
                 $logger?->info($log_prefix . "No modules found for project {$project_id}.", ['project_id' => $project_id]);
@@ -248,7 +275,7 @@ class Data_Machine_Scheduler {
             $total_jobs_created = 0;
             $modules_processed_count = 0;
 
-            // 4. Loop through modules:
+            // 6. Loop through modules:
             foreach ($modules as $module) {
                 // a. Filter: Check if module->schedule_interval === 'project_schedule'
                 if (($module->schedule_interval ?? 'project_schedule') !== 'project_schedule') {
@@ -385,5 +412,26 @@ class Data_Machine_Scheduler {
                 'trace' => $e->getTraceAsString(),
             ]);
         }
+    }
+
+    /**
+     * Check if maintenance should run for a project (once per day).
+     * 
+     * @param int $project_id Project ID
+     * @return bool True if maintenance should run
+     */
+    private function should_run_maintenance($project_id) {
+        $transient_key = "dm_maintenance_done_{$project_id}";
+        return !get_transient($transient_key);
+    }
+
+    /**
+     * Mark maintenance as completed for a project (valid for 24 hours).
+     * 
+     * @param int $project_id Project ID
+     */
+    private function mark_maintenance_done($project_id) {
+        $transient_key = "dm_maintenance_done_{$project_id}";
+        set_transient($transient_key, time(), DAY_IN_SECONDS);
     }
 } 

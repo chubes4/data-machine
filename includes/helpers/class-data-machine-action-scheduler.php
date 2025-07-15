@@ -34,13 +34,14 @@ class Data_Machine_Action_Scheduler {
 	 */
 	public function __construct( Data_Machine_Logger $logger = null ) {
 		$this->logger = $logger;
-		$this->init_hooks();
+		// Use the official Action Scheduler init hook for guaranteed API availability
+		add_action( 'action_scheduler_init', array( $this, 'init_hooks' ) );
 	}
 
 	/**
 	 * Initialize Action Scheduler hooks and settings
 	 */
-	private function init_hooks() {
+	public function init_hooks() {
 		// Only initialize if Action Scheduler is available
 		if ( ! $this->is_available() ) {
 			$this->logger?->warning( 'Action Scheduler not available, skipping hook initialization' );

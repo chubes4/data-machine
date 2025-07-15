@@ -121,7 +121,6 @@ class Data_Machine_Output_Threads implements Data_Machine_Output_Handler_Interfa
              // Or add text back if API allows captioning image_url directly?
              // Let's try adding text back for image posts based on recent API updates allowing text with media.
              $create_params['text'] = $content;
-             $this->logger?->debug('Threads API: Preparing IMAGE container.', ['image_url' => $image_url]);
         } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL)) {
             // Video requires resumable upload - complex, not implemented here.
             $this->logger?->warning('Threads API: Video posting via URL not supported, requires resumable upload. Posting as text instead.', ['video_url' => $video_url]);
@@ -129,7 +128,6 @@ class Data_Machine_Output_Threads implements Data_Machine_Output_Handler_Interfa
             // Add source link if available for text post
             if (!empty($source_link) && filter_var($source_link, FILTER_VALIDATE_URL)) {
                 $create_params['link_attachment']['url'] = $source_link; // Check if link_attachment is valid for TEXT
-                 $this->logger?->debug('Threads API: Preparing TEXT container with link attachment (video fallback).', ['link' => $source_link]);
             }
         } elseif ($media_type === 'TEXT' && !empty($source_link) && filter_var($source_link, FILTER_VALIDATE_URL)) {
              // For TEXT posts, use link_attachment if source link exists
@@ -139,11 +137,8 @@ class Data_Machine_Output_Threads implements Data_Machine_Output_Handler_Interfa
              if (strpos($content, $source_link) === false) {
                  $content .= "\n\n" . $source_link;
                  $create_params['text'] = $content; // Update text param
-                  $this->logger?->debug('Threads API: Appended source link to text for preview.', ['link' => $source_link]);
              }
-             $this->logger?->debug('Threads API: Preparing TEXT container with link in body.', ['link' => $source_link]);
         } else {
-            $this->logger?->debug('Threads API: Preparing TEXT container.');
         }
 
         $create_params['media_type'] = $media_type;

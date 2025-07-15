@@ -268,6 +268,83 @@ class Data_Machine_Database_Jobs {
         return $updated !== false;
     }
 
+    /**
+     * Clean up stuck jobs that have been running/pending for too long.
+     * 
+     * @param int $timeout_hours Hours after which jobs are considered stuck (default 12)
+     * @return int Number of jobs cleaned up
+     */
+    public function cleanup_stuck_jobs( $timeout_hours = 12 ) {
+        global $wpdb;
+        
+        $timeout_minutes = $timeout_hours * 60;
+        
+        // Find stuck jobs
+        $stuck_jobs = $wpdb->get_results( $wpdb->prepare(
+            "SELECT job_id, module_id, status, created_at 
+             FROM {$this->table_name} 
+             WHERE status IN ('pending', 'running') 
+             AND created_at < DATE_SUB(NOW(), INTERVAL %d MINUTE)",
+            $timeout_minutes
+        ) );
+        
+        if ( empty( $stuck_jobs ) ) {
+            return 0;
+        }
+        
+        // Mark stuck jobs as failed
+        $updated = $wpdb->query( $wpdb->prepare(
+            "UPDATE {$this->table_name} 
+             SET status = 'failed'
+             WHERE status IN ('pending', 'running') 
+             AND created_at < DATE_SUB(NOW(), INTERVAL %d MINUTE)",
+            $timeout_minutes
+        ) );
+        
+        return $updated !== false ? count( $stuck_jobs ) : 0;
+    }
+    
+    /**
+     * Get summary of job statuses for monitoring.
+     * 
+     * @return array Job status counts
+     */
+    public function get_job_status_summary() {
+        global $wpdb;
+        
+        $results = $wpdb->get_results(
+            "SELECT status, COUNT(*) as count 
+             FROM {$this->table_name} 
+             GROUP BY status"
+        );
+        
+        $summary = [];
+        foreach ( $results as $row ) {
+            $summary[ $row->status ] = (int) $row->count;
+        }
+        
+        return $summary;
+    }
+    
+    /**
+     * Delete old completed/failed jobs to keep table size manageable.
+     * 
+     * @param int $days_to_keep Days to keep job records (default 30)
+     * @return int Number of jobs deleted
+     */
+    public function cleanup_old_jobs( $days_to_keep = 30 ) {
+        global $wpdb;
+        
+        $deleted = $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$this->table_name} 
+             WHERE status IN ('completed', 'failed', 'completed_no_items', 'completed_with_errors') 
+             AND created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+            $days_to_keep
+        ) );
+        
+        return $deleted !== false ? $deleted : 0;
+    }
+
     // TODO: Add methods for get_job, update_job_status etc. if needed elsewhere.
 
 } 

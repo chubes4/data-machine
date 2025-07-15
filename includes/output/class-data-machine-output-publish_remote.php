@@ -274,7 +274,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		// --- MODIFIED: Iterate directly over configured custom tax values ---
 		$selected_custom_tax_values = $config['selected_custom_taxonomy_values'] ?? [];
 
-		$this->logger->debug('Starting custom taxonomy payload loop (using selected_custom_taxonomy_values)', ['selected_values' => $selected_custom_tax_values]); // DEBUG
+		// Custom taxonomy processing
 
 		// Iterate over the taxonomies actually configured for this module job
 		foreach ( $selected_custom_tax_values as $tax_slug => $tax_value ) {
@@ -313,19 +313,20 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			}
 		} // End foreach selected_custom_tax_values
 
-		$this->logger->debug('Finished custom taxonomy payload loop.', ['current_payload' => $payload]); // DEBUG
+		// End custom taxonomy processing
 
 		// Construct the target API URL
 		$api_url = $remote_url . '/wp-json/airdrop/v1/receive'; // Correct endpoint from helper plugin
 
-		// --- DEBUG: Log the full payload before sending ---
-		// Create a safe payload copy for logging, excluding potentially huge content
-		$log_payload = $payload;
-		if (isset($log_payload['content'])) {
-			$log_payload['content'] = '[Content length: ' . strlen($log_payload['content']) . ']';
-		}
-		$this->logger->debug('Airdrop Payload Prepared (Full)', ['api_url' => $api_url, 'payload' => $log_payload]);
-		// --- END DEBUG ---
+		// Log essential payload info only
+		$this->logger->info('Remote publish payload prepared', [
+			'api_url' => $api_url,
+			'title' => $payload['title'] ?? 'No title',
+			'post_type' => $payload['post_type'] ?? 'post',
+			'content_length' => strlen($payload['content'] ?? ''),
+			'has_category' => !empty($payload['category_id']) || !empty($payload['category_name']),
+			'has_tags' => !empty($payload['tag_ids']) || !empty($payload['tag_names'])
+		]);
 
 		// Prepare arguments for wp_remote_post
 		$args = array(
@@ -334,9 +335,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'Authorization' => 'Basic ' . base64_encode( $remote_user . ':' . $remote_password ),
 				'Content-Type'  => 'application/json; charset=utf-8',
 			),
-            // --- FINAL PAYLOAD LOG BEFORE ENCODING ---
-            'body'    => $this->log_and_encode_payload($payload), // Use helper method
-            // --- END FINAL PAYLOAD LOG ---
+            'body'    => json_encode($payload),
 			'timeout' => 60, // Increased timeout
 		);
 
@@ -378,15 +377,6 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 		);
 	}
 
-    /**
-     * Helper method to log payload right before JSON encoding.
-     *
-     * @param array $payload The payload array.
-     * @return string JSON encoded payload.
-     */
-    private function log_and_encode_payload(array $payload): string {
-        return json_encode($payload);
-    }
 
 	/**
 	 * Get settings fields for the Remote Publish output handler.

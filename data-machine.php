@@ -216,7 +216,7 @@ function run_data_machine() {
         $action_scheduler,
         $logger
     );
-    $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $action_scheduler, $logger);
+    $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
 
     // Import/export handler
     $import_export_handler = new Data_Machine_Import_Export($db_projects, $db_modules);
@@ -270,7 +270,8 @@ function run_data_machine() {
 
     $scheduler->init_hooks();
 }
-run_data_machine();
+// Initialize after plugins_loaded to ensure Action Scheduler is available
+add_action('plugins_loaded', 'run_data_machine', 20);
 
 /**
  * Allows JSON file uploads.
