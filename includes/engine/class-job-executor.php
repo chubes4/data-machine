@@ -283,96 +283,31 @@ class Data_Machine_Job_Executor {
 		} catch (Exception $e) {
 			// Enhanced error handling for authentication issues
 			$error_message = $e->getMessage();
-			$enhanced_error_message = $this->enhance_authentication_error_message($error_message, $module);
+			$error_details = $this->enhance_error_message($error_message, $module);
 			
-			$this->logger?->error("Error fetching input data: " . $enhanced_error_message, [
+			$this->logger?->error("Error fetching input data: " . $error_details['enhanced_message'], [
 				'module_id' => $module->module_id,
 				'handler_class' => get_class($input_handler),
 				'handler_type' => $module->data_source_type ?? 'unknown',
 				'error' => $error_message,
+				'is_auth_error' => $error_details['is_auth_error'],
 				'user_id' => $user_id
 			]);
-			return new WP_Error('input_fetch_error', "Error fetching input data: " . $enhanced_error_message);
+			return new WP_Error('input_fetch_error', "Error fetching input data: " . $error_details['enhanced_message']);
 		}
 	}
 
 	/**
-	 * Enhances authentication error messages to provide better user guidance.
+	 * Enhances error messages and determines if they're authentication-related.
 	 *
-	 * @param string $original_error_message The original error message from the input handler.
-	 * @param object $module The module object.
-	 * @return string Enhanced error message with specific guidance.
+	 * @param string $error_message The original error message.
+	 * @param object $module The module object for context.
+	 * @return array Array with 'is_auth_error' (bool) and 'enhanced_message' (string).
 	 */
-	private function enhance_authentication_error_message(string $original_error_message, object $module): string {
-		$handler_type = $module->data_source_type ?? 'unknown';
+	private function enhance_error_message(string $error_message, object $module): array {
 		$module_name = $module->module_name ?? "Module {$module->module_id}";
 		
-		// Check if this is a 401 authentication error
-		if (preg_match('/Code:\s*401/i', $original_error_message) || 
-			preg_match('/not currently logged in/i', $original_error_message) ||
-			preg_match('/authentication/i', $original_error_message)) {
-			
-			switch ($handler_type) {
-				case 'airdrop_rest_api':
-					return $original_error_message . "\n\n" . 
-						__('Authentication failed for the remote WordPress site. This usually means:', 'data-machine') . "\n" .
-						__('• The application password was changed or deleted on the remote site', 'data-machine') . "\n" .
-						__('• The username was changed on the remote site', 'data-machine') . "\n" .
-						__('• The Data Machine Airdrop helper plugin was disabled on the remote site', 'data-machine') . "\n" .
-						__('• The remote site\'s authentication settings have changed', 'data-machine') . "\n\n" .
-						sprintf(__('Please check the Remote Location settings for "%s" and verify the credentials are still valid.', 'data-machine'), $module_name);
-				
-				case 'reddit':
-					return $original_error_message . "\n\n" . 
-						sprintf(__('Reddit authentication failed for "%s". Please re-authenticate your Reddit account on the API Keys page.', 'data-machine'), $module_name);
-				
-				case 'twitter':
-					return $original_error_message . "\n\n" . 
-						sprintf(__('Twitter authentication failed for "%s". Please re-authenticate your Twitter account on the API Keys page.', 'data-machine'), $module_name);
-				
-				case 'facebook':
-					return $original_error_message . "\n\n" . 
-						sprintf(__('Facebook authentication failed for "%s". Please re-authenticate your Facebook account on the API Keys page.', 'data-machine'), $module_name);
-				
-				case 'threads':
-					return $original_error_message . "\n\n" . 
-						sprintf(__('Threads authentication failed for "%s". Please re-authenticate your Threads account on the API Keys page.', 'data-machine'), $module_name);
-				
-				case 'public_rest_api':
-					return $original_error_message . "\n\n" . 
-						sprintf(__('Authentication failed for the public REST API in "%s". Please check if the API endpoint requires authentication and verify your credentials.', 'data-machine'), $module_name);
-				
-				default:
-					return $original_error_message . "\n\n" . 
-						sprintf(__('Authentication failed for "%s". Please check your authentication settings and credentials.', 'data-machine'), $module_name);
-			}
-		}
-		
-		// Check for other common network/connection errors
-		if (preg_match('/Failed to connect/i', $original_error_message) || 
-			preg_match('/connection/i', $original_error_message)) {
-			return $original_error_message . "\n\n" . 
-				sprintf(__('Connection failed for "%s". Please check that the remote service is accessible and your network connection is stable.', 'data-machine'), $module_name);
-		}
-		
-		// Check for rate limiting errors
-		if (preg_match('/rate limit/i', $original_error_message) || 
-			preg_match('/Code:\s*429/i', $original_error_message)) {
-			return $original_error_message . "\n\n" . 
-				sprintf(__('Rate limit exceeded for "%s". The service is temporarily blocking requests. This job will be retried automatically later.', 'data-machine'), $module_name);
-		}
-		
-		// Return original message with module context if no specific enhancement applies
-		return sprintf(__('Error in "%s": %s', 'data-machine'), $module_name, $original_error_message);
-	}
-
-	/**
-	 * Determines if an error message indicates an authentication failure.
-	 *
-	 * @param string $error_message The error message to check.
-	 * @return bool True if the error appears to be authentication-related, false otherwise.
-	 */
-	private function is_authentication_error(string $error_message): bool {
+		// Check for authentication errors
 		$auth_patterns = [
 			'/Code:\s*401/i',
 			'/not currently logged in/i',
@@ -388,11 +323,28 @@ class Data_Machine_Job_Executor {
 		
 		foreach ($auth_patterns as $pattern) {
 			if (preg_match($pattern, $error_message)) {
-				return true;
+				return [
+					'is_auth_error' => true,
+					'enhanced_message' => $error_message . "\n\n" . 
+						sprintf(__('Authentication failed for "%s". Please check your credentials and re-authenticate if necessary.', 'data-machine'), $module_name)
+				];
 			}
 		}
 		
-		return false;
+		// Check for rate limiting errors
+		if (preg_match('/rate limit/i', $error_message) || preg_match('/Code:\s*429/i', $error_message)) {
+			return [
+				'is_auth_error' => false,
+				'enhanced_message' => $error_message . "\n\n" . 
+					sprintf(__('Rate limit exceeded for "%s". This job will be retried automatically later.', 'data-machine'), $module_name)
+			];
+		}
+		
+		// Return original message with module context
+		return [
+			'is_auth_error' => false,
+			'enhanced_message' => sprintf(__('Error in "%s": %s', 'data-machine'), $module_name, $error_message)
+		];
 	}
 
 	/**
@@ -805,14 +757,14 @@ class Data_Machine_Job_Executor {
 
 		} catch (Exception $e) {
 			// Determine if this is an authentication-related error
-			$is_auth_error = $this->is_authentication_error($e->getMessage());
-			$job_status = $is_auth_error ? 'failed_auth' : 'failed';
+			$error_details = $this->enhance_error_message($e->getMessage(), (object)$module_job_config);
+			$job_status = $error_details['is_auth_error'] ? 'failed_auth' : 'failed';
 			
 			$error_message = "Critical error during job execution: " . $e->getMessage();
 			$this->logger?->error($error_message, [
 				'job_id' => $job_id, 
 				'module_id' => $module_job_config['module_id'] ?? 'N/A', 
-				'is_auth_error' => $is_auth_error,
+				'is_auth_error' => $error_details['is_auth_error'],
 				'final_status' => $job_status,
 				'trace' => $e->getTraceAsString()
 			]);
@@ -820,13 +772,13 @@ class Data_Machine_Job_Executor {
 			// Ensure status is marked as failed if exception occurs before final update
 			if ($job && $this->db_jobs) {
 				// Prepare enhanced error data for storage
-				$error_data_for_db = json_encode([
+				$error_data_for_db = $this->safe_json_encode([
 					'error' => $e->getMessage(), 
 					'trace' => $e->getTraceAsString(),
-					'is_authentication_error' => $is_auth_error,
+					'is_authentication_error' => $error_details['is_auth_error'],
 					'module_type' => $module_job_config['data_source_type'] ?? 'unknown',
 					'timestamp' => current_time('mysql', true)
-				]);
+				], "error data for job {$job_id}");
 				$this->db_jobs->complete_job($job_id, $job_status, $error_data_for_db);
 			}
 		}
