@@ -29,6 +29,27 @@ class Data_Machine_Job_Worker {
 	}
 
 	/**
+	 * Safely decode JSON with error handling.
+	 *
+	 * @param string $json The JSON string to decode.
+	 * @param string $context Context for error logging.
+	 * @return mixed|WP_Error Decoded data on success, WP_Error on failure.
+	 */
+	private function safe_json_decode(string $json, string $context = ''): mixed {
+		if (empty($json)) {
+			return [];
+		}
+		
+		$decoded = json_decode($json, true);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			$error_msg = "Failed to decode JSON" . ($context ? " in {$context}" : "") . ": " . json_last_error_msg();
+			$this->logger?->error($error_msg, ['context' => $context, 'json_snippet' => substr($json, 0, 200) . '...']);
+			return new WP_Error('json_decode_error', $error_msg);
+		}
+		return $decoded;
+	}
+
+	/**
 	 * Processes a single job.
 	 *
 	 * @param int $job_id The ID of the job to process.
@@ -59,17 +80,15 @@ class Data_Machine_Job_Worker {
 
 		try {
 			// 1. Decode Module Configuration
-			$module_config = json_decode( $job->module_config, true );
-			if ( json_last_error() !== JSON_ERROR_NONE || ! is_array( $module_config ) ) {
-				$json_error = json_last_error_msg();
-				throw new Exception( 'Failed to decode module configuration for job. Error: ' . $json_error );
+			$module_config = $this->safe_json_decode( $job->module_config, "module config for job {$job_id}" );
+			if ( is_wp_error( $module_config ) ) {
+				throw new Exception( $module_config->get_error_message() );
 			}
 
 			// 2. Decode Input Data from Job
-			$input_data_packet = json_decode( $job->input_data, true );
-			if ( json_last_error() !== JSON_ERROR_NONE || ! is_array( $input_data_packet ) ) {
-				$json_error = json_last_error_msg();
-				throw new Exception( 'Failed to decode input data for job. Error: ' . $json_error );
+			$input_data_packet = $this->safe_json_decode( $job->input_data, "input data for job {$job_id}" );
+			if ( is_wp_error( $input_data_packet ) ) {
+				throw new Exception( $input_data_packet->get_error_message() );
 			}
 
 			// 3. Use the injected Processing Orchestrator service

@@ -204,9 +204,9 @@ class Data_Machine_Job_Executor {
 			}
 
 			// Encode the items to process as JSON string for the job entry
-			$items_to_process_json = wp_json_encode($items_to_process);
-			if ($items_to_process_json === false) {
-				throw new Exception("Failed to encode items to process as JSON.");
+			$items_to_process_json = $this->safe_json_encode($items_to_process, 'items_to_process');
+			if (is_wp_error($items_to_process_json)) {
+				return $items_to_process_json;
 			}
 
 			// 4. Create Job in DB and Schedule (Pass the filtered list)
@@ -269,8 +269,8 @@ class Data_Machine_Job_Executor {
 		try {
 			// Ensure data_source_config is an array (decode if needed)
 			if (isset($module->data_source_config) && is_string($module->data_source_config)) {
-				$decoded = json_decode($module->data_source_config, true);
-				if (json_last_error() === JSON_ERROR_NONE) {
+				$decoded = $this->safe_json_decode($module->data_source_config, 'module data_source_config');
+				if (!is_wp_error($decoded)) {
 					$module->data_source_config = $decoded;
 				}
 			}
@@ -419,22 +419,18 @@ class Data_Machine_Job_Executor {
 
 		// Decode data_source_config
 		if (!empty($module->data_source_config)) {
-			$decoded_ds_config = json_decode($module->data_source_config, true);
-			if (json_last_error() !== JSON_ERROR_NONE) {
-				$error_msg = "Failed to decode data_source_config JSON for module {$module->module_id}: " . json_last_error_msg();
-				$this->logger?->error($error_msg);
-				return new WP_Error('json_decode_error', $error_msg);
+			$decoded_ds_config = $this->safe_json_decode($module->data_source_config, "data_source_config for module {$module->module_id}");
+			if (is_wp_error($decoded_ds_config)) {
+				return $decoded_ds_config;
 			}
 			$config['data_source_config'] = $decoded_ds_config;
 		}
 
 		// Decode output_config
 		if (!empty($module->output_config)) {
-			$decoded_out_config = json_decode($module->output_config, true);
-			if (json_last_error() !== JSON_ERROR_NONE) {
-				$error_msg = "Failed to decode output_config JSON for module {$module->module_id}: " . json_last_error_msg();
-				$this->logger?->error($error_msg);
-				return new WP_Error('json_decode_error', $error_msg);
+			$decoded_out_config = $this->safe_json_decode($module->output_config, "output_config for module {$module->module_id}");
+			if (is_wp_error($decoded_out_config)) {
+				return $decoded_out_config;
 			}
 			$config['output_config'] = $decoded_out_config;
 		}
@@ -509,18 +505,9 @@ class Data_Machine_Job_Executor {
 			$this->logger?->debug("Raw module_config from DB for job", ['job_id' => $job_id, 'raw_config' => $raw_config_from_db]);
 
 			// Decode module config
-			json_last_error(); // Clear last error
-			$module_job_config = json_decode($raw_config_from_db, true);
-			$json_error_code = json_last_error();
-			if ($json_error_code !== JSON_ERROR_NONE) {
-				$json_error_message = json_last_error_msg();
-				$this->logger?->error("JSON decode error for module_config.", [
-					'job_id' => $job_id,
-					'error_code' => $json_error_code,
-					'error_message' => $json_error_message,
-					'raw_config_snippet' => substr($raw_config_from_db, 0, 500) . '...'
-				]);
-				throw new Exception("Failed to decode module_config JSON: " . $json_error_message);
+			$module_job_config = $this->safe_json_decode($raw_config_from_db, "module_config for job {$job_id}");
+			if (is_wp_error($module_job_config)) {
+				throw new Exception($module_job_config->get_error_message());
 			}
 
 			// Validate decoded structure
@@ -591,11 +578,11 @@ class Data_Machine_Job_Executor {
 			if (!empty($initial_items_json)) {
 				// File-based job: Data was pre-fetched and stored
 				$this->logger?->info("Job has pre-stored input data (likely file-based).", ['job_id' => $job_id, 'module_id' => $module_id]);
-				$decoded_items = json_decode($initial_items_json, true);
-				if (is_array($decoded_items)) {
-					$items_to_process = $decoded_items;
+				$decoded_items = $this->safe_json_decode($initial_items_json, "pre-stored input data for job {$job_id}");
+				if (is_wp_error($decoded_items)) {
+					$this->logger?->warning("Failed to decode pre-stored input data: " . $decoded_items->get_error_message(), ['job_id' => $job_id, 'module_id' => $module_id]);
 				} else {
-					$this->logger?->warning("Failed to decode pre-stored input data.", ['job_id' => $job_id, 'module_id' => $module_id]);
+					$items_to_process = $decoded_items;
 				}
 			} else {
 				// Config-based job: Fetch and filter data now
@@ -765,11 +752,11 @@ class Data_Machine_Job_Executor {
 				$result_payload['message'] = 'Job failed.';
 			}
 
-			$result_data_for_db = json_encode($result_payload);
-			if ($result_data_for_db === false) {
-				$this->logger?->error('Failed to JSON encode result_payload for job completion.', ['job_id' => $job_id, 'module_id' => $module_id, 'payload' => $result_payload]);
+			$result_data_for_db = $this->safe_json_encode($result_payload, "result_payload for job {$job_id}");
+			if (is_wp_error($result_data_for_db)) {
+				$this->logger?->error('Failed to JSON encode result_payload for job completion: ' . $result_data_for_db->get_error_message(), ['job_id' => $job_id, 'module_id' => $module_id]);
 				// Fallback to a simple error message if encoding fails
-				$result_data_for_db = json_encode(['status' => 'failed', 'message' => 'Job failed: Error encoding result data.']);
+				$result_data_for_db = $this->safe_json_encode(['status' => 'failed', 'message' => 'Job failed: Error encoding result data.'], 'fallback result');
 			}
 
 
@@ -900,6 +887,45 @@ class Data_Machine_Job_Executor {
 	}
 
 	/**
+	 * Safely encode data to JSON with error handling.
+	 *
+	 * @param mixed $data The data to encode.
+	 * @param string $context Context for error logging.
+	 * @return string|WP_Error JSON string on success, WP_Error on failure.
+	 */
+	private function safe_json_encode($data, string $context = ''): mixed {
+		$json = wp_json_encode($data);
+		if ($json === false) {
+			$error_msg = "Failed to encode data as JSON" . ($context ? " in {$context}" : "") . ": " . json_last_error_msg();
+			$this->logger?->error($error_msg, ['context' => $context, 'data_type' => gettype($data)]);
+			return new WP_Error('json_encode_error', $error_msg);
+		}
+		return $json;
+	}
+
+	/**
+	 * Safely decode JSON with error handling.
+	 *
+	 * @param string $json The JSON string to decode.
+	 * @param string $context Context for error logging.
+	 * @param bool $associative Whether to return associative arrays.
+	 * @return mixed|WP_Error Decoded data on success, WP_Error on failure.
+	 */
+	private function safe_json_decode(string $json, string $context = '', bool $associative = true): mixed {
+		if (empty($json)) {
+			return $associative ? [] : new stdClass();
+		}
+		
+		$decoded = json_decode($json, $associative);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			$error_msg = "Failed to decode JSON" . ($context ? " in {$context}" : "") . ": " . json_last_error_msg();
+			$this->logger?->error($error_msg, ['context' => $context, 'json_snippet' => substr($json, 0, 200) . '...']);
+			return new WP_Error('json_decode_error', $error_msg);
+		}
+		return $decoded;
+	}
+
+	/**
 	 * Extracts the unique identifier from an item based on its source type.
 	 * Centralizes the logic previously duplicated in several methods.
 	 *
@@ -971,9 +997,9 @@ class Data_Machine_Job_Executor {
 			}
 
 			// Encode the config snapshot
-			$config_snapshot_json = wp_json_encode($module_config_data);
-			if ($config_snapshot_json === false) {
-				throw new Exception("Failed to encode module config snapshot as JSON: " . json_last_error_msg());
+			$config_snapshot_json = $this->safe_json_encode($module_config_data, 'module config snapshot');
+			if (is_wp_error($config_snapshot_json)) {
+				throw new Exception($config_snapshot_json->get_error_message());
 			}
 
 			// Create the job entry - Corrected arguments
