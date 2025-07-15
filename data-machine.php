@@ -202,7 +202,8 @@ function run_data_machine() {
         $finalize_api,
         $handler_factory,
         $prompt_builder,
-        $logger
+        $logger,
+        $action_scheduler
     );
     $job_worker = new Data_Machine_Job_Worker($logger, $db_jobs, $orchestrator);
     $job_executor = new Data_Machine_Job_Executor(
@@ -217,6 +218,14 @@ function run_data_machine() {
         $logger
     );
     $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
+
+    // Global container for Action Scheduler access
+    global $data_machine_container;
+    $data_machine_container = array(
+        'handler_factory' => $handler_factory,
+        'db_jobs' => $db_jobs,
+        'logger' => $logger
+    );
 
     // Import/export handler
     $import_export_handler = new Data_Machine_Import_Export($db_projects, $db_modules);

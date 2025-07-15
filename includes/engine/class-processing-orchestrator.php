@@ -30,6 +30,9 @@ class Data_Machine_Processing_Orchestrator {
 	/** @var Data_Machine_Logger */
 	private $logger;
 
+	/** @var Data_Machine_Action_Scheduler */
+	private $action_scheduler;
+
 	/**
 	 * Constructor. Dependencies are injected.
 	 *
@@ -39,6 +42,7 @@ class Data_Machine_Processing_Orchestrator {
 	 * @param Data_Machine_Handler_Factory $handler_factory Handler Factory instance.
 	 * @param Data_Machine_Prompt_Builder $prompt_builder Instance of centralized prompt builder.
 	 * @param Data_Machine_Logger $logger Logger instance.
+	 * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
 	 */
 	public function __construct(
 		Data_Machine_process_data $process_data_handler,
@@ -46,7 +50,8 @@ class Data_Machine_Processing_Orchestrator {
 		Data_Machine_API_Finalize $finalize_api,
 		Data_Machine_Handler_Factory $handler_factory,
 		Data_Machine_Prompt_Builder $prompt_builder,
-		Data_Machine_Logger $logger
+		Data_Machine_Logger $logger,
+		Data_Machine_Action_Scheduler $action_scheduler
 	) {
 		$this->process_data_handler = $process_data_handler;
 		$this->factcheck_api = $factcheck_api;
@@ -54,6 +59,7 @@ class Data_Machine_Processing_Orchestrator {
 		$this->handler_factory = $handler_factory;
 		$this->prompt_builder = $prompt_builder;
 		$this->logger = $logger;
+		$this->action_scheduler = $action_scheduler;
 	}
 
 	/**
@@ -193,42 +199,45 @@ class Data_Machine_Processing_Orchestrator {
 		}
 
 
-		// --- Step 4: Output Delegation ---
-		$output_handler_result = null;
+		// --- Step 4: Output Delegation (Asynchronous via Action Scheduler) ---
 		$output_type = $module_job_config['output_type'] ?? null;
 
 		try {
-			// Ensure helper class is loaded
-			require_once DATA_MACHINE_PATH . 'includes/helpers/class-ai-response-parser.php';
-
-			// Get the appropriate output handler using the handler factory
-            if (empty($output_type)) {
-                throw new Exception('Output type is not defined in module configuration.');
-            }
-            
-            $output_handler = $this->handler_factory->create_handler('output', $output_type);
-
-			if ($output_handler instanceof Data_Machine_Output_Handler_Interface) {
-				// Pass the simplified config array AND input metadata to the handler
-				// Use $input_data_packet for metadata
-				$this->log_orchestrator_step('Step 4: Calling output handler handle()', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type]);
-				$output_handler_result = $output_handler->handle( $final_output_string, $module_job_config, $user_id, $input_data_packet['metadata'] ?? [] );
-				$this->log_orchestrator_step('Step 4: Received output handler result', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type, 'is_wp_error' => is_wp_error($output_handler_result), 'result_status' => is_array($output_handler_result) ? ($output_handler_result['status'] ?? 'unknown') : 'non-array']);
-			} else {
-                // Log error if handler creation failed or returned wrong type
-                $error_details = is_wp_error($output_handler) ? $output_handler->get_error_message() : 'Invalid handler type returned by factory.';
-                $this->logger?->error('Failed to create or retrieve a valid output handler from factory.', ['output_type' => $output_type, 'error' => $error_details]);
-				throw new Exception('Could not create or retrieve a valid output handler for type: ' . $output_type);
+			// Validate output type
+			if (empty($output_type)) {
+				throw new Exception('Output type is not defined in module configuration.');
 			}
 
-			// Check if the handler returned an error
-			if (is_wp_error($output_handler_result)) {
-				throw new Exception($output_handler_result->get_error_message());
+			// Queue the output job via Action Scheduler
+			$this->log_orchestrator_step('Step 4: Queuing output job via Action Scheduler', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type]);
+			
+			$action_id = $this->action_scheduler->schedule_single_job(
+				'dm_output_job_event',
+				array(
+					$final_output_string,
+					$module_job_config,
+					$user_id,
+					$input_data_packet['metadata'] ?? [],
+					$job_id
+				)
+			);
+
+			if ($action_id === false) {
+				throw new Exception('Failed to queue output job via Action Scheduler');
 			}
+
+			$this->log_orchestrator_step('Step 4: Output job queued successfully', $module_id, $input_data_packet['metadata'] ?? [], ['action_id' => $action_id, 'handler_type' => $output_type]);
+
+			// Return success status with action ID
+			$output_handler_result = array(
+				'status' => 'queued',
+				'action_id' => $action_id,
+				'output_type' => $output_type,
+				'message' => 'Output job queued for asynchronous processing'
+			);
 
 		} catch (Exception $e) {
-			$this->log_orchestrator_step('Step 4: Exception in output handling', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-			// Error logging removed for production
+			$this->log_orchestrator_step('Step 4: Exception in output job queuing', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
 			$error_code = method_exists($e, 'getCode') && $e->getCode() ? $e->getCode() : 'output_step_failed';
 			return new WP_Error($error_code, $e->getMessage());
 		}

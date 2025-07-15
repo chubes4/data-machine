@@ -106,28 +106,34 @@ class Data_Machine_Job_Worker {
 			$log_context = ['job_id' => $job_id, 'module_id' => $job->module_id];
 			$logger->debug("Job Worker: Orchestrator run completed.", array_merge($log_context, ['result_status' => $orchestrator_results['status'] ?? 'unknown']));
 
-			// Prepare the final result for DB storage (using output_result from orchestrator)
-			// Assuming orchestrator returns a structured array including 'output_result'
-			$final_result_data = $orchestrator_results['output_result'] ?? null; // Get the result from the output handler step
-
-			// Ensure we have data to encode before proceeding
-			if (is_null($final_result_data)) {
-				// Log a warning or potentially throw an error if output_result is crucial
-				$logger->warning("Job Worker: Orchestrator did not return 'output_result'. Storing null.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
-				// Decide how to handle: store null, or throw an exception? Storing null for now.
-				$result_json = null;
+			// Handle the new async output processing
+			$output_result = $orchestrator_results['output_result'] ?? null;
+			
+			// Check if output was queued for async processing
+			if (is_array($output_result) && isset($output_result['status']) && $output_result['status'] === 'queued') {
+				// Output job was queued via Action Scheduler
+				$logger->info("Job Worker: Job processing complete, output queued for async processing.", [
+					'job_id' => $job_id, 
+					'module_id' => $job->module_id,
+					'action_id' => $output_result['action_id'] ?? 'unknown',
+					'output_type' => $output_result['output_type'] ?? 'unknown'
+				]);
+				
+				// Update job status to 'processing_output' to indicate async output processing
+				$result_json = wp_json_encode($output_result);
+				$db_jobs->update_job_status($job_id, 'processing_output', $result_json);
+				
 			} else {
-				$result_json = wp_json_encode($final_result_data);
+				// Fallback for any synchronous output processing (shouldn't happen with new system)
+				$result_json = wp_json_encode($output_result);
 				if ($result_json === false) {
 					$json_error = json_last_error_msg();
 					throw new Exception('Failed to encode orchestrator result for job. Error: ' . $json_error);
 				}
+				
+				$db_jobs->complete_job( $job_id, 'complete', $result_json );
+				$logger->info("Job Worker: Job completed successfully (synchronous).", ['job_id' => $job_id, 'module_id' => $job->module_id]);
 			}
-
-			// Update job status to 'complete' using DB service
-			// Pass null or the encoded JSON string
-			$db_jobs->complete_job( $job_id, 'complete', $result_json );
-			$logger->info("Job Worker: Job completed successfully.", ['job_id' => $job_id, 'module_id' => $job->module_id]);
 
 		} catch ( Exception $e ) {
 			// Handle exceptions during processing
