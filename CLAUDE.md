@@ -16,6 +16,24 @@ composer update
 ### WordPress Development
 This is a WordPress plugin - no specific build process required. Changes take effect immediately when files are saved.
 
+#### Database Table Management
+```bash
+# Plugin activation automatically creates/updates tables via:
+# Data_Machine_Database_Projects::create_table()
+# Data_Machine_Database_Modules::create_table()
+# Data_Machine_Database_Jobs::create_table()
+# Data_Machine_Database_Remote_Locations::create_table()
+```
+
+#### Manual Testing
+```bash
+# Test single module execution via admin interface:
+# WordPress Admin → Data Machine → Run Single Module
+
+# Monitor Action Scheduler jobs:
+# WordPress Admin → Tools → Action Scheduler
+```
+
 ## Project Architecture
 
 ### Core Workflow
@@ -42,9 +60,10 @@ The Data Machine plugin follows a structured 5-step processing pipeline:
 - **Remote Locations**: Remote WordPress publishing endpoints
 
 #### Processing Engine (`includes/engine/`)
-- **`class-processing-orchestrator.php`**: Main workflow coordinator
-- **`class-job-executor.php`**: Job lifecycle management and WP-Cron integration
-- **`class-job-worker.php`**: Individual job processing execution
+- **`class-processing-orchestrator.php`**: Main workflow coordinator - handles 5-step pipeline
+- **`class-job-executor.php`**: Job lifecycle management and Action Scheduler integration
+- **`class-job-worker.php`**: Individual job processing execution with retry logic
+- **`class-process-data.php`**: OpenAI API integration for initial data processing
 
 #### Handler System
 **Input Handlers** (`includes/input/`): Data collection from various sources
@@ -80,10 +99,11 @@ Uses WordPress database with custom tables:
 
 ### Module Configuration System (`module-config/`)
 Dynamic UI system for configuring input/output handlers:
-- **Handler Templates**: PHP templates for each handler type's configuration UI
-- **Factory Pattern**: `HandlerFactory.php` for dependency injection
-- **Settings Registration**: WordPress Settings API integration
-- **AJAX System**: Real-time configuration management
+- **Handler Templates**: PHP templates for each handler type's configuration UI (`handler-templates/`)
+- **Factory Pattern**: `HandlerFactory.php` for dependency injection and handler instantiation
+- **Settings Registration**: WordPress Settings API integration (`RegisterSettings.php`)
+- **AJAX System**: Real-time configuration management with ES6 modules (`js/`)
+- **State Management**: Centralized UI state with `module-config-state.js` and `module-state-controller.js`
 
 ### Admin Interface (`admin/`)
 - **Project Management**: CRUD operations for projects and modules
@@ -92,6 +112,14 @@ Dynamic UI system for configuring input/output handlers:
 - **OAuth Integration**: Social media authentication flows
 
 ## Important Implementation Details
+
+### Action Scheduler Integration
+The plugin uses Action Scheduler for async job processing:
+- **Action Group**: `data-machine` for all plugin jobs
+- **Concurrency**: Maximum 2 concurrent jobs (`MAX_CONCURRENT_JOBS`)
+- **Retry Logic**: 3 attempts for failed output jobs with exponential backoff
+- **Hook**: `dm_output_job_event` for output processing jobs
+- **Status Tracking**: Jobs tracked in `wp_dm_jobs` table with Action Scheduler integration
 
 ### Dependency Injection
 All major classes use constructor injection managed through `Dependency_Injection_Handler_Factory`. No formal DI container - dependencies manually wired in `data-machine.php`.
@@ -126,17 +154,37 @@ Bluesky handler uses correct URL character counting (22 chars) to maximize conte
 
 ### Code Organization
 - Handler classes grouped by functionality (`input/`, `output/`)
-- Admin functionality separated from core logic
-- Templates separated from business logic
-- Extensive use of traits for shared functionality
+- Admin functionality separated from core logic (`admin/`)
+- Templates separated from business logic (`admin/templates/`)
+- Extensive use of traits for shared functionality (`trait-data-machine-base-*-handler.php`)
+- Module configuration system isolated in `module-config/` directory
+- Third-party libraries bundled in `libraries/` (Action Scheduler)
+- Vendor dependencies via Composer autoloader
 
 ### Testing & Debugging
 - Uses `Data_Machine_Logger` class for centralized logging
 - Admin notices displayed for user feedback
 - No formal test suite - manual testing via admin interface
 
+### JavaScript Architecture
+- **ES6 Modules**: Modern module system with import/export
+- **State Management**: Centralized state in `module-config-state.js`
+- **AJAX Handling**: Dedicated AJAX classes (`module-config-ajax.js`)
+- **UI Controllers**: Separate controllers for different UI sections
+- **Event-Driven**: Pub/sub pattern for state changes and UI updates
+- **Template Management**: Dynamic loading of handler configuration templates
+
+### Handler Development
+When creating new input/output handlers:
+- **Interface Implementation**: Must implement `Data_Machine_Input_Handler_Interface` or `Data_Machine_Output_Handler_Interface`
+- **Settings Fields**: Define configuration UI via `get_settings_fields()` method
+- **Templates**: Create PHP template in `module-config/handler-templates/`
+- **Registration**: Register in `Data_Machine_Handler_Registry`
+- **Sanitization**: Implement `sanitize_settings()` method for user input
+- **Traits**: Use base traits for common functionality
+
 ### WordPress Integration
 - Follows WordPress coding standards and security practices
 - Uses WordPress database layer (`$wpdb`) exclusively
 - Integrates with WordPress media library and user system
-- Employs WordPress cron for background job processing
+- Employs Action Scheduler for background job processing (replacing WP-Cron)

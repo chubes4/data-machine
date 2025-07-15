@@ -38,7 +38,9 @@ try {
                 console.warn(`[renderTemplate] Placeholder div not found for slug: ${slug}. Skipping render.`);
                 return;
             }
-            console.log('[renderTemplate] Calling fetchHandlerTemplate with cleaned:', { handlerType, slug, moduleId, locationId });
+            if (window.dmDebugMode) {
+                console.log('[renderTemplate] Calling fetchHandlerTemplate with cleaned:', { handlerType, slug, moduleId, locationId });
+            }
             const templateContent = await fetchHandlerTemplate(handlerType, slug, moduleId, locationId);
             const processTemplateContent = (contentHtml, containerElement, handlerSlug, handlerType, onLoadedCallback) => {
                 const placeholderDiv = containerElement.querySelector(`[data-handler-slug="${handlerSlug}"]`);
@@ -65,7 +67,9 @@ try {
                         // ctrl.setAttribute('required', ...);
                     });
                     if (attachTemplateEventListeners && window.dmRemoteLocationManager?.handlerConfigs?.[handlerSlug]) {
-                         console.log(`[MutationObserver] Target element likely ready for ${handlerSlug}. Calling attachTemplateEventListeners...`, placeholderDiv);
+                         if (window.dmDebugMode) {
+                             console.log(`[MutationObserver] Target element likely ready for ${handlerSlug}. Calling attachTemplateEventListeners...`, placeholderDiv);
+                         }
                          attachTemplateEventListeners(placeholderDiv, handlerType, handlerSlug);
                     }
                     if (onLoadedCallback) onLoadedCallback(handlerSlug, contentHtml, placeholderDiv, handlerType);
@@ -76,12 +80,16 @@ try {
                     if (targetSelector) {
                         const observer = new MutationObserver((mutationsList, obs) => {
                             if (placeholderDiv.querySelector(targetSelector)) {
-                                console.log(`[MutationObserver] Target element (${targetSelector}) found for ${handlerSlug}.`);
+                                if (window.dmDebugMode) {
+                                    console.log(`[MutationObserver] Target element (${targetSelector}) found for ${handlerSlug}.`);
+                                }
                                 attachAndFinalize();
                                 obs.disconnect();
                             }
                         });
-                        console.log(`[renderTemplate] Setting up MutationObserver for ${handlerSlug} on`, placeholderDiv);
+                        if (window.dmDebugMode) {
+                            console.log(`[renderTemplate] Setting up MutationObserver for ${handlerSlug} on`, placeholderDiv);
+                        }
                         observer.observe(placeholderDiv, { childList: true, subtree: true });
                         placeholderDiv.innerHTML = contentHtml;
                     } else {

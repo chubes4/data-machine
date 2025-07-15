@@ -26,6 +26,9 @@ class Data_Machine_Module_Config_Ajax {
     /** @var ?Data_Machine_Logger */
     private $logger;
 
+    /** @var array Simple cache for site info to avoid redundant JSON decoding */
+    private static $site_info_cache = [];
+
     /**
      * Constructor.
      *
@@ -194,26 +197,43 @@ class Data_Machine_Module_Config_Ajax {
 
                  // Fetch specific location's info if ID provided
                  if ($location_id > 0) {
-                     $location_data = $this->db_locations->get_location($location_id, $user_id, false); 
+                     $cache_key = "location_{$location_id}";
                      
-                     if ($location_data) {
-                         // Decode synced info
-                         $raw_synced_info = $location_data->synced_site_info ?? null;
-                         if (!empty($raw_synced_info)) {
-                             $decoded_info = json_decode(wp_unslash($raw_synced_info), true);
-                             if (is_array($decoded_info)) $site_info = $decoded_info;
-                         }
-                         // Decode enabled post types
-                         $raw_enabled_pt = $location_data->enabled_post_types ?? null;
-                         if (!empty($raw_enabled_pt)) {
-                              $decoded_enabled_pt = json_decode(wp_unslash($raw_enabled_pt), true);
-                              if (is_array($decoded_enabled_pt)) $enabled_post_types_array = $decoded_enabled_pt;
-                         }
-                         // Decode enabled taxonomies
-                         $raw_enabled_tax = $location_data->enabled_taxonomies ?? null;
-                         if (!empty($raw_enabled_tax)) {
-                              $decoded_enabled_tax = json_decode(wp_unslash($raw_enabled_tax), true);
-                              if (is_array($decoded_enabled_tax)) $enabled_taxonomies_array = $decoded_enabled_tax;
+                     // Check cache first
+                     if (isset(self::$site_info_cache[$cache_key])) {
+                         $cached_data = self::$site_info_cache[$cache_key];
+                         $site_info = $cached_data['site_info'];
+                         $enabled_post_types_array = $cached_data['enabled_post_types'];
+                         $enabled_taxonomies_array = $cached_data['enabled_taxonomies'];
+                     } else {
+                         $location_data = $this->db_locations->get_location($location_id, $user_id, false); 
+                         
+                         if ($location_data) {
+                             // Decode synced info
+                             $raw_synced_info = $location_data->synced_site_info ?? null;
+                             if (!empty($raw_synced_info)) {
+                                 $decoded_info = json_decode(wp_unslash($raw_synced_info), true);
+                                 if (is_array($decoded_info)) $site_info = $decoded_info;
+                             }
+                             // Decode enabled post types
+                             $raw_enabled_pt = $location_data->enabled_post_types ?? null;
+                             if (!empty($raw_enabled_pt)) {
+                                  $decoded_enabled_pt = json_decode(wp_unslash($raw_enabled_pt), true);
+                                  if (is_array($decoded_enabled_pt)) $enabled_post_types_array = $decoded_enabled_pt;
+                             }
+                             // Decode enabled taxonomies
+                             $raw_enabled_tax = $location_data->enabled_taxonomies ?? null;
+                             if (!empty($raw_enabled_tax)) {
+                                  $decoded_enabled_tax = json_decode(wp_unslash($raw_enabled_tax), true);
+                                  if (is_array($decoded_enabled_tax)) $enabled_taxonomies_array = $decoded_enabled_tax;
+                             }
+                             
+                             // Cache the decoded data
+                             self::$site_info_cache[$cache_key] = [
+                                 'site_info' => $site_info,
+                                 'enabled_post_types' => $enabled_post_types_array,
+                                 'enabled_taxonomies' => $enabled_taxonomies_array
+                             ];
                          }
                      }
                  } // End if ($location_id > 0)

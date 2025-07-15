@@ -75,7 +75,10 @@ AjaxHandler = class {
     }
 
     async getHandlerTemplate(handlerType, handlerSlug, moduleId = null, locationId = null) {
-        console.log(`[AjaxHandler.getHandlerTemplate] Args received:`, { handlerType, handlerSlug, moduleId, locationId });
+        // Reduced logging for better performance
+        if (window.dmDebugMode) {
+            console.log(`[AjaxHandler.getHandlerTemplate] Args received:`, { handlerType, handlerSlug, moduleId, locationId });
+        }
         const payload = {
             handler_type: handlerType,
             handler_slug: handlerSlug
@@ -88,7 +91,9 @@ AjaxHandler = class {
         if (handlerSlug === 'publish_remote' || handlerSlug === 'airdrop_rest_api') {
             payload.location_id = locationId;
         }
-        console.log(`[AjaxHandler.getHandlerTemplate] Final payload for AJAX:`, payload);
+        if (window.dmDebugMode) {
+            console.log(`[AjaxHandler.getHandlerTemplate] Final payload for AJAX:`, payload);
+        }
         return this._makeAjaxRequest('dm_get_handler_template', payload);
     }
 

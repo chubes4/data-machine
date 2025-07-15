@@ -26,6 +26,9 @@ window.dmUI = window.dmUI || {};
 window.DataMachine = window.DataMachine || {};
 window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 
+// Set debug mode (can be controlled via console: window.dmDebugMode = true/false)
+window.dmDebugMode = window.dmDebugMode || false;
+
 	// Set up the main AJAX handler and attach to global for legacy code
 	const ajaxHandler = new AjaxHandler();
 	window.DataMachine.ModuleConfig.ajaxHandler = ajaxHandler;
@@ -107,30 +110,53 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 		// --- End Modularized Project/Module Selection ---
 
 		// --- AJAX Template Fetching (Refactored to use AjaxHandler) ---
+		// Simple cache for handler templates to reduce AJAX calls
+		const templateCache = new Map();
+		
 		async function fetchHandlerTemplate(handlerType, handlerSlug, moduleId = null, locationId = null) {
-			console.log(`[fetchHandlerTemplate] Args received:`, { handlerType, handlerSlug, moduleId, locationId }); // +++ LOG
+			if (window.dmDebugMode) {
+				console.log(`[fetchHandlerTemplate] Args received:`, { handlerType, handlerSlug, moduleId, locationId });
+			}
 			if (!handlerType || !handlerSlug) {
 				return null;
 			}
 			if (!window.DataMachine?.ModuleConfig?.ajaxHandler) {
 				return null;
 			}
+			
+			// Create cache key (avoid caching location-specific templates for now)
+			const cacheKey = locationId ? null : `${handlerType}:${handlerSlug}:${moduleId || 'new'}`;
+			
+			// Check cache first (only for non-location specific requests)
+			if (cacheKey && templateCache.has(cacheKey)) {
+				if (window.dmDebugMode) {
+					console.log(`[fetchHandlerTemplate] Using cached template for:`, cacheKey);
+				}
+				return templateCache.get(cacheKey);
+			}
+			
 			try {
 				const data = await window.DataMachine.ModuleConfig.ajaxHandler.getHandlerTemplate(handlerType, handlerSlug, moduleId, locationId);
 				if (data.success) {
+					let result;
 					if (
 						(typeof data.data === 'string' && data.data.trim() === '') ||
 						(typeof data.data === 'object' && data.data !== null && data.data.html !== undefined && data.data.html.trim() === '')
 					) {
-						return { html: '<div class="dm-no-settings">No settings required for this handler.</div>' };
-					}
-					if (typeof data.data === 'object' && data.data !== null && data.data.html !== undefined) {
-						return data.data;
+						result = { html: '<div class="dm-no-settings">No settings required for this handler.</div>' };
+					} else if (typeof data.data === 'object' && data.data !== null && data.data.html !== undefined) {
+						result = data.data;
 					} else if (typeof data.data === 'string') {
-						return { html: data.data };
+						result = { html: data.data };
 					} else {
-						return { html: '<div class="notice notice-error"><p>Error loading settings: Unexpected format received.</p></div>' };
+						result = { html: '<div class="notice notice-error"><p>Error loading settings: Unexpected format received.</p></div>' };
 					}
+					
+					// Cache the result for non-location specific requests
+					if (cacheKey) {
+						templateCache.set(cacheKey, result);
+					}
+					return result;
 				} else {
 					if (handlerSlug === 'files') {
 						return { html: '<div class="dm-no-settings">No settings required for this handler.</div>' };
@@ -244,8 +270,10 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 
 		// --- Subscribe to state changes for UI updates (Refactored) ---
 		subscribe(async function(state) { // <<<< Make subscriber async
-			console.log('[UI Subscription] Subscriber received state:', state, 'Type:', typeof state);
-			console.log('[UI Subscription] Detailed received state:', JSON.parse(JSON.stringify(state)));
+			if (window.dmDebugMode) {
+				console.log('[UI Subscription] Subscriber received state:', state, 'Type:', typeof state);
+				console.log('[UI Subscription] Detailed received state:', JSON.parse(JSON.stringify(state)));
+			}
 
 			// --- Check for Remote Location Changes and Trigger Refresh ---
 			let inputRefreshed = false;
@@ -261,7 +289,9 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 
 			// Only refresh if the parsed ID is different from the previous selection
 			if (parsedInputId !== previousRemoteSelections.input) {
-				console.log(`[UI Subscription] Input location changed from ${previousRemoteSelections.input} to ${parsedInputId}. Refreshing input template.`);
+				if (window.dmDebugMode) {
+					console.log(`[UI Subscription] Input location changed from ${previousRemoteSelections.input} to ${parsedInputId}. Refreshing input template.`);
+				}
 				await handlerManager.refreshInput(parsedInputId);
 				previousRemoteSelections.input = parsedInputId; // Update previous selection
 				inputRefreshed = true;
@@ -278,9 +308,11 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 
 			// Only refresh if the parsed ID is different from the previous selection
 			if (parsedOutputId !== previousRemoteSelections.output) {
-				console.log(`[UI Subscription] Output location changed from ${previousRemoteSelections.output} to ${parsedOutputId}. Refreshing output template.`);
-				console.log('[UI Subscription] Value being passed to handlerManager.refreshOutput():', parsedOutputId); // Added log
-				console.log('[UI Subscription] Type of value being passed to handlerManager.refreshOutput():', typeof parsedOutputId); // Added type log
+				if (window.dmDebugMode) {
+					console.log(`[UI Subscription] Output location changed from ${previousRemoteSelections.output} to ${parsedOutputId}. Refreshing output template.`);
+					console.log('[UI Subscription] Value being passed to handlerManager.refreshOutput():', parsedOutputId);
+					console.log('[UI Subscription] Type of value being passed to handlerManager.refreshOutput():', typeof parsedOutputId);
+				}
 				await handlerManager.refreshOutput(parsedOutputId);
 				previousRemoteSelections.output = parsedOutputId; // Update previous selection
 				outputRefreshed = true;
@@ -313,11 +345,17 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 				if (outputDropdown) outputDropdown.value = state.selectedOutputSlug;
 
 				// Now, explicitly trigger template loading based on the set dropdown values
-				// Await these to ensure templates are loaded before populating fields
-				console.log('[UI Subscription] Triggering template refresh after module load...');
-				await handlerManager.refreshInput(undefined); 
-				await handlerManager.refreshOutput(undefined);
-				console.log('[UI Subscription] Template refresh complete.');
+				// Load templates in parallel to improve performance
+				if (window.dmDebugMode) {
+					console.log('[UI Subscription] Triggering template refresh after module load...');
+				}
+				await Promise.all([
+					handlerManager.refreshInput(undefined),
+					handlerManager.refreshOutput(undefined)
+				]);
+				if (window.dmDebugMode) {
+					console.log('[UI Subscription] Template refresh complete.');
+				}
 
 				// Populate handler config fields AFTER templates are loaded
 				const inputContainerElement = document.querySelector(`#data-source-settings-container .dm-input-settings[data-handler-slug="${state.selectedDataSourceSlug}"]`);
@@ -379,10 +417,16 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 				handlerManager.clearOutputContainer();
 
 				// Also explicitly clear/load default templates when switching to 'new'
-				console.log('[UI Subscription] Triggering template refresh for NEW module...');
-				await handlerManager.refreshInput(undefined);
-				await handlerManager.refreshOutput(undefined);
-				console.log('[UI Subscription] Template refresh complete for NEW module.');
+				if (window.dmDebugMode) {
+					console.log('[UI Subscription] Triggering template refresh for NEW module...');
+				}
+				await Promise.all([
+					handlerManager.refreshInput(undefined),
+					handlerManager.refreshOutput(undefined)
+				]);
+				if (window.dmDebugMode) {
+					console.log('[UI Subscription] Template refresh complete for NEW module.');
+				}
 			} else if (state.uiState === 'error') {
 				alert('An error occurred while loading the module.');
 			}
