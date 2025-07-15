@@ -39,10 +39,6 @@ class Data_Machine_Job_Worker {
 		$logger  = $this->logger;
 		$db_jobs = $this->db_jobs;
 
-		if ( ! $db_jobs ) { // This check might be redundant now with type hinting, but leave for safety? Or remove? Let's remove.
-			$logger->error( 'Job Worker: Database jobs service not properly injected.' );
-			return; // Cannot proceed
-		}
 
 		$job = $db_jobs->get_job($job_id);
 
@@ -77,10 +73,7 @@ class Data_Machine_Job_Worker {
 			}
 
 			// 3. Use the injected Processing Orchestrator service
-			$orchestrator = $this->orchestrator; // No need to check, ensured by constructor
-			if ( ! $orchestrator ) { // This check is redundant now with type hinting
-				 throw new Exception( 'Failed to retrieve Processing Orchestrator service (should be injected).' );
-			}
+			$orchestrator = $this->orchestrator;
 
 			// 4. Execute the processing job via the orchestrator, passing the fetched data
 			$logger->info( "Job Worker: Calling orchestrator.", [ 'job_id' => $job_id, 'module_id' => $job->module_id ] );
@@ -106,12 +99,11 @@ class Data_Machine_Job_Worker {
 			$log_context = ['job_id' => $job_id, 'module_id' => $job->module_id];
 			$logger->debug("Job Worker: Orchestrator run completed.", array_merge($log_context, ['result_status' => $orchestrator_results['status'] ?? 'unknown']));
 
-			// Handle the new async output processing
+			// Handle async output processing
 			$output_result = $orchestrator_results['output_result'] ?? null;
 			
-			// Check if output was queued for async processing
+			// Output job should always be queued for async processing
 			if (is_array($output_result) && isset($output_result['status']) && $output_result['status'] === 'queued') {
-				// Output job was queued via Action Scheduler
 				$logger->info("Job Worker: Job processing complete, output queued for async processing.", [
 					'job_id' => $job_id, 
 					'module_id' => $job->module_id,
@@ -124,15 +116,8 @@ class Data_Machine_Job_Worker {
 				$db_jobs->update_job_status($job_id, 'processing_output', $result_json);
 				
 			} else {
-				// Fallback for any synchronous output processing (shouldn't happen with new system)
-				$result_json = wp_json_encode($output_result);
-				if ($result_json === false) {
-					$json_error = json_last_error_msg();
-					throw new Exception('Failed to encode orchestrator result for job. Error: ' . $json_error);
-				}
-				
-				$db_jobs->complete_job( $job_id, 'complete', $result_json );
-				$logger->info("Job Worker: Job completed successfully (synchronous).", ['job_id' => $job_id, 'module_id' => $job->module_id]);
+				// This should not happen with the new async system
+				throw new Exception('Orchestrator did not return queued output job status. Expected async processing.');
 			}
 
 		} catch ( Exception $e ) {

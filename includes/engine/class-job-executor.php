@@ -163,75 +163,29 @@ class Data_Machine_Job_Executor {
 			}
 
 			foreach ($input_data as $item) {
-			    // --- START: Validate item structure ---
-			    // Ensure the current item is actually an array before proceeding
 			    if (!is_array($item)) {
 					$this->logger?->warning("Skipping non-array item found in input data.", [
 			            'module_id' => $module_id,
 			            'context' => $context,
 			            'item_type' => gettype($item)
 			        ]);
-			        continue; // Skip to the next item in the input data array
+			        continue;
 			    }
-			    // --- END: Validate item structure ---
 
-				$item_identifier = null;
+				$item_identifier = $this->_get_item_identifier($item, $source_type, $module_id, $context);
 
-				// Determine the unique identifier based on source type
-				switch ($source_type) {
-					case 'rss':
-						// Corrected: Look inside the metadata array where the handler places it
-						$item_identifier = $item['metadata']['item_identifier_to_log'] ?? null;
-						break;
-					case 'reddit':
-						// Use the specific key confirmed from Data_Machine_Input_Reddit
-						$item_identifier = $item['metadata']['item_identifier_to_log'] ?? null;
-						break;
-					case 'public_rest_api':
-						// Look inside the metadata array where the handler places it
-						$item_identifier = $item['metadata']['item_identifier_to_log'] ?? $item['metadata']['original_id'] ?? null;
-						break;
-					case 'files':
-						// Look inside the metadata array where the handler places it (persistent_path)
-						$item_identifier = $item['metadata']['item_identifier_to_log'] ?? null;
-						break;
-					case 'airdrop_rest_api':
-						// Look for the identifier at the top level
-						$item_identifier = $item['item_identifier'] ?? null;
-						break;
-					// Add cases for other known source types here
-					// case 'some_other_source':
-					// 	$item_identifier = $item['unique_field'] ?? null;
-					// 	break;
-					default:
-						// Attempt common fallback identifiers if type is unknown or not explicitly handled
-						$item_identifier = $item['id'] ?? $item['guid'] ?? $item['url'] ?? $item['link'] ?? null;
-						// If it's still null, log a warning
-						if (is_null($item_identifier)) {
-							$this->logger?->warning("Could not determine unique identifier for unknown source type or item structure.", [
-								'module_id' => $module_id,
-								'source_type' => $source_type,
-								'item_keys' => array_keys($item) // Log available keys for debugging
-							]);
-						}
-				}
-
-				// Ensure we have a non-empty identifier
 				if (empty($item_identifier)) {
 					$this->logger?->warning("Skipping item due to missing or empty identifier after checking source type.", [
 						'module_id' => $module_id,
 						'source_type' => $source_type,
 						'item_keys' => array_keys($item)
 					]);
-					continue; // Skip items where identifier couldn't be determined
+					continue;
 				}
 
-				// Check if item has already been processed
 				if (!$this->db_processed_items->has_item_been_processed($module_id, $source_type, $item_identifier)) {
-					// Item is new, add it to the list to be processed
 					$items_to_process[] = $item;
 				} else {
-					// Item already processed, log for debugging if needed
 					$this->logger?->info("Skipping already processed item.", ['module_id' => $module_id, 'source_type' => $source_type, 'item_identifier' => $item_identifier]);
 				}
 			}
@@ -1061,56 +1015,4 @@ class Data_Machine_Job_Executor {
 		}
 	}
 
-	/**
-	 * Original method for creating/scheduling job - kept for reference, potentially remove later
-	 * Creates a new job record in the database and schedules it.
-	 *
-	 * @deprecated Use create_and_schedule_job_event instead.
-	 * @param object $module The module object.
-	 * @param int    $user_id The ID of the user initiating the job.
-	 * @param string $module_config_json JSON encoded module configuration string.
-	 * @param array  $items_to_process Array of input data items confirmed to be processed for this job.
-	 * @return int|WP_Error Job ID of the newly created job, or a WP_Error object on failure.
-	 */
-	private function create_and_schedule_job(object $module, int $user_id, string $module_config_json, array $items_to_process) {
-		_deprecated_function(__METHOD__, '0.x.x', 'create_and_schedule_job_event');
-
-		try {
-			if (!$this->db_jobs) {
-				throw new Exception("Jobs database service not available.");
-			}
-			$items_json = wp_json_encode($items_to_process);
-			if ($items_json === false) {
-				throw new Exception("Failed to encode items to process as JSON: " . json_last_error_msg());
-			}
-
-			// Corrected call within deprecated method as well
-			$job_id = $this->db_jobs->create_job(
-				$module->module_id,
-				$user_id,
-				$module_config_json, // Arg 3
-				$items_json          // Arg 4
-			);
-
-			if (!$job_id || is_wp_error($job_id)) {
-				throw new Exception(is_wp_error($job_id) ? $job_id->get_error_message() : "Failed to create job in DB.");
-			}
-
-			$scheduled = $this->action_scheduler->schedule_single_job('dm_run_job_event', array($job_id));
-			if ($scheduled === false) {
-				// Attempt deletion if schedule fails
-				$this->db_jobs->delete_job($job_id);
-				$this->logger?->error("Failed to schedule cron in deprecated method. Deleted pending job.", ['job_id' => $job_id]);
-				throw new Exception("Failed to schedule WP Cron event.");
-			}
-
-			$this->logger?->info("Deprecated create_and_schedule_job called and succeeded.", ['job_id' => $job_id]);
-			return $job_id;
-
-		} catch (Exception $e) {
-			$error_message = "Error in deprecated create_and_schedule_job: " . $e->getMessage();
-			$this->logger?->error($error_message, ['module_id' => $module->module_id, 'error' => $e->getMessage()]);
-			return new WP_Error('job_creation_scheduling_error_deprecated', $error_message);
-		}
-	}
 }
