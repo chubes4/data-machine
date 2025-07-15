@@ -6,6 +6,7 @@ Thumbs.db
 desktop.ini
 
 # IDE files
+.claude/
 .vscode/
 .idea/
 *.swp

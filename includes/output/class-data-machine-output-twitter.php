@@ -132,7 +132,7 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
             $image_source_url = $input_metadata['image_source_url'] ?? null;
             $image_alt_text = $parser->get_title() ?: $parser->get_content_summary(50); // Use title or summary as alt text
 
-            if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL)) {
+            if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_source_url)) {
                 $this->logger?->info('Attempting to upload image to Twitter.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
                 
                 if (!function_exists('download_url')) {
@@ -380,5 +380,52 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
         $sanitized['twitter_include_source'] = isset($raw_settings['twitter_include_source']) && $raw_settings['twitter_include_source'] == '1';
         $sanitized['twitter_enable_images'] = isset($raw_settings['twitter_enable_images']) && $raw_settings['twitter_enable_images'] == '1';
         return $sanitized;
+    }
+
+    /**
+     * Check if an image URL is accessible by making a HEAD request
+     *
+     * @param string $image_url The image URL to check
+     * @return bool True if accessible, false otherwise
+     */
+    private function is_image_accessible(string $image_url): bool {
+        // Skip certain problematic domains/patterns
+        $problematic_patterns = [
+            'preview.redd.it', // Reddit preview URLs often have access restrictions
+            'i.redd.it'        // Reddit image URLs may have restrictions
+        ];
+        
+        foreach ($problematic_patterns as $pattern) {
+            if (strpos($image_url, $pattern) !== false) {
+                $this->logger?->warning('Twitter: Skipping problematic image URL pattern', ['url' => $image_url, 'pattern' => $pattern]);
+                return false;
+            }
+        }
+
+        // Test accessibility with HEAD request
+        $response = wp_remote_head($image_url, [
+            'timeout' => 10,
+            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->logger?->warning('Twitter: Image URL not accessible', ['url' => $image_url, 'error' => $response->get_error_message()]);
+            return false;
+        }
+
+        $http_code = wp_remote_retrieve_response_code($response);
+        $content_type = wp_remote_retrieve_header($response, 'content-type');
+
+        // Check for successful response and image content type
+        if ($http_code >= 200 && $http_code < 300 && strpos($content_type, 'image/') === 0) {
+            return true;
+        }
+
+        $this->logger?->warning('Twitter: Image URL validation failed', [
+            'url' => $image_url, 
+            'http_code' => $http_code, 
+            'content_type' => $content_type
+        ]);
+        return false;
     }
 } 

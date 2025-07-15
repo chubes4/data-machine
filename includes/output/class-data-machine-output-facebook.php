@@ -108,7 +108,7 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
         // $source_link = $input_metadata['source_url'] ?? null; // Source link is now appended to $content directly
 
         // Determine post type and prepare API parameters
-        if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+        if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url)) {
             // --- Image Post --- 
             // TODO: Add config check to enable/disable images
             $endpoint = "/{$page_id}/photos"; // Post to page photos endpoint
@@ -304,5 +304,52 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
         // Example:
         // $sanitized['facebook_enable_images'] = isset($raw_settings['facebook_enable_images']) && $raw_settings['facebook_enable_images'] == '1';
         return $sanitized;
+    }
+
+    /**
+     * Check if an image URL is accessible by making a HEAD request
+     *
+     * @param string $image_url The image URL to check
+     * @return bool True if accessible, false otherwise
+     */
+    private function is_image_accessible(string $image_url): bool {
+        // Skip certain problematic domains/patterns
+        $problematic_patterns = [
+            'preview.redd.it', // Reddit preview URLs often have access restrictions
+            'i.redd.it'        // Reddit image URLs may have restrictions
+        ];
+        
+        foreach ($problematic_patterns as $pattern) {
+            if (strpos($image_url, $pattern) !== false) {
+                $this->logger?->warning('Facebook: Skipping problematic image URL pattern', ['url' => $image_url, 'pattern' => $pattern]);
+                return false;
+            }
+        }
+
+        // Test accessibility with HEAD request
+        $response = wp_remote_head($image_url, [
+            'timeout' => 10,
+            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->logger?->warning('Facebook: Image URL not accessible', ['url' => $image_url, 'error' => $response->get_error_message()]);
+            return false;
+        }
+
+        $http_code = wp_remote_retrieve_response_code($response);
+        $content_type = wp_remote_retrieve_header($response, 'content-type');
+
+        // Check for successful response and image content type
+        if ($http_code >= 200 && $http_code < 300 && strpos($content_type, 'image/') === 0) {
+            return true;
+        }
+
+        $this->logger?->warning('Facebook: Image URL validation failed', [
+            'url' => $image_url, 
+            'http_code' => $http_code, 
+            'content_type' => $content_type
+        ]);
+        return false;
     }
 }

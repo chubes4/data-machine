@@ -336,7 +336,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'Content-Type'  => 'application/json; charset=utf-8',
 			),
             'body'    => json_encode($payload),
-			'timeout' => 60, // Increased timeout
+			'timeout' => 180, // Increased timeout for slow remote sites
 		);
 
 		// Make the API request to send post data
@@ -344,9 +344,31 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 
 		// --- Handle Publish Response ---
 		if ( is_wp_error( $response ) ) {
-			$error_message = __( 'Failed to send data to the remote site.', 'data-machine' ) . ' ' . $response->get_error_message();
-			$this->logger->error($error_message, ['api_url' => $api_url, 'args' => $args, 'wp_error' => $response]);
-			return new WP_Error( 'remote_publish_request_failed', $error_message );
+			$error_code = $response->get_error_code();
+			$error_message = $response->get_error_message();
+			
+			// Check if this is a timeout error - the post might have actually succeeded
+			if ( strpos( $error_code, 'timeout' ) !== false || strpos( $error_message, 'timeout' ) !== false ) {
+				$this->logger->warning( 'Timeout detected, verifying if post was actually created...', [
+					'api_url' => $api_url, 
+					'error_code' => $error_code,
+					'error_message' => $error_message
+				]);
+				
+				// Wait a moment for the remote site to finish processing
+				sleep( 3 );
+				
+				// Try to verify if the post was created despite the timeout
+				$verification_result = $this->verify_post_creation( $remote_url, $remote_user, $remote_password, $payload );
+				if ( $verification_result !== false ) {
+					$this->logger->info( 'Post was successfully created despite timeout', $verification_result );
+					return $verification_result; // Return success result
+				}
+			}
+			
+			$full_error_message = __( 'Failed to send data to the remote site.', 'data-machine' ) . ' ' . $error_message;
+			$this->logger->error($full_error_message, ['api_url' => $api_url, 'error_code' => $error_code, 'error_message' => $error_message]);
+			return new WP_Error( 'remote_publish_request_failed', $full_error_message );
 		}
 
 		$response_code = wp_remote_retrieve_response_code( $response );

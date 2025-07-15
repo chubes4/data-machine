@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name:     Data Machine
- * Plugin URI:      https://chubes.net
- * Description:     A plugin to automatically collect data from files using OpenAI API, fact-check it, and return a final output.
+ * Plugin URI:      https://github.com/chubes/data-machine
+ * Description:     A powerful WordPress plugin that automatically collects data from various sources using OpenAI API, fact-checks it, and publishes the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and Bluesky.
  * Version:         0.1.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
