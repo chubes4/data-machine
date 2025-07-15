@@ -338,8 +338,13 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 				                // START: Restore Update skip_fact_check checkbox logic (After handler population)
                 const skipCheckboxUpdate = document.getElementById('skip_fact_check'); // Use different var name
                 if (skipCheckboxUpdate) {
-                    console.log(`[UI Subscription] Updating skip_fact_check checkbox (after templates). State value: ${state.skip_fact_check}`);
-                    skipCheckboxUpdate.checked = !!state.skip_fact_check; // Convert 0/1 to boolean
+                    console.log(`[UI Subscription] Updating skip_fact_check checkbox (after templates). State value: ${state.skip_fact_check}, Current checkbox: ${skipCheckboxUpdate.checked}`);
+                    // Only update if different to avoid unnecessary changes
+                    const shouldBeChecked = !!state.skip_fact_check;
+                    if (skipCheckboxUpdate.checked !== shouldBeChecked) {
+                        skipCheckboxUpdate.checked = shouldBeChecked;
+                        console.log(`[UI Subscription] Checkbox updated to: ${shouldBeChecked}`);
+                    }
                     // Update fact check prompt visibility after setting checkbox
                     if (typeof toggleFactCheckPromptVisibility === 'function') {
                         toggleFactCheckPromptVisibility();
@@ -460,9 +465,24 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 		const skipFactCheckbox = document.getElementById('skip_fact_check');
 		if (skipFactCheckbox) {
 			skipFactCheckbox.addEventListener('change', function() {
+				console.log(`[Skip Fact Check] Checkbox changed to: ${this.checked}`);
 				toggleFactCheckPromptVisibility();
-				// Update state when checkbox changes
-				dispatch({ type: ACTIONS.UPDATE_CONFIG, payload: { skip_fact_check: this.checked ? 1 : 0, isDirty: true } });
+				// Update state when checkbox changes - ensure immediate state update
+				const newValue = this.checked ? 1 : 0;
+				dispatch({ type: ACTIONS.UPDATE_CONFIG, payload: { skip_fact_check: newValue, isDirty: true } });
+				console.log(`[Skip Fact Check] State updated to: ${newValue}`);
+			});
+		}
+
+		// Add form submission handler for debugging
+		const form = document.getElementById('data-machine-settings-form');
+		if (form) {
+			form.addEventListener('submit', function(e) {
+				// Log the final form values for debugging
+				const checkbox = document.getElementById('skip_fact_check');
+				const formData = new FormData(form);
+				console.log(`[Form Submit] skip_fact_check checkbox: ${checkbox?.checked}`);
+				console.log(`[Form Submit] skip_fact_check form value: ${formData.get('skip_fact_check')}`);
 			});
 		}
 
