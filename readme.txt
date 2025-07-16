@@ -2,7 +2,7 @@
 Contributors: chubes
 Tags: ai, automation, content, publishing, openai, social media, rss, reddit
 Requires at least: 5.0
-Tested up to: 6.4
+Tested up to: 6.8
 Requires PHP: 7.4
 Stable tag: 0.1.0
 License: GPLv2 or later
@@ -16,9 +16,9 @@ Data Machine is a comprehensive data processing and publishing solution for Word
 
 = Features =
 
-* **Multi-Source Data Collection**: Import data from files, RSS feeds, Reddit, and REST APIs
+* **Multi-Source Data Collection**: Import data from files, RSS feeds, Reddit, public REST APIs, and custom airdrop endpoints
 * **AI-Powered Processing**: Uses OpenAI API for content generation and fact-checking
-* **Multi-Platform Publishing**: Publish to WordPress, Twitter, Facebook, Threads, Bluesky, and more
+* **Multi-Platform Publishing**: Publish to WordPress, Twitter, Facebook, Threads, Bluesky, and data export formats
 * **Scheduled Automation**: Set up automated workflows with custom scheduling
 * **Project Management**: Organize your data processing workflows into projects
 * **Remote Publishing**: Publish content to remote WordPress installations
@@ -103,6 +103,10 @@ This plugin connects to several third-party services to provide its functionalit
 * MySQL 5.6 or higher
 * OpenAI API key (required for AI processing)
 
+= What third-party libraries are included? =
+
+This plugin includes Action Scheduler (by Automattic) for reliable background job processing. Action Scheduler is a widely-used, battle-tested library that provides robust task scheduling and is used by WooCommerce and many other major WordPress plugins. It ensures that background tasks run reliably even when WordPress cron is unreliable.
+
 = Which social media platforms are supported? =
 
 Currently supports Twitter/X, Facebook, Threads, Bluesky, and Reddit. More platforms are being added regularly.
@@ -135,15 +139,16 @@ Yes, the plugin is licensed under GPL v2 or later. However, ensure you comply wi
 
 = 0.1.0 =
 * Initial release
-* Multi-source data collection (files, RSS, Reddit, REST APIs)
+* Multi-source data collection (files, RSS, Reddit, public REST APIs, airdrop endpoints)
 * AI-powered content processing with OpenAI
-* Multi-platform publishing (WordPress, Twitter, Facebook, Threads, Bluesky)
+* Multi-platform publishing (WordPress, Twitter, Facebook, Threads, Bluesky, data export)
 * OAuth integration for social media platforms
 * Project and module management system
 * Remote WordPress publishing
 * Automated scheduling with Action Scheduler
 * Import/export functionality
 * Comprehensive logging and monitoring
+* Job queue management with failure recovery
 
 == Upgrade Notice ==
 
