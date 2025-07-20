@@ -1,13 +1,12 @@
 <?php
 /**
  * Plugin Name:     Data Machine
- * Plugin URI:      https://github.com/chubes/data-machine
+ * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     A powerful WordPress plugin that automatically collects data from various sources using OpenAI API, fact-checks it, and publishes the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and Bluesky.
  * Version:         0.1.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
  * Text Domain:     data-machine
- * Domain Path:     /languages
  * License:         GPL v2 or later
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
  */
@@ -25,13 +24,11 @@ define( 'DATA_MACHINE_VERSION', '0.1.0' );
 /** Define plugin path constant */
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 
-// Include the Composer autoloader
+// Load Composer autoloader and dependencies (includes Action Scheduler)
 require_once __DIR__ . '/vendor/autoload.php';
 
-// Load Action Scheduler library
-require_once __DIR__ . '/libraries/action-scheduler/action-scheduler.php';
-
 // Include necessary base classes and interfaces first
+require_once DATA_MACHINE_PATH . 'includes/class-data-machine-constants.php'; // Constants must be loaded first
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/input/trait-data-machine-base-input-handler.php';
@@ -48,6 +45,9 @@ require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-import-expo
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-prompt-builder.php'; // Centralized prompt builder
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-action-scheduler.php'; // Action Scheduler service
+require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-openai.php'; // OpenAI API integration
+require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-factcheck.php'; // Fact check API
+require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-finalize.php'; // Finalize API
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-memory-guard.php'; // Memory protection service
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
@@ -60,6 +60,8 @@ require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-twitter.p
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-threads.php'; // Add Threads OAuth
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-facebook.php'; // Add Facebook OAuth
 require_once DATA_MACHINE_PATH . 'includes/engine/class-job-worker.php'; // Ensure worker class is loaded
+require_once DATA_MACHINE_PATH . 'includes/engine/class-job-preparer.php'; // Job preparation class
+require_once DATA_MACHINE_PATH . 'includes/engine/class-job-filter.php'; // Job filtering and deduplication
 require_once DATA_MACHINE_PATH . 'module-config/SettingsFields.php';
 require_once DATA_MACHINE_PATH . 'module-config/class-dm-module-config-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/ajax/run-single-module-ajax.php';
@@ -95,7 +97,7 @@ function run_data_machine() {
     // Database classes
     $db_projects = new Data_Machine_Database_Projects();
     $db_modules = new Data_Machine_Database_Modules($db_projects, $logger);
-    $db_jobs = new Data_Machine_Database_Jobs();
+    $db_jobs = new Data_Machine_Database_Jobs($db_projects, $logger);
     $db_processed_items = new Data_Machine_Database_Processed_Items($logger);
     $db_remote_locations = new Data_Machine_Database_Remote_Locations();
 
@@ -205,16 +207,19 @@ function run_data_machine() {
         $logger,
         $action_scheduler
     );
-    $job_worker = new Data_Machine_Job_Worker($logger, $db_jobs, $orchestrator);
+    $job_preparer = new Data_Machine_Job_Preparer($db_processed_items, $handler_factory, $logger);
+    $job_filter = new Data_Machine_Job_Filter($db_jobs, $logger);
     $job_executor = new Data_Machine_Job_Executor(
         $db_processed_items,
         $db_jobs,
         $db_modules,
         $db_projects,
+        $db_remote_locations,
         $orchestrator,
         $handler_factory,
-        $job_worker,
         $action_scheduler,
+        $job_preparer,
+        $job_filter,
         $logger
     );
     $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
@@ -224,6 +229,7 @@ function run_data_machine() {
     $data_machine_container = array(
         'handler_factory' => $handler_factory,
         'db_jobs' => $db_jobs,
+        'db_processed_items' => $db_processed_items,
         'logger' => $logger
     );
 
@@ -282,6 +288,7 @@ function run_data_machine() {
 // Initialize after plugins_loaded to ensure Action Scheduler is available
 add_action('plugins_loaded', 'run_data_machine', 20);
 
+
 /**
  * Allows JSON file uploads.
  */
@@ -317,7 +324,4 @@ function activate_data_machine() {
 
 	// Set a transient flag for first-time admin notice or setup wizard (optional)
 	set_transient( 'dm_activation_notice', true, 5 * MINUTE_IN_SECONDS );
-
-	// Maybe clear scheduled crons? (Consider if necessary)
-	// wp_clear_scheduled_hook('Data_Machine_process_job_cron');
 }

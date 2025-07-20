@@ -213,7 +213,8 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
         $max_file_size = $this->get_max_file_size();
         if ($file['size'] > $max_file_size) {
             $error_message = sprintf(
-                __('File too large: %s. Maximum allowed size: %s', 'data-machine'),
+                /* translators: %1$s: actual file size, %2$s: maximum allowed size */
+                __('File too large: %1$s. Maximum allowed size: %2$s', 'data-machine'),
                 size_format($file['size']),
                 size_format($max_file_size)
             );
@@ -230,7 +231,8 @@ class Data_Machine_Input_Files implements Data_Machine_Input_Handler_Interface {
         $allowed_extensions = $this->get_allowed_file_extensions();
         if (!in_array($file_extension, $allowed_extensions)) {
             $error_message = sprintf(
-                __('Invalid file extension: %s. Allowed extensions: %s', 'data-machine'),
+                /* translators: %1$s: invalid file extension, %2$s: list of allowed extensions */
+                __('Invalid file extension: %1$s. Allowed extensions: %2$s', 'data-machine'),
                 $file_extension,
                 implode(', ', $allowed_extensions)
             );

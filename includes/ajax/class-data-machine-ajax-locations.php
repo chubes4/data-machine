@@ -81,6 +81,7 @@ class Data_Machine_Ajax_Locations {
             $error_data = json_decode($body, true);
             $error_message = isset($error_data['message']) ? $error_data['message'] : __('Unknown error occurred on the remote site.', 'data-machine');
             wp_send_json_error([
+                /* translators: %d: HTTP response code */
                 'message' => sprintf(__('Remote site returned an error (Code: %d).', 'data-machine'), $response_code),
                 'error_detail' => $error_message
             ]);

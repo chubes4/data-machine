@@ -1,22 +1,16 @@
 {
     "require": {
+        "php": ">=8.0",
         "erusev/parsedown": "^1.7",
         "monolog/monolog": "^3.9",
-        "abraham/twitteroauth": "^7.0"
+        "abraham/twitteroauth": "^7.0",
+        "woocommerce/action-scheduler": "^3.9"
     },
     "autoload": {
         "classmap": [
             "includes/",
             "admin/",
-            "data-machine-airdrop/",
-            "includes/database/",
-            "includes/ajax/",
-            "includes/api/",
-            "includes/engine/",
-            "includes/helpers/",
-            "includes/input/",
-            "includes/interfaces/",
-            "includes/output/"
+            "module-config/"
         ],
         "files": [
             "includes/class-data-machine-constants.php"

@@ -399,7 +399,8 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
             $error_data = json_decode($response_body, true);
             $error_message = $error_data['message'] ?? 'Authentication failed.';
             $this->logger?->error('Bluesky authentication failed (non-200 response).', ['handle' => $handle, 'code' => $response_code, 'response_message' => $error_message]);
-            return new WP_Error('bluesky_auth_failed', sprintf(__( 'Bluesky authentication failed: %s (Code: %d)', 'data-machine' ), $error_message, $response_code));
+            /* translators: %1$s: Error message, %2$d: HTTP response code */
+            return new WP_Error('bluesky_auth_failed', sprintf(__( 'Bluesky authentication failed: %1$s (Code: %2$d)', 'data-machine' ), $error_message, $response_code));
         }
 
         $session_data = json_decode($response_body, true);
@@ -483,6 +484,7 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
             return new WP_Error(
                 'bluesky_image_too_large',
                 sprintf(
+                    /* translators: %1$s: Current image file size, %2$s: Maximum allowed file size */
                     __('Image size (%1$s) exceeds Bluesky limit (%2$s).', 'data-machine'),
                     size_format($file_size),
                     size_format($max_image_size_bytes)
@@ -536,7 +538,8 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
                 $error_data = json_decode($response_body, true);
             $error_message = $error_data['message'] ?? 'Blob upload failed.';
             $this->logger?->error('Bluesky blob upload failed (non-200 response).', ['did' => $repo_did, 'code' => $response_code, 'response_message' => $error_message]);
-            return new WP_Error('bluesky_upload_failed', sprintf(__( 'Bluesky image upload failed: %s (Code: %d)', 'data-machine' ), $error_message, $response_code));
+            /* translators: %1$s: Error message, %2$d: HTTP response code */
+            return new WP_Error('bluesky_upload_failed', sprintf(__( 'Bluesky image upload failed: %1$s (Code: %2$d)', 'data-machine' ), $error_message, $response_code));
         }
 
         $upload_result = json_decode($response_body, true);
@@ -604,7 +607,8 @@ class Data_Machine_Output_Bluesky implements Data_Machine_Output_Handler_Interfa
             $error_data = json_decode($response_body, true);
             $error_message = $error_data['message'] ?? 'Post creation failed.';
             $this->logger?->error('Bluesky post creation failed (non-200 response).', ['did' => $repo_did, 'code' => $response_code, 'response_message' => $error_message]);
-            return new WP_Error('bluesky_post_failed', sprintf(__( 'Bluesky post creation failed: %s (Code: %d)', 'data-machine' ), $error_message, $response_code));
+            /* translators: %1$s: Error message, %2$d: HTTP response code */
+            return new WP_Error('bluesky_post_failed', sprintf(__( 'Bluesky post creation failed: %1$s (Code: %2$d)', 'data-machine' ), $error_message, $response_code));
         }
 
         $post_result = json_decode($response_body, true);

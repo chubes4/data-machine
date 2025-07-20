@@ -129,6 +129,7 @@ class Data_Machine_Run_Single_Module_Ajax {
                 $logger?->info('Manual AJAX Trigger: Job successfully queued.', ['module_id' => $module_id, 'user_id' => $user_id, 'job_id' => $job_id]);
                 wp_send_json_success(array(
                     'status' => 'processing_queued',
+                    /* translators: %d: Job ID number */
                     'message' => sprintf(__( 'Processing job successfully queued (Job ID: %d). The results will appear when processing is complete.', 'data-machine' ), $job_id),
                     'job_id' => $job_id
                 ));

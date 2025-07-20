@@ -69,6 +69,20 @@ if (!class_exists('Data_Machine_Constants')) {
          */
         const ENCRYPTION_KEY_CONSTANT_NAME = 'DM_ENCRYPTION_KEY';
 
+        /**
+         * Job timeout settings and limits.
+         */
+        const JOB_STUCK_TIMEOUT_HOURS = 6;          // Hours before job is considered stuck
+        const JOB_CLEANUP_OLD_DAYS = 30;            // Days before completed/failed jobs are deleted
+        const MAX_CONCURRENT_JOBS = 2;              // Maximum concurrent jobs via Action Scheduler
+        const JOB_RETRY_ATTEMPTS = 3;               // Number of retry attempts for failed output jobs
+        
+        /**
+         * Action Scheduler configuration.
+         */
+        const ACTION_GROUP = 'data-machine';        // Action Scheduler group name
+        const OUTPUT_JOB_HOOK = 'dm_output_job_event'; // Hook name for output jobs
+
         // --- Helper Methods for accessing constants ---
 
         /**

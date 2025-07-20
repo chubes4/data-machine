@@ -279,6 +279,7 @@ class Data_Machine_Input_Rss implements Data_Machine_Input_Handler_Interface {
 		$items = $feed->get_items();
 		$result['success'] = true;
 		$result['items_found'] = count($items);
+		/* translators: %d: Number of items found in the RSS feed */
 		$result['message'] = sprintf(__('Successfully fetched feed with %d items', 'data-machine'), count($items));
 		
 		return $result;

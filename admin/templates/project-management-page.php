@@ -135,7 +135,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                             <a 
                                 href="<?php echo esc_url( $delete_url ); ?>" 
                                 class="button action-button delete-project-button button-link-delete" 
-                                onclick="return confirm('<?php echo esc_js( sprintf( __( 'Are you sure you want to permanently delete the project \'%s\' and ALL its modules? This cannot be undone.', 'data-machine' ), $project->project_name ) ); ?>');"
+                                onclick="return confirm('<?php echo esc_js( sprintf( /* translators: %s: Project name */ __( 'Are you sure you want to permanently delete the project \'%s\' and ALL its modules? This cannot be undone.', 'data-machine' ), $project->project_name ) ); ?>');"
                             >Delete</a>
                         </td>
                     </tr>

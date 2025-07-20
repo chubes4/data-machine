@@ -119,10 +119,18 @@ class Data_Machine_Database_Processed_Items {
     public function add_processed_item( int $module_id, string $source_type, string $item_identifier ): bool {
         global $wpdb;
 
-        // Optional: Check if it exists first to avoid unnecessary insert attempts if called redundantly
-        // if ($this->has_item_been_processed($module_id, $source_type, $item_identifier)) {
-        //     return true; // Or false, depending on desired behavior for duplicates
-        // }
+        // Check if it exists first to avoid unnecessary insert attempts and duplicate key errors
+        if ($this->has_item_been_processed($module_id, $source_type, $item_identifier)) {
+            // Item already processed - return true to indicate success (idempotent behavior)
+            if ($this->logger) {
+                $this->logger->info("Item already processed, skipping duplicate insert.", [
+                    'module_id' => $module_id,
+                    'source_type' => $source_type,
+                    'item_identifier' => substr($item_identifier, 0, 100) . '...'
+                ]);
+            }
+            return true;
+        }
 
         $result = $wpdb->insert(
             $this->table_name,
@@ -140,9 +148,22 @@ class Data_Machine_Database_Processed_Items {
         );
 
         if ($result === false) {
-             // Log error
+             // Log error - but check if it's a duplicate key error first
              $db_error = $wpdb->last_error;
-             // Use Logger Service if available
+             
+             // If it's a duplicate key error, treat as success (race condition handling)
+             if (strpos($db_error, 'Duplicate entry') !== false) {
+                 if ($this->logger) {
+                     $this->logger->info("Duplicate key detected during insert - item already processed by another process.", [
+                         'module_id' => $module_id,
+                         'source_type' => $source_type,
+                         'item_identifier' => substr($item_identifier, 0, 100) . '...'
+                     ]);
+                 }
+                 return true; // Treat duplicate as success
+             }
+             
+             // Use Logger Service if available for actual errors
              if ($this->logger) {
                  $this->logger->error("Failed to insert processed item.", [
                      'module_id' => $module_id,

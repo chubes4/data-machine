@@ -39,6 +39,12 @@ class Data_Machine_Job_Executor {
 	private $db_projects;
 
 	/**
+	 * Remote Locations Database instance.
+	 * @var Data_Machine_Database_Remote_Locations
+	 */
+	private $db_remote_locations;
+
+	/**
 	 * Processing Orchestrator instance.
 	 * @var Data_Machine_Processing_Orchestrator
 	 */
@@ -49,12 +55,6 @@ class Data_Machine_Job_Executor {
 	 * @var Data_Machine_Handler_Factory
 	 */
 	private $handler_factory;
-
-	/**
-	 * Job Worker instance.
-	 * @var Data_Machine_Job_Worker
-	 */
-	private $job_worker;
 
 	/**
 	 * Logger instance (optional).
@@ -69,16 +69,30 @@ class Data_Machine_Job_Executor {
 	private $action_scheduler;
 
 	/**
+	 * Job Preparer service.
+	 * @var Data_Machine_Job_Preparer
+	 */
+	private $job_preparer;
+
+	/**
+	 * Job Filter service.
+	 * @var Data_Machine_Job_Filter
+	 */
+	private $job_filter;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Data_Machine_Database_Processed_Items $db_processed_items Processed Items DB service.
 	 * @param Data_Machine_Database_Jobs $db_jobs Jobs DB service.
 	 * @param Data_Machine_Database_Modules $db_modules Modules DB service.
 	 * @param Data_Machine_Database_Projects $db_projects Projects DB service.
+	 * @param Data_Machine_Database_Remote_Locations $db_remote_locations Remote Locations DB service.
 	 * @param Data_Machine_Processing_Orchestrator $processing_orchestrator Processing Orchestrator service.
 	 * @param Data_Machine_Handler_Factory $handler_factory Handler Factory service.
-	 * @param Data_Machine_Job_Worker $job_worker Job Worker service.
 	 * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
+	 * @param Data_Machine_Job_Preparer $job_preparer Job Preparer service.
+	 * @param Data_Machine_Job_Filter $job_filter Job Filter service.
 	 * @param Data_Machine_Logger|null $logger Logger service (optional).
 	 */
 	public function __construct(
@@ -86,20 +100,24 @@ class Data_Machine_Job_Executor {
 		Data_Machine_Database_Jobs $db_jobs,
 		Data_Machine_Database_Modules $db_modules,
 		Data_Machine_Database_Projects $db_projects,
+		Data_Machine_Database_Remote_Locations $db_remote_locations,
 		Data_Machine_Processing_Orchestrator $processing_orchestrator,
 		Data_Machine_Handler_Factory $handler_factory,
-		Data_Machine_Job_Worker $job_worker,
 		Data_Machine_Action_Scheduler $action_scheduler,
+		Data_Machine_Job_Preparer $job_preparer,
+		Data_Machine_Job_Filter $job_filter,
 		?Data_Machine_Logger $logger = null
 	) {
 		$this->db_processed_items = $db_processed_items;
 		$this->db_jobs = $db_jobs;
 		$this->db_modules = $db_modules;
 		$this->db_projects = $db_projects;
+		$this->db_remote_locations = $db_remote_locations;
 		$this->processing_orchestrator = $processing_orchestrator;
 		$this->handler_factory = $handler_factory;
-		$this->job_worker = $job_worker;
 		$this->action_scheduler = $action_scheduler;
+		$this->job_preparer = $job_preparer;
+		$this->job_filter = $job_filter;
 		$this->logger = $logger;
 	}
 
@@ -107,6 +125,7 @@ class Data_Machine_Job_Executor {
 	 * Executes a job for a given module.
 	 *
 	 * Main method responsible for orchestrating the entire job execution process.
+	 * Now uses Job Preparer for all preparation logic.
 	 *
 	 * @param object $module The module object for which the job is being executed.
 	 * @param int    $user_id The ID of the user initiating the job (project owner).
@@ -116,95 +135,39 @@ class Data_Machine_Job_Executor {
 	 */
 	public function execute_job(object $module, int $user_id, string $context, ?array $pre_fetched_input_data = null) {
 		try {
-			// 1. Input Data Acquisition
-			$input_data = null;
-			if ($pre_fetched_input_data !== null) {
-				// Use pre-fetched data if provided (e.g., from AJAX handler for file uploads)
-				$input_data = $pre_fetched_input_data;
-				$this->logger?->info("Using pre-fetched input data.", ['module_id' => $module->module_id, 'context' => $context]);
-			} else {
-				// Fetch data using the appropriate input handler
-				$input_handler = $this->get_input_handler($module);
-				if (!$input_handler) {
-					throw new Exception("Could not load input handler for type: {$module->data_source_type}");
-				}
-				$input_data = $this->fetch_input_data($input_handler, $module, $user_id);
-				if (is_wp_error($input_data)) {
-					return $input_data; // Return WP_Error directly
-				}
+			$module_id = $module->module_id ?? 0;
+			
+			// Job concurrency will be handled by Job Filter during scheduling
+			
+			$this->logger?->info("Job Executor: Starting job execution for module {$module_id}.", ['context' => $context]);
+
+			// Use Job Preparer to handle all preparation logic
+			$job_packet = $this->job_preparer->prepare_job_packet($module, $user_id, $pre_fetched_input_data);
+			
+			if (is_wp_error($job_packet)) {
+				return $job_packet; // Return WP_Error directly
 			}
 
-			// --- START: Explicit check for 'no_new_items' status --- 
-			if (is_array($input_data) && isset($input_data['status']) && $input_data['status'] === 'no_new_items') {
-				$this->logger?->info("Input handler returned no new items.", [
-			        'module_id' => $module->module_id,
-			        'context' => $context,
-			        'message' => $input_data['message'] ?? 'N/A'
-			    ]);
-			    return 0; // Indicate no job was created
-			}
-			// --- END: Explicit check ---
-
-			// Ensure we actually got data (array of items) - this check is now secondary but still useful for totally empty returns or non-array data
-			if (empty($input_data) || !is_array($input_data)) { 
-				$this->logger?->info("Input handler returned no data or unexpected format.", ['module_id' => $module->module_id, 'context' => $context, 'returned_data_type' => gettype($input_data)]);
-			    return 0; // Indicate no job was created as there was no input
-			}
-
-			// --- START: Filter out already processed items ---
-			$items_to_process = [];
-			$source_type = $module->data_source_type;
-			$module_id = $module->module_id;
-
-			if (!$this->db_processed_items) {
-				$this->logger?->error("Database service for processed items (db_processed_items) not injected or unavailable.", ['module_id' => $module_id]);
-				// Decide whether to proceed without check or return error. Returning error is safer.
-				return new WP_Error('service_not_found', __('Database service for processed items is unavailable.', 'data-machine'));
-			}
-
-			foreach ($input_data as $item) {
-			    if (!is_array($item)) {
-					$this->logger?->warning("Skipping non-array item found in input data.", [
-			            'module_id' => $module_id,
-			            'context' => $context,
-			            'item_type' => gettype($item)
-			        ]);
-			        continue;
-			    }
-
-				$item_identifier = $this->_get_item_identifier($item, $source_type, $module_id, $context);
-
-				if (empty($item_identifier)) {
-					$this->logger?->warning("Skipping item due to missing or empty identifier after checking source type.", [
-						'module_id' => $module_id,
-						'source_type' => $source_type,
-						'item_keys' => array_keys($item)
-					]);
-					continue;
-				}
-
-				if (!$this->db_processed_items->has_item_been_processed($module_id, $source_type, $item_identifier)) {
-					$items_to_process[] = $item;
-				} else {
-					$this->logger?->info("Skipping already processed item.", ['module_id' => $module_id, 'source_type' => $source_type, 'item_identifier' => $item_identifier]);
-				}
-			}
-
-			// If no new items are left after filtering, don't create a job
-			if (empty($items_to_process)) {
-				$this->logger?->info("No new items to process after filtering duplicates.", ['module_id' => $module_id, 'context' => $context]);
+			// Check for no new items
+			if (is_array($job_packet) && isset($job_packet['status']) && $job_packet['status'] === 'no_new_items') {
+				$this->logger?->info("Job Executor: No new items to process.", [
+					'module_id' => $module_id,
+					'context' => $context,
+					'message' => $job_packet['message'] ?? 'N/A'
+				]);
 				return 0; // Indicate no job was created
 			}
-			// --- END: Filter out already processed items ---
 
-			// 3. Prepare Job Config
-			$module_config_data = $this->prepare_job_config($module);
-			if (is_wp_error($module_config_data)) {
-				return $module_config_data; // Return WP_Error
+			// Validate job packet
+			if (!isset($job_packet['module_config']) || !isset($job_packet['input_data'])) {
+				return new WP_Error('invalid_job_packet', 'Job preparation returned invalid packet structure.');
 			}
 
+			$module_config_data = $job_packet['module_config'];
+			$items_to_process = $job_packet['input_data'];
+
 			// Encode the items to process as JSON string for the job entry
-			$items_to_process_json = $this->safe_json_encode($items_to_process, 'items_to_process');
+			$items_to_process_json = $this->job_preparer->safe_json_encode($items_to_process, 'items_to_process');
 			if (is_wp_error($items_to_process_json)) {
 				return $items_to_process_json;
 			}
@@ -216,6 +179,7 @@ class Data_Machine_Job_Executor {
 				return $job_id; // Return WP_Error
 			}
 
+			$this->logger?->info("Job Executor: Job created successfully.", ['module_id' => $module_id, 'job_id' => $job_id]);
 			return $job_id; // Return Job ID on success
 
 		} catch (Exception $e) {
@@ -225,77 +189,6 @@ class Data_Machine_Job_Executor {
 		}
 	}
 
-	/**
-	 * Gets the appropriate input handler for the module's data source type.
-	 *
-	 * @param object $module The module object.
-	 * @return Data_Machine_Input_Handler_Interface|null Instance of the input handler, or null if not found.
-	 */
-	private function get_input_handler(object $module): ?Data_Machine_Input_Handler_Interface {
-		try {
-			$handler = $this->handler_factory->create_handler('input', $module->data_source_type);
-		} catch (Exception $e) {
-			$this->logger?->error("Failed to create input handler.", [
-				'module_id' => $module->module_id,
-				'handler_type' => $module->data_source_type,
-				'error' => $e->getMessage()
-			]);
-			return null;
-		}
-
-		if ($handler instanceof Data_Machine_Input_Handler_Interface) {
-			return $handler;
-		}
-
-		// Optionally log an error if the handler is not found or not the correct type
-		$this->logger?->warning("Created handler is not a valid Data_Machine_Input_Handler_Interface.", [
-			'module_id' => $module->module_id,
-			'handler_type' => $module->data_source_type,
-			'handler_class' => is_object($handler) ? get_class($handler) : gettype($handler)
-		]);
-
-		return null;
-	}
-
-	/**
-	 * Fetches input data using the provided input handler.
-	 *
-	 * @param Data_Machine_Input_Handler_Interface $input_handler Instance of the input handler.
-	 * @param object $module The module object.
-	 * @param int    $user_id The ID of the user initiating the job.
-	 * @return array|WP_Error An array of input data items, or a WP_Error object on failure.
-	 */
-	private function fetch_input_data(Data_Machine_Input_Handler_Interface $input_handler, object $module, int $user_id) {
-		try {
-			// Ensure data_source_config is an array (decode if needed)
-			if (isset($module->data_source_config) && is_string($module->data_source_config)) {
-				$decoded = $this->safe_json_decode($module->data_source_config, 'module data_source_config');
-				if (!is_wp_error($decoded)) {
-					$module->data_source_config = $decoded;
-				}
-			}
-			// Determine the handler type/slug from the module
-			$handler_type = $module->data_source_type;
-			// Use the helper to extract the correct config sub-array for this handler
-			$handler_config = Handler_Config_Helper::get_handler_config($module, $handler_type);
-			// Call the handler's method with only its config
-			return $input_handler->get_input_data($module, $handler_config, $user_id);
-		} catch (Exception $e) {
-			// Enhanced error handling for authentication issues
-			$error_message = $e->getMessage();
-			$error_details = $this->enhance_error_message($error_message, $module);
-			
-			$this->logger?->error("Error fetching input data: " . $error_details['enhanced_message'], [
-				'module_id' => $module->module_id,
-				'handler_class' => get_class($input_handler),
-				'handler_type' => $module->data_source_type ?? 'unknown',
-				'error' => $error_message,
-				'is_auth_error' => $error_details['is_auth_error'],
-				'user_id' => $user_id
-			]);
-			return new WP_Error('input_fetch_error', "Error fetching input data: " . $error_details['enhanced_message']);
-		}
-	}
 
 	/**
 	 * Enhances error messages and determines if they're authentication-related.
@@ -326,6 +219,7 @@ class Data_Machine_Job_Executor {
 				return [
 					'is_auth_error' => true,
 					'enhanced_message' => $error_message . "\n\n" . 
+						/* translators: %s: Module name */
 						sprintf(__('Authentication failed for "%s". Please check your credentials and re-authenticate if necessary.', 'data-machine'), $module_name)
 				];
 			}
@@ -336,6 +230,7 @@ class Data_Machine_Job_Executor {
 			return [
 				'is_auth_error' => false,
 				'enhanced_message' => $error_message . "\n\n" . 
+					/* translators: %s: Module name */
 					sprintf(__('Rate limit exceeded for "%s". This job will be retried automatically later.', 'data-machine'), $module_name)
 			];
 		}
@@ -343,52 +238,11 @@ class Data_Machine_Job_Executor {
 		// Return original message with module context
 		return [
 			'is_auth_error' => false,
-			'enhanced_message' => sprintf(__('Error in "%s": %s', 'data-machine'), $module_name, $error_message)
+			/* translators: %1$s: Module name, %2$s: Error message */
+			'enhanced_message' => sprintf(__('Error in "%1$s": %2$s', 'data-machine'), $module_name, $error_message)
 		];
 	}
 
-	/**
-	 * Prepares the module configuration data into a structured array.
-	 *
-	 * @param object $module The module object.
-	 * @return array|WP_Error The structured configuration array or WP_Error on JSON decode failure.
-	 */
-	private function prepare_job_config(object $module) {
-		$config = [
-			'module_id' => $module->module_id,
-			'module_name' => $module->module_name,
-			'project_id' => $module->project_id,
-			'process_data_prompt' => $module->process_data_prompt,
-			'fact_check_prompt' => $module->fact_check_prompt,
-			'finalize_response_prompt' => $module->finalize_response_prompt,
-			'skip_fact_check' => isset($module->skip_fact_check) ? (int)$module->skip_fact_check : 0,
-			'data_source_type' => $module->data_source_type,
-			'output_type' => $module->output_type,
-			// Decode JSON config fields
-			'data_source_config' => null,
-			'output_config' => null,
-		];
-
-		// Decode data_source_config
-		if (!empty($module->data_source_config)) {
-			$decoded_ds_config = $this->safe_json_decode($module->data_source_config, "data_source_config for module {$module->module_id}");
-			if (is_wp_error($decoded_ds_config)) {
-				return $decoded_ds_config;
-			}
-			$config['data_source_config'] = $decoded_ds_config;
-		}
-
-		// Decode output_config
-		if (!empty($module->output_config)) {
-			$decoded_out_config = $this->safe_json_decode($module->output_config, "output_config for module {$module->module_id}");
-			if (is_wp_error($decoded_out_config)) {
-				return $decoded_out_config;
-			}
-			$config['output_config'] = $decoded_out_config;
-		}
-
-		return $config;
-	}
 
 	/**
 	 * Creates and schedules a job initiated from module configuration.
@@ -402,8 +256,24 @@ class Data_Machine_Job_Executor {
 	 * @return int|WP_Error Job ID on success, WP_Error on failure.
 	 */
 	public function schedule_job_from_config(object $module, int $user_id, string $context) {
+		// Use Job Filter to check if scheduling is allowed
+		if ($this->job_filter && !$this->job_filter->can_schedule_job($module->module_id)) {
+			$this->logger?->info("Skipping job scheduling - module has active jobs", [
+				'module_id' => $module->module_id, 
+				'context' => $context
+			]);
+			return new WP_Error('active_job_exists', 'Another job is already running for this module');
+		}
+		
 		$this->logger?->info("Scheduled config-based job.", ['module_id' => $module->module_id, 'context' => $context]);
-		return $this->create_and_schedule_job_event($module, $user_id, $this->prepare_job_config($module), null);
+		
+		// Use Job Preparer for config preparation
+		$job_config = $this->job_preparer->prepare_job_config($module);
+		if (is_wp_error($job_config)) {
+			return $job_config;
+		}
+		
+		return $this->create_and_schedule_job_event($module, $user_id, $job_config, null);
 	}
 
 	/**
@@ -420,7 +290,14 @@ class Data_Machine_Job_Executor {
 	 */
 	public function schedule_job_from_file(object $module, int $user_id, string $context, array $file_input_data_packet) {
 		$this->logger?->info("Scheduled file-based job.", ['module_id' => $module->module_id, 'context' => $context]);
-		return $this->create_and_schedule_job_event($module, $user_id, $this->prepare_job_config($module), wp_json_encode([$file_input_data_packet]));
+		
+		// Use Job Preparer for config preparation
+		$job_config = $this->job_preparer->prepare_job_config($module);
+		if (is_wp_error($job_config)) {
+			return $job_config;
+		}
+		
+		return $this->create_and_schedule_job_event($module, $user_id, $job_config, wp_json_encode([$file_input_data_packet]));
 	}
 
 	/**
@@ -434,20 +311,28 @@ class Data_Machine_Job_Executor {
 	 */
 	public function run_scheduled_job(int $job_id) {
 		$this->logger?->info("Running scheduled job...", ['job_id' => $job_id]);
-
+		
 		$job = null;
 		$module = null;
 		$module_job_config = null;
 		$final_job_status = 'failed'; // Default to failed unless explicitly set otherwise
 
 		try {
-			// 1. Load Job Data
+			// 1. Load Job Data and Update Status FIRST
 			if (!$this->db_jobs) throw new Exception("Jobs DB service not available.");
 			$job = $this->db_jobs->get_job($job_id);
 			if (!$job) throw new Exception("Job record not found.");
 
-			// Update job status to 'running' using the correct method
+			// Update job status to 'running' BEFORE concurrency check
 			$this->db_jobs->start_job($job_id, 'running');
+
+			// 2. Check if another job is running for this module (now excludes this job)
+			if ($this->has_running_job_for_module($job_id)) {
+				$this->logger?->info("Skipping job - another job is already running for this module", ['job_id' => $job_id]);
+				// Mark this job as failed since it can't run
+				$this->db_jobs->complete_job($job_id, 'failed', wp_json_encode(['error' => 'Another job already running for this module']));
+				return;
+			}
 
 			// Log raw config from DB before decoding
 			$raw_config_from_db = $job->module_config ?? null;
@@ -457,7 +342,7 @@ class Data_Machine_Job_Executor {
 			$this->logger?->debug("Raw module_config from DB for job", ['job_id' => $job_id, 'raw_config' => $raw_config_from_db]);
 
 			// Decode module config
-			$module_job_config = $this->safe_json_decode($raw_config_from_db, "module_config for job {$job_id}");
+			$module_job_config = $this->job_preparer->safe_json_decode($raw_config_from_db, "module_config for job {$job_id}");
 			if (is_wp_error($module_job_config)) {
 				throw new Exception($module_job_config->get_error_message());
 			}
@@ -491,30 +376,53 @@ class Data_Machine_Job_Executor {
 					$enabled_taxonomies_for_job = array_values($local_taxonomies);
 					$this->logger?->debug("Fetched local public taxonomies for publish_local", ['job_id' => $job_id, 'taxonomies' => $enabled_taxonomies_for_job]);
 				} 
-				// For publish_remote, extract from the *nested* remote_site_info
+				// For publish_remote, fetch remote_site_info from database using location_id
 				elseif ($output_type_slug === 'publish_remote') {
 					// Get the specific config for the 'publish_remote' handler
 					$publish_remote_config = $output_config[$output_type_slug] ?? [];
-					// --- START Granular Debugging ---
-					$this->logger?->debug("Checking for publish_remote config.", ['job_id' => $job_id, 'publish_remote_config_exists' => isset($output_config[$output_type_slug]), 'publish_remote_config' => $publish_remote_config]);
-					// --- END Granular Debugging ---
+					$this->logger?->debug("Checking for publish_remote config.", ['job_id' => $job_id, 'publish_remote_config' => $publish_remote_config]);
 
-					// Access remote_site_info within that handler's config
-					$remote_site_info = $publish_remote_config['remote_site_info'] ?? [];
-					// --- START Granular Debugging ---
-					$this->logger?->debug("Checking for remote_site_info.", ['job_id' => $job_id, 'remote_site_info_exists' => isset($publish_remote_config['remote_site_info']), 'remote_site_info' => $remote_site_info]);
-					// --- END Granular Debugging ---
+					// Get location_id from the config
+					$location_id = $publish_remote_config['location_id'] ?? null;
+					if (!$location_id) {
+						$error_msg = "location_id missing in publish_remote configuration.";
+						$this->logger?->error($error_msg, ['job_id' => $job_id, 'config' => $publish_remote_config]);
+						$this->db_jobs->complete_job($job_id, 'failed', wp_json_encode(['error' => $error_msg]));
+						return;
+					}
 
+					// Fetch remote site info from database using location_id and user_id
+					$remote_location = $this->db_remote_locations->get_location($location_id, $job->user_id, false);
+					if (!$remote_location || empty($remote_location->synced_site_info)) {
+						$error_msg = "Remote location not found or no synced site info available.";
+						$this->logger?->error($error_msg, ['job_id' => $job_id, 'location_id' => $location_id]);
+						$this->db_jobs->complete_job($job_id, 'failed', wp_json_encode(['error' => $error_msg]));
+						return;
+					}
+
+					// Decode the synced site info
+					$remote_site_info = json_decode($remote_location->synced_site_info, true);
+					if (!$remote_site_info) {
+						$error_msg = "Failed to decode synced site info for remote location.";
+						$this->logger?->error($error_msg, ['job_id' => $job_id, 'location_id' => $location_id]);
+						$this->db_jobs->complete_job($job_id, 'failed', wp_json_encode(['error' => $error_msg]));
+						return;
+					}
+
+					// Extract taxonomies from the remote site info
 					$remote_taxonomies = $remote_site_info['taxonomies'] ?? [];
-					// --- START Granular Debugging ---
-					$this->logger?->debug("Checking for remote_taxonomies.", ['job_id' => $job_id, 'remote_taxonomies_exist' => isset($remote_site_info['taxonomies']), 'remote_taxonomies' => $remote_taxonomies]);
-					// --- END Granular Debugging ---
+					$this->logger?->debug("Fetched remote taxonomies from database", ['job_id' => $job_id, 'location_id' => $location_id, 'taxonomies' => array_keys($remote_taxonomies)]);
 
 					if (!empty($remote_taxonomies) && is_array($remote_taxonomies)) {
 						$enabled_taxonomies_for_job = array_keys($remote_taxonomies);
-						$this->logger?->debug("Extracted remote taxonomies from synced data", ['job_id' => $job_id, 'taxonomies' => $enabled_taxonomies_for_job]);
+						
+						// Add remote_site_info to the config for the handler to use
+						$module_job_config['output_config'][$output_type_slug]['remote_site_info'] = $remote_site_info;
 					} else {
-						$this->logger?->warning("Remote site info or taxonomies missing/invalid in output_config for publish_remote.", ['job_id' => $job_id, 'output_config_keys' => array_keys($output_config)]);
+						$error_msg = "No taxonomies found in remote site info.";
+						$this->logger?->error($error_msg, ['job_id' => $job_id, 'location_id' => $location_id]);
+						$this->db_jobs->complete_job($job_id, 'failed', wp_json_encode(['error' => $error_msg]));
+						return;
 					}
 				}
 			}
@@ -530,31 +438,32 @@ class Data_Machine_Job_Executor {
 			if (!empty($initial_items_json)) {
 				// File-based job: Data was pre-fetched and stored
 				$this->logger?->info("Job has pre-stored input data (likely file-based).", ['job_id' => $job_id, 'module_id' => $module_id]);
-				$decoded_items = $this->safe_json_decode($initial_items_json, "pre-stored input data for job {$job_id}");
+				$decoded_items = $this->job_preparer->safe_json_decode($initial_items_json, "pre-stored input data for job {$job_id}");
 				if (is_wp_error($decoded_items)) {
 					$this->logger?->warning("Failed to decode pre-stored input data: " . $decoded_items->get_error_message(), ['job_id' => $job_id, 'module_id' => $module_id]);
 				} else {
 					$items_to_process = $decoded_items;
 				}
 			} else {
-				// Config-based job: Fetch and filter data now
-				$this->logger?->info("Fetching input data for config-based job.", ['job_id' => $job_id, 'module_id' => $module_id]);
+				// Config-based job: Fetch and filter data now using Job Preparer
+				$this->logger?->info("Fetching input data for config-based job using Job Preparer.", ['job_id' => $job_id, 'module_id' => $module_id]);
 
 				// Load the module object using the injected DB Modules service
 				if (!$this->db_modules) throw new Exception("Modules DB service (db_modules) not available.");
 				$module = $this->db_modules->get_module($module_id);
 				if (!$module) throw new Exception("Module object not found for ID: {$module_id}");
 
-				$input_handler = $this->get_input_handler($module);
-				if (!$input_handler) {
-					throw new Exception("Could not load input handler for type: {$module->data_source_type}");
+				// Use Job Preparer to fetch and filter input data
+				$input_handler = $this->job_preparer->get_input_handler($module);
+				if (is_wp_error($input_handler)) {
+					throw new Exception("Could not load input handler: " . $input_handler->get_error_message());
 				}
 
-				$fetched_data = $this->fetch_input_data($input_handler, $module, $user_id);
-
+				$fetched_data = $this->job_preparer->fetch_input_data($input_handler, $module, $user_id);
 				if (is_wp_error($fetched_data)) {
 					throw new Exception("Error fetching input data: " . $fetched_data->get_error_message());
 				}
+				
 				if (is_array($fetched_data) && isset($fetched_data['status']) && $fetched_data['status'] === 'no_new_items') {
 					$this->logger?->info("Input handler returned no new items during job execution.", ['job_id' => $job_id, 'module_id' => $module_id]);
 					$final_job_status = 'completed_no_items';
@@ -578,10 +487,10 @@ class Data_Machine_Job_Executor {
 						$fetched_data = array_slice($fetched_data, 0, $item_count_limit);
 					}
 
-					// Filter items (pass the $module object which is now available)
-					$items_to_process = $this->filter_processed_items($fetched_data, $module);
+					// Items are already filtered by the input handler, so use them directly
+					$items_to_process = $fetched_data;
 					if (empty($items_to_process)) {
-						$this->logger?->info("No new items found after filtering (and applying item_count limit).", ['job_id' => $job_id, 'module_id' => $module_id]);
+						$this->logger?->info("No new items found after input handler filtering (and applying item_count limit).", ['job_id' => $job_id, 'module_id' => $module_id]);
 						$final_job_status = 'completed_no_items';
 					}
 				}
@@ -628,38 +537,14 @@ class Data_Machine_Job_Executor {
 						$processed_successfully++;
 						$this->logger?->info("Successfully processed item {$item_log_id}.", ['job_id' => $job_id, 'module_id' => $module_id, 'output_status' => $orchestrator_result['output_result']['status'] ?? 'unknown']);
 
-						// --- START: Mark item as processed AFTER successful processing ---
-						$source_type = $module_job_config['data_source_type'] ?? null;
-						// Use the new helper method to get the identifier
-						$item_identifier = $this->_get_item_identifier($item_packet, $source_type, $module_id, 'run_scheduled_job_post_process');
-
-						// Ensure we have a non-empty identifier before marking
-						if (!empty($item_identifier) && $this->db_processed_items && $source_type) { // Also check source_type is known
-							$marked = $this->db_processed_items->add_processed_item($module_id, $source_type, $item_identifier);
-							if (!$marked) {
-								$this->logger?->warning("Failed to mark successfully processed item in database.", [
-									'job_id' => $job_id,
-									'module_id' => $module_id,
-									'source_type' => $source_type,
-									'item_identifier' => $item_identifier,
-									'last_db_error' => $this->handler_factory->create_handler('wpdb_key') ? $this->handler_factory->create_handler('wpdb_key')->last_error : 'WPDB not available in locator'
-								]);
-							} else {
-								$this->logger?->debug("Successfully marked item as processed in database.", [
-									'job_id' => $job_id,
-									'module_id' => $module_id,
-									'item_identifier' => $item_identifier
-								]);
-							}
-						} elseif (empty($item_identifier)) {
-							$this->logger?->warning("Could not determine identifier for successfully processed item, cannot mark as processed.", [
-								'job_id' => $job_id,
-								'module_id' => $module_id,
-								'source_type' => $source_type,
-								'item_packet_keys' => isset($item_packet['data']) && is_array($item_packet['data']) ? array_keys($item_packet['data']) : 'N/A'
-							]);
-						}
-						// --- END: Mark item as processed ---
+						// --- MOVED: Do NOT mark item as processed here ---
+						// Items will be marked as processed after output job completes successfully
+						// This prevents duplicate processing if the same job runs again before output finishes
+						$this->logger?->debug("Item processing queued, will be marked as processed after output job completes.", [
+							'job_id' => $job_id,
+							'module_id' => $module_id,
+							'item_identifier' => $item_log_id
+						]);
 					}
 				}
 
@@ -704,11 +589,11 @@ class Data_Machine_Job_Executor {
 				$result_payload['message'] = 'Job failed.';
 			}
 
-			$result_data_for_db = $this->safe_json_encode($result_payload, "result_payload for job {$job_id}");
+			$result_data_for_db = $this->job_preparer->safe_json_encode($result_payload, "result_payload for job {$job_id}");
 			if (is_wp_error($result_data_for_db)) {
 				$this->logger?->error('Failed to JSON encode result_payload for job completion: ' . $result_data_for_db->get_error_message(), ['job_id' => $job_id, 'module_id' => $module_id]);
 				// Fallback to a simple error message if encoding fails
-				$result_data_for_db = $this->safe_json_encode(['status' => 'failed', 'message' => 'Job failed: Error encoding result data.'], 'fallback result');
+				$result_data_for_db = $this->job_preparer->safe_json_encode(['status' => 'failed', 'message' => 'Job failed: Error encoding result data.'], 'fallback result');
 			}
 
 
@@ -724,6 +609,7 @@ class Data_Machine_Job_Executor {
 
 			// Call complete_job - Note: returns bool, could check it.
 			$db_updated = $this->db_jobs->complete_job($job_id, $final_job_status, $result_data_for_db);
+			
 			// Log completion status
 			$this->logger?->info("Job execution finished.", ['job_id' => $job_id, 'module_id' => $module_job_config['module_id'] ?? 'N/A', 'final_status' => $final_job_status, 'db_update_success' => (bool)$db_updated]);
 
@@ -772,7 +658,7 @@ class Data_Machine_Job_Executor {
 			// Ensure status is marked as failed if exception occurs before final update
 			if ($job && $this->db_jobs) {
 				// Prepare enhanced error data for storage
-				$error_data_for_db = $this->safe_json_encode([
+				$error_data_for_db = $this->job_preparer->safe_json_encode([
 					'error' => $e->getMessage(), 
 					'trace' => $e->getTraceAsString(),
 					'is_authentication_error' => $error_details['is_auth_error'],
@@ -785,143 +671,27 @@ class Data_Machine_Job_Executor {
 	}
 
 	/**
-	 * Filters a list of fetched items, removing those already processed.
+	 * Simple check if there's already a running job for this module.
 	 *
-	 * @param array  $fetched_data The fetched input data.
-	 * @param object $module The module object.
-	 * @return array Filtered items to be processed.
+	 * @param int $job_id The job ID to check.
+	 * @return bool True if another job is running for this module.
 	 */
-	private function filter_processed_items(array $fetched_data, object $module): array {
-		$items_to_process = [];
-		$source_type = $module->data_source_type;
-		$module_id = $module->module_id;
-		$context = 'filtering'; // Context for logging
-
-		if (!$this->db_processed_items) {
-			$this->logger?->error("Processed items database service not available during filtering.", ['module_id' => $module_id]);
-			// Return original data or empty array? Returning original is risky.
-			// Returning empty prevents processing but logs error.
-			return [];
+	private function has_running_job_for_module(int $job_id): bool {
+		if (!$this->db_jobs) {
+			return false;
 		}
 
-		foreach ($fetched_data as $item) {
-			if (!is_array($item)) {
-				$this->logger?->warning("Skipping non-array item found during filtering.", [
-					'module_id' => $module_id,
-					'item_type' => gettype($item)
-				]);
-				continue;
-			}
-
-			$item_identifier = $this->_get_item_identifier($item, $source_type, $module_id, $context);
-
-			if (empty($item_identifier)) {
-				$this->logger?->warning("Skipping item during filtering due to missing identifier.", [
-					'module_id' => $module_id,
-					'source_type' => $source_type,
-					'item_keys' => array_keys($item)
-				]);
-				continue;
-			}
-
-			if (!$this->db_processed_items->has_item_been_processed($module_id, $source_type, $item_identifier)) {
-				$items_to_process[] = $item;
-			} else {
-				$this->logger?->info("Filtered out already processed item.", [
-					'module_id' => $module_id,
-					'source_type' => $source_type,
-					'item_identifier' => $item_identifier
-				]);
-			}
+		$job = $this->db_jobs->get_job($job_id);
+		if (!$job) {
+			return false;
 		}
 
-		return $items_to_process;
+		// Check for active jobs for this module, excluding the current job
+		return $this->db_jobs->has_active_jobs_for_module($job->module_id, $job_id);
 	}
 
-	/**
-	 * Safely encode data to JSON with error handling.
-	 *
-	 * @param mixed $data The data to encode.
-	 * @param string $context Context for error logging.
-	 * @return string|WP_Error JSON string on success, WP_Error on failure.
-	 */
-	private function safe_json_encode($data, string $context = ''): mixed {
-		$json = wp_json_encode($data);
-		if ($json === false) {
-			$error_msg = "Failed to encode data as JSON" . ($context ? " in {$context}" : "") . ": " . json_last_error_msg();
-			$this->logger?->error($error_msg, ['context' => $context, 'data_type' => gettype($data)]);
-			return new WP_Error('json_encode_error', $error_msg);
-		}
-		return $json;
-	}
 
-	/**
-	 * Safely decode JSON with error handling.
-	 *
-	 * @param string $json The JSON string to decode.
-	 * @param string $context Context for error logging.
-	 * @param bool $associative Whether to return associative arrays.
-	 * @return mixed|WP_Error Decoded data on success, WP_Error on failure.
-	 */
-	private function safe_json_decode(string $json, string $context = '', bool $associative = true): mixed {
-		if (empty($json)) {
-			return $associative ? [] : new stdClass();
-		}
-		
-		$decoded = json_decode($json, $associative);
-		if (json_last_error() !== JSON_ERROR_NONE) {
-			$error_msg = "Failed to decode JSON" . ($context ? " in {$context}" : "") . ": " . json_last_error_msg();
-			$this->logger?->error($error_msg, ['context' => $context, 'json_snippet' => substr($json, 0, 200) . '...']);
-			return new WP_Error('json_decode_error', $error_msg);
-		}
-		return $decoded;
-	}
 
-	/**
-	 * Extracts the unique identifier from an item based on its source type.
-	 * Centralizes the logic previously duplicated in several methods.
-	 *
-	 * @param array  $item        The item data packet.
-	 * @param string $source_type The data source type (e.g., 'rss', 'reddit').
-	 * @param int|null $module_id Optional module ID for logging context.
-	 * @param string|null $context   Optional execution context for logging.
-	 * @return string|null The unique identifier string, or null if not found.
-	 */
-	private function _get_item_identifier(array $item, string $source_type, ?int $module_id = null, ?string $context = null): ?string {
-		$item_identifier = null;
-
-		switch ($source_type) {
-			case 'rss':
-			case 'reddit':
-			case 'public_rest_api':
-			case 'files':
-				// These handlers store it in metadata['item_identifier_to_log']
-				$item_identifier = $item['metadata']['item_identifier_to_log'] ?? null;
-				// Fallback for public_rest_api if needed
-				if (is_null($item_identifier) && $source_type === 'public_rest_api') {
-					$item_identifier = $item['metadata']['original_id'] ?? null;
-				}
-				break;
-			case 'airdrop_rest_api':
-				// This handler puts it at the top level
-				$item_identifier = $item['item_identifier'] ?? null;
-				break;
-			default:
-				// Attempt common fallbacks for unknown types
-				$item_identifier = $item['id'] ?? $item['guid'] ?? $item['url'] ?? $item['link'] ?? null;
-				if (is_null($item_identifier)) {
-					$this->logger?->warning("Could not determine item identifier from common fields.", [
-						'module_id' => $module_id,
-						'source_type' => $source_type,
-						'context' => $context,
-						'item_keys' => array_keys($item)
-					]);
-				}
-		}
-
-		// Return null if empty or not found
-		return empty($item_identifier) ? null : (string) $item_identifier;
-	}
 
 	/**
 	 * Creates the job record in the database and schedules the WP Cron event.
@@ -949,7 +719,7 @@ class Data_Machine_Job_Executor {
 			}
 
 			// Encode the config snapshot
-			$config_snapshot_json = $this->safe_json_encode($module_config_data, 'module config snapshot');
+			$config_snapshot_json = $this->job_preparer->safe_json_encode($module_config_data, 'module config snapshot');
 			if (is_wp_error($config_snapshot_json)) {
 				throw new Exception($config_snapshot_json->get_error_message());
 			}

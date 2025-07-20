@@ -211,14 +211,15 @@ class Data_Machine_Processing_Orchestrator {
 			// Queue the output job via Action Scheduler
 			$this->log_orchestrator_step('Step 4: Queuing output job via Action Scheduler', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type]);
 			
+			// Store large content in job result_data instead of Action Scheduler args to avoid 8000 char limit
+			// The Action Scheduler handler will retrieve content from the job record
 			$action_id = $this->action_scheduler->schedule_single_job(
-				'dm_output_job_event',
+				Data_Machine_Constants::OUTPUT_JOB_HOOK,
 				array(
-					$final_output_string,
+					$job_id,  // Just pass job ID - handler will get content from database
 					$module_job_config,
 					$user_id,
-					$input_data_packet['metadata'] ?? [],
-					$job_id
+					$input_data_packet['metadata'] ?? []
 				)
 			);
 

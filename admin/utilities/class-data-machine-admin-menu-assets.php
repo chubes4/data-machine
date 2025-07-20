@@ -276,6 +276,7 @@ class Data_Machine_Admin_Menu_Assets {
         wp_enqueue_script( 'dm-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true );
         $remote_locations_params = array(
             'ajax_url' => admin_url('admin-ajax.php'),
+            /* translators: %s: Location name */
             'confirm_delete' => __('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine')
         );
         wp_localize_script('dm-remote-locations-admin-js', 'dmRemoteLocationsParams', $remote_locations_params);

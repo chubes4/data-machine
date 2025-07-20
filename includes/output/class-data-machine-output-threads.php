@@ -230,6 +230,7 @@ class Data_Machine_Output_Threads implements Data_Machine_Output_Handler_Interfa
                         'status' => 'success',
                         'threads_media_id' => $threads_media_id,
                         'output_url' => $output_url,
+                        /* translators: %s: Threads media ID */
                         'message' => sprintf(__('Successfully posted to Threads: %s', 'data-machine'), $threads_media_id),
                         'raw_response' => $data,
                         'permalink_response' => is_wp_error($permalink_data) ? $permalink_data->get_error_message() : $permalink_data

@@ -70,6 +70,7 @@ class Data_Machine_Remote_Locations {
                     if (!$location) {
                         // Add an admin notice using injected logger
                         $this->logger?->add_admin_error(
+                            /* translators: %d: Location ID number */
                             sprintf(__('Location %d not found or permission denied.', 'data-machine'), $location_id)
                         );
                         $action = 'list'; // Revert to list view

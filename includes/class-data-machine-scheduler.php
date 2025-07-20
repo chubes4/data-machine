@@ -61,12 +61,12 @@ class Data_Machine_Scheduler {
      * Initialize WordPress hooks for scheduling and execution.
      */
     public function init_hooks() {
-        // Hook the callbacks for WP Cron events
+        // Add custom cron schedules (needed for admin interface)
+        add_filter( 'cron_schedules', [ $this, 'add_custom_cron_schedules' ] );
+        
+        // Register Action Scheduler callback hooks
         add_action( 'dm_run_project_schedule_callback', [ $this, 'dm_run_project_schedule_callback' ], 10, 1 );
         add_action( 'dm_run_module_schedule_callback', [ $this, 'dm_run_module_schedule_callback' ], 10, 1 );
-
-        // Add custom cron schedules (moved from Data_Machine class)
-        add_filter( 'cron_schedules', [ $this, 'add_custom_cron_schedules' ] );
     }
 
     /**
@@ -81,7 +81,7 @@ class Data_Machine_Scheduler {
             $schedules[$interval_slug] = array(
                 // 'interval' => wp_get_schedule_interval($interval), // OLD - Incorrect function
                 'interval' => $details['interval'], // Use interval in seconds from constant
-                'display'  => __($details['label'], 'data-machine') // Use label from constant
+                'display'  => $details['label'] // Use label from constant (already translated)
             );
         }
         // Ensure standard WP intervals are present (hourly, twicedaily, daily)
@@ -243,16 +243,16 @@ class Data_Machine_Scheduler {
             }
 
             // 3. Clean up stuck jobs before processing (safety net)
-            $stuck_jobs_cleaned = $this->db_jobs->cleanup_stuck_jobs(12); // 12 hour timeout
+            $stuck_jobs_cleaned = $this->db_jobs->cleanup_stuck_jobs(); // Uses constant timeout
             if ($stuck_jobs_cleaned > 0) {
-                $logger?->info($log_prefix . "Cleaned up {$stuck_jobs_cleaned} stuck jobs (>12 hours old).", ['project_id' => $project_id, 'cleaned_count' => $stuck_jobs_cleaned]);
+                $logger?->info($log_prefix . "Cleaned up {$stuck_jobs_cleaned} stuck jobs (>" . Data_Machine_Constants::JOB_STUCK_TIMEOUT_HOURS . " hours old).", ['project_id' => $project_id, 'cleaned_count' => $stuck_jobs_cleaned]);
             }
 
             // 4. Periodic maintenance: cleanup old jobs and log files (run once per day per project)
             if ($this->should_run_maintenance($project_id)) {
-                $old_jobs_cleaned = $this->db_jobs->cleanup_old_jobs(30); // 30 days
+                $old_jobs_cleaned = $this->db_jobs->cleanup_old_jobs(); // Uses constant timeout
                 if ($old_jobs_cleaned > 0) {
-                    $logger?->info($log_prefix . "Cleaned up {$old_jobs_cleaned} old completed/failed jobs (>30 days old).", ['project_id' => $project_id, 'cleaned_count' => $old_jobs_cleaned]);
+                    $logger?->info($log_prefix . "Cleaned up {$old_jobs_cleaned} old completed/failed jobs (>" . Data_Machine_Constants::JOB_CLEANUP_OLD_DAYS . " days old).", ['project_id' => $project_id, 'cleaned_count' => $old_jobs_cleaned]);
                 }
                 
                 if ($logger?->cleanup_log_files(10, 30)) { // 10MB or 30 days
@@ -434,4 +434,5 @@ class Data_Machine_Scheduler {
         $transient_key = "dm_maintenance_done_{$project_id}";
         set_transient($transient_key, time(), DAY_IN_SECONDS);
     }
+
 } 

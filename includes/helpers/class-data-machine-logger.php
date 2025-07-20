@@ -35,6 +35,28 @@ class Data_Machine_Logger {
     private $monolog_instance = null;
 
     /**
+     * Convert string log level to Monolog Level.
+     *
+     * @param string $level_string Log level string
+     * @return Level Monolog level constant
+     */
+    private function get_monolog_level(string $level_string): Level {
+        switch (strtolower($level_string)) {
+            case 'error':
+                return Level::Error;
+            case 'warning':
+            case 'warn':
+                return Level::Warning;
+            case 'info':
+                return Level::Info;
+            case 'debug':
+                return Level::Debug;
+            default:
+                return Level::Info;
+        }
+    }
+
+    /**
      * Gets the Monolog logger instance, initializing it if needed.
      *
      * @return MonologLogger
@@ -69,8 +91,12 @@ class Data_Machine_Logger {
             $this->monolog_instance = new MonologLogger('DataMachine');
 
             try {
+                // Get configurable log level from WordPress options
+                $log_level_setting = get_option('dm_log_level', 'info');
+                $log_level = $this->get_monolog_level($log_level_setting);
+                
                 // Create a handler (writing to a file)
-                $handler = new StreamHandler($log_file, Level::Debug); // Log from DEBUG level up
+                $handler = new StreamHandler($log_file, $log_level);
 
                 // Optional: Customize log format
                 $formatter = new LineFormatter(
@@ -294,8 +320,8 @@ class Data_Machine_Logger {
                 
                 // Optional: Output details for errors (consider formatting)
                 if ($type === self::NOTICE_ERROR && !empty($notice['details'])) {
-                     // Simple output for now, could be formatted better
-                     				echo '<pre style="margin-left: 2em; font-size: 0.9em;">' . esc_html( json_encode( $notice['details'], JSON_PRETTY_PRINT ) ) . '</pre>';
+                    // Simple output for now, could be formatted better
+                    echo '<pre style="margin-left: 2em; font-size: 0.9em;">' . esc_html( json_encode( $notice['details'], JSON_PRETTY_PRINT ) ) . '</pre>';
                 }
             }
         }
@@ -367,6 +393,106 @@ class Data_Machine_Logger {
             $this->error( "Exception during log file rotation: " . $e->getMessage() );
             return false;
         }
+    }
+
+    /**
+     * Get log file path.
+     *
+     * @return string Log file path
+     */
+    public function get_log_file_path(): string {
+        $upload_dir = wp_upload_dir();
+        $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+        return $log_dir . '/data-machine.log';
+    }
+
+    /**
+     * Get log file size in MB.
+     *
+     * @return float Log file size in MB
+     */
+    public function get_log_file_size(): float {
+        $log_file = $this->get_log_file_path();
+        if (!file_exists($log_file)) {
+            return 0;
+        }
+        return round(filesize($log_file) / 1024 / 1024, 2);
+    }
+
+    /**
+     * Get recent log entries.
+     *
+     * @param int $lines Number of lines to retrieve
+     * @return array Array of log lines
+     */
+    public function get_recent_logs(int $lines = 100): array {
+        $log_file = $this->get_log_file_path();
+        if (!file_exists($log_file)) {
+            return ['No log file found.'];
+        }
+
+        // Use tail command if available, otherwise read file
+        if (function_exists('exec')) {
+            $output = [];
+            exec("tail -n {$lines} " . escapeshellarg($log_file), $output);
+            return $output ?: ['Unable to read log file.'];
+        }
+
+        // Fallback: read entire file and get last lines
+        $file_content = file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($file_content === false) {
+            return ['Unable to read log file.'];
+        }
+
+        return array_slice($file_content, -$lines);
+    }
+
+    /**
+     * Clear all log files.
+     *
+     * @return bool True on success, false on failure
+     */
+    public function clear_logs(): bool {
+        $log_file = $this->get_log_file_path();
+        $backup_file = $log_file . '.old';
+        
+        $success = true;
+        
+        // Clear main log file
+        if (file_exists($log_file)) {
+            if (!unlink($log_file)) {
+                $success = false;
+            }
+        }
+        
+        // Clear backup log file
+        if (file_exists($backup_file)) {
+            if (!unlink($backup_file)) {
+                $success = false;
+            }
+        }
+        
+        if ($success) {
+            $this->info('Log files cleared successfully.');
+        } else {
+            $this->error('Failed to clear some log files.');
+        }
+        
+        return $success;
+    }
+
+    /**
+     * Get available log levels.
+     *
+     * @return array Array of log levels
+     */
+    public static function get_available_log_levels(): array {
+        return [
+            'error' => 'Error (errors only)',
+            'warning' => 'Warning (warnings and errors)',
+            'info' => 'Info (normal logging)',
+            'debug' => 'Debug (verbose logging)'
+        ];
     }
 
 } // End class 

@@ -28,13 +28,21 @@ class Data_Machine_Database_Jobs {
     private $db_projects;
 
     /**
+     * Logger instance for debugging and monitoring.
+     * @var Data_Machine_Logger|null
+     */
+    private $logger;
+
+    /**
      * Initialize the class.
      * @param Data_Machine_Database_Projects|null $db_projects Optional projects DB for updating last_run_at.
+     * @param Data_Machine_Logger|null $logger Optional logger for debugging.
      */
-    public function __construct($db_projects = null) {
+    public function __construct($db_projects = null, $logger = null) {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_jobs';
         $this->db_projects = $db_projects;
+        $this->logger = $logger;
     }
 
     /**
@@ -87,16 +95,26 @@ class Data_Machine_Database_Jobs {
      * Check if there are any active (pending or running) jobs for a specific module.
      *
      * @param int $module_id The ID of the module to check.
+     * @param int $exclude_job_id Optional job ID to exclude from the check.
      * @return bool True if there are active jobs, false otherwise.
      */
-    public function has_active_jobs_for_module( $module_id ) {
+    public function has_active_jobs_for_module( $module_id, $exclude_job_id = null ) {
         global $wpdb;
 
-        $count = $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} 
-             WHERE module_id = %d AND status IN ('pending', 'running')",
-            absint( $module_id )
-        ) );
+        if ( $exclude_job_id ) {
+            $count = $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->table_name} 
+                 WHERE module_id = %d AND job_id != %d AND status IN ('pending', 'running', 'processing_output')",
+                absint( $module_id ),
+                absint( $exclude_job_id )
+            ) );
+        } else {
+            $count = $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->table_name} 
+                 WHERE module_id = %d AND status IN ('pending', 'running', 'processing_output')",
+                absint( $module_id )
+            ) );
+        }
 
         return $count > 0;
     }
@@ -271,10 +289,13 @@ class Data_Machine_Database_Jobs {
     /**
      * Clean up stuck jobs that have been running/pending for too long.
      * 
-     * @param int $timeout_hours Hours after which jobs are considered stuck (default 12)
+     * @param int $timeout_hours Hours after which jobs are considered stuck (uses constant default)
      * @return int Number of jobs cleaned up
      */
-    public function cleanup_stuck_jobs( $timeout_hours = 12 ) {
+    public function cleanup_stuck_jobs( $timeout_hours = null ) {
+        if ( $timeout_hours === null ) {
+            $timeout_hours = Data_Machine_Constants::JOB_STUCK_TIMEOUT_HOURS;
+        }
         global $wpdb;
         
         $timeout_minutes = $timeout_hours * 60;
@@ -283,7 +304,7 @@ class Data_Machine_Database_Jobs {
         $stuck_jobs = $wpdb->get_results( $wpdb->prepare(
             "SELECT job_id, module_id, status, created_at 
              FROM {$this->table_name} 
-             WHERE status IN ('pending', 'running') 
+             WHERE status IN ('pending', 'running', 'processing_output') 
              AND created_at < DATE_SUB(NOW(), INTERVAL %d MINUTE)",
             $timeout_minutes
         ) );
@@ -292,12 +313,30 @@ class Data_Machine_Database_Jobs {
             return 0;
         }
         
-        // Mark stuck jobs as failed
+        // Log each stuck job being cleaned up
+        if ( $this->logger ) {
+            foreach ( $stuck_jobs as $job ) {
+                $hours_stuck = round( ( time() - strtotime( $job->created_at ) ) / 3600, 1 );
+                $this->logger->warning( "Cleaning up stuck job - marking as failed", [
+                    'job_id' => $job->job_id,
+                    'module_id' => $job->module_id,
+                    'status' => $job->status,
+                    'created_at' => $job->created_at,
+                    'hours_stuck' => $hours_stuck,
+                    'timeout_hours' => $timeout_hours
+                ] );
+            }
+        }
+        
+        // Mark stuck jobs as failed with detailed result data
         $updated = $wpdb->query( $wpdb->prepare(
             "UPDATE {$this->table_name} 
-             SET status = 'failed'
-             WHERE status IN ('pending', 'running') 
+             SET status = 'failed', 
+                 result_data = %s,
+                 completed_at = NOW()
+             WHERE status IN ('pending', 'running', 'processing_output') 
              AND created_at < DATE_SUB(NOW(), INTERVAL %d MINUTE)",
+            wp_json_encode( [ 'error' => 'Job stuck for more than ' . $timeout_hours . ' hours - automatically marked as failed' ] ),
             $timeout_minutes
         ) );
         
@@ -332,7 +371,10 @@ class Data_Machine_Database_Jobs {
      * @param int $days_to_keep Days to keep job records (default 30)
      * @return int Number of jobs deleted
      */
-    public function cleanup_old_jobs( $days_to_keep = 30 ) {
+    public function cleanup_old_jobs( $days_to_keep = null ) {
+        if ( $days_to_keep === null ) {
+            $days_to_keep = Data_Machine_Constants::JOB_CLEANUP_OLD_DAYS;
+        }
         global $wpdb;
         
         $deleted = $wpdb->query( $wpdb->prepare(

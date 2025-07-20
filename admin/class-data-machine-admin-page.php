@@ -129,6 +129,13 @@ class Data_Machine_Admin_Page {
         // Hook for jobs page (if any form processing is needed in future)
         add_action( 'load-dm-run-single-module_page_dm-jobs', array( $this, 'process_jobs_page' ) );
         add_action( 'load-data-machine_page_dm-jobs', array( $this, 'process_jobs_page' ) );
+        
+        // Admin post handlers for log management
+        add_action( 'admin_post_dm_update_log_level', array( $this, 'handle_update_log_level' ) );
+        add_action( 'admin_post_dm_clear_logs', array( $this, 'handle_clear_logs' ) );
+        
+        // AJAX handler for log refresh
+        add_action( 'wp_ajax_dm_refresh_logs', array( $this, 'handle_refresh_logs_ajax' ) );
     }
 
     /**
@@ -188,7 +195,7 @@ class Data_Machine_Admin_Page {
     public function display_api_keys_page() {
         // Security check: Ensure user has capabilities
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            wp_die(__('You do not have sufficient permissions to access this page.', 'data-machine'));
         }
 
 
@@ -204,7 +211,7 @@ class Data_Machine_Admin_Page {
     public function display_remote_locations_page() {
         // Ensure the capability is checked before displaying the page
         if (!current_user_can('manage_options')) { // Adjust capability as needed
-            wp_die(__( 'Sorry, you are not allowed to access this page.' ));
+            wp_die(__( 'Sorry, you are not allowed to access this page.', 'data-machine' ));
         }
         $remote_locations_handler = $this->remote_locations_admin; // Use injected property
 
@@ -219,35 +226,15 @@ class Data_Machine_Admin_Page {
      */
     public function display_jobs_page() {
         // Security check
-        if (!current_user_can('manage_options')) { // Adjust capability as needed
-            wp_die(__( 'Permission denied.', 'data-machine' ));
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Permission denied.', 'data-machine'));
         }
 
-        // Ensure the List Table class file is loaded
-        $list_table_file = plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/class-data-machine-jobs-list-table.php';
-        if (file_exists($list_table_file)) {
-            require_once $list_table_file;
-        } else {
-            // Handle error - class file missing
-            echo '<div class="error"><p>' . __( 'Error: Jobs List Table class file not found.', 'data-machine' ) . '</p></div>';
-            return;
-        }
-
-        // Create an instance of our package class...
-        $jobs_list_table = new Data_Machine_Jobs_List_Table();
-        // Fetch, prepare, sort, and filter our data...
-        $jobs_list_table->prepare_items();
-
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-
-            <form method="post">
-                <?php // Maybe add nonce fields here if we add bulk actions later ?>
-                <?php $jobs_list_table->display(); ?>
-            </form>
-        </div>
-        <?php
+        // Make logger instance available to the template
+        $logger = $this->logger;
+        
+        // Load the template file
+        include_once plugin_dir_path(dirname(__FILE__)) . 'admin/templates/jobs-page.php';
     }
 
 
@@ -257,4 +244,77 @@ class Data_Machine_Admin_Page {
     public function process_api_keys_page() {}
     public function process_remote_locations_page() {}
     public function process_jobs_page() {}
+
+    /**
+     * Handle log level update form submission.
+     */
+    public function handle_update_log_level() {
+        // Security checks
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Permission denied.', 'data-machine'));
+        }
+
+        if (!wp_verify_nonce($_POST['dm_log_level_nonce'] ?? '', 'dm_update_log_level')) {
+            wp_die(__('Security check failed.', 'data-machine'));
+        }
+
+        $new_log_level = sanitize_key($_POST['dm_log_level'] ?? 'info');
+        $available_levels = Data_Machine_Logger::get_available_log_levels();
+
+        if (!array_key_exists($new_log_level, $available_levels)) {
+            $this->logger->add_admin_error('Invalid log level selected.');
+        } else {
+            update_option('dm_log_level', $new_log_level);
+            $this->logger->add_admin_success('Log level updated successfully to: ' . $available_levels[$new_log_level]);
+        }
+
+        // Redirect back to logs tab
+        wp_redirect(admin_url('admin.php?page=dm-jobs&tab=logs'));
+        exit;
+    }
+
+    /**
+     * Handle clear logs form submission.
+     */
+    public function handle_clear_logs() {
+        // Security checks
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Permission denied.', 'data-machine'));
+        }
+
+        if (!wp_verify_nonce($_POST['dm_clear_logs_nonce'] ?? '', 'dm_clear_logs')) {
+            wp_die(__('Security check failed.', 'data-machine'));
+        }
+
+        if ($this->logger->clear_logs()) {
+            $this->logger->add_admin_success('Log files cleared successfully.');
+        } else {
+            $this->logger->add_admin_error('Failed to clear some log files.');
+        }
+
+        // Redirect back to logs tab
+        wp_redirect(admin_url('admin.php?page=dm-jobs&tab=logs'));
+        exit;
+    }
+
+    /**
+     * Handle AJAX request to refresh logs.
+     */
+    public function handle_refresh_logs_ajax() {
+        // Security checks
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Permission denied.']);
+        }
+
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_refresh_logs')) {
+            wp_send_json_error(['message' => 'Security check failed.']);
+        }
+
+        try {
+            $recent_logs = $this->logger->get_recent_logs(50);
+            wp_send_json_success(['logs' => $recent_logs]);
+        } catch (Exception $e) {
+            wp_send_json_error(['message' => 'Failed to retrieve logs: ' . $e->getMessage()]);
+        }
+    }
 }

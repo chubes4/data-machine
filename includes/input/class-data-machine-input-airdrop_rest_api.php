@@ -99,6 +99,7 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 		}
 		$location = $db_remote_locations->get_location($location_id, $user_id, true);
 		if (!$location) {
+			// translators: %d is the Remote Location ID number
 			throw new Exception(sprintf(__('Could not retrieve details for Remote Location ID: %d.', 'data-machine'), $location_id));
 		}
 
@@ -113,9 +114,11 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 		$fetch_batch_size = min(100, max(10, $process_limit * 2));
 
 		if (empty($endpoint_url_base) || !filter_var($endpoint_url_base, FILTER_VALIDATE_URL)) {
+			// translators: %s is the Remote Location name or ID
 			throw new Exception(sprintf(__('Invalid Target Site URL configured for Remote Location: %s.', 'data-machine'), $location->location_name ?? $location_id));
 		}
 		if (empty($remote_user) || empty($remote_password)) {
+			// translators: %s is the Remote Location name or ID
 			throw new Exception(sprintf(__('Missing username or application password for Remote Location: %s.', 'data-machine'), $location->location_name ?? $location_id));
 		}
 
@@ -184,6 +187,7 @@ class Data_Machine_Input_Airdrop_Rest_Api implements Data_Machine_Input_Handler_
 			if ($response_code !== 200) {
 				$error_data = json_decode($body, true);
 				$error_message_detail = isset($error_data['message']) ? $error_data['message'] : __('Unknown error occurred on the remote site.', 'data-machine');
+				// translators: %d is the HTTP response code number
 				$error_message = sprintf(__('Remote data source returned an error (Code: %d).', 'data-machine'), $response_code) . ' ' . $error_message_detail;
 				if ($current_page === 1) throw new Exception($error_message);
 				else break;

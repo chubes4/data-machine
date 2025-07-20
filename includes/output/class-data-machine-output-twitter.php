@@ -276,6 +276,7 @@ class Data_Machine_Output_Twitter implements Data_Machine_Output_Handler_Interfa
                      'status' => 'success', // Use 'status' key for consistency
                      'tweet_id' => $tweet_id,
                      'output_url' => $tweet_url, // Use 'output_url' key
+                     /* translators: %s: Twitter tweet ID */
                      'message' => sprintf(__( 'Successfully posted tweet: %s', 'data-machine' ), $tweet_id),
                      'raw_response' => $response
                  ];

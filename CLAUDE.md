@@ -4,187 +4,188 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Composer
+### WordPress Plugin Development
+- No build process required - changes take effect immediately
+- Use `composer install` if dependencies are updated
+
+### Debugging & Testing
 ```bash
-# Install dependencies (if composer.json is updated)
-composer install
+# Enable verbose browser logging:
+window.dmDebugMode = true
 
-# Update dependencies  
-composer update
-```
-
-### WordPress Development
-This is a WordPress plugin - no specific build process required. Changes take effect immediately when files are saved.
-
-#### Database Table Management
-```bash
-# Plugin activation automatically creates/updates tables via:
-# Data_Machine_Database_Projects::create_table()
-# Data_Machine_Database_Modules::create_table()
-# Data_Machine_Database_Jobs::create_table()
-# Data_Machine_Database_Remote_Locations::create_table()
-```
-
-#### Manual Testing
-```bash
-# Test single module execution via admin interface:
+# Test via admin interface:
 # WordPress Admin → Data Machine → Run Single Module
 
-# Monitor Action Scheduler jobs:
+# Monitor jobs:
+# WordPress Admin → Data Machine → Jobs
 # WordPress Admin → Tools → Action Scheduler
 ```
 
-## Project Architecture
+## Architecture Overview
 
-### Core Workflow
-The Data Machine plugin follows a structured 5-step processing pipeline:
-1. **Input Collection** - Gather data from various sources (files, RSS, Reddit, REST APIs)
-2. **Initial Processing** - Send to OpenAI API for analysis and transformation  
-3. **Fact Checking** - AI-powered content validation (optional, can be skipped)
-4. **Content Finalization** - Generate final output using project-specific prompts
-5. **Output Publishing** - Distribute to configured destinations (WordPress, social media, exports)
+Data Machine is a WordPress content automation plugin with a **5-step processing pipeline**:
+
+1. **Input Collection** → 2. **AI Processing** → 3. **Fact Check** → 4. **Finalize** → 5. **Output Publishing**
+
+### Core Architecture Patterns
+
+**Manual Dependency Injection**: Custom DI system in `data-machine.php` (lines 230+) with global `$data_machine_container` for Action Scheduler access. No formal DI framework - all dependencies manually wired in bootstrap.
+
+**Handler Registry Pattern**: Dynamic filesystem scanning discovers handlers by naming convention. Maps URL-friendly slugs to PHP classes with lazy loading and caching.
+
+**Asynchronous Job Processing**: Steps 1-4 run synchronously, Step 5 queued via Action Scheduler. Job metadata stored in custom tables to avoid 8000 char Action Scheduler limit.
 
 ### Key Components
 
-#### Main Plugin File (`data-machine.php`)
-- Plugin initialization and dependency injection
-- Defines constants: `DATA_MACHINE_VERSION`, `DATA_MACHINE_PATH`
-- Orchestrates all service instantiation and dependencies
-- Uses extensive manual dependency injection (no container)
+**Engine Directory** (`includes/engine/`):
+- `class-job-executor.php` - Job lifecycle management (both scheduling AND execution)
+- `class-job-filter.php` - Job-level concurrency control and stuck job cleanup
+- `class-job-preparer.php` - Data fetching, filtering, and preparation
+- `class-processing-orchestrator.php` - 5-step AI pipeline coordination
 
-#### Database Layer (`includes/database/`)
-- **Projects**: Main organizational unit for workflows
-- **Modules**: Individual processing configurations within projects  
-- **Jobs**: Queue management for processing tasks
-- **Processed Items**: Deduplication and history tracking
-- **Remote Locations**: Remote WordPress publishing endpoints
+**Handler System**: 
+- **Registry** (`includes/class-handler-registry.php`) - Dynamic handler discovery
+- **Factory** (`module-config/HandlerFactory.php`) - Hard-coded instantiation with complex DI
+- **Input Handlers** (`includes/input/`) - Implement `Data_Machine_Input_Handler_Interface`
+- **Output Handlers** (`includes/output/`) - Implement `Data_Machine_Output_Handler_Interface`
 
-#### Processing Engine (`includes/engine/`)
-- **`class-processing-orchestrator.php`**: Main workflow coordinator - handles 5-step pipeline
-- **`class-job-executor.php`**: Job lifecycle management and Action Scheduler integration
-- **`class-job-worker.php`**: Individual job processing execution with retry logic
-- **`class-process-data.php`**: OpenAI API integration for initial data processing
+**Database Layer** (`includes/database/`):
+Custom WordPress tables with `wp_dm_` prefix. No migrations - created on activation only.
 
-#### Handler System
-**Input Handlers** (`includes/input/`): Data collection from various sources
-- Files, RSS feeds, Reddit, REST APIs, Airdrop helper
-- All implement `Input_Handler_Interface`
-- Use `trait-data-machine-base-input-handler.php` for common functionality
+### Critical Dependencies & Failure Points
 
-**Output Handlers** (`includes/output/`): Content publishing to destinations  
-- WordPress (local/remote), Twitter, Facebook, Threads, Bluesky, data export
-- All implement `Data_Machine_Output_Handler_Interface`
-- Use `trait-data-machine-base-output-handler.php` for common functionality
+**Action Scheduler Integration**:
+- Job concurrency limited to 2 maximum concurrent jobs
+- Stuck jobs auto-failed after 6 hours via aggressive cleanup
+- Custom job table duplicates some Action Scheduler functionality
+- Race conditions possible between job status updates and item processing
 
-#### Centralized Prompt System (`includes/helpers/class-data-machine-prompt-builder.php`)
-Single source of truth for all AI prompt construction:
-- `build_system_prompt()`: Project prompts with context
-- `build_process_data_prompt()`: Initial processing instructions
-- `build_fact_check_prompt()`: Content validation prompts
-- `build_finalize_prompt()`: Output-specific formatting
-- Replaces scattered prompt logic across multiple files
+**Handler Factory Complexity**:
+Hard-coded switch statement in `HandlerFactory.php` lines 113-164. Each handler requires explicit case mapping with different constructor signatures. Adding new handlers requires updates in registry, factory, and bootstrap.
 
-#### Authentication & API Integration
-- **OAuth Handlers** (`admin/oauth/`): Social media authentication (Twitter, Reddit, Facebook, Threads)
-- **API Classes** (`includes/api/`): OpenAI integration for content processing
-- **Encryption Helper**: Secure storage of API keys and credentials
+**Method Naming Confusion**:
+- `execute_job()` doesn't execute - it schedules jobs
+- `run_scheduled_job()` actually executes jobs  
+- `get_input_handler()` vs `create_input_handler()` - registry vs factory
+- `complete_job()` vs `update_job_status()` - different completion semantics
 
-### Database Schema
-Uses WordPress database with custom tables:
-- `wp_dm_projects`: Project configurations and prompts
-- `wp_dm_modules`: Module settings with input/output handler configs
-- `wp_dm_jobs`: Processing queue with status tracking
-- `wp_dm_processed_items`: Content deduplication by hash
-- `wp_dm_remote_locations`: Remote publishing endpoints
+**JSON Encoding Vulnerabilities**:
+Large content can exceed Action Scheduler's 8000 char limit or exhaust PHP memory. Critical job data stored in custom tables, not Action Scheduler args.
 
-### Module Configuration System (`module-config/`)
-Dynamic UI system for configuring input/output handlers:
-- **Handler Templates**: PHP templates for each handler type's configuration UI (`handler-templates/`)
-- **Factory Pattern**: `HandlerFactory.php` for dependency injection and handler instantiation
-- **Settings Registration**: WordPress Settings API integration (`RegisterSettings.php`)
-- **AJAX System**: Real-time configuration management with ES6 modules (`js/`)
-- **State Management**: Centralized UI state with `module-config-state.js` and `module-state-controller.js`
+## Configuration & Constants
 
-### Admin Interface (`admin/`)
-- **Project Management**: CRUD operations for projects and modules
-- **Remote Locations**: Management of remote WordPress endpoints  
-- **API Keys**: Secure credential management interface
-- **OAuth Integration**: Social media authentication flows
+**Constants** (`includes/class-data-machine-constants.php`):
+- `JOB_STUCK_TIMEOUT_HOURS = 6` - Job cleanup threshold
+- `MAX_CONCURRENT_JOBS = 2` - Action Scheduler limit
+- `ACTION_GROUP = 'data-machine'` - Job grouping
 
-## Important Implementation Details
+**Database Schema**:
+```sql
+wp_dm_projects - Project configurations
+wp_dm_modules - Module settings  
+wp_dm_jobs - Job queue with status tracking
+wp_dm_processed_items - Deduplication by hash
+wp_dm_remote_locations - Remote WordPress endpoints
+```
 
-### Action Scheduler Integration
-The plugin uses Action Scheduler for async job processing:
-- **Action Group**: `data-machine` for all plugin jobs
-- **Concurrency**: Maximum 2 concurrent jobs (`MAX_CONCURRENT_JOBS`)
-- **Retry Logic**: 3 attempts for failed output jobs with exponential backoff
-- **Hook**: `dm_output_job_event` for output processing jobs
-- **Status Tracking**: Jobs tracked in `wp_dm_jobs` table with Action Scheduler integration
+## Important Implementation Notes
 
-### Dependency Injection
-All major classes use constructor injection managed through `Dependency_Injection_Handler_Factory`. No formal DI container - dependencies manually wired in `data-machine.php`.
+### Technical Debt & Complexity
 
-### Error Handling & Authentication  
-Enhanced authentication error detection in `class-job-executor.php`:
-- Pattern-based detection of auth failures
-- Service-specific user guidance messages
-- Improved job status tracking (`failed` vs `failed_auth`)
+**Monolithic Bootstrap**: `run_data_machine()` function (200+ lines) handles all dependency wiring, configuration, and hook registration. No component isolation for testing.
 
-### Skip Fact Check Feature
-Conditional validation system allowing users to bypass fact-checking:
-- Backend validation only requires fact check prompt when feature is disabled
-- Frontend UI provides visual feedback when fact checking is skipped
+**Multiple Error Patterns**: Methods inconsistently return `WP_Error`, throw `Exception`, or return `false`. No standardized error codes.
 
-### Character Limit Optimizations
-Bluesky handler uses correct URL character counting (22 chars) to maximize content space.
+**Global State Dependencies**: Heavy reliance on global variables (`$data_machine_container`, `$wpdb`) makes modular development challenging.
 
-### Security Implementation  
-- API key encryption using WordPress salts
-- Nonce verification for all AJAX requests
-- Input sanitization and capability checks
-- OAuth token secure storage
-
-## Development Notes
-
-### Naming Conventions
-- **PHP Classes**: PascalCase with underscores (`Data_Machine_Class_Name`)
-- **Database Keys**: snake_case (`input_config`, `output_config`) 
-- **JavaScript**: camelCase (`moduleConfigState`)
-- **CSS**: kebab-case (`data-machine-admin`)
-
-### Code Organization
-- Handler classes grouped by functionality (`input/`, `output/`)
-- Admin functionality separated from core logic (`admin/`)
-- Templates separated from business logic (`admin/templates/`)
-- Extensive use of traits for shared functionality (`trait-data-machine-base-*-handler.php`)
-- Module configuration system isolated in `module-config/` directory
-- Third-party libraries bundled in `libraries/` (Action Scheduler)
-- Vendor dependencies via Composer autoloader
-
-### Testing & Debugging
-- Uses `Data_Machine_Logger` class for centralized logging
-- Admin notices displayed for user feedback
-- No formal test suite - manual testing via admin interface
-
-### JavaScript Architecture
-- **ES6 Modules**: Modern module system with import/export
-- **State Management**: Centralized state in `module-config-state.js`
-- **AJAX Handling**: Dedicated AJAX classes (`module-config-ajax.js`)
-- **UI Controllers**: Separate controllers for different UI sections
-- **Event-Driven**: Pub/sub pattern for state changes and UI updates
-- **Template Management**: Dynamic loading of handler configuration templates
+**Interface vs Implementation Gaps**: Handlers must implement interfaces but factory instantiation requires specific constructor signatures not enforced by interfaces.
 
 ### Handler Development
-When creating new input/output handlers:
-- **Interface Implementation**: Must implement `Data_Machine_Input_Handler_Interface` or `Data_Machine_Output_Handler_Interface`
-- **Settings Fields**: Define configuration UI via `get_settings_fields()` method
-- **Templates**: Create PHP template in `module-config/handler-templates/`
-- **Registration**: Register in `Data_Machine_Handler_Registry`
-- **Sanitization**: Implement `sanitize_settings()` method for user input
-- **Traits**: Use base traits for common functionality
+
+**Adding New Handlers Requires**:
+1. Create handler class implementing interface (`includes/input/` or `includes/output/`)
+2. Add case to factory switch statement (`HandlerFactory.php` lines 113-164)
+3. Update bootstrap dependencies if new services needed (`data-machine.php`)
+4. Handler will be auto-discovered by registry filesystem scan
+
+**Critical**: Handler Factory uses hard-coded switch statement. Each handler needs explicit case mapping with exact constructor signature.
+
+### Security
+- API keys encrypted using WordPress salts
+- OAuth tokens securely stored
+- Input sanitization and capability checks
+- Nonce verification for all AJAX requests
 
 ### WordPress Integration
-- Follows WordPress coding standards and security practices
 - Uses WordPress database layer (`$wpdb`) exclusively
-- Integrates with WordPress media library and user system
-- Employs Action Scheduler for background job processing (replacing WP-Cron)
+- Action Scheduler for background processing (replaces WP-Cron)
+- WordPress Settings API for configuration
+- Standard WordPress hooks and filters
+
+## Common Issues & Solutions
+
+**Jobs Getting Stuck in "Running" State**: 
+- Check Action Scheduler status: WordPress Admin → Tools → Action Scheduler
+- Common cause: Method name mismatches (`get_input_handler()` vs `create_input_handler()`)
+- Common cause: Missing `user_id` parameter in database calls (strict PHP 8+ typing)
+- Aggressive cleanup runs automatically every 6 hours
+- Manual cleanup via "Run Now" button
+
+**Handler Factory Failures**:
+- Error: `Call to undefined method` - check method names match between caller and factory
+- New handlers fail: must add explicit case to `HandlerFactory.php` switch statement
+- Constructor signature mismatch: factory expects specific parameter order per handler
+
+**Large Content Processing**:
+- Action Scheduler has 8000 char limit for arguments
+- Large content stored in `wp_dm_jobs` table, not Action Scheduler args
+- Memory Guard prevents file processing issues for >100MB files
+
+**Race Conditions**:
+- Items can be processed multiple times if jobs overlap
+- Job status checks happen before item deduplication  
+- No database transactions ensure atomicity between job updates and item marking
+
+## Job Processing Flow (Actual Implementation)
+
+### Job Creation Pipeline
+1. **Job Executor** receives module + user context via `schedule_job_from_config()`
+2. **Job Filter** checks for existing active jobs via `can_schedule_job()`
+3. **Job Preparer** fetches and filters input data via `prepare_job_packet()`
+4. **Database Jobs** creates job record with "pending" status
+5. **Action Scheduler** queues `dm_run_job_event` with job ID
+
+### Job Execution Pipeline
+1. **Action Scheduler** triggers `run_scheduled_job(job_id)` hook
+2. **Job Executor** loads job, updates status to "running"
+3. **Processing Orchestrator** runs 5-step AI pipeline synchronously
+4. **Action Scheduler** queues separate `dm_output_job_event` for step 5
+5. **Output Handler** processes final result asynchronously
+6. **Database** marks job complete and item as processed
+
+### Critical Race Condition
+Items marked as processed **after** output job completes, not after main job completes. Creates window where same item can be picked up by concurrent jobs.
+
+## File Organization
+
+```
+├── includes/engine/          # Core processing logic
+├── includes/database/        # Database abstraction layer  
+├── includes/input/          # Input data handlers
+├── includes/output/         # Output publishing handlers
+├── includes/interfaces/     # Handler interfaces
+├── includes/helpers/        # Utility classes (Logger, Memory Guard, etc.)
+├── admin/                   # WordPress admin interface
+├── module-config/           # Dynamic configuration system + Handler Factory
+└── vendor/                  # Composer dependencies (Action Scheduler)
+```
+
+## WordPress.org Submission Status
+
+**Ready for submission** - critical fixes applied:
+- ✅ Action Scheduler text domain conflicts resolved via Composer
+- ✅ Job execution pipeline stabilized  
+- ✅ Handler Factory method name mismatches fixed
+- ✅ PHP 8+ strict typing issues resolved
+- ✅ Dead code removed (Job Worker class)
+- ⚠️ Technical debt remains but system functional

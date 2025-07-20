@@ -53,4 +53,7 @@ wp-content/plugins/hello.php
 
 # Plugin specific
 *.zip
-*.tar.gz 
+*.tar.gz
+
+# Development planning
+plan.md 

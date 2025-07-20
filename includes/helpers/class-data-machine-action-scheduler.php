@@ -14,17 +14,12 @@ class Data_Machine_Action_Scheduler {
 	/**
 	 * Action group for Data Machine jobs
 	 */
-	const ACTION_GROUP = 'data-machine';
+	// Removed - now using Data_Machine_Constants::ACTION_GROUP
 
 	/**
 	 * Maximum concurrent jobs allowed
 	 */
-	const MAX_CONCURRENT_JOBS = 2;
-
-	/**
-	 * Maximum retry attempts for failed output jobs
-	 */
-	const MAX_OUTPUT_RETRIES = 3;
+	// Removed - now using Data_Machine_Constants::MAX_CONCURRENT_JOBS
 
 	/**
 	 * Logger instance
@@ -60,7 +55,7 @@ class Data_Machine_Action_Scheduler {
 		add_filter( 'action_scheduler_store_class', array( $this, 'maybe_configure_store' ) );
 		
 		// Register output job handler for Action Scheduler
-		add_action( 'dm_output_job_event', array( $this, 'handle_output_job' ), 10, 6 );
+		add_action( Data_Machine_Constants::OUTPUT_JOB_HOOK, array( $this, 'handle_output_job' ), 10, 5 );
 	}
 
 	/**
@@ -70,7 +65,7 @@ class Data_Machine_Action_Scheduler {
 	 * @return int Modified concurrent batches
 	 */
 	public function set_concurrent_limit( $concurrent_batches ) {
-		return self::MAX_CONCURRENT_JOBS;
+		return Data_Machine_Constants::MAX_CONCURRENT_JOBS;
 	}
 
 	/**
@@ -110,7 +105,7 @@ class Data_Machine_Action_Scheduler {
 				$timestamp, 
 				$hook, 
 				$args, 
-				self::ACTION_GROUP 
+				Data_Machine_Constants::ACTION_GROUP 
 			);
 
 			$this->logger?->info( 'Job scheduled via Action Scheduler', array(
@@ -156,7 +151,7 @@ class Data_Machine_Action_Scheduler {
 				$interval_in_seconds, 
 				$hook, 
 				$args, 
-				self::ACTION_GROUP 
+				Data_Machine_Constants::ACTION_GROUP 
 			);
 
 			$this->logger?->info( 'Recurring job scheduled via Action Scheduler', array(
@@ -196,7 +191,7 @@ class Data_Machine_Action_Scheduler {
 		}
 
 		try {
-			as_unschedule_all_actions( $hook, $args, self::ACTION_GROUP );
+			as_unschedule_all_actions( $hook, $args, Data_Machine_Constants::ACTION_GROUP );
 
 			$this->logger?->info( 'Canceled scheduled jobs via Action Scheduler', array(
 				'hook' => $hook,
@@ -228,7 +223,7 @@ class Data_Machine_Action_Scheduler {
 			'hook' => $hook,
 			'args' => $args,
 			'status' => array( 'pending', 'in-progress' ),
-			'group' => self::ACTION_GROUP
+			'group' => Data_Machine_Constants::ACTION_GROUP
 		) );
 
 		return count( $pending_actions );
@@ -247,16 +242,45 @@ class Data_Machine_Action_Scheduler {
 	/**
 	 * Handle output job processing via Action Scheduler
 	 *
-	 * @param string $final_output Final processed output string
+	 * @param int    $job_id Original job ID (content retrieved from database)
 	 * @param array  $module_config Module configuration
 	 * @param int    $user_id User ID
 	 * @param array  $input_metadata Input metadata
-	 * @param int    $job_id Original job ID
-	 * @param int    $retry_count Current retry attempt (default 0)
 	 * @return void
 	 */
-	public function handle_output_job( $final_output, $module_config, $user_id, $input_metadata, $job_id, $retry_count = 0 ) {
+	public function handle_output_job( $job_id, $module_config, $user_id, $input_metadata ) {
 		global $data_machine_container;
+		
+		// First, retrieve the final output content from the job record
+		if ( ! isset( $data_machine_container['db_jobs'] ) ) {
+			$this->logger?->error( 'Output Job Handler: Jobs database not available', array(
+				'job_id' => $job_id,
+				'module_id' => $module_config['module_id'] ?? 'unknown'
+			) );
+			return;
+		}
+		
+		$db_jobs = $data_machine_container['db_jobs'];
+		$job = $db_jobs->get_job( $job_id );
+		
+		if ( ! $job || empty( $job->result_data ) ) {
+			$this->logger?->error( 'Output Job Handler: No job data found or result_data empty', array(
+				'job_id' => $job_id,
+				'module_id' => $module_config['module_id'] ?? 'unknown'
+			) );
+			return;
+		}
+		
+		$job_result = json_decode( $job->result_data, true );
+		if ( ! $job_result || ! isset( $job_result['final_output'] ) ) {
+			$this->logger?->error( 'Output Job Handler: Invalid job result data or missing final_output', array(
+				'job_id' => $job_id,
+				'module_id' => $module_config['module_id'] ?? 'unknown'
+			) );
+			return;
+		}
+		
+		$final_output = $job_result['final_output'];
 		
 		if ( ! $data_machine_container || ! isset( $data_machine_container['handler_factory'] ) ) {
 			$this->logger?->error( 'Output Job Handler: Handler factory not available', array(
@@ -264,6 +288,32 @@ class Data_Machine_Action_Scheduler {
 				'module_id' => $module_config['module_id'] ?? 'unknown'
 			) );
 			return;
+		}
+
+		// CRITICAL FIX: Check if item has already been processed to prevent duplicate publishing
+		if ( isset( $data_machine_container['db_processed_items'] ) ) {
+			$db_processed_items = $data_machine_container['db_processed_items'];
+			$module_id = $module_config['module_id'] ?? 0;
+			$source_type = $module_config['data_source_type'] ?? '';
+			$item_identifier = $input_metadata['item_identifier_to_log'] ?? null;
+
+			if ( $module_id && $source_type && $item_identifier ) {
+				if ( $db_processed_items->has_item_been_processed( $module_id, $source_type, $item_identifier ) ) {
+					$this->logger?->info( 'Output Job Handler: Item already processed, skipping to prevent duplicate', array(
+						'job_id' => $job_id,
+						'module_id' => $module_id,
+						'item_identifier' => $item_identifier
+					) );
+
+					// Mark job as complete since item was already processed
+					if ( isset( $data_machine_container['db_jobs'] ) ) {
+						$db_jobs = $data_machine_container['db_jobs'];
+						$result_json = wp_json_encode( array( 'status' => 'skipped', 'message' => 'Item already processed' ) );
+						$db_jobs->complete_job( $job_id, 'completed', $result_json );
+					}
+					return;
+				}
+			}
 		}
 
 		$handler_factory = $data_machine_container['handler_factory'];
@@ -304,8 +354,28 @@ class Data_Machine_Action_Scheduler {
 			if ( isset( $data_machine_container['db_jobs'] ) ) {
 				$db_jobs = $data_machine_container['db_jobs'];
 				$result_json = wp_json_encode( $result );
-				$db_jobs->complete_job( $job_id, 'complete', $result_json );
+				$job_completed = $db_jobs->complete_job( $job_id, 'completed', $result_json );
+				
+				if ( $job_completed ) {
+					$this->logger?->info( 'Output Job Handler: Parent job marked as completed', array(
+						'job_id' => $job_id,
+						'module_id' => $module_config['module_id'] ?? 'unknown'
+					) );
+				} else {
+					$this->logger?->error( 'Output Job Handler: Failed to mark parent job as completed', array(
+						'job_id' => $job_id,
+						'module_id' => $module_config['module_id'] ?? 'unknown'
+					) );
+				}
+			} else {
+				$this->logger?->error( 'Output Job Handler: db_jobs not available in container', array(
+					'job_id' => $job_id,
+					'module_id' => $module_config['module_id'] ?? 'unknown'
+				) );
 			}
+
+			// Mark item as processed AFTER successful output - this prevents duplicates
+			$this->mark_item_as_processed( $module_config, $input_metadata, $job_id );
 
 			$this->logger?->info( 'Output Job Handler: Output processed successfully', array(
 				'job_id' => $job_id,
@@ -314,65 +384,38 @@ class Data_Machine_Action_Scheduler {
 			) );
 
 		} catch ( Exception $e ) {
-			$this->logger?->error( 'Output Job Handler: Exception during processing', array(
+			$this->logger?->error( 'Output Job Handler: Failed - no retries', array(
 				'job_id' => $job_id,
 				'module_id' => $module_config['module_id'] ?? 'unknown',
-				'output_type' => $output_type,
-				'retry_count' => $retry_count,
+				'output_type' => $output_type ?? 'unknown',
 				'error' => $e->getMessage()
 			) );
 
-			// Attempt retry if under max retry limit
-			if ( $retry_count < self::MAX_OUTPUT_RETRIES ) {
-				$next_retry = $retry_count + 1;
-				$delay = pow( 2, $retry_count ) * 60; // Exponential backoff: 1min, 2min, 4min
-				
-				$this->logger?->info( 'Output Job Handler: Scheduling retry', array(
-					'job_id' => $job_id,
-					'module_id' => $module_config['module_id'] ?? 'unknown',
-					'retry_count' => $next_retry,
-					'delay_seconds' => $delay
-				) );
+			// Mark as failed immediately - no retries
+			if ( isset( $data_machine_container['db_jobs'] ) ) {
+				$db_jobs = $data_machine_container['db_jobs'];
+				$db_jobs->fail_job( $job_id, $e->getMessage() );
+			}
+		} catch ( Throwable $t ) {
+			// CRITICAL: Catch ALL failures including fatal errors, type errors, etc.
+			$this->logger?->error( 'Output Job Handler: Critical failure caught', array(
+				'job_id' => $job_id,
+				'module_id' => $module_config['module_id'] ?? 'unknown',
+				'error_type' => get_class( $t ),
+				'error' => $t->getMessage(),
+				'file' => $t->getFile(),
+				'line' => $t->getLine()
+			) );
 
-				// Schedule retry
-				$retry_action_id = $this->schedule_single_job(
-					'dm_output_job_event',
-					array(
-						$final_output,
-						$module_config,
-						$user_id,
-						$input_metadata,
-						$job_id,
-						$next_retry
-					),
-					time() + $delay
-				);
-
-				if ( $retry_action_id === false ) {
-					$this->logger?->error( 'Output Job Handler: Failed to schedule retry', array(
-						'job_id' => $job_id,
-						'retry_count' => $next_retry
-					) );
-					
-					// Mark as failed since we couldn't schedule retry
-					if ( isset( $data_machine_container['db_jobs'] ) ) {
-						$db_jobs = $data_machine_container['db_jobs'];
-						$db_jobs->fail_job( $job_id, 'Failed to schedule retry: ' . $e->getMessage() );
-					}
-				}
-			} else {
-				// Max retries exceeded, mark as failed
-				$this->logger?->error( 'Output Job Handler: Max retries exceeded', array(
-					'job_id' => $job_id,
-					'module_id' => $module_config['module_id'] ?? 'unknown',
-					'retry_count' => $retry_count,
-					'max_retries' => self::MAX_OUTPUT_RETRIES
-				) );
-
-				if ( isset( $data_machine_container['db_jobs'] ) ) {
-					$db_jobs = $data_machine_container['db_jobs'];
-					$db_jobs->fail_job( $job_id, 'Max retries exceeded: ' . $e->getMessage() );
-				}
+			// ALWAYS mark job as failed to prevent ghost failures
+			if ( isset( $data_machine_container['db_jobs'] ) ) {
+				$db_jobs = $data_machine_container['db_jobs'];
+				$db_jobs->complete_job( $job_id, 'failed', wp_json_encode( [
+					'error' => $t->getMessage(),
+					'error_type' => get_class( $t ),
+					'file' => $t->getFile(),
+					'line' => $t->getLine()
+				] ) );
 			}
 		}
 	}
@@ -392,29 +435,81 @@ class Data_Machine_Action_Scheduler {
 
 		$status = array(
 			'available' => true,
-			'group' => self::ACTION_GROUP,
-			'max_concurrent' => self::MAX_CONCURRENT_JOBS
+			'group' => Data_Machine_Constants::ACTION_GROUP,
+			'max_concurrent' => Data_Machine_Constants::MAX_CONCURRENT_JOBS
 		);
 
 		// Get counts by status if functions exist
 		if ( function_exists( 'as_get_scheduled_actions' ) ) {
 			$status['pending'] = count( as_get_scheduled_actions( array(
 				'status' => 'pending',
-				'group' => self::ACTION_GROUP
+				'group' => Data_Machine_Constants::ACTION_GROUP
 			) ) );
 
 			$status['running'] = count( as_get_scheduled_actions( array(
 				'status' => 'in-progress',
-				'group' => self::ACTION_GROUP
+				'group' => Data_Machine_Constants::ACTION_GROUP
 			) ) );
 
 			$status['completed'] = count( as_get_scheduled_actions( array(
 				'status' => 'complete',
-				'group' => self::ACTION_GROUP,
+				'group' => Data_Machine_Constants::ACTION_GROUP,
 				'per_page' => 10 // Limit to recent completions
 			) ) );
 		}
 
 		return $status;
+	}
+
+	/**
+	 * Mark an item as processed after successful output
+	 *
+	 * @param array $module_config Module configuration
+	 * @param array $input_metadata Input metadata containing item identifier
+	 * @param int   $job_id Job ID for logging
+	 */
+	private function mark_item_as_processed( $module_config, $input_metadata, $job_id ) {
+		global $data_machine_container;
+
+		if ( ! isset( $data_machine_container['db_processed_items'] ) ) {
+			$this->logger?->error( 'Output Job Handler: Cannot mark item as processed - db_processed_items not available', array(
+				'job_id' => $job_id,
+				'module_id' => $module_config['module_id'] ?? 'unknown'
+			) );
+			return;
+		}
+
+		$db_processed_items = $data_machine_container['db_processed_items'];
+
+		$module_id = $module_config['module_id'] ?? null;
+		$source_type = $module_config['data_source_type'] ?? null;
+		$item_identifier = $input_metadata['item_identifier_to_log'] ?? null;
+
+		if ( empty( $module_id ) || empty( $source_type ) || empty( $item_identifier ) ) {
+			$this->logger?->error( 'Output Job Handler: Cannot mark item as processed - missing required data', array(
+				'job_id' => $job_id,
+				'module_id' => $module_id,
+				'source_type' => $source_type,
+				'item_identifier' => $item_identifier
+			) );
+			return;
+		}
+
+		$marked = $db_processed_items->add_processed_item( $module_id, $source_type, $item_identifier );
+		
+		if ( ! $marked ) {
+			$this->logger?->error( 'Output Job Handler: Failed to mark item as processed', array(
+				'job_id' => $job_id,
+				'module_id' => $module_id,
+				'source_type' => $source_type,
+				'item_identifier' => $item_identifier
+			) );
+		} else {
+			$this->logger?->info( 'Output Job Handler: Item marked as processed successfully', array(
+				'job_id' => $job_id,
+				'module_id' => $module_id,
+				'item_identifier' => $item_identifier
+			) );
+		}
 	}
 }

@@ -143,6 +143,7 @@ class Data_Machine_Import_Export {
 		$json_data    = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 
 		if ( $json_data === false ) {
+			/* translators: %s: JSON encoding error message */
 			wp_die( sprintf( esc_html__( 'Failed to encode data to JSON. Error: %s', 'data-machine' ), json_last_error_msg() ) );
 		}
 
@@ -198,6 +199,7 @@ class Data_Machine_Import_Export {
 
 		$import_data = json_decode( $json_content, true ); // Decode as associative array
 		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			/* translators: %s: JSON decoding error message */
 			$this->redirect_with_notice( 'error', sprintf( __( 'Invalid JSON file. Error: %s', 'data-machine' ), json_last_error_msg() ) );
 			return;
 		}
@@ -238,7 +240,8 @@ class Data_Machine_Import_Export {
 		$new_project_id = $this->db_projects->create_project( $sanitized_project_data );
 
 		if ( is_wp_error( $new_project_id ) ) {
-			$this->redirect_with_notice( 'error', sprintf( __( 'Failed to create project: %s', 'data-machine' ), $new_project_id->get_error_message() ) );
+			/* translators: %s: Error message */
+		$this->redirect_with_notice( 'error', sprintf( __( 'Failed to create project: %s', 'data-machine' ), $new_project_id->get_error_message() ) );
 			return;
 		} elseif ( ! $new_project_id ) {
 			$this->redirect_with_notice( 'error', __( 'Failed to create project. Unknown database error.', 'data-machine' ) );
@@ -286,11 +289,13 @@ class Data_Machine_Import_Export {
 				$new_module_id = $this->db_modules->create_module( $sanitized_module_data );
 
 				if ( is_wp_error( $new_module_id ) ) {
-					$module_errors[] = sprintf( __( 'Failed to create module "%1$s": %2$s', 'data-machine' ), esc_html( $sanitized_module_data['module_name'] ), $new_module_id->get_error_message() );
+					/* translators: %1$s: Module name, %2$s: Error message */
+				$module_errors[] = sprintf( __( 'Failed to create module "%1$s": %2$s', 'data-machine' ), esc_html( $sanitized_module_data['module_name'] ), $new_module_id->get_error_message() );
 				} elseif ( $new_module_id ) {
 					$modules_created_count++;
 				} else {
-					$module_errors[] = sprintf( __( 'Failed to create module "%s". Unknown database error.', 'data-machine' ), esc_html( $sanitized_module_data['module_name'] ) );
+					/* translators: %s: Module name */
+				$module_errors[] = sprintf( __( 'Failed to create module "%s". Unknown database error.', 'data-machine' ), esc_html( $sanitized_module_data['module_name'] ) );
 				}
 			}
 		}
@@ -298,6 +303,7 @@ class Data_Machine_Import_Export {
 		// 9. Prepare Notice and Redirect
 		$project_name = esc_html( $sanitized_project_data['project_name'] );
 		if ( empty( $module_errors ) ) {
+			/* translators: %1$s: Project name, %2$d: Number of modules */
 			$notice_message = sprintf(
 				__( 'Project "%1$s" imported successfully with %2$d module(s).', 'data-machine' ),
 				$project_name,
@@ -305,6 +311,7 @@ class Data_Machine_Import_Export {
 			);
 			$this->redirect_with_notice( 'success', $notice_message );
 		} else {
+			/* translators: %1$s: Project name, %2$d: Number of modules */
 			$notice_message = sprintf(
 				__( 'Project "%1$s" imported with %2$d module(s), but some errors occurred:', 'data-machine' ),
 				$project_name,
@@ -348,6 +355,7 @@ class Data_Machine_Import_Export {
 
 		if ( is_wp_error( $deleted ) ) {
 			// Handle WP_Error (e.g., permission denied, not found)
+			/* translators: %s: Error message */
 			$this->redirect_with_notice( 'error', sprintf( __( 'Error deleting project: %s', 'data-machine' ), $deleted->get_error_message() ) );
 		} elseif ( $deleted === false ) {
 			// Handle general DB deletion failure

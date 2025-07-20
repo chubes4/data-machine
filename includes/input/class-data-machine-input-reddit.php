@@ -240,6 +240,7 @@ class Data_Machine_Input_Reddit implements Data_Machine_Input_Handler_Interface 
 			if ( $response_code !== 200 ) {
 				$error_data = json_decode( $body, true );
 				$error_message_detail = isset( $error_data['message'] ) ? $error_data['message'] : __( 'Unknown error on Reddit API.', 'data-machine' );
+				/* translators: %d: HTTP response code */
 				$error_message = sprintf( __( 'Reddit API error (Code: %d).', 'data-machine' ), $response_code ) . ' ' . $error_message_detail;
 				$this->logger?->error('Reddit Input: API Error Response.', ['url' => $reddit_url, 'code' => $response_code, 'body' => substr($body, 0, 500), 'module_id' => $module_id]);
 				if ($pages_fetched === 1) throw new Exception($error_message . ' Raw Body: ' . $body); // Throw only if first request fails

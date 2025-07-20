@@ -236,6 +236,7 @@ class Data_Machine_Output_Facebook implements Data_Machine_Output_Handler_Interf
                     'status' => 'success',
                     'post_id' => $post_id,
                     'output_url' => $output_url,
+                    /* translators: %s: Facebook post ID */
                     'message' => sprintf(__('Successfully posted to Facebook: %s', 'data-machine'), $post_id),
                     'raw_response' => $data
                 ];

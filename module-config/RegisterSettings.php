@@ -212,15 +212,6 @@ class Data_Machine_Register_Settings {
             array( $this, 'sanitize_openai_api_key' ) // Sanitize callback
         );
 
-        // Register Instagram OAuth settings for the API / Auth page
-        register_setting(
-            'dm_api_keys_group',
-            'instagram_oauth_client_id'
-        );
-        register_setting(
-            'dm_api_keys_group',
-            'instagram_oauth_client_secret'
-        );
 
         // Register Reddit OAuth settings for the API / Auth page (NEW)
         register_setting(

@@ -132,6 +132,7 @@ class Data_Machine_Input_Public_Rest_Api implements Data_Machine_Input_Handler_I
 			if ($response_code !== 200) {
 				$error_data = json_decode($body, true);
 				$error_message_detail = isset($error_data['message']) ? $error_data['message'] : __('Unknown error occurred on the remote API.', 'data-machine');
+				/* translators: %d: HTTP response code */
 				$error_message = sprintf(__('Public REST API returned an error (Code: %d).', 'data-machine'), $response_code) . ' ' . $error_message_detail;
                 $this->logger?->add_admin_error($error_message, ['url' => $next_page_url, 'body' => substr($body, 0, 500), 'module_id' => $module_id]);
 				if ($pages_fetched === 1) throw new Exception($error_message);

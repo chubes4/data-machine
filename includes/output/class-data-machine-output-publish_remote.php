@@ -203,8 +203,8 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			$payload['date'] = $post_date_iso; // Sending both date and date_gmt is often needed
 		}
 
-		// Get synced remote site info if available (this comes from the top-level output_config)
-		$remote_info = $output_config['remote_site_info'] ?? []; // Use $output_config
+		// Get synced remote site info if available (this comes from within the publish_remote config)
+		$remote_info = $config['remote_site_info'] ?? []; // Use $config (publish_remote specific)
 		$remote_cats = $remote_info['taxonomies']['category']['terms'] ?? [];
 		$remote_tags = $remote_info['taxonomies']['post_tag']['terms'] ?? [];
 
@@ -377,6 +377,7 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 
 		if ( $response_code !== 201 ) { // Expect 201 Created
 			$error_message_detail = isset( $decoded_body['message'] ) ? $decoded_body['message'] : __( 'Unknown error occurred on the remote site during publishing.', 'data-machine' );
+			/* translators: %d: HTTP response code */
 			$error_message = sprintf( __( 'Remote site returned an error (Code: %d).', 'data-machine' ), $response_code );
 			$this->logger->error($error_message, ['api_url' => $api_url, 'response_code' => $response_code, 'response_body' => $body, 'error_detail' => $error_message_detail]);
 			return new WP_Error( 'remote_publish_failed', $error_message, $error_message_detail );
@@ -447,7 +448,11 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 			'location_id' => [
 				'type' => 'select',
 				'label' => __('Remote Location', 'data-machine'),
-				'description' => __('Select a pre-configured remote publishing location. Manage locations <a href="' . admin_url('admin.php?page=dm-remote-locations') . '" target="_blank">here</a>.', 'data-machine'),
+				'description' => sprintf(
+					/* translators: %s: URL to manage remote locations */
+					__('Select a pre-configured remote publishing location. Manage locations <a href="%s" target="_blank">here</a>.', 'data-machine'),
+					admin_url('admin.php?page=dm-remote-locations')
+				),
 				'options' => $locations_options,
 				'required' => true,
 				'default' => '',
@@ -464,10 +469,10 @@ class Data_Machine_Output_Publish_Remote implements Data_Machine_Output_Handler_
 				'label' => __('Remote Post Status', 'data-machine'),
 				'description' => __('Select the desired status for the post created on the target site.', 'data-machine'),
 				'options' => [
-					'draft' => __('Draft'),
-					'publish' => __('Publish'),
-					'pending' => __('Pending Review'),
-					'private' => __('Private'),
+					'draft' => __('Draft', 'data-machine'),
+					'publish' => __('Publish', 'data-machine'),
+					'pending' => __('Pending Review', 'data-machine'),
+					'private' => __('Private', 'data-machine'),
 				],
 				'default' => 'publish',
 			],
@@ -554,7 +559,8 @@ public function sanitize_settings(array $raw_settings): array {
 	$sanitized['location_id'] = absint($raw_settings['location_id'] ?? 0);
 	$sanitized['selected_remote_post_type'] = sanitize_text_field($raw_settings['selected_remote_post_type'] ?? '');
 	$sanitized['remote_post_status'] = sanitize_text_field($raw_settings['remote_post_status'] ?? 'publish');
-	$sanitized['use_gutenberg_blocks'] = in_array($raw_settings['use_gutenberg_blocks'] ?? '1', ['0', '1']) ? $raw_settings['use_gutenberg_blocks'] : '1';
+	$use_gutenberg_value = $raw_settings['use_gutenberg_blocks'] ?? '1';
+	$sanitized['use_gutenberg_blocks'] = in_array($use_gutenberg_value, ['0', '1']) ? $use_gutenberg_value : '1';
 	$valid_date_sources = ['current_date', 'source_date'];
 	$date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
 	$sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
