@@ -212,7 +212,7 @@ class Data_Machine {
 	 */
 	public function run() {
 		// Instantiate and initialize admin menu/assets handler
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/utilities/class-data-machine-admin-menu-assets.php';
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-data-machine-admin-menu-assets.php';
 		$admin_menu_assets = new Data_Machine_Admin_Menu_Assets(
 			$this->version,
 			$this->admin_page,

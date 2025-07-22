@@ -56,4 +56,8 @@ wp-content/plugins/hello.php
 *.tar.gz
 
 # Development planning
-plan.md 
+plan.md
+CLAUDE.md
+
+# System files (additional)
+.DS_Store 

@@ -118,10 +118,10 @@ wp_dm_remote_locations - Remote WordPress endpoints
 
 ### Job Creation Entry Points (All use Job Creator)
 
-1. **"Run Now" Button** → `includes/ajax/class-project-management-ajax.php` → `job_creator->create_and_schedule_job()`
-2. **File Upload** → `includes/ajax/run-single-module-ajax.php` → `job_creator->create_and_schedule_job()`  
-3. **Single Module** → `includes/ajax/run-single-module-ajax.php` → `job_creator->create_and_schedule_job()`
-4. **Scheduled Jobs** → `includes/class-data-machine-scheduler.php` → `job_creator->create_and_schedule_job()`
+1. **"Run Now" Button** → `admin/projects/class-project-management-ajax.php` → `job_creator->create_and_schedule_job()`
+2. **File Upload** → `admin/module-config/ajax/run-single-module-ajax.php` → `job_creator->create_and_schedule_job()`  
+3. **Single Module** → `admin/module-config/ajax/run-single-module-ajax.php` → `job_creator->create_and_schedule_job()`
+4. **Scheduled Jobs** → `admin/projects/class-data-machine-scheduler.php` → `job_creator->create_and_schedule_job()`
 
 ### Handler Development
 
@@ -203,16 +203,22 @@ add_action('dm_finalize_job_event', [$orchestrator, 'execute_finalize_step'], 10
 ```
 admin/                       # WordPress admin interface (follows wp-admin/ pattern)
 ├── module-config/           # Handler configuration UI
-│   ├── ajax/               # Admin AJAX handlers
+│   ├── ajax/               # Module config AJAX handlers (includes run-single-module-ajax.php)
 │   ├── handler-templates/  # Admin form templates
 │   └── js/                 # Admin JavaScript
 ├── oauth/                  # OAuth authentication handlers & AJAX
+├── projects/               # Project management & scheduling
+│   ├── class-data-machine-scheduler.php
+│   ├── class-project-management-ajax.php
+│   ├── class-data-machine-ajax-scheduler.php
+│   └── class-data-machine-import-export.php
 ├── remote-locations/       # Remote location form handlers & services
 │   ├── class-data-machine-remote-locations-form-handler.php
 │   ├── class-sync-remote-locations.php
 │   └── class-remote-locations-list-table.php
-├── templates/              # Admin page templates  
-└── utilities/              # Admin utility classes
+├── templates/              # Admin page templates
+├── class-data-machine-admin-page.php  # Main admin page controller
+└── class-data-machine-admin-menu-assets.php  # Admin menu & assets handler
 
 includes/                    # Core functionality (follows wp-includes/ pattern)
 ├── engine/                 # Core processing logic
@@ -222,7 +228,6 @@ includes/                    # Core functionality (follows wp-includes/ pattern)
 ├── handlers/               # Pluggable input/output components
 │   ├── input/              # Input data handlers
 │   └── output/             # Output publishing handlers
-├── ajax/                   # Core AJAX handlers
 ├── database/               # Database abstraction layer
 ├── helpers/                # Utility classes (Logger, Memory Guard, etc.)
 └── api/                    # External API integrations

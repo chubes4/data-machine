@@ -36,9 +36,9 @@ require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php'
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php'; // Jobs Database Class
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php'; // Processed Items Database Class
 require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/class-module-config-ajax.php'; // Updated Module AJAX Handler path
-require_once DATA_MACHINE_PATH . 'includes/ajax/class-project-management-ajax.php'; // Corrected AJAX Handler path for Dashboard Project Actions
+require_once DATA_MACHINE_PATH . 'admin/projects/class-project-management-ajax.php'; // Corrected AJAX Handler path for Dashboard Project Actions
 require_once DATA_MACHINE_PATH . 'admin/remote-locations/class-data-machine-remote-locations-form-handler.php'; // Remote Locations Form Handler
-require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-import-export.php'; // Added Import/Export Helper
+require_once DATA_MACHINE_PATH . 'admin/projects/class-data-machine-import-export.php'; // Added Import/Export Helper
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-prompt-builder.php'; // Centralized prompt builder
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-action-scheduler.php'; // Action Scheduler service
@@ -46,8 +46,8 @@ require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-openai.php
 require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-factcheck.php'; // Fact check API
 require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-finalize.php'; // Finalize API
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-memory-guard.php'; // Memory protection service
-require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
-require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
+require_once DATA_MACHINE_PATH . 'admin/projects/class-data-machine-scheduler.php'; // Added Scheduler class
+require_once DATA_MACHINE_PATH . 'admin/projects/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
 require_once DATA_MACHINE_PATH . 'admin/module-config/RegisterSettings.php';
 require_once DATA_MACHINE_PATH . 'admin/module-config/HandlerFactory.php';
 require_once DATA_MACHINE_PATH . 'admin/remote-locations/RemoteLocationService.php';
@@ -60,7 +60,7 @@ require_once DATA_MACHINE_PATH . 'includes/engine/class-job-status-manager.php';
 require_once DATA_MACHINE_PATH . 'includes/engine/class-job-creator.php'; // Unified job creation class
 require_once DATA_MACHINE_PATH . 'admin/module-config/SettingsFields.php';
 require_once DATA_MACHINE_PATH . 'admin/module-config/class-dm-module-config-handler.php';
-require_once DATA_MACHINE_PATH . 'includes/ajax/run-single-module-ajax.php';
+require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/run-single-module-ajax.php';
 require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/module-config-remote-locations-ajax.php';
 // Include the new module config assets file
 // require_once DATA_MACHINE_PATH . 'admin/module-config/module-config-enqueue-assets.php';
