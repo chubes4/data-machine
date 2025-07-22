@@ -303,16 +303,16 @@ class Data_Machine_Import_Export {
 		// 9. Prepare Notice and Redirect
 		$project_name = esc_html( $sanitized_project_data['project_name'] );
 		if ( empty( $module_errors ) ) {
-			/* translators: %1$s: Project name, %2$d: Number of modules */
 			$notice_message = sprintf(
+				/* translators: %1$s: Project name, %2$d: Number of modules */
 				__( 'Project "%1$s" imported successfully with %2$d module(s).', 'data-machine' ),
 				$project_name,
 				$modules_created_count
 			);
 			$this->redirect_with_notice( 'success', $notice_message );
 		} else {
-			/* translators: %1$s: Project name, %2$d: Number of modules */
 			$notice_message = sprintf(
+				/* translators: %1$s: Project name, %2$d: Number of modules */
 				__( 'Project "%1$s" imported with %2$d module(s), but some errors occurred:', 'data-machine' ),
 				$project_name,
 				$modules_created_count

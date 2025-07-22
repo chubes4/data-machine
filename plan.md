@@ -1,164 +1,82 @@
 # Data Machine Development Plan
 
-## Current Major Initiatives
+## Immediate: Create Unified Job Creator Architecture
 
-### 1. Action Scheduler Migration (High Priority)
-**Goal**: Eliminate timeout/duplicate issues by making all long-running operations asynchronous
+### **Current Problem: 4 Different Job Entry Points**
+Job creation is scattered across multiple classes with duplicated logic:
 
-#### Phase 1: Output Handler Migration (CRITICAL) - IN PROGRESS
-- **Problem**: Remote publishing timeouts causing duplicate posts
-- **Solution**: Async output job queue
-- [x] Create `dm_output_job_event` Action Scheduler hook
-- [x] Modify orchestrator to queue output jobs after AI processing
-- [x] Mark items as processed only after output succeeds
-- [x] Add retry logic for failed output jobs (3 retries with exponential backoff)
-- [ ] **Testing**: Verify timeout/duplicate resolution
-- [ ] **Target**: Eliminate timeout duplicate posts
+1. **"Run Now" Button** → `class-project-management-ajax.php:182` → `schedule_job()`
+2. **Single Module File Upload** → `run-single-module-ajax.php:113` → `schedule_job_with_data()`  
+3. **Single Module Config Run** → `run-single-module-ajax.php:115` → `schedule_job()`
+4. **Scheduled Jobs** → `data-machine.php:286` → `execute_scheduled_job()`
 
-#### Phase 2: OpenAI API Migration
-- **Problem**: AI API calls can be slow and block execution
-- [ ] Create `dm_ai_job_event` Action Scheduler hook
-- [ ] Split AI processing into separate async jobs
-- [ ] Implement AI job retry logic with exponential backoff
-- [ ] Add rate limiting compliance
-- [ ] **Target**: Non-blocking AI processing
+**Note**: `prepare_and_schedule_job()` exists but appears unused (can be removed)
 
-#### Phase 3: Input Handler Migration
-- **Problem**: Large RSS feeds/slow APIs can timeout
-- [ ] Create `dm_input_job_event` Action Scheduler hook
-- [ ] Async input data fetching
-- [ ] Handle large data sources with pagination
-- [ ] **Target**: Reliable input processing
+### **Solution: Dedicated Job Creator Class**
 
-#### Phase 4: Enhanced Monitoring
-- [ ] Custom Action Scheduler dashboard for Data Machine
-- [ ] Failed job reporting and manual retry
-- [ ] Job performance metrics
-- [ ] **Target**: Better operational visibility
+#### **Phase 1: Create Job Creator Class** ✅ COMPLETED
+- [x] Create `includes/engine/class-job-creator.php`
+- [x] Single method: `create_and_schedule_job(module, user_id, context, optional_data)`
+- [x] Handles all job creation logic regardless of source
+- [x] Always schedules `dm_input_job_event` for async pipeline
+- [x] Absorbs logic from Job Executor's creation methods
 
-### 2. AI HTTP Client Library Migration (Medium Priority)
-**Goal**: Replace scattered HTTP logic with unified, multi-provider AI client
+#### **Phase 2: Update All Entry Points** ✅ COMPLETED  
+- [x] Update "Run Now" AJAX to use Job Creator
+- [x] Update file upload AJAX to use Job Creator
+- [x] Update single module page entry point to use Job Creator
+- [x] Update Module Config AJAX to use Job Creator
+- [x] Wire Job Creator into dependency injection in bootstrap
 
-#### Library Integration
-- [ ] Add ai-http-client as git subtree to `/libraries/ai-http-client/`
-- [ ] Include in main plugin file after Action Scheduler
-- [ ] Create `Data_Machine_AI_Client_Adapter` wrapper class
-- [ ] **Target**: Foundation for unified AI communication
+#### **Phase 3: Clean Up Dependencies** 🔄 IN PROGRESS
+- [x] Wire Job Creator into dependency injection in `data-machine.php`
+- [x] Remove obsolete methods from Job Executor:
+  - [x] Removed `prepare_and_schedule_job()`
+  - [x] Removed `schedule_job()`
+  - [x] Removed `schedule_job_with_data()`
+  - [x] Removed `create_and_schedule_job_event()`
+- [x] Remove old `dm_run_job_event` hook registration
+- [x] Clean up duplicate Module Config AJAX file
 
-#### API Class Replacement
-- [ ] Replace `Data_Machine_API_OpenAI` with adapter
-- [ ] Replace `Data_Machine_API_FactCheck` with adapter  
-- [ ] Replace `Data_Machine_API_Finalize` with adapter
-- [ ] Remove legacy API classes
-- [ ] **Target**: Single unified AI interface
+#### **Phase 3b: Evaluate Remaining Components** ✅ COMPLETED
+- [x] **Job Executor**: ❌ REMOVED - obsolete sync processing logic
+- [x] **Job Preparer**: ❌ REMOVED - only used by Job Executor
+- [x] **Job Filter**: ✅ KEPT - still needed for module concurrency & stuck job cleanup
+- [x] Updated Scheduler to use Job Creator instead of Job Executor
+- [x] Updated bootstrap dependencies to remove obsolete classes
+- [x] Removed Job Executor require from main plugin class
+- [x] Updated Composer autoload to remove deleted classes
+- [x] Updated CLAUDE.md with new simplified architecture
 
-#### Provider System Enhancement
-- [ ] Add provider selection UI (OpenAI, Anthropic, Gemini)
-- [ ] Implement automatic fallback chains
-- [ ] Migrate existing API keys to provider system
-- [ ] Add provider-specific configuration options
-- [ ] **Target**: Multi-provider flexibility and reliability
+#### **Phase 4: Fix Stuck Jobs Problem** ✅ COMPLETED
+- [x] **Root Cause**: Processing Orchestrator returned `false` on errors but never marked jobs as failed
+- [x] Added Job Status Manager dependency to Processing Orchestrator
+- [x] Updated all step methods to properly mark jobs as failed on errors:
+  - [x] `execute_input_step()` - proper failure handling with descriptive messages
+  - [x] `execute_process_step()` - fails on input data missing, logic failure, or scheduling failure
+  - [x] `execute_factcheck_step()` - fails on input data missing, logic failure, or scheduling failure  
+  - [x] `execute_finalize_step()` - fails on input data missing, logic failure, or scheduling failure
+- [x] Enhanced `schedule_next_step()` method with better error logging
+- [x] Updated bootstrap to inject Job Status Manager into orchestrator
+- [x] **Result**: Jobs now fail properly instead of getting stuck - proactive failure handling
 
-#### Advanced Features (Future)
-- [ ] Streaming AI responses for real-time feedback
-- [ ] Provider cost optimization algorithms
-- [ ] Enhanced error reporting with provider context
-- [ ] **Target**: Best-in-class AI integration
+#### **Phase 5: Testing** 🔄 IN PROGRESS
+- [ ] Test all 4 entry points use unified Job Creator
+- [ ] Verify all paths lead to same async pipeline and proper failure handling
+- [ ] Confirm no code duplication in job creation
+- [ ] Test that jobs fail gracefully instead of getting stuck
 
-### 3. WordPress.org Compliance (Completed ✅)
-- [x] Create comprehensive readme.txt with external service disclosure
-- [x] Document all third-party APIs (OpenAI, Reddit, Facebook, Twitter, etc.)
-- [x] Add proper plugin description and repository URL
-- [x] Clean up verbose debug logging
-- [x] Fix Action Scheduler initialization timing
+## Architecture Successfully Simplified ✅
 
-### 4. Multi-Plugin Strategy
-**Goal**: Standardize architecture across all Chris Huber plugins
+**Before**: Mixed sync/async pipeline with scattered job creation and stuck job cleanup
+**After**: 
+- Unified Job Creator for all entry points
+- Fully async 5-step pipeline  
+- Proactive failure handling (jobs fail immediately instead of getting stuck)
+- Clean separation of concerns
 
-#### Shared Libraries
-- [ ] **ai-http-client**: Deploy to Wordsurf, Data Machine, future plugins
-- [ ] **Action Scheduler**: Standardize async job processing
-- [ ] **Common utilities**: Shared logging, encryption, OAuth helpers
-- [ ] **Target**: Consistent architecture across plugin ecosystem
+## Next: Optional Enhancements
 
-#### Cross-Plugin Benefits
-- [ ] Unified AI provider management across all plugins
-- [ ] Shared fallback provider chains
-- [ ] Consistent error handling and logging patterns
-- [ ] Reduced maintenance overhead per plugin
-- [ ] **Target**: Plugin ecosystem synergy
-
-## Implementation Timeline
-
-### Week 1: Critical Fixes
-- [ ] Complete Action Scheduler Phase 1 (Output Handler Migration)
-- [ ] Fix remote publishing timeout/duplicate issues
-- [ ] Deploy ai-http-client library integration
-
-### Week 2: Core Migrations  
-- [ ] Complete AI HTTP Client API class replacements
-- [ ] Begin Action Scheduler Phase 2 (AI API Migration)
-- [ ] Provider system UI implementation
-
-### Week 3: Advanced Features
-- [ ] Action Scheduler Phase 3 (Input Handler Migration)
-- [ ] Multi-provider fallback configuration
-- [ ] Enhanced monitoring dashboard
-
-### Week 4: Polish & Testing
-- [ ] Comprehensive testing of async workflows
-- [ ] Performance optimization
-- [ ] Documentation updates
-- [ ] WordPress.org submission preparation
-
-## Success Metrics
-
-### Reliability
-- [ ] Zero timeout-related duplicate posts
-- [ ] 99%+ job completion rate
-- [ ] Automatic fallback to secondary AI providers
-
-### Performance  
-- [ ] Non-blocking AI processing
-- [ ] Background job processing via Action Scheduler
-- [ ] Faster response times for user interactions
-
-### Maintainability
-- [ ] Single unified AI client interface
-- [ ] Standardized async job patterns
-- [ ] Shared library architecture across plugins
-
-### User Experience
-- [ ] Real-time job status feedback
-- [ ] Provider choice and cost optimization
-- [ ] Better error messages and recovery options
-
-## Architecture Goals
-
-### Current State
-```
-Synchronous: Job → Process Data → Fact Check → Finalize → Output
-Problems: Timeouts, blocking, poor error recovery
-```
-
-### Target State
-```
-Asynchronous: Job → Queue AI Job → Queue Output Job → Complete
-Benefits: Non-blocking, retry logic, better reliability
-```
-
-### Multi-Plugin Ecosystem
-```
-Data Machine ──┐
-               ├── ai-http-client (shared)
-Wordsurf ──────┤
-               ├── Action Scheduler (shared)
-Future Plugin ─┘
-```
-
-## Notes
-- **Action Scheduler migration is critical** for resolving current timeout issues
-- **AI HTTP Client provides foundation** for multi-provider reliability
-- **Both initiatives support** the broader multi-plugin standardization strategy
-- **Focus on backward compatibility** during all migrations
-- **Comprehensive testing required** before WordPress.org submission
+### **Database Cleanup Implementation** (Optional)
+- [ ] Create `dm_cleanup_job_event` scheduled job  
+- [ ] Implement automatic pruning of large data fields after completion

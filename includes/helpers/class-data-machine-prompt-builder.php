@@ -221,19 +221,7 @@ PROMPT;
             $user_message .= "\n\nReminder: Do not use formatting markup for the initial directive lines (POST_TITLE, CATEGORY, TAGS).";
         }
 
-        // Add source link information
-        if (!empty($input_metadata['source_url'])) {
-            $source_url = esc_url($input_metadata['source_url']);
-            $source_name = $this->determine_source_name($input_metadata, $source_url);
-            
-            $source_link_string = sprintf(
-                'Source: <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
-                $source_url,
-                $source_name
-            );
-            
-            $user_message .= "\n\nSource Link: " . $source_link_string;
-        }
+        // Note: Source URL is handled programmatically by output handlers, not passed to AI
 
         return $user_message;
     }

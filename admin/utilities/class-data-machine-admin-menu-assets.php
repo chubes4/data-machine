@@ -246,8 +246,8 @@ class Data_Machine_Admin_Menu_Assets {
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'module_config_nonce' => wp_create_nonce( 'dm_module_config_actions_nonce' ),
         );
-        $js_path = $plugin_base_path . 'module-config/js/dm-module-config.js';
-        $js_url  = $plugin_base_url . 'module-config/js/dm-module-config.js';
+        $js_path = $plugin_base_path . 'admin/module-config/js/dm-module-config.js';
+        $js_url  = $plugin_base_url . 'admin/module-config/js/dm-module-config.js';
         if ( file_exists( $js_path ) ) {
             $js_version = filemtime( $js_path );
             wp_enqueue_script( 'dm-module-config', $js_url, array(), $js_version, true );
@@ -275,9 +275,7 @@ class Data_Machine_Admin_Menu_Assets {
         $js_remote_version = file_exists($js_remote_path) ? filemtime($js_remote_path) : $this->version;
         wp_enqueue_script( 'dm-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true );
         $remote_locations_params = array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            /* translators: %s: Location name */
-            'confirm_delete' => __('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine')
+            'ajax_url' => admin_url('admin-ajax.php')
         );
         wp_localize_script('dm-remote-locations-admin-js', 'dmRemoteLocationsParams', $remote_locations_params);
     }

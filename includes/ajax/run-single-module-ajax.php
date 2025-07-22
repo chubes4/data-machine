@@ -13,8 +13,8 @@ class Data_Machine_Run_Single_Module_Ajax {
     /** @var Data_Machine_Database_Projects */
     private $db_projects;
 
-    /** @var Data_Machine_Job_Executor */
-    private $job_executor;
+    /** @var Data_Machine_Job_Creator */
+    private $job_creator;
 
     /** @var Data_Machine_Input_Files */
     private $input_files_handler;
@@ -27,20 +27,20 @@ class Data_Machine_Run_Single_Module_Ajax {
      *
      * @param Data_Machine_Database_Modules $db_modules Modules DB service.
      * @param Data_Machine_Database_Projects $db_projects Projects DB service.
-     * @param Data_Machine_Job_Executor $job_executor Job Executor service.
+     * @param Data_Machine_Job_Creator $job_creator Job Creator service.
      * @param Data_Machine_Input_Files $input_files_handler Files Input Handler service.
      * @param Data_Machine_Logger|null $logger Logger service (optional).
      */
     public function __construct(
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Database_Projects $db_projects,
-        Data_Machine_Job_Executor $job_executor,
+        Data_Machine_Job_Creator $job_creator,
         Data_Machine_Input_Files $input_files_handler,
         ?Data_Machine_Logger $logger = null
     ) {
         $this->db_modules = $db_modules;
         $this->db_projects = $db_projects;
-        $this->job_executor = $job_executor;
+        $this->job_creator = $job_creator;
         $this->input_files_handler = $input_files_handler;
         $this->logger = $logger;
 
@@ -67,7 +67,7 @@ class Data_Machine_Run_Single_Module_Ajax {
         // Get dependencies from properties
         $db_modules = $this->db_modules;
         $logger = $this->logger;
-        $job_executor = $this->job_executor;
+        $job_creator = $this->job_creator;
         $db_projects = $this->db_projects;
 
         // --- Ownership Check (using Project) ---
@@ -105,27 +105,30 @@ class Data_Machine_Run_Single_Module_Ajax {
             }
 
             // Call the job executor.
+            // Convert module object to array for Job Creator
+            $module_array = (array) $module;
+            
             $result = null;
             if ($module->data_source_type === 'files') {
                 if (empty($input_data_for_executor) || !is_array($input_data_for_executor)) {
                     throw new Exception(__( 'File input handler did not return valid data.', 'data-machine' ));
                 }
-                $result = $job_executor->schedule_job_from_file($module, $user_id, 'manual_file', $input_data_for_executor[0]);
+                $result = $job_creator->create_and_schedule_job($module_array, $user_id, 'file_upload', $input_data_for_executor[0]);
             } else {
-                $result = $job_executor->schedule_job_from_config($module, $user_id, 'manual_ajax');
+                $result = $job_creator->create_and_schedule_job($module_array, $user_id, 'single_module');
             }
 
-            if (is_wp_error($result)) {
-                $logger?->error('Manual AJAX Trigger: Job Executor failed.', [
+            if (!$result['success']) {
+                $logger?->error('Manual AJAX Trigger: Job Creator failed.', [
                     'module_id' => $module_id,
                     'user_id' => $user_id,
-                    'error_code' => $result->get_error_code(),
-                    'error_message' => $result->get_error_message()
+                    'error_message' => $result['message']
                 ]);
-                wp_send_json_error(array('message' => $result->get_error_message()));
+                wp_send_json_error(array('message' => $result['message']));
 
-            } elseif (is_int($result) && $result > 0) {
-                $job_id = $result;
+            } else {
+                // Success case - result['success'] is true
+                $job_id = $result['job_id'] ?? 0;
                 $logger?->info('Manual AJAX Trigger: Job successfully queued.', ['module_id' => $module_id, 'user_id' => $user_id, 'job_id' => $job_id]);
                 wp_send_json_success(array(
                     'status' => 'processing_queued',
@@ -133,16 +136,6 @@ class Data_Machine_Run_Single_Module_Ajax {
                     'message' => sprintf(__( 'Processing job successfully queued (Job ID: %d). The results will appear when processing is complete.', 'data-machine' ), $job_id),
                     'job_id' => $job_id
                 ));
-
-            } elseif ($result === 0) {
-                $logger?->info('Manual AJAX Trigger: No new items found to process after filtering.', ['module_id' => $module_id, 'user_id' => $user_id]);
-                wp_send_json_success(array(
-                    'status' => 'success_no_items',
-                    'message' => __( 'No new items found matching the criteria after checking for duplicates.', 'data-machine' )
-                ));
-            } else {
-                $logger?->error('Manual AJAX Trigger: Unexpected result from Job Executor.', ['module_id' => $module_id, 'user_id' => $user_id, 'result' => $result]);
-                wp_send_json_error(array('message' => __('An unexpected error occurred during job initiation.', 'data-machine')));
             }
 
         } catch (Exception $e) {

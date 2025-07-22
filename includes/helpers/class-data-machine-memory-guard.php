@@ -256,7 +256,7 @@ class Data_Machine_Memory_Guard {
 	 */
 	public function process_file_safely( $file_path, callable $chunk_processor, $chunk_size = null ) {
 		if ( ! file_exists( $file_path ) ) {
-			throw new Exception( "File not found: {$file_path}" );
+			throw new Exception( esc_html( "File not found: {$file_path}" ) );
 		}
 		
 		if ( $chunk_size === null ) {
@@ -265,7 +265,7 @@ class Data_Machine_Memory_Guard {
 		
 		$file_handle = fopen( $file_path, 'rb' );
 		if ( $file_handle === false ) {
-			throw new Exception( "Cannot open file for reading: {$file_path}" );
+			throw new Exception( esc_html( "Cannot open file for reading: {$file_path}" ) );
 		}
 		
 		try {

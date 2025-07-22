@@ -18,17 +18,14 @@ require_once plugin_dir_path( __FILE__ ) . 'api/class-data-machine-api-finalize.
 require_once plugin_dir_path( __FILE__ ) . 'engine/class-process-data.php';
 require_once plugin_dir_path( __FILE__ ) . 'database/class-database-modules.php'; // Updated path
 require_once DATA_MACHINE_PATH . 'includes/engine/class-processing-orchestrator.php'; // Ensuring this path is correct
-require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php'; // Moved up
-require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php'; // Add correct interface back
-require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_local.php';
-require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-publish_remote.php';
-require_once DATA_MACHINE_PATH . 'includes/output/class-data-machine-output-data_export.php';
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-files.php';
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-airdrop_rest_api.php'; // Renamed from rest-api
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-public_rest_api.php'; // Added new public handler
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-rss.php';
-require_once DATA_MACHINE_PATH . 'includes/input/class-data-machine-input-reddit.php';
-require_once DATA_MACHINE_PATH . 'includes/engine/class-job-executor.php'; // ADDED: Job Executor
+require_once DATA_MACHINE_PATH . 'includes/handlers/output/class-data-machine-output-publish_local.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/output/class-data-machine-output-publish_remote.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/output/class-data-machine-output-data_export.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/input/class-data-machine-input-files.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/input/class-data-machine-input-airdrop_rest_api.php'; // Renamed from rest-api
+require_once DATA_MACHINE_PATH . 'includes/handlers/input/class-data-machine-input-public_rest_api.php'; // Added new public handler
+require_once DATA_MACHINE_PATH . 'includes/handlers/input/class-data-machine-input-rss.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/input/class-data-machine-input-reddit.php';
 
 use Data_Machine\Includes\Database\Data_Machine_Database_Modules;
 use Data_Machine\Includes\Database\Data_Machine_Database_Projects;
@@ -224,12 +221,12 @@ class Data_Machine {
 		$admin_menu_assets->init_hooks();
 
 		// Initialize settings registration handler
-		require_once DATA_MACHINE_PATH . 'module-config/RegisterSettings.php';
+		require_once DATA_MACHINE_PATH . 'admin/module-config/RegisterSettings.php';
 		$register_settings = new Data_Machine_Register_Settings($this->version);
 		$register_settings->init_hooks();
 
 		// Initialize module handler
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'module-config/class-dm-module-config-handler.php';
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/module-config/class-dm-module-config-handler.php';
 		$module_handler = new Data_Machine_Module_Handler(
 			$this->db_modules,
 			$this->admin_page->handler_registry,
@@ -246,8 +243,8 @@ class Data_Machine {
 		// Note: Prompt Builder is instantiated in main bootstrap file and injected into orchestrator
 
 		// Remote locations handler (if needed elsewhere, move to bootstrap)
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-data-machine-remote-locations.php';
-		$remote_locations = new Data_Machine_Remote_Locations($this->db_remote_locations, $this->logger);
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/remote-locations/class-data-machine-remote-locations-form-handler.php';
+		$remote_locations = new Data_Machine_Remote_Locations_Form_Handler($this->db_remote_locations, $this->logger);
 
 		// Remove legacy/placeholder null assignments for AJAX handlers and others
 		// All dependencies should be injected or instantiated as needed

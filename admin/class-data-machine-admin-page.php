@@ -64,14 +64,14 @@ class Data_Machine_Admin_Page {
 
     /**
      * Handler Factory instance.
-     * @var Data_Machine_Handler_Factory
+     * @var Dependency_Injection_Handler_Factory
      * @since NEXT_VERSION
      */
     public $handler_factory;
 
     /**
-     * Remote Locations Admin handler instance.
-     * @var Data_Machine_Remote_Locations
+     * Remote Locations Form Handler instance.
+     * @var Data_Machine_Remote_Locations_Form_Handler
      * @since NEXT_VERSION
      */
     private $remote_locations_admin;
@@ -93,8 +93,8 @@ class Data_Machine_Admin_Page {
      * @param    Data_Machine_Logger                      $logger                 Injected Logger instance.
      * @param    Data_Machine_Handler_Registry            $handler_registry       Injected Handler Registry instance.
      * @param    Data_Machine_Settings_Fields             $settings_fields        Injected Settings Fields instance.
-     * @param    Data_Machine_Handler_Factory             $handler_factory        Injected Handler Factory instance.
-     * @param    Data_Machine_Remote_Locations            $remote_locations_admin Injected Remote Locations Admin instance.
+     * @param    Dependency_Injection_Handler_Factory             $handler_factory        Injected Handler Factory instance.
+     * @param    Data_Machine_Remote_Locations_Form_Handler $remote_locations_admin Injected Remote Locations Form Handler instance.
      */
     public function __construct(
         $version,
@@ -103,8 +103,8 @@ class Data_Machine_Admin_Page {
         Data_Machine_Logger $logger,
         Data_Machine_Handler_Registry $handler_registry,
         Data_Machine_Settings_Fields $settings_fields,
-        Data_Machine_Handler_Factory $handler_factory,
-        Data_Machine_Remote_Locations $remote_locations_admin
+        Dependency_Injection_Handler_Factory $handler_factory,
+        Data_Machine_Remote_Locations_Form_Handler $remote_locations_admin
     ) {
         $this->version = $version;
         $this->db_modules = $db_modules;
@@ -115,7 +115,7 @@ class Data_Machine_Admin_Page {
         $this->handler_factory = $handler_factory;
         $this->remote_locations_admin = $remote_locations_admin;
         // Instantiate the module config handler with all required dependencies
-        require_once plugin_dir_path(__FILE__) . '../module-config/class-dm-module-config-handler.php';
+        require_once plugin_dir_path(__FILE__) . 'module-config/class-dm-module-config-handler.php';
         $this->module_config_handler = new Data_Machine_Module_Handler($db_modules, $handler_registry, $handler_factory, $logger);
         // Hook for project management page (if any form processing is needed in future)
         add_action( 'load-dm-run-single-module_page_dm-project-management', array( $this, 'process_project_management_page' ) );

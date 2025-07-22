@@ -17,8 +17,6 @@ class Data_Machine_process_data {
 	 */
 	private $openai_api;
 
-	// Removed logger dependency property
-
 	/**
 	 * Initialize the class and set its properties.
 	 * Dependencies are injected.

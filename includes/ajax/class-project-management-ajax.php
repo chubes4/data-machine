@@ -28,8 +28,8 @@ class Data_Machine_Project_Management_Ajax {
 	/** @var ?Data_Machine_Logger */
 	private $logger;
 
-	/** @var Data_Machine_Job_Executor */
-	private $job_executor;
+	/** @var Data_Machine_Job_Creator */
+	private $job_creator;
 
 	/**
 	 * Constructor: wires hooks and dependencies.
@@ -38,7 +38,7 @@ class Data_Machine_Project_Management_Ajax {
 	 * @param Data_Machine_Database_Modules $db_modules Modules DB service.
 	 * @param Data_Machine_Database_Jobs $db_jobs Jobs DB service.
 	 * @param Data_Machine_Database_Processed_Items $db_processed_items Processed Items DB service.
-	 * @param Data_Machine_Job_Executor $job_executor Job Executor service.
+	 * @param Data_Machine_Job_Creator $job_creator Job Creator service.
 	 * @param Data_Machine_Logger|null $logger Logger service (optional).
 	 */
 	public function __construct(
@@ -46,14 +46,14 @@ class Data_Machine_Project_Management_Ajax {
 		Data_Machine_Database_Modules   $db_modules,
 		Data_Machine_Database_Jobs      $db_jobs,
 		Data_Machine_Database_Processed_Items $db_processed_items,
-		Data_Machine_Job_Executor       $job_executor,
+		Data_Machine_Job_Creator        $job_creator,
 		?Data_Machine_Logger            $logger = null // Add optional logger
 	) {
 		$this->db_projects          = $db_projects;
 		$this->db_modules           = $db_modules;
 		$this->db_jobs              = $db_jobs;
 		$this->db_processed_items   = $db_processed_items;
-		$this->job_executor         = $job_executor;
+		$this->job_creator          = $job_creator;
 		$this->logger               = $logger;
 
 		add_action( 'wp_ajax_dm_run_now',              [ $this, 'handle_run_now' ] );
@@ -172,30 +172,28 @@ class Data_Machine_Project_Management_Ajax {
 				continue;
 			}
 
-			// NEW: Call Job Executor to schedule the job
+			// NEW: Call Job Creator to schedule the job
 			try {
-				// Ensure the job_executor property is set
-				if (empty($this->job_executor)) {
-					throw new Exception('Job Executor service is not available in Ajax Projects handler.');
+				// Ensure the job_creator property is set
+				if (empty($this->job_creator)) {
+					throw new Exception('Job Creator service is not available in Ajax Projects handler.');
 				}
 
-				$job_id = $this->job_executor->schedule_job_from_config($module, $user_id, 'run_now');
+				$result = $this->job_creator->create_and_schedule_job($module, $user_id, 'run_now');
 
-				if (is_wp_error($job_id)) {
-					$error_message = sprintf("Failed to schedule job for module '%s': %s", $module_name, $job_id->get_error_message());
+				if (!$result['success']) {
+					$error_message = sprintf("Failed to schedule job for module '%s': %s", $module_name, $result['message']);
 					$this->log($logger, $project_id, $module_id, $module_name, $error_message, 'error');
 					$errors[] = $error_message;
 					continue;
 				}
 
-				if ($job_id > 0) {
+				if ($result['job_id'] > 0) {
 					$jobs_scheduled++;
 					$scheduled_names[] = $module_name;
-					$this->log($logger, $project_id, $module_id, $module_name, "Job ID {$job_id} scheduled via Job Executor.");
-				} elseif ($job_id === 0) {
-					$this->log($logger, $project_id, $module_id, $module_name, "Job not created - module has active jobs (check jobs table for stuck jobs).", 'info');
+					$this->log($logger, $project_id, $module_id, $module_name, "Job ID {$result['job_id']} scheduled via Job Creator.");
 				} else {
-					$this->log($logger, $project_id, $module_id, $module_name, "Job scheduling via Job Executor did not return a valid Job ID.", 'warning');
+					$this->log($logger, $project_id, $module_id, $module_name, "Job creation succeeded but job_id not found in result.", 'warning');
 				}
 			} catch (Exception $e) {
 				$error_message = sprintf("Error triggering job schedule for module '%s': %s", $module_name, $e->getMessage());

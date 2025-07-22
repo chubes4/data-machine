@@ -16,8 +16,8 @@ class Data_Machine_Scheduler {
     /** @var ?Data_Machine_Logger */
     private $logger;
 
-    /** @var Data_Machine_Job_Executor */
-    private $job_executor;
+    /** @var Data_Machine_Job_Creator */
+    private $job_creator;
 
     /** @var Data_Machine_Database_Projects */
     private $db_projects;
@@ -34,7 +34,7 @@ class Data_Machine_Scheduler {
     /**
      * Constructor.
      *
-     * @param Data_Machine_Job_Executor $job_executor Job Executor service.
+     * @param Data_Machine_Job_Creator $job_creator Job Creator service.
      * @param Data_Machine_Database_Projects $db_projects Projects DB service.
      * @param Data_Machine_Database_Modules $db_modules Modules DB service.
      * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
@@ -42,14 +42,14 @@ class Data_Machine_Scheduler {
      * @param Data_Machine_Logger|null $logger Logger service (optional).
      */
     public function __construct(
-        Data_Machine_Job_Executor $job_executor,
+        Data_Machine_Job_Creator $job_creator,
         Data_Machine_Database_Projects $db_projects,
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Action_Scheduler $action_scheduler,
         Data_Machine_Database_Jobs $db_jobs,
         ?Data_Machine_Logger $logger = null
     ) {
-        $this->job_executor = $job_executor;
+        $this->job_creator = $job_creator;
         $this->db_projects = $db_projects;
         $this->db_modules = $db_modules;
         $this->action_scheduler = $action_scheduler;
@@ -212,12 +212,12 @@ class Data_Machine_Scheduler {
         $logger = $this->logger; // Use injected logger
         $log_prefix = "Data Machine Scheduler (Project Callback: {$project_id}): ";
 
-        // Get the Job Executor service from property
-        $job_executor = $this->job_executor;
-        if (!$job_executor) { // Should not happen if constructor enforces type
-             $error_message = $log_prefix . "Job Executor service not available (should be injected).";
+        // Get the Job Creator service from property
+        $job_creator = $this->job_creator;
+        if (!$job_creator) { // Should not happen if constructor enforces type
+             $error_message = $log_prefix . "Job Creator service not available (should be injected).";
              $logger?->critical($error_message, ['project_id' => $project_id]);
-             return; // Cannot proceed without the executor
+             return; // Cannot proceed without the creator
         }
 
         try {
@@ -293,18 +293,16 @@ class Data_Machine_Scheduler {
                     continue; // Skip file input modules for scheduled runs
                 }
 
-                // d. If passes filters, call schedule_job_from_config to create and schedule the job event
-                $job_result = $job_executor->schedule_job_from_config($module, $project_owner_user_id, 'cron_project');
+                // d. If passes filters, call Job Creator to create and schedule the job
+                $job_result = $job_creator->create_and_schedule_job((array) $module, $project_owner_user_id, 'cron_project');
 
-                if (is_wp_error($job_result)) {
-                    $logger?->error($log_prefix . "Error scheduling job for module ID {$module->module_id}: " . $job_result->get_error_message(), ['module_id' => $module->module_id, 'project_id' => $project_id]);
+                if (!$job_result['success']) {
+                    $logger?->error($log_prefix . "Error scheduling job for module ID {$module->module_id}: " . $job_result['message'], ['module_id' => $module->module_id, 'project_id' => $project_id]);
                     // Potentially continue to next module or stop? Continuing for now.
-                } elseif ($job_result > 0) {
-                    $total_jobs_created++;
-                    $logger?->info($log_prefix . "Successfully created job ID {$job_result} for module ID {$module->module_id}.", ['job_id' => $job_result, 'module_id' => $module->module_id]);
                 } else {
-                    // Job result was 0, meaning no new items to process for this module
-                    $logger?->info($log_prefix . "No job created for module ID {$module->module_id} (likely no new items).", ['module_id' => $module->module_id]);
+                    $total_jobs_created++;
+                    $job_id = $job_result['job_id'] ?? 0;
+                    $logger?->info($log_prefix . "Successfully created job ID {$job_id} for module ID {$module->module_id}.", ['job_id' => $job_id, 'module_id' => $module->module_id]);
                 }
 
                 $modules_processed_count++;
@@ -342,10 +340,10 @@ class Data_Machine_Scheduler {
         $logger = $this->logger; // Use injected logger
         $log_prefix = "Data Machine Scheduler (Module Callback: {$module_id}): ";
 
-        // Get the Job Executor service from property
-        $job_executor = $this->job_executor;
-        if (!$job_executor) { // Should not happen
-             $error_message = $log_prefix . "Job Executor service not available (should be injected).";
+        // Get the Job Creator service from property
+        $job_creator = $this->job_creator;
+        if (!$job_creator) { // Should not happen
+             $error_message = $log_prefix . "Job Creator service not available (should be injected).";
              $logger?->critical($error_message, ['module_id' => $module_id]);
              return; // Cannot proceed
         }
@@ -392,18 +390,16 @@ class Data_Machine_Scheduler {
             }
             $project_owner_user_id = $project->user_id;
 
-            // 8. If passes filters, call schedule_job_from_config to create and schedule the job event
-            $job_result = $job_executor->schedule_job_from_config($module, $project_owner_user_id, 'cron_module');
+            // 8. If passes filters, call Job Creator to create and schedule the job
+            $job_result = $job_creator->create_and_schedule_job((array) $module, $project_owner_user_id, 'cron_module');
 
-            if (is_wp_error($job_result)) {
-                $logger?->error($log_prefix . "Error scheduling job: " . $job_result->get_error_message(), ['module_id' => $module_id]);
-            } elseif ($job_result > 0) {
-                // Update module's last run time only if a job was created
-                $db_modules->update_module_last_run($module_id); // Update module last run time
-                $logger?->info($log_prefix . "Successfully created job ID {$job_result}. Module last run time updated.", ['job_id' => $job_result, 'module_id' => $module_id]);
+            if (!$job_result['success']) {
+                $logger?->error($log_prefix . "Error scheduling job: " . $job_result['message'], ['module_id' => $module_id]);
             } else {
-                 // Job result was 0, meaning no new items to process
-                 $logger?->info($log_prefix . "No job created (likely no new items). Module last run time NOT updated.", ['module_id' => $module_id]);
+                // Update module's last run time when job is created
+                $job_id = $job_result['job_id'] ?? 0;
+                $db_modules->update_module_last_run($module_id); // Update module last run time
+                $logger?->info($log_prefix . "Successfully created job ID {$job_id}. Module last run time updated.", ['job_id' => $job_id, 'module_id' => $module_id]);
             }
 
         } catch (Exception $e) {

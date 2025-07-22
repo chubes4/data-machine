@@ -161,12 +161,7 @@ if ($is_editing) {
 					<tr>
 						<th scope="row"><?php esc_html_e('Enable Content Types', 'data-machine'); ?></th>
 						<td>
-							<p><?php esc_html_e('Please sync this location first to enable post types and taxonomies for module configuration.', 'data-machine'); ?></p>
-							<button type="button" class="button dm-sync-location-button" data-location-id="<?php echo esc_attr($location_id); ?>">
-								<?php esc_html_e('Sync Now', 'data-machine'); ?>
-							</button>
-							<span class="spinner" style="float: none; vertical-align: middle;"></span>
-							<div class="dm-sync-status" style="margin-top: 5px;"></div>
+							<p><?php esc_html_e('Post types and taxonomies will be available for selection after the initial sync.', 'data-machine'); ?></p>
 						</td>
 					</tr>
 				<?php endif; ?>
@@ -174,5 +169,20 @@ if ($is_editing) {
 
 		</tbody>
 	</table>
-	<?php submit_button( $is_editing ? __( 'Update Location', 'data-machine' ) : __( 'Add Location', 'data-machine' ) ); ?>
+	<?php if ($is_editing): ?>
+		<p class="submit">
+			<input type="submit" name="submit" id="submit" class="button button-primary" value="<?php echo esc_attr(__('Update Location', 'data-machine')); ?>">
+			<?php if ($synced_info): ?>
+				<a href="<?php echo esc_url(add_query_arg(array(
+					'action' => 'dm_sync_location',
+					'location_id' => $location_id,
+					'_wpnonce' => wp_create_nonce('dm_sync_location_' . $location_id)
+				), admin_url('admin-post.php'))); ?>" class="button" style="margin-left: 10px;">
+					<?php esc_html_e('Re-sync', 'data-machine'); ?>
+				</a>
+			<?php endif; ?>
+		</p>
+	<?php else: ?>
+		<?php submit_button(__('Sync Now', 'data-machine')); ?>
+	<?php endif; ?>
 </form>

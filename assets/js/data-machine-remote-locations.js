@@ -92,52 +92,8 @@ jQuery(document).ready(function($) {
     });
 
     // --- Delete Action --- 
-    // Handles clicks on the 'Delete' link for a remote location.
-    // Prompts the user for confirmation before sending an AJAX request to delete the location.
-    // Fades out the table row on successful deletion.
-    $('.wp-list-table').on('click', '.dm-delete-location', function(e) {
-        e.preventDefault();
-        var $link = $(this);
-        var locationId = $link.data('id');
-        var locationName = $link.data('name');
-        var nonce = $link.data('nonce');
-        var $row = $link.closest('tr');
-
-        // Format confirmation message
-        var confirmMessage = dmRemoteLocationsParams.confirm_delete.replace('%s', locationName);
-
-        if (confirm(confirmMessage)) {
-            // Optional: Add visual indicator while deleting
-            $row.css('opacity', '0.5');
-
-            $.ajax({
-                url: dmRemoteLocationsParams.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_delete_location',
-                    location_id: locationId,
-                    _wpnonce: nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        showNotice(response.data.message, 'success');
-                        $row.fadeOut('slow', function() {
-                            $(this).remove();
-                            // If it's the last item, show the 'no items' message (might require page reload or more complex logic)
-                        });
-                    } else {
-                        showNotice(response.data.message, 'error');
-                        $row.css('opacity', '1'); // Restore opacity on failure
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    showNotice('AJAX Error: ' + textStatus + ' - ' + errorThrown, 'error');
-                    $row.css('opacity', '1'); // Restore opacity on failure
-                    console.error("Delete AJAX error:", textStatus, errorThrown);
-                }
-            });
-        }
-    });
+    // Delete now handled by simple form submission via admin-post.php
+    // No JavaScript needed - uses onclick="return confirm()" for confirmation
 
     // --- View Sync Details Action ---
     // Handles clicks on the 'View Details' link (if available after a successful sync).

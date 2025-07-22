@@ -29,18 +29,15 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 // Include necessary base classes and interfaces first
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-constants.php'; // Constants must be loaded first
-require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-data-machine-output-handler.php';
-require_once DATA_MACHINE_PATH . 'includes/interfaces/interface-input-handler.php';
-require_once DATA_MACHINE_PATH . 'includes/input/trait-data-machine-base-input-handler.php';
-require_once DATA_MACHINE_PATH . 'includes/output/trait-data-machine-base-output-handler.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/input/trait-data-machine-base-input-handler.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/output/trait-data-machine-base-output-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php'; // Updated path
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php'; // Added projects class
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php'; // Jobs Database Class
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php'; // Processed Items Database Class
-require_once DATA_MACHINE_PATH . 'module-config/ajax/class-module-config-ajax.php'; // Updated Module AJAX Handler path
+require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/class-module-config-ajax.php'; // Updated Module AJAX Handler path
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-project-management-ajax.php'; // Corrected AJAX Handler path for Dashboard Project Actions
-require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-locations.php'; // AJAX Handler for Location Actions
-require_once DATA_MACHINE_PATH . 'admin/class-data-machine-remote-locations.php'; // Admin Form Handler for Remote Locations
+require_once DATA_MACHINE_PATH . 'admin/remote-locations/class-data-machine-remote-locations-form-handler.php'; // Remote Locations Form Handler
 require_once DATA_MACHINE_PATH . 'admin/utilities/class-data-machine-import-export.php'; // Added Import/Export Helper
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-prompt-builder.php'; // Centralized prompt builder
@@ -51,23 +48,22 @@ require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-finalize.p
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-memory-guard.php'; // Memory protection service
 require_once DATA_MACHINE_PATH . 'includes/class-data-machine-scheduler.php'; // Added Scheduler class
 require_once DATA_MACHINE_PATH . 'includes/ajax/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
-require_once DATA_MACHINE_PATH . 'module-config/RegisterSettings.php';
-require_once DATA_MACHINE_PATH . 'module-config/HandlerFactoryInterface.php'; // Ensure factory interface is loaded
-require_once DATA_MACHINE_PATH . 'module-config/HandlerFactory.php';
-require_once DATA_MACHINE_PATH . 'module-config/remote-locations/RemoteLocationService.php';
+require_once DATA_MACHINE_PATH . 'admin/module-config/RegisterSettings.php';
+require_once DATA_MACHINE_PATH . 'admin/module-config/HandlerFactory.php';
+require_once DATA_MACHINE_PATH . 'admin/remote-locations/RemoteLocationService.php';
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-reddit.php';
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-twitter.php'; // Added missing include
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-threads.php'; // Add Threads OAuth
 require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-facebook.php'; // Add Facebook OAuth
-require_once DATA_MACHINE_PATH . 'includes/engine/class-job-worker.php'; // Ensure worker class is loaded
-require_once DATA_MACHINE_PATH . 'includes/engine/class-job-preparer.php'; // Job preparation class
 require_once DATA_MACHINE_PATH . 'includes/engine/class-job-filter.php'; // Job filtering and deduplication
-require_once DATA_MACHINE_PATH . 'module-config/SettingsFields.php';
-require_once DATA_MACHINE_PATH . 'module-config/class-dm-module-config-handler.php';
+require_once DATA_MACHINE_PATH . 'includes/engine/class-job-status-manager.php'; // Centralized job status management
+require_once DATA_MACHINE_PATH . 'includes/engine/class-job-creator.php'; // Unified job creation class
+require_once DATA_MACHINE_PATH . 'admin/module-config/SettingsFields.php';
+require_once DATA_MACHINE_PATH . 'admin/module-config/class-dm-module-config-handler.php';
 require_once DATA_MACHINE_PATH . 'includes/ajax/run-single-module-ajax.php';
-require_once DATA_MACHINE_PATH . 'module-config/ajax/module-config-remote-locations-ajax.php';
+require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/module-config-remote-locations-ajax.php';
 // Include the new module config assets file
-// require_once DATA_MACHINE_PATH . 'module-config/module-config-enqueue-assets.php';
+// require_once DATA_MACHINE_PATH . 'admin/module-config/module-config-enqueue-assets.php';
 
 
 
@@ -85,7 +81,7 @@ function run_data_machine() {
 
     // Register API/Auth admin_post handlers
     if (is_admin()) {
-        require_once DATA_MACHINE_PATH . 'admin/class-dm-api-auth-page.php';
+        require_once DATA_MACHINE_PATH . 'admin/oauth/class-dm-api-auth-page.php';
         new Data_Machine_Api_Auth_Page($logger);
     }
 
@@ -169,8 +165,11 @@ function run_data_machine() {
     // Settings fields
     $settings_fields = new Data_Machine_Settings_Fields($handler_factory, $remote_location_service);
 
-    // Remote locations admin handler
-    $remote_locations_admin = new Data_Machine_Remote_Locations($db_remote_locations, $logger);
+    // Remote locations sync service
+    $sync_remote_locations = new Data_Machine_Sync_Remote_Locations($db_remote_locations, $logger);
+
+    // Remote locations form handler
+    $remote_locations_form_handler = new Data_Machine_Remote_Locations_Form_Handler($db_remote_locations, $logger, $sync_remote_locations);
 
     // Admin page
     $admin_page = new Data_Machine_Admin_Page(
@@ -181,7 +180,7 @@ function run_data_machine() {
         $handler_registry,
         $settings_fields,
         $handler_factory,
-        $remote_locations_admin
+        $remote_locations_form_handler
     );
 
     // Register settings - Handled in Data_Machine class
@@ -198,6 +197,9 @@ function run_data_machine() {
     // Public API AJAX handler
 
     // Job worker, orchestrator, job executor, scheduler
+    $job_filter = new Data_Machine_Job_Filter($db_jobs, $logger);
+    $job_status_manager = new Data_Machine_Job_Status_Manager($db_jobs, $db_projects, $logger);
+    
     $orchestrator = new Data_Machine_Processing_Orchestrator(
         $process_data,
         $factcheck_api,
@@ -205,24 +207,12 @@ function run_data_machine() {
         $handler_factory,
         $prompt_builder,
         $logger,
-        $action_scheduler
-    );
-    $job_preparer = new Data_Machine_Job_Preparer($db_processed_items, $handler_factory, $logger);
-    $job_filter = new Data_Machine_Job_Filter($db_jobs, $logger);
-    $job_executor = new Data_Machine_Job_Executor(
-        $db_processed_items,
-        $db_jobs,
-        $db_modules,
-        $db_projects,
-        $db_remote_locations,
-        $orchestrator,
-        $handler_factory,
         $action_scheduler,
-        $job_preparer,
-        $job_filter,
-        $logger
+        $db_jobs,
+        $job_status_manager
     );
-    $scheduler = new Data_Machine_Scheduler($job_executor, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
+    $job_creator = new Data_Machine_Job_Creator($db_jobs, $db_modules, $db_projects, $job_filter, $action_scheduler, $logger);
+    $scheduler = new Data_Machine_Scheduler($job_creator, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
 
     // Global container for Action Scheduler access
     global $data_machine_container;
@@ -230,6 +220,9 @@ function run_data_machine() {
         'handler_factory' => $handler_factory,
         'db_jobs' => $db_jobs,
         'db_processed_items' => $db_processed_items,
+        'job_status_manager' => $job_status_manager,
+        'job_creator' => $job_creator,
+        'action_scheduler' => $action_scheduler,
         'logger' => $logger
     );
 
@@ -237,12 +230,11 @@ function run_data_machine() {
     $import_export_handler = new Data_Machine_Import_Export($db_projects, $db_modules);
 
     // AJAX handlers
-    $module_ajax_handler = new Data_Machine_Module_Config_Ajax($db_modules, $db_projects, $job_executor, $input_files, $db_remote_locations, $logger);
-    $dashboard_ajax_handler = new Data_Machine_Project_Management_Ajax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_executor, $logger);
-    $locations_ajax_handler = new Data_Machine_Ajax_Locations($db_remote_locations, $logger);
+    $module_ajax_handler = new Data_Machine_Module_Config_Ajax($db_modules, $db_projects, $input_files, $db_remote_locations, $logger);
+    $dashboard_ajax_handler = new Data_Machine_Project_Management_Ajax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_creator, $logger);
     $ajax_scheduler = new Data_Machine_Ajax_Scheduler($db_projects, $db_modules, $scheduler);
     $ajax_auth = new Data_Machine_Ajax_Auth();
-    $run_single_module_ajax_handler = new Data_Machine_Run_Single_Module_Ajax($db_modules, $db_projects, $job_executor, $input_files, $logger);
+    $run_single_module_ajax_handler = new Data_Machine_Run_Single_Module_Ajax($db_modules, $db_projects, $job_creator, $input_files, $logger);
     $remote_locations_ajax_handler = new Data_Machine_Module_Config_Remote_Locations_Ajax($db_remote_locations, $logger);
 
     // --- Instantiate Main Plugin ---
@@ -281,7 +273,12 @@ function run_data_machine() {
     add_action( 'wp_ajax_dm_edit_schedule', array( $dashboard_ajax_handler, 'handle_edit_schedule' ) );
     add_action( 'wp_ajax_dm_get_project_schedule_data', array( $dashboard_ajax_handler, 'handle_get_project_schedule_data' ) );
 
-    add_action( 'dm_run_job_event', array( $job_executor, 'run_scheduled_job' ), 10, 1 );
+    // Register async pipeline step hooks
+    add_action( 'dm_input_job_event', array( $orchestrator, 'execute_input_step' ), 10, 1 );
+    add_action( 'dm_process_job_event', array( $orchestrator, 'execute_process_step' ), 10, 1 );
+    add_action( 'dm_factcheck_job_event', array( $orchestrator, 'execute_factcheck_step' ), 10, 1 );
+    add_action( 'dm_finalize_job_event', array( $orchestrator, 'execute_finalize_step' ), 10, 1 );
+    // Note: OUTPUT_JOB_HOOK is registered by Action Scheduler helper in init_hooks()
 
     $scheduler->init_hooks();
 }

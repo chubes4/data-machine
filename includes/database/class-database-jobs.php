@@ -136,17 +136,24 @@ class Data_Machine_Database_Jobs {
             job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             module_id bigint(20) unsigned NOT NULL,
             user_id bigint(20) unsigned NOT NULL,
-            status varchar(20) NOT NULL DEFAULT 'pending', /* pending, processing, complete, failed */
+            status varchar(20) NOT NULL DEFAULT 'pending', /* pending, running, completed, failed, completed_with_errors */
+            current_step tinyint(1) NOT NULL DEFAULT 1, /* 1=input, 2=process, 3=factcheck, 4=finalize, 5=output */
             module_config longtext NULL, /* JSON config used for this specific job run */
-            input_data longtext NULL, /* JSON input data used */
-            result_data longtext NULL, /* JSON output/result/error */
+            input_data longtext NULL, /* JSON raw input data from Step 1 */
+            processed_data longtext NULL, /* JSON processed data from Step 2 */
+            fact_checked_data longtext NULL, /* JSON fact-checked data from Step 3 */
+            finalized_data longtext NULL, /* JSON finalized data from Step 4 */
+            result_data longtext NULL, /* JSON final output/result/error from Step 5 */
+            cleanup_scheduled datetime NULL DEFAULT NULL, /* When data cleanup should occur */
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,
             PRIMARY KEY  (job_id),
             KEY status (status),
+            KEY current_step (current_step),
             KEY module_id (module_id),
-            KEY user_id (user_id)
+            KEY user_id (user_id),
+            KEY cleanup_scheduled (cleanup_scheduled)
         ) $charset_collate;";
 
         dbDelta( $sql );
@@ -387,6 +394,103 @@ class Data_Machine_Database_Jobs {
         return $deleted !== false ? $deleted : 0;
     }
 
-    // TODO: Add methods for get_job, update_job_status etc. if needed elsewhere.
+    /**
+     * Update job step data and advance to next step.
+     *
+     * @param int    $job_id The job ID.
+     * @param int    $step   The step number (1-5).
+     * @param string $data   JSON data for this step.
+     * @return bool True on success, false on failure.
+     */
+    public function update_step_data( int $job_id, int $step, string $data ): bool {
+        global $wpdb;
+        
+        if ( empty( $job_id ) || $step < 1 || $step > 5 ) {
+            return false;
+        }
+        
+        $field_map = [
+            1 => 'input_data',
+            2 => 'processed_data', 
+            3 => 'fact_checked_data',
+            4 => 'finalized_data',
+            5 => 'result_data'
+        ];
+        
+        $field = $field_map[$step];
+        
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                $field => $data,
+                'current_step' => $step
+            ],
+            ['job_id' => $job_id],
+            ['%s', '%d'],
+            ['%d']
+        );
+        
+        return $updated !== false;
+    }
+    
+    /**
+     * Get job data for a specific step.
+     *
+     * @param int $job_id The job ID.
+     * @param int $step   The step number (1-5).
+     * @return string|null Step data as JSON string or null if not found.
+     */
+    public function get_step_data( int $job_id, int $step ): ?string {
+        global $wpdb;
+        
+        if ( empty( $job_id ) || $step < 1 || $step > 5 ) {
+            return null;
+        }
+        
+        $field_map = [
+            1 => 'input_data',
+            2 => 'processed_data',
+            3 => 'fact_checked_data', 
+            4 => 'finalized_data',
+            5 => 'result_data'
+        ];
+        
+        $field = $field_map[$step];
+        
+        $data = $wpdb->get_var( $wpdb->prepare(
+            "SELECT {$field} FROM {$this->table_name} WHERE job_id = %d",
+            $job_id
+        ) );
+        
+        return $data;
+    }
+    
+    /**
+     * Schedule job data cleanup after completion.
+     *
+     * @param int $job_id The job ID.
+     * @param int $cleanup_delay_hours Hours to delay cleanup (default 24).
+     * @return bool True on success, false on failure.
+     */
+    public function schedule_cleanup( int $job_id, int $cleanup_delay_hours = 24 ): bool {
+        global $wpdb;
+        
+        if ( empty( $job_id ) ) {
+            return false;
+        }
+        
+        $cleanup_time = current_time( 'mysql', 1 );
+        $cleanup_time = date( 'Y-m-d H:i:s', strtotime( $cleanup_time . " +{$cleanup_delay_hours} hours" ) );
+        
+        $updated = $wpdb->update(
+            $this->table_name,
+            ['cleanup_scheduled' => $cleanup_time],
+            ['job_id' => $job_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        return $updated !== false;
+    }
 
 } 

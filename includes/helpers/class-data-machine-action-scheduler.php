@@ -55,7 +55,7 @@ class Data_Machine_Action_Scheduler {
 		add_filter( 'action_scheduler_store_class', array( $this, 'maybe_configure_store' ) );
 		
 		// Register output job handler for Action Scheduler
-		add_action( Data_Machine_Constants::OUTPUT_JOB_HOOK, array( $this, 'handle_output_job' ), 10, 5 );
+		add_action( Data_Machine_Constants::OUTPUT_JOB_HOOK, array( $this, 'handle_output_job' ), 10, 1 );
 	}
 
 	/**
@@ -108,6 +108,17 @@ class Data_Machine_Action_Scheduler {
 				Data_Machine_Constants::ACTION_GROUP 
 			);
 
+			// Validate that scheduling actually succeeded (0 = failure)
+			if ($action_id === false || $action_id === 0) {
+				$this->logger?->error( 'Action Scheduler failed to schedule job', array(
+					'action_id' => $action_id,
+					'hook' => $hook,
+					'args' => $args,
+					'timestamp' => $timestamp
+				) );
+				return false;
+			}
+
 			$this->logger?->info( 'Job scheduled via Action Scheduler', array(
 				'action_id' => $action_id,
 				'hook' => $hook,
@@ -153,6 +164,18 @@ class Data_Machine_Action_Scheduler {
 				$args, 
 				Data_Machine_Constants::ACTION_GROUP 
 			);
+
+			// Validate that scheduling actually succeeded (0 = failure)
+			if ($action_id === false || $action_id === 0) {
+				$this->logger?->error( 'Action Scheduler failed to schedule recurring job', array(
+					'action_id' => $action_id,
+					'hook' => $hook,
+					'args' => $args,
+					'timestamp' => $timestamp,
+					'interval' => $interval_in_seconds
+				) );
+				return false;
+			}
 
 			$this->logger?->info( 'Recurring job scheduled via Action Scheduler', array(
 				'action_id' => $action_id,
@@ -242,45 +265,67 @@ class Data_Machine_Action_Scheduler {
 	/**
 	 * Handle output job processing via Action Scheduler
 	 *
-	 * @param int    $job_id Original job ID (content retrieved from database)
-	 * @param array  $module_config Module configuration
-	 * @param int    $user_id User ID
-	 * @param array  $input_metadata Input metadata
+	 * @param array  $output_args Contains final_output, module_config, user_id, input_metadata
 	 * @return void
 	 */
-	public function handle_output_job( $job_id, $module_config, $user_id, $input_metadata ) {
+	public function handle_output_job( $output_args ) {
+		// Debug: Log exactly what we receive from Action Scheduler
+		$this->logger?->debug('Output handler received from Action Scheduler', [
+			'args_type' => gettype($output_args),
+			'is_array' => is_array($output_args),
+			'args_structure' => is_array($output_args) ? array_keys($output_args) : 'not_array',
+			'job_id_raw' => $output_args['job_id'] ?? 'KEY_NOT_FOUND'
+		]);
+		
+		// Extract job ID from async pipeline
+		$job_id = $output_args['job_id'] ?? null;
 		global $data_machine_container;
 		
-		// First, retrieve the final output content from the job record
-		if ( ! isset( $data_machine_container['db_jobs'] ) ) {
-			$this->logger?->error( 'Output Job Handler: Jobs database not available', array(
-				'job_id' => $job_id,
-				'module_id' => $module_config['module_id'] ?? 'unknown'
-			) );
+		if ( empty( $job_id ) ) {
+			$this->logger?->error( 'Output Job Handler: No job ID provided' );
 			return;
 		}
 		
-		$db_jobs = $data_machine_container['db_jobs'];
+		// Get database dependencies
+		$db_jobs = $data_machine_container['db_jobs'] ?? null;
+		$job_status_manager = $data_machine_container['job_status_manager'] ?? null;
+		
+		if ( ! $db_jobs || ! $job_status_manager ) {
+			$this->logger?->error( 'Output Job Handler: Missing database dependencies', ['job_id' => $job_id] );
+			return;
+		}
+		
+		// Get job and finalized data from database
 		$job = $db_jobs->get_job( $job_id );
-		
-		if ( ! $job || empty( $job->result_data ) ) {
-			$this->logger?->error( 'Output Job Handler: No job data found or result_data empty', array(
-				'job_id' => $job_id,
-				'module_id' => $module_config['module_id'] ?? 'unknown'
-			) );
+		if ( ! $job ) {
+			$this->logger?->error( 'Output Job Handler: Job not found', ['job_id' => $job_id] );
 			return;
 		}
 		
-		$job_result = json_decode( $job->result_data, true );
-		if ( ! $job_result || ! isset( $job_result['final_output'] ) ) {
-			$this->logger?->error( 'Output Job Handler: Invalid job result data or missing final_output', array(
-				'job_id' => $job_id,
-				'module_id' => $module_config['module_id'] ?? 'unknown'
-			) );
+		$finalized_data_json = $db_jobs->get_step_data( $job_id, 4 );
+		if ( empty( $finalized_data_json ) ) {
+			$this->logger?->error( 'Output Job Handler: No finalized data available', ['job_id' => $job_id] );
+			$job_status_manager->fail( $job_id, 'Output job failed: No finalized data available' );
 			return;
 		}
 		
-		$final_output = $job_result['final_output'];
+		$finalized_data = json_decode( $finalized_data_json, true );
+		$final_output = $finalized_data['final_output_string'] ?? '';
+		
+		if ( empty( $final_output ) ) {
+			$this->logger?->error( 'Output Job Handler: Empty final output', ['job_id' => $job_id] );
+			$job_status_manager->fail( $job_id, 'Output job failed: Empty final output' );
+			return;
+		}
+		
+		// Get input metadata from database
+		$input_data_json = $db_jobs->get_step_data( $job_id, 1 );
+		$input_data_packet = json_decode( $input_data_json, true );
+		$input_metadata = $input_data_packet['metadata'] ?? [];
+		
+		// Get module config and user from job
+		$module_config = json_decode( $job->module_config, true );
+		$user_id = $job->user_id;
 		
 		if ( ! $data_machine_container || ! isset( $data_machine_container['handler_factory'] ) ) {
 			$this->logger?->error( 'Output Job Handler: Handler factory not available', array(
@@ -306,10 +351,10 @@ class Data_Machine_Action_Scheduler {
 					) );
 
 					// Mark job as complete since item was already processed
-					if ( isset( $data_machine_container['db_jobs'] ) ) {
-						$db_jobs = $data_machine_container['db_jobs'];
-						$result_json = wp_json_encode( array( 'status' => 'skipped', 'message' => 'Item already processed' ) );
-						$db_jobs->complete_job( $job_id, 'completed', $result_json );
+					if ( isset( $data_machine_container['job_status_manager'] ) ) {
+						$job_status_manager = $data_machine_container['job_status_manager'];
+						$result_data = array( 'status' => 'skipped', 'message' => 'Item already processed' );
+						$job_status_manager->complete( $job_id, 'completed', $result_data, 'Item already processed' );
 					}
 					return;
 				}
@@ -331,9 +376,8 @@ class Data_Machine_Action_Scheduler {
 			// Create the output handler
 			$output_handler = $handler_factory->create_handler( 'output', $output_type );
 
-			if ( ! $output_handler instanceof Data_Machine_Output_Handler_Interface ) {
-				$error_details = is_wp_error( $output_handler ) ? $output_handler->get_error_message() : 'Invalid handler type';
-				throw new Exception( 'Could not create valid output handler: ' . $error_details );
+			if ( is_wp_error( $output_handler ) ) {
+				throw new Exception( 'Could not create valid output handler: ' . $output_handler->get_error_message() );
 			}
 
 			// Execute the output handler
@@ -350,28 +394,29 @@ class Data_Machine_Action_Scheduler {
 				throw new Exception( $result->get_error_message() );
 			}
 
-			// Update job status to complete
-			if ( isset( $data_machine_container['db_jobs'] ) ) {
-				$db_jobs = $data_machine_container['db_jobs'];
-				$result_json = wp_json_encode( $result );
-				$job_completed = $db_jobs->complete_job( $job_id, 'completed', $result_json );
+			// CRITICAL: Only mark main job complete if we got successful 200 response from remote site
+			if ( isset( $data_machine_container['job_status_manager'] ) && $job_id ) {
+				$job_status_manager = $data_machine_container['job_status_manager'];
+				$job_completed = $job_status_manager->complete( $job_id, 'completed', $result, 'Job completed: Post successfully published to remote site' );
 				
 				if ( $job_completed ) {
-					$this->logger?->info( 'Output Job Handler: Parent job marked as completed', array(
+					$this->logger?->info( 'Output Job Handler: Main job marked as completed after successful remote publish', array(
 						'job_id' => $job_id,
-						'module_id' => $module_config['module_id'] ?? 'unknown'
+						'module_id' => $module_config['module_id'] ?? 'unknown',
+						'remote_post_id' => $result['remote_post_id'] ?? null
 					) );
+					
+					// Schedule cleanup of large data fields after successful completion
+					if ( $db_jobs ) {
+						$db_jobs->schedule_cleanup( $job_id );
+						$this->logger?->debug( 'Scheduled data cleanup for completed job', ['job_id' => $job_id] );
+					}
 				} else {
-					$this->logger?->error( 'Output Job Handler: Failed to mark parent job as completed', array(
+					$this->logger?->error( 'Output Job Handler: Failed to mark main job as completed', array(
 						'job_id' => $job_id,
 						'module_id' => $module_config['module_id'] ?? 'unknown'
 					) );
 				}
-			} else {
-				$this->logger?->error( 'Output Job Handler: db_jobs not available in container', array(
-					'job_id' => $job_id,
-					'module_id' => $module_config['module_id'] ?? 'unknown'
-				) );
 			}
 
 			// Mark item as processed AFTER successful output - this prevents duplicates
@@ -391,10 +436,10 @@ class Data_Machine_Action_Scheduler {
 				'error' => $e->getMessage()
 			) );
 
-			// Mark as failed immediately - no retries
-			if ( isset( $data_machine_container['db_jobs'] ) ) {
-				$db_jobs = $data_machine_container['db_jobs'];
-				$db_jobs->fail_job( $job_id, $e->getMessage() );
+			// Mark main job as failed immediately - no retries
+			if ( isset( $data_machine_container['job_status_manager'] ) && $job_id ) {
+				$job_status_manager = $data_machine_container['job_status_manager'];
+				$job_status_manager->fail( $job_id, 'Output job failed: ' . $e->getMessage() );
 			}
 		} catch ( Throwable $t ) {
 			// CRITICAL: Catch ALL failures including fatal errors, type errors, etc.
@@ -407,15 +452,11 @@ class Data_Machine_Action_Scheduler {
 				'line' => $t->getLine()
 			) );
 
-			// ALWAYS mark job as failed to prevent ghost failures
-			if ( isset( $data_machine_container['db_jobs'] ) ) {
-				$db_jobs = $data_machine_container['db_jobs'];
-				$db_jobs->complete_job( $job_id, 'failed', wp_json_encode( [
-					'error' => $t->getMessage(),
-					'error_type' => get_class( $t ),
-					'file' => $t->getFile(),
-					'line' => $t->getLine()
-				] ) );
+			// ALWAYS mark main job as failed to prevent ghost failures
+			if ( isset( $data_machine_container['job_status_manager'] ) && $job_id ) {
+				$job_status_manager = $data_machine_container['job_status_manager'];
+				$error_message = sprintf( 'Output job critical failure: %s in %s:%d', $t->getMessage(), $t->getFile(), $t->getLine() );
+				$job_status_manager->fail( $job_id, $error_message );
 			}
 		}
 	}

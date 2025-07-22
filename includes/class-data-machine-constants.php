@@ -75,7 +75,6 @@ if (!class_exists('Data_Machine_Constants')) {
         const JOB_STUCK_TIMEOUT_HOURS = 6;          // Hours before job is considered stuck
         const JOB_CLEANUP_OLD_DAYS = 30;            // Days before completed/failed jobs are deleted
         const MAX_CONCURRENT_JOBS = 2;              // Maximum concurrent jobs via Action Scheduler
-        const JOB_RETRY_ATTEMPTS = 3;               // Number of retry attempts for failed output jobs
         
         /**
          * Action Scheduler configuration.

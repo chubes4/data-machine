@@ -21,7 +21,7 @@ class Data_Machine_Processing_Orchestrator {
 	/** @var Data_Machine_API_Finalize */
 	private $finalize_api;
 
-	/** @var Data_Machine_Handler_Factory */
+	/** @var Dependency_Injection_Handler_Factory */
 	private $handler_factory;
 
 	/** @var Data_Machine_Prompt_Builder */
@@ -33,25 +33,35 @@ class Data_Machine_Processing_Orchestrator {
 	/** @var Data_Machine_Action_Scheduler */
 	private $action_scheduler;
 
+	/** @var Data_Machine_Database_Jobs */
+	private $db_jobs;
+
+	/** @var Data_Machine_Job_Status_Manager */
+	private $job_status_manager;
+
 	/**
 	 * Constructor. Dependencies are injected.
 	 *
 	 * @param Data_Machine_process_data $process_data_handler Instance of Process Data handler.
 	 * @param Data_Machine_API_FactCheck $factcheck_api Instance of FactCheck API handler.
 	 * @param Data_Machine_API_Finalize $finalize_api Instance of Finalize API handler.
-	 * @param Data_Machine_Handler_Factory $handler_factory Handler Factory instance.
+	 * @param Dependency_Injection_Handler_Factory $handler_factory Handler Factory instance.
 	 * @param Data_Machine_Prompt_Builder $prompt_builder Instance of centralized prompt builder.
 	 * @param Data_Machine_Logger $logger Logger instance.
 	 * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
+	 * @param Data_Machine_Database_Jobs $db_jobs Database Jobs service.
+	 * @param Data_Machine_Job_Status_Manager $job_status_manager Job Status Manager service.
 	 */
 	public function __construct(
 		Data_Machine_process_data $process_data_handler,
 		Data_Machine_API_FactCheck $factcheck_api,
 		Data_Machine_API_Finalize $finalize_api,
-		Data_Machine_Handler_Factory $handler_factory,
+		Dependency_Injection_Handler_Factory $handler_factory,
 		Data_Machine_Prompt_Builder $prompt_builder,
 		Data_Machine_Logger $logger,
-		Data_Machine_Action_Scheduler $action_scheduler
+		Data_Machine_Action_Scheduler $action_scheduler,
+		Data_Machine_Database_Jobs $db_jobs,
+		Data_Machine_Job_Status_Manager $job_status_manager
 	) {
 		$this->process_data_handler = $process_data_handler;
 		$this->factcheck_api = $factcheck_api;
@@ -60,199 +70,400 @@ class Data_Machine_Processing_Orchestrator {
 		$this->prompt_builder = $prompt_builder;
 		$this->logger = $logger;
 		$this->action_scheduler = $action_scheduler;
+		$this->db_jobs = $db_jobs;
+		$this->job_status_manager = $job_status_manager;
+	}
+	/**
+	 * Execute Step 1: Input Data Processing (async).
+	 *
+	 * @param int $job_id The job ID.
+	 * @return bool True on success, false on failure.
+	 */
+	public function execute_input_step( int $job_id ): bool {
+		try {
+			// Mark job as started
+			if ( ! $this->job_status_manager->start( $job_id ) ) {
+				return false;
+			}
+
+			$job = $this->db_jobs->get_job( $job_id );
+			if ( ! $job ) {
+				$this->job_status_manager->fail( $job_id, 'Job not found in database' );
+				return false;
+			}
+
+			$module_job_config = json_decode( $job->module_config, true );
+			$module_id = $module_job_config['module_id'] ?? 0;
+			$data_source_type = $module_job_config['data_source_type'] ?? '';
+
+			if ( empty( $data_source_type ) ) {
+				$this->logger->error( 'Missing data source type for input step', ['job_id' => $job_id, 'module_id' => $module_id] );
+				$this->job_status_manager->fail( $job_id, 'Missing data source type for input step' );
+				return false;
+			}
+
+			// Get input handler and fetch data
+			$input_handler = $this->handler_factory->create_handler( 'input', $data_source_type );
+			if ( is_wp_error( $input_handler ) ) {
+				$error_message = 'Failed to create input handler: ' . $input_handler->get_error_message();
+				$this->logger->error( 'Failed to create input handler', ['job_id' => $job_id, 'handler_type' => $data_source_type] );
+				$this->job_status_manager->fail( $job_id, $error_message );
+				return false;
+			}
+
+			// Fetch input data using the handler
+			$input_data_packet = $input_handler->handle( $module_job_config );
+			if ( is_wp_error( $input_data_packet ) ) {
+				$error_message = 'Input handler failed: ' . $input_data_packet->get_error_message();
+				$this->logger->error( 'Input handler failed to fetch data', ['job_id' => $job_id, 'handler_type' => $data_source_type] );
+				$this->job_status_manager->fail( $job_id, $error_message );
+				return false;
+			}
+
+			if ( empty( $input_data_packet ) ) {
+				$this->logger->error( 'Input handler returned empty data', ['job_id' => $job_id, 'handler_type' => $data_source_type] );
+				$this->job_status_manager->fail( $job_id, 'Input handler returned empty data' );
+				return false;
+			}
+
+			// Store input data and schedule next step
+			$success = $this->db_jobs->update_step_data( $job_id, 1, wp_json_encode( $input_data_packet ) );
+			if ( ! $success ) {
+				$this->logger->error( 'Failed to store input data', ['job_id' => $job_id] );
+				$this->job_status_manager->fail( $job_id, 'Failed to store input data in database' );
+				return false;
+			}
+
+			// Schedule Step 2: Process
+			if ( ! $this->schedule_next_step( $job_id, 'dm_process_job_event' ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to schedule process step' );
+				return false;
+			}
+
+			return true;
+
+		} catch ( Exception $e ) {
+			$this->logger->error( 'Exception in input step', ['job_id' => $job_id, 'error' => $e->getMessage()] );
+			$this->job_status_manager->fail( $job_id, 'Input step failed: ' . $e->getMessage() );
+			return false;
+		}
 	}
 
 	/**
-	 * Runs the complete processing flow for given input and configuration.
-	 * Process -> FactCheck -> Finalize -> Output Delegation
+	 * Execute Step 2: Process Data (async).
 	 *
-	 * @since 0.6.0 (Refactored 0.10.0)
-	 * @param array  $input_data_packet The standardized input data packet from the Input Handler.
-	 * @param array  $module_job_config Simplified module configuration array for the job.
-	 * @param int    $user_id Current user ID.
-	 * @return array|WP_Error Result from the final output handler or WP_Error on failure at any step.
+	 * @param int $job_id The job ID.
+	 * @return bool True on success, false on failure.
 	 */
-	public function run( array $input_data_packet, array $module_job_config, $user_id, $job_id = null ) {
-
-		// --- Configuration & Validation ---
-		$api_key = get_user_meta($user_id, 'dm_openai_api_key', true);
-		if (empty($api_key)) {
-			$api_key = get_option('openai_api_key'); // Fallback for backward compatibility
-		}
-		if (empty($api_key)) {
-			return new WP_Error('missing_api_key', __('OpenAI API Key is missing.', 'data-machine'));
-		}
-		// Use the config array instead of the object
-		if (empty($module_job_config) || !isset($module_job_config['module_id'])) {
-			return new WP_Error('invalid_module_config', __('Invalid module configuration provided for job.', 'data-machine'));
-		}
-		$module_id = $module_job_config['module_id']; // For logging
-
-		// --- Build System Prompt using centralized builder ---
-		$project_id = absint($module_job_config['project_id'] ?? 0);
-		$system_prompt = $this->prompt_builder->build_system_prompt($project_id, $user_id);
-
-		// --- Extract and validate base prompts ---
-		$process_data_prompt = $module_job_config['process_data_prompt'] ?? '';
-		$fact_check_prompt = $module_job_config['fact_check_prompt'] ?? '';
-		$finalize_response_prompt = $module_job_config['finalize_response_prompt'] ?? '';
-		$skip_fact_check = isset($module_job_config['skip_fact_check']) ? (bool)$module_job_config['skip_fact_check'] : false;
-
-		// Validate required prompts - fact check prompt is only required if skip_fact_check is false
-		if (empty($process_data_prompt) || empty($finalize_response_prompt)) {
-			return new WP_Error('missing_prompts', __('Process data prompt and finalize response prompt are required in the module settings.', 'data-machine'));
-		}
-		if (!$skip_fact_check && empty($fact_check_prompt)) {
-			return new WP_Error('missing_fact_check_prompt', __('Fact check prompt is required when fact checking is enabled. Either provide a fact check prompt or enable "Skip Fact Check" in the module settings.', 'data-machine'));
-		}
-
-		// --- Step 1: Initial Processing ---
-		$initial_output = '';
-		global $wpdb;
-		$jobs_table = isset($wpdb) ? $wpdb->prefix . 'dm_jobs' : null;
+	public function execute_process_step( int $job_id ): bool {
 		try {
-		    // Use the injected instance
-		    // Use $input_data_packet for logging and processing
-		    $this->log_orchestrator_step('Step 1: Calling process_data', $module_id, $input_data_packet['metadata'] ?? []);
-		    $enhanced_process_prompt = $this->prompt_builder->build_process_data_prompt($process_data_prompt, $input_data_packet);
-		    $process_result = $this->process_data_handler->process_data($api_key, $system_prompt, $enhanced_process_prompt, $input_data_packet);
-		    $this->log_orchestrator_step('Step 1: Received process_data result', $module_id, $input_data_packet['metadata'] ?? [], ['status' => $process_result['status'] ?? 'unknown', 'has_output' => !empty($process_result['json_output'])]);
-
-		    if (isset($process_result['status']) && $process_result['status'] === 'error') {
-		        throw new Exception($process_result['message'] ?? 'Unknown error during initial processing.');
-		    }
-		    $initial_output = $process_result['json_output'] ?? '';
-		    if (empty($initial_output)) {
-		        throw new Exception(__('Initial processing returned empty output.', 'data-machine'));
-		    }
-		} catch (Exception $e) {
-		    $this->log_orchestrator_step('Step 1: Exception in process_data', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		                    // Error logging removed for production
-		    return new WP_Error('process_step_failed', $e->getMessage());
-		}
-
-		// --- Step 2: Fact Check ---
-		$fact_checked_content = '';
-		// START: Add conditional check for skip_fact_check (variable already declared above)
-
-		if (!$skip_fact_check) {
-		    $this->log_orchestrator_step('Step 2: Running Fact Check (skip_fact_check is false)', $module_id, $input_data_packet['metadata'] ?? []);
-		    try {
-		        // Use the injected instance
-		        // Use $input_data_packet for logging
-		        $this->log_orchestrator_step('Step 2a: Calling fact_check_response API', $module_id, $input_data_packet['metadata'] ?? []);
-		        $enhanced_fact_check_prompt = $this->prompt_builder->build_fact_check_prompt($fact_check_prompt);
-		        $factcheck_result = $this->factcheck_api->fact_check_response($api_key, $system_prompt, $enhanced_fact_check_prompt, $initial_output);
-		        $this->log_orchestrator_step('Step 2b: Received fact_check_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($factcheck_result), 'has_output' => !is_wp_error($factcheck_result) && !empty($factcheck_result['fact_check_results'])]);
-		        // Debug: Log the raw result immediately after the API call
-
-		        if (is_wp_error($factcheck_result)) {
-		            // Use only the error message, and set code to 0 (Exception expects int)
-		            throw new Exception($factcheck_result->get_error_message(), 0);
-		        }
-		        $fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
-		    } catch (Exception $e) {
-		        $this->log_orchestrator_step('Step 2c: Exception in fact_check_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		                            // Error logging removed for production
-		        return new WP_Error('factcheck_step_failed', $e->getMessage());
-		    }
-		} else {
-		    $this->log_orchestrator_step('Step 2: Skipping Fact Check (skip_fact_check is true)', $module_id, $input_data_packet['metadata'] ?? []);
-		    // $fact_checked_content remains empty as initialized
-		}
-		// END: Add conditional check for skip_fact_check
-
-
-		// --- Step 3: Finalize ---
-		$final_output_string = '';
-		try {
-		    // Use the injected instance
-		    // Use $input_data_packet for logging and prompt modification
-		    $this->log_orchestrator_step('Step 3: Calling finalize_response', $module_id, $input_data_packet['metadata'] ?? []);
-		    // Use the centralized prompt builder to create enhanced finalize prompt
-		    $enhanced_finalize_prompt = $this->prompt_builder->build_finalize_prompt($finalize_response_prompt, $module_job_config, $input_data_packet);
-		    $finalize_user_message = $this->prompt_builder->build_finalize_user_message($enhanced_finalize_prompt, $initial_output, $fact_checked_content, $module_job_config, $input_data_packet['metadata'] ?? []);
-
-		    $finalize_result = $this->finalize_api->finalize_response(
-		        $api_key,
-		        $system_prompt,
-		        $finalize_user_message,
-		        '', // Initial output already included in user message
-		        '', // Fact check results already included in user message
-		        $module_job_config, // Pass the config array
-		        $input_data_packet['metadata'] ?? [] // Pass metadata from actual packet
-		    );
-		    $this->log_orchestrator_step('Step 3: Received finalize_response result', $module_id, $input_data_packet['metadata'] ?? [], ['is_wp_error' => is_wp_error($finalize_result), 'has_output' => !is_wp_error($finalize_result) && !empty($finalize_result['final_output'])]);
-
-		    if (is_wp_error($finalize_result)) {
-		        // Use only the error message, and set code to 0 (Exception expects int)
-		        throw new Exception($finalize_result->get_error_message(), 0);
-		    }
-		    $final_output_string = $finalize_result['final_output'] ?? '';
-		    if (empty($final_output_string)) {
-		        throw new Exception(__('Finalization returned empty output.', 'data-machine'));
-		    }
-		} catch (Exception $e) {
-		    $this->log_orchestrator_step('Step 3: Exception in finalize_response', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-		                    // Error logging removed for production
-		    return new WP_Error('finalize_step_failed', $e->getMessage());
-		}
-
-
-		// --- Step 4: Output Delegation (Asynchronous via Action Scheduler) ---
-		$output_type = $module_job_config['output_type'] ?? null;
-
-		try {
-			// Validate output type
-			if (empty($output_type)) {
-				throw new Exception('Output type is not defined in module configuration.');
+			$job = $this->db_jobs->get_job( $job_id );
+			if ( ! $job ) {
+				$this->job_status_manager->fail( $job_id, 'Job not found in database for process step' );
+				return false;
 			}
 
-			// Queue the output job via Action Scheduler
-			$this->log_orchestrator_step('Step 4: Queuing output job via Action Scheduler', $module_id, $input_data_packet['metadata'] ?? [], ['handler_type' => $output_type]);
+			$input_data_json = $this->db_jobs->get_step_data( $job_id, 1 );
+			if ( empty( $input_data_json ) ) {
+				$this->job_status_manager->fail( $job_id, 'No input data available for process step' );
+				return false;
+			}
+
+			$input_data_packet = json_decode( $input_data_json, true );
+			if ( empty( $input_data_packet ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to parse input data for process step' );
+				return false;
+			}
+
+			$module_job_config = json_decode( $job->module_config, true );
+
+			$result = $this->execute_process_step_logic( $job_id, $input_data_packet, $module_job_config );
 			
-			// Store large content in job result_data instead of Action Scheduler args to avoid 8000 char limit
-			// The Action Scheduler handler will retrieve content from the job record
-			$action_id = $this->action_scheduler->schedule_single_job(
-				Data_Machine_Constants::OUTPUT_JOB_HOOK,
-				array(
-					$job_id,  // Just pass job ID - handler will get content from database
-					$module_job_config,
-					$user_id,
-					$input_data_packet['metadata'] ?? []
-				)
-			);
-
-			if ($action_id === false) {
-				throw new Exception('Failed to queue output job via Action Scheduler');
+			if ( ! $result ) {
+				$this->job_status_manager->fail( $job_id, 'Process step logic failed' );
+				return false;
 			}
 
-			$this->log_orchestrator_step('Step 4: Output job queued successfully', $module_id, $input_data_packet['metadata'] ?? [], ['action_id' => $action_id, 'handler_type' => $output_type]);
+			if ( ! $this->schedule_next_step( $job_id, 'dm_factcheck_job_event' ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to schedule fact check step' );
+				return false;
+			}
 
-			// Return success status with action ID
-			$output_handler_result = array(
-				'status' => 'queued',
-				'action_id' => $action_id,
-				'output_type' => $output_type,
-				'message' => 'Output job queued for asynchronous processing'
-			);
+			return true;
 
-		} catch (Exception $e) {
-			$this->log_orchestrator_step('Step 4: Exception in output job queuing', $module_id, $input_data_packet['metadata'] ?? [], ['error' => $e->getMessage()]);
-			$error_code = method_exists($e, 'getCode') && $e->getCode() ? $e->getCode() : 'output_step_failed';
-			return new WP_Error($error_code, $e->getMessage());
+		} catch ( Exception $e ) {
+			$this->logger->error( 'Exception in process step', ['job_id' => $job_id, 'error' => $e->getMessage()] );
+			$this->job_status_manager->fail( $job_id, 'Process step failed: ' . $e->getMessage() );
+			return false;
+		}
+	}
+
+	/**
+	 * Execute Step 3: Fact Check (async).
+	 *
+	 * @param int $job_id The job ID.
+	 * @return bool True on success, false on failure.
+	 */
+	public function execute_factcheck_step( int $job_id ): bool {
+		try {
+			$job = $this->db_jobs->get_job( $job_id );
+			if ( ! $job ) {
+				$this->job_status_manager->fail( $job_id, 'Job not found in database for fact check step' );
+				return false;
+			}
+
+			$input_data_json = $this->db_jobs->get_step_data( $job_id, 1 );
+			if ( empty( $input_data_json ) ) {
+				$this->job_status_manager->fail( $job_id, 'No input data available for fact check step' );
+				return false;
+			}
+
+			$input_data_packet = json_decode( $input_data_json, true );
+			if ( empty( $input_data_packet ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to parse input data for fact check step' );
+				return false;
+			}
+
+			$module_job_config = json_decode( $job->module_config, true );
+
+			$result = $this->execute_factcheck_step_logic( $job_id, $input_data_packet, $module_job_config );
+			
+			if ( ! $result ) {
+				$this->job_status_manager->fail( $job_id, 'Fact check step logic failed' );
+				return false;
+			}
+
+			if ( ! $this->schedule_next_step( $job_id, 'dm_finalize_job_event' ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to schedule finalize step' );
+				return false;
+			}
+
+			return true;
+
+		} catch ( Exception $e ) {
+			$this->logger->error( 'Exception in factcheck step', ['job_id' => $job_id, 'error' => $e->getMessage()] );
+			$this->job_status_manager->fail( $job_id, 'Fact check step failed: ' . $e->getMessage() );
+			return false;
+		}
+	}
+
+	/**
+	 * Execute Step 4: Finalize (async).
+	 *
+	 * @param int $job_id The job ID.
+	 * @return bool True on success, false on failure.
+	 */
+	public function execute_finalize_step( int $job_id ): bool {
+		try {
+			$job = $this->db_jobs->get_job( $job_id );
+			if ( ! $job ) {
+				$this->job_status_manager->fail( $job_id, 'Job not found in database for finalize step' );
+				return false;
+			}
+
+			$input_data_json = $this->db_jobs->get_step_data( $job_id, 1 );
+			if ( empty( $input_data_json ) ) {
+				$this->job_status_manager->fail( $job_id, 'No input data available for finalize step' );
+				return false;
+			}
+
+			$input_data_packet = json_decode( $input_data_json, true );
+			if ( empty( $input_data_packet ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to parse input data for finalize step' );
+				return false;
+			}
+
+			$module_job_config = json_decode( $job->module_config, true );
+
+			$result = $this->execute_finalize_step_logic( $job_id, $input_data_packet, $module_job_config );
+			
+			if ( ! $result ) {
+				$this->job_status_manager->fail( $job_id, 'Finalize step logic failed' );
+				return false;
+			}
+
+			if ( ! $this->schedule_next_step( $job_id, 'dm_output_job_event' ) ) {
+				$this->job_status_manager->fail( $job_id, 'Failed to schedule output step' );
+				return false;
+			}
+
+			return true;
+
+		} catch ( Exception $e ) {
+			$this->logger->error( 'Exception in finalize step', ['job_id' => $job_id, 'error' => $e->getMessage()] );
+			$this->job_status_manager->fail( $job_id, 'Finalize step failed: ' . $e->getMessage() );
+			return false;
+		}
+	}
+
+	/**
+	 * Schedule the next step in the async pipeline.
+	 *
+	 * @param int    $job_id The job ID.
+	 * @param string $hook   The hook name for the next step.
+	 * @return bool True on success, false on failure.
+	 */
+	private function schedule_next_step( int $job_id, string $hook ): bool {
+		$action_id = $this->action_scheduler->schedule_single_job(
+			$hook,
+			['job_id' => $job_id],
+			time() + 1 // Schedule immediately
+		);
+
+		$success = $action_id !== false && $action_id !== 0;
+		
+		if ( ! $success ) {
+			$this->logger->error( 'Failed to schedule next step', [
+				'job_id' => $job_id,
+				'hook' => $hook,
+				'action_id' => $action_id
+			] );
+		}
+		
+		return $success;
+	}
+
+	/**
+	 * Execute process step logic (Step 2).
+	 */
+	private function execute_process_step_logic( int $job_id, array $input_data_packet, array $module_job_config ): bool {
+		$api_key = get_user_meta( $module_job_config['user_id'] ?? 0, 'dm_openai_api_key', true );
+		if ( empty( $api_key ) ) {
+			$api_key = get_option( 'openai_api_key' );
+		}
+		if ( empty( $api_key ) ) {
+			return false;
 		}
 
-		// --- Construct Final Consolidated Response ---
-		// Use $input_data_packet for logging
-		$this->log_orchestrator_step('Step 5: Orchestration complete, returning result', $module_id, $input_data_packet['metadata'] ?? []);
-		return array(
-			'status'             => 'processing-complete',
-			'initial_output'     => $initial_output,
-			'fact_check_results' => $fact_checked_content,
-			'final_output_string'=> $final_output_string,
-			'output_result'      => $output_handler_result
-		);
+		$project_id = absint( $module_job_config['project_id'] ?? 0 );
+		$system_prompt = $this->prompt_builder->build_system_prompt( $project_id, $module_job_config['user_id'] ?? 0 );
+		$process_data_prompt = $module_job_config['process_data_prompt'] ?? '';
+
+		try {
+			$enhanced_process_prompt = $this->prompt_builder->build_process_data_prompt( $process_data_prompt, $input_data_packet );
+			$process_result = $this->process_data_handler->process_data( $api_key, $system_prompt, $enhanced_process_prompt, $input_data_packet );
+
+			if ( isset( $process_result['status'] ) && $process_result['status'] === 'error' ) {
+				return false;
+			}
+
+			$initial_output = $process_result['json_output'] ?? '';
+			if ( empty( $initial_output ) ) {
+				return false;
+			}
+
+			// Store result in database
+			$this->db_jobs->update_step_data( $job_id, 2, wp_json_encode( ['processed_output' => $initial_output] ) );
+			return true;
+
+		} catch ( Exception $e ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Execute fact check step logic (Step 3).
+	 */
+	private function execute_factcheck_step_logic( int $job_id, array $input_data_packet, array $module_job_config ): bool {
+		$skip_fact_check = isset( $module_job_config['skip_fact_check'] ) ? (bool) $module_job_config['skip_fact_check'] : false;
+		
+		if ( $skip_fact_check ) {
+			// Store empty fact check result and continue
+			$this->db_jobs->update_step_data( $job_id, 3, wp_json_encode( ['fact_checked_content' => ''] ) );
+			return true;
+		}
+
+		$api_key = get_user_meta( $module_job_config['user_id'] ?? 0, 'dm_openai_api_key', true );
+		if ( empty( $api_key ) ) {
+			$api_key = get_option( 'openai_api_key' );
+		}
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$project_id = absint( $module_job_config['project_id'] ?? 0 );
+		$system_prompt = $this->prompt_builder->build_system_prompt( $project_id, $module_job_config['user_id'] ?? 0 );
+		$fact_check_prompt = $module_job_config['fact_check_prompt'] ?? '';
+
+		// Get processed data from previous step
+		$processed_data_json = $this->db_jobs->get_step_data( $job_id, 2 );
+		$processed_data = json_decode( $processed_data_json, true );
+		$initial_output = $processed_data['processed_output'] ?? '';
+
+		try {
+			$enhanced_fact_check_prompt = $this->prompt_builder->build_fact_check_prompt( $fact_check_prompt );
+			$factcheck_result = $this->factcheck_api->fact_check_response( $api_key, $system_prompt, $enhanced_fact_check_prompt, $initial_output );
+
+			if ( is_wp_error( $factcheck_result ) ) {
+				return false;
+			}
+
+			$fact_checked_content = $factcheck_result['fact_check_results'] ?? '';
+			
+			// Store result in database
+			$this->db_jobs->update_step_data( $job_id, 3, wp_json_encode( ['fact_checked_content' => $fact_checked_content] ) );
+			return true;
+
+		} catch ( Exception $e ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Execute finalize step logic (Step 4).
+	 */
+	private function execute_finalize_step_logic( int $job_id, array $input_data_packet, array $module_job_config ): bool {
+		$api_key = get_user_meta( $module_job_config['user_id'] ?? 0, 'dm_openai_api_key', true );
+		if ( empty( $api_key ) ) {
+			$api_key = get_option( 'openai_api_key' );
+		}
+		if ( empty( $api_key ) ) {
+			return false;
+		}
+
+		$project_id = absint( $module_job_config['project_id'] ?? 0 );
+		$system_prompt = $this->prompt_builder->build_system_prompt( $project_id, $module_job_config['user_id'] ?? 0 );
+		$finalize_response_prompt = $module_job_config['finalize_response_prompt'] ?? '';
+
+		// Get data from previous steps
+		$processed_data_json = $this->db_jobs->get_step_data( $job_id, 2 );
+		$processed_data = json_decode( $processed_data_json, true );
+		$initial_output = $processed_data['processed_output'] ?? '';
+
+		$factcheck_data_json = $this->db_jobs->get_step_data( $job_id, 3 );
+		$factcheck_data = json_decode( $factcheck_data_json, true );
+		$fact_checked_content = $factcheck_data['fact_checked_content'] ?? '';
+
+		try {
+			$enhanced_finalize_prompt = $this->prompt_builder->build_finalize_prompt( $finalize_response_prompt, $module_job_config, $input_data_packet );
+			$finalize_user_message = $this->prompt_builder->build_finalize_user_message( $enhanced_finalize_prompt, $initial_output, $fact_checked_content, $module_job_config, $input_data_packet['metadata'] ?? [] );
+
+			$finalize_result = $this->finalize_api->finalize_response(
+				$api_key,
+				$system_prompt,
+				$finalize_user_message,
+				$initial_output,
+				$fact_checked_content,
+				$module_job_config,
+				$input_data_packet['metadata'] ?? []
+			);
+
+			if ( is_wp_error( $finalize_result ) ) {
+				return false;
+			}
+
+			$final_output_string = $finalize_result['final_output'] ?? '';
+			if ( empty( $final_output_string ) ) {
+				return false;
+			}
+
+			// Store result in database
+			$this->db_jobs->update_step_data( $job_id, 4, wp_json_encode( ['final_output_string' => $final_output_string] ) );
+			return true;
+
+		} catch ( Exception $e ) {
+			return false;
+		}
 	}
 
 	/**

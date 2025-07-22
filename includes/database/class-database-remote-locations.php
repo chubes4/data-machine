@@ -275,6 +275,16 @@ class Data_Machine_Database_Remote_Locations {
     }
 
     /**
+     * Retrieves all remote locations for the current user.
+     * Convenience method for admin interface.
+     *
+     * @return array Array of location objects.
+     */
+    public function get_locations_for_current_user(): array {
+        return $this->get_locations_for_user(get_current_user_id());
+    }
+
+    /**
      * Updates the synced site info and last sync time for a location.
      *
      * @param int $location_id The location ID.

@@ -9,8 +9,7 @@
     "autoload": {
         "classmap": [
             "includes/",
-            "admin/",
-            "module-config/"
+            "admin/"
         ],
         "files": [
             "includes/class-data-machine-constants.php"
