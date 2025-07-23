@@ -6,34 +6,25 @@
  * @subpackage Data_Machine/includes/input
  * @since      0.7.0
  */
-class Data_Machine_Input_Files {
-
-	use Data_Machine_Base_Input_Handler;
-
-	/** @var Data_Machine_Database_Modules */
-	private $db_modules;
-
-	/** @var Data_Machine_Database_Projects */
-	private $db_projects;
-
-    /** @var ?Data_Machine_Logger */
-    private $logger;
+class Data_Machine_Input_Files extends Data_Machine_Base_Input_Handler {
 
 	/**
 	 * Constructor. Dependencies are injected.
+	 * Calls parent constructor to set up common dependencies.
 	 *
 	 * @param Data_Machine_Database_Modules $db_modules Database modules handler.
      * @param Data_Machine_Database_Projects $db_projects Database projects handler.
+     * @param Data_Machine_Database_Processed_Items $db_processed_items Processed items handler.
      * @param Data_Machine_Logger|null $logger Optional logger.
 	 */
 	public function __construct(
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Database_Projects $db_projects,
+        Data_Machine_Database_Processed_Items $db_processed_items,
         ?Data_Machine_Logger $logger = null
     ) {
-	 $this->db_modules = $db_modules;
-     $this->db_projects = $db_projects;
-     $this->logger = $logger;
+        // Call parent constructor with required dependencies
+        parent::__construct($db_modules, $db_projects, $db_processed_items, $logger);
 	}
 
 	/**
@@ -46,93 +37,280 @@ class Data_Machine_Input_Files {
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
 	public function get_input_data(object $module, array $source_config, int $user_id): array {
-        $this->logger?->info('Files Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
+        // Use base class validation - replaces ~20 lines of duplicated code
+        $validated = $this->validate_basic_requirements($module, $user_id);
+        $module_id = $validated['module_id'];
+        $project = $validated['project'];
 
-        // Ensure user ID is valid (passed from context)
-		if ( empty($user_id) ) {
-            $this->logger?->error('Files Input: User ID not provided.', ['module_id' => $module->module_id ?? null]);
-			throw new Exception(esc_html__( 'User ID not provided for file processing.', 'data-machine' ));
-		}
-
-		// Get module ID from the passed module object
-		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-		if ( empty( $module_id ) ) {
-            $this->logger?->error('Files Input: Module ID missing from module object.');
-			throw new Exception(esc_html__( 'Missing module ID.', 'data-machine' ));
-		}
-
-        // Check if dependencies were injected correctly
-		if (!$this->db_modules || !$this->db_projects) {
-            $this->logger?->error('Files Input: Required database service not available.', ['module_id' => $module_id]);
-			throw new Exception(esc_html__( 'Required database service not available in Files handler.', 'data-machine' ));
-		}
-
-		// Ownership check (using the trait method)
-		$project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
-
-        // Get the uploaded file data from the $_FILES superglobal
-        // NOTE: This handler assumes the job is triggered in a context where $_FILES is populated.
-        // Direct execution or background jobs might need different ways to access the file.
-        if (empty($_FILES['file_upload'])) {
-            $this->logger?->error('Files Input: No file data found in $_FILES[\'file_upload\'].', ['module_id' => $module_id]);
-            throw new Exception(esc_html__( 'No file uploaded for processing. Check the upload mechanism.', 'data-machine' ));
+        // Find the next unprocessed uploaded file
+        $next_file = $this->find_next_unprocessed_file($source_config);
+        
+        if (!$next_file) {
+            $this->logger?->info('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
+            return []; // No data to process
         }
 
-		// File handling logic starts here...
-		$file = $_FILES['file_upload'];
+        // Validate the file still exists
+        if (!file_exists($next_file['persistent_path'])) {
+            $this->logger?->error('Files Input: File no longer exists on disk.', [
+                'module_id' => $module_id,
+                'file_path' => $next_file['persistent_path']
+            ]);
+            // Remove invalid file and try again
+            $this->remove_invalid_file($module_id, $next_file['persistent_path']);
+            return $this->get_input_data($module, $source_config, $user_id);
+        }
 
-		// Check for upload errors
-		if ( $file['error'] !== UPLOAD_ERR_OK ) {
-            $error_message = $this->get_upload_error_message($file['error']);
-            $this->logger?->error('Files Input: File upload error.', ['module_id' => $module_id, 'error_code' => $file['error'], 'error_message' => $error_message]);
-			throw new Exception(esc_html($error_message));
-		}
+        // Create input_data_packet using the file path as the identifier
+        $file_identifier = $next_file['persistent_path'];
+        $mime_type = $next_file['mime_type'] ?? 'text/plain';
+        
+        // Read text file content for supported text types
+        $content_string = null;
+        if ($this->is_text_file($mime_type)) {
+            $content_string = $this->read_text_file_content($next_file['persistent_path'], $mime_type);
+        }
+        
+        // Use base class method to create standardized packet
+        $data = [
+            'content_string' => $content_string, // Text content for text files, null for PDFs/images
+            'file_info' => [
+                'original_name' => $next_file['original_name'],
+                'mime_type' => $mime_type,
+                'size' => $next_file['size'] ?? 0,
+                'persistent_path' => $next_file['persistent_path']
+            ]
+        ];
+        
+        $metadata = [
+            'source_type' => 'files',
+            'item_identifier_to_log' => $file_identifier, // Used by processed items system
+            'original_id' => $file_identifier,
+            'original_title' => $next_file['original_name'],
+            'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
+        ];
+        
+        $input_data_packet = $this->create_input_data_packet($data, $metadata);
 
-		// Comprehensive file security validation
-		$this->validate_file_security($file, $module_id);
+        $this->logger?->info('Files Input: Found unprocessed file for processing.', [
+            'module_id' => $module_id,
+            'file_path' => $file_identifier
+        ]);
 
-		// Move uploaded file to a persistent location
-		$upload_dir = wp_upload_dir();
-		$persistent_dir = $upload_dir['basedir'] . '/dm_persistent_jobs/';
-		wp_mkdir_p( $persistent_dir ); // Ensure directory exists
-
-		// Create a unique filename
-		$file_extension = pathinfo( $file['name'], PATHINFO_EXTENSION );
-		$new_filename = 'job_' . $module_id . '_' . time() . '_' . wp_generate_password( 8, false ) . '.' . sanitize_file_name($file_extension);
-		$persistent_path = $persistent_dir . $new_filename;
-
-		if ( ! move_uploaded_file( $file['tmp_name'], $persistent_path ) ) {
-            $this->logger?->error('Files Input: Failed to move uploaded file.', ['module_id' => $module_id, 'tmp_name' => $file['tmp_name'], 'destination' => $persistent_path]);
-			throw new Exception(esc_html__( 'Failed to move uploaded file to persistent storage.', 'data-machine' ));
-		}
-        $this->logger?->info('Files Input: File moved to persistent storage.', ['module_id' => $module_id, 'path' => $persistent_path]);
-
-		// Prepare packet (Content string is NOT included here, it will be read later by the orchestrator)
-		$input_data_packet = [
-			'data' => [
-                 // Content string is intentionally omitted here
-                 'content_string' => null, 
-                 'file_info' => [
-                     'original_name' => sanitize_file_name($file['name']),
-                     'mime_type' => $file['type'],
-                     'size' => $file['size'],
-                     'persistent_path' => $persistent_path // Path for later reading and cleanup
-                 ]
-             ],
-			'metadata' => [
-				'source_type' => 'files',
-                'item_identifier_to_log' => $persistent_path, // Use path as a unique identifier for processing log
-                'original_id' => $persistent_path, // Use path as original ID
-                'original_title' => sanitize_file_name($file['name']),
-                'original_date_gmt' => gmdate('Y-m-d H:i:s'), // Use current time as upload time
-                // Add other relevant metadata if needed
-			]
-		];
-
-		// Return the packet wrapped in an array, as expected by the Job Executor
-        $this->logger?->info('Files Input: Prepared data packet.', ['module_id' => $module_id, 'file_path' => $persistent_path]);
-		return [$input_data_packet];
+        return [$input_data_packet];
 	}
+
+    /**
+     * Find the next unprocessed file for a module.
+     *
+     * @param int $module_id Module ID.
+     * @return array|null File info or null if no unprocessed files.
+     */
+    private function find_next_unprocessed_file(array $source_config): ?array {
+        // Get uploaded files from nested config
+        $config = $source_config['files'] ?? [];
+        $uploaded_files = $config['uploaded_files'] ?? [];
+        
+        if (empty($uploaded_files)) {
+            return null;
+        }
+
+        // If we don't have processed items service, return the first file
+        if (!$this->db_processed_items) {
+            return $uploaded_files[0];
+        }
+
+        // Find first file that hasn't been processed using base class method
+        foreach ($uploaded_files as $file) {
+            $file_identifier = $file['persistent_path'];
+            
+            if (!$this->check_if_processed($module_id, 'files', $file_identifier)) {
+                return $file;
+            }
+        }
+
+        return null; // All files have been processed
+    }
+
+    /**
+     * Get uploaded files from module configuration.
+     *
+     * @param int $module_id Module ID.
+     * @return array Array of uploaded files.
+     */
+    private function get_uploaded_files(int $module_id): array {
+        $module = $this->db_modules->get_module($module_id);
+        if (!$module) {
+            return [];
+        }
+
+        $data_source_config = json_decode($module->data_source_config ?? '{}', true);
+        return $data_source_config['uploaded_files'] ?? [];
+    }
+
+    /**
+     * Remove invalid file from module configuration.
+     *
+     * @param int $module_id Module ID.
+     * @param string $file_path File path to remove.
+     */
+    private function remove_invalid_file(int $module_id, string $file_path): void {
+        $uploaded_files = $this->get_uploaded_files($module_id);
+        
+        // Filter out the invalid file
+        $uploaded_files = array_filter($uploaded_files, function($file) use ($file_path) {
+            return ($file['persistent_path'] ?? '') !== $file_path;
+        });
+
+        // Reindex array
+        $uploaded_files = array_values($uploaded_files);
+
+        // Update module config
+        $module = $this->db_modules->get_module($module_id);
+        if ($module) {
+            $data_source_config = json_decode($module->data_source_config ?? '{}', true);
+            $data_source_config['uploaded_files'] = $uploaded_files;
+            
+            $this->db_modules->update_module($module_id, [
+                'data_source_config' => json_encode($data_source_config)
+            ]);
+        }
+    }
+
+    /**
+     * Check if a MIME type represents a text file that should be read as content.
+     *
+     * @param string $mime_type MIME type to check.
+     * @return bool True if it's a text file type.
+     */
+    private function is_text_file(string $mime_type): bool {
+        $text_mime_types = [
+            'text/plain',
+            'text/csv',
+            'application/json',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        
+        return in_array($mime_type, $text_mime_types);
+    }
+
+    /**
+     * Read text content from a file.
+     *
+     * @param string $file_path Path to the file.
+     * @param string $mime_type MIME type of the file.
+     * @return string|null File content or null if reading failed.
+     */
+    private function read_text_file_content(string $file_path, string $mime_type): ?string {
+        try {
+            // Security check - ensure file exists and is readable
+            if (!file_exists($file_path) || !is_readable($file_path)) {
+                $this->logger?->error('Files Input: Cannot read file.', ['file_path' => $file_path]);
+                return null;
+            }
+
+            // Memory guard check
+            if (class_exists('Data_Machine_Memory_Guard')) {
+                $memory_guard = new Data_Machine_Memory_Guard();
+                if (!$memory_guard->can_load_file($file_path, 2.0)) {
+                    $this->logger?->error('Files Input: File too large to read safely.', ['file_path' => $file_path]);
+                    return null;
+                }
+            }
+
+            // Handle different file types
+            switch ($mime_type) {
+                case 'text/plain':
+                case 'text/csv':
+                case 'application/json':
+                    // Simple text files - read directly
+                    $content = file_get_contents($file_path);
+                    break;
+
+                case 'application/msword':
+                case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                    // Word documents - extract text (simplified)
+                    $content = $this->extract_word_document_text($file_path, $mime_type);
+                    break;
+
+                default:
+                    $this->logger?->error('Files Input: Unsupported text file type.', ['mime_type' => $mime_type]);
+                    return null;
+            }
+
+            if ($content === false || $content === null) {
+                $this->logger?->error('Files Input: Failed to read file content.', ['file_path' => $file_path]);
+                return null;
+            }
+
+            // Basic content sanitization
+            $content = trim($content);
+            if (empty($content)) {
+                $this->logger?->warning('Files Input: File appears to be empty.', ['file_path' => $file_path]);
+                return null;
+            }
+
+            $this->logger?->info('Files Input: Successfully read text file.', [
+                'file_path' => $file_path,
+                'content_length' => strlen($content)
+            ]);
+
+            return $content;
+
+        } catch (Exception $e) {
+            $this->logger?->error('Files Input: Error reading text file.', [
+                'file_path' => $file_path,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Extract text from Word documents.
+     *
+     * @param string $file_path Path to the Word document.
+     * @param string $mime_type MIME type of the document.
+     * @return string|null Extracted text or null if extraction failed.
+     */
+    private function extract_word_document_text(string $file_path, string $mime_type): ?string {
+        // For .docx files (Office Open XML), we can try a simple approach
+        if ($mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            try {
+                // .docx files are ZIP archives - try to extract text from document.xml
+                $zip = new ZipArchive();
+                if ($zip->open($file_path) === TRUE) {
+                    $xml_content = $zip->getFromName('word/document.xml');
+                    $zip->close();
+                    
+                    if ($xml_content) {
+                        // Simple XML parsing to extract text content
+                        $xml_content = preg_replace('/<[^>]*>/', ' ', $xml_content);
+                        $xml_content = html_entity_decode($xml_content);
+                        $xml_content = preg_replace('/\s+/', ' ', $xml_content);
+                        return trim($xml_content);
+                    }
+                }
+            } catch (Exception $e) {
+                $this->logger?->error('Files Input: Error extracting .docx content.', [
+                    'file_path' => $file_path,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // For .doc files (legacy format), extraction is more complex
+        // For now, return a helpful message
+        if ($mime_type === 'application/msword') {
+            $this->logger?->warning('Files Input: Legacy .doc format not fully supported. Please use .docx or plain text.', [
+                'file_path' => $file_path
+            ]);
+            return "Note: Legacy .doc file uploaded but text extraction not available. Please convert to .docx or .txt format for full content processing.";
+        }
+
+        return null;
+    }
 
 	/**
 	 * Get settings fields for the Files input handler.

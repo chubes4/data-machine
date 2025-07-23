@@ -9,46 +9,39 @@
  * @subpackage Data_Machine/includes/input
  * @since      0.7.0 (Renamed/Refactored 0.13.0)
  */
-class Data_Machine_Input_Airdrop_Rest_Api {
-
-	use Data_Machine_Base_Input_Handler;
-
-	/** @var Data_Machine_Database_Processed_Items */
-	private $db_processed_items;
-
-	/** @var Data_Machine_Database_Modules */
-	private $db_modules;
-
-	/** @var Data_Machine_Database_Projects */
-	private $db_projects;
+class Data_Machine_Input_Airdrop_Rest_Api extends Data_Machine_Base_Input_Handler {
 
 	/** @var Data_Machine_Database_Remote_Locations */
 	private $db_remote_locations;
 
-	/** @var ?Data_Machine_Logger */
-	private $logger;
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
 
 	/**
 	 * Constructor.
+	 * Calls parent constructor and adds handler-specific dependencies.
 	 *
-	 * @param Data_Machine_Database_Processed_Items $db_processed_items
 	 * @param Data_Machine_Database_Modules $db_modules
 	 * @param Data_Machine_Database_Projects $db_projects
+	 * @param Data_Machine_Database_Processed_Items $db_processed_items
 	 * @param Data_Machine_Database_Remote_Locations $db_remote_locations
+	 * @param Data_Machine_Handler_HTTP_Service $http_service
 	 * @param Data_Machine_Logger|null $logger
 	 */
 	public function __construct(
-		Data_Machine_Database_Processed_Items $db_processed_items,
 		Data_Machine_Database_Modules $db_modules,
 		Data_Machine_Database_Projects $db_projects,
+		Data_Machine_Database_Processed_Items $db_processed_items,
 		Data_Machine_Database_Remote_Locations $db_remote_locations,
+		Data_Machine_Handler_HTTP_Service $http_service,
 		?Data_Machine_Logger $logger = null
 	) {
-		$this->db_processed_items = $db_processed_items;
-		$this->db_modules = $db_modules;
-		$this->db_projects = $db_projects;
+		// Call parent constructor with common dependencies
+		parent::__construct($db_modules, $db_projects, $db_processed_items, $logger);
+		
+		// Set handler-specific dependencies
 		$this->db_remote_locations = $db_remote_locations;
-		$this->logger = $logger;
+		$this->http_service = $http_service;
 	}
 
 	/**
@@ -86,8 +79,9 @@ class Data_Machine_Input_Airdrop_Rest_Api {
 		}
 
 		// --- Configuration ---
-		// Use $source_config directly, as it is already the config for this handler
-		$location_id = absint($source_config['location_id'] ?? 0); // Access via $source_config
+		// Access config from nested structure
+		$config = $source_config['airdrop_rest_api'] ?? [];
+		$location_id = absint($config['location_id'] ?? 0);
 		if (empty($location_id)) {
 			throw new Exception(esc_html__('No Remote Location selected for Airdrop REST API.', 'data-machine'));
 		}
@@ -108,9 +102,9 @@ class Data_Machine_Input_Airdrop_Rest_Api {
 		$remote_user = trim($location->target_username ?? '');
 		$remote_password = $location->password ?? null;
 
-		// Access other settings via $source_config
-		$process_limit = max(1, absint($source_config['item_count'] ?? 1));
-		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
+		// Access other settings from config
+		$process_limit = max(1, absint($config['item_count'] ?? 1));
+		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
 		$fetch_batch_size = min(100, max(10, $process_limit * 2));
 
 		if (empty($endpoint_url_base) || !filter_var($endpoint_url_base, FILTER_VALIDATE_URL)) {
@@ -139,13 +133,13 @@ class Data_Machine_Input_Airdrop_Rest_Api {
 
 		$api_url_base = trailingslashit($endpoint_url_base) . 'wp-json/dma/v1/query-posts';
 
-		$post_type = $source_config['rest_post_type'] ?? 'post';
-		$post_status = $source_config['rest_post_status'] ?? 'publish';
-		$category_id = $source_config['rest_category'] ?? 0;
-		$tag_id = $source_config['rest_tag'] ?? 0;
-		$orderby = $source_config['rest_orderby'] ?? 'date';
-		$order = $source_config['rest_order'] ?? 'DESC';
-		$search = $source_config['search'] ?? null;
+		$post_type = $config['rest_post_type'] ?? 'post';
+		$post_status = $config['rest_post_status'] ?? 'publish';
+		$category_id = $config['rest_category'] ?? 0;
+		$tag_id = $config['rest_tag'] ?? 0;
+		$orderby = $config['rest_orderby'] ?? 'date';
+		$order = $config['rest_order'] ?? 'DESC';
+		$search = $config['search'] ?? null;
 
 		$eligible_items_packets = [];
 		$current_page = 1;
@@ -168,32 +162,25 @@ class Data_Machine_Input_Airdrop_Rest_Api {
 			$current_api_url = add_query_arg(array_filter($query_params, function($value) { return $value !== null; }), $api_url_base);
 
 			$args = array(
-				'headers' => array('Authorization' => $auth_header),
-				'timeout' => 60,
+				'headers' => array('Authorization' => $auth_header)
 			);
 
-			$response = wp_remote_get($current_api_url, $args);
-
-			if (is_wp_error($response)) {
-				$error_message = __('Failed to connect to the remote data source.', 'data-machine') . ' ' . $response->get_error_message();
-				if ($current_page === 1) throw new Exception(esc_html($error_message));
+			// Use HTTP service - replaces ~20 lines of duplicated HTTP code
+			$http_response = $this->http_service->get($current_api_url, $args, 'Airdrop REST API');
+			if (is_wp_error($http_response)) {
+				if ($current_page === 1) throw new Exception($http_response->get_error_message());
 				else break;
 			}
 
-			$response_code = wp_remote_retrieve_response_code($response);
-			$response_headers = wp_remote_retrieve_headers($response);
-			$body = wp_remote_retrieve_body($response);
+			$response_headers = $http_response['headers'];
+			$body = $http_response['body'];
 
-			if ($response_code !== 200) {
-				$error_data = json_decode($body, true);
-				$error_message_detail = isset($error_data['message']) ? $error_data['message'] : __('Unknown error occurred on the remote site.', 'data-machine');
-				// translators: %d is the HTTP response code number
-				$error_message = sprintf(__('Remote data source returned an error (Code: %d).', 'data-machine'), $response_code) . ' ' . $error_message_detail;
-				if ($current_page === 1) throw new Exception(esc_html($error_message));
+			// Parse JSON response with error handling
+			$response_data = $this->http_service->parse_json($body, 'Airdrop REST API');
+			if (is_wp_error($response_data)) {
+				if ($current_page === 1) throw new Exception($response_data->get_error_message());
 				else break;
 			}
-
-			$response_data = json_decode($body, true);
 			$posts_data = $response_data['posts'] ?? [];
 			$post_count = is_array($posts_data) ? count($posts_data) : 0;
 
@@ -247,9 +234,10 @@ class Data_Machine_Input_Airdrop_Rest_Api {
 				$source_name = $source_host ? ucwords(str_replace(['www.', '.com', '.org', '.net'], '', $source_host)) : 'Unknown Source';
 				$content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 				$input_data_packet = [
-					'item_identifier' => $current_item_id,
-					'content_string' => $content_string,
-					'file_info' => null,
+					'data' => [
+						'content_string' => $content_string,
+						'file_info' => null
+					],
 					'metadata' => [
 						'source_type' => 'airdrop_rest_api',
 						'item_identifier_to_log' => $current_item_id,
@@ -432,6 +420,11 @@ class Data_Machine_Input_Airdrop_Rest_Api {
 	public function sanitize_settings(array $raw_settings): array {
 		$sanitized = [];
 		$sanitized['location_id'] = absint($raw_settings['location_id'] ?? 0);
+		
+		// Validate required location_id
+		if (empty($sanitized['location_id'])) {
+			throw new InvalidArgumentException(__('Remote Location is required for Airdrop REST API input handler.', 'data-machine'));
+		}
 		$sanitized['rest_post_type'] = sanitize_text_field($raw_settings['rest_post_type'] ?? 'post');
 		$sanitized['rest_post_status'] = sanitize_text_field($raw_settings['rest_post_status'] ?? 'publish');
 		$sanitized['rest_category'] = absint($raw_settings['rest_category'] ?? 0);

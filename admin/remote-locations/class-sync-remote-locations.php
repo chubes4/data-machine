@@ -107,12 +107,27 @@ class Data_Machine_Sync_Remote_Locations {
         }
 
         $decoded_data = json_decode($body, true);
+        
+        // Enhanced debugging for sync issues
+        $this->logger?->debug('Sync API Response', [
+            'location_id' => $location_id,
+            'response_code' => $response_code,
+            'raw_body' => substr($body, 0, 500), // First 500 chars
+            'decoded_data_keys' => $decoded_data ? array_keys($decoded_data) : null,
+            'has_post_types' => isset($decoded_data['post_types']),
+            'has_taxonomies' => isset($decoded_data['taxonomies'])
+        ]);
+        
         if (empty($decoded_data) || !isset($decoded_data['post_types']) || !isset($decoded_data['taxonomies'])) {
             $error_message = __('Received invalid data format from the remote site.', 'data-machine');
-            $this->logger?->add_admin_error($error_message, ['location_id' => $location_id]);
+            $detailed_error = sprintf(
+                'Expected post_types and taxonomies keys. Received: %s',
+                $decoded_data ? implode(', ', array_keys($decoded_data)) : 'null/empty response'
+            );
+            $this->logger?->add_admin_error($error_message . ' ' . $detailed_error, ['location_id' => $location_id, 'raw_response' => $body]);
             return [
                 'success' => false,
-                'message' => $error_message,
+                'message' => $error_message . ' Check logs for details.',
                 'data' => null
             ];
         }
@@ -169,6 +184,15 @@ class Data_Machine_Sync_Remote_Locations {
                 $enabled_taxonomies = [];
             }
         }
+
+        // Debug: Log what we received from the API
+        $this->logger?->debug('Processing sync data', [
+            'location_id' => $location->location_id ?? 'unknown',
+            'post_types_count' => count($decoded_data['post_types'] ?? []),
+            'post_types_keys' => array_keys($decoded_data['post_types'] ?? []),
+            'taxonomies_count' => count($decoded_data['taxonomies'] ?? []),
+            'enabled_taxonomies' => $enabled_taxonomies
+        ]);
 
         // Always keep all post types and taxonomies (names/labels)
         // For taxonomies, only keep terms for enabled taxonomies (or all if none enabled)

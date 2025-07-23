@@ -297,7 +297,281 @@
             });
         });
 
+        // --- Upload Files Button Handler ---
+        // Handles click on 'Upload Files' buttons for projects with file modules.
+        $('table.projects').on('click', '.upload-files-button', function() {
+            const $button = $(this);
+            const projectId = $button.data('project-id');
+            const fileModules = $button.data('file-modules');
+            
+            console.log('Upload Files clicked for project:', projectId, 'File modules:', fileModules);
+            
+            // For now, show a simple alert - we'll implement the modal later
+            if (fileModules && fileModules.length > 0) {
+                if (fileModules.length === 1) {
+                    // Single file module - show upload interface directly
+                    showFileUploadInterface(projectId, fileModules[0]);
+                } else {
+                    // Multiple file modules - show module selection first
+                    showModuleSelectionModal(projectId, fileModules);
+                }
+            }
+        });
+
+        // --- File Upload Modal Handlers ---
+        
+        // File selection change handler
+        $(document).on('change', '#dm-file-uploads', function() {
+            const files = this.files;
+            const $fileList = $('#dm-upload-file-list');
+            const $selectedFiles = $('#dm-upload-selected-files');
+            
+            if (files.length > 0) {
+                $selectedFiles.empty();
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const sizeStr = formatFileSize(file.size);
+                    $selectedFiles.append(`<li>${file.name} (${sizeStr})</li>`);
+                }
+                $fileList.show();
+                $('#dm-upload-start').prop('disabled', false);
+            } else {
+                $fileList.hide();
+                $('#dm-upload-start').prop('disabled', true);
+            }
+        });
+        
+        // Upload start button handler
+        $(document).on('click', '#dm-upload-start', function() {
+            const $button = $(this);
+            const files = $('#dm-file-uploads')[0].files;
+            
+            if (files.length === 0) {
+                alert('Please select files to upload.');
+                return;
+            }
+            
+            // Disable button and show progress
+            $button.prop('disabled', true).text('Uploading...');
+            $('#dm-upload-progress').show();
+            
+            // Start file upload
+            uploadFilesToQueue(files);
+        });
+        
+        // Upload cancel button handler  
+        $(document).on('click', '#dm-upload-cancel', function() {
+            $('#dm-upload-files-modal').hide();
+        });
+        
+        // Close modal when clicking outside
+        $(document).on('click', '#dm-upload-files-modal', function(e) {
+            if (e.target === this) {
+                $(this).hide();
+            }
+        });
+
     });
+
+    /**
+     * Show file upload interface for a specific module.
+     * @param {number} projectId - Project ID
+     * @param {object} module - Module object with id and name
+     */
+    function showFileUploadInterface(projectId, module) {
+        const $modal = $('#dm-upload-files-modal');
+        const $projectName = $('#dm-upload-project-name');
+        const $moduleName = $('#dm-upload-module-name');
+        const $projectIdInput = $('#dm-upload-project-id');
+        const $moduleIdInput = $('#dm-upload-module-id');
+        
+        // Set modal data
+        $projectIdInput.val(projectId);
+        $moduleIdInput.val(module.id);
+        $projectName.text(`Project ID: ${projectId}`);
+        $moduleName.text(module.name);
+        
+        // Reset modal state
+        resetUploadModal();
+        
+        // Load current queue status
+        loadQueueStatus(module.id);
+        
+        // Show modal
+        $modal.show();
+    }
+
+    /**
+     * Show module selection modal for projects with multiple file modules.
+     * @param {number} projectId - Project ID  
+     * @param {array} fileModules - Array of file module objects
+     */
+    function showModuleSelectionModal(projectId, fileModules) {
+        let moduleList = 'Select which module to upload files to:\n\n';
+        fileModules.forEach((module, index) => {
+            moduleList += `${index + 1}. ${module.name}\n`;
+        });
+        moduleList += '\nEnter the number of your choice:';
+        
+        const choice = prompt(moduleList);
+        const moduleIndex = parseInt(choice) - 1;
+        
+        if (moduleIndex >= 0 && moduleIndex < fileModules.length) {
+            const selectedModule = fileModules[moduleIndex];
+            showFileUploadInterface(projectId, selectedModule);
+        } else if (choice !== null) {
+            alert('Invalid selection. Please try again.');
+        }
+    }
+
+    /**
+     * Reset the upload modal to initial state.
+     */
+    function resetUploadModal() {
+        $('#dm-file-uploads').val('');
+        $('#dm-upload-file-list').hide();
+        $('#dm-upload-selected-files').empty();
+        $('#dm-upload-progress').hide();
+        $('#dm-upload-results').hide();
+        $('#dm-upload-progress-bar').css('width', '0%').text('');
+        $('#dm-upload-status').text('Preparing upload...');
+        $('#dm-upload-success-list, #dm-upload-error-list').empty();
+        $('#dm-upload-start').prop('disabled', false).text('Upload Files');
+    }
+
+    /**
+     * Load and display queue status for a module.
+     * @param {number} moduleId - Module ID
+     */
+    function loadQueueStatus(moduleId) {
+        const $statusDiv = $('#dm-current-queue-status');
+        $statusDiv.html('<h4>Current Queue Status</h4><p>Loading...</p>');
+        
+        $.ajax({
+            url: dm_project_params.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'dm_get_queue_status',
+                nonce: dm_project_params.get_queue_status_nonce,
+                module_id: moduleId
+            },
+            success: function(response) {
+                if (response.success) {
+                    const status = response.data;
+                    $statusDiv.html(`
+                        <h4>Current Queue Status</h4>
+                        <p><strong>Total files:</strong> ${status.total}</p>
+                        <p><strong>Pending:</strong> ${status.pending} | <strong>Processing:</strong> ${status.processing || 0} | <strong>Completed:</strong> ${status.completed || 0}</p>
+                        <p><strong>Status:</strong> ${status.total > 0 ? 'Files ready for processing' : 'Queue is empty - upload files to get started'}</p>
+                    `);
+                } else {
+                    $statusDiv.html(`
+                        <h4>Current Queue Status</h4>
+                        <p style="color: #d63638;">Error loading queue status: ${response.data}</p>
+                    `);
+                }
+            },
+            error: function() {
+                $statusDiv.html(`
+                    <h4>Current Queue Status</h4>
+                    <p style="color: #d63638;">Network error loading queue status.</p>
+                `);
+            }
+        });
+    }
+
+    /**
+     * Format file size in human readable format.
+     * @param {number} bytes - File size in bytes
+     * @returns {string} Formatted file size
+     */
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    /**
+     * Upload files to the queue via AJAX.
+     * @param {FileList} files - Files to upload
+     */
+    function uploadFilesToQueue(files) {
+        const projectId = $('#dm-upload-project-id').val();
+        const moduleId = $('#dm-upload-module-id').val();
+        const $progressBar = $('#dm-upload-progress-bar');
+        const $status = $('#dm-upload-status');
+        const $results = $('#dm-upload-results');
+        const $successList = $('#dm-upload-success-list');
+        const $errorList = $('#dm-upload-error-list');
+        
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('action', 'dm_upload_files_to_queue');
+        formData.append('nonce', dm_project_params.upload_files_nonce); // We'll need to add this nonce
+        formData.append('project_id', projectId);
+        formData.append('module_id', moduleId);
+        
+        // Add all files
+        for (let i = 0; i < files.length; i++) {
+            formData.append('file_uploads[]', files[i]);
+        }
+        
+        $status.text(`Uploading ${files.length} file(s)...`);
+        $progressBar.css('width', '20%').text('20%');
+        
+        $.ajax({
+            url: dm_project_params.ajax_url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            xhr: function() {
+                const xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function(evt) {
+                    if (evt.lengthComputable) {
+                        const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                        $progressBar.css('width', percentComplete + '%').text(percentComplete + '%');
+                        $status.text(`Uploading... ${percentComplete}%`);
+                    }
+                }, false);
+                return xhr;
+            },
+            success: function(response) {
+                $progressBar.css('width', '100%').text('Complete');
+                
+                if (response.success) {
+                    $status.text('Upload completed successfully!');
+                    $successList.html(`<div class="notice notice-success"><p>${response.data.message}</p></div>`);
+                    
+                    // Reload queue status
+                    loadQueueStatus(moduleId);
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        resetUploadModal();
+                        $('#dm-upload-files-modal').hide();
+                    }, 2000);
+                    
+                } else {
+                    $status.text('Upload failed.');
+                    $errorList.html(`<div class="notice notice-error"><p>Error: ${response.data}</p></div>`);
+                }
+                
+                $results.show();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                $progressBar.css('width', '100%').text('Error').css('background', '#d63638');
+                $status.text('Upload failed due to network error.');
+                $errorList.html(`<div class="notice notice-error"><p>Network Error: ${textStatus}</p></div>`);
+                $results.show();
+            },
+            complete: function() {
+                $('#dm-upload-start').prop('disabled', false).text('Upload Files');
+            }
+        });
+    }
 
     /**
      * Helper function to make AJAX requests with consistent handling for:

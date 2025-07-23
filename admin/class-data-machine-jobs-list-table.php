@@ -5,7 +5,7 @@
  * Extends WP_List_Table to display Data Machine jobs.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/admin/templates
+ * @subpackage Data_Machine/admin
  */
 
 if (!class_exists('WP_List_Table')) {
@@ -118,35 +118,7 @@ class Data_Machine_Jobs_List_Table extends WP_List_Table {
             case 'status':
                 return esc_html($item['status']);
             case 'result_data':
-                $result_data = $item['result_data'] ?? null;
-                if (!empty($result_data)) {
-                    $decoded_result = json_decode($result_data, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded_result)) {
-                        $output = '';
-                        if (isset($decoded_result['status'])) {
-                            $output .= 'Status: ' . esc_html($decoded_result['status']) . '<br/>';
-                        }
-                        if (isset($decoded_result['message'])) {
-                            $output .= 'Message: ' . esc_html($decoded_result['message']) . '<br/>';
-                        }
-                        if (!empty($decoded_result['item_errors']) && is_array($decoded_result['item_errors'])) {
-                            $output .= 'Item Errors:<br/><ul>';
-                            foreach ($decoded_result['item_errors'] as $item_id => $error_msg) {
-                                $output .= '<li><strong>' . esc_html($item_id) . ':</strong> ' . esc_html($error_msg) . '</li>';
-                            }
-                            $output .= '</ul>';
-                        }
-                        if (empty($output)) {
-                            return 'Raw Data: ' . esc_html($result_data);
-                        }
-                        return $output;
-
-                    } else {
-                        // JSON decode failed or not an array, show raw data
-                        return 'Invalid Data: ' . esc_html($result_data);
-                    }
-                }
-                return 'N/A'; // Return N/A if result_data is empty
+                return $this->format_result_data($item['result_data'] ?? null);
             case 'created_at':
             case 'started_at':
             case 'completed_at':
@@ -194,6 +166,47 @@ class Data_Machine_Jobs_List_Table extends WP_List_Table {
             'completed_at' => array('j.completed_at', true) // Use alias
         );
         return $sortable_columns;
+    }
+
+    /**
+     * Format result data for display in the table.
+     *
+     * @param string|null $result_data Raw result data from database
+     * @return string Formatted result data for display
+     */
+    private function format_result_data($result_data) {
+        if (empty($result_data)) {
+            return 'N/A';
+        }
+
+        $decoded_result = json_decode($result_data, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded_result)) {
+            return 'Invalid Data: ' . esc_html($result_data);
+        }
+
+        $output_parts = [];
+        
+        if (isset($decoded_result['status'])) {
+            $output_parts[] = 'Status: ' . esc_html($decoded_result['status']);
+        }
+        
+        if (isset($decoded_result['message'])) {
+            $output_parts[] = 'Message: ' . esc_html($decoded_result['message']);
+        }
+        
+        if (!empty($decoded_result['item_errors']) && is_array($decoded_result['item_errors'])) {
+            $error_parts = [];
+            foreach ($decoded_result['item_errors'] as $item_id => $error_msg) {
+                $error_parts[] = esc_html($item_id) . ': ' . esc_html($error_msg);
+            }
+            $output_parts[] = 'Item Errors: ' . implode('; ', $error_parts);
+        }
+        
+        if (empty($output_parts)) {
+            return 'Raw Data: ' . esc_html($result_data);
+        }
+        
+        return implode(' | ', $output_parts);
     }
 
 } 

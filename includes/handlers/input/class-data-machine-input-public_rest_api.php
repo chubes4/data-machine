@@ -8,40 +8,31 @@
  * @subpackage Data_Machine/includes/input
  * @since      0.13.0
  */
-class Data_Machine_Input_Public_Rest_Api {
+class Data_Machine_Input_Public_Rest_Api extends Data_Machine_Base_Input_Handler {
 
-	use Data_Machine_Base_Input_Handler;
-
-	/** @var Data_Machine_Database_Processed_Items */
-    private $db_processed_items;
-
-    /** @var Data_Machine_Database_Modules */
-    private $db_modules;
-
-    /** @var Data_Machine_Database_Projects */
-    private $db_projects;
-
-    /** @var ?Data_Machine_Logger */
-    private $logger;
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
 
 	/**
 	 * Constructor.
+	 * Calls parent constructor with common dependencies.
 	 *
-     * @param Data_Machine_Database_Processed_Items $db_processed_items
      * @param Data_Machine_Database_Modules $db_modules
      * @param Data_Machine_Database_Projects $db_projects
+     * @param Data_Machine_Database_Processed_Items $db_processed_items
+     * @param Data_Machine_Handler_HTTP_Service $http_service
      * @param Data_Machine_Logger|null $logger
 	 */
 	public function __construct(
-        Data_Machine_Database_Processed_Items $db_processed_items,
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Database_Projects $db_projects,
+        Data_Machine_Database_Processed_Items $db_processed_items,
+        Data_Machine_Handler_HTTP_Service $http_service,
         ?Data_Machine_Logger $logger = null
     ) {
-		$this->db_processed_items = $db_processed_items;
-        $this->db_modules = $db_modules;
-        $this->db_projects = $db_projects;
-        $this->logger = $logger;
+        // Call parent constructor with common dependencies
+        parent::__construct($db_modules, $db_projects, $db_processed_items, $logger);
+        $this->http_service = $http_service;
 	}	
 
 	/**
@@ -68,11 +59,12 @@ class Data_Machine_Input_Public_Rest_Api {
 		$project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
 
 		// --- Configuration ---
-		$api_endpoint_url = $source_config['api_endpoint_url'] ?? '';
-		$data_path = $source_config['data_path'] ?? '';
-		$process_limit = max(1, absint($source_config['item_count'] ?? 1));
-		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
-		$search_term = trim($source_config['search'] ?? '');
+		$config = $source_config['public_rest_api'] ?? [];
+		$api_endpoint_url = $config['api_endpoint_url'] ?? '';
+		$data_path = $config['data_path'] ?? '';
+		$process_limit = max(1, absint($config['item_count'] ?? 1));
+		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+		$search_term = trim($config['search'] ?? '');
 		// Always order by date descending
 		$orderby = 'date';
 		$order = 'desc';
@@ -113,34 +105,21 @@ class Data_Machine_Input_Public_Rest_Api {
 			$pages_fetched++;
             $this->logger?->debug('Public REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $module_id]);
 
-			$args = array('timeout' => 60);
-			$response = wp_remote_get($next_page_url, $args);
-
-			if (is_wp_error($response)) {
-				$error_message = __('Failed to connect to the public REST API endpoint.', 'data-machine') . ' ' . $response->get_error_message();
-                $this->logger?->add_admin_error($error_message, ['url' => $next_page_url, 'module_id' => $module_id]);
-				if ($pages_fetched === 1) throw new Exception(esc_html($error_message));
+			// Use HTTP service - replaces ~25 lines of duplicated HTTP code
+			$http_response = $this->http_service->get($next_page_url, [], 'Public REST API');
+			if (is_wp_error($http_response)) {
+				if ($pages_fetched === 1) throw new Exception($http_response->get_error_message());
 				else break;
 			}
 
-			$response_code = wp_remote_retrieve_response_code($response);
-			$response_headers = wp_remote_retrieve_headers($response);
-			$body = wp_remote_retrieve_body($response);
-
-            $this->logger?->debug('Public REST Input: Response code', ['code' => $response_code, 'url' => $next_page_url, 'module_id' => $module_id]);
-
-			if ($response_code !== 200) {
-				$error_data = json_decode($body, true);
-				$error_message_detail = isset($error_data['message']) ? $error_data['message'] : __('Unknown error occurred on the remote API.', 'data-machine');
-				/* translators: %d: HTTP response code */
-				$error_message = sprintf(__('Public REST API returned an error (Code: %d).', 'data-machine'), $response_code) . ' ' . $error_message_detail;
-                $this->logger?->add_admin_error($error_message, ['url' => $next_page_url, 'body' => substr($body, 0, 500), 'module_id' => $module_id]);
-				if ($pages_fetched === 1) throw new Exception(esc_html($error_message));
+			// Parse JSON response with error handling
+			$response_data = $this->http_service->parse_json($http_response['body'], 'Public REST API');
+			if (is_wp_error($response_data)) {
+				if ($pages_fetched === 1) throw new Exception($response_data->get_error_message());
 				else break;
 			}
 
-			$response_data = json_decode($body, true);
-			$this->logger?->debug('Public REST Input: Response body sample', ['body_sample' => substr($body, 0, 1000), 'url' => $next_page_url, 'module_id' => $module_id]);
+			$response_headers = $http_response['headers'];
 
 			// Extract items array using data_path if provided, or auto-detect first array
 			$items = [];
@@ -306,7 +285,7 @@ class Data_Machine_Input_Public_Rest_Api {
     /**
      * Recursively find the first array of objects in a JSON structure.
      */
-    private static function find_first_array_of_objects($data) {
+    protected static function find_first_array_of_objects($data) {
         $title_keys = ['title', 'title.rendered', 'headline'];
         if (is_array($data)) {
             if (!empty($data) && is_array(reset($data)) && array_keys(reset($data)) !== range(0, count(reset($data)) - 1)) {

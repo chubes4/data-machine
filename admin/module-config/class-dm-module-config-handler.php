@@ -76,6 +76,9 @@ class Data_Machine_Module_Handler {
      * Handles saving of module configuration (create/update) triggered by admin_post hook.
      */
     public function handle_save_request() {
+        // Log the start of save request with received POST data
+        error_log( 'DM Module Config: Save request started - POST data: ' . print_r( $_POST, true ) );
+        
         // Security Checks
         // Check the nonce specific to this action
         // Note: admin_post actions use check_admin_referer, not check_ajax_referer
@@ -127,6 +130,14 @@ class Data_Machine_Module_Handler {
         $submitted_ds_config_all = $_POST['data_source_config'] ?? [];
         $submitted_output_config_all = $_POST['output_config'] ?? [];
 
+        // Log processed data for debugging
+        error_log( 'DM Module Config: Processed data - ' .
+            "Module ID: {$submitted_module_id}, " .
+            "Project ID: {$project_id}, " .
+            "Data Source: {$data_source_type_slug}, " .
+            "Output: {$output_type_slug}, " .
+            "Module Name: '{$module_name}'" );
+
         $this->logger->info('[Module Config Save] Starting save process via admin_post.', [
             'submitted_module_id' => $submitted_module_id,
             'project_id' => $project_id,
@@ -155,9 +166,30 @@ class Data_Machine_Module_Handler {
         }
 
         // --- Sanitize Configs ---
-        // Use class properties for dependencies
-        $final_clean_ds_config = $this->sanitize_input_config($data_source_type_slug, $submitted_ds_config_all);
-        $final_clean_output_config = $this->sanitize_output_config($output_type_slug, $submitted_output_config_all);
+        // DEBUG: Log raw submitted configs
+        error_log('DM DEBUG - Raw submitted DS config all: ' . print_r($submitted_ds_config_all, true));
+        error_log('DM DEBUG - Raw submitted output config all: ' . print_r($submitted_output_config_all, true));
+        
+        // Use class properties for dependencies - with validation error handling
+        try {
+            $final_clean_ds_config = $this->sanitize_input_config($data_source_type_slug, $submitted_ds_config_all);
+        } catch (\InvalidArgumentException $e) {
+            $this->logger->add_admin_error($e->getMessage());
+            $this->redirect_after_save('error');
+            return;
+        }
+        
+        try {
+            $final_clean_output_config = $this->sanitize_output_config($output_type_slug, $submitted_output_config_all);
+        } catch (\InvalidArgumentException $e) {
+            $this->logger->add_admin_error($e->getMessage());
+            $this->redirect_after_save('error');
+            return;
+        }
+        
+        // DEBUG: Log sanitized configs
+        error_log('DM DEBUG - Sanitized DS config: ' . print_r($final_clean_ds_config, true));
+        error_log('DM DEBUG - Sanitized output config: ' . print_r($final_clean_output_config, true));
 
         // --- Handle Module Create / Update ---
         if ($submitted_module_id === 'new') {
@@ -239,6 +271,14 @@ class Data_Machine_Module_Handler {
         // Perform ownership check - IMPORTANT: Assumes get_module doesn't check or we need another way
         // Let's assume db_modules->update_module handles the check internally based on user_id
         if ($existing_module) {
+            // DEBUG: Log existing module data from database
+            error_log('DM DEBUG - Existing module from DB:');
+            error_log('  module_name: ' . $existing_module->module_name);
+            error_log('  data_source_type: ' . $existing_module->data_source_type);
+            error_log('  data_source_config (raw): ' . $existing_module->data_source_config);
+            error_log('  output_type: ' . $existing_module->output_type);
+            error_log('  output_config (raw): ' . $existing_module->output_config);
+            
             // Preserve remote_site_info logic (seems specific, keep as is)
             if ($output_type_slug === 'publish_remote') {
                 $existing_output_config_for_check = json_decode($existing_module->output_config ?: '', true) ?: array();
@@ -289,10 +329,22 @@ class Data_Machine_Module_Handler {
 
             // Now compare the PHP arrays (new $final_clean_... config is already nested)
             // Use wp_json_encode for a canonical comparison that ignores key order issues etc.
+            
+            // DEBUG: Log the actual values being compared
+            error_log('DM DEBUG - Data Source Config Comparison:');
+            error_log('NEW (final_clean_ds_config): ' . wp_json_encode($final_clean_ds_config));
+            error_log('EXISTING (existing_ds_config_for_comparison): ' . wp_json_encode($existing_ds_config_for_comparison));
+            error_log('DS Config JSON comparison result: ' . (wp_json_encode($final_clean_ds_config) !== wp_json_encode($existing_ds_config_for_comparison) ? 'DIFFERENT' : 'SAME'));
+            
             if (wp_json_encode($final_clean_ds_config) !== wp_json_encode($existing_ds_config_for_comparison)) {
                 $update_data['data_source_config'] = $final_clean_ds_config; // Save the NEWLY sanitized (and nested) config
                 $this->logger->debug('[Module Config Save] Detected change in data_source_config.');
             }
+
+            error_log('DM DEBUG - Output Config Comparison:');
+            error_log('NEW (final_clean_output_config): ' . wp_json_encode($final_clean_output_config));
+            error_log('EXISTING (existing_output_config_for_comparison): ' . wp_json_encode($existing_output_config_for_comparison));
+            error_log('Output Config JSON comparison result: ' . (wp_json_encode($final_clean_output_config) !== wp_json_encode($existing_output_config_for_comparison) ? 'DIFFERENT' : 'SAME'));
 
             if (wp_json_encode($final_clean_output_config) !== wp_json_encode($existing_output_config_for_comparison)) {
                 $update_data['output_config'] = $final_clean_output_config; // Save the NEWLY sanitized (and nested) config
@@ -372,35 +424,37 @@ class Data_Machine_Module_Handler {
         $log_prefix = '[Module Config Save]';
 
         if (isset($submitted_config_all[$handler_type_slug])) {
+            error_log("DM Sanitize Debug: Processing {$config_type} handler '{$handler_type_slug}'");
             $get_handler_class_method = "get_{$config_type}_handler_class";
-            $create_handler_method = "create_{$config_type}_handler";
-            $handler_interface = ($config_type === 'input')
-                ? Data_Machine_Input_Handler_Interface::class
-                : Data_Machine_Output_Handler_Interface::class;
 
             if (!method_exists($this->handler_registry, $get_handler_class_method)) {
                  $this->logger->error("{$log_prefix} Invalid config type '{$config_type}' provided for registry lookup.", ['slug' => $handler_type_slug]);
                  return [ $handler_type_slug => [] ];
             }
-            if (!method_exists($this->handler_factory, $create_handler_method)) {
-                 $this->logger->error("{$log_prefix} Invalid config type '{$config_type}' provided for factory lookup.", ['slug' => $handler_type_slug]);
-                 return [ $handler_type_slug => [] ];
-            }
 
             $handler_class = $this->handler_registry->{$get_handler_class_method}($handler_type_slug);
+            error_log("DM Sanitize Debug: Handler class for '{$handler_type_slug}': " . ($handler_class ? $handler_class : 'NULL'));
 
             if ($handler_class) {
                 try {
-                    $handler_instance = $this->handler_factory->{$create_handler_method}($handler_type_slug);
+                    error_log("DM Sanitize Debug: Creating handler instance for '{$handler_type_slug}' using unified factory method");
+                    // Use the unified factory method: create_handler($handler_type, $handler_slug)
+                    $handler_instance = $this->handler_factory->create_handler($config_type, $handler_type_slug);
 
-                    if ($handler_instance instanceof $handler_interface && method_exists($handler_instance, 'sanitize_settings')) {
+                    if (method_exists($handler_instance, 'sanitize_settings')) {
                         $current_handler_submitted_config = $submitted_config_all[$handler_type_slug] ?? [];
+                        error_log("DM Sanitize Debug: About to call sanitize_settings on '{$handler_type_slug}' with data: " . print_r($current_handler_submitted_config, true));
                         $sanitized_config_selected = $handler_instance->sanitize_settings($current_handler_submitted_config);
+                        error_log("DM Sanitize Debug: Result from sanitize_settings on '{$handler_type_slug}': " . print_r($sanitized_config_selected, true));
                         $this->logger->debug("{$log_prefix} Sanitized {$config_type} config.", ['slug' => $handler_type_slug]);
                     } else {
-                        $this->logger->warning("{$log_prefix} {$config_type} handler missing sanitize_settings or wrong type.", ['slug' => $handler_type_slug, 'interface' => $handler_interface]);
+                        $this->logger->warning("{$log_prefix} {$config_type} handler missing sanitize_settings method.", ['slug' => $handler_type_slug, 'handler_class' => $handler_class]);
                         // Keep $sanitized_config_selected as []
                     }
+                } catch (\InvalidArgumentException $e) {
+                    // Validation error - re-throw with additional context for main handler
+                    $this->logger->error("{$log_prefix} Validation error in {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
+                    throw new \InvalidArgumentException($e->getMessage(), 0, $e);
                 } catch (\Exception $e) {
                     $this->logger->error("{$log_prefix} Error getting/sanitizing {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
                     // Keep $sanitized_config_selected as []

@@ -15,15 +15,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 
-class Data_Machine_Output_Twitter {
-
-    use Data_Machine_Base_Output_Handler;
+class Data_Machine_Output_Twitter extends Data_Machine_Base_Output_Handler {
 
     /** @var Data_Machine_OAuth_Twitter */
     private $oauth_twitter;
-
-    /** @var ?Data_Machine_Logger */
-    private $logger;
 
     /**
 	 * Constructor.
@@ -32,8 +27,8 @@ class Data_Machine_Output_Twitter {
      * @param Data_Machine_Logger|null $logger Optional Logger instance.
 	 */
 	public function __construct(Data_Machine_OAuth_Twitter $oauth_twitter, ?Data_Machine_Logger $logger = null) {
+        parent::__construct($logger);
         $this->oauth_twitter = $oauth_twitter;
-        $this->logger = $logger;
 	}
 
     /**

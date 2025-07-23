@@ -17,8 +17,6 @@ import HandlerTemplateManager from './handler-template-manager.js';
 import createRemoteLocationManager from './dm-module-config-remote-locations.js';
 import { populateHandlerFields, safePopulateHandlerFields } from './dm-module-config-ui-helpers.js';
 
-console.log('Loaded: dm-module-config.js');
-try {
 // Create a global namespace for UI functions if it doesn't exist
 window.dmUI = window.dmUI || {};
 
@@ -28,6 +26,16 @@ window.DataMachine.ModuleConfig = window.DataMachine.ModuleConfig || {};
 
 // Set debug mode (can be controlled via console: window.dmDebugMode = true/false)
 window.dmDebugMode = window.dmDebugMode || false;
+
+// Debug logging utility
+const dmLog = (message, level = 'info') => {
+    if (window.dmDebugMode) {
+        console.log(`[DM Module Config ${level.toUpperCase()}] ${message}`);
+    }
+};
+
+dmLog('Loaded: dm-module-config.js');
+try {
 
 	// Set up the main AJAX handler and attach to global for legacy code
 	const ajaxHandler = new AjaxHandler();
@@ -39,7 +47,7 @@ window.dmDebugMode = window.dmDebugMode || false;
 
 	// --- Prevent duplicate execution ---
 	if (window.dmModuleConfigInitialized) {
-		console.log('--- dm-module-config.js already initialized. Exiting. ---');
+		dmLog('Already initialized. Exiting.', 'warn');
 	} else {
 	window.dmModuleConfigInitialized = true;
 
@@ -53,14 +61,12 @@ window.dmDebugMode = window.dmDebugMode || false;
 	let isRemoteManagerInitialized = false;
 
 	document.addEventListener('DOMContentLoaded', function() {
-		console.log('[DOMContentLoaded] Fired.'); // Log entry
+		dmLog('DOMContentLoaded fired');
 
 		// *** Log Initial State VERY EARLY ***
 		try {
 			const earlyState = DMState.getState();
-			console.log('[DOMContentLoaded] Initial State Check (Very Early):', JSON.parse(JSON.stringify(earlyState)));
-			console.log(`[DOMContentLoaded] Initial selectedDataSourceSlug: ${earlyState.selectedDataSourceSlug}`);
-			console.log(`[DOMContentLoaded] Initial selectedOutputSlug: ${earlyState.selectedOutputSlug}`);
+			dmLog(`Initial state check - DataSource: ${earlyState.selectedDataSourceSlug}, Output: ${earlyState.selectedOutputSlug}`);
 		} catch (e) {
 			console.error('[DOMContentLoaded] Error getting initial state:', e);
 		}
@@ -94,7 +100,7 @@ window.dmDebugMode = window.dmDebugMode || false;
 				dispatch({ type: ACTIONS.UPDATE_CONFIG, payload: { config: { project_id: projectId } } });
 			},
 			onModuleChange: (moduleId) => {
-					console.log('[onModuleChange] moduleId:', moduleId);
+					dmLog(`Module changed to: ${moduleId}`);
 				if (moduleId === 'new') {
 					dispatch({ type: ACTIONS.SWITCH_MODULE, payload: { moduleId: 'new' } });
 				} else {
@@ -115,7 +121,7 @@ window.dmDebugMode = window.dmDebugMode || false;
 		
 		async function fetchHandlerTemplate(handlerType, handlerSlug, moduleId = null, locationId = null) {
 			if (window.dmDebugMode) {
-				console.log(`[fetchHandlerTemplate] Args received:`, { handlerType, handlerSlug, moduleId, locationId });
+				dmLog(`Fetching template: ${handlerType}/${handlerSlug} for module ${moduleId}`);
 			}
 			if (!handlerType || !handlerSlug) {
 				return null;
@@ -130,7 +136,7 @@ window.dmDebugMode = window.dmDebugMode || false;
 			// Check cache first (only for non-location specific requests)
 			if (cacheKey && templateCache.has(cacheKey)) {
 				if (window.dmDebugMode) {
-					console.log(`[fetchHandlerTemplate] Using cached template for:`, cacheKey);
+					dmLog(`Using cached template: ${cacheKey}`);
 				}
 				return templateCache.get(cacheKey);
 			}
@@ -649,8 +655,44 @@ window.dmDebugMode = window.dmDebugMode || false;
 		}
 
 
-		settingsForm.addEventListener('submit', function() {
+		settingsForm.addEventListener('submit', function(e) {
 			syncRemoteLocationSelectsWithState();
+			
+			// Log comprehensive form data for debugging
+			dmLog('Form submission triggered');
+			
+			// Always log form field analysis - this is critical debugging
+			console.log('=== FORM SUBMISSION DEBUG ===');
+			
+			// Check if handler template fields exist in DOM
+			const dataSourceFields = document.querySelectorAll('[name^="data_source_config"]');
+			const outputFields = document.querySelectorAll('[name^="output_config"]');
+			
+			console.log(`Found ${dataSourceFields.length} data_source_config fields:`);
+			dataSourceFields.forEach(field => {
+				console.log(`  ${field.name}: ${field.value} (disabled: ${field.disabled})`);
+			});
+			
+			console.log(`Found ${outputFields.length} output_config fields:`);
+			outputFields.forEach(field => {
+				console.log(`  ${field.name}: ${field.value} (disabled: ${field.disabled})`);
+			});
+			
+			if (window.dmDebugMode) {
+				const formData = new FormData(settingsForm);
+				const formDataObj = {};
+				for (let [key, value] of formData.entries()) {
+					formDataObj[key] = value;
+				}
+				console.log('[DM Module Config] Complete form data:', formDataObj);
+				
+				// Log specific hidden fields that are critical for saving
+				const criticalFields = ['project_id', 'module_id', 'data_source_type', 'output_type'];
+				criticalFields.forEach(field => {
+					const element = document.getElementById(`selected_${field}_for_save`) || document.querySelector(`[name="${field}"]`);
+					console.log(`[DM Module Config] Critical field ${field}: ${element ? element.value : 'NOT FOUND'}`);
+				});
+			}
 		});
 
 		document.addEventListener('input', function(e) {

@@ -20,6 +20,13 @@ class Data_Machine_Settings_Fields {
     private $handler_factory;
 
     /**
+     * Handler Registry instance.
+     * @var Data_Machine_Handler_Registry
+     * @since 0.15.0
+     */
+    private $handler_registry;
+
+    /**
      * Service for retrieving remote location options.
      * @var Data_Machine_Remote_Location_Service
      * @since 0.16.0
@@ -37,15 +44,18 @@ class Data_Machine_Settings_Fields {
      * Constructor.
      *
      * @param Dependency_Injection_Handler_Factory   $handler_factory         Handler Factory instance.
+     * @param Data_Machine_Handler_Registry          $handler_registry        Handler Registry instance.
      * @param Data_Machine_Remote_Location_Service $remote_location_service Service for remote locations.
      * @since 0.15.0
      * @since 0.16.0 Added $remote_location_service dependency.
      */
     public function __construct(
         Dependency_Injection_Handler_Factory $handler_factory,
+        Data_Machine_Handler_Registry $handler_registry,
         Data_Machine_Remote_Location_Service $remote_location_service
     ) {
         $this->handler_factory = $handler_factory;
+        $this->handler_registry = $handler_registry;
         $this->remote_location_service = $remote_location_service;
 
     }
@@ -138,9 +148,8 @@ class Data_Machine_Settings_Fields {
         ];
 
         // Get handlers from the registry service
-        $handler_registry = $this->handler_factory->get('handler_registry');
-        $input_handlers = $handler_registry->get_input_handlers();
-        $output_handlers = $handler_registry->get_output_handlers();
+        $input_handlers = $this->handler_registry->get_input_handlers();
+        $output_handlers = $this->handler_registry->get_output_handlers();
 
         foreach ($input_handlers as $slug => $handler_info) {
             $class_name = $handler_info['class'];
@@ -174,12 +183,11 @@ class Data_Machine_Settings_Fields {
      */
     private function get_handler_class_name(string $handler_type, string $handler_slug): ?string {
         // Get handlers from the registry service
-        $handler_registry = $this->handler_factory->get('handler_registry');
 
         if ($handler_type === 'input') {
-            return $handler_registry->get_input_handler_class($handler_slug);
+            return $this->handler_registry->get_input_handler_class($handler_slug);
         } elseif ($handler_type === 'output') {
-            return $handler_registry->get_output_handler_class($handler_slug);
+            return $this->handler_registry->get_output_handler_class($handler_slug);
         }
 
         return null;

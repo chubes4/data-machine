@@ -17,22 +17,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Note: Requires integration with an OAuth flow for Facebook authentication.
 // Note: Requires error handling.
 
-class Data_Machine_Output_Facebook {
-
-    use Data_Machine_Base_Output_Handler;
-
-    /** @var ?Data_Machine_Logger */
-    private $logger;
+class Data_Machine_Output_Facebook extends Data_Machine_Base_Output_Handler {
 
     const FACEBOOK_API_VERSION = 'v22.0'; // Define API version
 
     /**
 	 * Constructor.
+	 * Calls parent constructor with logger.
 	 *
      * @param Data_Machine_Logger|null $logger Optional Logger instance.
 	 */
-	public function __construct(?Data_Machine_Logger $logger = null) {
-        $this->logger = $logger;
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
+
+	public function __construct(Data_Machine_Handler_HTTP_Service $http_service, ?Data_Machine_Logger $logger = null) {
+        parent::__construct($logger);
+        $this->http_service = $http_service;
 	}
 
     /**
@@ -144,23 +144,21 @@ class Data_Machine_Output_Facebook {
 
             // Making Facebook API request 
 
-            $response = wp_remote_post($url, [
-                'method' => 'POST',
-                'body' => $api_params,
-                'timeout' => 45, // Increased timeout for potential image/video processing
-            ]);
-
-
-            if (is_wp_error($response)) {
-                $error_code = $response->get_error_code();
-                $error_message = $response->get_error_message();
-                $this->logger?->error('Facebook API Error: wp_remote_post failed.', ['error_code' => $error_code, 'error_message' => $error_message, 'user_id' => $user_id]);
-                return new WP_Error('facebook_wp_remote_error_' . $error_code, $error_message, $response);
+            // Use HTTP service - replaces duplicated HTTP code
+            $http_response = $this->http_service->post($url, $api_params, [], 'Facebook API');
+            if (is_wp_error($http_response)) {
+                $this->logger?->error('Facebook API Error: HTTP request failed.', ['error' => $http_response->get_error_message(), 'user_id' => $user_id]);
+                return $http_response;
             }
 
-            $body = wp_remote_retrieve_body($response);
-            $data = json_decode($body, true);
-            $http_code = wp_remote_retrieve_response_code($response);
+            $body = $http_response['body'];
+            $http_code = $http_response['status_code'];
+
+            // Parse JSON response with error handling
+            $data = $this->http_service->parse_json($body, 'Facebook API');
+            if (is_wp_error($data)) {
+                return $data;
+            }
 
             // Check for API errors returned in the body
             if (isset($data['error'])) {
@@ -194,25 +192,27 @@ class Data_Machine_Output_Facebook {
 
                     
                     $comment_url = $graph_api_url . $comment_endpoint;
-                    $comment_response = wp_remote_post($comment_url, [
-                        'method' => 'POST',
-                        'body' => $comment_api_params,
-                        'timeout' => 30,
-                    ]);
+                    $comment_response = $this->http_service->post($comment_url, $comment_api_params, [], 'Facebook Comments API');
 
                     if (is_wp_error($comment_response)) {
-                        $this->logger?->warning('Facebook API: Failed to post source link comment (wp_remote_error).', [
+                        $this->logger?->warning('Facebook API: Failed to post source link comment.', [
                             'post_id' => $post_id,
-                            'error_code' => $comment_response->get_error_code(),
+                            'error' => $comment_response->get_error_message(),
                             'error_message' => $comment_response->get_error_message(),
                             'user_id' => $user_id
                         ]);
                     } else {
-                        $comment_body = wp_remote_retrieve_body($comment_response);
-                        $comment_data = json_decode($comment_body, true);
-                        $comment_http_code = wp_remote_retrieve_response_code($comment_response);
+                        $comment_body = $comment_response['body'];
+                        $comment_data = $this->http_service->parse_json($comment_body, 'Facebook Comments API');
+                        $comment_http_code = $comment_response['status_code'];
 
-                        if (isset($comment_data['error'])) {
+                        if (is_wp_error($comment_data)) {
+                            $this->logger?->warning('Facebook API: Failed to parse comment response.', [
+                                'post_id' => $post_id,
+                                'error' => $comment_data->get_error_message(),
+                                'user_id' => $user_id
+                            ]);
+                        } elseif (isset($comment_data['error'])) {
                             $this->logger?->warning('Facebook API: Failed to post source link comment (API error).', [
                                 'post_id' => $post_id,
                                 'http_code' => $comment_http_code,

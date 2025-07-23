@@ -46,9 +46,17 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                     // Fetch modules for the current project
                     $modules = $db_modules->get_modules_for_project( $project->project_id, $user_id );
                     $module_names = [];
+                    $has_file_modules = false;
+                    $file_modules = [];
                     if ( ! empty( $modules ) && is_array( $modules ) ) {
                         foreach ( $modules as $module ) {
                             $module_names[] = esc_html( $module->module_name );
+                            
+                            // Check if this is a file module
+                            if ( isset( $module->data_source_type ) && $module->data_source_type === 'files' ) {
+                                $has_file_modules = true;
+                                $file_modules[] = $module;
+                            }
                         }
                     }
                     $modules_display = ! empty( $module_names ) ? implode( ', ', $module_names ) : 'No modules';
@@ -109,6 +117,13 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                             }
                         ?></td>
                         <td><?php /* TODO: Implement actions */ ?><button class="button action-button run-now-button">Run Now</button> <button class="button action-button edit-schedule-button">Edit Schedule</button>
+                            <?php if ( $has_file_modules ) : ?>
+                                <button class="button action-button upload-files-button" 
+                                        data-project-id="<?php echo esc_attr( $project->project_id ); ?>"
+                                        data-file-modules="<?php echo esc_attr( json_encode( array_map( function($m) { return ['id' => $m->module_id, 'name' => $m->module_name]; }, $file_modules ) ) ); ?>">
+                                    Upload Files
+                                </button>
+                            <?php endif; ?>
                             <?php
                             // Add Export Button
                             $export_url = add_query_arg(
@@ -300,6 +315,67 @@ jQuery(document).ready(function($) {
         <p class="submit">
             <button type="button" id="dm-modal-save" class="button button-primary">Save Schedule</button>
             <button type="button" id="dm-modal-cancel" class="button">Cancel</button>
+        </p>
+    </div>
+</div>
+
+<!-- File Upload Modal -->
+<div id="dm-upload-files-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border: 1px solid #ccc; width: 600px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2>Upload Files</h2>
+        <input type="hidden" id="dm-upload-project-id" value="">
+        <input type="hidden" id="dm-upload-module-id" value="">
+        <p><strong>Project:</strong> <span id="dm-upload-project-name"></span></p>
+        <p><strong>Module:</strong> <span id="dm-upload-module-name"></span></p>
+        
+        <form id="dm-file-upload-form" enctype="multipart/form-data" style="border: 1px solid #ddd; padding: 15px; margin: 15px 0;">
+            <fieldset>
+                <legend>Select Files to Upload</legend>
+                <table class="form-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">
+                                <label for="dm-file-uploads">Files</label>
+                            </th>
+                            <td>
+                                <input type="file" name="file_uploads[]" id="dm-file-uploads" multiple accept=".txt,.csv,.json,.pdf,.docx,.doc,.jpg,.jpeg,.png,.gif">
+                                <p class="description">
+                                    Select multiple files to upload. Supported types: TXT, CSV, JSON, PDF, DOCX, DOC, JPG, JPEG, PNG, GIF.<br>
+                                    Maximum file size: 100MB per file.
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div id="dm-upload-file-list" style="margin-top: 10px; display: none;">
+                    <strong>Selected files:</strong>
+                    <ul id="dm-upload-selected-files"></ul>
+                </div>
+            </fieldset>
+        </form>
+
+        <div id="dm-upload-progress" style="display: none; margin: 15px 0;">
+            <div style="background: #f1f1f1; border-radius: 3px; padding: 3px;">
+                <div id="dm-upload-progress-bar" style="background: #0073aa; height: 20px; border-radius: 3px; width: 0%; text-align: center; line-height: 20px; color: white; font-size: 12px;"></div>
+            </div>
+            <p id="dm-upload-status">Preparing upload...</p>
+        </div>
+
+        <div id="dm-upload-results" style="display: none; margin: 15px 0;">
+            <h4>Upload Results</h4>
+            <div id="dm-upload-success-list"></div>
+            <div id="dm-upload-error-list"></div>
+        </div>
+
+        <div id="dm-current-queue-status" style="border: 1px solid #ddd; padding: 10px; margin: 15px 0; background: #f9f9f9;">
+            <h4>Current Queue Status</h4>
+            <p>Loading queue status...</p>
+        </div>
+        
+        <p class="submit">
+            <button type="button" id="dm-upload-start" class="button button-primary">Upload Files</button>
+            <button type="button" id="dm-upload-cancel" class="button">Cancel</button>
         </p>
     </div>
 </div>

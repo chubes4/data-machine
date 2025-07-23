@@ -133,8 +133,6 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 		<input type="hidden" id="selected_module_id_for_save" name="module_id" value="<?php echo esc_attr($current_module_id); ?>">
 		<input type="hidden" id="selected_input_type" name="data_source_type" value="<?php echo esc_attr($current_data_source_type); ?>">
 		<input type="hidden" id="selected_output_type" name="output_type" value="<?php echo esc_attr($current_output_type); ?>">
-		<!-- Make sure $current_project_id is set correctly in your PHP template -->
-		<input type="hidden" name="project_id" value="<?php echo esc_attr($current_project_id); ?>">
 
 		<h2>Project Selection</h2>
 		<table class="form-table">

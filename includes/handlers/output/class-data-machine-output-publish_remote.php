@@ -10,8 +10,7 @@
  * @since      0.7.0
  */
 
-class Data_Machine_Output_Publish_Remote {
-	use Data_Machine_Base_Output_Handler;
+class Data_Machine_Output_Publish_Remote extends Data_Machine_Base_Output_Handler {
 
     /**
      * Database handler for remote locations.
@@ -20,30 +19,30 @@ class Data_Machine_Output_Publish_Remote {
     private $db_locations;
 
     /**
-     * Logger instance.
-     * @var Data_Machine_Logger
-     */
-    private $logger;
-
-    /**
      * Database handler for processed items.
      * @var Data_Machine_Database_Processed_Items
      */
     private $db_processed_items;
 
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
+
     /**
      * Constructor.
      * @param Data_Machine_Database_Remote_Locations $db_locations
+     * @param Data_Machine_Handler_HTTP_Service $http_service
      * @param Data_Machine_Logger $logger
      * @param Data_Machine_Database_Processed_Items $db_processed_items
      */
     public function __construct(
         Data_Machine_Database_Remote_Locations $db_locations,
+        Data_Machine_Handler_HTTP_Service $http_service,
         Data_Machine_Logger $logger,
         Data_Machine_Database_Processed_Items $db_processed_items
     ) {
+        parent::__construct($logger);
         $this->db_locations = $db_locations;
-        $this->logger = $logger;
+        $this->http_service = $http_service;
         $this->db_processed_items = $db_processed_items;
     }
 	/**
@@ -335,9 +334,8 @@ class Data_Machine_Output_Publish_Remote {
 			'has_tags' => !empty($payload['tag_ids']) || !empty($payload['tag_names'])
 		]);
 
-		// Prepare arguments for wp_remote_post
+		// Prepare arguments for HTTP service
 		$args = array(
-			'method'  => 'POST',
 			'headers' => array(
 				'Authorization' => 'Basic ' . base64_encode( $remote_user . ':' . $remote_password ),
 				'Content-Type'  => 'application/json; charset=utf-8',
@@ -346,23 +344,31 @@ class Data_Machine_Output_Publish_Remote {
 			'timeout' => 180, // Increased timeout for slow remote sites
 		);
 
-		// Make the API request to send post data
-		$response = wp_remote_post( $api_url, $args );
+		// Use HTTP service - replaces duplicated HTTP code
+		$response = $this->http_service->post( $api_url, [], $args, 'Remote Publishing API' );
 
 		// --- Handle Publish Response ---
 		if ( is_wp_error( $response ) ) {
 			$error_message = __( 'Failed to send data to the remote site.', 'data-machine' ) . ' ' . $response->get_error_message();
 			$this->logger->error( $error_message, [
 				'api_url' => $api_url, 
-				'error_code' => $response->get_error_code(),
-				'error_message' => $response->get_error_message()
+				'error' => $response->get_error_message()
 			]);
 			return new WP_Error( 'remote_publish_request_failed', $error_message );
 		}
 
-		$response_code = wp_remote_retrieve_response_code( $response );
-		$body = wp_remote_retrieve_body( $response );
-		$decoded_body = json_decode( $body, true );
+		$response_code = $response['status_code'];
+		$body = $response['body'];
+
+		// Parse JSON response with error handling
+		$decoded_body = $this->http_service->parse_json( $body, 'Remote Publishing API' );
+		if ( is_wp_error( $decoded_body ) ) {
+			$this->logger->error( 'Failed to parse remote publishing response JSON.', [
+				'api_url' => $api_url,
+				'error' => $decoded_body->get_error_message()
+			]);
+			return $decoded_body;
+		}
 
 		if ( $response_code !== 201 ) { // Expect 201 Created
 			$error_message_detail = isset( $decoded_body['message'] ) ? $decoded_body['message'] : __( 'Unknown error occurred on the remote site during publishing.', 'data-machine' );

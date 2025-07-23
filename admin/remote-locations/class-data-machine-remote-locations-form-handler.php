@@ -86,8 +86,9 @@ class Data_Machine_Remote_Locations_Form_Handler {
 
             // Only set form template if we are still adding or successfully verified editing
             if ($action === 'add' || ($action === 'edit' && $location)) { 
-                $template_to_load = DATA_MACHINE_PATH . 'admin/templates/remote-locations-form.php';
+                $template_to_load = DATA_MACHINE_PATH . 'admin/page-templates/remote-locations.php';
                 $template_data = [
+                    'action' => $action,
                     'is_editing' => $is_editing,
                     'location_id' => $location_id,
                     'location' => $location,
@@ -106,17 +107,21 @@ class Data_Machine_Remote_Locations_Form_Handler {
             $list_table = new Remote_Locations_List_Table($this->db_locations);
             $list_table->prepare_items();
 
-            $template_to_load = DATA_MACHINE_PATH . 'admin/templates/remote-locations-list-table.php';
-            $template_data = ['list_table' => $list_table];
+            $template_to_load = DATA_MACHINE_PATH . 'admin/page-templates/remote-locations.php';
+            $template_data = [
+                'action' => 'list',
+                'list_table' => $list_table
+            ];
             // Page title is already set to the default page title
         }
 
-        // Now load the main wrapper template, passing it the specific template and data
-        $main_template = DATA_MACHINE_PATH . 'admin/templates/remote-locations-page.php';
-        if (file_exists($main_template)) {
-            include $main_template; 
+        // Load the consolidated template
+        if (file_exists($template_to_load)) {
+            // Extract template data into local variables
+            extract($template_data);
+            include $template_to_load; 
         } else {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Main locations template missing.', 'data-machine') . '</p></div>';
+            echo '<div class="notice notice-error"><p>' . esc_html__('Remote locations template missing.', 'data-machine') . '</p></div>';
         }
     }
 
@@ -245,11 +250,26 @@ class Data_Machine_Remote_Locations_Form_Handler {
                         ];
                         // Post types: keep all keys, only keep details for enabled
                         if (!empty($site_info['post_types']) && is_array($site_info['post_types'])) {
-                            foreach ($site_info['post_types'] as $slug => $info) {
-                                if (in_array($slug, $enabled_post_types, true)) {
-                                    $filtered['post_types'][$slug] = $info;
+                            foreach ($site_info['post_types'] as $index => $info) {
+                                // Handle both indexed array (with 'name' field) and associative array formats
+                                $post_type_slug = '';
+                                if (is_array($info) && isset($info['name'])) {
+                                    // Indexed array format: info contains 'name' field
+                                    $post_type_slug = $info['name'];
+                                    $key = $post_type_slug; // Use the actual slug as key
+                                } elseif (is_string($index) && !is_numeric($index)) {
+                                    // Associative array format: index is the slug
+                                    $post_type_slug = $index;
+                                    $key = $index;
                                 } else {
-                                    $filtered['post_types'][$slug] = ['disabled' => true];
+                                    // Skip malformed entries
+                                    continue;
+                                }
+                                
+                                if (in_array($post_type_slug, $enabled_post_types, true)) {
+                                    $filtered['post_types'][$key] = $info;
+                                } else {
+                                    $filtered['post_types'][$key] = ['disabled' => true];
                                 }
                             }
                         }
@@ -272,12 +292,14 @@ class Data_Machine_Remote_Locations_Form_Handler {
                         $this->db_locations->update_synced_info($location_id, get_current_user_id(), wp_json_encode($filtered));
                     }
                 }
-                // Change redirect to the list page
+                // Redirect back to the edit page
                 $redirect_url = add_query_arg(
                     array(
                         'page' => 'dm-remote-locations',
-                        // Remove 'action' => 'edit' and 'location_id' to go to list view
-                        'message' => 'updated' // Keep success indicator
+                        'action' => 'edit',
+                        'location_id' => $location_id,
+                        '_wpnonce' => wp_create_nonce('edit_location_' . $location_id),
+                        'message' => 'updated'
                     ),
                     admin_url('admin.php')
                 );

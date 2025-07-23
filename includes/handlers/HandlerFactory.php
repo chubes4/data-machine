@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Ensure required classes are loaded (especially if this file is included early)
-require_once DATA_MACHINE_PATH . 'includes/class-handler-registry.php';
+require_once DATA_MACHINE_PATH . 'includes/handlers/class-handler-registry.php';
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php';
 require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php';
 require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-encryption-helper.php';
@@ -35,6 +35,7 @@ class Dependency_Injection_Handler_Factory {
     private $db_remote_locations;
     private $db_modules;
     private $db_projects;
+    private $handler_http_service;
 
     /**
      * Constructor. Injects all potential dependencies needed by any handler.
@@ -50,7 +51,8 @@ class Dependency_Injection_Handler_Factory {
         Data_Machine_OAuth_Facebook $oauth_facebook, // Added
         Data_Machine_Database_Remote_Locations $db_remote_locations,
         Data_Machine_Database_Modules $db_modules,
-        Data_Machine_Database_Projects $db_projects
+        Data_Machine_Database_Projects $db_projects,
+        Data_Machine_Handler_HTTP_Service $handler_http_service
     ) {
         $this->handler_registry = $handler_registry;
         $this->logger = $logger;
@@ -63,6 +65,7 @@ class Dependency_Injection_Handler_Factory {
         $this->db_remote_locations = $db_remote_locations;
         $this->db_modules = $db_modules;
         $this->db_projects = $db_projects;
+        $this->handler_http_service = $handler_http_service;
     }
 
     /**
@@ -112,35 +115,35 @@ class Dependency_Injection_Handler_Factory {
             switch ($handler_slug) {
                 // --- Input Handlers ---
                 case 'files':
-                    return new Data_Machine_Input_Files($this->db_modules, $this->db_projects, $this->logger);
+                    return new Data_Machine_Input_Files($this->db_modules, $this->db_projects, $this->db_processed_items, $this->logger);
                 case 'airdrop_rest_api':
-                    return new Data_Machine_Input_Airdrop_Rest_Api($this->db_processed_items, $this->db_modules, $this->db_projects, $this->db_remote_locations, $this->logger);
+                    return new Data_Machine_Input_Airdrop_Rest_Api($this->db_modules, $this->db_projects, $this->db_processed_items, $this->db_remote_locations, $this->handler_http_service, $this->logger);
                 case 'public_rest_api':
-                    return new Data_Machine_Input_Public_Rest_Api($this->db_processed_items, $this->db_modules, $this->db_projects, $this->logger);
+                    return new Data_Machine_Input_Public_Rest_Api($this->db_modules, $this->db_projects, $this->db_processed_items, $this->handler_http_service, $this->logger);
                 case 'reddit':
-                    return new Data_Machine_Input_Reddit($this->oauth_reddit, $this->db_processed_items, $this->db_modules, $this->db_projects, $this->logger);
+                    return new Data_Machine_Input_Reddit($this->db_modules, $this->db_projects, $this->db_processed_items, $this->oauth_reddit, $this->handler_http_service, $this->logger);
                 case 'rss':
-                    return new Data_Machine_Input_Rss($this->db_processed_items, $this->db_modules, $this->db_projects, $this->logger);
+                    return new Data_Machine_Input_Rss($this->db_modules, $this->db_projects, $this->db_processed_items, $this->handler_http_service, $this->logger);
 
                 // --- Output Handlers ---
                 case 'publish_remote':
-                    return new Data_Machine_Output_Publish_Remote($this->db_remote_locations, $this->logger, $this->db_processed_items);
+                    return new Data_Machine_Output_Publish_Remote($this->db_remote_locations, $this->handler_http_service, $this->logger, $this->db_processed_items);
                 case 'bluesky':
-                    return new Data_Machine_Output_Bluesky($this->encryption_helper, $this->logger);
+                    return new Data_Machine_Output_Bluesky($this->encryption_helper, $this->handler_http_service, $this->logger);
                 case 'twitter':
                     return new Data_Machine_Output_Twitter($this->oauth_twitter, $this->logger);
                 case 'data_export':
                     return new Data_Machine_Output_Data_Export(); // No dependencies
                 case 'publish_local':
-                     return new Data_Machine_Output_Publish_Local($this->db_processed_items); // Only needs processed items DB
+                     return new Data_Machine_Output_Publish_Local($this->db_processed_items, $this->logger);
                 case 'threads':
                      // Ensure the class file is loaded (should be handled by registry/autoload)
                      if (!class_exists('Data_Machine_Output_Threads')) require_once DATA_MACHINE_PATH . 'includes/handlers/output/class-data-machine-output-threads.php';
-                     return new Data_Machine_Output_Threads($this->logger); // Pass logger
+                     return new Data_Machine_Output_Threads($this->handler_http_service, $this->logger);
                 case 'facebook':
                      // Ensure the class file is loaded (should be handled by registry/autoload)
                      if (!class_exists('Data_Machine_Output_Facebook')) require_once DATA_MACHINE_PATH . 'includes/handlers/output/class-data-machine-output-facebook.php';
-                     return new Data_Machine_Output_Facebook($this->logger); // Pass logger
+                     return new Data_Machine_Output_Facebook($this->handler_http_service, $this->logger);
 
                 // Default case for unhandled or new handlers
                 default:

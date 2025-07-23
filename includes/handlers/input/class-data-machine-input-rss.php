@@ -8,40 +8,31 @@
  * @subpackage Data_Machine/includes/input
  * @since      0.14.0 // Or next version
  */
-class Data_Machine_Input_Rss {
+class Data_Machine_Input_Rss extends Data_Machine_Base_Input_Handler {
 
-	use Data_Machine_Base_Input_Handler;
-
-	/** @var Data_Machine_Database_Processed_Items */
-	private $db_processed_items;
-
-	/** @var Data_Machine_Database_Modules */
-	private $db_modules;
-
-	/** @var Data_Machine_Database_Projects */
-	private $db_projects;
-
-	/** @var ?Data_Machine_Logger */
-	private $logger;
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
 
 	/**
 	 * Constructor.
+	 * Calls parent constructor with common dependencies.
 	 *
-	 * @param Data_Machine_Database_Processed_Items $db_processed_items
 	 * @param Data_Machine_Database_Modules $db_modules
 	 * @param Data_Machine_Database_Projects $db_projects
+	 * @param Data_Machine_Database_Processed_Items $db_processed_items
+	 * @param Data_Machine_Handler_HTTP_Service $http_service
 	 * @param Data_Machine_Logger|null $logger
 	 */
 	public function __construct(
-		Data_Machine_Database_Processed_Items $db_processed_items,
 		Data_Machine_Database_Modules $db_modules,
 		Data_Machine_Database_Projects $db_projects,
+		Data_Machine_Database_Processed_Items $db_processed_items,
+		Data_Machine_Handler_HTTP_Service $http_service,
 		?Data_Machine_Logger $logger = null
 	) {
-		$this->db_processed_items = $db_processed_items;
-		$this->db_modules = $db_modules;
-		$this->db_projects = $db_projects;
-		$this->logger = $logger;
+        // Call parent constructor with common dependencies
+        parent::__construct($db_modules, $db_projects, $db_processed_items, $logger);
+        $this->http_service = $http_service;
 	}
 
 	/**
@@ -73,11 +64,12 @@ class Data_Machine_Input_Rss {
 		$project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
 
 		// --- Configuration --- 
-		// Access settings directly from $source_config (flat array)
-		$feed_url = trim( $source_config['feed_url'] ?? '' );
-		$process_limit = max(1, absint( $source_config['item_count'] ?? 1 ));
-		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
-		$search_term = trim( $source_config['search'] ?? '' );
+		// Access settings from nested config structure
+		$config = $source_config['rss'] ?? [];
+		$feed_url = trim( $config['feed_url'] ?? '' );
+		$process_limit = max(1, absint( $config['item_count'] ?? 1 ));
+		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+		$search_term = trim( $config['search'] ?? '' );
 		$search_keywords = [];
 		if (!empty($search_term)) {
 			$search_keywords = array_map('trim', explode(',', $search_term));

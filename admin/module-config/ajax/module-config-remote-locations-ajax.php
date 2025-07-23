@@ -40,7 +40,7 @@ class Data_Machine_Module_Config_Remote_Locations_Ajax {
             wp_send_json_error(['message' => __('User not logged in.', 'data-machine')]);
             return;
         }
-        require_once(DATA_MACHINE_PATH . 'admin/module-config/remote-locations/RemoteLocationService.php');
+        require_once(DATA_MACHINE_PATH . 'admin/remote-locations/RemoteLocationService.php');
         $remote_location_service = new Data_Machine_Remote_Location_Service($this->db_locations);
         $locations = $remote_location_service->get_user_locations_for_js($user_id);
         wp_send_json_success($locations);
@@ -89,7 +89,7 @@ class Data_Machine_Module_Config_Remote_Locations_Ajax {
         $filtered_post_types = [];
         if (!empty($synced_info['post_types']) && is_array($synced_info['post_types'])) {
             foreach ($synced_info['post_types'] as $slug => $details) {
-                if (in_array((int)$slug, $enabled_post_types)) {
+                if (in_array($slug, $enabled_post_types)) {
                     $filtered_post_types[$slug] = $details;
                 }
             }
@@ -99,7 +99,7 @@ class Data_Machine_Module_Config_Remote_Locations_Ajax {
         $filtered_taxonomies = [];
         if (!empty($synced_info['taxonomies']) && is_array($synced_info['taxonomies'])) {
             foreach ($synced_info['taxonomies'] as $slug => $details) {
-                if (in_array((int)$slug, $enabled_taxonomies)) {
+                if (in_array($slug, $enabled_taxonomies)) {
                     // Also filter terms within the taxonomy if they exist
                     if (isset($details['terms']) && is_array($details['terms'])) {
                         // Currently, we enable the whole taxonomy, not individual terms.

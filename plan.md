@@ -1,82 +1,106 @@
 # Data Machine Development Plan
 
-## Immediate: Create Unified Job Creator Architecture
+## Handler Architecture Refactor: Convert Traits to Base Classes
 
-### **Current Problem: 4 Different Job Entry Points**
-Job creation is scattered across multiple classes with duplicated logic:
+### **Objective**
+Replace current trait-based handler system with abstract base classes to eliminate code duplication, centralize shared logic (especially processed items filtering), and improve maintainability.
 
-1. **"Run Now" Button** → `class-project-management-ajax.php:182` → `schedule_job()`
-2. **Single Module File Upload** → `run-single-module-ajax.php:113` → `schedule_job_with_data()`  
-3. **Single Module Config Run** → `run-single-module-ajax.php:115` → `schedule_job()`
-4. **Scheduled Jobs** → `data-machine.php:286` → `execute_scheduled_job()`
+### **Current Issues**
+- Every input handler duplicates processed items filtering logic (~20-30 lines each)
+- Traits only provide basic utilities, not core shared functionality
+- No standardized dependency injection for handlers
+- File security validation duplicated across multiple classes
+- Inconsistent error handling patterns
 
-**Note**: `prepare_and_schedule_job()` exists but appears unused (can be removed)
+---
 
-### **Solution: Dedicated Job Creator Class**
+## **Phase 1: Analysis & Design** 
+- [ ] **Audit current input handlers** - Document exact duplication patterns across Files, RSS, Reddit, etc.
+- [ ] **Map dependencies** - Identify what each handler needs (db_processed_items, logger, db_modules, etc.)
+- [ ] **Design base class interface** - Define abstract methods and shared functionality contracts
+- [ ] **Plan constructor injection** - Design how dependencies flow through inheritance hierarchy
 
-#### **Phase 1: Create Job Creator Class** ✅ COMPLETED
-- [x] Create `includes/engine/class-job-creator.php`
-- [x] Single method: `create_and_schedule_job(module, user_id, context, optional_data)`
-- [x] Handles all job creation logic regardless of source
-- [x] Always schedules `dm_input_job_event` for async pipeline
-- [x] Absorbs logic from Job Executor's creation methods
+## **Phase 2: Create Base Classes**
+- [ ] **Create abstract base input handler**
+  - [ ] File: `includes/handlers/input/abstract-data-machine-base-input-handler.php`
+  - [ ] Shared constructor with dependency injection ($db_processed_items, $logger, etc.)
+  - [ ] Abstract `get_input_data()` method signature
+  - [ ] Concrete helper methods for processed items filtering
+  - [ ] Concrete helper methods for input_data_packet creation
+  - [ ] Concrete ownership validation logic
 
-#### **Phase 2: Update All Entry Points** ✅ COMPLETED  
-- [x] Update "Run Now" AJAX to use Job Creator
-- [x] Update file upload AJAX to use Job Creator
-- [x] Update single module page entry point to use Job Creator
-- [x] Update Module Config AJAX to use Job Creator
-- [x] Wire Job Creator into dependency injection in bootstrap
+- [ ] **Create abstract base output handler**
+  - [ ] File: `includes/handlers/output/abstract-data-machine-base-output-handler.php`
+  - [ ] Shared output formatting methods
+  - [ ] Abstract publishing methods
+  - [ ] Standardized result structure creation
 
-#### **Phase 3: Clean Up Dependencies** 🔄 IN PROGRESS
-- [x] Wire Job Creator into dependency injection in `data-machine.php`
-- [x] Remove obsolete methods from Job Executor:
-  - [x] Removed `prepare_and_schedule_job()`
-  - [x] Removed `schedule_job()`
-  - [x] Removed `schedule_job_with_data()`
-  - [x] Removed `create_and_schedule_job_event()`
-- [x] Remove old `dm_run_job_event` hook registration
-- [x] Clean up duplicate Module Config AJAX file
+## **Phase 3: Migrate Input Handlers (One by One)**
+- [ ] **Migrate Files handler** (Start here - freshest implementation)
+  - [ ] Extend base class instead of using trait
+  - [ ] Remove duplicated processed items logic
+  - [ ] Test thoroughly to ensure no regression
+  - [ ] Validate text file reading still works
 
-#### **Phase 3b: Evaluate Remaining Components** ✅ COMPLETED
-- [x] **Job Executor**: ❌ REMOVED - obsolete sync processing logic
-- [x] **Job Preparer**: ❌ REMOVED - only used by Job Executor
-- [x] **Job Filter**: ✅ KEPT - still needed for module concurrency & stuck job cleanup
-- [x] Updated Scheduler to use Job Creator instead of Job Executor
-- [x] Updated bootstrap dependencies to remove obsolete classes
-- [x] Removed Job Executor require from main plugin class
-- [x] Updated Composer autoload to remove deleted classes
-- [x] Updated CLAUDE.md with new simplified architecture
+- [ ] **Migrate RSS handler** (Most mature - good validation case)
+- [ ] **Migrate Reddit handler**
+- [ ] **Migrate Public REST API handler** 
+- [ ] **Migrate Airdrop REST API handler**
 
-#### **Phase 4: Fix Stuck Jobs Problem** ✅ COMPLETED
-- [x] **Root Cause**: Processing Orchestrator returned `false` on errors but never marked jobs as failed
-- [x] Added Job Status Manager dependency to Processing Orchestrator
-- [x] Updated all step methods to properly mark jobs as failed on errors:
-  - [x] `execute_input_step()` - proper failure handling with descriptive messages
-  - [x] `execute_process_step()` - fails on input data missing, logic failure, or scheduling failure
-  - [x] `execute_factcheck_step()` - fails on input data missing, logic failure, or scheduling failure  
-  - [x] `execute_finalize_step()` - fails on input data missing, logic failure, or scheduling failure
-- [x] Enhanced `schedule_next_step()` method with better error logging
-- [x] Updated bootstrap to inject Job Status Manager into orchestrator
-- [x] **Result**: Jobs now fail properly instead of getting stuck - proactive failure handling
+## **Phase 4: Update Bootstrap & Dependencies**
+- [ ] **Update handler instantiation** in `data-machine.php`
+  - [ ] Pass required dependencies to base constructors
+  - [ ] Update HandlerFactory to work with new inheritance
+  - [ ] Ensure all handlers get proper dependency injection
 
-#### **Phase 5: Testing** 🔄 IN PROGRESS
-- [ ] Test all 4 entry points use unified Job Creator
-- [ ] Verify all paths lead to same async pipeline and proper failure handling
-- [ ] Confirm no code duplication in job creation
-- [ ] Test that jobs fail gracefully instead of getting stuck
+- [ ] **Verify dependency flow**
+  - [ ] Test that all handlers receive db_processed_items correctly
+  - [ ] Test that logging works consistently across handlers
 
-## Architecture Successfully Simplified ✅
+## **Phase 5: Extract More Shared Logic**
+- [ ] **Create central file service**
+  - [ ] Move file security validation to shared service class
+  - [ ] Centralize memory safety checks
+  - [ ] Consolidate text file reading logic
 
-**Before**: Mixed sync/async pipeline with scattered job creation and stuck job cleanup
-**After**: 
-- Unified Job Creator for all entry points
-- Fully async 5-step pipeline  
-- Proactive failure handling (jobs fail immediately instead of getting stuck)
-- Clean separation of concerns
+- [ ] **Standardize patterns**
+  - [ ] Consistent error handling across all handlers
+  - [ ] Unified logging format and levels
+  - [ ] Common input validation patterns
 
-## Next: Optional Enhancements
+## **Phase 6: Output Handler Migration**
+- [ ] **Migrate Local Publish handler** to use base class
+- [ ] **Migrate Remote Publish handler** 
+- [ ] **Migrate Twitter handler**
+- [ ] **Migrate Data Export handler**
+- [ ] **Centralize content formatting logic**
 
-### **Database Cleanup Implementation** (Optional)
-- [ ] Create `dm_cleanup_job_event` scheduled job  
-- [ ] Implement automatic pruning of large data fields after completion
+## **Phase 7: Cleanup & Documentation**
+- [ ] **Remove old traits** once all handlers successfully migrated
+- [ ] **Update handler documentation** with new base class patterns
+- [ ] **Run comprehensive testing** of all input/output workflows
+- [ ] **Update HandlerFactory documentation**
+
+---
+
+## **Success Metrics**
+- **Code Reduction**: ~20-30 lines removed per input handler (5+ handlers = 100-150 lines saved)
+- **Consistency**: All handlers follow identical processed items patterns
+- **Maintainability**: New handlers require minimal boilerplate (~10 lines vs 40+ currently)
+- **No Regressions**: All existing functionality preserved and tested
+
+## **Risk Mitigation**
+- **Incremental Migration**: One handler at a time prevents breaking everything
+- **Parallel Implementation**: Keep traits during migration, remove after completion
+- **Comprehensive Testing**: Test each handler after migration before proceeding
+- **Bootstrap Changes Last**: Handlers work with new classes before changing instantiation
+
+## **Dependencies/Prerequisites**
+- Understand current HandlerFactory dependency injection patterns
+- Verify all current handlers work properly before starting migration
+- May need to update some handler constructor signatures during migration
+
+---
+
+**Estimated Timeline**: Medium-large refactor with high architectural value
+**Current Status**: Planning phase - ready to begin Phase 1 analysis

@@ -118,16 +118,12 @@ class Data_Machine_Admin_Page {
         require_once plugin_dir_path(__FILE__) . 'module-config/class-dm-module-config-handler.php';
         $this->module_config_handler = new Data_Machine_Module_Handler($db_modules, $handler_registry, $handler_factory, $logger);
         // Hook for project management page (if any form processing is needed in future)
-        add_action( 'load-dm-run-single-module_page_dm-project-management', array( $this, 'process_project_management_page' ) );
         add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_management_page' ) );
         // Hook for API keys page (if any form processing is needed in future)
-        add_action( 'load-dm-run-single-module_page_dm-api-keys', array( $this, 'process_api_keys_page' ) );
         add_action( 'load-data-machine_page_dm-api-keys', array( $this, 'process_api_keys_page' ) );
         // Hook for remote locations page (if any form processing is needed in future)
-        add_action( 'load-dm-run-single-module_page_dm-remote-locations', array( $this, 'process_remote_locations_page' ) );
         add_action( 'load-data-machine_page_dm-remote-locations', array( $this, 'process_remote_locations_page' ) );
         // Hook for jobs page (if any form processing is needed in future)
-        add_action( 'load-dm-run-single-module_page_dm-jobs', array( $this, 'process_jobs_page' ) );
         add_action( 'load-data-machine_page_dm-jobs', array( $this, 'process_jobs_page' ) );
         
         // Admin post handlers for log management
@@ -138,19 +134,6 @@ class Data_Machine_Admin_Page {
         add_action( 'wp_ajax_dm_refresh_logs', array( $this, 'handle_refresh_logs_ajax' ) );
     }
 
-    /**
-     * Display the main admin page content.
-     */
-    public function display_admin_page() {
-        // Make required services available to the included template file
-        $db_projects = $this->db_projects;
-        $db_modules = $this->db_modules;
-        // Note: $logger is not explicitly used in the template logic, but $db_modules needs it.
-        // Since $db_modules is already instantiated correctly with the logger, we don\'t need to pass $logger itself.
-        
-        // Load the template file
-        include_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/run-single-module-page.php';
-    }
 
     /**
      * Display the settings page content by including the template file.
@@ -173,7 +156,7 @@ class Data_Machine_Admin_Page {
         // All fetched variables ($handler_registry, $db_projects,
         // $db_modules, $input_handlers, $output_handlers, $projects, $user_id)
         // are available to the included template.
-        include_once plugin_dir_path( __FILE__ ) . 'templates/module-config-page.php';
+        include_once plugin_dir_path( __FILE__ ) . 'page-templates/module-config-page.php';
     }
 
     /**
@@ -184,7 +167,7 @@ class Data_Machine_Admin_Page {
         $db_projects = $this->db_projects;
         $db_modules = $this->db_modules;
         // Load the template file
-        include_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/project-management-page.php';
+        include_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/page-templates/project-management-page.php';
     }
 
     /**
@@ -202,7 +185,7 @@ class Data_Machine_Admin_Page {
 
         // Display the settings page content
         $logger = $this->logger;
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/templates/api-keys-page.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/page-templates/api-keys-page.php';
     }
 
     /**
@@ -234,7 +217,7 @@ class Data_Machine_Admin_Page {
         $logger = $this->logger;
         
         // Load the template file
-        include_once plugin_dir_path(dirname(__FILE__)) . 'admin/templates/jobs-page.php';
+        include_once plugin_dir_path(dirname(__FILE__)) . 'admin/page-templates/jobs.php';
     }
 
 

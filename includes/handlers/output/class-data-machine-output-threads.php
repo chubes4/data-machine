@@ -16,22 +16,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Note: Requires integration with an OAuth flow for Threads authentication.
 // Note: Requires error handling and potentially a library/SDK for API interaction.
 
-class Data_Machine_Output_Threads {
+class Data_Machine_Output_Threads extends Data_Machine_Base_Output_Handler {
 
-    use Data_Machine_Base_Output_Handler;
-
-    /** @var ?Data_Machine_Logger */
-    private $logger;
 
     const THREADS_API_BASE_URL = 'https://graph.threads.net/v1.0'; // Use constant
+
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
 
     /**
 	 * Constructor.
 	 *
+     * @param Data_Machine_Handler_HTTP_Service $http_service HTTP service for API calls.
      * @param Data_Machine_Logger|null $logger Optional Logger instance.
 	 */
-	public function __construct(?Data_Machine_Logger $logger = null) {
-        $this->logger = $logger;
+	public function __construct(Data_Machine_Handler_HTTP_Service $http_service, ?Data_Machine_Logger $logger = null) {
+        parent::__construct($logger);
+        $this->http_service = $http_service;
 	}
 
     /**
@@ -152,22 +153,22 @@ class Data_Machine_Output_Threads {
 
             $this->logger?->debug('Threads API: Creating container request.', ['url' => $create_url, 'params_keys' => array_keys($create_params), 'user_id' => $user_id]);
 
-            $response = wp_remote_post($create_url, [
-                'method' => 'POST',
-                'body' => $create_params, // Send full params including token
-                'timeout' => 30,
-            ]);
+            // Use HTTP service - replaces duplicated HTTP code
+            $response = $this->http_service->post($create_url, $create_params, [], 'Threads Create API');
 
             if (is_wp_error($response)) {
-                $error_code = $response->get_error_code();
-                $error_message = $response->get_error_message();
-                $this->logger?->error('Threads API Error: Create container wp_remote_post failed.', ['error_code' => $error_code, 'error_message' => $error_message, 'user_id' => $user_id]);
-                return new WP_Error('threads_wp_remote_error_create_' . $error_code, $error_message, $response);
+                $this->logger?->error('Threads API Error: Create container failed.', ['error' => $response->get_error_message(), 'user_id' => $user_id]);
+                return $response;
             }
 
-            $body = wp_remote_retrieve_body($response);
-            $data = json_decode($body, true);
-            $http_code = wp_remote_retrieve_response_code($response);
+            $body = $response['body'];
+            $http_code = $response['status_code'];
+
+            // Parse JSON response with error handling
+            $data = $this->http_service->parse_json($body, 'Threads Create API');
+            if (is_wp_error($data)) {
+                return $data;
+            }
 
             if ($http_code >= 200 && $http_code < 300 && isset($data['id'])) {
                 $container_id = $data['id'];
@@ -200,22 +201,21 @@ class Data_Machine_Output_Threads {
 
                 $this->logger?->debug('Threads API: Publishing container request.', ['url' => $publish_url, 'container_id' => $container_id, 'user_id' => $user_id]);
 
-                $response = wp_remote_post($publish_url, [
-                    'method' => 'POST',
-                    'body' => $publish_params,
-                    'timeout' => 30,
-                ]);
+                $response = $this->http_service->post($publish_url, $publish_params, [], 'Threads Publish API');
 
                 if (is_wp_error($response)) {
-                     $error_code = $response->get_error_code();
-                     $error_message = $response->get_error_message();
-                     $this->logger?->error('Threads API Error: Publish container wp_remote_post failed.', ['error_code' => $error_code, 'error_message' => $error_message, 'user_id' => $user_id]);
-                     return new WP_Error('threads_wp_remote_error_publish_' . $error_code, $error_message, $response);
+                     $this->logger?->error('Threads API Error: Publish container failed.', ['error' => $response->get_error_message(), 'user_id' => $user_id]);
+                     return $response;
                 }
 
-                $body = wp_remote_retrieve_body($response);
-                $data = json_decode($body, true);
-                $http_code = wp_remote_retrieve_response_code($response);
+                $body = $response['body'];
+                $http_code = $response['status_code'];
+
+                // Parse JSON response with error handling
+                $data = $this->http_service->parse_json($body, 'Threads Publish API');
+                if (is_wp_error($data)) {
+                    return $data;
+                }
 
                 if ($http_code >= 200 && $http_code < 300 && isset($data['id'])) {
                     $threads_media_id = $data['id'];
@@ -264,16 +264,21 @@ class Data_Machine_Output_Threads {
         $url = self::THREADS_API_BASE_URL . "/{$media_id}?fields=permalink&access_token={$access_token}";
         $this->logger?->debug('Threads API: Fetching permalink.', ['url' => $url]);
 
-        $response = wp_remote_get($url, ['timeout' => 10]);
+        $response = $this->http_service->get($url, [], 'Threads Permalink API');
 
         if (is_wp_error($response)) {
-            $this->logger?->error('Threads API Error: Permalink fetch wp_remote_get failed.', ['error' => $response->get_error_message()]);
+            $this->logger?->error('Threads API Error: Permalink fetch failed.', ['error' => $response->get_error_message()]);
             return $response;
         }
 
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $body = $response['body'];
+        $http_code = $response['status_code'];
+
+        // Parse JSON response with error handling
+        $data = $this->http_service->parse_json($body, 'Threads Permalink API');
+        if (is_wp_error($data)) {
+            return $data;
+        }
 
         if ($http_code !== 200 || empty($data['permalink'])) {
             $error_message = $data['error']['message'] ?? 'Failed to fetch Threads permalink.';

@@ -163,10 +163,8 @@ class Data_Machine_Project_Management_Ajax {
 				$this->log( $logger, $project_id, $module_id, $module_name, 'Skipping – paused.' );
 				continue;
 			}
-			if ( ( $module->data_source_type ?? '' ) === 'files' ) {
-				$this->log( $logger, $project_id, $module_id, $module_name, 'Skipping – input type files.' );
-				continue;
-			}
+			// File modules are now supported via queue system
+			// No need to skip file modules anymore
 			if ( ( $module->schedule_interval ?? '' ) !== 'project_schedule' ) {
 				$this->log( $logger, $project_id, $module_id, $module_name, 'Skipping – schedule not project_schedule.' );
 				continue;
@@ -179,7 +177,7 @@ class Data_Machine_Project_Management_Ajax {
 					throw new Exception('Job Creator service is not available in Ajax Projects handler.');
 				}
 
-				$result = $this->job_creator->create_and_schedule_job($module, $user_id, 'run_now');
+				$result = $this->job_creator->create_and_schedule_job((array) $module, $user_id, 'run_now');
 
 				if (!$result['success']) {
 					$error_message = sprintf("Failed to schedule job for module '%s': %s", $module_name, $result['message']);

@@ -287,11 +287,8 @@ class Data_Machine_Scheduler {
                     $logger?->debug($log_prefix . "Module {$module->module_id} skipped: schedule_status is '{$module->schedule_status}', not 'active'", ['module_id' => $module->module_id]);
                     continue; // Skip paused modules
                 }
-                // c. Filter: Check if module->data_source_type !== 'files'
-                if (($module->data_source_type ?? null) === 'files') {
-                    $logger?->debug($log_prefix . "Module {$module->module_id} skipped: data_source_type is 'files' (files not allowed in scheduled runs)", ['module_id' => $module->module_id]);
-                    continue; // Skip file input modules for scheduled runs
-                }
+                // File modules are now supported via queue system
+                // No need to skip file modules anymore
 
                 // d. If passes filters, call Job Creator to create and schedule the job
                 $job_result = $job_creator->create_and_schedule_job((array) $module, $project_owner_user_id, 'cron_project');
@@ -376,12 +373,8 @@ class Data_Machine_Scheduler {
                  return;
             }
 
-            // 6. Filter: Check if module->data_source_type !== 'files'
-            if (($module->data_source_type ?? null) === 'files') {
-                 $logger?->debug($log_prefix . "Module {$module_id} skipped: data_source_type is 'files' (files not allowed in scheduled runs)", ['module_id' => $module_id]);
-                 $this->unschedule_module($module_id);
-                 return;
-            }
+            // File modules are now supported via queue system
+            // No need to skip file modules anymore
 
             // 7. Get project owner user_id
             $project = $db_projects->get_project($module->project_id);

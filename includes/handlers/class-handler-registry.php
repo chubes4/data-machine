@@ -53,7 +53,7 @@ class Data_Machine_Handler_Registry {
      */
     private function scan_directory($sub_directory, $type) {
         $handlers = [];
-        $directory = $this->plugin_path . 'includes/' . $sub_directory . '/';
+        $directory = $this->plugin_path . 'includes/handlers/' . $sub_directory . '/';
         $pattern = $directory . 'class-data-machine-' . $type . '-*.php';
 
         $files = glob($pattern);

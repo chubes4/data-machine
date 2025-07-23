@@ -15,24 +15,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Interface checks removed - using duck typing now
 
-class Data_Machine_Output_Bluesky {
-
-    use Data_Machine_Base_Output_Handler;
+class Data_Machine_Output_Bluesky extends Data_Machine_Base_Output_Handler {
 
     /** @var Data_Machine_Encryption_Helper|null */
     private $encryption_helper;
-    /** @var Data_Machine_Logger|null */
-    private $logger;
+
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
 
     /**
      * Constructor.
+     * Calls parent constructor and adds handler-specific dependencies.
      *
-     * @param Data_Machine_Encryption_Helper|null $encryption_helper Encryption helper instance.
+     * @param Data_Machine_Encryption_Helper $encryption_helper Encryption helper instance.
+     * @param Data_Machine_Handler_HTTP_Service $http_service HTTP service for API calls.
      * @param Data_Machine_Logger|null $logger Optional Logger instance.
      */
-    public function __construct(?Data_Machine_Encryption_Helper $encryption_helper = null, ?Data_Machine_Logger $logger = null) {
+    public function __construct(Data_Machine_Encryption_Helper $encryption_helper, Data_Machine_Handler_HTTP_Service $http_service, ?Data_Machine_Logger $logger = null) {
+        // Call parent constructor with logger
+        parent::__construct($logger);
+        
+        // Set handler-specific dependencies
         $this->encryption_helper = $encryption_helper;
-        $this->logger = $logger;
+        $this->http_service = $http_service;
     }
 
     /**
@@ -366,37 +371,36 @@ class Data_Machine_Output_Bluesky {
         }
 
         $args = [
-            'method'  => 'POST',
             'headers' => ['Content-Type' => 'application/json'],
             'body'    => $body,
-            'timeout' => 20,
         ];
 
         $this->logger?->info('Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
 
-        $response = wp_remote_post($url, $args);
+        // Use HTTP service - replaces duplicated HTTP code
+        $response = $this->http_service->post($url, [], $args, 'Bluesky Auth API');
 
         if (is_wp_error($response)) {
-            $this->logger?->error('Bluesky session request failed (wp_remote_post error).', ['handle' => $handle, 'error' => $response->get_error_message()]);
+            $this->logger?->error('Bluesky session request failed.', ['handle' => $handle, 'error' => $response->get_error_message()]);
             return new WP_Error('bluesky_session_request_failed', __('Could not connect to Bluesky server for authentication.', 'data-machine') . ' ' . $response->get_error_message());
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $response['status_code'];
+        $response_body = $response['body'];
         $this->logger?->debug('Bluesky session response received.', ['handle' => $handle, 'code' => $response_code, 'body_snippet' => substr($response_body, 0, 200)]);
 
+        // Parse JSON response with error handling
+        $session_data = $this->http_service->parse_json($response_body, 'Bluesky Auth API');
+        if (is_wp_error($session_data)) {
+            $this->logger?->error('Failed to decode Bluesky session response JSON.', ['handle' => $handle, 'error' => $session_data->get_error_message()]);
+            return $session_data;
+        }
+
         if ($response_code !== 200) {
-            $error_data = json_decode($response_body, true);
-            $error_message = $error_data['message'] ?? 'Authentication failed.';
+            $error_message = $session_data['message'] ?? 'Authentication failed.';
             $this->logger?->error('Bluesky authentication failed (non-200 response).', ['handle' => $handle, 'code' => $response_code, 'response_message' => $error_message]);
             /* translators: %1$s: Error message, %2$d: HTTP response code */
             return new WP_Error('bluesky_auth_failed', sprintf(__( 'Bluesky authentication failed: %1$s (Code: %2$d)', 'data-machine' ), $error_message, $response_code));
-        }
-
-        $session_data = json_decode($response_body, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->logger?->error('Failed to decode Bluesky session response JSON.', ['handle' => $handle, 'json_error' => json_last_error_msg()]);
-            return new WP_Error('bluesky_json_decode_error', __('Could not decode Bluesky authentication response.', 'data-machine'));
         }
 
         // --- Add PDS URL to Session Data ---
@@ -511,31 +515,37 @@ class Data_Machine_Output_Bluesky {
 
         $this->logger?->info('Uploading image blob to Bluesky.', ['did' => $repo_did, 'upload_url' => $upload_url, 'mime' => $mime_type]);
 
-        $response = wp_remote_post($upload_url, $args);
+        // Use HTTP service - replaces duplicated HTTP code
+        $response = $this->http_service->post($upload_url, [], $args, 'Bluesky Upload API');
         unlink($temp_file_path); // Clean up temp file immediately after request
         unset($image_content); // Free memory
 
-            if (is_wp_error($response)) {
-            $this->logger?->error('Bluesky blob upload request failed (wp_remote_post error).', ['did' => $repo_did, 'error' => $response->get_error_message()]);
+        if (is_wp_error($response)) {
+            $this->logger?->error('Bluesky blob upload request failed.', ['did' => $repo_did, 'error' => $response->get_error_message()]);
             return new WP_Error('bluesky_upload_request_failed', __('Could not connect to Bluesky server for image upload.', 'data-machine') . ' ' . $response->get_error_message());
-            }
+        }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-            $response_body = wp_remote_retrieve_body($response);
+        $response_code = $response['status_code'];
+        $response_body = $response['body'];
         $this->logger?->debug('Bluesky blob upload response received.', ['did' => $repo_did, 'code' => $response_code, 'body_snippet' => substr($response_body, 0, 200)]);
 
+        // Parse JSON response with error handling
+        $upload_result = $this->http_service->parse_json($response_body, 'Bluesky Upload API');
+        if (is_wp_error($upload_result)) {
+            $this->logger?->error('Failed to decode Bluesky blob upload response.', ['did' => $repo_did, 'error' => $upload_result->get_error_message()]);
+            return $upload_result;
+        }
+
         if ($response_code !== 200) {
-                $error_data = json_decode($response_body, true);
-            $error_message = $error_data['message'] ?? 'Blob upload failed.';
+            $error_message = $upload_result['message'] ?? 'Blob upload failed.';
             $this->logger?->error('Bluesky blob upload failed (non-200 response).', ['did' => $repo_did, 'code' => $response_code, 'response_message' => $error_message]);
             /* translators: %1$s: Error message, %2$d: HTTP response code */
             return new WP_Error('bluesky_upload_failed', sprintf(__( 'Bluesky image upload failed: %1$s (Code: %2$d)', 'data-machine' ), $error_message, $response_code));
         }
 
-        $upload_result = json_decode($response_body, true);
-        if (json_last_error() !== JSON_ERROR_NONE || empty($upload_result['blob'])) {
-            $this->logger?->error('Failed to decode Bluesky blob upload response or missing blob data.', ['did' => $repo_did, 'json_error' => json_last_error_msg()]);
-            return new WP_Error('bluesky_upload_decode_error', __('Could not decode Bluesky image upload response.', 'data-machine'));
+        if (empty($upload_result['blob'])) {
+            $this->logger?->error('Missing blob data in Bluesky upload response.', ['did' => $repo_did]);
+            return new WP_Error('bluesky_upload_decode_error', __('Missing blob data in Bluesky image upload response.', 'data-machine'));
         }
 
         // 4. Add Alt Text to Blob (Separate Step? No, include in post record)
@@ -570,41 +580,45 @@ class Data_Machine_Output_Bluesky {
         }
 
         $args = [
-            'method'  => 'POST',
             'headers' => [
                 'Content-Type'  => 'application/json',
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body'    => $body,
-            'timeout' => 30,
         ];
 
         $this->logger?->info('Attempting to create Bluesky post record.', ['did' => $repo_did, 'url' => $url]);
         $this->logger?->debug('Bluesky post record data', ['record' => $record]); // Log the full record being sent
 
-        $response = wp_remote_post($url, $args);
+        // Use HTTP service - replaces duplicated HTTP code
+        $response = $this->http_service->post($url, [], $args, 'Bluesky Post API');
 
         if (is_wp_error($response)) {
-            $this->logger?->error('Bluesky create post request failed (wp_remote_post error).', ['did' => $repo_did, 'error' => $response->get_error_message()]);
+            $this->logger?->error('Bluesky create post request failed.', ['did' => $repo_did, 'error' => $response->get_error_message()]);
             return new WP_Error('bluesky_post_request_failed', __('Could not connect to Bluesky server to create post.', 'data-machine') . ' ' . $response->get_error_message());
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $response['status_code'];
+        $response_body = $response['body'];
         $this->logger?->debug('Bluesky create post response received.', ['did' => $repo_did, 'code' => $response_code, 'body_snippet' => substr($response_body, 0, 200)]);
 
+        // Parse JSON response with error handling
+        $post_result = $this->http_service->parse_json($response_body, 'Bluesky Post API');
+        if (is_wp_error($post_result)) {
+            $this->logger?->error('Failed to decode Bluesky post response.', ['did' => $repo_did, 'error' => $post_result->get_error_message()]);
+            return $post_result;
+        }
+
         if ($response_code !== 200) {
-            $error_data = json_decode($response_body, true);
-            $error_message = $error_data['message'] ?? 'Post creation failed.';
+            $error_message = $post_result['message'] ?? 'Post creation failed.';
             $this->logger?->error('Bluesky post creation failed (non-200 response).', ['did' => $repo_did, 'code' => $response_code, 'response_message' => $error_message]);
             /* translators: %1$s: Error message, %2$d: HTTP response code */
             return new WP_Error('bluesky_post_failed', sprintf(__( 'Bluesky post creation failed: %1$s (Code: %2$d)', 'data-machine' ), $error_message, $response_code));
         }
 
-        $post_result = json_decode($response_body, true);
-        if (json_last_error() !== JSON_ERROR_NONE || empty($post_result['uri'])) {
-            $this->logger?->error('Failed to decode Bluesky post response or missing URI.', ['did' => $repo_did, 'json_error' => json_last_error_msg()]);
-            return new WP_Error('bluesky_post_decode_error', __('Could not decode Bluesky post creation response.', 'data-machine'));
+        if (empty($post_result['uri'])) {
+            $this->logger?->error('Missing URI in Bluesky post response.', ['did' => $repo_did]);
+            return new WP_Error('bluesky_post_decode_error', __('Missing URI in Bluesky post creation response.', 'data-machine'));
         }
 
         return $post_result; // Contains uri and cid

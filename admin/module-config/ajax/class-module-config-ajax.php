@@ -185,7 +185,7 @@ class Data_Machine_Module_Config_Ajax {
              // --- Fetch data for remote handlers ---
              if (in_array($handler_slug, ['publish_remote', 'airdrop_rest_api'])) {
                  // Fetch all locations for dropdown
-                 require_once(DATA_MACHINE_PATH . 'admin/module-config/remote-locations/RemoteLocationService.php');
+                 require_once(DATA_MACHINE_PATH . 'admin/remote-locations/RemoteLocationService.php');
                  $remote_location_service = new Data_Machine_Remote_Location_Service($this->db_locations);
                  $all_locations = $remote_location_service->get_user_locations_for_js($user_id); 
 

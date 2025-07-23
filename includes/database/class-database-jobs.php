@@ -422,13 +422,22 @@ class Data_Machine_Database_Jobs {
         $updated = $wpdb->update(
             $this->table_name,
             [
-                $field => $data,
-                'current_step' => $step
+                $field => $data
             ],
             ['job_id' => $job_id],
-            ['%s', '%d'],
+            ['%s'],
             ['%d']
         );
+        
+        if ( $updated === false ) {
+            $this->logger && $this->logger->error( 'Database update failed', [
+                'job_id' => $job_id,
+                'step' => $step,
+                'field' => $field,
+                'data_length' => strlen($data),
+                'wpdb_error' => $wpdb->last_error
+            ]);
+        }
         
         return $updated !== false;
     }

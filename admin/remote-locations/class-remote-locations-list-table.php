@@ -138,12 +138,34 @@ class Remote_Locations_List_Table extends WP_List_Table {
      */
     protected function column_last_sync($item) {
         if (!empty($item->last_sync_time) && $item->last_sync_time !== '0000-00-00 00:00:00') {
-            $timestamp = strtotime($item->last_sync_time);
-            if ($timestamp === false) {
+            // Convert stored time to timestamp
+            $stored_timestamp = strtotime($item->last_sync_time);
+            if ($stored_timestamp === false) {
                 return '<em>' . __('Invalid Date Format', 'data-machine') . '</em>';
             }
-            $time_diff = human_time_diff($timestamp, current_time('timestamp'));
-            $formatted_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+            
+            $current_timestamp = current_time('timestamp');
+            
+            // Check if this looks like a GMT timestamp (future time indicates old GMT storage)
+            $time_diff_seconds = $current_timestamp - $stored_timestamp;
+            if ($time_diff_seconds < -3600) { // More than 1 hour in the future suggests GMT storage
+                // Convert from GMT to local time by adding timezone offset
+                $timezone_offset = current_time('timestamp') - current_time('timestamp', true);
+                $adjusted_timestamp = $stored_timestamp + $timezone_offset;
+                error_log(sprintf('DM Sync Time - Detected GMT storage, adjusting: %s -> %s (offset: %d)',
+                    date('Y-m-d H:i:s', $stored_timestamp), date('Y-m-d H:i:s', $adjusted_timestamp), $timezone_offset
+                ));
+                $timestamp = $adjusted_timestamp;
+            } else {
+                // Use stored timestamp as-is (local time storage)
+                $timestamp = $stored_timestamp;
+            }
+            
+            // Calculate time difference
+            $time_diff = human_time_diff($timestamp, $current_timestamp);
+            
+            // Use wp_date for proper timezone handling
+            $formatted_date = wp_date(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
             $sync_status = sprintf(
                 '<span title="%s">%s ago</span>', 
                 esc_attr($formatted_date),

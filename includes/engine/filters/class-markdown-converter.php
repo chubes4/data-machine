@@ -139,22 +139,4 @@ class Data_Machine_Markdown_Converter {
             : $sanitized_html;
     }
 
-    /**
-     * Legacy method for backward compatibility.
-     * @deprecated Use convert_to_html() instead.
-     */
-    public static function convert_html_to_blocks( $html ) {
-        return self::html_to_gutenberg_using_wordpress( $html );
-    }
-
-    /**
-     * Legacy method for backward compatibility.
-     * @deprecated Use convert_to_html() instead.
-     */
-    private static function convert_element_to_block( $element ) {
-        // This complex DOM parsing is no longer needed
-        // WordPress can handle simpler block creation
-        return '';
-    }
-
 } // End class

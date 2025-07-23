@@ -8,46 +8,39 @@
  * @subpackage Data_Machine/includes/input
  * @since      0.15.0 // Or next version
  */
-class Data_Machine_Input_Reddit {
-
-	use Data_Machine_Base_Input_Handler;
+class Data_Machine_Input_Reddit extends Data_Machine_Base_Input_Handler {
 
 	/** @var Data_Machine_OAuth_Reddit */
 	private $oauth_reddit;
 
-	/** @var Data_Machine_Database_Processed_Items */
-	private $db_processed_items;
-
-	/** @var Data_Machine_Database_Modules */
-	private $db_modules;
-
-	/** @var Data_Machine_Database_Projects */
-	private $db_projects;
-
-	/** @var ?Data_Machine_Logger */
-	private $logger;
+    /** @var Data_Machine_Handler_HTTP_Service */
+    private $http_service;
 
 	/**
 	 * Constructor.
+	 * Calls parent constructor and adds handler-specific dependencies.
 	 *
+	 * @param Data_Machine_Database_Modules $db_modules
+	 * @param Data_Machine_Database_Projects $db_projects
+	 * @param Data_Machine_Database_Processed_Items $db_processed_items
 	 * @param Data_Machine_OAuth_Reddit $oauth_reddit Reddit OAuth handler.
-	 * @param Data_Machine_Database_Processed_Items $db_processed_items Processed items DB.
-	 * @param Data_Machine_Database_Modules $db_modules Modules DB.
-	 * @param Data_Machine_Database_Projects $db_projects Projects DB.
+	 * @param Data_Machine_Handler_HTTP_Service $http_service
 	 * @param Data_Machine_Logger|null $logger Optional logger.
 	 */
 	public function __construct(
-		Data_Machine_OAuth_Reddit $oauth_reddit,
-		Data_Machine_Database_Processed_Items $db_processed_items,
 		Data_Machine_Database_Modules $db_modules,
 		Data_Machine_Database_Projects $db_projects,
+		Data_Machine_Database_Processed_Items $db_processed_items,
+		Data_Machine_OAuth_Reddit $oauth_reddit,
+		Data_Machine_Handler_HTTP_Service $http_service,
 		?Data_Machine_Logger $logger = null
 	) {
+        // Call parent constructor with common dependencies
+        parent::__construct($db_modules, $db_projects, $db_processed_items, $logger);
+        
+        // Set handler-specific dependencies
 		$this->oauth_reddit = $oauth_reddit;
-		$this->db_processed_items = $db_processed_items;
-		$this->db_modules = $db_modules;
-		$this->db_projects = $db_projects;
-		$this->logger = $logger;
+		$this->http_service = $http_service;
 	}
 
 	/**
@@ -141,16 +134,17 @@ class Data_Machine_Input_Reddit {
 			throw new Exception(esc_html__( 'Permission denied for this module (Reddit handler).', 'data-machine' ));
 		}
 
-		// --- Configuration (from $source_config) ---
-		$subreddit = trim( $source_config['subreddit'] ?? '' );
-		$sort = $source_config['sort_by'] ?? 'hot';
-		$process_limit = max(1, absint( $source_config['item_count'] ?? 1 ));
-		$timeframe_limit = $source_config['timeframe_limit'] ?? 'all_time';
-		$min_upvotes = isset($source_config['min_upvotes']) ? absint($source_config['min_upvotes']) : 0;
+		// --- Configuration (from nested config structure) ---
+		$config = $source_config['reddit'] ?? [];
+		$subreddit = trim( $config['subreddit'] ?? '' );
+		$sort = $config['sort_by'] ?? 'hot';
+		$process_limit = max(1, absint( $config['item_count'] ?? 1 ));
+		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+		$min_upvotes = isset($config['min_upvotes']) ? absint($config['min_upvotes']) : 0;
 		$fetch_batch_size = 100; // Max items per Reddit API request
-		$min_comment_count = isset($source_config['min_comment_count']) ? absint($source_config['min_comment_count']) : 0;
-		$comment_count_setting = isset($source_config['comment_count']) ? absint($source_config['comment_count']) : 0;
-		$search_term = trim( $source_config['search'] ?? '' );
+		$min_comment_count = isset($config['min_comment_count']) ? absint($config['min_comment_count']) : 0;
+		$comment_count_setting = isset($config['comment_count']) ? absint($config['comment_count']) : 0;
+		$search_term = trim( $config['search'] ?? '' );
 		$search_keywords = [];
 		if (!empty($search_term)) {
 			$search_keywords = array_map('trim', explode(',', $search_term));
@@ -206,7 +200,6 @@ class Data_Machine_Input_Reddit {
 			);
 			$args = [
 				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)', // Use constant
-				'timeout' => 15,
 				'headers' => [
 					'Authorization' => 'Bearer ' . $access_token
 				]
@@ -223,30 +216,22 @@ class Data_Machine_Input_Reddit {
 				'headers' => $log_headers
 			]);
 
-			// Make the API request
-			$response = wp_remote_get( $reddit_url, $args );
-
-			// --- Handle API Response & Errors ---
-			if ( is_wp_error( $response ) ) {
-				$error_message = __( 'Failed to connect to the Reddit API.', 'data-machine' ) . ' ' . $response->get_error_message();
-				$this->logger?->error('Reddit Input: API Request Failed.', ['url' => $reddit_url, 'error' => $response->get_error_message(), 'module_id' => $module_id]);
-				if ($pages_fetched === 1) throw new Exception(esc_html($error_message)); // Throw only if first request fails
-				else break; // Stop fetching
+			// Use HTTP service - replaces ~25 lines of duplicated HTTP code
+			$http_response = $this->http_service->get($reddit_url, $args, 'Reddit API');
+			if (is_wp_error($http_response)) {
+				if ($pages_fetched === 1) throw new Exception($http_response->get_error_message());
+				else break;
 			}
-			$response_code = wp_remote_retrieve_response_code( $response );
-			$body = wp_remote_retrieve_body( $response );
-			$this->logger?->debug('Reddit Input: API Response Code', ['code' => $response_code, 'url' => $reddit_url, 'module_id' => $module_id]);
 
-			if ( $response_code !== 200 ) {
-				$error_data = json_decode( $body, true );
-				$error_message_detail = isset( $error_data['message'] ) ? $error_data['message'] : __( 'Unknown error on Reddit API.', 'data-machine' );
-				/* translators: %d: HTTP response code */
-				$error_message = sprintf( __( 'Reddit API error (Code: %d).', 'data-machine' ), $response_code ) . ' ' . $error_message_detail;
-				$this->logger?->error('Reddit Input: API Error Response.', ['url' => $reddit_url, 'code' => $response_code, 'body' => substr($body, 0, 500), 'module_id' => $module_id]);
-				if ($pages_fetched === 1) throw new Exception(esc_html($error_message) . ' Raw Body: ' . esc_html($body)); // Throw only if first request fails
-				else break; // Stop fetching
+			$body = $http_response['body'];
+			$this->logger?->debug('Reddit Input: API Response Code', ['code' => $http_response['status_code'], 'url' => $reddit_url, 'module_id' => $module_id]);
+
+			// Parse JSON response with error handling
+			$response_data = $this->http_service->parse_json($body, 'Reddit API');
+			if (is_wp_error($response_data)) {
+				if ($pages_fetched === 1) throw new Exception($response_data->get_error_message());
+				else break;
 			}
-			$response_data = json_decode( $body, true );
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
 				$this->logger?->info('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'module_id' => $module_id]);
 				break; // Stop fetching
@@ -348,16 +333,15 @@ class Data_Machine_Input_Reddit {
 					$comments_url = 'https://oauth.reddit.com' . $item_data['permalink'] . '.json?limit=' . $comment_count_setting . '&sort=top';
 					$comment_args = [
 						'user-agent' => $args['user-agent'],
-						'timeout' => 15,
 						'headers' => [
 							'Authorization' => 'Bearer ' . $access_token
 						]
 					];
 					try {
-						$comments_response = wp_remote_get($comments_url, $comment_args);
-						if (!is_wp_error($comments_response) && wp_remote_retrieve_response_code($comments_response) === 200) {
-							$comments_body = wp_remote_retrieve_body($comments_response);
-							$comments_data = json_decode($comments_body, true);
+						$comments_response = $this->http_service->get($comments_url, $comment_args, 'Reddit Comments');
+						if (!is_wp_error($comments_response)) {
+							$comments_data = $this->http_service->parse_json($comments_response['body'], 'Reddit Comments');
+							if (!is_wp_error($comments_data)) {
 							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
 								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
 								if (!empty($top_comments)) {
@@ -376,11 +360,19 @@ class Data_Machine_Input_Reddit {
 									}
 								}
 							}
+							} else {
+								$this->logger?->warning('Reddit Input: Failed to parse comments JSON.', [
+									'item_id' => $current_item_id,
+									'comments_url' => $comments_url,
+									'error' => $comments_data->get_error_message(),
+									'module_id' => $module_id
+								]);
+							}
 						} else {
 							$this->logger?->warning('Reddit Input: Failed to fetch comments for post.', [
 								'item_id' => $current_item_id,
 								'comments_url' => $comments_url,
-								'response_code' => is_wp_error($comments_response) ? $comments_response->get_error_code() : wp_remote_retrieve_response_code($comments_response),
+								'error' => $comments_response->get_error_message(),
 								'module_id' => $module_id
 							]);
 						}

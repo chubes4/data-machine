@@ -25,8 +25,6 @@ class Data_Machine_Job_Creator {
     /** @var Data_Machine_Database_Projects */
     private $db_projects;
 
-    /** @var Data_Machine_Job_Filter */
-    private $job_filter;
 
     /** @var Data_Machine_Action_Scheduler */
     private $action_scheduler;
@@ -40,7 +38,6 @@ class Data_Machine_Job_Creator {
      * @param Data_Machine_Database_Jobs     $db_jobs Database jobs service.
      * @param Data_Machine_Database_Modules  $db_modules Database modules service.
      * @param Data_Machine_Database_Projects $db_projects Database projects service.
-     * @param Data_Machine_Job_Filter        $job_filter Job filtering service.
      * @param Data_Machine_Action_Scheduler  $action_scheduler Action scheduler service.
      * @param Data_Machine_Logger            $logger Logger service.
      */
@@ -48,14 +45,12 @@ class Data_Machine_Job_Creator {
         Data_Machine_Database_Jobs $db_jobs,
         Data_Machine_Database_Modules $db_modules,
         Data_Machine_Database_Projects $db_projects,
-        Data_Machine_Job_Filter $job_filter,
         Data_Machine_Action_Scheduler $action_scheduler,
         Data_Machine_Logger $logger
     ) {
         $this->db_jobs = $db_jobs;
         $this->db_modules = $db_modules;
         $this->db_projects = $db_projects;
-        $this->job_filter = $job_filter;
         $this->action_scheduler = $action_scheduler;
         $this->logger = $logger;
     }
@@ -90,14 +85,7 @@ class Data_Machine_Job_Creator {
                 ];
             }
 
-            // Check if job can be scheduled (concurrency control)
-            $can_schedule = $this->job_filter->can_schedule_job( $module_id );
-            if ( ! $can_schedule ) {
-                return [
-                    'success' => false,
-                    'message' => 'Job cannot be scheduled - module has active jobs or reached concurrency limit'
-                ];
-            }
+            // Action Scheduler handles global concurrency control (MAX_CONCURRENT_JOBS = 2)
 
             // Build job config for database storage
             $job_config = $this->build_job_config( $module, $user_id, $context );
@@ -206,10 +194,23 @@ class Data_Machine_Job_Creator {
             return new WP_Error( 'project_not_found', 'Project not found for module' );
         }
 
-        // Parse module configuration
-        $module_config = json_decode( $full_module->configuration, true );
-        if ( ! is_array( $module_config ) ) {
-            return new WP_Error( 'invalid_module_config', 'Invalid module configuration JSON' );
+        // Build module configuration from database fields
+        $module_config = [
+            'data_source_type' => $full_module->data_source_type ?? '',
+            'data_source_config' => json_decode( $full_module->data_source_config ?? '{}', true ),
+            'output_type' => $full_module->output_type ?? '',
+            'output_config' => json_decode( $full_module->output_config ?? '{}', true ),
+            'process_data_prompt' => $full_module->process_data_prompt ?? '',
+            'fact_check_prompt' => $full_module->fact_check_prompt ?? '',
+            'finalize_response_prompt' => $full_module->finalize_response_prompt ?? '',
+            'skip_fact_check' => (bool)( $full_module->skip_fact_check ?? false )
+        ];
+        
+        if ( ! is_array( $module_config['data_source_config'] ) ) {
+            $module_config['data_source_config'] = [];
+        }
+        if ( ! is_array( $module_config['output_config'] ) ) {
+            $module_config['output_config'] = [];
         }
 
         // Build simplified job configuration

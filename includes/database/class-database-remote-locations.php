@@ -304,7 +304,7 @@ class Data_Machine_Database_Remote_Locations {
 
         $update_data = array(
             'synced_site_info' => $site_info_json, // Store JSON as string
-            'last_sync_time' => $site_info_json !== null ? current_time('mysql', 1) : null, // Update time only if info is set
+            'last_sync_time' => $site_info_json !== null ? current_time('mysql') : null, // Update time only if info is set
             'updated_at' => current_time('mysql', 1)
         );
         $update_formats = array('%s', '%s', '%s');

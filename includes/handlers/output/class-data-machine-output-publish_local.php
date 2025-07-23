@@ -8,9 +8,7 @@
  * @subpackage Data_Machine/includes/output
  * @since      0.7.0
  */
-class Data_Machine_Output_Publish_Local {
-
-	use Data_Machine_Base_Output_Handler;
+class Data_Machine_Output_Publish_Local extends Data_Machine_Base_Output_Handler {
 
 	/**
 	 * Database handler for processed items.
@@ -22,7 +20,8 @@ class Data_Machine_Output_Publish_Local {
 	 * Constructor.
 	 * @param Data_Machine_Database_Processed_Items $db_processed_items
 	 */
-	public function __construct(Data_Machine_Database_Processed_Items $db_processed_items) {
+	public function __construct(Data_Machine_Database_Processed_Items $db_processed_items, ?Data_Machine_Logger $logger = null) {
+        parent::__construct($logger);
 		$this->db_processed_items = $db_processed_items;
 	}
 
@@ -405,6 +404,9 @@ class Data_Machine_Output_Publish_Local {
 	 * @return array
 	 */
 	public function sanitize_settings(array $raw_settings): array {
+		// Debug logging for sanitization
+		error_log('DM Publish Local Sanitize: Raw settings received: ' . print_r($raw_settings, true));
+		
 		$sanitized = [];
 		$sanitized['post_type'] = sanitize_text_field($raw_settings['post_type'] ?? 'post');
 		$sanitized['post_status'] = sanitize_text_field($raw_settings['post_status'] ?? 'draft');
@@ -430,6 +432,9 @@ class Data_Machine_Output_Publish_Local {
 		}
 		
 		// Note: No custom taxonomies for local publish currently
+		
+		// Debug logging for sanitization output
+		error_log('DM Publish Local Sanitize: Sanitized result: ' . print_r($sanitized, true));
 
 		return $sanitized;
 	}

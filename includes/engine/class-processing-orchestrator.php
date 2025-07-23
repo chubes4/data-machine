@@ -39,6 +39,9 @@ class Data_Machine_Processing_Orchestrator {
 	/** @var Data_Machine_Job_Status_Manager */
 	private $job_status_manager;
 
+	/** @var Data_Machine_Database_Modules */
+	private $db_modules;
+
 	/**
 	 * Constructor. Dependencies are injected.
 	 *
@@ -51,6 +54,7 @@ class Data_Machine_Processing_Orchestrator {
 	 * @param Data_Machine_Action_Scheduler $action_scheduler Action Scheduler service.
 	 * @param Data_Machine_Database_Jobs $db_jobs Database Jobs service.
 	 * @param Data_Machine_Job_Status_Manager $job_status_manager Job Status Manager service.
+	 * @param Data_Machine_Database_Modules $db_modules Database Modules service.
 	 */
 	public function __construct(
 		Data_Machine_process_data $process_data_handler,
@@ -61,7 +65,8 @@ class Data_Machine_Processing_Orchestrator {
 		Data_Machine_Logger $logger,
 		Data_Machine_Action_Scheduler $action_scheduler,
 		Data_Machine_Database_Jobs $db_jobs,
-		Data_Machine_Job_Status_Manager $job_status_manager
+		Data_Machine_Job_Status_Manager $job_status_manager,
+		Data_Machine_Database_Modules $db_modules
 	) {
 		$this->process_data_handler = $process_data_handler;
 		$this->factcheck_api = $factcheck_api;
@@ -72,6 +77,7 @@ class Data_Machine_Processing_Orchestrator {
 		$this->action_scheduler = $action_scheduler;
 		$this->db_jobs = $db_jobs;
 		$this->job_status_manager = $job_status_manager;
+		$this->db_modules = $db_modules;
 	}
 	/**
 	 * Execute Step 1: Input Data Processing (async).
@@ -111,8 +117,25 @@ class Data_Machine_Processing_Orchestrator {
 				return false;
 			}
 
-			// Fetch input data using the handler
-			$input_data_packet = $input_handler->handle( $module_job_config );
+			// Get the full module object from database
+			$user_id = $module_job_config['user_id'] ?? 0;
+			$module = $this->db_modules->get_module( $module_id, $user_id );
+			if ( ! $module ) {
+				$this->logger->error( 'Module not found for input step', ['job_id' => $job_id, 'module_id' => $module_id, 'user_id' => $user_id] );
+				$this->job_status_manager->fail( $job_id, 'Module not found for input step' );
+				return false;
+			}
+
+			// Extract source config from module
+			$source_config = json_decode( $module->data_source_config ?? '{}', true );
+			if ( ! is_array( $source_config ) ) {
+				$this->logger->error( 'Invalid data source config in module', ['job_id' => $job_id, 'module_id' => $module_id] );
+				$this->job_status_manager->fail( $job_id, 'Invalid data source config in module' );
+				return false;
+			}
+
+			// Fetch input data using the correct method signature
+			$input_data_packet = $input_handler->get_input_data( $module, $source_config, $user_id );
 			if ( is_wp_error( $input_data_packet ) ) {
 				$error_message = 'Input handler failed: ' . $input_data_packet->get_error_message();
 				$this->logger->error( 'Input handler failed to fetch data', ['job_id' => $job_id, 'handler_type' => $data_source_type] );
@@ -127,7 +150,16 @@ class Data_Machine_Processing_Orchestrator {
 			}
 
 			// Store input data and schedule next step
-			$success = $this->db_jobs->update_step_data( $job_id, 1, wp_json_encode( $input_data_packet ) );
+			$json_data = wp_json_encode( $input_data_packet );
+			if ( $json_data === false ) {
+				$this->logger->error( 'Failed to JSON encode input data', ['job_id' => $job_id, 'json_error' => json_last_error_msg()] );
+				$this->job_status_manager->fail( $job_id, 'Failed to JSON encode input data: ' . json_last_error_msg() );
+				return false;
+			}
+			
+			$this->logger->info( 'JSON encoded input data successfully', ['job_id' => $job_id, 'data_size' => strlen($json_data)] );
+			
+			$success = $this->db_jobs->update_step_data( $job_id, 1, $json_data );
 			if ( ! $success ) {
 				$this->logger->error( 'Failed to store input data', ['job_id' => $job_id] );
 				$this->job_status_manager->fail( $job_id, 'Failed to store input data in database' );
