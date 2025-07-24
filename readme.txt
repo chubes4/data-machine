@@ -14,6 +14,27 @@ A powerful WordPress plugin that automatically collects data from various source
 
 Data Machine is a comprehensive data processing and publishing solution for WordPress. It can automatically collect data from files, RSS feeds, Reddit, and other sources, process it through OpenAI's API for fact-checking and content generation, and publish the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and Bluesky.
 
+= How It Works =
+
+Data Machine operates through a powerful 5-step automated pipeline:
+
+1. **Data Collection**: Automatically gathers content from your configured sources (RSS feeds, Reddit posts, uploaded files, REST APIs)
+2. **AI Processing**: Uses OpenAI to analyze, summarize, and enhance the raw content according to your prompts
+3. **Fact-Checking**: Validates information accuracy using AI-powered fact-checking (optional but recommended)
+4. **Content Finalization**: Polishes the content for publication with final AI refinements
+5. **Multi-Platform Publishing**: Simultaneously publishes the processed content to your selected destinations
+
+All processing happens in the background using reliable job queues, so you can set it up once and let it work automatically. The system handles failures gracefully and provides detailed logging for monitoring.
+
+= Key Benefits =
+
+* **Save Hours of Time**: Process dozens of content pieces in minutes instead of hours of manual work
+* **Ensure Quality**: AI-powered fact-checking and content refinement maintains high standards
+* **Scale Your Reach**: Publish to multiple social media platforms and websites simultaneously
+* **Never Miss Content**: Automated monitoring of RSS feeds and Reddit ensures you catch everything
+* **Reliable Operation**: Background processing with failure recovery means your workflows keep running
+* **Complete Control**: Customize AI prompts, scheduling, and output formatting to match your needs
+
 = Features =
 
 * **Multi-Source Data Collection**: Import data from files, RSS feeds, Reddit, public REST APIs, and custom airdrop endpoints
@@ -24,6 +45,23 @@ Data Machine is a comprehensive data processing and publishing solution for Word
 * **Remote Publishing**: Publish content to remote WordPress installations
 * **OAuth Integration**: Secure authentication with social media platforms
 * **Import/Export**: Backup and restore your configurations
+
+= Use Cases =
+
+**Content Creators & Bloggers:**
+Turn RSS feeds from your favorite sources into polished blog posts. Data Machine monitors feeds, processes content with AI, and publishes to your WordPress site automatically.
+
+**Social Media Managers:**
+Streamline cross-platform posting. Upload a content file, let AI optimize it for different platforms, then publish simultaneously to Twitter, Facebook, Threads, and Bluesky.
+
+**News & Media Organizations:**
+Monitor Reddit discussions for trending topics, fact-check the information using AI, and publish verified summaries to your news website and social channels.
+
+**Business & Marketing Teams:**
+Transform data reports and press releases into engaging social media content. AI processing ensures consistent messaging across all your marketing channels.
+
+**Researchers & Analysts:**
+Collect data from multiple REST APIs, process it through AI for insights, and automatically publish findings to both internal WordPress sites and external platforms.
 
 == External Services ==
 
@@ -93,6 +131,52 @@ This plugin connects to several third-party services to provide its functionalit
 3. Use the Data Machine menu item to configure the plugin
 4. Configure your API keys for the services you plan to use
 5. Create projects and modules to set up your data processing workflows
+
+= Getting Started =
+
+**Step 1: Configure API Keys**
+Go to Data Machine → API Keys and add your OpenAI API key (required). Add keys for social media platforms you want to use (Twitter, Facebook, etc.).
+
+**Step 2: Create Your First Project**
+Think of projects as containers for related workflows. Go to Data Machine → Projects and create a project like "Blog Automation" or "Social Media Manager".
+
+**Step 3: Set Up a Module**
+Modules define the actual data processing workflow. Each module has:
+- **Input Source**: Where data comes from (RSS feed, file upload, Reddit, etc.)
+- **AI Processing**: How OpenAI should process the content (custom prompts)
+- **Output Destination**: Where to publish (WordPress, Twitter, Facebook, etc.)
+
+**Step 4: Configure Scheduling**
+Set up automated scheduling for your modules. Choose from preset intervals (hourly, daily, weekly) or use custom cron schedules.
+
+**Step 5: Monitor & Optimize**
+Use Data Machine → Jobs to monitor your automated workflows. Check logs and adjust AI prompts as needed for optimal results.
+
+= Workflow Examples =
+
+**Example 1: RSS to Social Media**
+- **Input**: RSS feed from your favorite tech blog
+- **Processing**: "Summarize this article in 2 sentences and add relevant hashtags"
+- **Output**: Auto-post to Twitter and Facebook
+- **Schedule**: Check every hour, post new articles
+
+**Example 2: Reddit Monitoring to Blog**
+- **Input**: Monitor specific subreddits for trending posts
+- **Processing**: "Analyze this discussion, fact-check claims, and write a 300-word blog post"
+- **Output**: Publish to WordPress blog with SEO optimization
+- **Schedule**: Daily summary of top discussions
+
+**Example 3: File Processing to Multi-Platform**
+- **Input**: Upload weekly newsletter content as a file
+- **Processing**: "Adapt this content for different social media platforms"
+- **Output**: Customized posts for Twitter (280 chars), Facebook (longer form), and Bluesky
+- **Schedule**: Manual trigger when file is uploaded
+
+**Example 4: API Data to Report**
+- **Input**: REST API endpoint with business metrics
+- **Processing**: "Create an executive summary of this data with key insights"
+- **Output**: Post to internal WordPress site and send summary to Slack
+- **Schedule**: Weekly automated reports
 
 == Frequently Asked Questions ==
 
