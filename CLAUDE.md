@@ -47,7 +47,7 @@ window.dmDebugMode = true
 
 **Key Patterns**:
 - **PSR-4 Namespacing**: Modern namespace structure with `DataMachine\` root namespace
-- **Manual DI**: Custom dependency injection in `data-machine.php` (lines 270+)
+- **Manual DI**: Custom dependency injection in `data-machine.php` (lines 207-218)
 - **Handler Registry**: Dynamic filesystem scanning discovers handlers by naming convention
 - **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator` class
 - **Action Scheduler**: Background processing with 2 max concurrent jobs
@@ -57,7 +57,7 @@ window.dmDebugMode = true
 DataMachine\
 ├── Admin\{Projects,ModuleConfig,RemoteLocations,OAuth}\
 ├── Database\{Modules,Projects,Jobs,ProcessedItems,RemoteLocations}\
-├── Engine\{JobCreator,ProcessingOrchestrator,JobStatusManager}\
+├── Engine\{JobCreator,ProcessingOrchestrator,JobStatusManager,ProcessedItemsManager}\
 ├── Handlers\{HandlerFactory,HandlerRegistry,Input\*,Output\*}\
 ├── Helpers\{Logger,ActionScheduler,HttpService,Encryption}\
 └── Api\{OpenAI integration classes}\
@@ -66,31 +66,32 @@ DataMachine\
 ## Critical File Locations
 
 ```
-data-machine.php           # Bootstrap: 270+ lines of manual DI setup
+data-machine.php           # Bootstrap: Global container setup (lines 207-218)
 
 admin/
 ├── page-templates/         # Pure view templates (no business logic)
-├── module-config/          # Handler configuration system
+├── ModuleConfig/          # Handler configuration system
 │   ├── handler-templates/  # Input/output form templates
 │   └── js/                # Frontend state management
-├── projects/               # Job creation & scheduling
-├── remote-locations/       # Remote WordPress management
-└── oauth/                 # Social media authentication
+├── Projects/              # Job creation & scheduling
+├── RemoteLocations/       # Remote WordPress management
+└── OAuth/                 # Social media authentication
 
 includes/
 ├── engine/                 # Core processing pipeline
-│   ├── class-job-creator.php           # Single entry point for all jobs
-│   ├── class-processing-orchestrator.php # 5-step async coordinator
-│   ├── class-job-status-manager.php    # Centralized status updates
+│   ├── JobCreator.php                   # Single entry point for all jobs
+│   ├── ProcessingOrchestrator.php       # 5-step async coordinator
+│   ├── JobStatusManager.php             # Centralized status updates
+│   ├── ProcessedItemsManager.php        # Deduplication management
 │   └── filters/           # AI utilities (prompt builder, parser, etc.)
 ├── handlers/              # Input/Output handlers
-│   ├── HandlerFactory.php              # Hard-coded switch statement (lines 115-141)
-│   ├── class-handler-registry.php      # Filesystem scanning discovery
-│   ├── input/class-data-machine-base-input-handler.php  # Shared input logic
+│   ├── HandlerFactory.php              # Hard-coded switch statement (lines 104-151)
+│   ├── HandlerRegistry.php             # Filesystem scanning discovery
+│   ├── input/BaseInputHandler.php      # Shared input logic
 │   └── input/output/      # Handler implementations
 ├── database/              # Custom wp_dm_* tables (no migrations)
 ├── api/                   # OpenAI integration classes
-└── helpers/               # Logger, encryption, memory guard
+└── helpers/               # Logger, encryption, memory guard, constants
 ```
 
 ## Handler Development
@@ -98,7 +99,7 @@ includes/
 **Adding New Handlers**:
 1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler` or `DataMachine\Handlers\Output\BaseOutputHandler`
 2. Implement required methods: `get_input_data()` or `handle_output()`
-3. **Critical**: Add case to `HandlerFactory.php` switch statement (lines 115-141)
+3. **Critical**: Add case to `HandlerFactory.php` switch statement (lines 104-151)
 4. Add proper `use` statements for all dependencies
 5. Update bootstrap dependencies in `data-machine.php` if needed
 
@@ -138,9 +139,24 @@ $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_dat
 **Remote Locations**: Form submissions (no AJAX) for reliability
 **Database Schema**: Custom `wp_dm_*` tables - no migrations, created on activation
 
+## Database Schema
+
+**Core Tables**:
+```sql
+wp_dm_jobs - 5-step pipeline data storage:
+├── job_id, module_id, user_id, status, current_step (1-5)
+├── input_data, processed_data, fact_checked_data, finalized_data, result_data
+├── cleanup_scheduled (data retention), created_at, updated_at
+
+wp_dm_modules - Handler configuration and settings
+wp_dm_projects - Project scheduling and management
+wp_dm_processed_items - Deduplication tracking with content hashes
+wp_dm_remote_locations - Remote WordPress credentials (encrypted)
+```
+
 ## Common Issues
 
-**Handler Factory**: Must add explicit case to switch statement for new handlers (lines 115-141)
+**Handler Factory**: Must add explicit case to switch statement for new handlers (lines 104-151)
 **Job Failures**: Check Action Scheduler status, jobs fail immediately with descriptive errors
 **Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
 **Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths
@@ -148,9 +164,9 @@ $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_dat
 
 ## Dependencies
 
-- PHP 7.4+, WordPress 5.0+, MySQL 5.6+
+- PHP 8.0+, WordPress 5.0+, MySQL 5.6+
 - Composer packages: monolog, parsedown, twitteroauth, action-scheduler
-- OpenAI API key required for AI processing steps
+- OpenAI API key required for AI processing steps (custom HTTP integration, not OpenAI SDK)
 
 ## Storage Architecture
 
@@ -184,6 +200,12 @@ $location = $this->db_locations->get_location($location_id, null, true, true); /
 - **Naming Conventions**: PascalCase for classes/files (PSR-4), snake_case for slugs/identifiers/database (WordPress standard)
 
 **Bootstrap Container**: Access dependencies via `global $data_machine_container` in hooks
+
+**Constants Configuration**: Global settings via `DataMachine\Constants` class
+- AI model defaults: gpt-4.1-mini, gpt-4o-mini
+- Cron intervals and job timeout settings
+- Memory limits and cleanup schedules
+- Encryption key management
 
 ## File Organization & PSR-4 Migration
 

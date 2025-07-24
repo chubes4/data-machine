@@ -3,7 +3,7 @@ Contributors: chubes
 Tags: ai, automation, content, publishing, openai, social media, rss, reddit
 Requires at least: 5.0
 Tested up to: 6.8
-Requires PHP: 7.4
+Requires PHP: 8.0
 Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,13 +12,13 @@ A powerful WordPress plugin that automatically collects data from various source
 
 == Description ==
 
-Data Machine is a comprehensive data processing and publishing solution for WordPress. It can automatically collect data from files, RSS feeds, Reddit, and other sources, process it through OpenAI's API for fact-checking and content generation, and publish the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and more.
+Data Machine is a comprehensive data processing and publishing solution for WordPress. It can automatically collect data from files, RSS feeds, Reddit, and other sources, process it through OpenAI's API for fact-checking and content generation, and publish the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and Bluesky.
 
 = Features =
 
 * **Multi-Source Data Collection**: Import data from files, RSS feeds, Reddit, public REST APIs, and custom airdrop endpoints
 * **AI-Powered Processing**: Uses OpenAI API for content generation and fact-checking
-* **Multi-Platform Publishing**: Publish to WordPress, Twitter, Facebook, Threads, Bluesky, and data export formats
+* **Multi-Platform Publishing**: Publish to WordPress, Twitter, Facebook, Threads, and Bluesky
 * **Scheduled Automation**: Set up automated workflows with custom scheduling
 * **Project Management**: Organize your data processing workflows into projects
 * **Remote Publishing**: Publish content to remote WordPress installations
@@ -99,7 +99,7 @@ This plugin connects to several third-party services to provide its functionalit
 = What are the system requirements? =
 
 * WordPress 5.0 or higher
-* PHP 7.4 or higher
+* PHP 8.0 or higher
 * MySQL 5.6 or higher
 * OpenAI API key (required for AI processing)
 
@@ -141,7 +141,7 @@ Yes, the plugin is licensed under GPL v2 or later. However, ensure you comply wi
 * Initial release
 * Multi-source data collection (files, RSS, Reddit, public REST APIs, airdrop endpoints)
 * AI-powered content processing with OpenAI
-* Multi-platform publishing (WordPress, Twitter, Facebook, Threads, Bluesky, data export)
+* Multi-platform publishing (WordPress, Twitter, Facebook, Threads, Bluesky)
 * OAuth integration for social media platforms
 * Project and module management system
 * Remote WordPress publishing
@@ -153,7 +153,7 @@ Yes, the plugin is licensed under GPL v2 or later. However, ensure you comply wi
 == Upgrade Notice ==
 
 = 0.1.0 =
-Initial release of Data Machine plugin. Requires PHP 7.4+ and WordPress 5.0+.
+Initial release of Data Machine plugin. Requires PHP 8.0+ and WordPress 5.0+.
 
 == Privacy Policy ==
 
