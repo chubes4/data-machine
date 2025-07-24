@@ -8,13 +8,13 @@ A powerful WordPress plugin that automates data collection, AI processing, and m
 
 ## Overview
 
-Data Machine transforms WordPress into a comprehensive content automation platform. It collects data from various sources (RSS feeds, Reddit, files, APIs), processes it through OpenAI's AI models for enhancement and fact-checking, then publishes to multiple platforms simultaneously.
+Data Machine transforms WordPress into a comprehensive content automation platform. It collects data from various sources (RSS feeds, Reddit, files, APIs), processes it through multiple AI providers for enhancement and fact-checking, then publishes to multiple platforms simultaneously.
 
 ### Key Features
 
 - **🔄 5-Step Automated Pipeline**: Input → AI Processing → Fact-Check → Finalize → Multi-Platform Publishing
 - **📡 Multi-Source Collection**: RSS feeds, Reddit, file uploads, REST APIs, custom endpoints
-- **🤖 AI-Powered Processing**: OpenAI integration for content generation and fact-checking
+- **🤖 AI-Powered Processing**: Multi-provider AI integration (OpenAI, Anthropic, Gemini, Grok, OpenRouter) for content generation and fact-checking
 - **🚀 Multi-Platform Publishing**: WordPress, Twitter, Facebook, Threads, Bluesky
 - **⏰ Scheduled Automation**: Reliable background processing with Action Scheduler
 - **🎯 Project Management**: Organize workflows into projects and modules
@@ -26,7 +26,7 @@ Data Machine transforms WordPress into a comprehensive content automation platfo
 ```
 Input Sources → AI Processing → Fact Checking → Finalization → Output Publishing
      ↓              ↓              ↓             ↓              ↓
-   RSS/Reddit    OpenAI API    AI Validation   Content      Multi-Platform
+   RSS/Reddit    Multi-AI      AI Validation   Content      Multi-Platform
    Files/APIs    Processing    (Optional)      Polish       Distribution
 ```
 
@@ -34,7 +34,7 @@ Input Sources → AI Processing → Fact Checking → Finalization → Output Pu
 - **Backend**: PHP 8.0+ with PSR-4 namespacing
 - **Database**: Custom WordPress tables (`wp_dm_*`)
 - **Job Processing**: Action Scheduler for reliable background tasks
-- **AI Integration**: Custom OpenAI HTTP client (not SDK)
+- **AI Integration**: Custom AI HTTP Client library with multi-provider support
 - **Authentication**: OAuth for social media platforms
 - **Security**: Encrypted credential storage with `EncryptionHelper`
 
@@ -46,8 +46,10 @@ data-machine/
 │   ├── engine/              # Core processing pipeline
 │   ├── handlers/            # Input/Output handlers
 │   ├── database/            # Database abstraction layer
-│   ├── api/                 # OpenAI integration
+│   ├── api/                 # AI processing integration
 │   └── helpers/             # Utilities and services
+├── lib/
+│   └── ai-http-client/      # Multi-provider AI library
 ├── assets/                  # Frontend assets
 └── vendor/                  # Composer dependencies
 ```
@@ -59,7 +61,7 @@ data-machine/
 - PHP 8.0+
 - MySQL 5.6+
 - Composer
-- OpenAI API key
+- AI provider API key (OpenAI, Anthropic, etc.)
 
 ### Installation
 
@@ -77,7 +79,7 @@ data-machine/
 3. **WordPress setup**
    - Place in `/wp-content/plugins/data-machine/`
    - Activate through WordPress admin
-   - Configure API keys in Data Machine → API Keys
+   - Configure AI provider settings in Data Machine → API Keys
 
 ### Development Commands
 
@@ -167,10 +169,16 @@ $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_dat
 ## Configuration
 
 ### Constants
-Global configuration via `DataMachine\Constants`:
-- AI model defaults (gpt-4.1-mini, gpt-4o-mini)
+**AI Provider Configuration**: Multi-provider support via AI HTTP Client library
+- **Supported Providers**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
+- **Per-Step Configuration**: Different providers/models for process, fact-check, finalize steps
+- **Shared API Keys**: Efficient key management across multiple plugins
+- **Plugin-Scoped Settings**: Isolated configuration per plugin instance
+
+**Global Configuration** via `DataMachine\Constants`:
 - Cron intervals and job timeouts
 - Memory limits and cleanup schedules
+- Database retention policies
 
 ### Dependency Injection
 Manual DI container in `data-machine.php` (lines 207-218):

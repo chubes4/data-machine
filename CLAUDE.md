@@ -205,7 +205,38 @@ wp_dm_remote_locations - Remote WordPress credentials (encrypted)
 
 - PHP 8.0+, WordPress 5.0+, MySQL 5.6+
 - Composer packages: monolog, parsedown, twitteroauth, action-scheduler
-- OpenAI API key required for AI processing steps (custom HTTP integration, not OpenAI SDK)
+- **AI HTTP Client Library** (`/lib/ai-http-client/`): Multi-provider AI integration with unified interface
+- **OpenAI API key** required for AI processing steps
+
+## AI Integration Architecture
+
+**Multi-Provider AI Library**: Data Machine uses a custom AI HTTP Client library that supports multiple providers
+- **Providers Supported**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
+- **Plugin-Scoped Configuration**: Each plugin can use different models/providers
+- **Shared API Keys**: Efficient storage across multiple plugins using this library
+- **Unified Interface**: Standard request/response format regardless of provider
+
+**IMPORTANT - OpenAI Integration**: 
+- **ALWAYS use OpenAI Responses API**, never Chat Completions API
+- No hard-coded defaults for AI Provider APIs - if settings missing, fail with API error
+- AI library handles provider normalization automatically
+
+**AI Library Integration Pattern**:
+```php
+// Access via dependency injection
+use DataMachine\Api\OpenAi;
+
+class ProcessData {
+    private $openai;
+    
+    public function __construct(OpenAi $openai) {
+        $this->openai = $openai;
+    }
+    
+    // Library handles provider switching automatically
+    $response = $this->openai->generate_response($prompt, $model_config);
+}
+```
 
 ## Storage Architecture
 
@@ -256,3 +287,25 @@ The codebase has been fully migrated to PSR-4 namespacing with PascalCase filena
 - File paths match namespace structure: `includes/database/Jobs.php` for `DataMachine\Database\Jobs`
 
 **Current State**: All classes use PSR-4 autoloading via Composer with proper namespace declarations
+
+## WordPress Development Standards
+
+**HTTP Requests**: 
+- **NEVER use cURL functions** - highly discouraged in WordPress
+- **ALWAYS use `wp_remote_get()` and `wp_remote_post()`** for all HTTP requests
+- AI HTTP Client library uses WordPress-native HTTP functions internally
+
+**Security & Output**:
+- **All output MUST be run through escaping functions** (`esc_html`, `esc_attr`, etc.)
+- Never include sensitive information (API keys, tokens) in code or commits
+- Use WordPress security functions throughout (`wp_verify_nonce`, `current_user_can`, etc.)
+
+**Code Style**:
+- **Never use inline CSS styles** - all styles in external files
+- Follow WordPress coding standards for HTML/CSS/JS
+- Use WordPress hooks and filters for extensibility
+
+**Error Handling**:
+- Return `WP_Error` objects for error conditions
+- Log errors via `DataMachine\Helpers\Logger` class
+- Provide helpful error messages to users via admin notices
