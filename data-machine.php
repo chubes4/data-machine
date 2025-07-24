@@ -27,43 +27,22 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 // Load Composer autoloader and dependencies (includes Action Scheduler)
 require_once __DIR__ . '/vendor/autoload.php';
 
-// Include necessary base classes and interfaces first
-require_once DATA_MACHINE_PATH . 'includes/class-data-machine-constants.php'; // Constants must be loaded first
-require_once DATA_MACHINE_PATH . 'includes/handlers/input/class-data-machine-base-input-handler.php';
-require_once DATA_MACHINE_PATH . 'includes/handlers/output/class-data-machine-base-output-handler.php';
-require_once DATA_MACHINE_PATH . 'includes/handlers/class-data-machine-handler-http-service.php';
-require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php'; // Updated path
-require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php'; // Added projects class
-require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php'; // Jobs Database Class
-require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php'; // Processed Items Database Class
-require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/class-module-config-ajax.php'; // Updated Module AJAX Handler path
-require_once DATA_MACHINE_PATH . 'admin/projects/class-project-management-ajax.php'; // Corrected AJAX Handler path for Dashboard Project Actions
-require_once DATA_MACHINE_PATH . 'admin/remote-locations/class-data-machine-remote-locations-form-handler.php'; // Remote Locations Form Handler
-require_once DATA_MACHINE_PATH . 'admin/projects/class-data-machine-import-export.php'; // Added Import/Export Helper
-require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-logger.php'; // Updated Logger Class path
-require_once DATA_MACHINE_PATH . 'includes/engine/filters/class-data-machine-prompt-builder.php'; // Centralized prompt builder
-require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-action-scheduler.php'; // Action Scheduler service
-require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-openai.php'; // OpenAI API integration
-require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-factcheck.php'; // Fact check API
-require_once DATA_MACHINE_PATH . 'includes/api/class-data-machine-api-finalize.php'; // Finalize API
-require_once DATA_MACHINE_PATH . 'includes/helpers/class-data-machine-memory-guard.php'; // Memory protection service
-require_once DATA_MACHINE_PATH . 'admin/projects/class-data-machine-scheduler.php'; // Added Scheduler class
-require_once DATA_MACHINE_PATH . 'admin/projects/class-data-machine-ajax-scheduler.php'; // Added AJAX Scheduler class
-require_once DATA_MACHINE_PATH . 'admin/module-config/RegisterSettings.php';
-require_once DATA_MACHINE_PATH . 'includes/handlers/HandlerFactory.php';
-require_once DATA_MACHINE_PATH . 'admin/remote-locations/RemoteLocationService.php';
-require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-reddit.php';
-require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-twitter.php'; // Added missing include
-require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-threads.php'; // Add Threads OAuth
-require_once DATA_MACHINE_PATH . 'admin/oauth/class-data-machine-oauth-facebook.php'; // Add Facebook OAuth
-require_once DATA_MACHINE_PATH . 'includes/engine/class-job-status-manager.php'; // Centralized job status management
-require_once DATA_MACHINE_PATH . 'includes/engine/class-job-creator.php'; // Unified job creation class
-require_once DATA_MACHINE_PATH . 'admin/module-config/SettingsFields.php';
-require_once DATA_MACHINE_PATH . 'admin/module-config/class-dm-module-config-handler.php';
-require_once DATA_MACHINE_PATH . 'admin/module-config/ajax/module-config-remote-locations-ajax.php';
-require_once DATA_MACHINE_PATH . 'admin/projects/class-file-upload-handler.php';
-// Include the new module config assets file
-// require_once DATA_MACHINE_PATH . 'admin/module-config/module-config-enqueue-assets.php';
+// PSR-4 Autoloading - no manual includes needed
+use DataMachine\{DataMachine, Constants};
+use DataMachine\Admin\{AdminPage, AdminMenuAssets, JobsListTable};
+use DataMachine\Admin\OAuth\{Twitter as OAuthTwitter, Reddit as OAuthReddit, Threads as OAuthThreads, Facebook as OAuthFacebook, ApiAuthPage};
+use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUploadHandler, ProjectManagementAjax};
+use DataMachine\Admin\ModuleConfig\{RegisterSettings, SettingsFields, ModuleConfigHandler};
+use DataMachine\Admin\ModuleConfig\Ajax\{ModuleConfigAjax, RemoteLocationsAjax};
+use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, ListTable as RemoteLocationsListTable, SyncRemoteLocations};
+use DataMachine\Api\{OpenAi, FactCheck, Finalize};
+use DataMachine\Database\{Jobs as DatabaseJobs, Modules as DatabaseModules, Projects as DatabaseProjects, ProcessedItems as DatabaseProcessedItems, RemoteLocations as DatabaseRemoteLocations};
+use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, ProcessData, ProcessedItemsManager};
+use DataMachine\Engine\Filters\{AiResponseParser, PromptBuilder, MarkdownConverter};
+use DataMachine\Handlers\{HandlerFactory, HandlerRegistry, HttpService};
+use DataMachine\Handlers\Input\{BaseInputHandler, Files as InputFiles};
+use DataMachine\Handlers\Output\{BaseOutputHandler, PublishLocal, PublishRemote, DataExport};
+use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler};
 
 
 
@@ -74,15 +53,14 @@ require_once DATA_MACHINE_PATH . 'admin/projects/class-file-upload-handler.php';
  */
 function run_data_machine() {
     // --- Instantiate core dependencies ---
-    $logger = new Data_Machine_Logger();
-    $encryption_helper = new Data_Machine_Encryption_Helper();
-    $action_scheduler = new Data_Machine_Action_Scheduler($logger);
-    $memory_guard = new Data_Machine_Memory_Guard($logger);
+    $logger = new Logger();
+    $encryption_helper = new EncryptionHelper();
+    $action_scheduler = new ActionScheduler($logger);
+    $memory_guard = new MemoryGuard($logger);
 
     // Register API/Auth admin_post handlers
     if (is_admin()) {
-        require_once DATA_MACHINE_PATH . 'admin/oauth/class-dm-api-auth-page.php';
-        new Data_Machine_Api_Auth_Page($logger);
+        new ApiAuthPage($logger);
     }
 
     // Hook the logger's display method to admin notices
@@ -91,67 +69,92 @@ function run_data_machine() {
     }
 
     // Database classes
-    $db_projects = new Data_Machine_Database_Projects();
-    $db_modules = new Data_Machine_Database_Modules($db_projects, $logger);
-    $db_jobs = new Data_Machine_Database_Jobs($db_projects, $logger);
-    $db_processed_items = new Data_Machine_Database_Processed_Items($logger);
-    $db_remote_locations = new Data_Machine_Database_Remote_Locations();
+    $db_projects = new DatabaseProjects();
+    $db_modules = new DatabaseModules($db_projects, $logger);
+    $db_jobs = new DatabaseJobs($db_projects, $logger);
+    $db_processed_items = new DatabaseProcessedItems($logger);
+    $db_remote_locations = new DatabaseRemoteLocations();
 
     // Handler services
-    $handler_http_service = new Data_Machine_Handler_HTTP_Service($logger);
+    $handler_http_service = new HttpService($logger);
 
     // OAuth handlers
-    $oauth_twitter = new Data_Machine_OAuth_Twitter($logger); // Assumes constructor handles missing credentials gracefully or fetches globally if needed
-    $oauth_reddit = new Data_Machine_OAuth_Reddit($logger);   // Assumes constructor handles missing credentials gracefully or fetches globally if needed
+    $oauth_twitter = new OAuthTwitter($logger); // Assumes constructor handles missing credentials gracefully or fetches globally if needed
+    $oauth_reddit = new OAuthReddit($logger);   // Assumes constructor handles missing credentials gracefully or fetches globally if needed
 
     // Get Threads app credentials from options
-    $threads_app_credentials = get_option('dm_threads_app_credentials', []);
-    $threads_client_id = $threads_app_credentials['client_id'] ?? '';
-    $threads_client_secret = $threads_app_credentials['client_secret'] ?? '';
-    $oauth_threads = new Data_Machine_OAuth_Threads($threads_client_id, $threads_client_secret, $logger);
+    $threads_client_id = get_option('threads_app_id', '');
+    $threads_client_secret = get_option('threads_app_secret', '');
+    $oauth_threads = new OAuthThreads($threads_client_id, $threads_client_secret, $logger);
 
     // Get Facebook app credentials from options
-    $facebook_app_credentials = get_option('dm_facebook_app_credentials', []);
-    $facebook_client_id = $facebook_app_credentials['client_id'] ?? '';
-    $facebook_client_secret = $facebook_app_credentials['client_secret'] ?? '';
-    $oauth_facebook = new Data_Machine_OAuth_Facebook($facebook_client_id, $facebook_client_secret, $logger);
+    $facebook_client_id = get_option('facebook_app_id', '');
+    $facebook_client_secret = get_option('facebook_app_secret', '');
+    $oauth_facebook = new OAuthFacebook($facebook_client_id, $facebook_client_secret, $logger);
 
     // Centralized prompt builder
-    $prompt_builder = new Data_Machine_Prompt_Builder($db_projects);
+    $prompt_builder = new PromptBuilder($db_projects);
 
     // Handler registry
-    $handler_registry = new Data_Machine_Handler_Registry();
+    $handler_registry = new HandlerRegistry();
 
-    // Output handlers
-    $output_publish_local = new Data_Machine_Output_Publish_Local($db_processed_items);
-    $output_publish_remote = new Data_Machine_Output_Publish_Remote($db_remote_locations, $handler_http_service, $logger, $db_processed_items);
-    $output_data_export = new Data_Machine_Output_Data_Export();
-    $output_twitter = new Data_Machine_Output_Twitter($oauth_twitter, $logger);
-    // Add other output handlers as needed
-
-    // Input handlers
-    $input_files = new Data_Machine_Input_Files($db_modules, $db_projects, $db_processed_items, $logger);
-    $input_airdrop_rest_api = new Data_Machine_Input_Airdrop_Rest_Api($db_modules, $db_projects, $db_processed_items, $db_remote_locations, $handler_http_service, $logger);
-    $input_public_rest_api = new Data_Machine_Input_Public_Rest_Api($db_modules, $db_projects, $db_processed_items, $handler_http_service, $logger);
-    $input_reddit = new Data_Machine_Input_Reddit($db_modules, $db_projects, $db_processed_items, $oauth_reddit, $handler_http_service, $logger);
-    $input_rss = new Data_Machine_Input_Rss($db_modules, $db_projects, $db_processed_items, $handler_http_service, $logger);
-    // Add other input handlers as needed
+    // Create minimal handler instances for main plugin constructor
+    // (These are legacy dependencies - actual handlers are created via factory)
+    $output_publish_local = null; // Will be created via factory when needed
+    $output_publish_remote = null; // Will be created via factory when needed
+    $output_data_export = new DataExport(); // No dependencies needed
+    
+    // Note: $input_files will be created after processed_items_manager is available
 
     // API services
-    $openai_api = new Data_Machine_API_OpenAI();
-    $factcheck_api = new Data_Machine_API_FactCheck($openai_api);
-    $finalize_api = new Data_Machine_API_Finalize($openai_api);
+    $openai_api = new OpenAi();
+    $factcheck_api = new FactCheck($openai_api);
+    $finalize_api = new Finalize($openai_api);
 
     // Process data
-    $process_data = new Data_Machine_process_data($openai_api);
+    $process_data = new ProcessData($openai_api);
 
 
+
+    // Handler factory will be created after processed items manager
+
+    // Remote location service
+    $remote_location_service = new RemoteLocationService($db_remote_locations);
+
+    // Settings fields will be created after handler factory
+
+    // Remote locations sync service
+    $sync_remote_locations = new SyncRemoteLocations($db_remote_locations, $logger);
+
+    // Remote locations form handler
+    $remote_locations_form_handler = new RemoteLocationsFormHandler($db_remote_locations, $logger, $sync_remote_locations);
+
+    // Admin page will be created after dependencies are available
+
+    // Register settings - Handled in Data_Machine class
+
+    // Module handler will be created after dependencies are available
+
+    // Public API AJAX handler
+
+    // Job worker, orchestrator, job executor, scheduler
+    $job_status_manager = new JobStatusManager($db_jobs, $db_projects, $logger);
+    
+    // Orchestrator will be created after dependencies are available
+    $job_creator = new JobCreator($db_jobs, $db_modules, $db_projects, $action_scheduler, $logger);
+    $scheduler = new Scheduler($job_creator, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
+    
+    // Processed items manager
+    $processed_items_manager = new ProcessedItemsManager($db_processed_items, $logger);
+
+    // Create legacy Files handler with correct dependency
+    $input_files = new InputFiles($db_modules, $db_projects, $processed_items_manager, $logger);
 
     // Handler factory (replace with DI version if available)
-    $handler_factory = new Dependency_Injection_Handler_Factory(
+    $handler_factory = new HandlerFactory(
         $handler_registry,
         $logger,
-        $db_processed_items,
+        $processed_items_manager,
         $encryption_helper,
         $oauth_twitter,
         $oauth_reddit,
@@ -163,20 +166,11 @@ function run_data_machine() {
         $handler_http_service
     );
 
-    // Remote location service
-    $remote_location_service = new Data_Machine_Remote_Location_Service($db_remote_locations);
-
     // Settings fields
-    $settings_fields = new Data_Machine_Settings_Fields($handler_factory, $handler_registry, $remote_location_service);
-
-    // Remote locations sync service
-    $sync_remote_locations = new Data_Machine_Sync_Remote_Locations($db_remote_locations, $logger);
-
-    // Remote locations form handler
-    $remote_locations_form_handler = new Data_Machine_Remote_Locations_Form_Handler($db_remote_locations, $logger, $sync_remote_locations);
+    $settings_fields = new SettingsFields($handler_factory, $handler_registry, $remote_location_service);
 
     // Admin page
-    $admin_page = new Data_Machine_Admin_Page(
+    $admin_page = new AdminPage(
         DATA_MACHINE_VERSION,
         $db_modules,
         $db_projects,
@@ -187,10 +181,8 @@ function run_data_machine() {
         $remote_locations_form_handler
     );
 
-    // Register settings - Handled in Data_Machine class
-
     // Module handler
-    $module_handler = new Data_Machine_Module_Handler(
+    $module_handler = new ModuleConfigHandler(
         $db_modules,
         $handler_registry,
         $handler_factory,
@@ -198,12 +190,8 @@ function run_data_machine() {
     );
     $module_handler->init_hooks();
 
-    // Public API AJAX handler
-
-    // Job worker, orchestrator, job executor, scheduler
-    $job_status_manager = new Data_Machine_Job_Status_Manager($db_jobs, $db_projects, $logger);
-    
-    $orchestrator = new Data_Machine_Processing_Orchestrator(
+    // Orchestrator
+    $orchestrator = new ProcessingOrchestrator(
         $process_data,
         $factcheck_api,
         $finalize_api,
@@ -215,8 +203,6 @@ function run_data_machine() {
         $job_status_manager,
         $db_modules
     );
-    $job_creator = new Data_Machine_Job_Creator($db_jobs, $db_modules, $db_projects, $action_scheduler, $logger);
-    $scheduler = new Data_Machine_Scheduler($job_creator, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
 
     // Global container for Action Scheduler access
     global $data_machine_container;
@@ -224,6 +210,7 @@ function run_data_machine() {
         'handler_factory' => $handler_factory,
         'db_jobs' => $db_jobs,
         'db_processed_items' => $db_processed_items,
+        'processed_items_manager' => $processed_items_manager,
         'job_status_manager' => $job_status_manager,
         'job_creator' => $job_creator,
         'action_scheduler' => $action_scheduler,
@@ -231,20 +218,19 @@ function run_data_machine() {
     );
 
     // Import/export handler
-    $import_export_handler = new Data_Machine_Import_Export($db_projects, $db_modules);
+    $import_export_handler = new ImportExport($db_projects, $db_modules);
 
     // AJAX handlers
-    $module_ajax_handler = new Data_Machine_Module_Config_Ajax($db_modules, $db_projects, $input_files, $db_remote_locations, $logger);
-    $dashboard_ajax_handler = new Data_Machine_Project_Management_Ajax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_creator, $logger);
-    $ajax_scheduler = new Data_Machine_Ajax_Scheduler($db_projects, $db_modules, $scheduler);
-    $ajax_auth = new Data_Machine_Ajax_Auth();
-    $remote_locations_ajax_handler = new Data_Machine_Module_Config_Remote_Locations_Ajax($db_remote_locations, $logger);
-    $file_upload_handler = new Data_Machine_File_Upload_Handler($db_modules, $db_projects, $logger);
+    $module_ajax_handler = new ModuleConfigAjax($db_modules, $db_projects, $input_files, $db_remote_locations, $logger);
+    $dashboard_ajax_handler = new ProjectManagementAjax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_creator, $logger);
+    $ajax_scheduler = new AjaxScheduler($db_projects, $db_modules, $scheduler);
+    $ajax_auth = new \DataMachine\Admin\OAuth\AjaxAuth();
+    $remote_locations_ajax_handler = new RemoteLocationsAjax($db_remote_locations, $logger);
+    $file_upload_handler = new FileUploadHandler($db_modules, $db_projects, $logger);
 
     // --- Instantiate Main Plugin ---
-    if (!class_exists('Data_Machine')) require_once DATA_MACHINE_PATH . 'includes/class-data-machine.php';
-    $register_settings = new Data_Machine_Register_Settings(DATA_MACHINE_VERSION);
-    $plugin = new Data_Machine(
+    $register_settings = new RegisterSettings(DATA_MACHINE_VERSION);
+    $plugin = new DataMachine(
             DATA_MACHINE_VERSION,
         $register_settings,
         $admin_page,
@@ -281,7 +267,7 @@ function run_data_machine() {
     add_action( 'dm_process_job_event', array( $orchestrator, 'execute_process_step' ), 10, 1 );
     add_action( 'dm_factcheck_job_event', array( $orchestrator, 'execute_factcheck_step' ), 10, 1 );
     add_action( 'dm_finalize_job_event', array( $orchestrator, 'execute_finalize_step' ), 10, 1 );
-    // Note: OUTPUT_JOB_HOOK is registered by Action Scheduler helper in init_hooks()
+    add_action( 'dm_output_job_event', array( $action_scheduler, 'handle_output_job' ), 10, 1 );
 
     $scheduler->init_hooks();
 }
@@ -300,26 +286,19 @@ add_filter( 'upload_mimes', 'dm_allow_json_upload' );
 
 // Activation and deactivation hooks (if needed)
 register_activation_hook( __FILE__, 'activate_data_machine' );
-register_deactivation_hook( __FILE__, array( 'Data_Machine', 'deactivate' ) );
+register_deactivation_hook( __FILE__, array( '\\DataMachine\\DataMachine', 'deactivate' ) );
 
 function activate_data_machine() {
 	// Action Scheduler is now bundled as a library - no dependency check needed
 
-	// Include database class files directly as autoloading might not be ready
-	require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php';
-	require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php';
-	require_once DATA_MACHINE_PATH . 'includes/database/class-database-jobs.php';
-	require_once DATA_MACHINE_PATH . 'includes/database/class-database-processed-items.php';
-	require_once DATA_MACHINE_PATH . 'includes/database/class-database-remote-locations.php'; // Add new class
-
 	// Create/Update tables using static methods where available
-	Data_Machine_Database_Projects::create_table();
-	Data_Machine_Database_Modules::create_table();
-	Data_Machine_Database_Jobs::create_table();
-	Data_Machine_Database_Remote_Locations::create_table(); // Add table creation call
+	\DataMachine\Database\Projects::create_table();
+	\DataMachine\Database\Modules::create_table();
+	\DataMachine\Database\Jobs::create_table();
+	\DataMachine\Database\RemoteLocations::create_table(); // Add table creation call
 
 	// Instantiate and call instance method for Processed_Items
-	$db_processed_items = new Data_Machine_Database_Processed_Items();
+	$db_processed_items = new \DataMachine\Database\ProcessedItems();
 	$db_processed_items->create_table();
 
 	// Set a transient flag for first-time admin notice or setup wizard (optional)

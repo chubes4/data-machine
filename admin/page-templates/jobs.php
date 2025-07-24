@@ -5,12 +5,14 @@
  * Handles both Jobs list and Logs management in a single tabbed interface.
  *
  * Expects:
- * - $logger (Data_Machine_Logger) - Logger instance for logs tab
+ * - $logger (Logger) - Logger instance for logs tab
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/admin/page-templates
  * @since      NEXT_VERSION
  */
+
+use DataMachine\Helpers\Logger;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -48,19 +50,14 @@ $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'jobs';
  * Render the Jobs tab content with list table.
  */
 function render_jobs_tab() {
-    // Ensure the List Table class is loaded
-    if (!class_exists('Data_Machine_Jobs_List_Table')) {
-        $list_table_file = dirname(__DIR__) . '/class-data-machine-jobs-list-table.php';
-        if (file_exists($list_table_file)) {
-            require_once $list_table_file;
-        } else {
-            echo '<div class="error"><p>' . __('Error: Jobs List Table class file not found.', 'data-machine') . '</p></div>';
-            return;
-        }
+    // Use the PSR-4 namespaced class
+    if (!class_exists('DataMachine\Admin\JobsListTable')) {
+        echo '<div class="error"><p>' . __('Error: Jobs List Table class not found. Please ensure the plugin is properly activated.', 'data-machine') . '</p></div>';
+        return;
     }
 
     // Create and prepare list table
-    $jobs_list_table = new Data_Machine_Jobs_List_Table();
+    $jobs_list_table = new DataMachine\Admin\JobsListTable();
     $jobs_list_table->prepare_items();
     ?>
     <form method="post">
@@ -72,7 +69,7 @@ function render_jobs_tab() {
 /**
  * Render the Logs tab content with configuration and viewer.
  *
- * @param Data_Machine_Logger $logger Logger instance
+ * @param Logger $logger Logger instance
  */
 function render_logs_tab($logger) {
     // Get logger data
@@ -80,7 +77,7 @@ function render_logs_tab($logger) {
     $log_file_path = $logger->get_log_file_path();
     $log_file_size = $logger->get_log_file_size();
     $recent_logs = $logger->get_recent_logs(50);
-    $available_levels = Data_Machine_Logger::get_available_log_levels();
+    $available_levels = Logger::get_available_log_levels();
     ?>
     <div class="dm-logs-container">
         <?php render_log_configuration($current_log_level, $available_levels); ?>

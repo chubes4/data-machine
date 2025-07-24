@@ -6,5 +6,5 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    '0c71ae71448d415672134aa776219b16' => $baseDir . '/includes/class-data-machine-constants.php',
+    '47da2106ff1e4cc4294f4a8a605227f2' => $baseDir . '/includes/Constants.php',
 );

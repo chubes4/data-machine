@@ -27,9 +27,6 @@ if (isset($_GET['openai_saved'])) {
 if (isset($_GET['bluesky_saved'])) {
     echo '<div class="notice notice-success is-dismissible"><p>Bluesky credentials saved.</p></div>';
 }
-if (isset($_GET['instagram_saved'])) {
-    echo '<div class="notice notice-success is-dismissible"><p>Instagram credentials saved.</p></div>';
-}
 if (isset($_GET['twitter_saved'])) {
     echo '<div class="notice notice-success is-dismissible"><p>Twitter credentials saved.</p></div>';
 }
@@ -39,8 +36,6 @@ if (isset($_GET['reddit_saved'])) {
 
 $twitter_account = get_user_meta(get_current_user_id(), 'data_machine_twitter_account', true);
 $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_account', true);
-$instagram_accounts = get_user_meta(get_current_user_id(), 'data_machine_instagram_accounts', true);
-if (!is_array($instagram_accounts)) $instagram_accounts = [];
 ?>
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -98,7 +93,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
             <tr>
                 <th scope="row"><label for="openai_api_key_user">OpenAI API Key</label></th>
                 <td>
-                    <input type="text" id="openai_api_key_user" name="openai_api_key_user" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'dm_openai_api_key', true)); ?>" class="regular-text" />
+                    <input type="text" id="openai_api_key_user" name="openai_api_key_user" value="<?php echo esc_attr(get_option('openai_api_key', '')); ?>" class="regular-text" />
                     <p class="description">Enter your API key from OpenAI for features like content generation or analysis.</p>
                 </td>
             </tr>
@@ -115,7 +110,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
             <tr>
                 <th scope="row"><label for="bluesky_username">Bluesky Handle</label></th>
                 <td>
-                    <input type="text" id="bluesky_username" name="bluesky_username" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'dm_bluesky_username', true)); ?>" class="regular-text" />
+                    <input type="text" id="bluesky_username" name="bluesky_username" value="<?php echo esc_attr(get_option('bluesky_username', '')); ?>" class="regular-text" />
                     <p class="description">Enter your Bluesky handle (e.g., yourname.bsky.social).</p>
                 </td>
             </tr>
@@ -130,34 +125,10 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
         <button type="submit" class="button button-primary">Save Bluesky Credentials</button>
     </form>
 
-    <!-- Instagram Credentials -->
-    <h3 style="margin-top: 20px;">Instagram Credentials</h3>
-    <?php $instagram_account = get_user_meta(get_current_user_id(), 'data_machine_instagram_account', true); if (!is_array($instagram_account)) $instagram_account = []; ?>
-    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-        <input type="hidden" name="action" value="dm_save_instagram_user_meta" />
-        <?php wp_nonce_field('dm_save_instagram_user_meta_action'); ?>
-        <table class="form-table">
-            <tr>
-                <th scope="row"><label for="instagram_oauth_client_id">Instagram App ID (Client ID)</label></th>
-                <td>
-                    <input type="text" id="instagram_oauth_client_id" name="instagram_oauth_client_id" value="<?php echo esc_attr($instagram_account['client_id'] ?? ''); ?>" class="regular-text" />
-                    <p class="description">Enter your Instagram App ID (Client ID) from the Facebook Developer Console.</p>
-                </td>
-            </tr>
-            <tr>
-                <th scope="row"><label for="instagram_oauth_client_secret">Instagram App Secret (Client Secret)</label></th>
-                <td>
-                    <input type="text" id="instagram_oauth_client_secret" name="instagram_oauth_client_secret" value="<?php echo esc_attr($instagram_account['client_secret'] ?? ''); ?>" class="regular-text" />
-                    <p class="description">Enter your Instagram App Secret (Client Secret) from the Facebook Developer Console.</p>
-                </td>
-            </tr>
-        </table>
-        <button type="submit" class="button button-primary">Save Instagram Credentials</button>
-    </form>
 
     <!-- Twitter Credentials (Manual Entry Only) -->
     <h3 style="margin-top: 20px;">Twitter Account</h3>
-    <?php $twitter_account = get_user_meta(get_current_user_id(), 'data_machine_twitter_account', true); if (!is_array($twitter_account)) $twitter_account = []; ?>
+    <?php $twitter_api_key = get_option('twitter_api_key', ''); $twitter_api_secret = get_option('twitter_api_secret', ''); ?>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="dm_save_twitter_user_meta" />
         <?php wp_nonce_field('dm_save_twitter_user_meta_action'); ?>
@@ -165,14 +136,14 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
             <tr>
                 <th scope="row"><label for="twitter_api_key">Twitter API Key (Consumer Key)</label></th>
                 <td>
-                    <input type="text" id="twitter_api_key" name="twitter_api_key" value="<?php echo esc_attr($twitter_account['api_key'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="twitter_api_key" name="twitter_api_key" value="<?php echo esc_attr($twitter_api_key); ?>" class="regular-text" />
                     <p class="description">Enter your Twitter App's API Key (sometimes called Consumer Key).</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row"><label for="twitter_api_secret">Twitter API Secret (Consumer Secret)</label></th>
                 <td>
-                    <input type="text" id="twitter_api_secret" name="twitter_api_secret" value="<?php echo esc_attr($twitter_account['api_secret'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="twitter_api_secret" name="twitter_api_secret" value="<?php echo esc_attr($twitter_api_secret); ?>" class="regular-text" />
                     <p class="description">Enter your Twitter App's API Secret (sometimes called Consumer Secret).</p>
                 </td>
             </tr>
@@ -182,7 +153,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
 
     <!-- Reddit Credentials (Manual Entry Only) -->
     <h3 style="margin-top: 20px;">Reddit Account</h3>
-    <?php $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_account', true); if (!is_array($reddit_account)) $reddit_account = []; ?>
+    <?php $reddit_client_id = get_option('reddit_oauth_client_id', ''); $reddit_client_secret = get_option('reddit_oauth_client_secret', ''); $reddit_developer_username = get_option('reddit_developer_username', ''); ?>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="dm_save_reddit_user_meta" />
         <?php wp_nonce_field('dm_save_reddit_user_meta_action'); ?>
@@ -190,21 +161,21 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
             <tr>
                 <th scope="row"><label for="reddit_oauth_client_id">Reddit Client ID</label></th>
                 <td>
-                    <input type="text" id="reddit_oauth_client_id" name="reddit_oauth_client_id" value="<?php echo esc_attr($reddit_account['client_id'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="reddit_oauth_client_id" name="reddit_oauth_client_id" value="<?php echo esc_attr($reddit_client_id); ?>" class="regular-text" />
                     <p class="description">Enter your Reddit App Client ID (found under your app details on Reddit's app preferences page - it's the string under the app name/type).</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row"><label for="reddit_oauth_client_secret">Reddit Client Secret</label></th>
                 <td>
-                    <input type="text" id="reddit_oauth_client_secret" name="reddit_oauth_client_secret" value="<?php echo esc_attr($reddit_account['client_secret'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="reddit_oauth_client_secret" name="reddit_oauth_client_secret" value="<?php echo esc_attr($reddit_client_secret); ?>" class="regular-text" />
                     <p class="description">Enter your Reddit App Client Secret.</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row"><label for="reddit_developer_username">Reddit Developer Username</label></th>
                 <td>
-                    <input type="text" id="reddit_developer_username" name="reddit_developer_username" value="<?php echo esc_attr($reddit_account['developer_username'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="reddit_developer_username" name="reddit_developer_username" value="<?php echo esc_attr($reddit_developer_username); ?>" class="regular-text" />
                     <p class="description">Enter the Reddit username (without u/) associated with the account that registered the app above. Required for the User-Agent string in API calls.</p>
                 </td>
             </tr>
@@ -214,7 +185,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
 
     <!-- Threads Credentials -->
     <h3 style="margin-top: 20px;">Threads Credentials (Required for Posting)</h3>
-    <?php $threads_account = get_user_meta(get_current_user_id(), 'data_machine_threads_account', true); if (!is_array($threads_account)) $threads_account = []; ?>
+    <?php $threads_app_id = get_option('threads_app_id', ''); $threads_app_secret = get_option('threads_app_secret', ''); ?>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="dm_save_threads_user_meta" />
         <?php wp_nonce_field('dm_save_threads_user_meta_action'); ?>
@@ -222,14 +193,14 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
             <tr>
                 <th scope="row"><label for="threads_app_id">Threads App ID</label></th>
                 <td>
-                    <input type="text" id="threads_app_id" name="threads_app_id" value="<?php echo esc_attr($threads_account['app_id'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="threads_app_id" name="threads_app_id" value="<?php echo esc_attr($threads_app_id); ?>" class="regular-text" />
                     <p class="description">Enter your Threads App ID (likely obtained via Facebook Developer Console).</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row"><label for="threads_app_secret">Threads App Secret</label></th>
                 <td>
-                    <input type="text" id="threads_app_secret" name="threads_app_secret" value="<?php echo esc_attr($threads_account['app_secret'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="threads_app_secret" name="threads_app_secret" value="<?php echo esc_attr($threads_app_secret); ?>" class="regular-text" />
                     <p class="description">Enter your Threads App Secret.</p>
                 </td>
             </tr>
@@ -239,7 +210,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
 
     <!-- Facebook Credentials -->
     <h3 style="margin-top: 20px;">Facebook Credentials (Required for Posting)</h3>
-    <?php $facebook_account = get_user_meta(get_current_user_id(), 'data_machine_facebook_account', true); if (!is_array($facebook_account)) $facebook_account = []; ?>
+    <?php $facebook_app_id = get_option('facebook_app_id', ''); $facebook_app_secret = get_option('facebook_app_secret', ''); ?>
     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
         <input type="hidden" name="action" value="dm_save_facebook_user_meta" />
         <?php wp_nonce_field('dm_save_facebook_user_meta_action'); ?>
@@ -247,14 +218,14 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
             <tr>
                 <th scope="row"><label for="facebook_app_id">Facebook App ID</label></th>
                 <td>
-                    <input type="text" id="facebook_app_id" name="facebook_app_id" value="<?php echo esc_attr($facebook_account['app_id'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="facebook_app_id" name="facebook_app_id" value="<?php echo esc_attr($facebook_app_id); ?>" class="regular-text" />
                     <p class="description">Enter your Facebook App ID from the Facebook Developer Console.</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row"><label for="facebook_app_secret">Facebook App Secret</label></th>
                 <td>
-                    <input type="text" id="facebook_app_secret" name="facebook_app_secret" value="<?php echo esc_attr($facebook_account['app_secret'] ?? ''); ?>" class="regular-text" />
+                    <input type="text" id="facebook_app_secret" name="facebook_app_secret" value="<?php echo esc_attr($facebook_app_secret); ?>" class="regular-text" />
                     <p class="description">Enter your Facebook App Secret.</p>
                 </td>
             </tr>
@@ -268,52 +239,13 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
 <hr>
 <h2>Authenticated Accounts</h2>
 
-<!-- Instagram Accounts Section -->
-<div class="accounts-section" id="instagram-accounts-section" style="margin-top: 20px;">
-    <h3>Instagram Accounts</h3>
-    <div id="instagram-accounts-list">
-        <?php
-        $ig_accounts = get_user_meta(get_current_user_id(), 'data_machine_instagram_accounts', true);
-        if (!is_array($ig_accounts)) $ig_accounts = [];
-        if (empty($ig_accounts)) {
-            echo '<p>No Instagram accounts authenticated yet.</p>';
-        } else {
-            echo '<ul class="dm-account-list">';
-            foreach ($ig_accounts as $index => $acct) { // Use index if needed for removal
-                 echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
-                 if (!empty($acct['profile_pic'])) {
-                     echo '<img src="' . esc_url($acct['profile_pic']) . '" style="width:32px;height:32px;border-radius:50%;vertical-align:middle;margin-right:8px;">';
-                 }
-                 echo '<strong>' . esc_html($acct['username']) . '</strong> (' . esc_html($acct['account_type'] ?? 'N/A') . ') ';
-                 if (!empty($acct['expires_at'])) {
-                     // Note: Instagram short-lived tokens expire quickly. Need long-lived token exchange & refresh logic.
-                     $ig_expiry_ts = strtotime($acct['expires_at']);
-                     $ig_time_left = $ig_expiry_ts - time();
-                     $ig_expires_display = ($ig_time_left > 0) ? human_time_diff(time(), $ig_expiry_ts) . ' left' : 'Expired';
-                     echo '<span style="color:' . ($ig_time_left > 0 ? '#888' : 'red') . ';">(Token expires: ' . esc_html(date('Y-m-d H:i', $ig_expiry_ts)) . ' - ' . $ig_expires_display . ')</span> ';
-                 }
-                 // Add nonce for security
-                 $remove_nonce_ig = wp_create_nonce('dm_remove_ig_account_' . $acct['id']);
-                 echo '<button class="button button-small button-danger instagram-remove-account-btn" data-account-id="' . esc_attr($acct['id']) . '" data-nonce="' . esc_attr($remove_nonce_ig) . '" style="float: right;">Remove</button>';
-                 echo '</li>';
-            }
-            echo '</ul>';
-        }
-        ?>
-    </div>
-     <button type="button" id="instagram-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_option('instagram_oauth_client_id')) || empty(get_option('instagram_oauth_client_secret'))); ?>>
-        Authenticate New Instagram Account
-    </button>
-    <span id="instagram-auth-feedback" style="margin-left: 10px;"></span>
-    <p class="description">Authenticate a new Instagram business/creator account. Requires saved Instagram App ID and Secret above.</p>
-</div>
 
 <!-- Twitter Accounts Section -->
 <div class="accounts-section" id="twitter-accounts-section" style="margin-top: 40px;">
     <h3>Twitter Account</h3>
     <div id="twitter-accounts-list">
         <?php
-        $twitter_account = Data_Machine_OAuth_Twitter::get_account_details(get_current_user_id());
+        $twitter_account = \DataMachine\Admin\OAuth\Twitter::get_account_details(get_current_user_id());
         if (empty($twitter_account)):
         ?>
             <p>No Twitter account authenticated yet.</p>
@@ -335,7 +267,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
     </div>
 
     <?php if (empty($twitter_account)): // Only show auth button if not authenticated ?>
-    <button type="button" id="twitter-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_option('twitter_api_key')) || empty(get_option('twitter_api_secret'))); ?>>
+    <button type="button" id="twitter-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty($twitter_api_key) || empty($twitter_api_secret)); ?>>
         Authenticate Twitter Account
     </button>
     <span id="twitter-auth-feedback" style="margin-left: 10px;"></span>
@@ -384,7 +316,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
         ?>
     </div>
     <?php if (empty($reddit_account['username'])): // Only show auth button if not already authenticated ?>
-    <button type="button" id="reddit-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_option('reddit_oauth_client_id')) || empty(get_option('reddit_oauth_client_secret'))); ?>>
+    <button type="button" id="reddit-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty($reddit_client_id) || empty($reddit_client_secret)); ?>>
         Authenticate Reddit Account
     </button>
      <span id="reddit-auth-feedback" style="margin-left: 10px;"></span>
@@ -418,7 +350,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
         ?>
     </div>
     <?php if (empty($threads_auth_account['username'])): // Only show auth button if not already authenticated ?>
-    <button type="button" id="threads-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_user_meta(get_current_user_id(), 'data_machine_threads_account', true)['app_id']) || empty(get_user_meta(get_current_user_id(), 'data_machine_threads_account', true)['app_secret'])); ?>>
+    <button type="button" id="threads-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty($threads_app_id) || empty($threads_app_secret)); ?>>
         Authenticate Threads Account
     </button>
      <span id="threads-auth-feedback" style="margin-left: 10px;"></span>
@@ -459,7 +391,7 @@ if (!is_array($instagram_accounts)) $instagram_accounts = [];
     <?php // Check using user_id
     if (empty($facebook_auth_account['user_id'])):
     ?>
-    <button type="button" id="facebook-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty(get_user_meta(get_current_user_id(), 'data_machine_facebook_account', true)['app_id']) || empty(get_user_meta(get_current_user_id(), 'data_machine_facebook_account', true)['app_secret'])); ?>>
+    <button type="button" id="facebook-authenticate-btn" class="button button-primary" style="margin-top: 10px;" <?php disabled(empty($facebook_app_id) || empty($facebook_app_secret)); ?>>
         Authenticate Facebook Account/Page
     </button>
      <span id="facebook-auth-feedback" style="margin-left: 10px;"></span>

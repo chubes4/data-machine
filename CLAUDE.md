@@ -46,10 +46,22 @@ window.dmDebugMode = true
 **5-Step Async Pipeline**: Input Collection → AI Processing → Fact Check → Finalize → Output Publishing
 
 **Key Patterns**:
-- **Manual DI**: Custom dependency injection in `data-machine.php` (lines 208+)
+- **PSR-4 Namespacing**: Modern namespace structure with `DataMachine\` root namespace
+- **Manual DI**: Custom dependency injection in `data-machine.php` (lines 270+)
 - **Handler Registry**: Dynamic filesystem scanning discovers handlers by naming convention
-- **Unified Job Creation**: All jobs flow through `Data_Machine_Job_Creator` class
+- **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator` class
 - **Action Scheduler**: Background processing with 2 max concurrent jobs
+
+**Namespace Structure**:
+```
+DataMachine\
+├── Admin\{Projects,ModuleConfig,RemoteLocations,OAuth}\
+├── Database\{Modules,Projects,Jobs,ProcessedItems,RemoteLocations}\
+├── Engine\{JobCreator,ProcessingOrchestrator,JobStatusManager}\
+├── Handlers\{HandlerFactory,HandlerRegistry,Input\*,Output\*}\
+├── Helpers\{Logger,ActionScheduler,HttpService,Encryption}\
+└── Api\{OpenAI integration classes}\
+```
 
 ## Critical File Locations
 
@@ -72,7 +84,7 @@ includes/
 │   ├── class-job-status-manager.php    # Centralized status updates
 │   └── filters/           # AI utilities (prompt builder, parser, etc.)
 ├── handlers/              # Input/Output handlers
-│   ├── HandlerFactory.php              # Hard-coded switch statement (lines 115-166)
+│   ├── HandlerFactory.php              # Hard-coded switch statement (lines 115-141)
 │   ├── class-handler-registry.php      # Filesystem scanning discovery
 │   ├── input/class-data-machine-base-input-handler.php  # Shared input logic
 │   └── input/output/      # Handler implementations
@@ -84,14 +96,20 @@ includes/
 ## Handler Development
 
 **Adding New Handlers**:
-1. Create class extending `Data_Machine_Base_Input_Handler` or `Data_Machine_Base_Output_Handler`
+1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler` or `DataMachine\Handlers\Output\BaseOutputHandler`
 2. Implement required methods: `get_input_data()` or `handle_output()`
-3. Add case to `HandlerFactory.php` switch statement (lines 113-164)
-4. Update bootstrap dependencies in `data-machine.php` if needed
+3. **Critical**: Add case to `HandlerFactory.php` switch statement (lines 115-141)
+4. Add proper `use` statements for all dependencies
+5. Update bootstrap dependencies in `data-machine.php` if needed
 
 **Handler Pattern**:
 ```php
-class Data_Machine_Input_Example extends Data_Machine_Base_Input_Handler {
+namespace DataMachine\Handlers\Input;
+
+use DataMachine\Database\{Modules, Projects, ProcessedItems};
+use DataMachine\Helpers\Logger;
+
+class ExampleHandler extends BaseInputHandler {
     public function get_input_data(object $module, array $source_config, int $user_id): array {
         // Use $this->http_service for API calls
         // Use $this->filter_processed_items() for deduplication
@@ -122,7 +140,7 @@ $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_dat
 
 ## Common Issues
 
-**Handler Factory**: Must add explicit case to switch statement for new handlers (lines 115-166)
+**Handler Factory**: Must add explicit case to switch statement for new handlers (lines 115-141)
 **Job Failures**: Check Action Scheduler status, jobs fail immediately with descriptive errors
 **Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
 **Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths
@@ -130,5 +148,50 @@ $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_dat
 
 ## Dependencies
 
-- PHP 8.0+, WordPress tables (`$wpdb`), Action Scheduler, Composer autoloading
-- Key packages: monolog, parsedown, twitteroauth, action-scheduler
+- PHP 7.4+, WordPress 5.0+, MySQL 5.6+
+- Composer packages: monolog, parsedown, twitteroauth, action-scheduler
+- OpenAI API key required for AI processing steps
+
+## Storage Architecture
+
+**Configuration Storage**: All app-level credentials (API keys, Bluesky credentials) use global WordPress options
+- OpenAI: `openai_api_key`
+- Bluesky: `bluesky_username`, `bluesky_app_password`
+- Twitter/Facebook/Threads: OAuth tokens stored per-user in user meta
+
+**Database Tables**: Custom `wp_dm_*` tables managed without migrations
+- Recreated on plugin activation/deactivation cycle
+- `wp_dm_jobs` stores step data for async pipeline (no 8000 char limit like Action Scheduler)
+- Encrypted passwords for remote locations using `EncryptionHelper`
+
+## Critical Integration Points
+
+**Action Scheduler Hooks**: Background processing limited to 2 concurrent jobs
+```php
+'dm_input_job_event', 'dm_process_job_event', 'dm_factcheck_job_event', 
+'dm_finalize_job_event', 'dm_output_job_event'
+```
+
+**Remote Locations**: Enhanced with system access for automated jobs
+```php
+$location = $this->db_locations->get_location($location_id, null, true, true); // System access
+```
+
+**PSR-4 Type Safety**: All constructor parameters use proper namespaced types
+- Always add `use` statements for dependencies  
+- Namespace declaration must come before `ABSPATH` check
+- Missing imports cause fatal "Class not found" errors
+- **Naming Conventions**: PascalCase for classes/files (PSR-4), snake_case for slugs/identifiers/database (WordPress standard)
+
+**Bootstrap Container**: Access dependencies via `global $data_machine_container` in hooks
+
+## File Organization & PSR-4 Migration
+
+The codebase has been fully migrated to PSR-4 namespacing with PascalCase filenames:
+
+**New Structure**:
+- Old: `class-data-machine-*.php` files → New: PascalCase `*.php` files
+- Classes use full namespaces: `DataMachine\Database\Jobs` instead of `Data_Machine_Database_Jobs`
+- File paths match namespace structure: `includes/database/Jobs.php` for `DataMachine\Database\Jobs`
+
+**Current State**: All classes use PSR-4 autoloading via Composer with proper namespace declarations

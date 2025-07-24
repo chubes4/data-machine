@@ -10,7 +10,16 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-// Delete plugin options
+// Delete global plugin options (standardized storage)
+delete_option( 'openai_api_key' );
+delete_option( 'bluesky_username' );
+delete_option( 'bluesky_app_password' );
+delete_option( 'twitter_api_key' );
+delete_option( 'reddit_api_key' );
+delete_option( 'threads_app_credentials' );
+delete_option( 'facebook_app_credentials' );
+
+// Delete legacy options from old storage system
 delete_option( 'dm_openai_api_key' );
 delete_option( 'dm_openai_user_meta' );
 delete_option( 'dm_bluesky_user_meta' );
@@ -18,8 +27,6 @@ delete_option( 'dm_twitter_user_meta' );
 delete_option( 'dm_reddit_user_meta' );
 delete_option( 'dm_threads_user_meta' );
 delete_option( 'dm_facebook_user_meta' );
-delete_option( 'dm_threads_app_credentials' );
-delete_option( 'dm_facebook_app_credentials' );
 
 // Delete user meta for all users
 global $wpdb;

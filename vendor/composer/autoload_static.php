@@ -7,7 +7,7 @@ namespace Composer\Autoload;
 class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
 {
     public static $files = array (
-        '0c71ae71448d415672134aa776219b16' => __DIR__ . '/../..' . '/includes/class-data-machine-constants.php',
+        '47da2106ff1e4cc4294f4a8a605227f2' => __DIR__ . '/../..' . '/includes/Constants.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -18,6 +18,11 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         'M' => 
         array (
             'Monolog\\' => 8,
+        ),
+        'D' => 
+        array (
+            'DataMachine\\Admin\\' => 18,
+            'DataMachine\\' => 12,
         ),
         'C' => 
         array (
@@ -37,6 +42,14 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         'Monolog\\' => 
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
+        ),
+        'DataMachine\\Admin\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/admin',
+        ),
+        'DataMachine\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/includes',
         ),
         'Composer\\CaBundle\\' => 
         array (
@@ -60,67 +73,6 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Data_Machine' => __DIR__ . '/../..' . '/includes/class-data-machine.php',
-        'Data_Machine_AI_Response_Parser' => __DIR__ . '/../..' . '/includes/engine/filters/class-ai-response-parser.php',
-        'Data_Machine_API_FactCheck' => __DIR__ . '/../..' . '/includes/api/class-data-machine-api-factcheck.php',
-        'Data_Machine_API_Finalize' => __DIR__ . '/../..' . '/includes/api/class-data-machine-api-finalize.php',
-        'Data_Machine_API_OpenAI' => __DIR__ . '/../..' . '/includes/api/class-data-machine-api-openai.php',
-        'Data_Machine_Action_Scheduler' => __DIR__ . '/../..' . '/includes/helpers/class-data-machine-action-scheduler.php',
-        'Data_Machine_Admin_Menu_Assets' => __DIR__ . '/../..' . '/admin/class-data-machine-admin-menu-assets.php',
-        'Data_Machine_Admin_Page' => __DIR__ . '/../..' . '/admin/class-data-machine-admin-page.php',
-        'Data_Machine_Ajax_Auth' => __DIR__ . '/../..' . '/admin/oauth/class-data-machine-ajax-auth.php',
-        'Data_Machine_Ajax_Scheduler' => __DIR__ . '/../..' . '/admin/projects/class-data-machine-ajax-scheduler.php',
-        'Data_Machine_Api_Auth_Page' => __DIR__ . '/../..' . '/admin/oauth/class-dm-api-auth-page.php',
-        'Data_Machine_Base_Input_Handler' => __DIR__ . '/../..' . '/includes/handlers/input/trait-data-machine-base-input-handler.php',
-        'Data_Machine_Base_Output_Handler' => __DIR__ . '/../..' . '/includes/handlers/output/trait-data-machine-base-output-handler.php',
-        'Data_Machine_Constants' => __DIR__ . '/../..' . '/includes/class-data-machine-constants.php',
-        'Data_Machine_Database_Jobs' => __DIR__ . '/../..' . '/includes/database/class-database-jobs.php',
-        'Data_Machine_Database_Modules' => __DIR__ . '/../..' . '/includes/database/class-database-modules.php',
-        'Data_Machine_Database_Processed_Items' => __DIR__ . '/../..' . '/includes/database/class-database-processed-items.php',
-        'Data_Machine_Database_Projects' => __DIR__ . '/../..' . '/includes/database/class-database-projects.php',
-        'Data_Machine_Database_Remote_Locations' => __DIR__ . '/../..' . '/includes/database/class-database-remote-locations.php',
-        'Data_Machine_Encryption_Helper' => __DIR__ . '/../..' . '/includes/helpers/class-data-machine-encryption-helper.php',
-        'Data_Machine_Handler_Registry' => __DIR__ . '/../..' . '/includes/handlers/class-handler-registry.php',
-        'Data_Machine_Import_Export' => __DIR__ . '/../..' . '/admin/projects/class-data-machine-import-export.php',
-        'Data_Machine_Input_Airdrop_Rest_Api' => __DIR__ . '/../..' . '/includes/handlers/input/class-data-machine-input-airdrop_rest_api.php',
-        'Data_Machine_Input_Files' => __DIR__ . '/../..' . '/includes/handlers/input/class-data-machine-input-files.php',
-        'Data_Machine_Input_Public_Rest_Api' => __DIR__ . '/../..' . '/includes/handlers/input/class-data-machine-input-public_rest_api.php',
-        'Data_Machine_Input_Reddit' => __DIR__ . '/../..' . '/includes/handlers/input/class-data-machine-input-reddit.php',
-        'Data_Machine_Input_Rss' => __DIR__ . '/../..' . '/includes/handlers/input/class-data-machine-input-rss.php',
-        'Data_Machine_Job_Creator' => __DIR__ . '/../..' . '/includes/engine/class-job-creator.php',
-        'Data_Machine_Job_Filter' => __DIR__ . '/../..' . '/includes/engine/class-job-filter.php',
-        'Data_Machine_Job_Status_Manager' => __DIR__ . '/../..' . '/includes/engine/class-job-status-manager.php',
-        'Data_Machine_Jobs_List_Table' => __DIR__ . '/../..' . '/admin/class-data-machine-jobs-list-table.php',
-        'Data_Machine_Logger' => __DIR__ . '/../..' . '/includes/helpers/class-data-machine-logger.php',
-        'Data_Machine_Markdown_Converter' => __DIR__ . '/../..' . '/includes/engine/filters/class-markdown-converter.php',
-        'Data_Machine_Memory_Guard' => __DIR__ . '/../..' . '/includes/helpers/class-data-machine-memory-guard.php',
-        'Data_Machine_Module_Config_Ajax' => __DIR__ . '/../..' . '/admin/module-config/ajax/class-module-config-ajax.php',
-        'Data_Machine_Module_Config_Remote_Locations_Ajax' => __DIR__ . '/../..' . '/admin/module-config/ajax/module-config-remote-locations-ajax.php',
-        'Data_Machine_Module_Handler' => __DIR__ . '/../..' . '/admin/module-config/class-dm-module-config-handler.php',
-        'Data_Machine_OAuth_Facebook' => __DIR__ . '/../..' . '/admin/oauth/class-data-machine-oauth-facebook.php',
-        'Data_Machine_OAuth_Reddit' => __DIR__ . '/../..' . '/admin/oauth/class-data-machine-oauth-reddit.php',
-        'Data_Machine_OAuth_Threads' => __DIR__ . '/../..' . '/admin/oauth/class-data-machine-oauth-threads.php',
-        'Data_Machine_OAuth_Twitter' => __DIR__ . '/../..' . '/admin/oauth/class-data-machine-oauth-twitter.php',
-        'Data_Machine_Output_Bluesky' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-bluesky.php',
-        'Data_Machine_Output_Data_Export' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-data_export.php',
-        'Data_Machine_Output_Facebook' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-facebook.php',
-        'Data_Machine_Output_Publish_Local' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-publish_local.php',
-        'Data_Machine_Output_Publish_Remote' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-publish_remote.php',
-        'Data_Machine_Output_Threads' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-threads.php',
-        'Data_Machine_Output_Twitter' => __DIR__ . '/../..' . '/includes/handlers/output/class-data-machine-output-twitter.php',
-        'Data_Machine_Processing_Orchestrator' => __DIR__ . '/../..' . '/includes/engine/class-processing-orchestrator.php',
-        'Data_Machine_Project_Management_Ajax' => __DIR__ . '/../..' . '/admin/projects/class-project-management-ajax.php',
-        'Data_Machine_Prompt_Builder' => __DIR__ . '/../..' . '/includes/engine/filters/class-data-machine-prompt-builder.php',
-        'Data_Machine_Register_Settings' => __DIR__ . '/../..' . '/admin/module-config/RegisterSettings.php',
-        'Data_Machine_Remote_Location_Service' => __DIR__ . '/../..' . '/admin/remote-locations/RemoteLocationService.php',
-        'Data_Machine_Remote_Locations_Form_Handler' => __DIR__ . '/../..' . '/admin/remote-locations/class-data-machine-remote-locations-form-handler.php',
-        'Data_Machine_Run_Single_Module_Ajax' => __DIR__ . '/../..' . '/admin/module-config/ajax/run-single-module-ajax.php',
-        'Data_Machine_Scheduler' => __DIR__ . '/../..' . '/admin/projects/class-data-machine-scheduler.php',
-        'Data_Machine_Settings_Fields' => __DIR__ . '/../..' . '/admin/module-config/SettingsFields.php',
-        'Data_Machine_Sync_Remote_Locations' => __DIR__ . '/../..' . '/admin/remote-locations/class-sync-remote-locations.php',
-        'Data_Machine_process_data' => __DIR__ . '/../..' . '/includes/engine/class-process-data.php',
-        'Dependency_Injection_Handler_Factory' => __DIR__ . '/../..' . '/includes/handlers/HandlerFactory.php',
-        'Remote_Locations_List_Table' => __DIR__ . '/../..' . '/admin/remote-locations/class-remote-locations-list-table.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

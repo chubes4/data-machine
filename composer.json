@@ -7,12 +7,12 @@
         "woocommerce/action-scheduler": "^3.9"
     },
     "autoload": {
-        "classmap": [
-            "includes/",
-            "admin/"
-        ],
+        "psr-4": {
+            "DataMachine\\": "includes/",
+            "DataMachine\\Admin\\": "admin/"
+        },
         "files": [
-            "includes/class-data-machine-constants.php"
+            "includes/Constants.php"
         ]
     }
 }

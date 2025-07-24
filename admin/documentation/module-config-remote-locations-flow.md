@@ -13,7 +13,7 @@ The Remote Locations feature allows users to configure connections to external W
 
 ## Data Storage
 
-Remote location data is stored in the WordPress database table `wp_dm_remote_locations`. The structure is defined and managed by the `Data_Machine_Database_Remote_Locations` class (`includes/database/class-database-remote-locations.php`).
+Remote location data is stored in the WordPress database table `wp_dm_remote_locations`. The structure is defined and managed by the `DataMachine\Database\RemoteLocations` class (`includes/database/RemoteLocations.php`).
 
 **`wp_dm_remote_locations` Table Schema:**
 

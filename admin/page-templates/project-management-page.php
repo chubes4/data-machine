@@ -3,13 +3,9 @@
  * Template for the Project Management page.
  */
 
-// // Ensure the database classes are available (No longer needed here)
-// require_once plugin_dir_path( __FILE__ ) . '../includes/database/class-database-projects.php';
-// require_once plugin_dir_path( __FILE__ ) . '../includes/database/class-database-modules.php';
+use DataMachine\Constants;
 
-// // Instantiate the database classes (No longer needed here, provided by caller)
-// $db_projects = new Data_Machine_Database_Projects();
-// $db_modules = new Data_Machine_Database_Modules();
+// Database classes are provided by caller via dependency injection
 
 // Get current user ID
 $user_id = get_current_user_id();
@@ -64,7 +60,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                     // --- Schedule Display Logic ---
                     $project_interval = $project->schedule_interval ?? 'manual';
                     // Use constant label for project schedule
-                    $project_schedule_label = Data_Machine_Constants::get_cron_label($project_interval);
+                    $project_schedule_label = Constants::get_cron_label($project_interval);
                     if (!$project_schedule_label && $project_interval === 'manual') {
                         $project_schedule_label = 'Manual'; // Handle manual case explicitly if not in constants
                     }
@@ -78,7 +74,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                             // Show module schedule if it's NOT 'project_schedule'
                             if ( $module_interval !== 'project_schedule' ) {
                                 // Use constant label for module schedule
-                                $module_schedule_label = Data_Machine_Constants::get_cron_label($module_interval);
+                                $module_schedule_label = Constants::get_cron_label($module_interval);
                                 if (!$module_schedule_label && $module_interval === 'manual') {
                                     $module_schedule_label = 'Manual'; // Handle manual case explicitly if not in constants
                                 }
@@ -269,9 +265,9 @@ jQuery(document).ready(function($) {
                             <select id="dm-modal-schedule-interval" name="schedule_interval">
                                 <?php
                                 // Use the helper method to get only project-allowed intervals and labels
-                                $project_intervals = Data_Machine_Constants::get_project_cron_intervals();
+                                $project_intervals = Constants::get_project_cron_intervals();
                                 foreach ($project_intervals as $interval_slug) {
-                                    $label = Data_Machine_Constants::get_cron_label($interval_slug);
+                                    $label = Constants::get_cron_label($interval_slug);
                                     if ($label) { // Ensure label exists
                                         echo '<option value="' . esc_attr($interval_slug) . '">' . esc_html($label) . '</option>';
                                     }

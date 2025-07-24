@@ -1,0 +1,338 @@
+<?php
+/**
+ * Handles database operations for the Remote Locations feature.
+ *
+ * @package    Data_Machine
+ * @subpackage Data_Machine/includes/database
+ * @since      0.16.0 // Or current version
+ */
+
+namespace DataMachine\Database;
+
+use DataMachine\Helpers\{Logger, EncryptionHelper};
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Exit if accessed directly.
+}
+
+class RemoteLocations {
+
+    /**
+     * Constructor.
+     *
+     * No longer requires the Service Locator.
+     */
+    public function __construct() {
+        // No dependencies needed in constructor currently.
+    }
+
+    /**
+     * Creates or updates the database table.
+     */
+    public static function create_table() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+        
+        // dbDelta handles table creation and updates.
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE {$table_name} (
+            location_id bigint unsigned NOT NULL auto_increment,
+            user_id bigint unsigned NOT NULL,
+            location_name varchar(255) NOT NULL,
+            target_site_url varchar(255) NOT NULL,
+            target_username varchar(100) NOT NULL,
+            encrypted_password text NOT NULL,
+            synced_site_info longtext NULL,
+            enabled_post_types longtext NULL,
+            enabled_taxonomies longtext NULL,
+            last_sync_time datetime NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (location_id),
+            KEY idx_user_id (user_id),
+            KEY idx_user_location_name (user_id, location_name(191))
+        ) {$charset_collate};";
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
+    }
+
+    /**
+     * Adds a new remote location.
+     *
+     * @param int $user_id The ID of the user adding the location.
+     * @param array $data Location data: ['location_name', 'target_site_url', 'target_username', 'password'].
+     * @return int|false The new location ID on success, false on failure.
+     */
+    public function add_location(int $user_id, array $data) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+
+        if (empty($user_id) || empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username']) || !isset($data['password'])) {
+            return false; // Basic validation
+        }
+
+        // Use the Encryption Helper
+        $encrypted_password = EncryptionHelper::encrypt($data['password']);
+        if ($encrypted_password === false) {
+            			// Debug logging removed for production
+            return false;
+        }
+
+        $result = $wpdb->insert(
+            $table_name,
+            array(
+                'user_id' => $user_id,
+                'location_name' => sanitize_text_field($data['location_name']),
+                'target_site_url' => esc_url_raw(untrailingslashit($data['target_site_url'])),
+                'target_username' => sanitize_text_field($data['target_username']),
+                'encrypted_password' => $encrypted_password,
+                'created_at' => current_time('mysql', 1),
+                'updated_at' => current_time('mysql', 1),
+            ),
+            array('%d', '%s', '%s', '%s', '%s', '%s', '%s') // Data formats
+        );
+
+        if ($result === false) {
+            			// Debug logging removed for production
+            return false;
+        }
+
+        return $wpdb->insert_id;
+    }
+
+    /**
+     * Updates an existing remote location.
+     *
+     * @param int $location_id The ID of the location to update.
+     * @param int $user_id The ID of the user performing the update (for ownership check).
+     * @param array $data Data to update. Can include 'location_name', 'target_site_url', 'target_username', 'password'.
+     * @return bool True on success, false on failure or if permission denied.
+     */
+    public function update_location(int $location_id, int $user_id, array $data) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+
+        // Verify ownership first
+        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
+        if (!$owner_id || (int)$owner_id !== $user_id) {
+            return false; // Permission denied or location not found
+        }
+
+        $update_data = array();
+        $update_formats = array();
+
+        if (!empty($data['location_name'])) {
+            $update_data['location_name'] = sanitize_text_field($data['location_name']);
+            $update_formats[] = '%s';
+        }
+        if (!empty($data['target_site_url'])) {
+            $update_data['target_site_url'] = esc_url_raw(untrailingslashit($data['target_site_url']));
+            $update_formats[] = '%s';
+        }
+        if (!empty($data['target_username'])) {
+            $update_data['target_username'] = sanitize_text_field($data['target_username']);
+            $update_formats[] = '%s';
+        }
+        if (isset($data['password'])) { // Allow updating with an empty password if intended
+            // Use the Encryption Helper
+            $encrypted_password = EncryptionHelper::encrypt($data['password']);
+            if ($encrypted_password === false) {
+                 			// Debug logging removed for production
+                 return false;
+            }
+            $update_data['encrypted_password'] = $encrypted_password;
+            $update_formats[] = '%s';
+        }
+        // Add enabled post types if present in $data
+        if (isset($data['enabled_post_types'])) {
+            // Assume it's already JSON encoded by the handler
+            $update_data['enabled_post_types'] = $data['enabled_post_types'];
+            $update_formats[] = '%s';
+        }
+        // Add enabled taxonomies if present in $data
+        if (isset($data['enabled_taxonomies'])) {
+             // Assume it's already JSON encoded by the handler
+            $update_data['enabled_taxonomies'] = $data['enabled_taxonomies'];
+            $update_formats[] = '%s';
+        }
+
+        if (empty($update_data)) {
+            // Check if only password was potentially updated (as it doesn't require other fields)
+            // If only password was set, $update_data might still be empty here if other fields were blank.
+            // However, the logic above ensures password is added if set.
+            // This check remains valid: if no fields were provided for update, return false.
+            return false; // Nothing to update
+        }
+
+        // Add updated_at timestamp
+        $update_data['updated_at'] = current_time('mysql', 1);
+        $update_formats[] = '%s';
+
+        $result = $wpdb->update(
+            $table_name,
+            $update_data,
+            array('location_id' => $location_id, 'user_id' => $user_id), // WHERE clause
+            $update_formats, // Format of data being updated
+            array('%d', '%d') // Format of WHERE clause
+        );
+
+        // $wpdb->update returns number of rows affected or false on error.
+        return $result !== false;
+    }
+
+    /**
+     * Deletes a remote location.
+     *
+     * @param int $location_id The ID of the location to delete.
+     * @param int $user_id The ID of the user performing the deletion (for ownership check).
+     * @return bool True on success, false on failure or if permission denied.
+     */
+    public function delete_location(int $location_id, int $user_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+
+        // Optional: Verify ownership before deleting (good practice)
+        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
+        if (!$owner_id || (int)$owner_id !== $user_id) {
+            return false; // Permission denied or location not found
+        }
+
+        $result = $wpdb->delete(
+            $table_name,
+            array('location_id' => $location_id, 'user_id' => $user_id), // WHERE clause
+            array('%d', '%d') // Format of WHERE clause
+        );
+
+        // $wpdb->delete returns number of rows affected or false on error.
+        return $result !== false;
+    }
+
+    /**
+     * Retrieves a single remote location by ID.
+     *
+     * @param int $location_id The location ID.
+     * @param int|null $user_id The user ID for ownership check. If null, allows system access.
+     * @param bool $decrypt_password Whether to decrypt the password.
+     * @param bool $allow_system_access Whether to allow access without user verification.
+     * @return object|null Location object on success, null if not found or permission denied.
+     */
+    public function get_location(int $location_id, ?int $user_id, bool $decrypt_password = false, bool $allow_system_access = false): ?object {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+
+        if ($allow_system_access && $user_id === null) {
+            // System access - get location without user verification
+            $location = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table_name WHERE location_id = %d",
+                $location_id
+            ));
+        } else {
+            // Normal access - verify user ownership
+            $location = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $table_name WHERE location_id = %d AND user_id = %d",
+                $location_id,
+                $user_id
+            ));
+        }
+
+        if (!$location) {
+            return null;
+        }
+
+        if ($decrypt_password && isset($location->encrypted_password)) {
+            // Use the Encryption Helper
+            $location->password = EncryptionHelper::decrypt($location->encrypted_password);
+            if ($location->password === false) {
+                			// Debug logging removed for production
+                // Optionally handle decryption failure, e.g., set password to null or an error indicator
+                unset($location->password);
+            }
+        }
+
+        // Unset encrypted version if decrypted or not requested
+        unset($location->encrypted_password);
+
+        return $location;
+    }
+
+    /**
+     * Retrieves all remote locations for a specific user.
+     * Passwords are NOT included.
+     *
+     * @param int $user_id The user ID.
+     * @return array Array of location objects.
+     */
+    public function get_locations_for_user(int $user_id): array {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT location_id, user_id, location_name, target_site_url, target_username, last_sync_time, created_at, updated_at
+             FROM $table_name WHERE user_id = %d ORDER BY location_name ASC",
+            $user_id
+        ));
+
+        // Check if results is null (indicates DB error) or empty
+        if (is_null($results)) {
+            // Log the WPDB error
+            			// Debug logging removed for production
+            return []; // Return empty on error
+        }
+        if (empty($results)) {
+             			// Debug logging removed for production
+             return []; // Return empty if no locations found
+        }
+
+        // Return the results directly (array of objects by default)
+        return $results;
+    }
+
+    /**
+     * Retrieves all remote locations for the current user.
+     * Convenience method for admin interface.
+     *
+     * @return array Array of location objects.
+     */
+    public function get_locations_for_current_user(): array {
+        return $this->get_locations_for_user(get_current_user_id());
+    }
+
+    /**
+     * Updates the synced site info and last sync time for a location.
+     *
+     * @param int $location_id The location ID.
+     * @param int $user_id The user ID for ownership check.
+     * @param string|null $site_info_json JSON string of the site info, or null to clear.
+     * @return bool True on success, false on failure.
+     */
+    public function update_synced_info(int $location_id, int $user_id, ?string $site_info_json): bool {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'dm_remote_locations';
+
+        // Verify ownership first
+        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
+        if (!$owner_id || (int)$owner_id !== $user_id) {
+            return false; // Permission denied or location not found
+        }
+
+        $update_data = array(
+            'synced_site_info' => $site_info_json, // Store JSON as string
+            'last_sync_time' => $site_info_json !== null ? current_time('mysql') : null, // Update time only if info is set
+            'updated_at' => current_time('mysql', 1)
+        );
+        $update_formats = array('%s', '%s', '%s');
+
+        $result = $wpdb->update(
+            $table_name,
+            $update_data,
+            array('location_id' => $location_id, 'user_id' => $user_id), // WHERE clause
+            $update_formats,
+            array('%d', '%d') // Format of WHERE clause
+        );
+
+        return $result !== false;
+    }
+
+} // End class

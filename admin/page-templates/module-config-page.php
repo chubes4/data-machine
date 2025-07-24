@@ -3,9 +3,7 @@
 $user_id = get_current_user_id();
 
 // Get Projects
-// Removed: require_once DATA_MACHINE_PATH . 'includes/database/class-database-projects.php';
-// Removed: $db_projects = new Data_Machine_Database_Projects();
-// $db_projects is now passed from Data_Machine_Admin_Page::display_settings_page()
+// $db_projects is now passed from AdminPage::display_settings_page()
 $projects = $db_projects->get_projects_for_user($user_id);
 
 // Determine Current Project (using user meta, fallback to first project)
@@ -30,9 +28,7 @@ if (empty($current_project_id) && !empty($projects)) {
 $current_project_id = absint($current_project_id); // Ensure it's an integer
 
 // Get Modules for the Current Project
-// Removed: require_once DATA_MACHINE_PATH . 'includes/database/class-database-modules.php';
-// Removed: $db_modules = new Data_Machine_Database_Modules($locator);
-// $db_modules is now passed from Data_Machine_Admin_Page::display_settings_page()
+// $db_modules is now passed from AdminPage::display_settings_page()
 $modules = []; // Default to empty array
 if ($current_project_id > 0) {
     $modules = $db_modules->get_modules_for_project($current_project_id, $user_id);
@@ -103,11 +99,12 @@ $current_output_type = $current_module ? $current_module->output_type : 'data_ex
 
 <div class="wrap">
 <?php
-if (!isset($logger) || !is_object($logger)) {
-    if (class_exists('Data_Machine_Logger')) {
-        $logger = new Data_Machine_Logger();
-    }
+// Logger might not be available in template scope, so check and use global container if needed
+$logger = null;
+if (isset($GLOBALS['data_machine_container']) && $GLOBALS['data_machine_container']) {
+    $logger = $GLOBALS['data_machine_container']['logger'] ?? null;
 }
+
 if ($logger && method_exists($logger, 'get_pending_notices')) {
     $notices = $logger->get_pending_notices();
     foreach ($notices as $notice) {
