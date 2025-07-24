@@ -29,19 +29,18 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 // PSR-4 Autoloading - no manual includes needed
 use DataMachine\{DataMachine, Constants};
-use DataMachine\Admin\{AdminPage, AdminMenuAssets, JobsListTable};
+use DataMachine\Admin\{AdminPage, AdminMenuAssets};
 use DataMachine\Admin\OAuth\{Twitter as OAuthTwitter, Reddit as OAuthReddit, Threads as OAuthThreads, Facebook as OAuthFacebook, ApiAuthPage};
 use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUploadHandler, ProjectManagementAjax};
 use DataMachine\Admin\ModuleConfig\{RegisterSettings, SettingsFields, ModuleConfigHandler};
 use DataMachine\Admin\ModuleConfig\Ajax\{ModuleConfigAjax, RemoteLocationsAjax};
-use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, ListTable as RemoteLocationsListTable, SyncRemoteLocations};
+use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, SyncRemoteLocations};
 use DataMachine\Api\{OpenAi, FactCheck, Finalize};
 use DataMachine\Database\{Jobs as DatabaseJobs, Modules as DatabaseModules, Projects as DatabaseProjects, ProcessedItems as DatabaseProcessedItems, RemoteLocations as DatabaseRemoteLocations};
 use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, ProcessData, ProcessedItemsManager};
 use DataMachine\Engine\Filters\{AiResponseParser, PromptBuilder, MarkdownConverter};
 use DataMachine\Handlers\{HandlerFactory, HandlerRegistry, HttpService};
-use DataMachine\Handlers\Input\{BaseInputHandler, Files as InputFiles};
-use DataMachine\Handlers\Output\{BaseOutputHandler, PublishLocal, PublishRemote, DataExport};
+use DataMachine\Handlers\Input\Files as InputFiles;
 use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler};
 
 
@@ -95,6 +94,9 @@ function run_data_machine() {
     // Centralized prompt builder
     $prompt_builder = new PromptBuilder($db_projects);
 
+    // Register core handlers using the same hook system external plugins will use
+    add_filter('dm_register_handlers', 'data_machine_register_core_handlers');
+
     // Handler registry
     $handler_registry = new HandlerRegistry();
 
@@ -102,7 +104,6 @@ function run_data_machine() {
     // (These are legacy dependencies - actual handlers are created via factory)
     $output_publish_local = null; // Will be created via factory when needed
     $output_publish_remote = null; // Will be created via factory when needed
-    $output_data_export = new DataExport(); // No dependencies needed
     
     // Note: $input_files will be created after processed_items_manager is available
 
@@ -242,7 +243,6 @@ function run_data_machine() {
         $orchestrator,
         $output_publish_local,
         $output_publish_remote,
-        $output_data_export,
         $input_files,
         $oauth_reddit,
         $oauth_twitter,
@@ -274,6 +274,73 @@ function run_data_machine() {
 // Initialize after plugins_loaded to ensure Action Scheduler is available
 add_action('plugins_loaded', 'run_data_machine', 20);
 
+/**
+ * Register all core handlers using the same hook system external plugins will use.
+ * This "eats our own dog food" and validates the external API.
+ *
+ * @param array $handlers Existing handlers array
+ * @return array Updated handlers array with core handlers registered
+ */
+function data_machine_register_core_handlers($handlers) {
+    // Input Handlers - all using same API as external plugins
+    $handlers['input']['files'] = [
+        'class' => 'DataMachine\Handlers\Input\Files',
+        'label' => __('File Upload', 'data-machine')
+    ];
+    
+    $handlers['input']['rss'] = [
+        'class' => 'DataMachine\Handlers\Input\Rss',
+        'label' => __('RSS Feed', 'data-machine')
+    ];
+    
+    $handlers['input']['reddit'] = [
+        'class' => 'DataMachine\Handlers\Input\Reddit',
+        'label' => __('Reddit Posts', 'data-machine')
+    ];
+    
+    $handlers['input']['public_rest_api'] = [
+        'class' => 'DataMachine\Handlers\Input\PublicRestApi',
+        'label' => __('Public REST API', 'data-machine')
+    ];
+    
+    $handlers['input']['airdrop_rest_api'] = [
+        'class' => 'DataMachine\Handlers\Input\AirdropRestApi',
+        'label' => __('Airdrop REST API', 'data-machine')
+    ];
+
+    // Output Handlers - all using same API as external plugins
+    $handlers['output']['publish_local'] = [
+        'class' => 'DataMachine\Handlers\Output\PublishLocal',
+        'label' => __('WordPress Post', 'data-machine')
+    ];
+    
+    $handlers['output']['publish_remote'] = [
+        'class' => 'DataMachine\Handlers\Output\PublishRemote',
+        'label' => __('Remote WordPress', 'data-machine')
+    ];
+    
+    $handlers['output']['twitter'] = [
+        'class' => 'DataMachine\Handlers\Output\Twitter',
+        'label' => __('Twitter/X', 'data-machine')
+    ];
+    
+    $handlers['output']['facebook'] = [
+        'class' => 'DataMachine\Handlers\Output\Facebook',
+        'label' => __('Facebook', 'data-machine')
+    ];
+    
+    $handlers['output']['threads'] = [
+        'class' => 'DataMachine\Handlers\Output\Threads',
+        'label' => __('Threads', 'data-machine')
+    ];
+    
+    $handlers['output']['bluesky'] = [
+        'class' => 'DataMachine\Handlers\Output\Bluesky',
+        'label' => __('Bluesky', 'data-machine')
+    ];
+    
+    return $handlers;
+}
 
 /**
  * Allows JSON file uploads.

@@ -266,30 +266,5 @@ class Twitter {
         }
     }
 
-	/**
-	 * Static method to get an authenticated connection (Deprecated - Use instance method get_connection_for_user)
-	 *
-	 * @deprecated Use instance method ->get_connection_for_user() after getting the service from the locator.
-	 * @param int $user_id
-	 * @return TwitterOAuth|WP_Error
-	 */
-	public static function get_authenticated_connection($user_id) {
-        // TODO: Remove this method in a future release. Use get_connection_for_user instead.
-        $credentials = get_user_meta($user_id, 'data_machine_twitter_account', true);
-        if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
-            return new WP_Error('twitter_missing_credentials', __('Twitter credentials not found for this user. Please authenticate on the API Keys page.', 'data-machine'));
-        }
-        $consumer_key = get_option('twitter_api_key');
-        $consumer_secret = get_option('twitter_api_secret');
-        if (empty($consumer_key) || empty($consumer_secret)) {
-            return new WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
-        }
-        try {
-            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $credentials['access_token'], $credentials['access_token_secret']);
-            return $connection;
-        } catch (\Exception $e) {
-            return new WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'data-machine'));
-        }
-	}
 
 } 

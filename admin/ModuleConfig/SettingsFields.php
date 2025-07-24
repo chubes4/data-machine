@@ -42,12 +42,6 @@ class SettingsFields {
      */
     private $remote_location_service;
 
-    /**
-     * Database handler for remote locations.
-     * @var RemoteLocations|null
-     * @deprecated 0.16.0 Use $remote_location_service instead.
-     */
-    // private $db_locations = null; // Keep commented out or remove later
 
     /**
      * Constructor.
@@ -78,39 +72,13 @@ class SettingsFields {
      * @since 0.15.0
      */
     public function get_fields_for_handler(string $handler_type, string $handler_slug, array $current_config = []): array {
-        $fields = [];
-        // Construct the service key (e.g., 'input_files', 'output_publish_local')
-        $handler_key = $handler_type . '_' . str_replace('-', '_', $handler_slug);
-
-        try {
-            // Use the factory's create_handler method directly.
-            // It will throw an exception if the handler doesn't exist.
-            $handler_instance = $this->handler_factory->create_handler($handler_type, $handler_slug);
-
-            // Check if the instance has the get_settings_fields method
-            if (method_exists($handler_instance, 'get_settings_fields')) {
-                // Pass $current_config and the locator instance
-                // Note: We might need to adjust how the locator is passed if the factory doesn't expose it.
-                // For now, assume the handler's get_settings_fields signature might have changed
-                // or doesn't strictly need the locator anymore.
-                // Let's refine the argument passing based on the ReflectionMethod result.
-                $ref = new \ReflectionMethod($handler_instance, 'get_settings_fields');
-                $params = $ref->getParameters();
-                $args = [];
-                if (isset($params[0])) { // Check if it accepts config
-                    $args[] = $current_config;
-                }
-                // Call with appropriate arguments
-                $fields = $handler_instance->get_settings_fields(...$args);
-
-            } else {
-                // Log if method doesn't exist on the retrieved instance
-                			// Debug logging removed for production
-            }
-        } catch (\Exception $e) {
-            // Catch errors from create_handler (handler not found) or get_settings_fields
-            			// Debug logging removed for production
-            $fields = []; // Default to empty on error
+        // Use WordPress filter system to get handler settings fields
+        // This allows both core and external handlers to register their settings the same way
+        $fields = apply_filters('dm_handler_settings_fields', [], $handler_type, $handler_slug, $current_config);
+        
+        // If no fields returned from filter, try legacy method as fallback
+        if (empty($fields)) {
+            $fields = $this->get_legacy_handler_fields($handler_type, $handler_slug, $current_config);
         }
 
         // --- Populate Remote Locations dynamically for publish_remote using the service ---
@@ -163,5 +131,40 @@ class SettingsFields {
         return null;
     }
 
+    /**
+     * Legacy method to get handler fields via handler instantiation.
+     * Used as fallback during transition to hook-based system.
+     *
+     * @param string $handler_type 'input' or 'output'
+     * @param string $handler_slug Handler slug
+     * @param array $current_config Current configuration
+     * @return array Settings fields array
+     */
+    private function get_legacy_handler_fields(string $handler_type, string $handler_slug, array $current_config = []): array {
+        $fields = [];
+        
+        try {
+            // Use the factory's create_handler method directly
+            $handler_instance = $this->handler_factory->create_handler($handler_type, $handler_slug);
 
-} // End class Data_Machine_Settings_Fields
+            // Check if the instance has the get_settings_fields method
+            if (method_exists($handler_instance, 'get_settings_fields')) {
+                $ref = new \ReflectionMethod($handler_instance, 'get_settings_fields');
+                $params = $ref->getParameters();
+                $args = [];
+                if (isset($params[0])) { // Check if it accepts config
+                    $args[] = $current_config;
+                }
+                // Call with appropriate arguments
+                $fields = $handler_instance->get_settings_fields(...$args);
+            }
+        } catch (\Exception $e) {
+            // Default to empty on error
+            $fields = [];
+        }
+        
+        return $fields;
+    }
+
+
+} // End class \\DataMachine\\Admin\\ModuleConfig\\SettingsFields

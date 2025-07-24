@@ -176,10 +176,22 @@ class ModuleConfigAjax {
             wp_send_json_error( ['message' => __('Missing or invalid handler type or slug.', 'data-machine')], 400 );
         }
 
-        // Construct template path
-        $template_path = DATA_MACHINE_PATH . "admin/module-config/handler-templates/{$handler_type}/{$handler_slug}.php";
+        // Try hook-based template loading first, fall back to file system
+        $template_loaded = false;
+        $template_html = '';
+        
+        // Allow external handlers to provide templates via hooks
+        ob_start();
+        $template_loaded = apply_filters('dm_load_handler_template', false, $handler_type, $handler_slug, $current_config);
+        if (!$template_loaded) {
+            // Fall back to core template files
+            $template_path = DATA_MACHINE_PATH . "admin/ModuleConfig/handler-templates/{$handler_type}/{$handler_slug}.php";
+            if (file_exists($template_path)) {
+                $template_loaded = true;
+            }
+        }
 
-        if ( file_exists( $template_path ) ) {
+        if ($template_loaded) {
              // --- Initialize variables --- 
              $site_info                = null; 
              $saved_config             = null; 
@@ -318,8 +330,10 @@ class ModuleConfigAjax {
             $GLOBALS['dm_template_filtered_tag_options']       = $filtered_tag_options;
             $GLOBALS['dm_template_filtered_custom_taxonomies'] = $filtered_custom_taxonomies;
 
-            ob_start();
-            include $template_path;
+            // Template already loaded via hook or include core template
+            if (isset($template_path) && file_exists($template_path)) {
+                include $template_path;
+            }
             $template_html = ob_get_clean();
 
             // --- Clean up globals after include --- 

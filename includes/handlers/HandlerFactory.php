@@ -9,11 +9,10 @@
 
 namespace DataMachine\Handlers;
 
-use DataMachine\Handlers\Input\{Files, AirdropRestApi, PublicRestApi, Reddit, Rss};
-use DataMachine\Handlers\Output\{PublishRemote, Bluesky, Twitter, DataExport, PublishLocal, Threads, Facebook};
 use DataMachine\Admin\OAuth\{Twitter as OAuthTwitter, Reddit as OAuthReddit, Threads as OAuthThreads, Facebook as OAuthFacebook};
 use DataMachine\Database\{Modules, Projects, RemoteLocations};
 use DataMachine\Engine\ProcessedItemsManager;
+use DataMachine\Handlers\HttpService;
 use DataMachine\Helpers\{Logger, EncryptionHelper};
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -100,54 +99,27 @@ class HandlerFactory {
                 return new \WP_Error('handler_class_not_found', 'Handler class not found - check namespace and autoloader.', ['class' => $class_name]);
             }
 
-            // Instantiate based on the specific handler slug/class
-            switch ($handler_slug) {
-                // --- Input Handlers ---
-                case 'files':
-                    return new Files($this->db_modules, $this->db_projects, $this->processed_items_manager, $this->logger);
-                case 'airdrop_rest_api':
-                    return new AirdropRestApi($this->db_modules, $this->db_projects, $this->processed_items_manager, $this->db_remote_locations, $this->handler_http_service, $this->logger);
-                case 'public_rest_api':
-                    return new PublicRestApi($this->db_modules, $this->db_projects, $this->processed_items_manager, $this->handler_http_service, $this->logger);
-                case 'reddit':
-                    return new Reddit($this->db_modules, $this->db_projects, $this->processed_items_manager, $this->oauth_reddit, $this->handler_http_service, $this->logger);
-                case 'rss':
-                    return new Rss($this->db_modules, $this->db_projects, $this->processed_items_manager, $this->handler_http_service, $this->logger);
-
-                // --- Output Handlers ---
-                case 'publish_remote':
-                    return new PublishRemote($this->db_remote_locations, $this->handler_http_service, $this->logger);
-                case 'bluesky':
-                    return new Bluesky($this->encryption_helper, $this->handler_http_service, $this->logger);
-                case 'twitter':
-                    return new Twitter($this->oauth_twitter, $this->logger);
-                case 'data_export':
-                    return new DataExport(); // No dependencies
-                case 'publish_local':
-                     return new PublishLocal($this->logger);
-                case 'threads':
-                     return new Threads($this->handler_http_service, $this->logger);
-                case 'facebook':
-                     return new Facebook($this->handler_http_service, $this->logger);
-
-                // Default case for unhandled or new handlers
-                default:
-                    if ($this->logger) $this->logger->warning('Attempting to create handler with unknown slug using generic instantiation (may fail).', ['type' => $handler_type, 'slug' => $handler_slug, 'class' => $class_name]);
-                    // Attempt generic instantiation if possible, might fail if constructor needs args
-                    // This case should ideally not be hit if all handlers are mapped above.
-                    if (class_exists($class_name)) {
-                        // Check constructor reflection if needed, but for now, assume no args or log error
-                        $reflection = new ReflectionClass($class_name);
-                        if ($reflection->getConstructor() === null || $reflection->getConstructor()->getNumberOfRequiredParameters() === 0) {
-                            return new $class_name();
-                        } else {
-                             if ($this->logger) $this->logger->error('Cannot instantiate handler: Unknown slug with constructor requiring arguments.', ['type' => $handler_type, 'slug' => $handler_slug, 'class' => $class_name]);
-                             return new \WP_Error('unhandled_handler_with_args', 'Cannot instantiate handler: Unknown slug with constructor requiring arguments.', ['slug' => $handler_slug]);
-                        }
-                    } else {
-                        // Should have been caught earlier, but final check
-                        return new \WP_Error('handler_class_still_not_found', 'Handler class not found.', ['class' => $class_name]);
-                    }
+            // Dynamic instantiation using reflection-based dependency resolution
+            try {
+                if ($this->logger) $this->logger->debug('Creating handler via dynamic instantiation.', [
+                    'type' => $handler_type, 
+                    'slug' => $handler_slug, 
+                    'class' => $class_name
+                ]);
+                
+                return $this->instantiate_with_dependencies($class_name);
+                
+            } catch (\Exception $e) {
+                if ($this->logger) $this->logger->error('Failed to instantiate handler dynamically.', [
+                    'type' => $handler_type,
+                    'slug' => $handler_slug, 
+                    'class' => $class_name,
+                    'error' => $e->getMessage()
+                ]);
+                return new \WP_Error('handler_instantiation_failed', 
+                    'Failed to create handler: ' . $e->getMessage(), 
+                    ['class' => $class_name, 'slug' => $handler_slug]
+                );
             }
 
         } catch (\Exception $e) {
@@ -168,6 +140,109 @@ class HandlerFactory {
                  'error_trace' => $e->getTraceAsString() 
              ]);
              return new \WP_Error('handler_creation_error', 'A critical error occurred during handler creation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Instantiate a handler with automatically resolved dependencies.
+     *
+     * @param string $class_name Fully qualified class name
+     * @return object Handler instance
+     * @throws \Exception If required dependencies are missing
+     */
+    private function instantiate_with_dependencies(string $class_name): object {
+        $dependencies = $this->resolve_constructor_dependencies($class_name);
+        return new $class_name(...$dependencies);
+    }
+
+    /**
+     * Resolve constructor dependencies for a handler class using reflection.
+     *
+     * @param string $class_name Fully qualified class name
+     * @return array Array of resolved dependencies in constructor order
+     * @throws \Exception If required dependencies cannot be resolved
+     */
+    private function resolve_constructor_dependencies(string $class_name): array {
+        $reflection = new \ReflectionClass($class_name);
+        $constructor = $reflection->getConstructor();
+        
+        if (!$constructor) {
+            return [];
+        }
+        
+        $dependencies = [];
+        foreach ($constructor->getParameters() as $param) {
+            $type = $param->getType();
+            
+            if ($type && !$type->isBuiltin()) {
+                $type_name = $type->getName();
+                $dependency = $this->get_dependency_by_type($type_name);
+                
+                if ($dependency === null && !$param->isOptional()) {
+                    throw new \Exception("Required dependency {$type_name} not available for {$class_name}");
+                }
+                
+                $dependencies[] = $dependency;
+            } else {
+                // Handle built-in types or no type hint - use default value if available
+                if ($param->isDefaultValueAvailable()) {
+                    $dependencies[] = $param->getDefaultValue();
+                } else {
+                    $dependencies[] = null;
+                }
+            }
+        }
+        
+        return $dependencies;
+    }
+
+    /**
+     * Get dependency instance by type name.
+     *
+     * @param string $type_name Fully qualified class/interface name
+     * @return mixed|null Dependency instance or null if not available
+     */
+    private function get_dependency_by_type(string $type_name): mixed {
+        return match($type_name) {
+            'DataMachine\Database\Modules' => $this->db_modules,
+            'DataMachine\Database\Projects' => $this->db_projects,
+            'DataMachine\Database\RemoteLocations' => $this->db_remote_locations,
+            'DataMachine\Engine\ProcessedItemsManager' => $this->processed_items_manager,
+            'DataMachine\Helpers\Logger' => $this->logger,
+            'DataMachine\Helpers\EncryptionHelper' => $this->encryption_helper,
+            'DataMachine\Handlers\HttpService' => $this->handler_http_service,
+            'DataMachine\Admin\OAuth\Twitter' => $this->oauth_twitter,
+            'DataMachine\Admin\OAuth\Reddit' => $this->oauth_reddit,
+            'DataMachine\Admin\OAuth\Threads' => $this->oauth_threads,
+            'DataMachine\Admin\OAuth\Facebook' => $this->oauth_facebook,
+            default => null
+        };
+    }
+
+    /**
+     * Register an external handler for third-party plugin support.
+     *
+     * @param string $type Handler type ('input' or 'output')
+     * @param string $slug Handler slug
+     * @param string $class_name Fully qualified class name
+     */
+    public function register_external_handler(string $type, string $slug, string $class_name): void {
+        if ($type === 'input') {
+            // Note: This would require enhancing HandlerRegistry with registration methods
+            // For now, this is a placeholder for future extensibility
+            if ($this->logger) {
+                $this->logger->info('External input handler registration requested', [
+                    'slug' => $slug, 
+                    'class' => $class_name
+                ]);
+            }
+        } elseif ($type === 'output') {
+            if ($this->logger) {
+                $this->logger->info('External output handler registration requested', [
+                    'slug' => $slug, 
+                    'class' => $class_name
+                ]);
+            }
         }
     }
 

@@ -314,6 +314,28 @@ class ActionScheduler {
 			$source_type = $module_config['data_source_type'] ?? '';
 			$item_identifier = $input_metadata['item_identifier_to_log'] ?? null;
 
+			// FAIL FAST: If we can't track processed items, fail the job immediately
+			if ( !$module_id || !$source_type || !$item_identifier ) {
+				$this->logger?->error( 'Output Job Handler: Missing critical metadata for processed items tracking - failing job', array(
+					'job_id' => $job_id,
+					'module_id' => $module_id,
+					'source_type' => $source_type,
+					'item_identifier' => $item_identifier,
+					'input_metadata_keys' => array_keys( $input_metadata )
+				) );
+
+				// Mark job as failed
+				if ( isset( $data_machine_container['job_status_manager'] ) ) {
+					$job_status_manager = $data_machine_container['job_status_manager'];
+					$error_message = 'Missing critical metadata: ' . 
+						(!$module_id ? 'module_id ' : '') . 
+						(!$source_type ? 'source_type ' : '') . 
+						(!$item_identifier ? 'item_identifier ' : '');
+					$job_status_manager->complete( $job_id, 'failed', null, $error_message );
+				}
+				return;
+			}
+
 			if ( $module_id && $source_type && $item_identifier ) {
 				if ( $processed_items_manager->is_item_processed( $module_id, $source_type, $item_identifier ) ) {
 					$this->logger?->info( 'Output Job Handler: Item already processed, skipping to prevent duplicate', array(
@@ -413,7 +435,17 @@ class ActionScheduler {
 				$module_id = $module_config['module_id'] ?? 0;
 				$source_type = $module_config['data_source_type'] ?? '';
 				$item_identifier = $input_metadata['item_identifier_to_log'] ?? null;
-				$processed_items_manager->mark_item_processed( $module_id, $source_type, $item_identifier, $job_id );
+				
+				$marked_success = $processed_items_manager->mark_item_processed( $module_id, $source_type, $item_identifier, $job_id );
+				
+				if ( !$marked_success ) {
+					$this->logger?->warning( 'Output Job Handler: Failed to mark item as processed - may cause duplicates', array(
+						'job_id' => $job_id,
+						'module_id' => $module_id,
+						'source_type' => $source_type,
+						'item_identifier' => $item_identifier
+					) );
+				}
 			}
 
 			$this->logger?->info( 'Output Job Handler: Output processed successfully', array(

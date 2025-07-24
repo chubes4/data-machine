@@ -125,7 +125,6 @@ public function create_response_with_file($api_key, $file, $prompt) {
         return new WP_Error('mime_type_missing', 'Could not determine the MIME type for the provided file input.');
     }
 
-            // Debug logging removed for production
     // Initialize payload variable
     $payload = [];
     $pdf_size_threshold = 5 * 1024 * 1024; // 5MB threshold for switching to file upload
@@ -278,7 +277,6 @@ public function create_response_with_file($api_key, $file, $prompt) {
         }
     }
 
-    // Debug logging removed for production
 
     // Clean formatting: Remove potential backticks and "json" markers.
     $output_text = preg_replace('/^```json\s*/i', '', $output_text);
@@ -337,11 +335,9 @@ public function create_response_with_file($api_key, $file, $prompt) {
 			'timeout' => 300, // Increased timeout to 5 minutes for testing
 		];
 
-		// Debug logging removed for production
 
 		$response = wp_remote_post($endpoint, $args);
 
-		// Debug logging removed for production
 
 		$decoded = $this->parse_response($response);
 
@@ -355,7 +351,6 @@ public function create_response_with_file($api_key, $file, $prompt) {
              $output_text = $decoded['output_text'];
         }
 
-		// Debug logging removed for production
 
 		// Clean formatting (optional, but good practice)
 		$output_text = preg_replace('/^```json\s*/i', '', $output_text);

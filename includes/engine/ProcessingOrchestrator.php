@@ -163,6 +163,28 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
+			// Enhanced logging to track metadata flow
+			$metadata = $input_data_packet['metadata'] ?? [];
+			$item_identifier = $metadata['item_identifier_to_log'] ?? null;
+			$this->logger->info( 'Orchestrator: Input data received with metadata', [
+				'job_id' => $job_id,
+				'handler_type' => $data_source_type,
+				'metadata_keys' => array_keys( $metadata ),
+				'item_identifier_to_log' => $item_identifier,
+				'source_url' => $metadata['source_url'] ?? 'NOT_SET'
+			] );
+
+			// FAIL FAST: If input handler didn't provide critical metadata, fail immediately
+			if ( empty( $item_identifier ) ) {
+				$this->logger->error( 'Orchestrator: Input handler missing critical item_identifier_to_log - failing job', [
+					'job_id' => $job_id,
+					'handler_type' => $data_source_type,
+					'metadata_provided' => $metadata
+				] );
+				$this->job_status_manager->fail( $job_id, 'Input handler failed to provide item_identifier_to_log for processed items tracking' );
+				return false;
+			}
+
 			// Store input data and schedule next step
 			$json_data = wp_json_encode( $input_data_packet );
 			if ( $json_data === false ) {

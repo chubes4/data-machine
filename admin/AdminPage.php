@@ -68,7 +68,7 @@ class AdminPage {
 
     /**
      * Settings Fields service instance.
-     * @var Data_Machine_Settings_Fields
+     * @var \DataMachine\Admin\ModuleConfig\SettingsFields
      * @since NEXT_VERSION
      */
     private $settings_fields;

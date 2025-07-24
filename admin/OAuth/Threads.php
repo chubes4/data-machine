@@ -288,12 +288,32 @@ class Threads {
 
      /**
      * Removes the authenticated Threads account for the user.
+     * Attempts to revoke the token via the Graph API first.
      *
      * @param int $user_id WordPress User ID.
      * @return bool True on success, false otherwise.
      */
     public static function remove_account(int $user_id): bool {
-        // TODO: Optionally call a token revocation endpoint on the Threads API if available
+        // Try to get the stored token to attempt revocation
+        $token = self::get_access_token($user_id);
+
+        if ($token) {
+            // Attempt token revocation with Facebook Graph API (Threads uses Facebook infrastructure)
+            $url = self::GRAPH_API_URL . '/me/permissions';
+            $response = wp_remote_request($url, [
+                'method' => 'DELETE',
+                'body' => ['access_token' => $token],
+                'timeout' => 10,
+            ]);
+
+            // Log success or failure of revocation, but don't stop deletion
+            if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+                // Token revocation failed, but continue with local cleanup
+                error_log('Threads token revocation failed for user ' . $user_id);
+            }
+        }
+
+        // Always attempt to delete the local user meta regardless of revocation success
         return delete_user_meta($user_id, 'data_machine_threads_auth_account');
     }
 

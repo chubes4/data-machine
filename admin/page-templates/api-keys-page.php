@@ -331,19 +331,33 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
     <h3>Threads Account</h3>
     <div id="threads-accounts-list">
         <?php
-        // TODO: Implement logic to retrieve and display authenticated Threads account(s)
-        $threads_auth_account = get_user_meta(get_current_user_id(), 'data_machine_threads_auth_account', true); // Example meta key
-        if (empty($threads_auth_account) || !is_array($threads_auth_account) || empty($threads_auth_account['username'])) {
+        $threads_auth_account = get_user_meta(get_current_user_id(), 'data_machine_threads_auth_account', true);
+        if (empty($threads_auth_account) || !is_array($threads_auth_account) || empty($threads_auth_account['page_name'])) {
             echo '<p>No Threads account authenticated yet.</p>';
         } else {
              echo '<ul class="dm-account-list">';
              echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
-             // Display Threads username/ID
-             echo '<strong>' . esc_html($threads_auth_account['username'] ?? 'Unknown') . '</strong> '; // Placeholder
-             // TODO: Display token expiry if applicable
-             // Add nonce for security
-             $remove_nonce_threads = wp_create_nonce('dm_remove_threads_account_' . ($threads_auth_account['user_id'] ?? 'unknown')); // Use user_id if available
-             echo '<button class="button button-small button-danger threads-remove-account-btn" data-account-id="' . esc_attr($threads_auth_account['user_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_threads) . '" style="float: right;">Remove</button>';
+             
+             // Display Threads page name and ID
+             echo '<strong>' . esc_html($threads_auth_account['page_name'] ?? 'Unknown') . '</strong>';
+             if (!empty($threads_auth_account['page_id'])) {
+                 echo ' <span style="color: #666;">(ID: ' . esc_html($threads_auth_account['page_id']) . ')</span>';
+             }
+             
+             // Display token expiry if available
+             if (!empty($threads_auth_account['token_expires_at'])) {
+                 $expires_at = intval($threads_auth_account['token_expires_at']);
+                 $time_until_expiry = $expires_at - time();
+                 if ($time_until_expiry > 0) {
+                     echo '<br><small style="color: #666;">Token expires: ' . esc_html(human_time_diff($expires_at)) . '</small>';
+                 } else {
+                     echo '<br><small style="color: #d63638;">Token expired</small>';
+                 }
+             }
+             
+             // Add remove button with proper nonce
+             $remove_nonce_threads = wp_create_nonce('dm_remove_threads_account_' . get_current_user_id());
+             echo '<button class="button button-small button-danger threads-remove-account-btn" data-account-id="' . esc_attr($threads_auth_account['page_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_threads) . '" style="float: right;">Remove</button>';
              echo '</li>';
              echo '</ul>';
         }
@@ -365,23 +379,30 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
     <h3>Facebook Account</h3>
     <div id="facebook-accounts-list">
         <?php
-        // TODO: Implement logic to retrieve and display authenticated Facebook account(s)/page(s)
-        $facebook_auth_account = get_user_meta(get_current_user_id(), 'data_machine_facebook_auth_account', true); // Example meta key
-        // Check using user_id as the primary identifier for an established connection
+        $facebook_auth_account = get_user_meta(get_current_user_id(), 'data_machine_facebook_auth_account', true);
         if (empty($facebook_auth_account) || !is_array($facebook_auth_account) || empty($facebook_auth_account['user_id'])):
             echo '<p>No Facebook account/page authenticated yet.</p>';
         else:
              echo '<ul class="dm-account-list">';
              echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
-             // Display Facebook User Name and Page Name (Reverting to ?? operator)
-             echo '<strong>User:</strong> ' . esc_html($facebook_auth_account['user_name'] ?? 'Unknown User') . ' (ID: ' . esc_html($facebook_auth_account['user_id'] ?? 'N/A') . ')<br>';
-             echo '<strong>Page:</strong> ' . esc_html($facebook_auth_account['page_name'] ?? 'Unknown Page') . ' (ID: ' . esc_html($facebook_auth_account['page_id'] ?? 'N/A') . ') ';
              
-             // TODO: Display token expiry if applicable - Needs page token expiry check
+             // Display Facebook User Name and Page Name
+             echo '<strong>User:</strong> ' . esc_html($facebook_auth_account['user_name'] ?? 'Unknown User') . ' <span style="color: #666;">(ID: ' . esc_html($facebook_auth_account['user_id'] ?? 'N/A') . ')</span><br>';
+             echo '<strong>Page:</strong> ' . esc_html($facebook_auth_account['page_name'] ?? 'Unknown Page') . ' <span style="color: #666;">(ID: ' . esc_html($facebook_auth_account['page_id'] ?? 'N/A') . ')</span>';
+             
+             // Display token expiry if available
+             if (!empty($facebook_auth_account['token_expires_at'])) {
+                 $expires_at = intval($facebook_auth_account['token_expires_at']);
+                 $time_until_expiry = $expires_at - time();
+                 if ($time_until_expiry > 0) {
+                     echo '<br><small style="color: #666;">Token expires: ' . esc_html(human_time_diff($expires_at)) . '</small>';
+                 } else {
+                     echo '<br><small style="color: #d63638;">Token expired</small>';
+                 }
+             }
 
-             // Add nonce for security - Use the Facebook User ID for consistency with the AJAX handler
-             $remove_nonce_facebook = wp_create_nonce('dm_remove_facebook_account_' . ($facebook_auth_account['user_id'] ?? 'unknown'));
-             // Pass the actual Facebook User ID in data-account-id for clarity, though nonce relies on it too
+             // Add remove button with proper nonce
+             $remove_nonce_facebook = wp_create_nonce('dm_remove_facebook_account_' . get_current_user_id());
              echo '<button class="button button-small button-danger facebook-remove-account-btn" data-account-id="' . esc_attr($facebook_auth_account['user_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_facebook) . '" style="float: right;">Remove</button>';
              echo '</li>';
              echo '</ul>';

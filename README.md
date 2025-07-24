@@ -116,7 +116,7 @@ Monitor jobs:
 
 1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler`
 2. Implement required method: `get_input_data()`
-3. **Critical**: Add case to `HandlerFactory.php` switch statement (lines 104-151)
+3. **Automatic**: HandlerFactory resolves dependencies dynamically via reflection
 4. Add proper `use` statements for dependencies
 
 ```php
@@ -138,7 +138,7 @@ class CustomHandler extends BaseInputHandler {
 
 1. Create class extending `DataMachine\Handlers\Output\BaseOutputHandler`
 2. Implement required method: `handle_output()`
-3. Add case to `HandlerFactory.php` switch statement
+3. Dependencies resolved automatically via reflection
 4. Update dependencies in `data-machine.php` if needed
 
 ## Database Schema

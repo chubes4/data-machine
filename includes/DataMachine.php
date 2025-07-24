@@ -15,7 +15,7 @@ namespace DataMachine;
 use DataMachine\Admin\{AdminPage, AdminMenuAssets};
 use DataMachine\Admin\ModuleConfig\{RegisterSettings, ModuleConfigHandler};
 use DataMachine\Admin\RemoteLocations\FormHandler as RemoteLocationsFormHandler;
-use DataMachine\Database\{Modules, Projects};
+use DataMachine\Database\Modules;
 use DataMachine\Helpers\Logger;
 
 // PSR-4 autoloading handles class loading - no manual includes needed
@@ -47,7 +47,7 @@ class DataMachine {
     /**
      * Admin Page class instance.
      * @since    0.1.0
-     * @var      Data_Machine_Admin_Page    $admin_page    Admin Page class instance.
+     * @var      \DataMachine\Admin\AdminPage    $admin_page    Admin Page class instance.
      */
     public $admin_page;
 
@@ -61,21 +61,21 @@ class DataMachine {
 	/**
 	 * FactCheck API class instance.
 	 * @since    0.1.0
-	 * @var      Data_Machine_API_FactCheck    $factcheck_api    FactCheck API class instance.
+	 * @var      \DataMachine\Api\FactCheck    $factcheck_api    FactCheck API class instance.
 	 */
 	public $factcheck_api;
 
 	/**
 	 * Finalize API class instance.
 	 * @since    0.1.0
-	 * @var      Data_Machine_API_Finalize    $finalize_api    Finalize API class instance.
+	 * @var      \DataMachine\Api\Finalize    $finalize_api    Finalize API class instance.
 	 */
 	public $finalize_api;
 
 	/**
 	 * Process Data class instance.
 	 * @since    0.1.0
-	 * @var      Data_Machine_process_data    $process_data    Process Data class instance.
+	 * @var      \DataMachine\Engine\ProcessData    $process_data    Process Data class instance.
 	 */
 	public $process_data;
 
@@ -89,32 +89,26 @@ class DataMachine {
 	/**
 	 * Processing Orchestrator class instance.
 	 * @since    0.7.0
-	 * @var      Data_Machine_Processing_Orchestrator    $orchestrator    Orchestrator class instance.
+	 * @var      \DataMachine\Engine\ProcessingOrchestrator    $orchestrator    Orchestrator class instance.
 	 */
 	public $orchestrator; // Added property
 
 	/**
 	 * Output handler for local publishing.
-	 * @var Data_Machine_Output_Publish_Local
+	 * @var \DataMachine\Handlers\Output\PublishLocal
 	 */
 	public $output_publish_local;
 
 	/**
 	 * Output handler for remote publishing.
-	 * @var Data_Machine_Output_Publish_Remote
+	 * @var \DataMachine\Handlers\Output\PublishRemote
 	 */
 	public $output_publish_remote;
 
-	/**
-	 * Output handler for data export.
-	 * @var Data_Machine_Output_Data_Export
-	 * @since 0.7.0
-	 */
-	public $output_data_export;
 
 	/**
 	 * Input handler for file uploads.
-	 * @var Data_Machine_Input_Files
+	 * @var \DataMachine\Handlers\Input\Files
 	 */
 	public $input_files;
 
@@ -149,6 +143,12 @@ class DataMachine {
 	public $oauth_facebook;
 
 	/**
+	 * Reddit OAuth handler instance.
+	 * @var \DataMachine\Admin\OAuth\Reddit
+	 */
+	public $oauth_reddit;
+
+	/**
 	 * Initialize the class and set its properties.
 	 * @since    0.1.0
 	 */
@@ -165,7 +165,6 @@ class DataMachine {
 		$orchestrator,
 		$output_publish_local,
 		$output_publish_remote,
-		$output_data_export,
 		$input_files,
 		$oauth_reddit,
 		$oauth_twitter,
@@ -185,13 +184,13 @@ class DataMachine {
 		$this->orchestrator = $orchestrator;
 		$this->output_publish_local = $output_publish_local;
 		$this->output_publish_remote = $output_publish_remote;
-		$this->output_data_export = $output_data_export;
 		$this->input_files = $input_files;
 		$this->db_remote_locations = $db_remote_locations;
 		$this->logger = $logger;
 		$this->oauth_twitter = $oauth_twitter; // Corrected potential typo if present
 		$this->oauth_threads = $oauth_threads;   // Ensure assignment
 		$this->oauth_facebook = $oauth_facebook; // Ensure assignment
+		$this->oauth_reddit = $oauth_reddit; // Ensure assignment
 		// Register hooks for OAuth handlers
 		$oauth_reddit->register_hooks();
 		$oauth_twitter->register_hooks();

@@ -1,7 +1,6 @@
 // handler-template-manager.js
 // Encapsulates logic for fetching, rendering, and handling selection changes for handler templates (vanilla JS)
 
-console.log('Loaded: handler-template-manager.js');
 let HandlerTemplateManager;
 try {
     HandlerTemplateManager = function(options, DMState) {
@@ -22,10 +21,8 @@ try {
             const state = DMState.getState();
             moduleId = state.currentModuleId;
             if (locationId !== undefined) {
-                console.log('[renderTemplate] Using locationId explicitly passed:', locationId);
             } else if (slug === 'publish_remote' || slug === 'airdrop_rest_api') {
                 locationId = state.remoteHandlers?.[slug]?.selectedLocationId ?? null;
-                console.log('[renderTemplate] Using locationId from state (fallback/event):', locationId);
             } else {
                 locationId = null;
             }
@@ -39,7 +36,6 @@ try {
                 return;
             }
             if (window.dmDebugMode) {
-                console.log('[renderTemplate] Calling fetchHandlerTemplate with cleaned:', { handlerType, slug, moduleId, locationId });
             }
             const templateContent = await fetchHandlerTemplate(handlerType, slug, moduleId, locationId);
             const processTemplateContent = (contentHtml, containerElement, handlerSlug, handlerType, onLoadedCallback) => {
@@ -68,7 +64,6 @@ try {
                     });
                     if (attachTemplateEventListeners && window.dmRemoteLocationManager?.handlerConfigs?.[handlerSlug]) {
                          if (window.dmDebugMode) {
-                             console.log(`[MutationObserver] Target element likely ready for ${handlerSlug}. Calling attachTemplateEventListeners...`, placeholderDiv);
                          }
                          attachTemplateEventListeners(placeholderDiv, handlerType, handlerSlug);
                     }
@@ -81,14 +76,12 @@ try {
                         const observer = new MutationObserver((mutationsList, obs) => {
                             if (placeholderDiv.querySelector(targetSelector)) {
                                 if (window.dmDebugMode) {
-                                    console.log(`[MutationObserver] Target element (${targetSelector}) found for ${handlerSlug}.`);
                                 }
                                 attachAndFinalize();
                                 obs.disconnect();
                             }
                         });
                         if (window.dmDebugMode) {
-                            console.log(`[renderTemplate] Setting up MutationObserver for ${handlerSlug} on`, placeholderDiv);
                         }
                         observer.observe(placeholderDiv, { childList: true, subtree: true });
                         placeholderDiv.innerHTML = contentHtml;

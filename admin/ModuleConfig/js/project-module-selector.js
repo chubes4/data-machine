@@ -1,6 +1,5 @@
 // Handles project/module dropdowns, hidden fields, and AJAX fetching of modules (vanilla JS)
 
-console.log('Loaded: project-module-selector.js');
 let ProjectModuleSelector;
 try {
     ProjectModuleSelector = function(options) {

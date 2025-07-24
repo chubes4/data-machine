@@ -166,8 +166,8 @@ PROMPT;
             $tag_mode = $output_config[$output_type]['tag_mode'] ?? 
                        $output_config[$output_type]['selected_remote_tag_id'] ?? null;
             if (is_string($tag_mode) && ($tag_mode === 'instruct_model')) {
-                $directive_block .= "\n    TAGS: [Your chosen comma-separated tags]";
-                $taxonomy_instructions[] = "- TAGS: Determine the most appropriate tag(s) based ONLY on the user instructions in the prompt below. Output comma-separated.";
+                $directive_block .= "\n    TAGS: [Your chosen single tag]";
+                $taxonomy_instructions[] = "- TAGS: Determine the most appropriate single tag based ONLY on the user instructions in the prompt below. Output exactly one tag name only.";
             }
 
             // Custom taxonomy instructions

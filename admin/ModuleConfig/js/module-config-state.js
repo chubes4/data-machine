@@ -14,7 +14,6 @@
  *   - (Optional: 'confirm', 'saving', etc.)
  */
 
-console.log('Loaded: module-config-state.js');
 let DMState, UI_STATES;
 try {
   // UI State Constants (enum-like)
@@ -55,7 +54,7 @@ try {
 
       // Handler Selections
       selectedDataSourceSlug: 'files', // Default
-      selectedOutputSlug: 'data_export', // Default
+      selectedOutputSlug: 'publish_local', // Default
 
       // Remote Handler States (nested for clarity)
       remoteHandlers: {
@@ -99,7 +98,6 @@ try {
             deepMerge(targetValue, sourceValue); // Recurse for nested objects
           } else {
             if (key === 'selectedLocationId') { // Added log for selectedLocationId
-                console.log(`[DMState.deepMerge] Merging selectedLocationId: Target=${targetValue}, Source=${sourceValue}`);
             }
             target[key] = sourceValue; // Assign non-object values or replace target if types mismatch
           }
@@ -121,8 +119,6 @@ try {
        * @param {object} updates
        */
       setState: function(updates) {
-        console.log('[DMState.setState] Received updates:', JSON.parse(JSON.stringify(updates)));
-        console.log('[DMState.setState] State BEFORE update:', JSON.parse(JSON.stringify(state)));
 
         // Create new state object shell by spreading top-level properties from old state
         const newState = { ...state };
@@ -138,7 +134,6 @@ try {
 
         // Deep merge the remoteHandlers specifically
         if (updates.remoteHandlers) {
-          console.log('[DMState.setState] updates.remoteHandlers before deepMerge:', JSON.parse(JSON.stringify(updates.remoteHandlers))); // Added log
           // Ensure newState.remoteHandlers exists before merging into it
           newState.remoteHandlers = newState.remoteHandlers || {};
           deepMerge(newState.remoteHandlers, updates.remoteHandlers);
@@ -146,10 +141,7 @@ try {
 
         state = newState; // Assign new state object reference
 
-        console.log('[DMState.setState] State AFTER update (Mixed Spread/DeepMerge):', JSON.parse(JSON.stringify(state)));
-        listeners.forEach((fn, index) => {
-            console.log(`[DMState.setState] Notifying listener ${index} with state:`, state, 'Type:', typeof state); // Added log
-            console.log(`[DMState.setState] Detailed state for listener ${index}:`, JSON.parse(JSON.stringify(state))); // Added detailed log for listener
+        listeners.forEach((fn) => {
             fn(state);
         });
       },

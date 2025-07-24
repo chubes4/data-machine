@@ -74,18 +74,38 @@ try {
 
 		// --- Constants and Selectors ---
 
-		// Input: Public REST API (now just the endpoint URL field)
-		const publicApiContainer = document.querySelector('.dm-input-settings[data-handler-slug="public_rest_api"]');
-		// No sync button or feedback needed
+		// Cache DOM elements once to avoid repeated queries
+		const DOMCache = {
+			// Form fields that get updated frequently
+			moduleNameField: document.getElementById('module_name'),
+			processPromptField: document.getElementById('process_data_prompt'),
+			factCheckField: document.getElementById('fact_check_prompt'),
+			finalizePromptField: document.getElementById('finalize_response_prompt'),
+			skipFactCheckbox: document.getElementById('skip_fact_check'),
+			inputDropdown: document.getElementById('data_source_type'),
+			outputDropdown: document.getElementById('output_type'),
+			
+			// Form selectors
+			projectSelector: document.getElementById('current_project'),
+			moduleSelector: document.getElementById('current_module'),
+			projectIdField: document.querySelector('input[name="project_id"]'),
+			selectedProjectIdField: document.getElementById('selected_project_id_for_save'),
+			selectedModuleIdField: document.getElementById('selected_module_id_for_save'),
+			moduleSpinner: document.getElementById('module-spinner'),
+			settingsForm: document.getElementById('data-machine-settings-form'),
+			
+			// Legacy selectors (keep for compatibility)
+			publicApiContainer: document.querySelector('.dm-input-settings[data-handler-slug="public_rest_api"]')
+		};
 
-		// Form Selectors 
-		const projectSelector = document.getElementById('current_project');
-		const moduleSelector = document.getElementById('current_module');
-		const projectIdField = document.querySelector('input[name="project_id"]');
-		const selectedProjectIdField = document.getElementById('selected_project_id_for_save');
-		const selectedModuleIdField = document.getElementById('selected_module_id_for_save');
-		const moduleSpinner = document.getElementById('module-spinner');
-		const settingsForm = document.getElementById('data-machine-settings-form');
+		// Legacy variable assignments for existing code compatibility
+		const projectSelector = DOMCache.projectSelector;
+		const moduleSelector = DOMCache.moduleSelector;
+		const projectIdField = DOMCache.projectIdField;
+		const selectedProjectIdField = DOMCache.selectedProjectIdField;
+		const selectedModuleIdField = DOMCache.selectedModuleIdField;
+		const moduleSpinner = DOMCache.moduleSpinner;
+		const settingsForm = DOMCache.settingsForm;
 
 		// --- Project/Module Selection Handling (Modularized) ---
 		const selector = ProjectModuleSelector({
@@ -202,11 +222,8 @@ try {
 								'data_source_config[airdrop_rest_api][rest_post_type]',
 								'data_source_config[airdrop_rest_api][location_id]'
 							];
-							// Add custom taxonomies if present in config
-							const customTax = state.data_source_config[handlerSlug].custom_taxonomies || {};
-							for (const taxSlug in customTax) {
-								requiredFields.push(`data_source_config[airdrop_rest_api][custom_taxonomies][${taxSlug}]`);
-							}
+							// Add custom taxonomies using utility function
+							requiredFields.push(...buildCustomTaxonomyRequiredFields(state.data_source_config, handlerSlug, 'data_source_config'));
 						}
 						safePopulateHandlerFields(state.data_source_config[handlerSlug], 'input', handlerSlug, placeholderDiv, requiredFields);
 					} else if (state.data_source_config && state.data_source_config[handlerSlug] && placeholderDiv) {
@@ -224,11 +241,8 @@ try {
 								'output_config[publish_remote][selected_remote_post_type]',
 								'output_config[publish_remote][location_id]'
 							];
-							// Add custom taxonomies if present in config
-							const customTax = state.output_config[handlerSlug].selected_custom_taxonomy_values || {};
-							for (const taxSlug in customTax) {
-								requiredFields.push(`output_config[publish_remote][selected_custom_taxonomy_values][${taxSlug}]`);
-							}
+							// Add custom taxonomies using utility function
+							requiredFields.push(...buildCustomTaxonomyRequiredFields(state.output_config, handlerSlug, 'output_config'));
 						}
 						safePopulateHandlerFields(state.output_config[handlerSlug], 'output', handlerSlug, placeholderDiv, requiredFields);
 					} else if (state.output_config && state.output_config[handlerSlug] && placeholderDiv) {
@@ -238,47 +252,44 @@ try {
 		}, DMState);
 		// --- End Handler Template Management ---
 
-		// Tab switching
-		Array.from(document.querySelectorAll('.nav-tab-wrapper a')).forEach(function(tab) {
-			tab.addEventListener('click', function(e) {
-				e.preventDefault();
-				var tabId = tab.getAttribute('data-tab');
-				// Update tabs
-				Array.from(document.querySelectorAll('.nav-tab-wrapper a')).forEach(function(t) {
-					t.classList.remove('nav-tab-active');
-				});
-				tab.classList.add('nav-tab-active');
-				// Update content visibility
-				Array.from(document.querySelectorAll('.tab-content')).forEach(function(tc) {
-					tc.classList.remove('active-tab');
-					tc.style.display = 'none';
-				});
-				var content = document.getElementById(tabId + '-tab-content');
-				if (content) {
-					content.classList.add('active-tab');
-					content.style.display = '';
-				}
-				// Save active tab to localStorage
-				if (window.localStorage) {
-					localStorage.setItem('dmActiveModuleConfigTab', tabId);
+		// Tab navigation is handled by dm-module-config-ui-helpers.js
+
+		// --- MutationObserver Registry for Cleanup ---
+		const observerRegistry = new Set();
+		window.dmObserverRegistry = observerRegistry; // Expose globally for other modules
+		function registerObserver(observer) {
+			observerRegistry.add(observer);
+		}
+		function cleanupAllObservers() {
+			observerRegistry.forEach(observer => {
+				try {
+					observer.disconnect();
+				} catch (e) {
+					console.warn('[Observer Cleanup] Error disconnecting observer:', e);
 				}
 			});
-		});
+			observerRegistry.clear();
+		}
+		// Cleanup on page unload
+		window.addEventListener('beforeunload', cleanupAllObservers);
+		// Cleanup on navigation away from this page
+		window.addEventListener('pagehide', cleanupAllObservers);
 
-		// Restore active tab on page load
-		if (window.localStorage) {
-			var activeTab = localStorage.getItem('dmActiveModuleConfigTab');
-			if (activeTab) {
-				var tab = document.querySelector('.nav-tab-wrapper a[data-tab="' + activeTab + '"]');
-				if (tab) tab.click();
+		// --- Custom Taxonomy Utilities ---
+		function buildCustomTaxonomyRequiredFields(config, handlerSlug, configPrefix) {
+			const requiredFields = [];
+			const customTaxKey = handlerSlug === 'airdrop_rest_api' ? 'custom_taxonomies' : 'selected_custom_taxonomy_values';
+			const customTax = config?.[handlerSlug]?.[customTaxKey] || {};
+			
+			for (const taxSlug in customTax) {
+				requiredFields.push(`${configPrefix}[${handlerSlug}][${customTaxKey}][${taxSlug}]`);
 			}
+			return requiredFields;
 		}
 
 		// --- Subscribe to state changes for UI updates (Refactored) ---
 		subscribe(async function(state) { // <<<< Make subscriber async
 			if (window.dmDebugMode) {
-				console.log('[UI Subscription] Subscriber received state:', state, 'Type:', typeof state);
-				console.log('[UI Subscription] Detailed received state:', JSON.parse(JSON.stringify(state)));
 			}
 
 			// --- Check for Remote Location Changes and Trigger Refresh ---
@@ -296,7 +307,6 @@ try {
 			// Only refresh if the parsed ID is different from the previous selection
 			if (parsedInputId !== previousRemoteSelections.input) {
 				if (window.dmDebugMode) {
-					console.log(`[UI Subscription] Input location changed from ${previousRemoteSelections.input} to ${parsedInputId}. Refreshing input template.`);
 				}
 				await handlerManager.refreshInput(parsedInputId);
 				previousRemoteSelections.input = parsedInputId; // Update previous selection
@@ -315,9 +325,6 @@ try {
 			// Only refresh if the parsed ID is different from the previous selection
 			if (parsedOutputId !== previousRemoteSelections.output) {
 				if (window.dmDebugMode) {
-					console.log(`[UI Subscription] Output location changed from ${previousRemoteSelections.output} to ${parsedOutputId}. Refreshing output template.`);
-					console.log('[UI Subscription] Value being passed to handlerManager.refreshOutput():', parsedOutputId);
-					console.log('[UI Subscription] Type of value being passed to handlerManager.refreshOutput():', typeof parsedOutputId);
 				}
 				await handlerManager.refreshOutput(parsedOutputId);
 				previousRemoteSelections.output = parsedOutputId; // Update previous selection
@@ -329,38 +336,34 @@ try {
 
 			// Update spinner based on loading state
 			if (state.uiState === 'loading' || state.uiState === 'switching' || state.uiState === 'projectChange') {
-				moduleSpinner.classList.add('is-active');
-				moduleSelector.disabled = true;
+				DOMCache.moduleSpinner.classList.add('is-active');
+				DOMCache.moduleSelector.disabled = true;
 				return; 
 			}
-			moduleSpinner.classList.remove('is-active');
-			moduleSelector.disabled = false;
+			DOMCache.moduleSpinner.classList.remove('is-active');
+			DOMCache.moduleSelector.disabled = false;
 
 			// Standard UI update based on module ID and state
 			if (state.uiState === 'default' && state.currentModuleId && state.currentModuleId !== 'new') {
-				document.getElementById('module_name').value = state.currentModuleName || '';
-				document.getElementById('module_name').disabled = false;
-				document.getElementById('process_data_prompt').value = state.process_data_prompt || '';
-				document.getElementById('fact_check_prompt').value = state.fact_check_prompt || '';
-				document.getElementById('finalize_response_prompt').value = state.finalize_response_prompt || '';
+				DOMCache.moduleNameField.value = state.currentModuleName || '';
+				DOMCache.moduleNameField.disabled = false;
+				DOMCache.processPromptField.value = state.process_data_prompt || '';
+				DOMCache.factCheckField.value = state.fact_check_prompt || '';
+				DOMCache.finalizePromptField.value = state.finalize_response_prompt || '';
 				
 				// Set the dropdown values FIRST
-				const inputDropdown = document.getElementById('data_source_type');
-				const outputDropdown = document.getElementById('output_type');
-				if (inputDropdown) inputDropdown.value = state.selectedDataSourceSlug;
-				if (outputDropdown) outputDropdown.value = state.selectedOutputSlug;
+				if (DOMCache.inputDropdown) DOMCache.inputDropdown.value = state.selectedDataSourceSlug;
+				if (DOMCache.outputDropdown) DOMCache.outputDropdown.value = state.selectedOutputSlug;
 
 				// Now, explicitly trigger template loading based on the set dropdown values
 				// Load templates in parallel to improve performance
 				if (window.dmDebugMode) {
-					console.log('[UI Subscription] Triggering template refresh after module load...');
 				}
 				await Promise.all([
 					handlerManager.refreshInput(undefined),
 					handlerManager.refreshOutput(undefined)
 				]);
 				if (window.dmDebugMode) {
-					console.log('[UI Subscription] Template refresh complete.');
 				}
 
 				// Populate handler config fields AFTER templates are loaded
@@ -380,14 +383,11 @@ try {
 					}
 				}
 				                // START: Restore Update skip_fact_check checkbox logic (After handler population)
-                const skipCheckboxUpdate = document.getElementById('skip_fact_check'); // Use different var name
-                if (skipCheckboxUpdate) {
-                    console.log(`[UI Subscription] Updating skip_fact_check checkbox (after templates). State value: ${state.skip_fact_check}, Current checkbox: ${skipCheckboxUpdate.checked}`);
+                if (DOMCache.skipFactCheckbox) {
                     // Only update if different to avoid unnecessary changes
                     const shouldBeChecked = !!state.skip_fact_check;
-                    if (skipCheckboxUpdate.checked !== shouldBeChecked) {
-                        skipCheckboxUpdate.checked = shouldBeChecked;
-                        console.log(`[UI Subscription] Checkbox updated to: ${shouldBeChecked}`);
+                    if (DOMCache.skipFactCheckbox.checked !== shouldBeChecked) {
+                        DOMCache.skipFactCheckbox.checked = shouldBeChecked;
                     }
                     // Update fact check prompt visibility after setting checkbox
                     if (typeof toggleFactCheckPromptVisibility === 'function') {
@@ -397,15 +397,14 @@ try {
                 // END: Restore Update skip_fact_check checkbox logic
 			} else if (state.uiState === 'default' && state.currentModuleId === 'new') {
 				// Handle 'new' module state 
-				document.getElementById('module_name').value = '';
-				document.getElementById('module_name').disabled = false;
-				document.getElementById('process_data_prompt').value = '';
-				document.getElementById('fact_check_prompt').value = '';
-				document.getElementById('finalize_response_prompt').value = '';
+				DOMCache.moduleNameField.value = '';
+				DOMCache.moduleNameField.disabled = false;
+				DOMCache.processPromptField.value = '';
+				DOMCache.factCheckField.value = '';
+				DOMCache.finalizePromptField.value = '';
 				                // START: Restore Reset skip_fact_check checkbox for new module
-                const skipCheckboxNew = document.getElementById('skip_fact_check');
-                if (skipCheckboxNew) {
-                    skipCheckboxNew.checked = false;
+                if (DOMCache.skipFactCheckbox) {
+                    DOMCache.skipFactCheckbox.checked = false;
                     // Update fact check prompt visibility after resetting checkbox
                     if (typeof toggleFactCheckPromptVisibility === 'function') {
                         toggleFactCheckPromptVisibility();
@@ -413,10 +412,8 @@ try {
                 }
                 // END: Restore Reset skip_fact_check checkbox for new module
 				// Set dropdowns to state defaults, not blank
-				const inputDropdown = document.getElementById('data_source_type');
-				const outputDropdown = document.getElementById('output_type');
-				if (inputDropdown) inputDropdown.value = state.selectedDataSourceSlug;
-				if (outputDropdown) outputDropdown.value = state.selectedOutputSlug;
+				if (DOMCache.inputDropdown) DOMCache.inputDropdown.value = state.selectedDataSourceSlug;
+				if (DOMCache.outputDropdown) DOMCache.outputDropdown.value = state.selectedOutputSlug;
 
 				// Clear handler settings containers if switching to 'new'
 				handlerManager.clearInputContainer();
@@ -424,27 +421,26 @@ try {
 
 				// Also explicitly clear/load default templates when switching to 'new'
 				if (window.dmDebugMode) {
-					console.log('[UI Subscription] Triggering template refresh for NEW module...');
 				}
 				await Promise.all([
 					handlerManager.refreshInput(undefined),
 					handlerManager.refreshOutput(undefined)
 				]);
 				if (window.dmDebugMode) {
-					console.log('[UI Subscription] Template refresh complete for NEW module.');
 				}
 			} else if (state.uiState === 'error') {
 				alert('An error occurred while loading the module.');
 			}
 		});
 
-		// --- Form Submission (Save Module) ---
-		settingsForm.addEventListener('submit', function(e) {
-			var moduleName = document.getElementById('module_name').value.trim();
+		// --- Consolidated Form Submission Handler ---
+		function handleFormSubmission(e) {
+			// 1. Validation
+			var moduleName = DOMCache.moduleNameField.value.trim();
 			if (!moduleName) {
 				e.preventDefault();
 				alert('Please enter a name for the module.');
-				document.getElementById('module_name').focus();
+				DOMCache.moduleNameField.focus();
 				return false;
 			}
 			var currentModuleId = selectedModuleIdField.value;
@@ -455,23 +451,24 @@ try {
 				return false;
 			}
 
-			// --- Sync custom taxonomy DOM values to state before syncing state to form fields ---
+			// 2. State synchronization - sync remote location selects
+			syncRemoteLocationSelectsWithState();
+
+			// 3. Custom taxonomy sync from DOM to state
 			const customTaxonomySelects = document.querySelectorAll('[name^="data_source_config[airdrop_rest_api][custom_taxonomies]"]');
 			const currentCustomTaxonomies = {};
 			customTaxonomySelects.forEach(select => {
-				// Extract the taxonomy slug from the name attribute
 				const match = select.name.match(/\[custom_taxonomies\]\[([a-zA-Z0-9_-]+)\]$/);
 				if (match && match[1]) {
 					currentCustomTaxonomies[match[1]] = select.value;
 				}
 			});
-			// Update the state with the latest DOM values
 			const state = DMState.getState();
 			if (state.data_source_config && state.data_source_config.airdrop_rest_api) {
 				state.data_source_config.airdrop_rest_api.custom_taxonomies = { ...currentCustomTaxonomies };
 			}
 
-			// --- Sync custom taxonomy values from state to form fields (airdrop_rest_api) ---
+			// 4. Sync custom taxonomy values from state back to form fields
 			const customTaxonomies = state.data_source_config?.airdrop_rest_api?.custom_taxonomies || {};
 			for (const taxSlug in customTaxonomies) {
 				if (Object.hasOwnProperty.call(customTaxonomies, taxSlug)) {
@@ -482,15 +479,41 @@ try {
 					}
 				}
 			}
-		});
+
+			// 5. Debug logging
+			dmLog('Form submission triggered');
+			
+			// Log handler template fields
+			const dataSourceFields = document.querySelectorAll('[name^="data_source_config"]');
+			const outputFields = document.querySelectorAll('[name^="output_config"]');
+			
+			
+			// Debug mode logging
+			if (window.dmDebugMode) {
+				const formData = new FormData(DOMCache.settingsForm);
+				const formDataObj = {};
+				for (let [key, value] of formData.entries()) {
+					formDataObj[key] = value;
+				}
+				
+				const criticalFields = ['project_id', 'module_id', 'data_source_type', 'output_type'];
+				criticalFields.forEach(field => {
+					const element = document.getElementById(`selected_${field}_for_save`) || document.querySelector(`[name="${field}"]`);
+				});
+			}
+
+			const formData = new FormData(DOMCache.settingsForm);
+		}
+
+		// Attach the consolidated handler
+		settingsForm.addEventListener('submit', handleFormSubmission);
 
 		// --- Skip Fact Check Toggle Logic ---
 		function toggleFactCheckPromptVisibility() {
-			const skipFactCheckbox = document.getElementById('skip_fact_check');
 			const factCheckPromptRow = document.getElementById('fact-check-prompt-row');
 			
-			if (skipFactCheckbox && factCheckPromptRow) {
-				if (skipFactCheckbox.checked) {
+			if (DOMCache.skipFactCheckbox && factCheckPromptRow) {
+				if (DOMCache.skipFactCheckbox.checked) {
 					factCheckPromptRow.style.opacity = '0.5';
 					factCheckPromptRow.style.pointerEvents = 'none';
 					const textarea = factCheckPromptRow.querySelector('textarea');
@@ -512,50 +535,64 @@ try {
 		toggleFactCheckPromptVisibility();
 
 		// Add event listener for skip fact check checkbox
-		const skipFactCheckbox = document.getElementById('skip_fact_check');
-		if (skipFactCheckbox) {
-			skipFactCheckbox.addEventListener('change', function() {
-				console.log(`[Skip Fact Check] Checkbox changed to: ${this.checked}`);
+		if (DOMCache.skipFactCheckbox) {
+			DOMCache.skipFactCheckbox.addEventListener('change', function() {
 				toggleFactCheckPromptVisibility();
 				// Update state when checkbox changes - ensure immediate state update
 				const newValue = this.checked ? 1 : 0;
 				dispatch({ type: ACTIONS.UPDATE_CONFIG, payload: { skip_fact_check: newValue, isDirty: true } });
-				console.log(`[Skip Fact Check] State updated to: ${newValue}`);
 			});
 		}
 
-		// Add form submission handler for debugging
-		const form = document.getElementById('data-machine-settings-form');
-		if (form) {
-			form.addEventListener('submit', function(e) {
-				// Log the final form values for debugging
-				const checkbox = document.getElementById('skip_fact_check');
-				const formData = new FormData(form);
-				console.log(`[Form Submit] skip_fact_check checkbox: ${checkbox?.checked}`);
-				console.log(`[Form Submit] skip_fact_check form value: ${formData.get('skip_fact_check')}`);
-			});
-		}
+		// Form submission debugging is now handled in the consolidated handler
 
 		// --- Initial Module Load Logic (Check if initial template fetch is needed) ---
-		console.log('[DOMContentLoaded] Starting Initial Module/Template Load Logic...');
 		const currentState = DMState.getState();
-		console.log('[DOMContentLoaded] State before initial dispatch:', JSON.parse(JSON.stringify(currentState)));
 
 		// **Initial Template Fetch Trigger**
 		// We need to explicitly trigger fetches for the initial slugs from the state
 		// *after* the handlerManager is initialized but *before* relying on subscriber.
 		let initialInputSlug = currentState.selectedDataSourceSlug;
 		let initialOutputSlug = currentState.selectedOutputSlug;
-		console.log(`[DOMContentLoaded] Triggering initial fetches for Input: ${initialInputSlug}, Output: ${initialOutputSlug}`);
 		
-		// Call refresh directly, passing undefined for locationId - renderTemplate will get from state
-		// Use try-catch in case handlerManager methods fail early
+		// Helper function to wait for template DOM elements to be ready
+		function waitForTemplateReady(handlerSlug, handlerType, maxWait = 3000) {
+			return new Promise((resolve) => {
+				const container = handlerType === 'input' 
+					? document.querySelector(`#data-source-settings-container .dm-input-settings[data-handler-slug="${handlerSlug}"]`)
+					: document.querySelector(`#output-settings-container .dm-output-settings[data-handler-slug="${handlerSlug}"]`);
+				
+				if (container && container.children.length > 0) {
+					resolve(container);
+					return;
+				}
+				
+				const startTime = Date.now();
+				const checkInterval = setInterval(() => {
+					const updatedContainer = handlerType === 'input' 
+						? document.querySelector(`#data-source-settings-container .dm-input-settings[data-handler-slug="${handlerSlug}"]`)
+						: document.querySelector(`#output-settings-container .dm-output-settings[data-handler-slug="${handlerSlug}"]`);
+					
+					if (updatedContainer && updatedContainer.children.length > 0) {
+						clearInterval(checkInterval);
+						resolve(updatedContainer);
+					} else if (Date.now() - startTime > maxWait) {
+						console.warn(`[waitForTemplateReady] Timeout waiting for ${handlerType} template ${handlerSlug}`);
+						clearInterval(checkInterval);
+						resolve(null);
+					}
+				}, 50); // Check every 50ms
+			});
+		}
+
+		// Call refresh and wait for templates to be ready in DOM
 		Promise.all([
 			(async () => { 
 				try { 
 					if(initialInputSlug) { 
-						console.log(`[DOMContentLoaded] Calling initial refreshInput for ${initialInputSlug}`);
-						await handlerManager.refreshInput(undefined); 
+						await handlerManager.refreshInput(undefined);
+						// Wait for the template to be actually rendered in DOM
+						await waitForTemplateReady(initialInputSlug, 'input');
 					} 
 				} catch (e) { 
 					console.error('[DOMContentLoaded] Error during initial refreshInput:', e); 
@@ -564,57 +601,62 @@ try {
 			(async () => { 
 				try { 
 					if(initialOutputSlug) { 
-						console.log(`[DOMContentLoaded] Calling initial refreshOutput for ${initialOutputSlug}`);
-						await handlerManager.refreshOutput(undefined); 
+						await handlerManager.refreshOutput(undefined);
+						// Wait for the template to be actually rendered in DOM
+						await waitForTemplateReady(initialOutputSlug, 'output');
 					} 
 				} catch (e) { 
 					console.error('[DOMContentLoaded] Error during initial refreshOutput:', e); 
 				}
 			})()
-		] // Close the Promise.all array argument
-		).then(() => { // Call .then directly after the closing bracket
-			 console.log('[DOMContentLoaded] Initial template fetches attempted.');
+		]).then(() => {
 			 
-			 // --- BEGIN: Populate fields after initial template load --- 
-			 const postFetchState = DMState.getState(); // Get potentially updated state
-			 console.log('[DOMContentLoaded] State after initial template fetches:', JSON.parse(JSON.stringify(postFetchState)));
+			 // --- BEGIN: Populate fields after templates are fully loaded --- 
+			 const postFetchState = DMState.getState();
 
 			 // If a module was loaded initially by PHP, populate its fields now
 			 if (postFetchState.currentModuleId && postFetchState.currentModuleId !== 'new' && postFetchState.currentModuleId !== 0) {
-				 console.log('[DOMContentLoaded] Module pre-loaded by PHP. Populating fields...');
 				 
-				 // Find containers AFTER templates are presumed loaded
+				 // Find containers - they should exist now
 				 const initialInputContainer = document.querySelector(`#data-source-settings-container .dm-input-settings[data-handler-slug="${postFetchState.selectedDataSourceSlug}"]`);
 				 const initialOutputContainer = document.querySelector(`#output-settings-container .dm-output-settings[data-handler-slug="${postFetchState.selectedOutputSlug}"]`);
 
-				 // Populate Input
+				 // Use safePopulateHandlerFields for better field detection
 				 if (initialInputContainer && postFetchState.data_source_config && postFetchState.data_source_config[postFetchState.selectedDataSourceSlug]) {
-					 populateHandlerFields(
+					 // Build required fields for safer population
+					 let inputRequiredFields = [];
+					 if (postFetchState.selectedDataSourceSlug === 'airdrop_rest_api') {
+						 inputRequiredFields = buildCustomTaxonomyRequiredFields(postFetchState.data_source_config, postFetchState.selectedDataSourceSlug, 'data_source_config');
+					 }
+					 safePopulateHandlerFields(
 						 postFetchState.data_source_config[postFetchState.selectedDataSourceSlug],
 						 'input',
 						 postFetchState.selectedDataSourceSlug,
-						 initialInputContainer
+						 initialInputContainer,
+						 inputRequiredFields
 					 );
 				 }
-				 // Populate Output
+				 // Use safePopulateHandlerFields for output as well
 				 if (initialOutputContainer && postFetchState.output_config && postFetchState.output_config[postFetchState.selectedOutputSlug]) {
-					populateHandlerFields(
+					 let outputRequiredFields = [];
+					 if (postFetchState.selectedOutputSlug === 'publish_remote') {
+						 outputRequiredFields = buildCustomTaxonomyRequiredFields(postFetchState.output_config, postFetchState.selectedOutputSlug, 'output_config');
+					 }
+					safePopulateHandlerFields(
 						postFetchState.output_config[postFetchState.selectedOutputSlug],
 						'output',
 						postFetchState.selectedOutputSlug,
-						initialOutputContainer
+						initialOutputContainer,
+						outputRequiredFields
 					);
 				 }
-				 console.log('[DOMContentLoaded] Initial field population attempt complete.');
 			 } else {
-				  console.log('[DOMContentLoaded] No module pre-loaded or \'new\' selected. Skipping initial population.');
 			 }
-			 // --- END: Populate fields after initial template load --- 
+			 // --- END: Populate fields after template loading completion --- 
 
 			 // Now proceed with module loading dispatch if needed (e.g., if PHP didn't select one)
 			 if (!currentState.currentModuleId || currentState.currentModuleId === '0' || currentState.currentModuleId === null ) {
 				 var initialModuleValue = moduleSelector.value;
-				 console.log(`[DOMContentLoaded] No currentModuleId in state. Initial moduleSelector value: ${initialModuleValue}`);
 				 if (initialModuleValue === 'new') {
 					 selectedModuleIdField.value = 'new';
 					 dispatch({ type: ACTIONS.SWITCH_MODULE, payload: { moduleId: 'new' } });
@@ -634,7 +676,6 @@ try {
 					 dispatch({ type: ACTIONS.SWITCH_MODULE, payload: { moduleId: 'new' } });
 				 }
 			 } else {
-				  console.log(`[DOMContentLoaded] currentModuleId (${currentState.currentModuleId}) exists in state. Assuming templates handled or will be by subscriber.`);
 			 }
 		}).catch(err => {
 			console.error('[DOMContentLoaded] Error during initial template fetch Promise.all:', err);
@@ -655,45 +696,7 @@ try {
 		}
 
 
-		settingsForm.addEventListener('submit', function(e) {
-			syncRemoteLocationSelectsWithState();
-			
-			// Log comprehensive form data for debugging
-			dmLog('Form submission triggered');
-			
-			// Always log form field analysis - this is critical debugging
-			console.log('=== FORM SUBMISSION DEBUG ===');
-			
-			// Check if handler template fields exist in DOM
-			const dataSourceFields = document.querySelectorAll('[name^="data_source_config"]');
-			const outputFields = document.querySelectorAll('[name^="output_config"]');
-			
-			console.log(`Found ${dataSourceFields.length} data_source_config fields:`);
-			dataSourceFields.forEach(field => {
-				console.log(`  ${field.name}: ${field.value} (disabled: ${field.disabled})`);
-			});
-			
-			console.log(`Found ${outputFields.length} output_config fields:`);
-			outputFields.forEach(field => {
-				console.log(`  ${field.name}: ${field.value} (disabled: ${field.disabled})`);
-			});
-			
-			if (window.dmDebugMode) {
-				const formData = new FormData(settingsForm);
-				const formDataObj = {};
-				for (let [key, value] of formData.entries()) {
-					formDataObj[key] = value;
-				}
-				console.log('[DM Module Config] Complete form data:', formDataObj);
-				
-				// Log specific hidden fields that are critical for saving
-				const criticalFields = ['project_id', 'module_id', 'data_source_type', 'output_type'];
-				criticalFields.forEach(field => {
-					const element = document.getElementById(`selected_${field}_for_save`) || document.querySelector(`[name="${field}"]`);
-					console.log(`[DM Module Config] Critical field ${field}: ${element ? element.value : 'NOT FOUND'}`);
-				});
-			}
-		});
+		// Removed: duplicate form submission handler - now handled by consolidated handler above
 
 		document.addEventListener('input', function(e) {
 			if (e.target && (e.target.matches('input, select, textarea'))) {
@@ -702,22 +705,18 @@ try {
 		});
 
 		// --- Initialize Remote Location Logic (Run ONCE after main setup) --- 
-		console.log('[DOMContentLoaded] About to initialize dmRemoteLocationManager...');
 		if (!isRemoteManagerInitialized && window.dmRemoteLocationManager && typeof window.dmRemoteLocationManager.initialize === 'function') {
 			// Create a wrapper for the dispatch function to add logging
 			const dispatchWrapper = (action) => {
-				console.log('[Dispatch Wrapper] Called from Remote Manager with action:', action);
 				dispatch(action); // Call the original dispatch function
 			};
 
-			console.log('[DOMContentLoaded] Initializing dmRemoteLocationManager...');
 			window.dmRemoteLocationManager.initialize(
 				dispatchWrapper, // Pass the wrapper function
 				window.DataMachine.ModuleConfig.ajaxHandler,
 				handlerManager
 			);
 			isRemoteManagerInitialized = true;
-			console.log('[DOMContentLoaded] dmRemoteLocationManager Initialized.');
 		} else {
 			if (isRemoteManagerInitialized) {
 				// console.log('[DOMContentLoaded] dmRemoteLocationManager already initialized.');

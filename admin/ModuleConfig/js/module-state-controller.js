@@ -114,8 +114,6 @@ function createStateController(DMState, UI_STATES, AjaxHandler) {
         // Implement handler change logic
         break;
       case ACTIONS.UPDATE_CONFIG:
-        console.log('[Controller] ACTION: UPDATE_CONFIG triggered with payload:', action.payload);
-        console.log('[Controller] Calling DMState.setState for UPDATE_CONFIG...');
         DMState.setState({ ...action.payload, isDirty: true, uiState: UI_STATES.DIRTY });
         break;
       case ACTIONS.PROJECT_CHANGE:

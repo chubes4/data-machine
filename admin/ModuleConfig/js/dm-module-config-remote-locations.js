@@ -9,7 +9,6 @@
 import { ACTIONS } from './module-state-controller.js';
 import DMState from './module-config-state.js';
 
-console.log('Loaded: dm-module-config-remote-locations.js');
 let dmRemoteLocationManager;
 try {
 // import CustomTaxonomyHandler from './dm-custom-taxonomy-handler.js'; // REMOVED - Logic moved
@@ -61,7 +60,6 @@ dmRemoteLocationManager = (function() {
         const newLocationIdStr = locationId !== null && locationId !== undefined && locationId !== '' ? String(locationId) : null;
 
         // Update the location ID and reset dependent fields in the state
-        console.log(`[triggerRemoteHandlerUpdate] Dispatching state update for ${config.stateKey} with location value: ${newLocationIdStr}`);
         const updatePayload = {
             remoteHandlers: {
                 [config.stateKey]: {
@@ -75,7 +73,6 @@ dmRemoteLocationManager = (function() {
              isDirty: true,
              uiState: 'dirty' 
          };
-        console.log('[triggerRemoteHandlerUpdate] Calling updateDmState (dispatch wrapper) with payload:', updatePayload); // Log before call
         // Wrap payload in a proper action object with a type
         updateDmState({ type: ACTIONS.UPDATE_CONFIG, payload: updatePayload }); 
     }
@@ -91,7 +88,6 @@ dmRemoteLocationManager = (function() {
 
     // --- Event Handlers (Now for elements WITHIN a specific template) ---
     function attachTemplateEventListeners(templateContainer, handlerType, handlerSlug) {
-        console.log(`[attachTemplateEventListeners] Called for ${handlerSlug} inside:`, templateContainer);
         const config = handlerConfigs[handlerSlug];
         if (!config) {
             console.error(`[attachTemplateEventListeners] No config found for ${handlerSlug}.`);
@@ -99,7 +95,6 @@ dmRemoteLocationManager = (function() {
         }
 
         const location = templateContainer.querySelector(config.selectors.location);
-        console.log(`[attachTemplateEventListeners] Found location element for ${handlerSlug}?`, location);
         const postType = templateContainer.querySelector(config.selectors.postType);
         const category = templateContainer.querySelector(config.selectors.category);
         const tag = templateContainer.querySelector(config.selectors.tag);
@@ -107,10 +102,8 @@ dmRemoteLocationManager = (function() {
 
         // --- Location Change Listener ---
         if (location) {
-            console.log(`[attachTemplateEventListeners] Attaching 'change' listener to location element for ${handlerSlug}:`, location);
             location.addEventListener('change', function(event) { 
                 event.stopPropagation(); 
-                console.log(`[Location Change Listener] Fired for ${handlerSlug}! Value:`, location.value);
                 triggerRemoteHandlerUpdate(config, location.value); 
             });
         } else {

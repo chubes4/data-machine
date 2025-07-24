@@ -14,7 +14,8 @@ namespace DataMachine\Handlers\Output;
 
 use DataMachine\Engine\Filters\{AiResponseParser, MarkdownConverter};
 use DataMachine\Database\RemoteLocations;
-use DataMachine\Helpers\{HttpService, Logger};
+use DataMachine\Helpers\Logger;
+use DataMachine\Handlers\HttpService;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -205,13 +206,35 @@ class PublishRemote extends BaseOutputHandler {
 		// Fetch remote site taxonomies directly from location (instead of carrying in job args)
 		$remote_cats = [];
 		$remote_tags = [];
+		$site_supports_categories = false;
+		$site_supports_tags = false;
+		
 		if (!empty($location_id) && !empty($user_id)) {
 			$location = $this->db_locations->get_location($location_id, $user_id, false);
 			if ($location && !empty($location->synced_site_info)) {
 				$site_info = json_decode($location->synced_site_info, true);
 				$remote_cats = $site_info['taxonomies']['category']['terms'] ?? [];
 				$remote_tags = $site_info['taxonomies']['post_tag']['terms'] ?? [];
+				$site_supports_categories = isset($site_info['taxonomies']['category']);
+				$site_supports_tags = isset($site_info['taxonomies']['post_tag']);
 			}
+		}
+		
+		// Validate taxonomy usage against remote site capabilities
+		if (!empty($category_id) && !$site_supports_categories) {
+			$this->logger->warning('Remote site does not support categories - skipping category assignment', [
+				'location_id' => $location_id,
+				'category_id' => $category_id
+			]);
+			$category_id = ''; // Reset category selection
+		}
+		
+		if (!empty($tag_id) && !$site_supports_tags) {
+			$this->logger->warning('Remote site does not support tags - skipping tag assignment', [
+				'location_id' => $location_id,
+				'tag_id' => $tag_id
+			]);
+			$tag_id = ''; // Reset tag selection
 		}
 
 		// Category Logic - Determine what to send
@@ -409,13 +432,13 @@ class PublishRemote extends BaseOutputHandler {
 	public function get_settings_fields(array $current_config = []): array {
 		$locations_options = ['' => '-- Select Location --'];
 		$post_type_options = [ '' => '-- Select Location First --' ];
-		$category_options = [ '' => '-- Select Location First --', 'model_decides' => '-- Let Model Decide --', 'instruct_model' => '-- Instruct Model --' ];
-		$tag_options = [ '' => '-- Select Location First --', 'model_decides' => '-- Let Model Decide --', 'instruct_model' => '-- Instruct Model --' ];
+		$category_options = [ '' => '-- Select Location First --', 'instruct_model' => '-- Instruct Model --' ];
+		$tag_options = [ '' => '-- Select Location First --', 'instruct_model' => '-- Instruct Model --' ];
 
 		$selected_post_type = $current_config['selected_remote_post_type'] ?? '';
 		// Use string keys for default mode
-		$selected_category_id = $current_config['selected_remote_category_id'] ?? 'model_decides';
-		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? 'model_decides';
+		$selected_category_id = $current_config['selected_remote_category_id'] ?? 'instruct_model';
+		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? 'instruct_model';
 
 		// --- NEW: Retrieve site_info using injected db_locations ---
 		$site_info = [];
@@ -496,23 +519,34 @@ class PublishRemote extends BaseOutputHandler {
 				],
 				'default' => 'current_date',
 			],
-			'selected_remote_category_id' => [
-				'type' => 'select',
-				'label' => __('Remote Category', 'data-machine'),
-				'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
-				'options' => $category_options,
-				'default' => $selected_category_id, // Will be string or int ID
-			],
-			'selected_remote_tag_id' => [
-				'type' => 'select',
-				'label' => __('Remote Tag', 'data-machine'),
-				'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
-				'options' => $tag_options,
-				'default' => $selected_tag_id, // Will be string or int ID
-			],
 		];
 
-		// --- NEW: Add dynamic custom taxonomy fields if site_info is available ---
+		// --- Conditionally add category and tag fields if remote site supports them ---
+		if (!empty($site_info['taxonomies']) && is_array($site_info['taxonomies'])) {
+			// Add category field if remote site supports categories
+			if (isset($site_info['taxonomies']['category'])) {
+				$fields['selected_remote_category_id'] = [
+					'type' => 'select',
+					'label' => __('Remote Category', 'data-machine'),
+					'description' => __('Select a category or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
+					'options' => $category_options,
+					'default' => $selected_category_id,
+				];
+			}
+			
+			// Add tag field if remote site supports tags
+			if (isset($site_info['taxonomies']['post_tag'])) {
+				$fields['selected_remote_tag_id'] = [
+					'type' => 'select',
+					'label' => __('Remote Tag', 'data-machine'),
+					'description' => __('Select a single tag or instruct the AI using your prompt. Populated after selecting a location.', 'data-machine'),
+					'options' => $tag_options,
+					'default' => $selected_tag_id,
+				];
+			}
+		}
+
+		// --- Add dynamic custom taxonomy fields if site_info is available ---
 		if (!empty($site_info['taxonomies']) && is_array($site_info['taxonomies'])) {
 			foreach ($site_info['taxonomies'] as $tax_slug => $tax_data) {
 				if (in_array($tax_slug, ['category', 'post_tag'])) {
@@ -522,7 +556,6 @@ class PublishRemote extends BaseOutputHandler {
 				
 				$tax_options = [
 					'' => '-- Select ' . ($tax_data['label'] ?? ucfirst($tax_slug)) . ' --',
-					'model_decides' => '-- Let Model Decide --',
 					'instruct_model' => '-- Instruct Model --'
 				];
 				if (!empty($tax_data['terms']) && is_array($tax_data['terms'])) {
@@ -617,4 +650,4 @@ public static function get_label(): string {
 	return 'Publish Remotely';
 }
 
-} // End class Data_Machine_Output_Publish_Remote
+} // End class \\DataMachine\\Handlers\\Output\\PublishRemote

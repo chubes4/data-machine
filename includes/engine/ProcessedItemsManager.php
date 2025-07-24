@@ -89,11 +89,17 @@ class ProcessedItemsManager {
 	 */
 	public function mark_item_processed( int $module_id, string $source_type, string $identifier, ?int $job_id = null ): bool {
 		if ( empty( $module_id ) || empty( $source_type ) || empty( $identifier ) ) {
+			$missing_fields = [];
+			if ( empty( $module_id ) ) $missing_fields[] = 'module_id';
+			if ( empty( $source_type ) ) $missing_fields[] = 'source_type';
+			if ( empty( $identifier ) ) $missing_fields[] = 'identifier';
+			
 			$this->logger?->error( 'ProcessedItemsManager: Cannot mark item as processed - missing required data', [
 				'job_id' => $job_id,
 				'module_id' => $module_id,
 				'source_type' => $source_type,
-				'identifier' => $identifier
+				'identifier' => $identifier,
+				'missing_fields' => $missing_fields
 			] );
 			return false;
 		}

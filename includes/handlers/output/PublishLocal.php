@@ -139,7 +139,7 @@ class PublishLocal extends BaseOutputHandler {
 				$assigned_category_id = $category_id;
 				$assigned_category_name = $term->name;
 			}
-		} elseif ( $category_id === -1 && ! empty( $parsed_data['category'] ) ) { // Model decides
+		} elseif ( $category_id === 'instruct_model' && ! empty( $parsed_data['category'] ) ) { // Instruct Model
 			$term = get_term_by( 'name', $parsed_data['category'], 'category' );
 			if ( $term ) {
 				wp_set_post_terms( $post_id, array( $term->term_id ), 'category', false );
@@ -313,8 +313,7 @@ class PublishLocal extends BaseOutputHandler {
 		}
 		// Get available categories
 		$category_options = [
-		    'model_decides' => '-- Let Model Decide --', // Use string key
-		    'instruct_model' => '-- Instruct Model --' // Use string key
+		    'instruct_model' => '-- Instruct Model --' // AI determines category based on prompt instructions
 		];
 		$local_categories = get_terms(array('taxonomy' => 'category', 'hide_empty' => false));
 		if (!is_wp_error($local_categories)) {
@@ -324,8 +323,7 @@ class PublishLocal extends BaseOutputHandler {
 		}
 		// Get available tags
 		$tag_options = [
-		    'model_decides' => '-- Let Model Decide --', // Use string key
-		    'instruct_model' => '-- Instruct Model --' // Use string key
+		    'instruct_model' => '-- Instruct Model --' // AI determines tags based on prompt instructions
 		];
 		$local_tags = get_terms(array('taxonomy' => 'post_tag', 'hide_empty' => false));
 		if (!is_wp_error($local_tags)) {
@@ -405,8 +403,6 @@ class PublishLocal extends BaseOutputHandler {
 	 * @return array
 	 */
 	public function sanitize_settings(array $raw_settings): array {
-		// Debug logging for sanitization
-		error_log('DM Publish Local Sanitize: Raw settings received: ' . print_r($raw_settings, true));
 		
 		$sanitized = [];
 		$sanitized['post_type'] = sanitize_text_field($raw_settings['post_type'] ?? 'post');
@@ -432,11 +428,21 @@ class PublishLocal extends BaseOutputHandler {
 			$sanitized['selected_local_tag_id'] = intval($tag_val); // Treat others as int ID
 		}
 		
-		// Note: No custom taxonomies for local publish currently
+		// Sanitize custom taxonomy fields (fields starting with 'rest_')
+		foreach ($raw_settings as $key => $value) {
+			if (strpos($key, 'rest_') === 0) {
+				$tax_slug = substr($key, 5); // Remove 'rest_' prefix
+				if (taxonomy_exists($tax_slug)) {
+					$sanitized_value = sanitize_text_field($value);
+					if ($sanitized_value === 'instruct_model' || $sanitized_value === '') {
+						$sanitized[$key] = $sanitized_value;
+					} else {
+						$sanitized[$key] = intval($sanitized_value); // Treat as term ID
+					}
+				}
+			}
+		}
 		
-		// Debug logging for sanitization output
-		error_log('DM Publish Local Sanitize: Sanitized result: ' . print_r($sanitized, true));
-
 		return $sanitized;
 	}
-} // End class Data_Machine_Output_Publish_Local
+} // End class \\DataMachine\\Handlers\\Output\\PublishLocal

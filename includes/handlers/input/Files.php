@@ -107,7 +107,8 @@ class Files extends BaseInputHandler {
             'file_path' => $file_identifier
         ]);
 
-        return [$input_data_packet];
+        // Return single packet directly for "one coin, one operation" model
+        return $input_data_packet;
 	}
 
     /**

@@ -433,14 +433,7 @@ class Logger {
             return ['No log file found.'];
         }
 
-        // Use tail command if available, otherwise read file
-        if (function_exists('exec')) {
-            $output = [];
-            exec("tail -n {$lines} " . escapeshellarg($log_file), $output);
-            return $output ?: ['Unable to read log file.'];
-        }
-
-        // Fallback: read entire file and get last lines
+        // Read entire file and get last lines
         $file_content = file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if ($file_content === false) {
             return ['Unable to read log file.'];

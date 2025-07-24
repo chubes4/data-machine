@@ -51,7 +51,6 @@ class ProcessData {
 	 */
 	public function process_data($api_key, $system_prompt, $user_prompt, $input_data_packet) {
 		// Log the full input_data_packet for debugging
-		        // Debug logging removed for production
 		// Use the injected OpenAI API instance
 		$api = $this->openai_api;
 		$default_response = [
@@ -87,7 +86,6 @@ class ProcessData {
 					}
 
 					// Log only once for file input
-					        // Debug logging removed for production
 					$response = $api->create_response_with_file($api_key, $file_info, $user_message);
 
 				} else {
@@ -97,7 +95,6 @@ class ProcessData {
 						$user_message .= "\n\nPost Content:\n" . $content_string;
 					}
 					// Log only once for text input
-					        // Debug logging removed for production
 					$response = $api->create_completion_from_text($api_key, $user_message, $system_prompt);
 				}
 			}
@@ -151,4 +148,4 @@ class ProcessData {
 		}
 	} // End process_data method
 
-} // End class Data_Machine_process_data
+} // End class \\DataMachine\\Engine\\ProcessData

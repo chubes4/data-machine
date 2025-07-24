@@ -17,25 +17,37 @@ foreach ($post_types as $pt) {
     $post_type_options[$pt->name] = $pt->label;
 }
 
-$category_options = [
-    'instruct_model' => '-- Instruct Model --'
-];
-$local_categories = get_terms(['taxonomy' => 'category', 'hide_empty' => false]);
-if (!is_wp_error($local_categories)) {
-    foreach ($local_categories as $cat) {
-        $category_options[$cat->term_id] = $cat->name;
+// Get all public taxonomies available for content publishing
+$taxonomies = get_taxonomies(['public' => true], 'objects');
+$taxonomy_options = [];
+
+foreach ($taxonomies as $tax_slug => $tax_obj) {
+    // Skip built-in taxonomies that aren't typically used for content publishing
+    if (in_array($tax_slug, ['nav_menu', 'link_category', 'post_format'])) {
+        continue;
+    }
+    
+    $terms = get_terms(['taxonomy' => $tax_slug, 'hide_empty' => false]);
+    if (!is_wp_error($terms) && !empty($terms)) {
+        $taxonomy_options[$tax_slug] = [
+            'label' => $tax_obj->label,
+            'terms' => []
+        ];
+        
+        // Add default options
+        $taxonomy_options[$tax_slug]['terms'][''] = '-- Select ' . $tax_obj->label . ' --';
+        $taxonomy_options[$tax_slug]['terms']['instruct_model'] = '-- Instruct Model --';
+        
+        // Add actual terms
+        foreach ($terms as $term) {
+            $taxonomy_options[$tax_slug]['terms'][$term->term_id] = $term->name;
+        }
     }
 }
 
-$tag_options = [
-    'instruct_model' => '-- Instruct Model --'
-];
-$local_tags = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => false]);
-if (!is_wp_error($local_tags)) {
-    foreach ($local_tags as $tag) {
-        $tag_options[$tag->term_id] = $tag->name;
-    }
-}
+// Legacy support: ensure category and post_tag have specific variables for backward compatibility
+$category_options = $taxonomy_options['category']['terms'] ?? ['instruct_model' => '-- Instruct Model --'];
+$tag_options = $taxonomy_options['post_tag']['terms'] ?? ['instruct_model' => '-- Instruct Model --'];
 ?>
 <table class="form-table">
     <tr>
@@ -71,6 +83,7 @@ if (!is_wp_error($local_tags)) {
             <p class="description"><?php _e('Choose whether to use the original date from the source (if available) or the current date when publishing. UTC timestamps will be converted to site time.', 'data-machine'); ?></p>
         </td>
     </tr>
+    <?php if (isset($taxonomy_options['category'])): // Only show if category taxonomy has terms ?>
     <tr>
         <th scope="row"><label for="output_publish_local_selected_local_category_id"><?php _e('Category', 'data-machine'); ?></label></th>
         <td>
@@ -82,6 +95,8 @@ if (!is_wp_error($local_tags)) {
             <p class="description"><?php _e('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'); ?></p>
         </td>
     </tr>
+    <?php endif; ?>
+    <?php if (isset($taxonomy_options['post_tag'])): // Only show if post_tag taxonomy has terms ?>
     <tr>
         <th scope="row"><label for="output_publish_local_selected_local_tag_id"><?php _e('Tag', 'data-machine'); ?></label></th>
         <td>
@@ -93,4 +108,30 @@ if (!is_wp_error($local_tags)) {
             <p class="description"><?php _e('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'); ?></p>
         </td>
     </tr>
+    <?php endif; ?>
+    <?php 
+    // Dynamic Custom Taxonomy Rows - show all other public taxonomies
+    foreach ($taxonomy_options as $tax_slug => $tax_data):
+        // Skip category and post_tag as they already have dedicated rows above
+        if (in_array($tax_slug, ['category', 'post_tag'])) {
+            continue;
+        }
+        
+        $tax_label = $tax_data['label'];
+        $tax_terms = $tax_data['terms'];
+    ?>
+    <tr>
+        <th scope="row"><label for="output_publish_local_<?php echo esc_attr($tax_slug); ?>"><?php echo esc_html($tax_label); ?></label></th>
+        <td>
+            <select id="output_publish_local_<?php echo esc_attr($tax_slug); ?>" name="output_config[publish_local][rest_<?php echo esc_attr($tax_slug); ?>]">
+                <?php foreach ($tax_terms as $term_id => $term_name): ?>
+                    <option value="<?php echo esc_attr($term_id); ?>"><?php echo esc_html($term_name); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <p class="description"><?php 
+                /* translators: %s: taxonomy label */
+                printf(__('Select a %s, let the AI choose, or instruct the AI using your prompt.', 'data-machine'), esc_html(strtolower($tax_label))); ?></p>
+        </td>
+    </tr>
+    <?php endforeach; ?>
 </table> 

@@ -17,7 +17,6 @@
     'use strict';
 
     $(document).ready(function() {
-        console.log('Project Management JS Loaded');
 
         // --- Create New Project Button Handler ---
         // Handles the click event for the 'Create New Project' button.
@@ -304,7 +303,6 @@
             const projectId = $button.data('project-id');
             const fileModules = $button.data('file-modules');
             
-            console.log('Upload Files clicked for project:', projectId, 'File modules:', fileModules);
             
             // For now, show a simple alert - we'll implement the modal later
             if (fileModules && fileModules.length > 0) {

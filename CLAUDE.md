@@ -46,9 +46,9 @@ window.dmDebugMode = true
 **5-Step Async Pipeline**: Input Collection → AI Processing → Fact Check → Finalize → Output Publishing
 
 **Key Patterns**:
+- **WordPress-Native Hooks**: All handlers registered via `apply_filters('dm_register_handlers')` - no filesystem scanning
 - **PSR-4 Namespacing**: Modern namespace structure with `DataMachine\` root namespace
-- **Manual DI**: Custom dependency injection in `data-machine.php` (lines 207-218)
-- **Handler Registry**: Dynamic filesystem scanning discovers handlers by naming convention
+- **Dynamic Dependency Injection**: HandlerFactory uses reflection to resolve constructor dependencies automatically
 - **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator` class
 - **Action Scheduler**: Background processing with 2 max concurrent jobs
 
@@ -66,12 +66,12 @@ DataMachine\
 ## Critical File Locations
 
 ```
-data-machine.php           # Bootstrap: Global container setup (lines 207-218)
+data-machine.php           # Bootstrap: DI container + core handler registration (lines 284-342)
 
 admin/
 ├── page-templates/         # Pure view templates (no business logic)
 ├── ModuleConfig/          # Handler configuration system
-│   ├── handler-templates/  # Input/output form templates
+│   ├── handler-templates/  # Core handler form templates
 │   └── js/                # Frontend state management
 ├── Projects/              # Job creation & scheduling
 ├── RemoteLocations/       # Remote WordPress management
@@ -85,8 +85,8 @@ includes/
 │   ├── ProcessedItemsManager.php        # Deduplication management
 │   └── filters/           # AI utilities (prompt builder, parser, etc.)
 ├── handlers/              # Input/Output handlers
-│   ├── HandlerFactory.php              # Hard-coded switch statement (lines 104-151)
-│   ├── HandlerRegistry.php             # Filesystem scanning discovery
+│   ├── HandlerFactory.php              # Dynamic dependency injection via reflection
+│   ├── HandlerRegistry.php             # WordPress hook-based handler registration
 │   ├── input/BaseInputHandler.php      # Shared input logic
 │   └── input/output/      # Handler implementations
 ├── database/              # Custom wp_dm_* tables (no migrations)
@@ -96,12 +96,51 @@ includes/
 
 ## Handler Development
 
-**Adding New Handlers**:
+**Adding Core Handlers**:
 1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler` or `DataMachine\Handlers\Output\BaseOutputHandler`
 2. Implement required methods: `get_input_data()` or `handle_output()`
-3. **Critical**: Add case to `HandlerFactory.php` switch statement (lines 104-151)
-4. Add proper `use` statements for all dependencies
-5. Update bootstrap dependencies in `data-machine.php` if needed
+3. Add proper `use` statements for all dependencies with correct PSR-4 type hints
+4. Register in `data_machine_register_core_handlers()` function in `data-machine.php`
+5. **Done!** HandlerFactory uses dynamic dependency resolution via reflection
+
+**Adding External Handlers (Third-Party Plugins)**:
+```php
+// Third-party plugins register handlers via WordPress hooks:
+add_filter('dm_register_handlers', function($handlers) {
+    $handlers['input']['shopify_orders'] = [
+        'class' => 'MyPlugin\ShopifyOrdersHandler',
+        'label' => 'Shopify Orders'
+    ];
+    return $handlers;
+});
+
+// Optional: Register settings fields
+add_filter('dm_handler_settings_fields', function($fields, $type, $slug, $config) {
+    if ($type === 'input' && $slug === 'shopify_orders') {
+        return [
+            'api_key' => [
+                'type' => 'text',
+                'label' => 'Shopify API Key',
+                'required' => true
+            ]
+        ];
+    }
+    return $fields;
+}, 10, 4);
+
+// Optional: Register custom template
+add_action('dm_load_handler_template', function(&$loaded, $type, $slug, $config) {
+    if ($type === 'input' && $slug === 'shopify_orders') {
+        include plugin_dir_path(__FILE__) . 'templates/shopify-settings.php';
+        $loaded = true;
+    }
+}, 10, 4);
+```
+
+**WordPress-Native Extensibility**: 
+- Core and external handlers use identical WordPress hook patterns
+- HandlerFactory resolves dependencies automatically for all handlers
+- No filesystem scanning or core modifications needed
 
 **Handler Pattern**:
 ```php
@@ -156,7 +195,7 @@ wp_dm_remote_locations - Remote WordPress credentials (encrypted)
 
 ## Common Issues
 
-**Handler Factory**: Must add explicit case to switch statement for new handlers (lines 104-151)
+**Handler Factory**: Now uses dynamic dependency resolution - no core modifications needed for new handlers
 **Job Failures**: Check Action Scheduler status, jobs fail immediately with descriptive errors
 **Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
 **Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths

@@ -1,4 +1,3 @@
-console.log('Loaded: module-config-ajax.js');
 let AjaxHandler;
 try {
 /**
@@ -77,7 +76,6 @@ AjaxHandler = class {
     async getHandlerTemplate(handlerType, handlerSlug, moduleId = null, locationId = null) {
         // Reduced logging for better performance
         if (window.dmDebugMode) {
-            console.log(`[AjaxHandler.getHandlerTemplate] Args received:`, { handlerType, handlerSlug, moduleId, locationId });
         }
         const payload = {
             handler_type: handlerType,
@@ -92,7 +90,6 @@ AjaxHandler = class {
             payload.location_id = locationId;
         }
         if (window.dmDebugMode) {
-            console.log(`[AjaxHandler.getHandlerTemplate] Final payload for AJAX:`, payload);
         }
         return this._makeAjaxRequest('dm_get_handler_template', payload);
     }

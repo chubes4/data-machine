@@ -23,7 +23,7 @@ class AjaxScheduler {
     /** @var Modules */
     private $db_modules;
 
-    /** @var Data_Machine_Scheduler */
+    /** @var \DataMachine\Admin\Projects\Scheduler */
     private $scheduler;
 
     /**

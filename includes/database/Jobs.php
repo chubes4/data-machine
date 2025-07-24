@@ -64,7 +64,6 @@ class Jobs {
 
         // Basic validation
         if ( empty( $module_id ) || empty( $user_id ) || ! is_string( $module_config_json ) ) {
-            		// Debug logging removed for production
             return false;
         }
 
@@ -89,7 +88,6 @@ class Jobs {
         $inserted = $wpdb->insert( $this->table_name, $data, $format );
 
         if ( false === $inserted ) {
-            		// Debug logging removed for production
             return false;
         }
 
@@ -225,11 +223,9 @@ class Jobs {
         $valid_statuses = ['completed', 'failed', 'completed_with_errors', 'completed_no_items'];
 
 		// --- START: Add Detailed Logging Inside complete_job ---
-		// Debug logging removed for production
 		// --- END: Add Detailed Logging ---
 
         if ( empty( $job_id ) || !in_array( $status, $valid_statuses ) ) {
-            // Debug logging removed for production
             return false;
         }
         $updated = $wpdb->update(
@@ -244,7 +240,6 @@ class Jobs {
             ['%d']  // Format for WHERE
         );
          if ( false === $updated ) {
-            // Debug logging removed for production
         } else {
             // --- Update last_run_at in the related project ---
             // 1. Get module_id for this job
@@ -262,7 +257,6 @@ class Jobs {
                         ['%d']
                     );
                     if (false === $project_updated) {
-                        // Debug logging removed for production
                     }
                 }
             }
@@ -293,7 +287,6 @@ class Jobs {
             ['%d']  // Format for WHERE
         );
         if ( false === $updated ) {
-            // Debug logging removed for production
         }
         return $updated !== false;
     }

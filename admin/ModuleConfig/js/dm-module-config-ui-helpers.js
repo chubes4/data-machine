@@ -1,4 +1,3 @@
-console.log('Loaded: dm-module-config-ui-helpers.js');
 let populateHandlerFields;
 try {
 	// Vanilla JS version of tab UI helpers
@@ -55,7 +54,6 @@ try {
 			console.warn('[populateHandlerFields] Invalid arguments or container not found.');
 			return;
 		}
-		console.log(`[populateHandlerFields] Populating fields for ${handlerType} handler: ${handlerSlug}`, configData);
 
 		const configPrefix = handlerType === 'input' ? 'data_source_config' : 'output_config';
 
@@ -69,7 +67,6 @@ try {
 				// --- Handle Nested Custom Taxonomy Values for airdrop_rest_api (input) --- 
 				if (key === 'custom_taxonomies' && typeof configData[key] === 'object' && configData[key] !== null) {
 					const customTaxValues = configData[key];
-					console.log(`[populateHandlerFields] Populating custom taxonomies for ${handlerSlug}:`, customTaxValues);
 					for (const taxSlug in customTaxValues) {
 						if (Object.hasOwnProperty.call(customTaxValues, taxSlug)) {
 							const taxValue = customTaxValues[taxSlug];
@@ -78,7 +75,6 @@ try {
 							const customTaxFieldElement = containerElement.querySelector(`[name="${customTaxFieldName}"]`);
 
 							if (customTaxFieldElement) {
-								console.log(`[populateHandlerFields] Setting value for ${customTaxFieldName} to:`, taxValue);
 								customTaxFieldElement.value = taxValue; // Should handle selects
 							} else {
 								console.warn(`[populateHandlerFields] Custom tax field not found for name: ${customTaxFieldName}`);
@@ -92,7 +88,6 @@ try {
 				// --- Handle Nested Custom Taxonomy Values --- 
 				if (key === 'selected_custom_taxonomy_values' && typeof configData[key] === 'object' && configData[key] !== null) {
 					const customTaxValues = configData[key];
-					console.log(`[populateHandlerFields] Populating custom taxonomies for ${handlerSlug}:`, customTaxValues);
 					for (const taxSlug in customTaxValues) {
 						if (Object.hasOwnProperty.call(customTaxValues, taxSlug)) {
 							const taxValue = customTaxValues[taxSlug];
@@ -101,7 +96,6 @@ try {
 							const customTaxFieldElement = containerElement.querySelector(`[name="${customTaxFieldName}"]`);
 
 							if (customTaxFieldElement) {
-								console.log(`[populateHandlerFields] Setting value for ${customTaxFieldName} to:`, taxValue);
 								customTaxFieldElement.value = taxValue; // Should handle selects
 							} else {
 								console.warn(`[populateHandlerFields] Custom tax field not found for name: ${customTaxFieldName}`);
@@ -144,7 +138,10 @@ try {
 					 // Dispatch a 'change' event for potential dependent logic
 					// fieldElement.dispatchEvent(new Event('change', { bubbles: true }));
 				} else {
-					console.warn(`[populateHandlerFields] Field not found for name: ${fieldName}`);
+					// Only warn about missing fields in debug mode or for unexpected missing fields
+					if (window.dmDebugMode) {
+						console.warn(`[populateHandlerFields] Field not found for name: ${fieldName}`);
+					}
 				}
 			}
 		}
@@ -175,11 +172,25 @@ function safePopulateHandlerFields(configData, handlerType, handlerSlug, contain
 	const observer = new MutationObserver((mutations, obs) => {
 		if (allPresent()) {
 			obs.disconnect();
+			// Remove from registry when disconnected
+			if (window.dmObserverRegistry) {
+				window.dmObserverRegistry.delete(obs);
+			}
 			populateHandlerFields(configData, handlerType, handlerSlug, containerElement);
 		}
 	});
+	// Register observer for cleanup
+	if (window.dmObserverRegistry) {
+		window.dmObserverRegistry.add(observer);
+	}
 	observer.observe(containerElement, { childList: true, subtree: true });
-	setTimeout(() => observer.disconnect(), 5000);
+	// Improved cleanup with registry removal
+	setTimeout(() => {
+		observer.disconnect();
+		if (window.dmObserverRegistry) {
+			window.dmObserverRegistry.delete(observer);
+		}
+	}, 5000);
 }
 
 export { populateHandlerFields, safePopulateHandlerFields }; 

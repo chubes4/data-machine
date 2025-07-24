@@ -282,7 +282,8 @@ class AirdropRestApi extends BaseInputHandler {
 			return ['status' => 'no_new_items', 'message' => __('No new items found matching the criteria from the helper API endpoint.', 'data-machine')];
 		}
 
-		return $eligible_items_packets;
+		// Return only the first item for "one coin, one operation" model
+		return $eligible_items_packets[0];
 	}
 
 	/**

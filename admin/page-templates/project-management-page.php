@@ -112,7 +112,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                                 echo 'Never';
                             }
                         ?></td>
-                        <td><?php /* TODO: Implement actions */ ?><button class="button action-button run-now-button">Run Now</button> <button class="button action-button edit-schedule-button">Edit Schedule</button>
+                        <td><button class="button action-button run-now-button">Run Now</button> <button class="button action-button edit-schedule-button">Edit Schedule</button>
                             <?php if ( $has_file_modules ) : ?>
                                 <button class="button action-button upload-files-button" 
                                         data-project-id="<?php echo esc_attr( $project->project_id ); ?>"

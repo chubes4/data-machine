@@ -508,7 +508,8 @@ class Reddit extends BaseInputHandler {
 			return ['status' => 'no_new_items', 'message' => __('No new items found from the Reddit source matching the criteria.', 'data-machine')];
 		}
 
-		return $eligible_items_packets;
+		// Return only the first item for "one coin, one operation" model
+		return $eligible_items_packets[0];
 	}
 
 	/**
@@ -629,4 +630,4 @@ class Reddit extends BaseInputHandler {
 	}
 
 
-} // End class Data_Machine_Input_Reddit
+} // End class \\DataMachine\\Handlers\\Input\\Reddit

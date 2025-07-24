@@ -225,8 +225,8 @@ class Rss extends BaseInputHandler {
 			return ['status' => 'no_new_items', 'message' => __('No new items found matching the criteria in the feed.', 'data-machine')];
 		}
 
-		// Return the eligible items found (up to the limit)
-		return $eligible_items_packets;
+		// Return only the first item for "one coin, one operation" model
+		return $eligible_items_packets[0];
 	}
 
 	/**
@@ -385,4 +385,4 @@ class Rss extends BaseInputHandler {
 	public static function get_label(): string {
 		return 'RSS Feed';
 	}
-} // End class Data_Machine_Input_Rss
+} // End class \\DataMachine\\Handlers\\Input\\Rss
