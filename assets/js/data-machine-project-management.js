@@ -83,7 +83,7 @@
                 success: function(response) {
                     if (response.success) {
                         alert('Success: ' + response.data.message);
-                        // TODO: Optionally update row status or next run time based on response
+                        // Future: Could update row status or next run time in the UI
                     } else {
                         // Check if response.data is an object with a message property, otherwise display it directly
                         const errorMessage = (typeof response.data === 'object' && response.data !== null && response.data.message) ? response.data.message : response.data;

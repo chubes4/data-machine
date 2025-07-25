@@ -121,7 +121,7 @@ class ProjectManagementAjax {
 
 		if ( ! current_user_can( 'edit_posts' ) ) {
 			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'data-machine' ) ] );
-			wp_die();
+			return;
 		}
 
 		$project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
@@ -129,19 +129,19 @@ class ProjectManagementAjax {
 
 		if ( empty( $project_id ) || empty( $user_id ) ) {
 			wp_send_json_error( [ 'message' => __( 'Missing project ID or user ID.', 'data-machine' ) ] );
-			wp_die();
+			return;
 		}
 
 		$project = $this->db_projects->get_project( $project_id );
 		if ( ! $project || intval( $project->user_id ) !== intval( $user_id ) ) {
 			wp_send_json_error( [ 'message' => __( 'Project not found or permission denied.', 'data-machine' ) ] );
-			wp_die();
+			return;
 		}
 
 		$modules = $this->db_modules->get_modules_for_project( $project_id, $user_id );
 		if ( ! $modules ) {
 			wp_send_json_success( [ 'message' => __( 'No modules found in this project to schedule.', 'data-machine' ) ] );
-			wp_die();
+			return;
 		}
 
 		// Clean up stuck jobs before processing
@@ -226,7 +226,7 @@ class ProjectManagementAjax {
 			wp_send_json_success( [ 'message' => $summary ] );
 		}
 
-		wp_die();
+		// No wp_die() needed - wp_send_json_* functions handle termination
 	}
 
 	/* ---------------------------------------------------------------------

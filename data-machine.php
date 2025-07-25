@@ -101,13 +101,6 @@ function run_data_machine() {
     add_filter('dm_register_handlers', 'data_machine_register_core_handlers');
 
 
-    // Create minimal handler instances for main plugin constructor
-    // (These are legacy dependencies - actual handlers are created via factory)
-    $output_publish_local = null; // Will be created via factory when needed
-    $output_publish_remote = null; // Will be created via factory when needed
-    
-    // Note: $input_files will be created after processed_items_manager is available
-
     // API services - now use AI HTTP Client library directly
     $factcheck_api = new FactCheck();
     $finalize_api = new Finalize();
@@ -115,14 +108,8 @@ function run_data_machine() {
     // Process data
     $process_data = new ProcessData();
 
-
-
-    // Handler factory will be created after processed items manager
-
     // Remote location service
     $remote_location_service = new RemoteLocationService($db_remote_locations);
-
-    // Settings fields will be created after handler factory
 
     // Remote locations sync service
     $sync_remote_locations = new SyncRemoteLocations($db_remote_locations, $logger);
@@ -130,18 +117,8 @@ function run_data_machine() {
     // Remote locations form handler
     $remote_locations_form_handler = new RemoteLocationsFormHandler($db_remote_locations, $logger, $sync_remote_locations);
 
-    // Admin page will be created after dependencies are available
-
-    // Register settings - Handled in Data_Machine class
-
-    // Module handler will be created after dependencies are available
-
-    // Public API AJAX handler
-
     // Job worker, orchestrator, job executor, scheduler
     $job_status_manager = new JobStatusManager($db_jobs, $db_projects, $logger);
-    
-    // Orchestrator will be created after dependencies are available
     $job_creator = new JobCreator($db_jobs, $db_modules, $db_projects, $action_scheduler, $logger);
     $scheduler = new Scheduler($job_creator, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
     
@@ -151,20 +128,8 @@ function run_data_machine() {
     // Create legacy Files handler with correct dependency
     $input_files = new InputFiles($db_modules, $db_projects, $processed_items_manager, $logger);
 
-    // Handler factory (replace with DI version if available)
-    $handler_factory = new HandlerFactory(
-        $logger,
-        $processed_items_manager,
-        $encryption_helper,
-        $oauth_twitter,
-        $oauth_reddit,
-        $oauth_threads,
-        $oauth_facebook,
-        $db_remote_locations,
-        $db_modules,
-        $db_projects,
-        $handler_http_service
-    );
+    // Handler factory using PSR-4 autoloading and service locator pattern
+    $handler_factory = new HandlerFactory();
 
     // Settings fields
     $settings_fields = new SettingsFields($handler_factory, $remote_location_service);
@@ -210,6 +175,8 @@ function run_data_machine() {
     $data_machine_container = array(
         'handler_factory' => $handler_factory,
         'db_jobs' => $db_jobs,
+        'db_modules' => $db_modules,
+        'db_projects' => $db_projects,
         'db_processed_items' => $db_processed_items,
         'processed_items_manager' => $processed_items_manager,
         'job_status_manager' => $job_status_manager,
@@ -233,23 +200,21 @@ function run_data_machine() {
     // --- Instantiate Main Plugin ---
     $register_settings = new RegisterSettings(DATA_MACHINE_VERSION);
     $plugin = new DataMachine(
-            DATA_MACHINE_VERSION,
+        DATA_MACHINE_VERSION,
         $register_settings,
         $admin_page,
         $factcheck_api,
         $finalize_api,
         $process_data,
-            $db_modules,
+        $db_modules,
         $orchestrator,
-        $output_publish_local,
-        $output_publish_remote,
         $input_files,
         $oauth_reddit,
         $oauth_twitter,
-        $oauth_threads,  // Pass new handler
-        $oauth_facebook, // Pass new handler
-  $db_remote_locations,
-  $logger
+        $oauth_threads,
+        $oauth_facebook,
+        $db_remote_locations,
+        $logger
 	);
 
 	// --- Run the Plugin ---
@@ -271,6 +236,8 @@ function run_data_machine() {
 
     $scheduler->init_hooks();
 }
+
+
 // Initialize after plugins_loaded to ensure Action Scheduler is available
 add_action('plugins_loaded', 'run_data_machine', 20);
 

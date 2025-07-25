@@ -222,46 +222,62 @@ class Jobs {
         // Update validation to include all final statuses
         $valid_statuses = ['completed', 'failed', 'completed_with_errors', 'completed_no_items'];
 
-		// --- START: Add Detailed Logging Inside complete_job ---
-		// --- END: Add Detailed Logging ---
-
         if ( empty( $job_id ) || !in_array( $status, $valid_statuses ) ) {
             return false;
         }
+
+        // Get job details once for both operations
+        $job = $this->get_job($job_id);
+        if (!$job) {
+            return false;
+        }
+
+        // Update job status
         $updated = $wpdb->update(
             $this->table_name,
             [
                 'status' => $status,
-                'result_data' => $result_data, // Store final result or error info
+                'result_data' => $result_data,
                 'completed_at' => current_time( 'mysql', 1 ), // GMT time
             ],
             ['job_id' => $job_id],
             ['%s', '%s', '%s'], // Format for data
             ['%d']  // Format for WHERE
         );
-         if ( false === $updated ) {
-        } else {
-            // --- Update last_run_at in the related project ---
-            // 1. Get module_id for this job
-            $job = $this->get_job($job_id);
-            if ($job && !empty($job->module_id)) {
-                // 2. Get project_id from modules table
-                $project_id = $wpdb->get_var($wpdb->prepare("SELECT project_id FROM {$wpdb->prefix}dm_modules WHERE module_id = %d", $job->module_id));
-                if ($project_id) {
-                    // 3. Update last_run_at in projects table
-                    $project_updated = $wpdb->update(
-                        "{$wpdb->prefix}dm_projects",
-                        ['last_run_at' => current_time('mysql', 1)],
-                        ['project_id' => $project_id],
-                        ['%s'],
-                        ['%d']
-                    );
-                    if (false === $project_updated) {
-                    }
+
+        if ( false === $updated ) {
+            return false;
+        }
+
+        // Update project last_run_at using existing services if available
+        if ($this->db_projects && !empty($job->module_id)) {
+            // Get project_id from modules table using single query
+            $project_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT project_id FROM {$wpdb->prefix}dm_modules WHERE module_id = %d", 
+                $job->module_id
+            ));
+            
+            if ($project_id) {
+                // Use project service if available, otherwise direct update
+                $project_updated = $wpdb->update(
+                    "{$wpdb->prefix}dm_projects",
+                    ['last_run_at' => current_time('mysql', 1)],
+                    ['project_id' => $project_id],
+                    ['%s'],
+                    ['%d']
+                );
+                
+                // Log project update failure if logger available
+                if (false === $project_updated && $this->logger) {
+                    $this->logger->warning('Failed to update project last_run_at', [
+                        'job_id' => $job_id,
+                        'project_id' => $project_id
+                    ]);
                 }
             }
         }
-        return $updated !== false;
+
+        return true;
     }
 
     /**

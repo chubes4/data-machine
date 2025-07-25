@@ -265,7 +265,7 @@ class Bluesky extends BaseOutputHandler {
             '$type'     => 'app.bsky.feed.post',
             'text'      => $final_post_text, // Use the final text with potential truncation/link
             'createdAt' => $current_time,
-            'langs'     => ['en'], // TODO: Detect language?
+            'langs'     => [$this->detect_content_language($final_post_text)],
         ];
         // Add facets if any were detected
         if (!empty($facets)) {
@@ -732,6 +732,62 @@ class Bluesky extends BaseOutputHandler {
 
 
         return $facets;
+    }
+
+    /**
+     * Detect the primary language of the given text content.
+     * Simple detection based on WordPress locale and common patterns.
+     *
+     * @param string $text The text to analyze
+     * @return string ISO 639-1 language code
+     */
+    private function detect_content_language(string $text): string {
+        // Use WordPress locale as base
+        $wp_locale = get_locale(); // e.g., 'en_US', 'es_ES', 'fr_FR'
+        
+        // Extract language code (first two characters)
+        $lang_code = substr($wp_locale, 0, 2);
+        
+        // Validate it's a reasonable language code, default to 'en'
+        if (!preg_match('/^[a-z]{2}$/', $lang_code)) {
+            return 'en';
+        }
+        
+        // Basic content-based detection for common patterns
+        $text_lower = strtolower($text);
+        
+        // Spanish indicators
+        if (preg_match('/\b(el|la|los|las|y|o|en|de|del|con|por|para|que|una?|este?|esta?|muy|más|también)\b/', $text_lower)) {
+            return 'es';
+        }
+        
+        // French indicators  
+        if (preg_match('/\b(le|la|les|et|ou|en|de|du|avec|pour|par|que|une?|ce|cette|très|plus|aussi)\b/', $text_lower)) {
+            return 'fr';
+        }
+        
+        // German indicators
+        if (preg_match('/\b(der|die|das|und|oder|in|von|mit|für|durch|dass|ein|eine|sehr|mehr|auch)\b/', $text_lower)) {
+            return 'de';
+        }
+        
+        // Italian indicators
+        if (preg_match('/\b(il|la|lo|gli|le|e|o|in|di|da|con|per|che|un|una|questo|questa|molto|più|anche)\b/', $text_lower)) {
+            return 'it';
+        }
+        
+        // Portuguese indicators
+        if (preg_match('/\b(o|a|os|as|e|ou|em|de|do|da|com|por|para|que|um|uma|este|esta|muito|mais|também)\b/', $text_lower)) {
+            return 'pt';
+        }
+        
+        // If WordPress locale suggests non-English but no patterns matched, trust WP locale
+        if ($lang_code !== 'en') {
+            return $lang_code;
+        }
+        
+        // Default to English
+        return 'en';
     }
 
 }

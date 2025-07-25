@@ -22,16 +22,16 @@ if (isset($_GET['auth_error'])) {
 
 // Check for per-form success notices
 if (isset($_GET['openai_saved'])) {
-    echo '<div class="notice notice-success is-dismissible"><p>OpenAI API key saved.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('OpenAI API key saved.', 'data-machine') . '</p></div>';
 }
 if (isset($_GET['bluesky_saved'])) {
-    echo '<div class="notice notice-success is-dismissible"><p>Bluesky credentials saved.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Bluesky credentials saved.', 'data-machine') . '</p></div>';
 }
 if (isset($_GET['twitter_saved'])) {
-    echo '<div class="notice notice-success is-dismissible"><p>Twitter credentials saved.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Twitter credentials saved.', 'data-machine') . '</p></div>';
 }
 if (isset($_GET['reddit_saved'])) {
-    echo '<div class="notice notice-success is-dismissible"><p>Reddit credentials saved.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Reddit credentials saved.', 'data-machine') . '</p></div>';
 }
 
 $twitter_account = get_user_meta(get_current_user_id(), 'data_machine_twitter_account', true);
@@ -95,7 +95,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
             <h3>Global AI Provider Settings</h3>
             <p>Configure default AI provider settings. These can be overridden per processing step below.</p>
             <?php
-            echo AI_HTTP_ProviderManager_Component::render([
+            echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                 'plugin_context' => 'data-machine',
                 'components' => [
                     'core' => ['provider_selector', 'api_key_input', 'model_selector'],
@@ -109,7 +109,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                         'default_value' => 0.7
                     ]
                 ]
-            ]);
+            ]));
             ?>
             
             <!-- Step-Specific AI Configuration -->
@@ -123,7 +123,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     <h4>Step 2: Process Data</h4>
                     <p style="font-size: 12px; color: #666;">Analyzes and processes raw input data</p>
                     <?php
-                    echo AI_HTTP_ProviderManager_Component::render([
+                    echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
                         'step_context' => 'process',
                         'components' => [
@@ -131,7 +131,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                         ],
                         'show_title' => false,
                         'show_description' => false
-                    ]);
+                    ]));
                     ?>
                 </div>
                 
@@ -140,7 +140,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     <h4>Step 3: Fact Check</h4>
                     <p style="font-size: 12px; color: #666;">Verifies information accuracy using web search</p>
                     <?php
-                    echo AI_HTTP_ProviderManager_Component::render([
+                    echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
                         'step_context' => 'factcheck',
                         'components' => [
@@ -148,7 +148,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                         ],
                         'show_title' => false,
                         'show_description' => false
-                    ]);
+                    ]));
                     ?>
                 </div>
                 
@@ -157,7 +157,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     <h4>Step 4: Finalize</h4>
                     <p style="font-size: 12px; color: #666;">Formats content for final output destination</p>
                     <?php
-                    echo AI_HTTP_ProviderManager_Component::render([
+                    echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
                         'step_context' => 'finalize',
                         'components' => [
@@ -165,7 +165,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                         ],
                         'show_title' => false,
                         'show_description' => false
-                    ]);
+                    ]));
                     ?>
                 </div>
                 
@@ -173,7 +173,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
             
             <?php
         } else {
-            echo '<div class="notice notice-warning"><p>AI HTTP Client library not loaded. Using legacy OpenAI integration.</p></div>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__('AI HTTP Client library not loaded. Using legacy OpenAI integration.', 'data-machine') . '</p></div>';
         }
         ?>
     </div>
@@ -329,7 +329,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
         $twitter_account = \DataMachine\Admin\OAuth\Twitter::get_account_details(get_current_user_id());
         if (empty($twitter_account)):
         ?>
-            <p>No Twitter account authenticated yet.</p>
+            <p><?php echo esc_html__('No Twitter account authenticated yet.', 'data-machine'); ?></p>
         <?php else:
             $remove_nonce_twitter = wp_create_nonce('dm_remove_twitter_account_' . ($twitter_account['user_id'] ?? 'unknown'));
             // Display authenticated account info
@@ -340,7 +340,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     // Ideally, fetch profile pic URL via API if needed, but screen name is good for now
                     echo '<strong>@' . esc_html($twitter_account['screen_name'] ?? 'UnknownUser') . '</strong> ';
                     echo '(ID: ' . esc_html($twitter_account['user_id'] ?? 'N/A') . ') ';
-                    echo '<button class="button button-small button-danger twitter-remove-account-btn" data-nonce="' . esc_attr($remove_nonce_twitter) . '" style="float: right;">Remove</button>';
+                    echo '<button class="button button-small button-danger twitter-remove-account-btn" data-nonce="' . esc_attr($remove_nonce_twitter) . '" style="float: right;">' . esc_html__('Remove', 'data-machine') . '</button>';
                     ?>
                  </li>
              </ul>
@@ -368,7 +368,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
         // Retrieve stored Reddit account info (assuming single account per WP user for now)
         $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_account', true);
         if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['username'])) {
-            echo '<p>No Reddit account authenticated yet.</p>';
+            echo '<p>' . esc_html__('No Reddit account authenticated yet.', 'data-machine') . '</p>';
         } else {
              echo '<ul class="dm-account-list">';
              echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
@@ -380,17 +380,17 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     $now = time();
                     $time_left = $expires_timestamp - $now;
                     if ($time_left <= 0) {
-                        echo '<span style="color:red;">(Token Expired - Refresh Needed)</span> ';
+                        echo '<span style="color:red;">(' . esc_html__('Token Expired - Refresh Needed', 'data-machine') . ')</span> ';
                     } else {
                         $expires_display = human_time_diff($now, $expires_timestamp) . ' left';
-                         echo '<span style="color:#888;">(Token expires: ' . esc_html(date('Y-m-d H:i', $expires_timestamp)) . ' - ' . $expires_display . ')</span> ';
+                         echo '<span style="color:#888;">(' . esc_html(sprintf(__('Token expires: %s - %s', 'data-machine'), date('Y-m-d H:i', $expires_timestamp), $expires_display)) . ')</span> ';
                     }
               } else {
-                   echo '<span style="color:orange;">(Token expiry unknown)</span> ';
+                   echo '<span style="color:orange;">(' . esc_html__('Token expiry unknown', 'data-machine') . ')</span> ';
               }
              // Add nonce for security
              $remove_nonce_reddit = wp_create_nonce('dm_remove_reddit_account_' . $reddit_account['username']); // Use username as identifier
-             echo '<button class="button button-small button-danger reddit-remove-account-btn" data-account-username="' . esc_attr($reddit_account['username']) . '" data-nonce="' . esc_attr($remove_nonce_reddit) . '" style="float: right;">Remove</button>';
+             echo '<button class="button button-small button-danger reddit-remove-account-btn" data-account-username="' . esc_attr($reddit_account['username']) . '" data-nonce="' . esc_attr($remove_nonce_reddit) . '" style="float: right;">' . esc_html__('Remove', 'data-machine') . '</button>';
              echo '</li>';
              echo '</ul>';
         }
@@ -414,7 +414,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
         <?php
         $threads_auth_account = get_user_meta(get_current_user_id(), 'data_machine_threads_auth_account', true);
         if (empty($threads_auth_account) || !is_array($threads_auth_account) || empty($threads_auth_account['page_name'])) {
-            echo '<p>No Threads account authenticated yet.</p>';
+            echo '<p>' . esc_html__('No Threads account authenticated yet.', 'data-machine') . '</p>';
         } else {
              echo '<ul class="dm-account-list">';
              echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
@@ -438,7 +438,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
              
              // Add remove button with proper nonce
              $remove_nonce_threads = wp_create_nonce('dm_remove_threads_account_' . get_current_user_id());
-             echo '<button class="button button-small button-danger threads-remove-account-btn" data-account-id="' . esc_attr($threads_auth_account['page_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_threads) . '" style="float: right;">Remove</button>';
+             echo '<button class="button button-small button-danger threads-remove-account-btn" data-account-id="' . esc_attr($threads_auth_account['page_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_threads) . '" style="float: right;">' . esc_html__('Remove', 'data-machine') . '</button>';
              echo '</li>';
              echo '</ul>';
         }
@@ -462,7 +462,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
         <?php
         $facebook_auth_account = get_user_meta(get_current_user_id(), 'data_machine_facebook_auth_account', true);
         if (empty($facebook_auth_account) || !is_array($facebook_auth_account) || empty($facebook_auth_account['user_id'])):
-            echo '<p>No Facebook account/page authenticated yet.</p>';
+            echo '<p>' . esc_html__('No Facebook account/page authenticated yet.', 'data-machine') . '</p>';
         else:
              echo '<ul class="dm-account-list">';
              echo '<li style="margin-bottom: 10px; padding: 5px; border: 1px solid #eee;">';
@@ -484,7 +484,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
 
              // Add remove button with proper nonce
              $remove_nonce_facebook = wp_create_nonce('dm_remove_facebook_account_' . get_current_user_id());
-             echo '<button class="button button-small button-danger facebook-remove-account-btn" data-account-id="' . esc_attr($facebook_auth_account['user_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_facebook) . '" style="float: right;">Remove</button>';
+             echo '<button class="button button-small button-danger facebook-remove-account-btn" data-account-id="' . esc_attr($facebook_auth_account['user_id'] ?? '') . '" data-nonce="' . esc_attr($remove_nonce_facebook) . '" style="float: right;">' . esc_html__('Remove', 'data-machine') . '</button>';
              echo '</li>';
              echo '</ul>';
         endif;

@@ -101,15 +101,15 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                             ><?php echo esc_html($project->project_prompt ?? ''); ?></div>
                             <span class="dm-prompt-save-spinner spinner" style="float:none;vertical-align:middle;display:none;"></span>
                         </td>
-                        <td><?php echo $modules_display; ?></td>
-                        <td><?php echo $final_schedule_display; ?></td>
+                        <td><?php echo wp_kses_post($modules_display); ?></td>
+                        <td><?php echo wp_kses_post($final_schedule_display); ?></td>
                         <td><?php echo esc_html( ucfirst( $project->schedule_status ?? 'paused' ) ); ?></td>
                         <td><?php
                             if (!empty($project->last_run_at)) {
                                 // Display human-readable time difference
                                 echo esc_html( human_time_diff( strtotime( $project->last_run_at ), current_time( 'timestamp' ) ) . ' ago' );
                             } else {
-                                echo 'Never';
+                                echo esc_html__('Never', 'data-machine');
                             }
                         ?></td>
                         <td><button class="button action-button run-now-button">Run Now</button> <button class="button action-button edit-schedule-button">Edit Schedule</button>
@@ -153,7 +153,7 @@ $projects = $db_projects->get_projects_for_user( $user_id );
                 <?php endforeach; ?>
             <?php else : ?>
                 <tr>
-                    <td colspan="6">No projects found. Click 'Create New Project' above to get started.</td>
+                    <td colspan="6"><?php echo esc_html__('No projects found. Click \'Create New Project\' above to get started.', 'data-machine'); ?></td>
                 </tr>
             <?php endif; ?>
         </tbody>
@@ -304,7 +304,7 @@ jQuery(document).ready(function($) {
             <p class="description" style="margin-bottom: 10px;">Modules set to "Project Schedule" will use the settings above. You can override the schedule for individual modules here.</p>
             <div id="dm-modal-module-list" style="max-height: 200px; overflow-y: auto;">
                 <!-- Module schedule rows will be inserted here by JavaScript -->
-                <p>Loading modules...</p> 
+                <p><?php echo esc_html__('Loading modules...', 'data-machine'); ?></p> 
             </div>
         </fieldset>
         
@@ -345,7 +345,7 @@ jQuery(document).ready(function($) {
                 </table>
                 
                 <div id="dm-upload-file-list" style="margin-top: 10px; display: none;">
-                    <strong>Selected files:</strong>
+                    <strong><?php echo esc_html__('Selected files:', 'data-machine'); ?></strong>
                     <ul id="dm-upload-selected-files"></ul>
                 </div>
             </fieldset>
@@ -355,17 +355,17 @@ jQuery(document).ready(function($) {
             <div style="background: #f1f1f1; border-radius: 3px; padding: 3px;">
                 <div id="dm-upload-progress-bar" style="background: #0073aa; height: 20px; border-radius: 3px; width: 0%; text-align: center; line-height: 20px; color: white; font-size: 12px;"></div>
             </div>
-            <p id="dm-upload-status">Preparing upload...</p>
+            <p id="dm-upload-status"><?php echo esc_html__('Preparing upload...', 'data-machine'); ?></p>
         </div>
 
         <div id="dm-upload-results" style="display: none; margin: 15px 0;">
-            <h4>Upload Results</h4>
+            <h4><?php echo esc_html__('Upload Results', 'data-machine'); ?></h4>
             <div id="dm-upload-success-list"></div>
             <div id="dm-upload-error-list"></div>
         </div>
 
         <div id="dm-current-queue-status" style="border: 1px solid #ddd; padding: 10px; margin: 15px 0; background: #f9f9f9;">
-            <h4>Current Queue Status</h4>
+            <h4><?php echo esc_html__('Current Queue Status', 'data-machine'); ?></h4>
             <p>Loading queue status...</p>
         </div>
         

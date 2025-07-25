@@ -103,7 +103,7 @@ class Logger {
                 // Optional: Customize log format
                 $formatter = new LineFormatter(
                     "[%datetime%] [%channel%.%level_name%]: %message% %context% %extra%\n",
-                    "Y-m-d\TH:i:s.uP", // ISO 8601 format
+                    "Y-m-d H:i:s", // Human-readable format
                     true, // Allow inline line breaks
                     true  // Ignore empty context/extra
                 );

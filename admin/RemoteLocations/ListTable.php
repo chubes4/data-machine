@@ -82,16 +82,12 @@ class ListTable extends \WP_List_Table {
         $sortable = $this->get_sortable_columns();
         $this->_column_headers = array($columns, $hidden, $sortable);
 
-        // TODO: Implement sorting logic based on $_GET['orderby'] and $_GET['order']
-        // For now, fetch all items ordered by name (as done in DB class)
+        // Sorting logic can be implemented based on orderby and order parameters
+        // Currently using default DB ordering by name
         $this->items = $this->db_locations->get_locations_for_user($user_id);
 
-        // TODO: Implement pagination if needed
-        // $per_page = 20;
-        // $current_page = $this->get_pagenum();
-        // $total_items = count($this->items);
-        // $this->set_pagination_args(array(
-        //     'total_items' => $total_items,
+        // Pagination can be implemented if the number of locations grows large
+        // Currently showing all locations for simplicity
         //     'per_page'    => $per_page
         // ));
         // $this->items = array_slice($this->items, (($current_page - 1) * $per_page), $per_page);

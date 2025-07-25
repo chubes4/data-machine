@@ -87,18 +87,6 @@ class DataMachine {
 	 */
 	public $orchestrator; // Added property
 
-	/**
-	 * Output handler for local publishing.
-	 * @var \DataMachine\Handlers\Output\PublishLocal
-	 */
-	public $output_publish_local;
-
-	/**
-	 * Output handler for remote publishing.
-	 * @var \DataMachine\Handlers\Output\PublishRemote
-	 */
-	public $output_publish_remote;
-
 
 	/**
 	 * Input handler for file uploads.
@@ -146,7 +134,7 @@ class DataMachine {
 	 * Initialize the class and set its properties.
 	 * @since    0.1.0
 	 */
-	// Refactored constructor to accept all dependencies directly
+	// Streamlined constructor with only needed dependencies
 	public function __construct(
 		$version,
 		$register_settings,
@@ -156,13 +144,11 @@ class DataMachine {
 		$process_data,
 		$db_modules,
 		$orchestrator,
-		$output_publish_local,
-		$output_publish_remote,
 		$input_files,
 		$oauth_reddit,
 		$oauth_twitter,
-		      $oauth_threads,  // Added
-		      $oauth_facebook, // Added
+		$oauth_threads,
+		$oauth_facebook,
 		$db_remote_locations,
 		$logger
 	) {
@@ -174,20 +160,18 @@ class DataMachine {
 		$this->process_data = $process_data;
 		$this->db_modules = $db_modules;
 		$this->orchestrator = $orchestrator;
-		$this->output_publish_local = $output_publish_local;
-		$this->output_publish_remote = $output_publish_remote;
 		$this->input_files = $input_files;
 		$this->db_remote_locations = $db_remote_locations;
 		$this->logger = $logger;
-		$this->oauth_twitter = $oauth_twitter; // Corrected potential typo if present
-		$this->oauth_threads = $oauth_threads;   // Ensure assignment
-		$this->oauth_facebook = $oauth_facebook; // Ensure assignment
-		$this->oauth_reddit = $oauth_reddit; // Ensure assignment
+		$this->oauth_twitter = $oauth_twitter;
+		$this->oauth_threads = $oauth_threads;
+		$this->oauth_facebook = $oauth_facebook;
+		$this->oauth_reddit = $oauth_reddit;
 		// Register hooks for OAuth handlers
 		$oauth_reddit->register_hooks();
 		$oauth_twitter->register_hooks();
-		$oauth_threads->register_hooks();  // Ensure hook registration
-		$oauth_facebook->register_hooks(); // Ensure hook registration
+		$oauth_threads->register_hooks();
+		$oauth_facebook->register_hooks();
 	}
 
 	/**
@@ -210,7 +194,6 @@ class DataMachine {
 		// Initialize module handler
 		$module_handler = new ModuleConfigHandler(
 			$this->db_modules,
-			$this->admin_page->handler_registry,
 			$this->admin_page->handler_factory,
 			$this->logger
 		);
@@ -222,14 +205,6 @@ class DataMachine {
 		// (AJAX handler hooks and scheduler logic should be handled in the main bootstrap, not here)
 
 		// Note: Prompt Builder is instantiated in main bootstrap file and injected into orchestrator
-
-		// Remote locations handler (if needed elsewhere, move to bootstrap)
-		$remote_locations = new RemoteLocationsFormHandler($this->db_remote_locations, $this->logger);
-
-		// Remove legacy/placeholder null assignments for AJAX handlers and others
-		// All dependencies should be injected or instantiated as needed
-
-		// (AJAX handler hooks and scheduler logic should be handled in the main bootstrap, not here)
 	}
 
 	/**

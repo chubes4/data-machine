@@ -107,7 +107,7 @@ class ImportExport {
 				$export_data['project'][ $field ] = $project->$field;
 			}
 		}
-		// TODO: Add project metadata export if applicable and safe
+		// Project metadata can be added here if needed for import/export
 
 		// Define allowed fields for modules (excluding module_id, project_id, user_id)
 		$allowed_module_fields = array(
@@ -133,7 +133,7 @@ class ImportExport {
 						}
 					}
 				}
-				// TODO: Add module metadata export if applicable and safe
+				// Module metadata can be added here if needed for import/export
 
 				if ( ! empty( $module_export ) ) {
 					$export_data['modules'][] = $module_export;

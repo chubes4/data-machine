@@ -10,6 +10,7 @@
 namespace DataMachine\Admin\OAuth;
 
 use DataMachine\Helpers\Logger;
+use DataMachine\Helpers\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -227,11 +228,21 @@ class Reddit {
              $this->logger->warning('Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error, 'user_id' => $user_id]);
         }
 
-        // --- 5. Store Tokens and User Info --- 
+        // --- 5. Store Tokens and User Info (Encrypted) --- 
+        // Encrypt the tokens before storing
+        $encrypted_access_token = EncryptionHelper::encrypt($access_token);
+        $encrypted_refresh_token = $refresh_token ? EncryptionHelper::encrypt($refresh_token) : null;
+        
+        if ($encrypted_access_token === false || ($refresh_token && $encrypted_refresh_token === false)) {
+            $this->logger?->error('Reddit OAuth Error: Failed to encrypt tokens.', ['user_id' => $user_id]);
+            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_encryption_failed'));
+            exit;
+        }
+        
         $account_data = [
             'username'           => $identity_username, // Might be null
-            'access_token'       => $access_token,      // Store securely!
-            'refresh_token'      => $refresh_token,     // Store securely!
+            'access_token'       => $encrypted_access_token,      // Store encrypted!
+            'refresh_token'      => $encrypted_refresh_token,     // Store encrypted!
             'token_expires_at'   => $token_expires_at,
             'scope'              => $scope_granted,
             'last_refreshed_at'  => time()
@@ -262,7 +273,12 @@ class Reddit {
             // delete_user_meta($user_id, 'data_machine_reddit_account');
             return false;
         }
-        $refresh_token = $reddit_account['refresh_token'];
+        // Decrypt the refresh token
+        $refresh_token = EncryptionHelper::decrypt($reddit_account['refresh_token']);
+        if ($refresh_token === false) {
+            $this->logger->error('Reddit Token Refresh Error: Failed to decrypt refresh token.', ['user_id' => $user_id]);
+            return false;
+        }
 
         // Get credentials needed for Basic Auth
         $client_id = get_option('reddit_oauth_client_id');
@@ -324,10 +340,19 @@ class Reddit {
         $new_scope_granted = $data['scope'] ?? $reddit_account['scope'] ?? ''; // Keep old scope if not returned
         $new_token_expires_at = time() + intval($new_expires_in);
 
+        // Encrypt the tokens before storing
+        $encrypted_new_access_token = EncryptionHelper::encrypt($new_access_token);
+        $encrypted_new_refresh_token = EncryptionHelper::encrypt($new_refresh_token);
+        
+        if ($encrypted_new_access_token === false || $encrypted_new_refresh_token === false) {
+            $this->logger->error('Reddit Token Refresh Error: Failed to encrypt new tokens.', ['user_id' => $user_id]);
+            return false;
+        }
+
         $updated_account_data = [
             'username'           => $reddit_account['username'] ?? null, // Keep existing username
-            'access_token'       => $new_access_token,
-            'refresh_token'      => $new_refresh_token,
+            'access_token'       => $encrypted_new_access_token,
+            'refresh_token'      => $encrypted_new_refresh_token,
             'token_expires_at'   => $new_token_expires_at,
             'scope'              => $new_scope_granted,
             'last_refreshed_at'  => time() // Update refresh time

@@ -44,6 +44,12 @@ class RemoteLocationsAjax {
      */
     public function get_user_locations_ajax_handler() {
         check_ajax_referer('dm_module_config_actions_nonce', 'nonce');
+        
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(['message' => __('Permission denied.', 'data-machine')]);
+            return;
+        }
+        
         $user_id = get_current_user_id();
         if (empty($user_id)) {
             wp_send_json_error(['message' => __('User not logged in.', 'data-machine')]);

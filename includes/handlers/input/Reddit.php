@@ -16,6 +16,7 @@ use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Admin\OAuth\Reddit as OAuthReddit;
 use DataMachine\Handlers\HttpService;
 use DataMachine\Helpers\Logger;
+use DataMachine\Helpers\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -127,10 +128,17 @@ class Reddit extends BaseInputHandler {
 			$this->logger?->info('Reddit Input: Token refresh successful.', ['module_id' => $module_id, 'user_id' => $user_id]);
 		}
 
-		$access_token = $reddit_account['access_token'] ?? null;
-		if (empty($access_token)) {
+		// Decrypt the access token
+		$encrypted_access_token = $reddit_account['access_token'] ?? null;
+		if (empty($encrypted_access_token)) {
 			$this->logger?->error('Reddit Input: Access token is still empty after checks/refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
 			throw new Exception(esc_html__( 'Could not obtain valid Reddit access token.', 'data-machine' ));
+		}
+		
+		$access_token = EncryptionHelper::decrypt($encrypted_access_token);
+		if ($access_token === false) {
+			$this->logger?->error('Reddit Input: Failed to decrypt access token.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			throw new Exception(esc_html__( 'Failed to decrypt Reddit access token. Please re-authenticate.', 'data-machine' ));
 		}
 		// --- End Token Retrieval & Refresh ---
 
@@ -533,7 +541,7 @@ class Reddit extends BaseInputHandler {
 				'options' => [
 					'hot' => 'Hot',
 					'new' => 'New',
-					'top' => 'Top (All Time)', // TODO: Add time range options for 'top'?
+					'top' => 'Top (All Time)', // Time range options could be added for 'top'
 					'rising' => 'Rising',
 				],
 				'default' => 'hot',

@@ -322,7 +322,7 @@ class Rss extends BaseInputHandler {
 				'description' => __('Optional: Filter items locally by keywords (comma-separated). Only items containing at least one keyword in their title or content (text only) will be considered.', 'data-machine'),
 				'default' => '',
 			],
-			// TODO: Add 'Order' (Newest/Oldest)? 'Offset'?
+			// Future: Order (Newest/Oldest) and Offset options could be added
 		];
 	}
 

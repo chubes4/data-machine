@@ -297,7 +297,7 @@ class AdminPage {
         }
 
         try {
-            $recent_logs = $this->logger->get_recent_logs(50);
+            $recent_logs = $this->logger->get_recent_logs(100);
             wp_send_json_success(['logs' => $recent_logs]);
         } catch (Exception $e) {
             wp_send_json_error(['message' => 'Failed to retrieve logs: ' . $e->getMessage()]);

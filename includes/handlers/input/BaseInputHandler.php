@@ -16,31 +16,79 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BaseInputHandler {
     
-    // Universal dependencies required by all input handlers
+    // Universal dependencies accessed via service locator
     protected $processed_items_manager;
     protected $db_modules;
     protected $db_projects;
     protected $logger;
+    protected $http_service;
     
     /**
-     * Constructor with shared dependency injection.
-     * Child classes should call parent::__construct() and add their specific dependencies.
-     *
-     * @param Modules $db_modules
-     * @param Projects $db_projects  
-     * @param ProcessedItemsManager $processed_items_manager
-     * @param Logger|null $logger
+     * Constructor using service locator pattern.
+     * No manual dependency injection needed.
      */
-    public function __construct(
-        $db_modules,
-        $db_projects,
-        $processed_items_manager,
-        $logger = null
-    ) {
-        $this->db_modules = $db_modules;
-        $this->db_projects = $db_projects;
-        $this->processed_items_manager = $processed_items_manager;
-        $this->logger = $logger;
+    public function __construct() {
+        $this->init_dependencies();
+    }
+    
+    /**
+     * Initialize dependencies via service locator.
+     */
+    protected function init_dependencies() {
+        global $data_machine_container;
+        
+        // Get dependencies from global container - create fallbacks only if needed
+        $this->logger = $data_machine_container['logger'] ?? null;
+        $this->processed_items_manager = $data_machine_container['processed_items_manager'] ?? null;
+        
+        // Try to get existing services from container first
+        if (isset($data_machine_container['db_projects'])) {
+            $this->db_projects = $data_machine_container['db_projects'];
+        } else {
+            $this->db_projects = $this->get_db_projects();
+        }
+        
+        if (isset($data_machine_container['db_modules'])) {
+            $this->db_modules = $data_machine_container['db_modules'];
+        } else {
+            $this->db_modules = $this->get_db_modules();
+        }
+        
+        $this->http_service = $this->get_http_service();
+    }
+    
+    /**
+     * Get database modules service.
+     */
+    protected function get_db_modules() {
+        if (!class_exists('DataMachine\\Database\\Modules')) {
+            return null;
+        }
+        // Avoid circular dependency by ensuring projects service exists first
+        if (!$this->db_projects) {
+            $this->db_projects = $this->get_db_projects();
+        }
+        return new \DataMachine\Database\Modules($this->db_projects, $this->logger);
+    }
+    
+    /**
+     * Get database projects service.
+     */
+    protected function get_db_projects() {
+        if (!class_exists('DataMachine\\Database\\Projects')) {
+            return null;
+        }
+        return new \DataMachine\Database\Projects();
+    }
+    
+    /**
+     * Get HTTP service.
+     */
+    protected function get_http_service() {
+        if (!class_exists('DataMachine\\Handlers\\HttpService')) {
+            return null;
+        }
+        return new \DataMachine\Handlers\HttpService($this->logger);
     }
     
     /**
@@ -71,8 +119,8 @@ class BaseInputHandler {
             throw new Exception(esc_html__('User ID not provided.', 'data-machine'));
         }
         
-        // Validate dependency injection
-        if (!$this->processed_items_manager || !$this->db_modules || !$this->db_projects) {
+        // Validate dependencies
+        if (!$this->db_modules || !$this->db_projects) {
             $this->logger && $this->logger->error('Input Handler: Required database service not available.', ['module_id' => $module_id]);
             throw new Exception(esc_html__('Required database service not available in input handler.', 'data-machine'));
         }

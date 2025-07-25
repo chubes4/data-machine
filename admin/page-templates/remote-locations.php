@@ -84,7 +84,7 @@ function render_remote_locations_form( $is_editing = false, $location_id = 0, $l
 	<h2><?php echo $is_editing ? esc_html__( 'Edit Location', 'data-machine' ) : esc_html__( 'Add New Location', 'data-machine' ); ?></h2>
 
 	<form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="<?php echo $is_editing ? 'dm_update_location' : 'dm_add_location'; ?>">
+		<input type="hidden" name="action" value="<?php echo esc_attr($is_editing ? 'dm_update_location' : 'dm_add_location'); ?>">
 		<?php wp_nonce_field( $is_editing ? 'dm_update_location_' . $location_id : 'dm_add_location' ); ?>
 		<?php if ( $is_editing ): ?>
 			<input type="hidden" name="location_id" value="<?php echo esc_attr( $location_id ); ?>">
@@ -127,7 +127,7 @@ function render_basic_fields( $location = null, $is_editing = false ) {
 	<tr>
 		<th scope="row"><label for="password"><?php esc_html_e( 'Application Password', 'data-machine' ); ?></label></th>
 		<td>
-			<input name="password" type="password" id="password" value="" class="regular-text" <?php echo $is_editing ? '' : 'required'; ?> autocomplete="new-password">
+			<input name="password" type="password" id="password" value="" class="regular-text" <?php echo esc_attr($is_editing ? '' : 'required'); ?> autocomplete="new-password">
 			<?php if ( $is_editing ): ?>
 				<p class="description"><?php esc_html_e( 'Leave blank to keep the current password.', 'data-machine' ); ?></p>
 			<?php endif; ?>

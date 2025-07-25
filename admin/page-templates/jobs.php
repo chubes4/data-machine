@@ -28,11 +28,11 @@ $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'jobs';
     <!-- Tab Navigation -->
     <nav class="nav-tab-wrapper">
         <a href="<?php echo esc_url(admin_url('admin.php?page=dm-jobs&tab=jobs')); ?>" 
-           class="nav-tab <?php echo $current_tab === 'jobs' ? 'nav-tab-active' : ''; ?>">
+           class="nav-tab <?php echo esc_attr($current_tab === 'jobs' ? 'nav-tab-active' : ''); ?>">
             Jobs
         </a>
         <a href="<?php echo esc_url(admin_url('admin.php?page=dm-jobs&tab=logs')); ?>" 
-           class="nav-tab <?php echo $current_tab === 'logs' ? 'nav-tab-active' : ''; ?>">
+           class="nav-tab <?php echo esc_attr($current_tab === 'logs' ? 'nav-tab-active' : ''); ?>">
             Logs
         </a>
     </nav>
@@ -76,7 +76,7 @@ function render_logs_tab($logger) {
     $current_log_level = get_option('dm_log_level', 'info');
     $log_file_path = $logger->get_log_file_path();
     $log_file_size = $logger->get_log_file_size();
-    $recent_logs = $logger->get_recent_logs(50);
+    $recent_logs = $logger->get_recent_logs(100);
     $available_levels = Logger::get_available_log_levels();
     ?>
     <div class="dm-logs-container">
@@ -163,7 +163,7 @@ function render_log_file_info($log_file_path, $log_file_size) {
 function render_log_viewer($recent_logs) {
     ?>
     <div class="postbox">
-        <h3 class="hndle">Recent Log Entries (Last 50)</h3>
+        <h3 class="hndle">Recent Log Entries (Last 100)</h3>
         <div class="inside">
             <div id="dm-log-viewer" style="background: #f9f9f9; border: 1px solid #ddd; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap;">
                 <?php echo esc_html(implode("\n", $recent_logs)); ?>
@@ -196,11 +196,11 @@ function render_log_viewer_javascript() {
                     if (response.success && response.data.logs) {
                         $('#dm-log-viewer').text(response.data.logs.join('\n'));
                     } else {
-                        alert('Failed to refresh logs: ' + (response.data.message || 'Unknown error'));
+                        alert(<?php echo wp_json_encode(__('Failed to refresh logs: ', 'data-machine')); ?> + (response.data.message || <?php echo wp_json_encode(__('Unknown error', 'data-machine')); ?>));
                     }
                 },
                 error: function() {
-                    alert('AJAX error: Failed to refresh logs.');
+                    alert(<?php echo wp_json_encode(__('AJAX error: Failed to refresh logs.', 'data-machine')); ?>);
                 },
                 complete: function() {
                     $button.text(originalText).prop('disabled', false);

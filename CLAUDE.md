@@ -48,7 +48,7 @@ window.dmDebugMode = true
 **Key Patterns**:
 - **WordPress-Native Hooks**: All handlers registered via `apply_filters('dm_register_handlers')` - no filesystem scanning
 - **PSR-4 Namespacing**: Modern namespace structure with `DataMachine\` root namespace
-- **Dynamic Dependency Injection**: HandlerFactory uses reflection to resolve constructor dependencies automatically
+- **Service Locator Pattern**: HandlerFactory uses PSR-4 autoloading + global container for dependencies
 - **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator` class
 - **Action Scheduler**: Background processing with 2 max concurrent jobs
 - **Direct Filter Access**: Handler registration uses direct WordPress filter calls via `DataMachine\Constants` helper methods
@@ -68,7 +68,7 @@ DataMachine\
 ## Critical File Locations
 
 ```
-data-machine.php           # Bootstrap: DI container + core handler registration (lines 284-342)
+data-machine.php           # Bootstrap: Service locator + core handler registration + hook registration
 
 admin/
 ├── page-templates/         # Pure view templates (no business logic)
@@ -87,8 +87,8 @@ includes/
 │   ├── ProcessedItemsManager.php        # Deduplication management
 │   └── filters/           # AI utilities (prompt builder, parser, etc.)
 ├── handlers/              # Input/Output handlers
-│   ├── HandlerFactory.php              # Dynamic dependency injection via reflection
-│   ├── input/BaseInputHandler.php      # Shared input logic
+│   ├── HandlerFactory.php              # PSR-4 autoloading + service locator pattern
+│   ├── input/BaseInputHandler.php      # Shared input logic with service locator
 │   └── input/output/      # Handler implementations
 ├── database/              # Custom wp_dm_* tables (no migrations)
 ├── api/                   # OpenAI integration classes
@@ -100,9 +100,9 @@ includes/
 **Adding Core Handlers**:
 1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler` or `DataMachine\Handlers\Output\BaseOutputHandler`
 2. Implement required methods: `get_input_data()` or `handle_output()`
-3. Add proper `use` statements for all dependencies with correct PSR-4 type hints
+3. No constructor needed - dependencies available via service locator in base class
 4. Register in `data_machine_register_core_handlers()` function in `data-machine.php`
-5. **Done!** HandlerFactory uses dynamic dependency resolution via reflection
+5. **Done!** HandlerFactory uses PSR-4 autoloading: `new $className()`
 
 **Adding External Handlers (Third-Party Plugins)**:
 ```php
@@ -140,7 +140,8 @@ add_action('dm_load_handler_template', function(&$loaded, $type, $slug, $config)
 
 **WordPress-Native Extensibility**: 
 - Core and external handlers use identical WordPress hook patterns
-- HandlerFactory resolves dependencies automatically for all handlers
+- HandlerFactory uses simple PSR-4 autoloading for all handlers
+- Base classes provide service locator access to dependencies
 - Direct filter access via `DataMachine\Constants` helper methods
 - No filesystem scanning or core modifications needed
 
@@ -148,11 +149,12 @@ add_action('dm_load_handler_template', function(&$loaded, $type, $slug, $config)
 ```php
 namespace DataMachine\Handlers\Input;
 
-use DataMachine\Database\{Modules, Projects, ProcessedItems};
-use DataMachine\Helpers\Logger;
-
 class ExampleHandler extends BaseInputHandler {
     public function get_input_data(object $module, array $source_config, int $user_id): array {
+        // Dependencies available via service locator:
+        // $this->logger, $this->db_modules, $this->db_projects, 
+        // $this->processed_items_manager, $this->http_service
+        
         // Use $this->http_service for API calls
         // Use $this->filter_processed_items() for deduplication
     }
@@ -198,7 +200,7 @@ wp_dm_remote_locations - Remote WordPress credentials (encrypted)
 ## Common Issues
 
 **Handler Registration**: Use `DataMachine\Constants::get_*_handler*()` methods to access registered handlers
-**Handler Factory**: Uses dynamic dependency resolution - no core modifications needed for new handlers
+**Handler Factory**: Uses PSR-4 autoloading + service locator - no manual dependency injection needed
 **Job Failures**: Check Action Scheduler status, jobs fail immediately with descriptive errors
 **Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
 **Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths
@@ -294,18 +296,25 @@ The codebase has been fully migrated to PSR-4 namespacing with PascalCase filena
 
 ## Recent Architecture Changes
 
-**HandlerRegistry Removal**: The `HandlerRegistry` class has been removed as redundant. It was simply wrapping WordPress filter calls with no added value.
+**Service Locator Migration**: Replaced complex manual dependency injection with PSR-4 autoloading + service locator pattern.
 
-**New Pattern**: Direct filter access via `DataMachine\Constants` helper methods:
+**HandlerFactory Simplification**: 
 ```php
-// Old (removed):
-$handlers = $handler_registry->get_input_handlers();
+// Old (removed): Complex reflection-based DI
+$handler_factory = new HandlerFactory($logger, $processed_items_manager, $encryption_helper, ...);
 
-// New (current):
-$handlers = \DataMachine\Constants::get_input_handlers();
+// New (current): Simple PSR-4 autoloading
+$handler_factory = new HandlerFactory(); // Dependencies via service locator
 ```
 
-**Impact**: Simplified architecture, removed 133+ lines of unnecessary wrapper code, cleaner dependency injection
+**Bootstrap Streamlining**: 
+- Reduced from 373 lines to ~200 lines
+- Organized into `init_data_machine_services()` and `register_data_machine_hooks()`
+- Eliminated contradictory manual DI that fought against PSR-4/hooks system
+
+**HandlerRegistry Removal**: The `HandlerRegistry` class has been removed as redundant. It was simply wrapping WordPress filter calls with no added value.
+
+**Impact**: 50% reduction in complexity, leveraged existing PSR-4 + hooks architecture instead of undermining it
 
 ## WordPress Development Standards
 

@@ -55,14 +55,6 @@ if (!class_exists('DataMachine\Constants')) {
             ],
         ];
 
-        /**
-         * Legacy AI model constants - these are deprecated.
-         * AI models are now configured via the AI HTTP Client library 
-         * through the admin interface per provider.
-         */
-        const AI_MODEL_INITIAL = ''; // Deprecated - models configured via AI HTTP Client
-        const AI_MODEL_FACT_CHECK = ''; // Deprecated - models configured via AI HTTP Client  
-        const AI_MODEL_FINALIZE = ''; // Deprecated - models configured via AI HTTP Client
 
         /**
          * The name of the constant used to define a custom encryption key in wp-config.php.
@@ -165,30 +157,43 @@ if (!class_exists('DataMachine\Constants')) {
          * @return string The 32-byte encryption key.
          */
         public static function get_encryption_key(): string {
+            static $cached_key = null;
+            
+            // Cache the key to avoid repeated computation
+            if ($cached_key !== null) {
+                return $cached_key;
+            }
+            
             $constant_name = self::ENCRYPTION_KEY_CONSTANT_NAME;
             $raw_key = '';
 
+            // Priority order: Custom constant > AUTH_KEY > wp_salt fallback
             if (defined($constant_name) && !empty(constant($constant_name))) {
                 $raw_key = constant($constant_name);
-            } elseif (defined(AUTH_KEY)) {
+            } elseif (defined('AUTH_KEY') && !empty(AUTH_KEY)) {
                 $raw_key = AUTH_KEY;
             } else {
-                // Final fallback if neither constant nor AUTH_KEY is defined
-                // Using wp_salt here is okay as a last resort, but log an error.
-                $raw_key = wp_salt();
-                // Security warning logging removed for production
+                // Final fallback - use wp_salt with site-specific data
+                $raw_key = wp_salt('auth') . get_option('siteurl', 'fallback_site');
+                
+                // Log warning in debug mode only
+                if (WP_DEBUG) {
+                    error_log('Data Machine: Using fallback encryption key. Consider defining DM_ENCRYPTION_KEY in wp-config.php');
+                }
             }
 
             if (empty($raw_key)) {
-                // This case should be rare if WP salts are configured and the constant isn't empty.
-                // Security warning logging removed for production
-                // Return a hash of a fallback string to avoid fatal errors, though encryption will be weak/predictable.
-                $raw_key = 'fallback_key_for_empty_encryption_key';
+                // Extremely rare case - create deterministic fallback
+                $raw_key = 'dm_fallback_' . get_option('siteurl', 'localhost') . '_key';
+                
+                if (WP_DEBUG) {
+                    error_log('Data Machine: Emergency fallback encryption key used. This is insecure.');
+                }
             }
 
             // Ensure the key is exactly 32 bytes for AES-256 using SHA256 hash
-            // The 'true' argument returns raw binary output.
-            return hash('sha256', $raw_key, true);
+            $cached_key = hash('sha256', $raw_key, true);
+            return $cached_key;
         }
 
         // --- Handler Registry Helper Methods ---

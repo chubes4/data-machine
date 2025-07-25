@@ -28,6 +28,7 @@ class Threads {
     const TOKEN_URL = 'https://graph.threads.net/oauth/access_token';
     const REFRESH_URL = 'https://graph.threads.net/refresh_access_token';
     const API_BASE_URL = 'https://graph.threads.net/v1.0'; // Base for API calls
+    const GRAPH_API_URL = 'https://graph.facebook.com/v19.0'; // Facebook Graph API URL for token revocation
     // Required scopes for basic info and publishing
     const SCOPES = 'threads_basic,threads_content_publish';
 

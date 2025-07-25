@@ -75,6 +75,11 @@ class ModuleConfigAjax {
 		// Check the nonce action that was actually used to create the nonce value in localization
 		check_ajax_referer('dm_module_config_actions_nonce', 'nonce');
 
+		if (!current_user_can('edit_posts')) {
+			wp_send_json_error(array('message' => __('Permission denied.', 'data-machine')));
+			return;
+		}
+
 		$module_id = isset($_POST['module_id']) ? absint($_POST['module_id']) : 0;
 		$user_id = get_current_user_id();
 
@@ -147,7 +152,7 @@ class ModuleConfigAjax {
 		);
 
 		wp_send_json_success( $data_to_return );
-		wp_die(); // this is required to terminate immediately and return a proper response
+		// wp_send_json_success() already terminates execution
 	}
 
     /**
@@ -361,7 +366,7 @@ class ModuleConfigAjax {
             ]);
             wp_send_json_error( ['message' => __('Template not found.', 'data-machine'), 'template' => basename($template_path)], 404 );
         }
-        wp_die(); // Important for AJAX handlers
+        // wp_send_json_error() already terminates execution
     }
 
     /**

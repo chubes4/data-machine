@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 use DataMachine\Helpers\Logger;
+use DataMachine\Helpers\EncryptionHelper;
 
 class Twitter {
 
@@ -182,10 +183,20 @@ class Twitter {
                 exit;
             }
 
-            // --- 4. Store Permanent Credentials --- 
+            // --- 4. Store Permanent Credentials (Encrypted) --- 
+            // Encrypt the access tokens before storing
+            $encrypted_access_token = EncryptionHelper::encrypt($access_token_data['oauth_token']);
+            $encrypted_access_token_secret = EncryptionHelper::encrypt($access_token_data['oauth_token_secret']);
+            
+            if ($encrypted_access_token === false || $encrypted_access_token_secret === false) {
+                $this->logger?->error('Twitter OAuth Error: Failed to encrypt access tokens.', ['user_id' => $user_id]);
+                wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_encryption_failed'));
+                exit;
+            }
+            
             $account_data = [
-                'access_token'        => $access_token_data['oauth_token'],
-                'access_token_secret' => $access_token_data['oauth_token_secret'],
+                'access_token'        => $encrypted_access_token,
+                'access_token_secret' => $encrypted_access_token_secret,
                 'user_id'             => $access_token_data['user_id'] ?? null, // Twitter User ID
                 'screen_name'         => $access_token_data['screen_name'] ?? null, // Twitter Screen Name (@handle)
                 'last_verified_at'    => time() // Timestamp of this successful auth
@@ -245,6 +256,15 @@ class Twitter {
             return new WP_Error('twitter_missing_credentials', __('Twitter credentials not found for this user. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
+        // Decrypt the stored tokens
+        $decrypted_access_token = EncryptionHelper::decrypt($credentials['access_token']);
+        $decrypted_access_token_secret = EncryptionHelper::decrypt($credentials['access_token_secret']);
+        
+        if ($decrypted_access_token === false || $decrypted_access_token_secret === false) {
+            $this->logger?->error('Failed to decrypt Twitter credentials.', ['user_id' => $user_id]);
+            return new WP_Error('twitter_decryption_failed', __('Failed to decrypt Twitter credentials. Please re-authenticate.', 'data-machine'));
+        }
+
         $consumer_key = get_option('twitter_api_key');
         $consumer_secret = get_option('twitter_api_secret');
         if (empty($consumer_key) || empty($consumer_secret)) {
@@ -253,7 +273,7 @@ class Twitter {
         }
 
         try {
-            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $credentials['access_token'], $credentials['access_token_secret']);
+            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $decrypted_access_token, $decrypted_access_token_secret);
             // Optionally verify credentials work
             // $user = $connection->get("account/verify_credentials");
             // if ($connection->getLastHttpCode() != 200) { ... handle error ... }

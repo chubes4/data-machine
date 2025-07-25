@@ -33,7 +33,10 @@ class ApiAuthPage {
 
         add_action('admin_post_dm_save_bluesky_user_meta', function() {
             // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            if (!current_user_can('manage_options')) {
+                wp_redirect(add_query_arg('error', 'permission', admin_url('admin.php?page=dm-api-keys')));
+                exit;
+            }
             check_admin_referer('dm_save_bluesky_user_meta_action');
             update_option('bluesky_username', sanitize_text_field($_POST['bluesky_username'] ?? ''));
             if (isset($_POST['bluesky_app_password']) && $_POST['bluesky_app_password'] !== '') {
@@ -48,7 +51,10 @@ class ApiAuthPage {
 
         add_action('admin_post_dm_save_twitter_user_meta', function() {
             // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            if (!current_user_can('manage_options')) {
+                wp_redirect(add_query_arg('error', 'permission', admin_url('admin.php?page=dm-api-keys')));
+                exit;
+            }
             check_admin_referer('dm_save_twitter_user_meta_action');
             update_option('twitter_api_key', sanitize_text_field($_POST['twitter_api_key'] ?? ''));
             update_option('twitter_api_secret', sanitize_text_field($_POST['twitter_api_secret'] ?? ''));
@@ -58,7 +64,10 @@ class ApiAuthPage {
 
         add_action('admin_post_dm_save_reddit_user_meta', function() {
             // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            if (!current_user_can('manage_options')) {
+                wp_redirect(add_query_arg('error', 'permission', admin_url('admin.php?page=dm-api-keys')));
+                exit;
+            }
             check_admin_referer('dm_save_reddit_user_meta_action');
             update_option('reddit_oauth_client_id', sanitize_text_field($_POST['reddit_oauth_client_id'] ?? ''));
             update_option('reddit_oauth_client_secret', sanitize_text_field($_POST['reddit_oauth_client_secret'] ?? ''));
@@ -69,7 +78,10 @@ class ApiAuthPage {
 
         add_action('admin_post_dm_save_threads_user_meta', function() {
             // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            if (!current_user_can('manage_options')) {
+                wp_redirect(add_query_arg('error', 'permission', admin_url('admin.php?page=dm-api-keys')));
+                exit;
+            }
             check_admin_referer('dm_save_threads_user_meta_action');
             update_option('threads_app_id', sanitize_text_field($_POST['threads_app_id'] ?? ''));
             update_option('threads_app_secret', sanitize_text_field($_POST['threads_app_secret'] ?? ''));
@@ -79,7 +91,10 @@ class ApiAuthPage {
 
         add_action('admin_post_dm_save_facebook_user_meta', function() {
             // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
+            if (!current_user_can('manage_options')) {
+                wp_redirect(add_query_arg('error', 'permission', admin_url('admin.php?page=dm-api-keys')));
+                exit;
+            }
             check_admin_referer('dm_save_facebook_user_meta_action');
             update_option('facebook_app_id', sanitize_text_field($_POST['facebook_app_id'] ?? ''));
             update_option('facebook_app_secret', sanitize_text_field($_POST['facebook_app_secret'] ?? ''));

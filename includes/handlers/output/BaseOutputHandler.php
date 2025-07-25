@@ -16,17 +16,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BaseOutputHandler {
     
-    // Common dependencies across output handlers
+    // Common dependencies accessed via service locator
     protected $logger;
     
     /**
-     * Constructor with shared dependency injection.
-     * Child classes should call parent::__construct() and add their specific dependencies.
-     *
-     * @param Logger|null $logger Optional logger instance
+     * Constructor using service locator pattern.
+     * No manual dependency injection needed.
      */
-    public function __construct($logger = null) {
-        $this->logger = $logger;
+    public function __construct() {
+        $this->init_dependencies();
+    }
+    
+    /**
+     * Initialize dependencies via service locator.
+     */
+    protected function init_dependencies() {
+        global $data_machine_container;
+        
+        // Get dependencies from global container with better error handling
+        $this->logger = $data_machine_container['logger'] ?? null;
+        
+        // Log if container is not available for debugging
+        if (empty($data_machine_container) && WP_DEBUG) {
+            error_log('Data Machine: Global container not available in BaseOutputHandler');
+        }
     }
     
     /**
