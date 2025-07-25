@@ -34,16 +34,38 @@ class AI_HTTP_Options_Manager {
     private $plugin_context;
 
     /**
+     * AI type for scoped configuration
+     */
+    private $ai_type;
+
+    /**
      * Whether the options manager is properly configured
      */
     private $is_configured = false;
 
     /**
-     * Constructor with plugin context
+     * Constructor with plugin context and AI type
      *
      * @param string $plugin_context Plugin context for scoped configuration
+     * @param string $ai_type AI type for scoped configuration ('llm', 'upscaling', 'generative')
      */
-    public function __construct($plugin_context = null) {
+    public function __construct($plugin_context = null, $ai_type = null) {
+        // Require ai_type parameter - no defaults
+        if (empty($ai_type)) {
+            error_log('AI HTTP Client OptionsManager: ai_type parameter is required. Specify "llm", "upscaling", or "generative".');
+            $this->is_configured = false;
+            return;
+        }
+        
+        // Validate ai_type
+        $valid_types = array('llm', 'upscaling', 'generative');
+        if (!in_array($ai_type, $valid_types)) {
+            error_log('AI HTTP Client OptionsManager: Invalid ai_type "' . $ai_type . '". Must be one of: ' . implode(', ', $valid_types));
+            $this->is_configured = false;
+            return;
+        }
+        
+        $this->ai_type = $ai_type;
         // Validate plugin context using centralized helper
         $context_validation = AI_HTTP_Plugin_Context_Helper::validate_for_constructor(
             $plugin_context,
@@ -55,13 +77,13 @@ class AI_HTTP_Options_Manager {
     }
 
     /**
-     * Get plugin-scoped option name
+     * Get plugin and AI type scoped option name
      *
      * @param string $base_name Base option name
-     * @return string Scoped option name
+     * @return string Scoped option name with plugin context and AI type
      */
     private function get_scoped_option_name($base_name) {
-        return $base_name . '_' . $this->plugin_context;
+        return $base_name . '_' . $this->plugin_context . '_' . $this->ai_type;
     }
 
     /**

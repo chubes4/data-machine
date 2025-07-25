@@ -142,7 +142,7 @@ class AI_HTTP_Client {
         // Get provider from options if not specified
         if (!$provider_name) {
             if (class_exists('AI_HTTP_Options_Manager') && !empty($this->plugin_context)) {
-                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
                 $provider_name = $options_manager->get_selected_provider();
             }
             
@@ -203,7 +203,7 @@ class AI_HTTP_Client {
         // Get provider from options if not specified
         if (!$provider_name) {
             if (class_exists('AI_HTTP_Options_Manager') && !empty($this->plugin_context)) {
-                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
                 $provider_name = $options_manager->get_selected_provider();
             }
             
@@ -257,7 +257,7 @@ class AI_HTTP_Client {
         // Get provider from options if not specified
         if (!$provider_name) {
             if (class_exists('AI_HTTP_Options_Manager') && !empty($this->plugin_context)) {
-                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
                 $provider_name = $options_manager->get_selected_provider();
             }
             
@@ -302,7 +302,7 @@ class AI_HTTP_Client {
         // Get provider from options if not specified
         if (!$provider_name) {
             if (class_exists('AI_HTTP_Options_Manager') && !empty($this->plugin_context)) {
-                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
                 $provider_name = $options_manager->get_selected_provider();
             }
             
@@ -347,7 +347,7 @@ class AI_HTTP_Client {
         // Get provider from options if not specified
         if (!$provider_name) {
             if (class_exists('AI_HTTP_Options_Manager') && !empty($this->plugin_context)) {
-                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
                 $provider_name = $options_manager->get_selected_provider();
             }
             
@@ -484,7 +484,7 @@ class AI_HTTP_Client {
      * @return array Provider configuration with merged API keys
      */
     private function get_provider_config($provider_name) {
-        $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+        $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
         return $options_manager->get_provider_settings($provider_name);
     }
 
@@ -556,7 +556,7 @@ class AI_HTTP_Client {
         
         try {
             // Load step configuration
-            $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+            $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
             $step_config = $options_manager->get_step_configuration($step_key);
             
             if (empty($step_config)) {
@@ -591,7 +591,7 @@ class AI_HTTP_Client {
             return array();
         }
         
-        $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+        $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
         return $options_manager->get_step_configuration($step_key);
     }
     
@@ -606,7 +606,7 @@ class AI_HTTP_Client {
             return false;
         }
         
-        $options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+        $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
         return $options_manager->has_step_configuration($step_key);
     }
     

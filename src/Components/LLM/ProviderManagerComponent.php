@@ -33,7 +33,7 @@ class AI_HTTP_ProviderManager_Component {
         
         // Only initialize dependent objects if properly configured
         if ($this->is_configured) {
-            $this->options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
+            $this->options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
             $this->client = new AI_HTTP_Client([
                 'plugin_context' => $this->plugin_context,
                 'ai_type' => $this->ai_type

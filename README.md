@@ -350,6 +350,26 @@ Each provider needs only 4 methods:
 - `get_raw_models()` - Fetch available models
 - `is_configured()` - Check if provider is configured
 
+## Breaking Changes
+
+### v2.x.x - AI Type Scoping (Current)
+
+**OptionsManager Constructor Change:**
+```php
+// OLD (no longer works)
+$options_manager = new AI_HTTP_Options_Manager('my-plugin-slug');
+
+// NEW (required)
+$options_manager = new AI_HTTP_Options_Manager('my-plugin-slug', 'llm');
+```
+
+**Impact:** All plugins using `AI_HTTP_Options_Manager` directly must update their constructor calls to include the `ai_type` parameter.
+
+**Migration:**
+- Add `'llm'` as second parameter for existing LLM functionality
+- Use `'upscaling'` or `'generative'` for new AI types
+- Settings will be automatically scoped by AI type (no data loss)
+
 ## Examples
 
 WordPress plugins using this library:

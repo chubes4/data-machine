@@ -169,10 +169,10 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
      */
     private static function render_model_options($provider, $selected_model) {
         try {
-            // Note: This static method cannot access plugin context
+            // Note: This static method cannot access plugin context or ai_type
             // It will use default/fallback behavior for initial render
             // Dynamic loading via AJAX will use proper plugin context
-            $options_manager = new AI_HTTP_Options_Manager('default');
+            $options_manager = new AI_HTTP_Options_Manager('default', 'llm');
             $provider_config = $options_manager->get_provider_settings($provider);
             
             // Use unified model fetcher - now returns normalized key-value format
@@ -221,7 +221,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             $provider = sanitize_text_field($_POST['provider']);
             
             // Get provider settings from plugin-scoped WordPress options
-            $options_manager = new AI_HTTP_Options_Manager($plugin_context);
+            $options_manager = new AI_HTTP_Options_Manager($plugin_context, 'llm');
             $provider_config = $options_manager->get_provider_settings($provider);
             
             // Use unified model fetcher
