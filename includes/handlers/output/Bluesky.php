@@ -21,29 +21,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Bluesky extends BaseOutputHandler {
 
-    /** @var EncryptionHelper|null */
-    private $encryption_helper;
-
     /**
-     * Constructor.
-     * Uses service locator pattern for dependency injection.
+     * Get the encryption helper service.
+     *
+     * @return object The encryption helper service.
      */
-    public function __construct() {
-        // Call parent constructor to initialize common dependencies via service locator
-        parent::__construct();
-        
-        // Initialize handler-specific dependencies
-        $this->init_handler_dependencies();
-    }
-    
-    /**
-     * Initialize handler-specific dependencies via service locator.
-     */
-    private function init_handler_dependencies() {
-        global $data_machine_container;
-        
-        // Get encryption helper from container or create if needed
-        $this->encryption_helper = $data_machine_container['encryption_helper'] ?? new \DataMachine\Helpers\EncryptionHelper();
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_service', null, 'encryption_helper');
     }
 
     /**
@@ -56,7 +40,8 @@ class Bluesky extends BaseOutputHandler {
      * @return array|WP_Error Result array on success, WP_Error on failure.
      */
     public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array|WP_Error {
-        $this->logger?->info('Starting Bluesky output handling.', ['user_id' => $user_id]);
+        $logger = $this->get_logger();
+        $logger?->info('Starting Bluesky output handling.', ['user_id' => $user_id]);
 
         // --- 1. Get Configuration ---
         $output_config = $module_job_config['output_config']['bluesky'] ?? [];
@@ -65,7 +50,7 @@ class Bluesky extends BaseOutputHandler {
 
         // --- Get User Meta Credentials ---
         if (null === $user_id) {
-             $this->logger?->error('User ID context is missing for Bluesky output.', ['method' => __METHOD__]);
+             $logger?->error('User ID context is missing for Bluesky output.', ['method' => __METHOD__]);
              return new WP_Error('bluesky_missing_user_id', __('User context is required for Bluesky authentication.', 'data-machine'));
         }
         $handle = get_option('bluesky_username', '');
@@ -73,36 +58,37 @@ class Bluesky extends BaseOutputHandler {
 
         // --- 2. Check Required Configuration ---
         if (empty($handle) || empty($encrypted_password)) {
-            $this->logger?->error('Bluesky handle or app password is missing in global options.', ['user_id' => $user_id]);
+            $logger?->error('Bluesky handle or app password is missing in global options.', ['user_id' => $user_id]);
             return new WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured on the API / Auth page.', 'data-machine'));
         }
 
         // --- 3. Decrypt Password ---
         $password = '';
-        if (!$this->encryption_helper) {
-            $this->logger?->error('Encryption helper service not available for Bluesky password decryption.', ['user_id' => $user_id]);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $logger?->error('Encryption helper service not available for Bluesky password decryption.', ['user_id' => $user_id]);
             return new WP_Error('bluesky_service_unavailable', __('Encryption service is unavailable.', 'data-machine'));
         }
 
         try {
-            $this->logger?->debug('Attempting to decrypt password using injected helper.', ['user_id' => $user_id, 'encrypted_value_type' => gettype($encrypted_password)]);
-            $password = $this->encryption_helper->decrypt($encrypted_password);
+            $logger?->debug('Attempting to decrypt password using encryption helper.', ['user_id' => $user_id, 'encrypted_value_type' => gettype($encrypted_password)]);
+            $password = $encryption_helper->decrypt($encrypted_password);
 
             if ($password === false) {
-                 $this->logger?->error('Bluesky password decryption failed (returned false).', ['user_id' => $user_id]);
+                 $logger?->error('Bluesky password decryption failed (returned false).', ['user_id' => $user_id]);
                  throw new Exception('Failed to decrypt Bluesky password.');
             }
             if (empty($password) && !empty($encrypted_password)) {
-                 $this->logger?->warning('Bluesky password decryption resulted in an empty string, but encrypted value was not empty. Ensure a valid password was saved.', ['user_id' => $user_id]);
+                 $logger?->warning('Bluesky password decryption resulted in an empty string, but encrypted value was not empty. Ensure a valid password was saved.', ['user_id' => $user_id]);
                  throw new Exception('Decrypted password is empty.');
             }
              if (empty($password) && empty($encrypted_password)) {
-                 $this->logger?->error('Bluesky password configuration is empty.', ['user_id' => $user_id]);
+                 $logger?->error('Bluesky password configuration is empty.', ['user_id' => $user_id]);
                  throw new Exception('Bluesky password is empty in configuration.');
              }
-            $this->logger?->debug('Bluesky app password decrypted successfully.', ['user_id' => $user_id]);
+            $logger?->debug('Bluesky app password decrypted successfully.', ['user_id' => $user_id]);
         } catch (\Exception $e) {
-            $this->logger?->error('Bluesky password decryption failed: ' . $e->getMessage(), ['user_id' => $user_id, 'exception_type' => get_class($e)]);
+            $logger?->error('Bluesky password decryption failed: ' . $e->getMessage(), ['user_id' => $user_id, 'exception_type' => get_class($e)]);
             // Clear potentially sensitive password from memory in case of error
             unset($password);
             return new WP_Error('bluesky_decrypt_failed', __('Could not decrypt Bluesky app password. Please re-save the module settings.', 'data-machine'));

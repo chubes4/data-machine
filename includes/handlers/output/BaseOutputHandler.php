@@ -10,260 +10,112 @@
 
 namespace DataMachine\Handlers\Output;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+use DataMachine\Database\{Modules, Projects};
+use DataMachine\Contracts\LoggerInterface;
+
+if (!defined('ABSPATH')) {
+    exit;
 }
 
-class BaseOutputHandler {
-    
-    // Common dependencies accessed via service locator
-    protected $logger;
+abstract class BaseOutputHandler {
     
     /**
-     * Constructor using service locator pattern.
-     * No manual dependency injection needed.
-     */
-    public function __construct() {
-        $this->init_dependencies();
-    }
-    
-    /**
-     * Initialize dependencies via service locator.
-     */
-    protected function init_dependencies() {
-        global $data_machine_container;
-        
-        // Get dependencies from global container with better error handling
-        $this->logger = $data_machine_container['logger'] ?? null;
-        
-        // Log if container is not available for debugging
-        if (empty($data_machine_container) && WP_DEBUG) {
-            error_log('Data Machine: Global container not available in BaseOutputHandler');
-        }
-    }
-    
-    /**
-     * Validate user ID context required by most handlers.
+     * Get the logger service.
      *
-     * @param int $user_id User ID to validate
-     * @param string $handler_context Handler name for logging context
-     * @return bool True if valid
-     * @throws WP_Error If user ID is invalid
+     * @return LoggerInterface The logger service.
      */
-    protected function validate_user_context($user_id, $handler_context = 'Output Handler') {
-        if (empty($user_id)) {
-            $this->logger && $this->logger->error($handler_context . ': User ID context is missing.');
-            throw new WP_Error('handler_missing_user_id', __('Cannot process without user account context.', 'data-machine'));
-        }
-        
-        return true;
+    protected function get_logger() {
+        return apply_filters('dm_get_service', null, 'logger');
     }
     
     /**
-     * Validate content is not empty after AI processing.
+     * Get the modules database service.
      *
-     * @param string $content Content to validate
-     * @param string $handler_context Handler name for logging context
-     * @param int $user_id User ID for logging context
-     * @return bool True if content is valid
-     * @throws WP_Error If content is empty
+     * @return Modules The modules database service.
      */
-    protected function validate_content_not_empty($content, $handler_context = 'Output Handler', $user_id = 0) {
-        $content = trim($content);
-        if (empty($content)) {
-            $this->logger && $this->logger->warning($handler_context . ': Parsed content is empty.', ['user_id' => $user_id]);
-            throw new WP_Error('handler_empty_content', __('Cannot process empty content. Check AI response and parsing.', 'data-machine'));
-        }
-        
-        return true;
+    protected function get_db_modules() {
+        return apply_filters('dm_get_service', null, 'db_modules');
     }
     
     /**
-     * Load and instantiate AI Response Parser with error handling.
-     * Common pattern used across 7 out of 8 handlers.
+     * Get the projects database service.
      *
-     * @param string $ai_output_string Raw AI response to parse
-     * @param string $handler_context Handler name for logging context
-     * @return \DataMachine\Engine\Filters\AiResponseParser|WP_Error Parser instance or error
+     * @return Projects The projects database service.
      */
-    protected function load_ai_response_parser($ai_output_string, $handler_context = 'Output Handler') {
-        // Check if class exists (should be autoloaded via PSR-4)
-        if (!class_exists('\DataMachine\Engine\Filters\AiResponseParser')) {
-            $this->logger && $this->logger->error($handler_context . ': AI Response Parser class not found - check autoloader.');
-            return new WP_Error('parser_not_found', __('AI Response Parser not available.', 'data-machine'));
-        }
-        
-        try {
-            $parser = new \DataMachine\Engine\Filters\AiResponseParser($ai_output_string);
-            $parser->parse();
-            
-            $this->logger && $this->logger->info($handler_context . ': Successfully loaded and parsed AI response.');
-            return $parser;
-            
-        } catch (Exception $e) {
-            $this->logger && $this->logger->error($handler_context . ': Failed to parse AI response.', [
-                'error' => $e->getMessage()
-            ]);
-            return new WP_Error('parser_execution_failed', __('Failed to parse AI response: ', 'data-machine') . $e->getMessage());
-        }
+    protected function get_db_projects() {
+        return apply_filters('dm_get_service', null, 'db_projects');
     }
     
     /**
-     * Build standard success response structure.
-     * Used by all handlers with consistent format.
+     * Perform basic validation and setup required by all handlers.
+     * Validates module ID, user ID, dependencies, and performs ownership check.
      *
-     * @param string $message Success message
-     * @param string $output_url URL to view/access the published content
-     * @param array $additional_data Handler-specific response data
-     * @return array Standard success response
+     * @param object $module Module object
+     * @param int $user_id User ID
+     * @return array Contains validated module_id and project object
+     * @throws Exception If validation fails
      */
-    protected function build_success_response($message, $output_url, $additional_data = []) {
-        $response = [
-            'status' => 'success',
-            'message' => $message,
-            'output_url' => $output_url
-        ];
+    protected function validate_basic_requirements($module, $user_id) {
+        $logger = $this->get_logger();
+        $db_modules = $this->get_db_modules();
+        $db_projects = $this->get_db_projects();
         
-        // Merge any handler-specific data (post_id, tweet_id, etc.)
-        return array_merge($response, $additional_data);
-    }
-    
-    /**
-     * Build standard error response structure.
-     * Converts WP_Error to consistent array format.
-     *
-     * @param WP_Error $error Error object
-     * @param string $handler_context Handler name for logging
-     * @return array Standard error response
-     */
-    protected function build_error_response($error, $handler_context = 'Output Handler') {
-        $this->logger && $this->logger->error($handler_context . ': ' . $error->get_error_message(), [
-            'error_code' => $error->get_error_code(),
-            'error_data' => $error->get_error_data()
+        $logger && $logger->info('Output Handler: Validating basic requirements.', [
+            'module_id' => $module->module_id ?? null,
+            'user_id' => $user_id
         ]);
         
+        // Extract and validate module ID
+        $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
+        if (empty($module_id)) {
+            $logger && $logger->error('Output Handler: Module ID missing from module object.');
+            throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
+        }
+        
+        // Validate user ID
+        if (empty($user_id)) {
+            $logger && $logger->error('Output Handler: User ID not provided.', ['module_id' => $module_id]);
+            throw new Exception(esc_html__('User ID not provided.', 'data-machine'));
+        }
+        
+        // Validate dependencies
+        if (!$db_modules || !$db_projects) {
+            $logger && $logger->error('Output Handler: Required database service not available.', ['module_id' => $module_id]);
+            throw new Exception(esc_html__('Required database service not available in output handler.', 'data-machine'));
+        }
+        
+        // Ownership check
+        $project = $this->get_module_with_ownership_check($module, $user_id, $db_projects);
+        
         return [
-            'status' => 'error',
-            'message' => $error->get_error_message(),
-            'output_url' => '',
-            'error_code' => $error->get_error_code()
+            'module_id' => $module_id,
+            'project' => $project
         ];
     }
     
     /**
-     * Truncate content to character limit with ellipsis.
-     * Common pattern for social media handlers with character limits.
+     * Checks module ownership for the given user and returns the project if valid.
+     * Common validation needed by all output handlers.
      *
-     * @param string $content Content to truncate
-     * @param int $limit Character limit
-     * @param int $url_length Reserved characters for URLs (platform-specific)
-     * @return string Truncated content
+     * @param object $module
+     * @param int $user_id
+     * @param object $db_projects Database projects service
+     * @return object $project
+     * @throws Exception If validation fails
      */
-    protected function truncate_content_with_ellipsis($content, $limit, $url_length = 0) {
-        $available_length = $limit - $url_length;
-        
-        if (mb_strlen($content) <= $available_length) {
-            return $content;
+    protected function get_module_with_ownership_check($module, $user_id, $db_projects) {
+        if (!isset($module->project_id)) {
+            throw new Exception(esc_html__('Invalid module provided (missing project ID).', 'data-machine'));
         }
-        
-        // Reserve 3 characters for ellipsis
-        $truncate_length = $available_length - 3;
-        
-        if ($truncate_length <= 0) {
-            return '...'; // Content too long even for ellipsis
+        $project = $db_projects->get_project($module->project_id, $user_id);
+        if (!$project) {
+            throw new Exception(esc_html__('Permission denied for this module.', 'data-machine'));
         }
-        
-        return mb_substr($content, 0, $truncate_length) . '...';
+        return $project;
     }
     
-    /**
-     * Get common settings field patterns used across handlers.
-     * Child classes can use these as building blocks.
-     *
-     * @return array Common settings field definitions
-     */
-    protected function get_common_settings_fields() {
-        return [
-            'include_source' => [
-                'type' => 'checkbox',
-                'label' => __('Include Source Link', 'data-machine'),
-                'description' => __('Append a link to the original content source.', 'data-machine'),
-                'default' => false
-            ],
-            'enable_images' => [
-                'type' => 'checkbox', 
-                'label' => __('Include Images', 'data-machine'),
-                'description' => __('Include images from the original content when available.', 'data-machine'),
-                'default' => true
-            ]
-        ];
-    }
     
-    /**
-     * Sanitize common settings fields.
-     * Child classes should call this and merge with handler-specific sanitization.
-     *
-     * @param array $raw_settings Raw form input
-     * @return array Sanitized common settings
-     */
-    protected function get_common_sanitized_settings($raw_settings) {
-        return [
-            'include_source' => !empty($raw_settings['include_source']),
-            'enable_images' => !empty($raw_settings['enable_images'])
-        ];
-    }
+    abstract public function handle_output(array $finalized_data, object $module, int $user_id): array;
     
-    /**
-     * Standard method to check if a WP_Error was returned and handle it consistently.
-     *
-     * @param mixed $result Result to check
-     * @param string $operation_context Description of the operation for logging
-     * @return array Error response if $result is WP_Error, otherwise returns $result
-     */
-    protected function handle_wp_error_result($result, $operation_context = 'operation') {
-        if (is_wp_error($result)) {
-            return $this->build_error_response($result, $operation_context);
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Append an image to the content if available in metadata.
-     * Moved from trait - common content formatting.
-     *
-     * @param string $content
-     * @param array $input_metadata
-     * @return string
-     */
-    protected function prepend_image_if_available($content, $input_metadata) {
-        if (!empty($input_metadata['image_source_url'])) {
-            $image_url = esc_url($input_metadata['image_source_url']);
-            $alt_text = !empty($input_metadata['original_title']) ? esc_attr($input_metadata['original_title']) : esc_attr('Source Image');
-            $image_tag = sprintf('<img src="%s" alt="%s" /><br /><br />', $image_url, $alt_text);
-            return $image_tag . $content;
-        }
-        return $content;
-    }
-
-    /**
-     * Append a source link to the content if available in metadata.
-     * Moved from trait - common content formatting.
-     *
-     * @param string $content
-     * @param array $input_metadata
-     * @return string
-     */
-    protected function append_source_if_available($content, $input_metadata) {
-        if (!empty($input_metadata['source_url'])) {
-            $source_url = esc_url($input_metadata['source_url']);
-            $source_name = esc_html($input_metadata['original_title'] ?? 'Original Source');
-            if (!empty($input_metadata['subreddit'])) {
-                $source_name = 'r/' . esc_html($input_metadata['subreddit']);
-            }
-            $source_link_string = sprintf('Source: <a href="%s" target="_blank" rel="noopener noreferrer">%s</a>', $source_url, $source_name);
-            $content .= "\n\n" . $source_link_string;
-        }
-        return $content;
-    }
+    abstract public static function get_settings_fields(array $current_config = []): array;
 }

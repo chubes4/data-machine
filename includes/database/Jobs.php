@@ -13,6 +13,7 @@ namespace DataMachine\Database;
 
 use DataMachine\Helpers\Logger;
 use DataMachine\Constants;
+use DataMachine\Contracts\LoggerInterface;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -43,7 +44,7 @@ class Jobs {
      * @param Projects|null $db_projects Optional projects DB for updating last_run_at.
      * @param Logger|null $logger Optional logger for debugging.
      */
-    public function __construct(?Projects $db_projects = null, ?Logger $logger = null) {
+    public function __construct(?Projects $db_projects = null, ?LoggerInterface $logger = null) {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_jobs';
         $this->db_projects = $db_projects;
@@ -53,13 +54,15 @@ class Jobs {
     /**
      * Create a new job record in the database.
      *
-     * @param int    $module_id          The ID of the module this job is for.
-     * @param int    $user_id            The ID of the user initiating the job.
-     * @param string $module_config_json JSON string of the simplified module configuration for the job.
-     * @param string|null $input_data_json JSON string of the input data packet, or null if not applicable initially.
-     * @return int|false                 The ID of the newly created job or false on failure.
+     * @param array $job_data The job data array containing module_id, user_id, module_config, and input_data.
+     * @return int|false The job ID on success, false on failure.
      */
-    public function create_job( $module_id, $user_id, $module_config_json, $input_data_json ) {
+    public function create_job(array $job_data): int|false {
+        // Extract data from standardized array format
+        $module_id = $job_data['module_id'] ?? 0;
+        $user_id = $job_data['user_id'] ?? 0;
+        $module_config_json = $job_data['module_config'] ?? '{}';
+        $input_data_json = $job_data['input_data'] ?? null;
         global $wpdb;
 
         // Basic validation
@@ -170,7 +173,7 @@ class Jobs {
      * @param int $job_id The job ID.
      * @return object|null The job data as an object, or null if not found.
      */
-    public function get_job( int $job_id ) {
+    public function get_job( int $job_id ): ?object {
         global $wpdb;
         if ( empty( $job_id ) ) {
             return null;
@@ -510,6 +513,40 @@ class Jobs {
             ['cleanup_scheduled' => $cleanup_time],
             ['job_id' => $job_id],
             ['%s'],
+            ['%d']
+        );
+        
+        return $updated !== false;
+    }
+
+    /**
+     * Update job status.
+     *
+     * @param int $job_id The job ID.
+     * @param string $status The new status.
+     * @param string|null $error_details Optional error details.
+     * @return bool True on success, false on failure.
+     */
+    public function update_job_status(int $job_id, string $status, ?string $error_details = null): bool {
+        global $wpdb;
+        
+        if (empty($job_id)) {
+            return false;
+        }
+        
+        $update_data = ['status' => $status];
+        $format = ['%s'];
+        
+        if ($error_details !== null) {
+            $update_data['error_details'] = $error_details;
+            $format[] = '%s';
+        }
+        
+        $updated = $wpdb->update(
+            $this->table_name,
+            $update_data,
+            ['job_id' => $job_id],
+            $format,
             ['%d']
         );
         

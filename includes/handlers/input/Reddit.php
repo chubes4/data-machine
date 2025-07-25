@@ -24,29 +24,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Reddit extends BaseInputHandler {
 
-	/** @var \DataMachine\Admin\OAuth\Reddit */
-	private $oauth_reddit;
-
 	/**
-	 * Constructor.
-	 * Uses service locator pattern for dependency injection.
+	 * Get the OAuth Reddit service.
+	 *
+	 * @return \DataMachine\Admin\OAuth\Reddit The OAuth Reddit service.
 	 */
-	public function __construct() {
-		// Call parent constructor to initialize common dependencies via service locator
-		parent::__construct();
-		
-		// Initialize handler-specific dependencies
-		$this->init_handler_dependencies();
-	}
-	
-	/**
-	 * Initialize handler-specific dependencies via service locator.
-	 */
-	private function init_handler_dependencies() {
-		global $data_machine_container;
-		
-		// Get OAuth Reddit service from container or create if needed
-		$this->oauth_reddit = $data_machine_container['oauth_reddit'] ?? new OAuthReddit($this->logger);
+	private function get_oauth_reddit() {
+		$logger = $this->get_logger();
+		return apply_filters('dm_get_service', null, 'oauth_reddit') ?? new OAuthReddit($logger);
 	}
 
 	/**
@@ -59,24 +44,31 @@ class Reddit extends BaseInputHandler {
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
 	public function get_input_data(object $module, array $source_config, int $user_id): array {
-		$this->logger?->info('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
+		$logger = $this->get_logger();
+		$logger?->info('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
 
 		// Get module ID from the passed module object
 		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
 
 		if ( empty( $module_id ) || empty( $user_id ) ) {
-			$this->logger?->error('Reddit Input: Missing module ID or user ID.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->error('Reddit Input: Missing module ID or user ID.', ['module_id' => $module_id, 'user_id' => $user_id]);
 			throw new Exception(esc_html__( 'Missing module ID or user ID provided to Reddit handler.', 'data-machine' ));
 		}
 
-		// Check if essential dependencies were injected correctly
-		if (!$this->oauth_reddit || !$this->db_processed_items || !$this->db_modules || !$this->db_projects) {
-			$this->logger?->error('Reddit Input: Required service dependency missing.', [
+		// Get services via filter-based access
+		$oauth_reddit = $this->get_oauth_reddit();
+		$processed_items_manager = $this->get_processed_items_manager();
+		$db_modules = $this->get_db_modules();
+		$db_projects = $this->get_db_projects();
+
+		// Check if essential dependencies are available
+		if (!$oauth_reddit || !$processed_items_manager || !$db_modules || !$db_projects) {
+			$logger?->error('Reddit Input: Required service dependency missing.', [
 				'module_id' => $module_id,
-				'oauth_missing' => !$this->oauth_reddit,
-				'db_processed_missing' => !$this->db_processed_items,
-				'db_modules_missing' => !$this->db_modules,
-				'db_projects_missing' => !$this->db_projects
+				'oauth_missing' => !$oauth_reddit,
+				'processed_items_manager_missing' => !$processed_items_manager,
+				'db_modules_missing' => !$db_modules,
+				'db_projects_missing' => !$db_projects
 			]);
 			throw new Exception(esc_html__( 'Required service not available in Reddit handler.', 'data-machine' ));
 		}
@@ -86,64 +78,64 @@ class Reddit extends BaseInputHandler {
 		$needs_refresh = false;
 		if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['access_token'])) {
 			 if (!empty($reddit_account['refresh_token'])) {
-				$this->logger?->info('Reddit Input: Token missing or empty, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id]);
+				$logger?->info('Reddit Input: Token missing or empty, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				  $needs_refresh = true;
 			 } else {
-				$this->logger?->error('Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['module_id' => $module_id, 'user_id' => $user_id]);
+				$logger?->error('Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				throw new Exception(esc_html__( 'Reddit account not authenticated or token missing. Please authenticate on the API Keys page.', 'data-machine' ));
 			}
 		} else {
 			 $token_expires_at = $reddit_account['token_expires_at'] ?? 0;
 			if (time() >= ($token_expires_at - 300)) { // Check if expired or within 5 mins
-				$this->logger?->info('Reddit Input: Token expired or expiring soon, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id, 'expiry' => $token_expires_at]);
+				$logger?->info('Reddit Input: Token expired or expiring soon, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id, 'expiry' => $token_expires_at]);
 				$needs_refresh = true;
 			 }
 		}
 
 		if ($needs_refresh) {
-			$this->logger?->info('Reddit Input: Attempting token refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
-			// Use the injected OAuth service
-			$refreshed = $this->oauth_reddit->refresh_token($user_id);
+			$logger?->info('Reddit Input: Attempting token refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			// Use the OAuth service
+			$refreshed = $oauth_reddit->refresh_token($user_id);
 
 			if (!$refreshed) {
 				// Error already logged by refresh_token method
-				$this->logger?->error('Reddit Input: Token refresh failed.', ['module_id' => $module_id, 'user_id' => $user_id]);
+				$logger?->error('Reddit Input: Token refresh failed.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				throw new Exception(esc_html__( 'Failed to refresh expired Reddit access token. Please re-authenticate the Reddit account on the API Keys page.', 'data-machine' ));
 			}
 
 			// Re-fetch updated account data after successful refresh
 			$reddit_account = get_user_meta($user_id, 'data_machine_reddit_account', true);
 			if (empty($reddit_account['access_token'])) {
-				$this->logger?->error('Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['module_id' => $module_id, 'user_id' => $user_id]);
+				$logger?->error('Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				 throw new Exception(esc_html__( 'Reddit token refresh seemed successful, but failed to retrieve new token data.', 'data-machine' ));
 			}
-			$this->logger?->info('Reddit Input: Token refresh successful.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->info('Reddit Input: Token refresh successful.', ['module_id' => $module_id, 'user_id' => $user_id]);
 		}
 
 		// Decrypt the access token
 		$encrypted_access_token = $reddit_account['access_token'] ?? null;
 		if (empty($encrypted_access_token)) {
-			$this->logger?->error('Reddit Input: Access token is still empty after checks/refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->error('Reddit Input: Access token is still empty after checks/refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
 			throw new Exception(esc_html__( 'Could not obtain valid Reddit access token.', 'data-machine' ));
 		}
 		
 		$access_token = EncryptionHelper::decrypt($encrypted_access_token);
 		if ($access_token === false) {
-			$this->logger?->error('Reddit Input: Failed to decrypt access token.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->error('Reddit Input: Failed to decrypt access token.', ['module_id' => $module_id, 'user_id' => $user_id]);
 			throw new Exception(esc_html__( 'Failed to decrypt Reddit access token. Please re-authenticate.', 'data-machine' ));
 		}
 		// --- End Token Retrieval & Refresh ---
 
-		$this->logger?->debug('Reddit Input: Token check complete.', [
+		$logger?->debug('Reddit Input: Token check complete.', [
 			'module_id' => $module_id,
 			'token_present' => !empty($access_token),
 			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
 		]);
 
-		// --- Verify Module Ownership (using injected services) ---
-		$project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
+		// --- Verify Module Ownership ---
+		$project = $this->get_module_with_ownership_check($module, $user_id, $db_projects);
 		if (!$project) {
-			$this->logger?->error('Reddit Input: Permission denied for module.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->error('Reddit Input: Permission denied for module.', ['module_id' => $module_id, 'user_id' => $user_id]);
 			throw new Exception(esc_html__( 'Permission denied for this module (Reddit handler).', 'data-machine' ));
 		}
 
@@ -165,16 +157,16 @@ class Reddit extends BaseInputHandler {
 		}
 
 		if ( empty( $subreddit ) ) {
-			$this->logger?->error('Reddit Input: Subreddit name not configured.', ['module_id' => $module_id]);
+			$logger?->error('Reddit Input: Subreddit name not configured.', ['module_id' => $module_id]);
 			throw new Exception(esc_html__( 'Subreddit name is not configured.', 'data-machine' ));
 		}
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
-			$this->logger?->error('Reddit Input: Invalid subreddit name format.', ['module_id' => $module_id, 'subreddit' => $subreddit]);
+			$logger?->error('Reddit Input: Invalid subreddit name format.', ['module_id' => $module_id, 'subreddit' => $subreddit]);
 			throw new Exception(esc_html__( 'Invalid subreddit name format.', 'data-machine' ));
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		if (!in_array($sort, $valid_sorts)) {
-			$this->logger?->warning('Reddit Input: Invalid sort parameter, defaulting to hot.', ['module_id' => $module_id, 'invalid_sort' => $sort]);
+			$logger?->warning('Reddit Input: Invalid sort parameter, defaulting to hot.', ['module_id' => $module_id, 'invalid_sort' => $sort]);
 			$sort = 'hot'; // Default to hot if invalid
 		}
 
@@ -222,7 +214,7 @@ class Reddit extends BaseInputHandler {
 			if (isset($log_headers['Authorization'])) {
 				$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
 			}
-			$this->logger?->info('Reddit Input: Making API call.', [
+			$logger?->info('Reddit Input: Making API call.', [
 				'module_id' => $module_id,
 				'page' => $pages_fetched,
 				'url' => $reddit_url,
@@ -230,23 +222,24 @@ class Reddit extends BaseInputHandler {
 			]);
 
 			// Use HTTP service - replaces ~25 lines of duplicated HTTP code
-			$http_response = $this->http_service->get($reddit_url, $args, 'Reddit API');
+			$http_service = $this->get_http_service();
+			$http_response = $http_service->get($reddit_url, $args, 'Reddit API');
 			if (is_wp_error($http_response)) {
 				if ($pages_fetched === 1) throw new Exception($http_response->get_error_message());
 				else break;
 			}
 
 			$body = $http_response['body'];
-			$this->logger?->debug('Reddit Input: API Response Code', ['code' => $http_response['status_code'], 'url' => $reddit_url, 'module_id' => $module_id]);
+			$logger?->debug('Reddit Input: API Response Code', ['code' => $http_response['status_code'], 'url' => $reddit_url, 'module_id' => $module_id]);
 
 			// Parse JSON response with error handling
-			$response_data = $this->http_service->parse_json($body, 'Reddit API');
+			$response_data = $http_service->parse_json($body, 'Reddit API');
 			if (is_wp_error($response_data)) {
 				if ($pages_fetched === 1) throw new Exception($response_data->get_error_message());
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
-				$this->logger?->info('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'module_id' => $module_id]);
+				$logger?->info('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'module_id' => $module_id]);
 				break; // Stop fetching
 			}
 			// --- End API Response Handling ---
@@ -256,7 +249,7 @@ class Reddit extends BaseInputHandler {
 			foreach ($response_data['data']['children'] as $post_wrapper) {
 				$total_checked++;
 				if (empty($post_wrapper['data']) || empty($post_wrapper['data']['id']) || empty($post_wrapper['kind'])) {
-					$this->logger?->warning('Reddit Input: Skipping post with missing data.', ['subreddit' => $subreddit, 'module_id' => $module_id]);
+					$logger?->warning('Reddit Input: Skipping post with missing data.', ['subreddit' => $subreddit, 'module_id' => $module_id]);
 					continue; // Skip malformed posts
 				}
 				$item_data = $post_wrapper['data'];
@@ -265,12 +258,12 @@ class Reddit extends BaseInputHandler {
 				// 1. Check timeframe limit first
 				if ($cutoff_timestamp !== null) {
 					if (empty($item_data['created_utc'])) {
-						$this->logger?->debug('Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
+						$logger?->debug('Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 						continue; // Skip if no creation time available
 					}
 					$item_timestamp = (int) $item_data['created_utc'];
 					if ($item_timestamp < $cutoff_timestamp) {
-						$this->logger?->debug('Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'module_id' => $module_id]);
+						$logger?->debug('Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'module_id' => $module_id]);
 						$batch_hit_time_limit = true;
 						continue; // Skip item if it's too old
 					}
@@ -279,21 +272,21 @@ class Reddit extends BaseInputHandler {
 				// 2. Check minimum upvotes (score)
 				if ($min_upvotes > 0) {
 					if (!isset($item_data['score']) || $item_data['score'] < $min_upvotes) {
-						$this->logger?->debug('Reddit Input: Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'module_id' => $module_id]);
+						$logger?->debug('Reddit Input: Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'module_id' => $module_id]);
 						continue; // Skip if not enough upvotes
 					}
 				}
 
-				// 3. Check if already processed (using injected service)
+				// 3. Check if already processed
 				if ($this->check_if_processed($module_id, 'reddit', $current_item_id)) {
-					$this->logger?->debug('Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
+					$logger?->debug('Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 					continue; // Skip if already processed
 				}
 
 				// 4. Check minimum comment count
 				if ($min_comment_count > 0) {
 					if (!isset($item_data['num_comments']) || $item_data['num_comments'] < $min_comment_count) {
-						$this->logger?->debug('Reddit Input: Skipping item (min comment count).', [
+						$logger?->debug('Reddit Input: Skipping item (min comment count).', [
 							'item_id' => $current_item_id,
 							'comments' => $item_data['num_comments'] ?? 'N/A',
 							'min_required' => $min_comment_count,
@@ -316,13 +309,13 @@ class Reddit extends BaseInputHandler {
 						}
 					}
 					if (!$found_keyword) {
-						$this->logger?->debug('Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
+						$logger?->debug('Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 						continue; // Skip if no keyword found
 					}
 				}
 
 				// --- Item is ELIGIBLE! ---
-				$this->logger?->debug('Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'module_id' => $module_id]);
+				$logger?->debug('Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 
 				// Prepare content string (Title and selftext/body)
 				$title = $item_data['title'] ?? '';
@@ -351,9 +344,9 @@ class Reddit extends BaseInputHandler {
 						]
 					];
 					try {
-						$comments_response = $this->http_service->get($comments_url, $comment_args, 'Reddit Comments');
+						$comments_response = $http_service->get($comments_url, $comment_args, 'Reddit Comments');
 						if (!is_wp_error($comments_response)) {
-							$comments_data = $this->http_service->parse_json($comments_response['body'], 'Reddit Comments');
+							$comments_data = $http_service->parse_json($comments_response['body'], 'Reddit Comments');
 							if (!is_wp_error($comments_data)) {
 							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
 								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
@@ -374,7 +367,7 @@ class Reddit extends BaseInputHandler {
 								}
 							}
 							} else {
-								$this->logger?->warning('Reddit Input: Failed to parse comments JSON.', [
+								$logger?->warning('Reddit Input: Failed to parse comments JSON.', [
 									'item_id' => $current_item_id,
 									'comments_url' => $comments_url,
 									'error' => $comments_data->get_error_message(),
@@ -382,7 +375,7 @@ class Reddit extends BaseInputHandler {
 								]);
 							}
 						} else {
-							$this->logger?->warning('Reddit Input: Failed to fetch comments for post.', [
+							$logger?->warning('Reddit Input: Failed to fetch comments for post.', [
 								'item_id' => $current_item_id,
 								'comments_url' => $comments_url,
 								'error' => $comments_response->get_error_message(),
@@ -390,7 +383,7 @@ class Reddit extends BaseInputHandler {
 							]);
 						}
 					} catch (Exception $e) {
-						$this->logger?->error('Reddit Input: Exception while fetching comments.', [
+						$logger?->error('Reddit Input: Exception while fetching comments.', [
 							'item_id' => $current_item_id,
 							'comments_url' => $comments_url,
 							'exception' => $e->getMessage(),
@@ -481,28 +474,28 @@ class Reddit extends BaseInputHandler {
 				array_push($eligible_items_packets, $input_data_packet);
 
 				if (count($eligible_items_packets) >= $process_limit) {
-					$this->logger?->debug('Reddit Input: Reached process limit.', ['limit' => $process_limit, 'module_id' => $module_id]);
+					$logger?->debug('Reddit Input: Reached process limit.', ['limit' => $process_limit, 'module_id' => $module_id]);
 					break; // Stop processing this batch
 				}
 			} // End foreach ($response_data...)
 
 			// Stop pagination if we hit the time limit boundary in the batch
 			if ($batch_hit_time_limit) {
-				$this->logger?->debug('Reddit Input: Stopping pagination due to hitting time limit within batch.', ['module_id' => $module_id]);
+				$logger?->debug('Reddit Input: Stopping pagination due to hitting time limit within batch.', ['module_id' => $module_id]);
 				break;
 			}
 
 			// Prepare for the next page fetch
 			$after_param = $response_data['data']['after'] ?? null;
 			if (!$after_param) {
-				$this->logger?->debug("Reddit Input: No 'after' parameter found, ending pagination.", ['module_id' => $module_id]);
+				$logger?->debug("Reddit Input: No 'after' parameter found, ending pagination.", ['module_id' => $module_id]);
 				break; // No more pages indicated by Reddit
 			}
 
 		} // End while loop
 
 		$found_count = count($eligible_items_packets);
-		$this->logger?->info('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'module_id' => $module_id]);
+		$logger?->info('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'module_id' => $module_id]);
 
 		if (empty($eligible_items_packets)) {
 			return ['status' => 'no_new_items', 'message' => __('No new items found from the Reddit source matching the criteria.', 'data-machine')];

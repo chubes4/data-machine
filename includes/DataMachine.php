@@ -52,26 +52,8 @@ class DataMachine {
     public $admin_page;
 
 
-	/**
-	 * FactCheck API class instance.
-	 * @since    0.1.0
-	 * @var      \DataMachine\Api\FactCheck    $factcheck_api    FactCheck API class instance.
-	 */
-	public $factcheck_api;
 
-	/**
-	 * Finalize API class instance.
-	 * @since    0.1.0
-	 * @var      \DataMachine\Api\Finalize    $finalize_api    Finalize API class instance.
-	 */
-	public $finalize_api;
-
-	/**
-	 * Process Data class instance.
-	 * @since    0.1.0
-	 * @var      \DataMachine\Engine\ProcessData    $process_data    Process Data class instance.
-	 */
-	public $process_data;
+	// ProcessData class removed - functionality moved to ProcessStep
 
 	/**
 	 * Database Modules class instance.
@@ -134,9 +116,6 @@ class DataMachine {
 		$version,
 		$register_settings,
 		$admin_page,
-		$factcheck_api,
-		$finalize_api,
-		$process_data,
 		$db_modules,
 		$orchestrator,
 		$oauth_reddit,
@@ -149,9 +128,6 @@ class DataMachine {
 		$this->version = $version;
 		$this->register_settings = $register_settings;
 		$this->admin_page = $admin_page;
-		$this->factcheck_api = $factcheck_api;
-		$this->finalize_api = $finalize_api;
-		$this->process_data = $process_data;
 		$this->db_modules = $db_modules;
 		$this->orchestrator = $orchestrator;
 		$this->db_remote_locations = $db_remote_locations;

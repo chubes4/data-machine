@@ -12,10 +12,7 @@
 
 namespace DataMachine\Handlers\Input;
 
-use DataMachine\Database\{Modules, Projects, RemoteLocations};
-use DataMachine\Engine\ProcessedItemsManager;
-use DataMachine\Handlers\HttpService;
-use DataMachine\Helpers\Logger;
+use DataMachine\Database\RemoteLocations;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -23,29 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class AirdropRestApi extends BaseInputHandler {
 
-	/** @var RemoteLocations */
-	private $db_remote_locations;
-
 	/**
-	 * Constructor.
-	 * Uses service locator pattern for dependency injection.
+	 * Get the remote locations database service.
+	 *
+	 * @return RemoteLocations The remote locations database service.
 	 */
-	public function __construct() {
-		// Call parent constructor to initialize common dependencies via service locator
-		parent::__construct();
-		
-		// Initialize handler-specific dependencies
-		$this->init_handler_dependencies();
-	}
-	
-	/**
-	 * Initialize handler-specific dependencies via service locator.
-	 */
-	private function init_handler_dependencies() {
-		global $data_machine_container;
-		
-		// Get remote locations service from container or create if needed
-		$this->db_remote_locations = $data_machine_container['db_remote_locations'] ?? new RemoteLocations();
+	protected function get_db_remote_locations() {
+		return apply_filters('dm_get_service', null, 'db_remote_locations');
 	}
 
 	/**
@@ -58,28 +39,10 @@ class AirdropRestApi extends BaseInputHandler {
 	 * @throws Exception If input data is invalid or cannot be retrieved.
 	 */
 	public function get_input_data(object $module, array $source_config, int $user_id): array {
-		// Get module ID from the module object
-		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-		// Use the passed $user_id for validation
-		if (empty($module_id) || empty($user_id)) {
-			throw new Exception(esc_html__('Missing module ID or user ID.', 'data-machine'));
-		}
-
-		// Get dependencies
-		$db_modules = $this->db_modules; // Needed for ownership check
-		$db_projects = $this->db_projects; // Needed for ownership check
-		if (!$this->processed_items_manager || !$db_modules || !$db_projects) {
-			throw new Exception(esc_html__('Required database service not available.', 'data-machine'));
-		}
-
-		// Need to check ownership via project
-		if (!$module || !isset($module->project_id)) {
-			throw new Exception(esc_html__('Invalid module or project association missing.', 'data-machine'));
-		}
-		$project = $db_projects->get_project($module->project_id, $user_id); // Use passed $user_id for ownership check
-		if (!$project) {
-			throw new Exception(esc_html__('Permission denied for this module.', 'data-machine'));
-		}
+		// Validate basic requirements and get dependencies
+		$validation_result = $this->validate_basic_requirements($module, $user_id);
+		$module_id = $validation_result['module_id'];
+		$project = $validation_result['project'];
 
 		// --- Configuration ---
 		// Access config from nested structure
@@ -90,7 +53,7 @@ class AirdropRestApi extends BaseInputHandler {
 		}
 
 		// Get Remote Location details
-		$db_remote_locations = $this->db_remote_locations;
+		$db_remote_locations = $this->get_db_remote_locations();
 		if (!$db_remote_locations) {
 			throw new Exception(esc_html__('Remote Locations database service not available.', 'data-machine'));
 		}
@@ -171,7 +134,8 @@ class AirdropRestApi extends BaseInputHandler {
 			);
 
 			// Use HTTP service - replaces ~20 lines of duplicated HTTP code
-			$http_response = $this->http_service->get($current_api_url, $args, 'Airdrop REST API');
+			$http_service = $this->get_http_service();
+			$http_response = $http_service->get($current_api_url, $args, 'Airdrop REST API');
 			if (is_wp_error($http_response)) {
 				if ($current_page === 1) throw new Exception($http_response->get_error_message());
 				else break;
@@ -181,7 +145,7 @@ class AirdropRestApi extends BaseInputHandler {
 			$body = $http_response['body'];
 
 			// Parse JSON response with error handling
-			$response_data = $this->http_service->parse_json($body, 'Airdrop REST API');
+			$response_data = $http_service->parse_json($body, 'Airdrop REST API');
 			if (is_wp_error($response_data)) {
 				if ($current_page === 1) throw new Exception($response_data->get_error_message());
 				else break;
@@ -228,7 +192,8 @@ class AirdropRestApi extends BaseInputHandler {
 						// Basic validation - check if it looks like a URL
 						if (filter_var($first_image_src, FILTER_VALIDATE_URL)) {
 							$image_url = $first_image_src;
-							$this->logger?->debug('Airdrop Input: Using first image from content as fallback.', ['found_url' => $image_url, 'item_id' => $current_item_id]);
+							$logger = $this->get_logger();
+							$logger && $logger->debug('Airdrop Input: Using first image from content as fallback.', ['found_url' => $image_url, 'item_id' => $current_item_id]);
 						}
 					}
 				}
@@ -264,7 +229,8 @@ class AirdropRestApi extends BaseInputHandler {
 			// Check if we should stop pagination early
 			$total_pages = $response_data['max_num_pages'] ?? ($response_headers['x-wp-totalpages'] ?? null);
 			if ($total_pages !== null && $current_page >= (int)$total_pages) {
-				$this->logger?->info('Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
+				$logger = $this->get_logger();
+				$logger && $logger->info('Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
 				break;
 			}
 
@@ -275,7 +241,8 @@ class AirdropRestApi extends BaseInputHandler {
 
 			// Stop after 1 empty page (no new items added) for efficiency
 			if ($items_added_this_page === 0) {
-				$this->logger?->info('Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
+				$logger = $this->get_logger();
+				$logger && $logger->info('Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
 				break;
 			}
 
@@ -297,10 +264,8 @@ class AirdropRestApi extends BaseInputHandler {
 	 * @return array An array defining the settings fields for this input handler.
 	 */
 	public static function get_settings_fields(array $current_config = []): array {
-		global $data_machine_container;
-		
-		// Get remote locations service from container
-		$db_remote_locations = $data_machine_container['db_remote_locations'] ?? new RemoteLocations();
+		// Get remote locations service via filter system
+		$db_remote_locations = apply_filters('dm_get_service', null, 'db_remote_locations') ?? new RemoteLocations();
 		$locations = $db_remote_locations->get_locations_for_current_user();
 
 		$options = [0 => __('Select a Remote Location', 'data-machine')];

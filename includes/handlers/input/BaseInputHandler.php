@@ -10,86 +10,62 @@
 
 namespace DataMachine\Handlers\Input;
 
+use DataMachine\Database\{Modules, Projects};
+use DataMachine\Engine\ProcessedItemsManager;
+use DataMachine\Handlers\HttpService;
+use DataMachine\Contracts\LoggerInterface;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
 class BaseInputHandler {
     
-    // Universal dependencies accessed via service locator
-    protected $processed_items_manager;
-    protected $db_modules;
-    protected $db_projects;
-    protected $logger;
-    protected $http_service;
-    
     /**
-     * Constructor using service locator pattern.
-     * No manual dependency injection needed.
+     * Get the logger service.
+     *
+     * @return LoggerInterface The logger service.
      */
-    public function __construct() {
-        $this->init_dependencies();
+    protected function get_logger() {
+        return apply_filters('dm_get_service', null, 'logger');
     }
     
     /**
-     * Initialize dependencies via service locator.
-     */
-    protected function init_dependencies() {
-        global $data_machine_container;
-        
-        // Get dependencies from global container - create fallbacks only if needed
-        $this->logger = $data_machine_container['logger'] ?? null;
-        $this->processed_items_manager = $data_machine_container['processed_items_manager'] ?? null;
-        
-        // Try to get existing services from container first
-        if (isset($data_machine_container['db_projects'])) {
-            $this->db_projects = $data_machine_container['db_projects'];
-        } else {
-            $this->db_projects = $this->get_db_projects();
-        }
-        
-        if (isset($data_machine_container['db_modules'])) {
-            $this->db_modules = $data_machine_container['db_modules'];
-        } else {
-            $this->db_modules = $this->get_db_modules();
-        }
-        
-        $this->http_service = $this->get_http_service();
-    }
-    
-    /**
-     * Get database modules service.
+     * Get the modules database service.
+     *
+     * @return Modules The modules database service.
      */
     protected function get_db_modules() {
-        if (!class_exists('DataMachine\\Database\\Modules')) {
-            return null;
-        }
-        // Avoid circular dependency by ensuring projects service exists first
-        if (!$this->db_projects) {
-            $this->db_projects = $this->get_db_projects();
-        }
-        return new \DataMachine\Database\Modules($this->db_projects, $this->logger);
+        return apply_filters('dm_get_service', null, 'db_modules');
     }
     
     /**
-     * Get database projects service.
+     * Get the projects database service.
+     *
+     * @return Projects The projects database service.
      */
     protected function get_db_projects() {
-        if (!class_exists('DataMachine\\Database\\Projects')) {
-            return null;
-        }
-        return new \DataMachine\Database\Projects();
+        return apply_filters('dm_get_service', null, 'db_projects');
     }
     
     /**
-     * Get HTTP service.
+     * Get the processed items manager service.
+     *
+     * @return ProcessedItemsManager The processed items manager service.
+     */
+    protected function get_processed_items_manager() {
+        return apply_filters('dm_get_service', null, 'processed_items_manager');
+    }
+    
+    /**
+     * Get the HTTP service.
+     *
+     * @return HttpService The HTTP service.
      */
     protected function get_http_service() {
-        if (!class_exists('DataMachine\\Handlers\\HttpService')) {
-            return null;
-        }
-        return new \DataMachine\Handlers\HttpService($this->logger);
+        return apply_filters('dm_get_service', null, 'http_service');
     }
+    
     
     /**
      * Perform basic validation and setup required by all handlers.
@@ -101,7 +77,11 @@ class BaseInputHandler {
      * @throws Exception If validation fails
      */
     protected function validate_basic_requirements($module, $user_id) {
-        $this->logger && $this->logger->info('Input Handler: Validating basic requirements.', [
+        $logger = $this->get_logger();
+        $db_modules = $this->get_db_modules();
+        $db_projects = $this->get_db_projects();
+        
+        $logger && $logger->info('Input Handler: Validating basic requirements.', [
             'module_id' => $module->module_id ?? null,
             'user_id' => $user_id
         ]);
@@ -109,24 +89,24 @@ class BaseInputHandler {
         // Extract and validate module ID
         $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
         if (empty($module_id)) {
-            $this->logger && $this->logger->error('Input Handler: Module ID missing from module object.');
+            $logger && $logger->error('Input Handler: Module ID missing from module object.');
             throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
         }
         
         // Validate user ID
         if (empty($user_id)) {
-            $this->logger && $this->logger->error('Input Handler: User ID not provided.', ['module_id' => $module_id]);
+            $logger && $logger->error('Input Handler: User ID not provided.', ['module_id' => $module_id]);
             throw new Exception(esc_html__('User ID not provided.', 'data-machine'));
         }
         
         // Validate dependencies
-        if (!$this->db_modules || !$this->db_projects) {
-            $this->logger && $this->logger->error('Input Handler: Required database service not available.', ['module_id' => $module_id]);
+        if (!$db_modules || !$db_projects) {
+            $logger && $logger->error('Input Handler: Required database service not available.', ['module_id' => $module_id]);
             throw new Exception(esc_html__('Required database service not available in input handler.', 'data-machine'));
         }
         
-        // Ownership check (using trait method)
-        $project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
+        // Ownership check
+        $project = $this->get_module_with_ownership_check($module, $user_id, $db_projects);
         
         return [
             'module_id' => $module_id,
@@ -157,7 +137,8 @@ class BaseInputHandler {
             });
         }
         
-        $this->logger && $this->logger->info('Input Handler: Parsed common config.', [
+        $logger = $this->get_logger();
+        $logger && $logger->info('Input Handler: Parsed common config.', [
             'process_limit' => $config['process_limit'],
             'timeframe_limit' => $config['timeframe_limit'],
             'search_keywords_count' => count($config['search_keywords'])
@@ -186,14 +167,16 @@ class BaseInputHandler {
         ];
         
         if (!isset($interval_map[$timeframe_limit])) {
-            $this->logger && $this->logger->warning('Input Handler: Invalid timeframe limit, using all_time.', [
+            $logger = $this->get_logger();
+            $logger && $logger->warning('Input Handler: Invalid timeframe limit, using all_time.', [
                 'timeframe_limit' => $timeframe_limit
             ]);
             return null;
         }
         
         $cutoff = strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
-        $this->logger && $this->logger->info('Input Handler: Calculated timeframe cutoff.', [
+        $logger = $this->get_logger();
+        $logger && $logger->info('Input Handler: Calculated timeframe cutoff.', [
             'timeframe_limit' => $timeframe_limit,
             'cutoff_timestamp' => $cutoff,
             'cutoff_date' => $cutoff ? gmdate('Y-m-d H:i:s', $cutoff) : null
@@ -211,7 +194,8 @@ class BaseInputHandler {
      * @return bool True if already processed
      */
     protected function check_if_processed($module_id, $source_type, $item_identifier) {
-        return $this->processed_items_manager->is_item_processed($module_id, $source_type, $item_identifier);
+        $processed_items_manager = $this->get_processed_items_manager();
+        return $processed_items_manager->is_item_processed($module_id, $source_type, $item_identifier);
     }
     
     /**

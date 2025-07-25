@@ -101,13 +101,14 @@ class JobCreator {
                 ];
             }
 
-            // Create job record in database
-            $job_id = $this->db_jobs->create_job(
-                $module_id,
-                $user_id,
-                wp_json_encode( $job_config ),
-                $optional_data ? wp_json_encode( $optional_data ) : null
-            );
+            // Create job record in database using standardized format
+            $job_data = [
+                'module_id' => $module_id,
+                'user_id' => $user_id,
+                'module_config' => wp_json_encode( $job_config ),
+                'input_data' => $optional_data ? wp_json_encode( $optional_data ) : null
+            ];
+            $job_id = $this->db_jobs->create_job( $job_data );
 
             if ( ! $job_id ) {
                 $this->logger->error( 'Failed to create job record', [

@@ -38,13 +38,13 @@ use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUplo
 use DataMachine\Admin\ModuleConfig\{RegisterSettings, SettingsFields, ModuleConfigHandler};
 use DataMachine\Admin\ModuleConfig\Ajax\{ModuleConfigAjax, RemoteLocationsAjax};
 use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, SyncRemoteLocations};
-use DataMachine\Api\{FactCheck, Finalize};
 use DataMachine\Database\{Jobs as DatabaseJobs, Modules as DatabaseModules, Projects as DatabaseProjects, ProcessedItems as DatabaseProcessedItems, RemoteLocations as DatabaseRemoteLocations};
-use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, ProcessData, ProcessedItemsManager};
+use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, ProcessedItemsManager};
 use DataMachine\Engine\Filters\{AiResponseParser, PromptBuilder, MarkdownConverter};
 use DataMachine\Handlers\{HandlerFactory, HttpService};
 use DataMachine\Handlers\Input\Files as InputFiles;
 use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler};
+use DataMachine\Contracts\{LoggerInterface, ActionSchedulerInterface};
 
 
 
@@ -54,137 +54,103 @@ use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler}
  * @since    0.1.0
  */
 function run_data_machine() {
-    // --- Instantiate core dependencies ---
-    $logger = new Logger();
-    $encryption_helper = new EncryptionHelper();
-    $action_scheduler = new ActionScheduler($logger);
-    $memory_guard = new MemoryGuard($logger);
-
-    // Register API/Auth admin_post handlers
-    if (is_admin()) {
-        new ApiAuthPage($logger);
-    }
-
-    // Hook the logger's display method to admin notices
-    if (is_admin()) { // Only hook in the admin area
-        add_action( 'admin_notices', array( $logger, 'display_admin_notices' ) );
-    }
-
-    // Database classes
-    $db_projects = new DatabaseProjects();
-    $db_modules = new DatabaseModules($db_projects, $logger);
-    $db_jobs = new DatabaseJobs($db_projects, $logger);
-    $db_processed_items = new DatabaseProcessedItems($logger);
-    $db_remote_locations = new DatabaseRemoteLocations();
-
+    // Simple service registry using filter-based access
+    $services = [];
+    
+    // Core services - simple instantiation
+    $services['logger'] = new Logger();
+    $services['encryption_helper'] = new EncryptionHelper();
+    $services['action_scheduler'] = new ActionScheduler($services['logger']);
+    $services['memory_guard'] = new MemoryGuard($services['logger']);
+    
+    // Database services
+    $services['db_projects'] = new DatabaseProjects();
+    $services['db_modules'] = new DatabaseModules($services['db_projects'], $services['logger']);
+    $services['db_jobs'] = new DatabaseJobs($services['db_projects'], $services['logger']);
+    $services['db_processed_items'] = new DatabaseProcessedItems($services['logger']);
+    $services['db_remote_locations'] = new DatabaseRemoteLocations();
+    
     // Handler services
-    $handler_http_service = new HttpService($logger);
-
-    // OAuth handlers
-    $oauth_twitter = new OAuthTwitter($logger); // Assumes constructor handles missing credentials gracefully or fetches globally if needed
-    $oauth_reddit = new OAuthReddit($logger);   // Assumes constructor handles missing credentials gracefully or fetches globally if needed
-
-    // Get Threads app credentials from options
+    $services['http_service'] = new HttpService($services['logger']);
+    
+    // OAuth services
+    $services['oauth_twitter'] = new OAuthTwitter($services['logger']);
+    $services['oauth_reddit'] = new OAuthReddit($services['logger']);
     $threads_client_id = get_option('threads_app_id', '');
     $threads_client_secret = get_option('threads_app_secret', '');
-    $oauth_threads = new OAuthThreads($threads_client_id, $threads_client_secret, $logger);
-
-    // Get Facebook app credentials from options
+    $services['oauth_threads'] = new OAuthThreads($threads_client_id, $threads_client_secret, $services['logger']);
     $facebook_client_id = get_option('facebook_app_id', '');
     $facebook_client_secret = get_option('facebook_app_secret', '');
-    $oauth_facebook = new OAuthFacebook($facebook_client_id, $facebook_client_secret, $logger);
-
-    // Centralized prompt builder - now uses library for everything
-    $prompt_builder = new PromptBuilder();
-    $prompt_builder->register_all_sections();
+    $services['oauth_facebook'] = new OAuthFacebook($facebook_client_id, $facebook_client_secret, $services['logger']);
+    
+    // AI and engine services
+    $services['prompt_builder'] = new PromptBuilder();
+    $services['prompt_builder']->register_all_sections();
+    $services['ai_http_client'] = new AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
+    $services['job_status_manager'] = new JobStatusManager($services['db_jobs'], $services['db_projects'], $services['logger']);
+    $services['job_creator'] = new JobCreator($services['db_jobs'], $services['db_modules'], $services['db_projects'], $services['action_scheduler'], $services['logger']);
+    $services['processed_items_manager'] = new ProcessedItemsManager($services['db_processed_items'], $services['logger']);
+    $services['handler_factory'] = new HandlerFactory($services['logger']);
+    $services['scheduler'] = new Scheduler($services['job_creator'], $services['db_projects'], $services['db_modules'], $services['action_scheduler'], $services['db_jobs'], $services['logger']);
+    $services['orchestrator'] = new ProcessingOrchestrator($services['logger'], $services['action_scheduler'], $services['db_jobs']);
+    
+    // Get frequently used services for convenience
+    $logger = $services['logger'];
+    $db_projects = $services['db_projects'];
+    $db_modules = $services['db_modules'];
+    $db_jobs = $services['db_jobs'];
+    $db_processed_items = $services['db_processed_items'];
+    $db_remote_locations = $services['db_remote_locations'];
+    $handler_factory = $services['handler_factory'];
+    $job_creator = $services['job_creator'];
+    $orchestrator = $services['orchestrator'];
+    $scheduler = $services['scheduler'];
+    
+    // Filter-based service access
+    add_filter('dm_get_service', function($service, $service_name) use ($services) {
+        return $services[$service_name] ?? null;
+    }, 10, 2);
+    
+    // Admin setup
+    if (is_admin()) {
+        new ApiAuthPage($logger);
+        add_action('admin_notices', array($logger, 'display_admin_notices'));
+    }
 
     // Initialize core handler auto-registration system
     CoreHandlerRegistry::init();
 
-    // Register core handlers explicitly via filter system (replaces filesystem scanning)
-    add_filter('dm_register_handlers', function($handlers) {
-        // Input handlers
-        $handlers['input']['files'] = [
-            'class' => 'DataMachine\\Handlers\\Input\\Files',
-            'label' => __('File Upload', 'data-machine')
+    // Register default 5-step pipeline
+    add_filter('dm_register_pipeline_steps', function($steps) {
+        return [
+            'input' => [
+                'class' => 'DataMachine\\Engine\\Steps\\InputStep',
+                'next' => 'process'
+            ],
+            'process' => [
+                'class' => 'DataMachine\\Engine\\Steps\\ProcessStep', 
+                'next' => 'factcheck'
+            ],
+            'factcheck' => [
+                'class' => 'DataMachine\\Engine\\Steps\\FactCheckStep',
+                'next' => 'finalize'
+            ],
+            'finalize' => [
+                'class' => 'DataMachine\\Engine\\Steps\\FinalizeStep',
+                'next' => 'output'
+            ],
+            'output' => [
+                'class' => 'DataMachine\\Engine\\Steps\\OutputStep',
+                'next' => null
+            ]
         ];
-        $handlers['input']['local_word_press'] = [
-            'class' => 'DataMachine\\Handlers\\Input\\LocalWordPress',
-            'label' => __('Local WordPress', 'data-machine')
-        ];
-        $handlers['input']['airdrop_rest_api'] = [
-            'class' => 'DataMachine\\Handlers\\Input\\AirdropRestApi',
-            'label' => __('Airdrop REST API (Helper Plugin)', 'data-machine')
-        ];
-        $handlers['input']['public_rest_api'] = [
-            'class' => 'DataMachine\\Handlers\\Input\\PublicRestApi',
-            'label' => __('Public REST API', 'data-machine')
-        ];
-        $handlers['input']['rss'] = [
-            'class' => 'DataMachine\\Handlers\\Input\\Rss',
-            'label' => 'RSS Feed'
-        ];
-        $handlers['input']['reddit'] = [
-            'class' => 'DataMachine\\Handlers\\Input\\Reddit',
-            'label' => 'Reddit Subreddit'
-        ];
-        
-        // Output handlers
-        $handlers['output']['publish_local'] = [
-            'class' => 'DataMachine\\Handlers\\Output\\PublishLocal',
-            'label' => 'Publish Locally'
-        ];
-        $handlers['output']['publish_remote'] = [
-            'class' => 'DataMachine\\Handlers\\Output\\PublishRemote',
-            'label' => 'Publish Remotely'
-        ];
-        $handlers['output']['twitter'] = [
-            'class' => 'DataMachine\\Handlers\\Output\\Twitter',
-            'label' => __('Post to Twitter', 'data-machine')
-        ];
-        $handlers['output']['facebook'] = [
-            'class' => 'DataMachine\\Handlers\\Output\\Facebook',
-            'label' => __('Facebook', 'data-machine')
-        ];
-        $handlers['output']['threads'] = [
-            'class' => 'DataMachine\\Handlers\\Output\\Threads',
-            'label' => __('Threads', 'data-machine')
-        ];
-        $handlers['output']['bluesky'] = [
-            'class' => 'DataMachine\\Handlers\\Output\\Bluesky',
-            'label' => __('Post to Bluesky', 'data-machine')
-        ];
-        
-        return $handlers;
-    }, 5); // Priority 5 to run before CoreHandlerRegistry (priority 10)
+    }, 5);
 
 
-    // API services - now use AI HTTP Client library directly
-    $factcheck_api = new FactCheck();
-    $finalize_api = new Finalize();
-
-    // Process data
-    $process_data = new ProcessData();
-
-    // Remote location service
+    // Additional services
     $remote_location_service = new RemoteLocationService($db_remote_locations);
-
-    // Remote locations sync service
     $sync_remote_locations = new SyncRemoteLocations($db_remote_locations, $logger);
-
-    // Remote locations form handler
     $remote_locations_form_handler = new RemoteLocationsFormHandler($db_remote_locations, $logger, $sync_remote_locations);
-
-    // Job worker, orchestrator, job executor, scheduler
-    $job_status_manager = new JobStatusManager($db_jobs, $db_projects, $logger);
-    $job_creator = new JobCreator($db_jobs, $db_modules, $db_projects, $action_scheduler, $logger);
-    $scheduler = new Scheduler($job_creator, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
-    
-    // Processed items manager
-    $processed_items_manager = new ProcessedItemsManager($db_processed_items, $logger);
-
-    // Handler factory using PSR-4 autoloading and service locator pattern
-    $handler_factory = new HandlerFactory();
 
     // Settings fields
     $settings_fields = new SettingsFields($handler_factory, $remote_location_service);
@@ -208,46 +174,6 @@ function run_data_machine() {
     );
     $module_handler->init_hooks();
 
-    // Orchestrator
-    $orchestrator = new ProcessingOrchestrator(
-        $process_data,
-        $factcheck_api,
-        $finalize_api,
-        $handler_factory,
-        $prompt_builder,
-        $logger,
-        $action_scheduler,
-        $db_jobs,
-        $job_status_manager,
-        $db_modules
-    );
-
-    // AI HTTP Client with plugin context and AI type
-    $ai_http_client = new AI_HTTP_Client([
-        'plugin_context' => 'data-machine',
-        'ai_type' => 'llm'
-    ]);
-
-
-    // Step configuration validator
-    $step_validator = new \DataMachine\Engine\StepConfigurationValidator();
-
-    // Global container for Action Scheduler access
-    global $data_machine_container;
-    $data_machine_container = array(
-        'handler_factory' => $handler_factory,
-        'db_jobs' => $db_jobs,
-        'db_modules' => $db_modules,
-        'db_projects' => $db_projects,
-        'db_processed_items' => $db_processed_items,
-        'processed_items_manager' => $processed_items_manager,
-        'job_status_manager' => $job_status_manager,
-        'job_creator' => $job_creator,
-        'action_scheduler' => $action_scheduler,
-        'logger' => $logger,
-        'ai_http_client' => $ai_http_client,
-        'step_validator' => $step_validator
-    );
 
     // Import/export handler
     $import_export_handler = new ImportExport($db_projects, $db_modules);
@@ -266,15 +192,12 @@ function run_data_machine() {
         DATA_MACHINE_VERSION,
         $register_settings,
         $admin_page,
-        $factcheck_api,
-        $finalize_api,
-        $process_data,
         $db_modules,
         $orchestrator,
-        $oauth_reddit,
-        $oauth_twitter,
-        $oauth_threads,
-        $oauth_facebook,
+        $services['oauth_reddit'],
+        $services['oauth_twitter'],
+        $services['oauth_threads'],
+        $services['oauth_facebook'],
         $db_remote_locations,
         $logger
 	);
@@ -289,12 +212,16 @@ function run_data_machine() {
     add_action( 'wp_ajax_dm_edit_schedule', array( $dashboard_ajax_handler, 'handle_edit_schedule' ) );
     add_action( 'wp_ajax_dm_get_project_schedule_data', array( $dashboard_ajax_handler, 'handle_get_project_schedule_data' ) );
 
-    // Register async pipeline step hooks
-    add_action( 'dm_input_job_event', array( $orchestrator, 'execute_input_step' ), 10, 1 );
-    add_action( 'dm_process_job_event', array( $orchestrator, 'execute_process_step' ), 10, 1 );
-    add_action( 'dm_factcheck_job_event', array( $orchestrator, 'execute_factcheck_step' ), 10, 1 );
-    add_action( 'dm_finalize_job_event', array( $orchestrator, 'execute_finalize_step' ), 10, 1 );
-    add_action( 'dm_output_job_event', array( $action_scheduler, 'handle_output_job' ), 10, 1 );
+    // Register async pipeline step hooks dynamically
+    $pipeline_steps = apply_filters( 'dm_register_pipeline_steps', [] );
+    foreach ( $pipeline_steps as $step_name => $step_config ) {
+        $hook_name = 'dm_' . $step_name . '_job_event';
+        
+        // All steps use the unified dynamic orchestrator
+        add_action( $hook_name, function( $job_id ) use ( $orchestrator, $step_name ) {
+            return $orchestrator->execute_step( $step_name, $job_id );
+        }, 10, 1 );
+    }
 
     $scheduler->init_hooks();
 }

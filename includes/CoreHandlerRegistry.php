@@ -72,11 +72,75 @@ class CoreHandlerRegistry {
 
 
     /**
-     * Initialize the core handler settings field registration system.
+     * Auto-register core handlers using the same filter system external plugins use.
+     * 
+     * @param array $handlers Existing handlers array from filter
+     * @return array Updated handlers array with core handlers
+     */
+    public static function register_core_handlers(array $handlers): array {
+        // Input handlers
+        $handlers['input']['files'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\Files',
+            'label' => __('File Upload', 'data-machine')
+        ];
+        $handlers['input']['local_word_press'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\LocalWordPress',
+            'label' => __('Local WordPress', 'data-machine')
+        ];
+        $handlers['input']['airdrop_rest_api'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\AirdropRestApi',
+            'label' => __('Airdrop REST API (Helper Plugin)', 'data-machine')
+        ];
+        $handlers['input']['public_rest_api'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\PublicRestApi',
+            'label' => __('Public REST API', 'data-machine')
+        ];
+        $handlers['input']['rss'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\Rss',
+            'label' => 'RSS Feed'
+        ];
+        $handlers['input']['reddit'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\Reddit',
+            'label' => 'Reddit Subreddit'
+        ];
+        
+        // Output handlers
+        $handlers['output']['publish_local'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\PublishLocal',
+            'label' => 'Publish Locally'
+        ];
+        $handlers['output']['publish_remote'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\PublishRemote',
+            'label' => 'Publish Remotely'
+        ];
+        $handlers['output']['twitter'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Twitter',
+            'label' => __('Post to Twitter', 'data-machine')
+        ];
+        $handlers['output']['facebook'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Facebook',
+            'label' => __('Facebook', 'data-machine')
+        ];
+        $handlers['output']['threads'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Threads',
+            'label' => __('Threads', 'data-machine')
+        ];
+        $handlers['output']['bluesky'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Bluesky',
+            'label' => __('Post to Bluesky', 'data-machine')
+        ];
+        
+        return $handlers;
+    }
+
+    /**
+     * Initialize the core handler registration system.
      * Called during plugin bootstrap to register hooks.
-     * Note: Handler registration is now done explicitly via bootstrap filter.
      */
     public static function init(): void {
+        // Register core handlers using the same filter system external plugins use
+        add_filter('dm_register_handlers', [self::class, 'register_core_handlers'], 5);
+        
         // Register core handler settings fields
         add_filter('dm_handler_settings_fields', [self::class, 'register_core_settings_fields'], 10, 4);
         

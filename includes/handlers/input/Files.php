@@ -19,13 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Files extends BaseInputHandler {
 
 	/**
-	 * Constructor.
-	 * Uses service locator pattern for dependency injection.
+	 * Constructor with dependency injection.
+	 * No need to override - uses parent constructor with proper dependency injection.
 	 */
-	public function __construct() {
-		// Call parent constructor to initialize common dependencies via service locator
-		parent::__construct();
-	}
 
 	/**
 	 * Processes uploaded files and prepares input data packets.
@@ -41,18 +37,20 @@ class Files extends BaseInputHandler {
         $validated = $this->validate_basic_requirements($module, $user_id);
         $module_id = $validated['module_id'];
         $project = $validated['project'];
+        
+        $logger = $this->get_logger();
 
         // Find the next unprocessed uploaded file
         $next_file = $this->find_next_unprocessed_file($source_config);
         
         if (!$next_file) {
-            $this->logger?->info('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
+            $logger?->info('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
             return []; // No data to process
         }
 
         // Validate the file still exists
         if (!file_exists($next_file['persistent_path'])) {
-            $this->logger?->error('Files Input: File no longer exists on disk.', [
+            $logger?->error('Files Input: File no longer exists on disk.', [
                 'module_id' => $module_id,
                 'file_path' => $next_file['persistent_path']
             ]);
@@ -92,7 +90,7 @@ class Files extends BaseInputHandler {
         
         $input_data_packet = $this->create_input_data_packet($data, $metadata);
 
-        $this->logger?->info('Files Input: Found unprocessed file for processing.', [
+        $logger?->info('Files Input: Found unprocessed file for processing.', [
             'module_id' => $module_id,
             'file_path' => $file_identifier
         ]);

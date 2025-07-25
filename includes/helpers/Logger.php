@@ -17,12 +17,13 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Level;
 use Monolog\Handler\ErrorLogHandler;
+use DataMachine\Contracts\LoggerInterface;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-class Logger {
+class Logger implements LoggerInterface {
 
     const TRANSIENT_NOTICES = 'dm_admin_notices'; // Transient to store notices
     const NOTICE_ERROR      = 'error';

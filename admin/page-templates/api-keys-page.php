@@ -181,6 +181,82 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
         }
         ?>
     </div>
+    
+    <!-- Step Configuration Status -->
+    <div style="margin-top: 30px; padding: 20px; background: #fff; border: 1px solid #c3c4c7; border-radius: 5px;">
+        <h3 style="margin-top: 0;">Configuration Status</h3>
+        <p>Data Machine requires step-specific AI configurations to process jobs. Configure each step above.</p>
+        
+        <?php
+        // Show configuration status using AI HTTP Client library via filter
+        $ai_http_client = apply_filters('dm_get_service', null, 'ai_http_client');
+        
+        if ($ai_http_client) {
+            $steps = ['process', 'factcheck', 'finalize'];
+            $all_configured = true;
+            $missing_steps = [];
+            $status = [];
+            
+            foreach ($steps as $step) {
+                $configured = $ai_http_client->has_step_configuration($step);
+                $config = $ai_http_client->get_step_configuration($step);
+                
+                if (!$configured) {
+                    $all_configured = false;
+                    $missing_steps[] = $step;
+                }
+                
+                $status[$step] = [
+                    'configured' => $configured,
+                    'provider' => $config['provider'] ?? 'not set',
+                    'model' => $config['model'] ?? 'not set',
+                    'temperature' => $config['temperature'] ?? 'not set'
+                ];
+            }
+            
+            if ($all_configured) {
+                echo '<div class="notice notice-success inline" style="margin: 15px 0;"><p>✅ All step configurations are complete. Jobs can be processed.</p></div>';
+            } else {
+                $missing_list = implode(', ', $missing_steps);
+                echo '<div class="notice notice-error inline" style="margin: 15px 0;"><p>❌ Missing step configurations: ' . esc_html($missing_list) . '. Please configure these steps before running jobs.</p></div>';
+            }
+            ?>
+            
+            <table class="widefat" style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Processing Step</th>
+                        <th>Status</th>
+                        <th>Provider</th>
+                        <th>Model</th>
+                        <th>Temperature</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($status as $step => $info): ?>
+                    <tr>
+                        <td><strong><?php echo esc_html(ucfirst($step)); ?> Step</strong></td>
+                        <td>
+                            <?php if ($info['configured']): ?>
+                                <span style="color: #00a32a;">✅ Configured</span>
+                            <?php else: ?>
+                                <span style="color: #d63638;">❌ Missing</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo esc_html($info['provider']); ?></td>
+                        <td><?php echo esc_html($info['model']); ?></td>
+                        <td><?php echo esc_html($info['temperature']); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            
+            <?php
+        } else {
+            echo '<div class="notice notice-warning inline" style="margin: 15px 0;"><p>⚠️ AI HTTP Client not available for configuration status.</p></div>';
+        }
+        ?>
+    </div>
 
     <hr style="margin: 30px 0;">
     <h2>Social Media & Platform Credentials</h2>

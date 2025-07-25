@@ -299,8 +299,7 @@ PROMPT;
      * @return string The project context content
      */
     public function build_project_context_section(int $project_id, int $user_id): string {
-        global $data_machine_container;
-        $db_projects = $data_machine_container['db_projects'] ?? null;
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
         
         if ($project_id > 0 && $db_projects && method_exists($db_projects, 'get_project')) {
             $project = $db_projects->get_project($project_id, $user_id);

@@ -24,26 +24,9 @@ class Twitter extends BaseOutputHandler {
     private $oauth_twitter;
 
     /**
-	 * Constructor.
-	 * Uses service locator pattern for dependency injection.
+	 * Constructor with dependency injection.
+	 * No need to override - uses parent constructor with proper dependency injection.
 	 */
-	public function __construct() {
-		// Call parent constructor to initialize common dependencies via service locator
-		parent::__construct();
-		
-		// Initialize handler-specific dependencies
-		$this->init_handler_dependencies();
-	}
-	
-	/**
-	 * Initialize handler-specific dependencies via service locator.
-	 */
-	private function init_handler_dependencies() {
-		global $data_machine_container;
-		
-		// Get OAuth Twitter service from container or create if needed
-		$this->oauth_twitter = $data_machine_container['oauth_twitter'] ?? new \DataMachine\Admin\OAuth\Twitter($this->logger);
-	}
 
     /**
 	 * Handles posting the AI output to Twitter.

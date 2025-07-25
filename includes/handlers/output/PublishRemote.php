@@ -34,21 +34,8 @@ class PublishRemote extends BaseOutputHandler {
      * Uses service locator pattern for dependency injection.
      */
     public function __construct() {
-        // Call parent constructor to initialize common dependencies via service locator
+        // Call parent constructor to initialize all dependencies via filters
         parent::__construct();
-        
-        // Initialize handler-specific dependencies
-        $this->init_handler_dependencies();
-    }
-    
-    /**
-     * Initialize handler-specific dependencies via service locator.
-     */
-    private function init_handler_dependencies() {
-        global $data_machine_container;
-        
-        // Get remote locations service from container or create if needed
-        $this->db_locations = $data_machine_container['db_remote_locations'] ?? new RemoteLocations();
     }
 	/**
 	 * Handles publishing the AI output to a remote WordPress site via REST API.
@@ -446,8 +433,7 @@ class PublishRemote extends BaseOutputHandler {
 		$site_info = [];
 		$location_id = $current_config['location_id'] ?? null;
 		if ($location_id) {
-			global $data_machine_container;
-			$db_locations = $data_machine_container['db_remote_locations'] ?? null;
+			$db_locations = apply_filters('dm_get_service', null, 'db_remote_locations');
 			
 			if ($db_locations) {
 				try {

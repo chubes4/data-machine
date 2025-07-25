@@ -65,12 +65,12 @@ class ModuleConfigAjax {
      * @return object|\WP_Error Files handler instance or WP_Error on failure
      */
     private function get_files_handler() {
-        global $data_machine_container;
-        if (!isset($data_machine_container['handler_factory'])) {
-            return new \WP_Error('missing_factory', 'Handler factory not available in container');
+        $handler_factory = apply_filters('dm_get_service', null, 'handler_factory');
+        if (!$handler_factory) {
+            return new \WP_Error('missing_factory', 'Handler factory not available');
         }
         
-        return $data_machine_container['handler_factory']->create_handler('input', 'files');
+        return $handler_factory->create_handler('input', 'files');
     }
 
     /**
