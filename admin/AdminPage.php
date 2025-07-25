@@ -119,7 +119,7 @@ class AdminPage {
         $this->remote_locations_admin = $remote_locations_admin;
         // Instantiate the module config handler with all required dependencies
         require_once plugin_dir_path(__FILE__) . 'ModuleConfig/ModuleConfigHandler.php';
-        $this->module_config_handler = new \DataMachine\Admin\ModuleConfig\ModuleConfigHandler($db_modules, $handler_registry, $handler_factory, $logger);
+        $this->module_config_handler = new \DataMachine\Admin\ModuleConfig\ModuleConfigHandler($db_modules, $handler_factory, $logger);
         // Hook for project management page (if any form processing is needed in future)
         add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_management_page' ) );
         // Hook for API keys page (if any form processing is needed in future)
