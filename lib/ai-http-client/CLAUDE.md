@@ -177,10 +177,10 @@ ai_http_client_shared_api_keys = [
 - **AI_HTTP_OpenRouter_Provider** - Pure OpenRouter API communication
 
 ### WordPress Integration
-- **OptionsManager** - Plugin-scoped WordPress options storage (`src/Utils/OptionsManager.php`)
-- **PromptManager** - Modular prompt building (`src/Utils/PromptManager.php`)
-- **WordPressSSEHandler** - WordPress-native SSE streaming endpoint (`src/Utils/WordPressSSEHandler.php`)
-- **ProviderManagerComponent** - Complete admin UI with plugin context support (`src/Components/ProviderManagerComponent.php`)
+- **OptionsManager** - Plugin-scoped WordPress options storage (`src/Utils/LLM/OptionsManager.php`)
+- **PromptManager** - Modular prompt building (`src/Utils/LLM/PromptManager.php`)
+- **WordPressSSEHandler** - WordPress-native SSE streaming endpoint (`src/Utils/LLM/WordPressSSEHandler.php`)
+- **ProviderManagerComponent** - Complete admin UI with plugin context + ai_type support (`src/Components/LLM/ProviderManagerComponent.php`)
 
 ## Development Commands
 
@@ -196,23 +196,25 @@ composer dump-autoload # Regenerate autoloader after adding new classes
 - PHPUnit configured for automated testing
 - PHPStan static analysis at level 5
 - Testing requires WordPress environment with library loaded
-- Use the TestConnection component (`src/Components/Extended/TestConnection.php`) for provider connectivity testing
+- Use the TestConnection component (`src/Components/LLM/Extended/TestConnection.php`) for provider connectivity testing
 
-### Development Workflow (Multi-Plugin Architecture)
+### Development Workflow (Multi-Type AI Parameter System)
 ```php
-// Basic testing setup in WordPress - REQUIRES plugin context
+// Basic LLM testing setup - REQUIRES both plugin_context AND ai_type
 require_once 'ai-http-client.php';
-$client = new AI_HTTP_Client(['plugin_context' => 'my-plugin-slug']);
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm' // REQUIRED
+]);
 $response = $client->send_request([
     'messages' => [['role' => 'user', 'content' => 'test']]
-    // Model uses plugin-scoped configuration
 ]);
 var_dump($response);
 
-// Test streaming with plugin context
-$client->send_streaming_request([
-    'messages' => [['role' => 'user', 'content' => 'test']]
-    // Model uses plugin-scoped configuration
+// Test upscaling (when implemented)
+$upscaling_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'upscaling' // REQUIRED
 ]);
 
 // Test connection with plugin context
@@ -222,12 +224,6 @@ var_dump($test_result);
 // Get available models using plugin-scoped configuration
 $models = $client->get_available_models('openai');
 var_dump($models);
-
-// Override configured model per request
-$response = $client->send_request([
-    'messages' => [['role' => 'user', 'content' => 'test']],
-    'model' => 'gpt-4o' // Override plugin-scoped model
-]);
 ```
 
 ### Version Management
