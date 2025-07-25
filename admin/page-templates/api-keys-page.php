@@ -97,6 +97,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
             <?php
             echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                 'plugin_context' => 'data-machine',
+                'ai_type' => 'llm',
                 'components' => [
                     'core' => ['provider_selector', 'api_key_input', 'model_selector'],
                     'extended' => ['temperature_slider', 'system_prompt_field']
@@ -125,6 +126,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     <?php
                     echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
+                        'ai_type' => 'llm',
                         'step_context' => 'process',
                         'components' => [
                             'core' => ['model_selector']
@@ -142,6 +144,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     <?php
                     echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
+                        'ai_type' => 'llm',
                         'step_context' => 'factcheck',
                         'components' => [
                             'core' => ['model_selector']
@@ -159,6 +162,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     <?php
                     echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
+                        'ai_type' => 'llm',
                         'step_context' => 'finalize',
                         'components' => [
                             'core' => ['model_selector']

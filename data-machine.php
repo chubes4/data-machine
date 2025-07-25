@@ -167,8 +167,11 @@ function run_data_machine() {
         $db_modules
     );
 
-    // AI HTTP Client with plugin context
-    $ai_http_client = new AI_HTTP_Client(['plugin_context' => 'data-machine']);
+    // AI HTTP Client with plugin context and AI type
+    $ai_http_client = new AI_HTTP_Client([
+        'plugin_context' => 'data-machine',
+        'ai_type' => 'llm'
+    ]);
 
     // Global container for Action Scheduler access
     global $data_machine_container;
