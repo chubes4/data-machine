@@ -1,6 +1,6 @@
 # Data Machine
 
-A powerful WordPress plugin that automates data collection, AI processing, and multi-platform publishing through a sophisticated 5-step pipeline.
+A revolutionary WordPress plugin that transforms your site into a Universal Content Processing Platform. Built with pure WordPress-native hooks and filters, Data Machine provides an infinitely extensible pipeline for content automation, AI processing, and multi-platform publishing.
 
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
@@ -8,50 +8,97 @@ A powerful WordPress plugin that automates data collection, AI processing, and m
 
 ## Overview
 
-Data Machine transforms WordPress into a comprehensive content automation platform. It collects data from various sources (RSS feeds, Reddit, files, APIs), processes it through multiple AI providers for enhancement and fact-checking, then publishes to multiple platforms simultaneously.
+Data Machine revolutionizes content automation through its groundbreaking **Extensible Pipeline Architecture**. Unlike rigid automation tools, Data Machine uses pure WordPress filters to create a completely customizable processing pipeline that can be extended by any plugin without touching core code. Collect data from any source, process it through custom workflows, and publish everywhere - all through WordPress-native extensibility patterns.
 
-### Key Features
+### Revolutionary Features
 
-- **🔄 5-Step Automated Pipeline**: Input → AI Processing → Fact-Check → Finalize → Multi-Platform Publishing
-- **📡 Multi-Source Collection**: RSS feeds, Reddit, file uploads, REST APIs, custom endpoints
-- **🤖 AI-Powered Processing**: Multi-provider AI integration (OpenAI, Anthropic, Gemini, Grok, OpenRouter) for content generation and fact-checking
-- **🚀 Multi-Platform Publishing**: WordPress, Twitter, Facebook, Threads, Bluesky
-- **⏰ Scheduled Automation**: Reliable background processing with Action Scheduler
-- **🎯 Project Management**: Organize workflows into projects and modules
-- **🔐 Secure**: Encrypted API key storage and secure HTTPS communications
+- **🔄 Infinitely Extensible Pipeline**: Plugin-based pipeline steps registered via WordPress filters - add, remove, or modify any processing step
+- **🎯 Pure WordPress-Native Architecture**: Built entirely on WordPress hooks and filters for maximum compatibility and extensibility
+- **🔌 Universal Plugin Integration**: Any WordPress plugin can extend Data Machine without core modifications
+- **📡 Extensible Handler System**: Input/output handlers registered dynamically - support any data source or publishing platform
+- **🤖 Multi-Provider AI Integration**: OpenAI, Anthropic, Gemini, Grok, OpenRouter with per-step configuration flexibility
+- **🚀 Filter-Based Service Architecture**: All services accessible via WordPress filters - no dependency injection complexity
+- **⏰ Dynamic Background Processing**: Action Scheduler hooks generated automatically from pipeline configuration
+- **🎯 Zero Core Modifications**: External plugins use identical patterns as core handlers - true extensibility
+- **🔐 WordPress-Standard Security**: Built on WordPress security patterns with encrypted credential storage
 
-## Architecture
+## Revolutionary Architecture
 
-### Core Design Pattern
+### Universal Content Processing Platform
+Data Machine's **Extensible Pipeline Architecture** transforms WordPress into a universal content processing platform where any workflow can be implemented through pure WordPress hooks and filters.
+
 ```
-Input Sources → AI Processing → Fact Checking → Finalization → Output Publishing
-     ↓              ↓              ↓             ↓              ↓
-   RSS/Reddit    Multi-AI      AI Validation   Content      Multi-Platform
-   Files/APIs    Processing    (Optional)      Polish       Distribution
+┌─────────────────────────────────────────────────────────────────────┐
+│                    EXTENSIBLE PIPELINE SYSTEM                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  Input Step  →  Process Step  →  Custom Steps  →  Finalize  →  Output │
+│      ↓              ↓               ↓              ↓           ↓     │
+│  Any Source    Multi-AI       Plugin-Defined    Content    Any Platform│
+│  (Filterable)  Processing     Steps (Unlimited)  Polish    (Filterable)│
+└─────────────────────────────────────────────────────────────────────┘
+
+EXTENSIBLE VIA WORDPRESS FILTERS:
+• dm_register_pipeline_steps    - Add/modify pipeline steps
+• dm_register_handlers         - Add input/output handlers  
+• dm_get_service              - Access/override any service
+```
+
+### Filter-Based Service Architecture
+Every component uses pure WordPress filters for maximum extensibility:
+
+```php
+// Universal service access pattern
+$service = apply_filters('dm_get_service', null, 'service_name');
+
+// Pipeline step registration
+add_filter('dm_register_pipeline_steps', function($steps) {
+    $steps['custom_analysis'] = [
+        'class' => 'MyPlugin\CustomStep',
+        'next' => 'finalize'
+    ];
+    return $steps;
+});
+
+// Handler registration  
+add_filter('dm_register_handlers', function($handlers) {
+    $handlers['input']['shopify'] = [
+        'class' => 'MyPlugin\ShopifyHandler',
+        'label' => 'Shopify Integration'
+    ];
+    return $handlers;
+});
 ```
 
 ### Technical Stack
-- **Backend**: PHP 8.0+ with PSR-4 namespacing
-- **Database**: Custom WordPress tables (`wp_dm_*`)
-- **Job Processing**: Action Scheduler for reliable background tasks
-- **AI Integration**: Custom AI HTTP Client library with multi-provider support
-- **Authentication**: OAuth for social media platforms
-- **Security**: Encrypted credential storage with `EncryptionHelper`
+- **Architecture**: Pure WordPress filter-based dependency system
+- **Extensibility**: Universal plugin integration via WordPress hooks
+- **Backend**: PHP 8.0+ with PSR-4 namespacing  
+- **Service System**: Filter-based service registry (`dm_get_service`)
+- **Pipeline**: Dynamic step registration via `dm_register_pipeline_steps`
+- **Handlers**: Automatic discovery with `dm_register_handlers` filter
+- **Database**: Custom WordPress tables (`wp_dm_*`) with JSON step data
+- **Job Processing**: Dynamic Action Scheduler hooks from pipeline config
+- **AI Integration**: Multi-provider library with step-aware configuration
+- **Security**: WordPress-native patterns with encrypted credential storage
 
 ### Directory Structure
 ```
 data-machine/
-├── admin/                    # Admin interface and management
+├── admin/                         # Admin UI with programmatic forms
 ├── includes/
-│   ├── engine/              # Core processing pipeline
-│   ├── handlers/            # Input/Output handlers
-│   ├── database/            # Database abstraction layer
-│   ├── api/                 # AI processing integration
-│   └── helpers/             # Utilities and services
-├── lib/
-│   └── ai-http-client/      # Multi-provider AI library
-├── assets/                  # Frontend assets
-└── vendor/                  # Composer dependencies
+│   ├── Contracts/                # Type-safe interfaces
+│   ├── engine/                   # Extensible pipeline system
+│   │   ├── interfaces/           # Pipeline step contracts
+│   │   └── steps/               # Core pipeline step implementations
+│   ├── handlers/                # Extensible input/output handlers
+│   ├── database/               # WordPress table abstractions
+│   ├── helpers/                # Filter-based utility services
+│   ├── CoreHandlerRegistry.php # Auto-discovery system
+│   └── DataMachine.php         # Filter-based service bootstrap
+├── lib/ai-http-client/           # Multi-provider AI library
+├── assets/                      # Frontend assets
+├── vendor/                      # Composer dependencies
+└── data-machine.php            # WordPress filter registration
 ```
 
 ## Development Setup
@@ -112,36 +159,166 @@ Monitor jobs:
 - **Action Scheduler**: WordPress → Tools → Action Scheduler  
 - **Database**: Check `wp_dm_jobs` table for step progression
 
-## Handler Development
+## Extensible Development
 
-### Adding New Input Handlers
+### Universal Plugin Integration
+Data Machine uses **pure WordPress patterns** - any plugin can extend functionality without touching core code.
 
-1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler`
-2. Implement required method: `get_input_data()`
-3. **Automatic**: HandlerFactory resolves dependencies dynamically via reflection
-4. Add proper `use` statements for dependencies
+### Adding Custom Pipeline Steps
 
 ```php
-namespace DataMachine\Handlers\Input;
+// Register custom pipeline step via WordPress filter
+add_filter('dm_register_pipeline_steps', function($steps) {
+    // Insert custom step between process and factcheck
+    $steps['sentiment_analysis'] = [
+        'class' => 'MyPlugin\SentimentAnalysisStep',
+        'next' => 'factcheck'
+    ];
+    $steps['process']['next'] = 'sentiment_analysis';
+    
+    return $steps;
+}, 10);
 
-use DataMachine\Database\{Modules, Projects, ProcessedItems};
-use DataMachine\Helpers\Logger;
+// Implement the step
+namespace MyPlugin;
 
-class CustomHandler extends BaseInputHandler {
-    public function get_input_data(object $module, array $source_config, int $user_id): array {
-        // Implementation here
-        // Use $this->http_service for API calls
-        // Use $this->filter_processed_items() for deduplication
+use DataMachine\Engine\{Interfaces\PipelineStepInterface, Steps\BasePipelineStep};
+
+class SentimentAnalysisStep extends BasePipelineStep implements PipelineStepInterface {
+    public function execute(int $job_id): bool {
+        // Access services via pure WordPress filters - no constructor needed
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        $ai_client = apply_filters('dm_get_service', null, 'ai_http_client');
+        
+        // Get data from previous step
+        $processed_data = $this->get_step_data($job_id, 2);
+        
+        // Perform sentiment analysis
+        $sentiment = $this->analyze_sentiment($processed_data);
+        
+        // Store result for next step
+        return $this->store_step_data($job_id, 'sentiment_data', $sentiment);
     }
 }
 ```
 
-### Adding New Output Handlers
+### Adding Custom Input Handlers
 
-1. Create class extending `DataMachine\Handlers\Output\BaseOutputHandler`
-2. Implement required method: `handle_output()`
-3. Dependencies resolved automatically via reflection
-4. Update dependencies in `data-machine.php` if needed
+```php
+// Register handler via WordPress filter
+add_filter('dm_register_handlers', function($handlers) {
+    $handlers['input']['shopify_orders'] = [
+        'class' => 'MyPlugin\ShopifyOrdersHandler',
+        'label' => 'Shopify Orders'
+    ];
+    return $handlers;
+});
+
+// Register settings fields
+add_filter('dm_handler_settings_fields', function($fields, $type, $slug, $config) {
+    if ($type === 'input' && $slug === 'shopify_orders') {
+        return [
+            'api_key' => [
+                'type' => 'text',
+                'label' => 'Shopify API Key',
+                'required' => true
+            ],
+            'store_url' => [
+                'type' => 'url', 
+                'label' => 'Store URL',
+                'required' => true
+            ]
+        ];
+    }
+    return $fields;
+}, 10, 4);
+
+// Implement the handler
+namespace MyPlugin;
+
+use DataMachine\Handlers\Input\BaseInputHandler;
+
+class ShopifyOrdersHandler extends BaseInputHandler {
+    // No constructor needed - services accessed via filters
+    
+    public function get_input_data(object $module, array $source_config, int $user_id): array {
+        // Access services dynamically via WordPress filters
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        $http_service = apply_filters('dm_get_service', null, 'http_service');
+        $processed_items_manager = apply_filters('dm_get_service', null, 'processed_items_manager');
+        
+        // Fetch orders from Shopify API
+        $orders = $this->fetch_shopify_orders($source_config['api_key'], $source_config['store_url']);
+        
+        // Filter out already processed items
+        $filtered_orders = $processed_items_manager->filter_processed_items($orders, $module->id);
+        
+        return ['processed_items' => $filtered_orders];
+    }
+    
+    // CRITICAL: Settings fields method must be static
+    public static function get_settings_fields(array $current_config = []): array {
+        return [
+            'api_key' => [
+                'type' => 'text',
+                'label' => 'Shopify API Key',
+                'required' => true
+            ],
+            'store_url' => [
+                'type' => 'url',
+                'label' => 'Store URL', 
+                'required' => true
+            ]
+        ];
+    }
+}
+```
+
+### Adding Custom Output Handlers
+
+```php
+// Register output handler
+add_filter('dm_register_handlers', function($handlers) {
+    $handlers['output']['discord'] = [
+        'class' => 'MyPlugin\DiscordHandler',
+        'label' => 'Discord Webhook'
+    ];
+    return $handlers;
+});
+
+// Implement handler with filter-based service access
+namespace MyPlugin;
+
+use DataMachine\Handlers\Output\BaseOutputHandler;
+
+class DiscordHandler extends BaseOutputHandler {
+    public function handle_output(array $finalized_data, object $module, int $user_id): array {
+        // Access services via filters - maximum extensibility
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        $http_service = apply_filters('dm_get_service', null, 'http_service');
+        
+        // Send to Discord webhook
+        $response = $http_service->post($module->output_config['webhook_url'], [
+            'content' => $finalized_data['content']
+        ]);
+        
+        return [
+            'success' => !is_wp_error($response),
+            'response' => $response
+        ];
+    }
+    
+    public static function get_settings_fields(array $current_config = []): array {
+        return [
+            'webhook_url' => [
+                'type' => 'url',
+                'label' => 'Discord Webhook URL',
+                'required' => true
+            ]
+        ];
+    }
+}
+```
 
 ## Database Schema
 
@@ -152,56 +329,84 @@ class CustomHandler extends BaseInputHandler {
 - **`wp_dm_processed_items`**: Deduplication tracking
 - **`wp_dm_remote_locations`**: Encrypted remote WordPress credentials
 
-### Job Processing Flow
+### Extensible Job Processing Flow
 
 ```php
-// Job creation
-$job_creator->create_and_schedule_job($module, $user_id, $context, $optional_data);
+// Job creation via filter-based service
+$job_creator = apply_filters('dm_get_service', null, 'job_creator');
+$result = $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_data);
 
-// Async steps (each stores data in wp_dm_jobs)
+// Dynamic pipeline execution - hooks generated from registered steps
+// Core pipeline (extensible via dm_register_pipeline_steps filter):
 // Step 1: dm_input_job_event → input_data
-// Step 2: dm_process_job_event → processed_data  
-// Step 3: dm_factcheck_job_event → fact_checked_data
+// Step 2: dm_process_job_event → processed_data
+// Step 3: dm_factcheck_job_event → fact_checked_data  
 // Step 4: dm_finalize_job_event → finalized_data
 // Step 5: dm_output_job_event → result_data
+
+// Custom steps automatically integrated:
+// Step X: dm_sentiment_analysis_job_event → sentiment_data
+// Step Y: dm_custom_validation_job_event → validation_data
+
+// All step data stored in wp_dm_jobs JSON fields
+// ProcessingOrchestrator coordinates execution dynamically
 ```
 
 ## Configuration
 
-### Constants
-**AI Provider Configuration**: Multi-provider support via AI HTTP Client library
-- **Supported Providers**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
-- **Per-Step Configuration**: Different providers/models for process, fact-check, finalize steps
-- **Shared API Keys**: Efficient key management across multiple plugins
-- **Plugin-Scoped Settings**: Isolated configuration per plugin instance
+### Filter-Based Configuration System
 
-**Global Configuration** via `DataMachine\Constants`:
-- Cron intervals and job timeouts
-- Memory limits and cleanup schedules
-- Database retention policies
-
-### Dependency Injection
-Manual DI container in `data-machine.php` (lines 207-218):
+**Pure WordPress-Native Service Access**:
 ```php
-global $data_machine_container; // Access in hooks
+// Universal service access pattern throughout the platform
+$logger = apply_filters('dm_get_service', null, 'logger');
+$db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
+$ai_client = apply_filters('dm_get_service', null, 'ai_http_client');
+$handler_factory = apply_filters('dm_get_service', null, 'handler_factory');
+
+// Third-party plugins can override any service
+add_filter('dm_get_service', function($service, $name) {
+    if ($name === 'logger') {
+        return new MyCustomLogger(); // Override core logger
+    }
+    return $service;
+}, 15, 2); // Higher priority overrides core services
 ```
+
+**AI Provider Configuration**:
+- **Multi-Provider Support**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
+- **Step-Aware Configuration**: Different providers/models per pipeline step
+- **Filter-Based Access**: AI client accessed via `dm_get_service` filter
+- **Plugin Extensibility**: Third-party plugins can add new AI providers
+
+**Dynamic Configuration** via `DataMachine\Constants`:
+- Handler registration and discovery
+- Pipeline step management
+- Service registry patterns
+- WordPress-native configuration storage
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Follow PSR-4 naming conventions
-4. Add proper error handling with `WP_Error`
-5. Update `HandlerFactory.php` for new handlers
-6. Test thoroughly with Action Scheduler
-7. Submit pull request
+3. Follow pure WordPress filter patterns for extensibility
+4. Use `apply_filters('dm_get_service', null, 'service_name')` for service access
+5. Register handlers via `dm_register_handlers` filter (no core modifications)
+6. Register pipeline steps via `dm_register_pipeline_steps` filter
+7. Implement proper interfaces (`PipelineStepInterface` for steps)
+8. Add proper error handling with `WP_Error`
+9. Test thoroughly with Action Scheduler and multiple plugins
+10. Submit pull request
 
 ### Code Standards
-- **PSR-4 namespacing** with `DataMachine\` root
-- **PascalCase** for classes/files
-- **snake_case** for database/WordPress conventions
-- All constructor parameters use proper namespaced types
-- Always add `use` statements for dependencies
+- **Pure WordPress Patterns**: Use filters for all service access and extensibility
+- **PSR-4 namespacing** with `DataMachine\` root namespace
+- **Filter-Based Services**: Access services via `apply_filters('dm_get_service', null, 'service_name')`
+- **No Constructor Injection**: Services retrieved dynamically when needed
+- **Static Settings Methods**: Handler settings methods must be `public static`
+- **WordPress-Native Security**: Use WordPress escaping and sanitization functions
+- **Extensible Patterns**: Core and external code use identical registration patterns
+- Always add `use` statements for proper PSR-4 imports
 
 ## License
 
