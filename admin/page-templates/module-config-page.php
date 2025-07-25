@@ -89,8 +89,8 @@ elseif (!is_array($data_source_config)) $data_source_config = array();
 $current_data_source_type = $current_module ? $current_module->data_source_type : 'files';
 $current_output_type = $current_module ? $current_module->output_type : 'data_export';
 
-// Get Handler Registry from locator
-// $handler_registry is now passed from Data_Machine_Admin_Page::display_settings_page()
+// Handler data is now accessed via Constants helper methods
+// Input/output handlers are passed from AdminPage::display_settings_page()
 
 
 // --- Start Page Output ---

@@ -143,7 +143,6 @@ class AdminPage {
      */
     public function display_settings_page() {
         // Dependencies
-        $handler_registry = $this->handler_registry;
         $db_projects = $this->db_projects;
         $handler_factory = $this->handler_factory;
         $db_modules = $this->db_modules;
@@ -156,8 +155,8 @@ class AdminPage {
         $user_id = get_current_user_id();
         $projects = $db_projects ? $db_projects->get_projects_for_user($user_id) : [];
 
-        // All fetched variables ($handler_registry, $db_projects,
-        // $db_modules, $input_handlers, $output_handlers, $projects, $user_id)
+        // All fetched variables ($db_projects, $db_modules, $handler_factory,
+        // $input_handlers, $output_handlers, $projects, $user_id)
         // are available to the included template.
         include_once plugin_dir_path( __FILE__ ) . 'page-templates/module-config-page.php';
     }
