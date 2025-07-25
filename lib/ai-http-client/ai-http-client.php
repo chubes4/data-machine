@@ -93,9 +93,9 @@ if (!function_exists('ai_http_client_init')) {
         
         // 1. Load dependencies in order
         
-        // 2. Shared utilities (only keep what's needed)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PluginContextHelper.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/FileUploadClient.php';
+        // 2. Shared utilities (moved to top-level)
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/PluginContextHelper.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/FileUploadClient.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/ToolExecutor.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/WordPressSSEHandler.php';
         
@@ -118,18 +118,18 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/class-client.php';
         
         // 4.5. WordPress management components
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/OptionsManager.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/OptionsManager.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PromptManager.php';
         
-        // 4.6. UI Components system
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ComponentInterface.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ComponentRegistry.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ProviderSelector.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ApiKeyInput.php';
+        // 4.6. UI Components system (shared components moved to top-level)
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentInterface.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentRegistry.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ProviderSelector.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ApiKeyInput.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/TestConnection.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ModelSelector.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/TemperatureSlider.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/SystemPromptField.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/TestConnection.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ProviderManagerComponent.php';
     }
     
