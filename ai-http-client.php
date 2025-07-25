@@ -94,43 +94,43 @@ if (!function_exists('ai_http_client_init')) {
         // 1. Load dependencies in order
         
         // 2. Shared utilities (only keep what's needed)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/PluginContextHelper.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/FileUploadClient.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/ToolExecutor.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/WordPressSSEHandler.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PluginContextHelper.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/FileUploadClient.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/ToolExecutor.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/WordPressSSEHandler.php';
         
         // 2.6. Unified Normalizers (NEW ARCHITECTURE)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedRequestNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedResponseNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedStreamingNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedToolResultsNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedConnectionTestNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedModelFetcher.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedRequestNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedResponseNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedStreamingNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedToolResultsNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedConnectionTestNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedModelFetcher.php';
         
         // 2.7. Simple Providers (NEW ARCHITECTURE)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openai.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/gemini.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/anthropic.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/grok.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openrouter.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openai.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/gemini.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/anthropic.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/grok.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openrouter.php';
         
         // 3. Main orchestrator client (NEW UNIFIED ARCHITECTURE)
         require_once AI_HTTP_CLIENT_PATH . '/src/class-client.php';
         
         // 4.5. WordPress management components
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/OptionsManager.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/PromptManager.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/OptionsManager.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PromptManager.php';
         
         // 4.6. UI Components system
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentInterface.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentRegistry.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ProviderSelector.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ApiKeyInput.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ModelSelector.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Extended/TemperatureSlider.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Extended/SystemPromptField.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Extended/TestConnection.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ProviderManagerComponent.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ComponentInterface.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ComponentRegistry.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ProviderSelector.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ApiKeyInput.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ModelSelector.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/TemperatureSlider.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/SystemPromptField.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/TestConnection.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ProviderManagerComponent.php';
     }
     
     function ai_http_client_wordpress_init() {

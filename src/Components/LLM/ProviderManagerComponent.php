@@ -17,9 +17,10 @@ class AI_HTTP_ProviderManager_Component {
     private $options_manager;
     private $client;
     private $plugin_context;
+    private $ai_type;
     private $is_configured = false;
 
-    public function __construct($plugin_context = null) {
+    public function __construct($plugin_context = null, $ai_type = null) {
         // Validate plugin context using centralized helper
         $context_validation = AI_HTTP_Plugin_Context_Helper::validate_for_constructor(
             $plugin_context,
@@ -27,12 +28,16 @@ class AI_HTTP_ProviderManager_Component {
         );
         
         $this->plugin_context = AI_HTTP_Plugin_Context_Helper::get_context($context_validation);
-        $this->is_configured = AI_HTTP_Plugin_Context_Helper::is_configured($context_validation);
+        $this->ai_type = $ai_type;
+        $this->is_configured = AI_HTTP_Plugin_Context_Helper::is_configured($context_validation) && !empty($ai_type);
         
         // Only initialize dependent objects if properly configured
         if ($this->is_configured) {
             $this->options_manager = new AI_HTTP_Options_Manager($this->plugin_context);
-            $this->client = new AI_HTTP_Client(['plugin_context' => $this->plugin_context]);
+            $this->client = new AI_HTTP_Client([
+                'plugin_context' => $this->plugin_context,
+                'ai_type' => $this->ai_type
+            ]);
         }
         
         self::$instance_count++;
@@ -47,6 +52,23 @@ class AI_HTTP_ProviderManager_Component {
      */
     public static function render($args = array()) {
         // Validate plugin context using centralized helper
+        // Validate ai_type parameter is provided
+        if (empty($args['ai_type'])) {
+            return AI_HTTP_Plugin_Context_Helper::create_admin_error_html(
+                'AI HTTP Provider Manager',
+                'Component cannot render without ai_type parameter. Specify "llm", "upscaling", or "generative".'
+            );
+        }
+        
+        // Validate ai_type value
+        $valid_types = array('llm', 'upscaling', 'generative');
+        if (!in_array($args['ai_type'], $valid_types)) {
+            return AI_HTTP_Plugin_Context_Helper::create_admin_error_html(
+                'AI HTTP Provider Manager',
+                'Invalid ai_type "' . $args['ai_type'] . '". Must be one of: ' . implode(', ', $valid_types)
+            );
+        }
+        
         $context_validation = AI_HTTP_Plugin_Context_Helper::validate_for_static_method(
             $args,
             'AI_HTTP_ProviderManager_Component::render'
@@ -61,9 +83,11 @@ class AI_HTTP_ProviderManager_Component {
         }
         
         $plugin_context = AI_HTTP_Plugin_Context_Helper::get_context($context_validation);
+        $ai_type = $args['ai_type'];
         unset($args['plugin_context']); // Remove from args so it doesn't interfere with other config
+        unset($args['ai_type']); // Remove from args, pass separately
         
-        $component = new self($plugin_context);
+        $component = new self($plugin_context, $ai_type);
         return $component->render_component($args);
     }
 
@@ -90,7 +114,6 @@ class AI_HTTP_ProviderManager_Component {
             ),
             'show_test_connection' => true,
             'allowed_providers' => array(), // Empty = all providers
-            'default_provider' => 'openai',
             'wrapper_class' => 'ai-http-provider-manager',
             'component_configs' => array(),
             'step_key' => null // NEW: Step identifier for multi-step workflows
@@ -112,7 +135,7 @@ class AI_HTTP_ProviderManager_Component {
             $step_config = $this->options_manager->get_step_configuration($step_key);
             $selected_provider = isset($step_config['provider']) 
                 ? $step_config['provider'] 
-                : $args['default_provider'];
+                : null;
             
             $current_values = array_merge(
                 $this->options_manager->get_provider_settings_with_step($selected_provider, $step_key),
@@ -124,7 +147,7 @@ class AI_HTTP_ProviderManager_Component {
             $current_settings = $this->options_manager->get_all_providers();
             $selected_provider = isset($current_settings['selected_provider']) 
                 ? $current_settings['selected_provider'] 
-                : $args['default_provider'];
+                : null;
 
             $current_values = array_merge(
                 $this->options_manager->get_provider_settings($selected_provider),

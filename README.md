@@ -1,20 +1,20 @@
 # AI HTTP Client for WordPress
 
-A professional WordPress library for unified AI provider communication with **multi-plugin support**. Drop-in solution for WordPress plugin developers who need AI functionality with minimal integration effort.
+A professional WordPress library for **multi-type AI provider communication** with plugin-scoped configuration. Supports LLM, Upscaling, and Generative AI in a single unified library.
 
 ## Why This Library?
 
-This is for WordPress plugin developers who want to ship AI features fast.
+This is for WordPress plugin developers who want to ship AI features fast across multiple AI types.
 
-**Complete Drop-In Solution:**
-- ✅ Backend AI integration + Admin UI component
-- ✅ **Multi-plugin support** - Multiple plugins can use different AI providers simultaneously
-- ✅ **Shared API keys** - Efficient key management across plugins
-- ✅ Zero styling (you control the design)
-- ✅ Unified architecture with shared normalizers
-- ✅ Standardized request/response formats
-- ✅ WordPress-native (Composer optional, uses `wp_remote_post`)
-- ✅ Dynamic model fetching (no hardcoded models)
+**Complete Multi-Type Solution:**
+- ✅ **Multi-Type AI Support** - LLM, Upscaling, Generative AI via `ai_type` parameter
+- ✅ **Multi-Plugin Support** - Multiple plugins can use different AI providers simultaneously
+- ✅ **Shared API Keys** - Efficient key management across plugins and AI types
+- ✅ **No Hardcoded Defaults** - Library fails fast with clear errors when not configured
+- ✅ **Type-Specific Features** - Streaming for LLM, async processing for upscaling
+- ✅ **Unified Interface** - Same client class for all AI types
+- ✅ **WordPress-Native** - Uses `wp_remote_post`, plugin-scoped options
+- ✅ **Zero Styling** - You control the design
 
 ## Installation
 
@@ -59,50 +59,97 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
 ```
 
-### 2. Add Admin UI Component (Multi-Plugin Architecture)
+### 2. Add Admin UI Component (Multi-Type AI System)
 ```php
-// Basic usage - REQUIRES plugin context
-echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug'  // REQUIRED
-]);
-
-// Customized component with plugin context
+// LLM Admin UI - REQUIRES both plugin_context AND ai_type
 echo AI_HTTP_ProviderManager_Component::render([
     'plugin_context' => 'my-plugin-slug',  // REQUIRED
+    'ai_type' => 'llm'  // REQUIRED: 'llm', 'upscaling', 'generative'
+]);
+
+// Upscaling Admin UI 
+echo AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug',  // REQUIRED
+    'ai_type' => 'upscaling'  // REQUIRED
+]);
+
+// Customized LLM component
+echo AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug',  // REQUIRED
+    'ai_type' => 'llm',  // REQUIRED
     'components' => [
         'core' => ['provider_selector', 'api_key_input', 'model_selector'],
         'extended' => ['temperature_slider', 'system_prompt_field']
-    ],
-    'component_configs' => [
-        'temperature_slider' => ['min' => 0, 'max' => 1, 'default_value' => 0.7]
     ]
 ]);
 ```
 
-### 3. Send AI Requests (Multi-Plugin Architecture)
+### 3. Send AI Requests (Multi-Type AI System)
+
+#### LLM Requests
 ```php
-// REQUIRES plugin context
-$client = new AI_HTTP_Client(['plugin_context' => 'my-plugin-slug']);
+// REQUIRES both plugin_context AND ai_type
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm'  // REQUIRED
+]);
 $response = $client->send_request([
     'messages' => [
         ['role' => 'user', 'content' => 'Hello AI!']
     ],
-    'model' => 'gpt-4o-mini',  // Uses plugin-scoped configuration
     'max_tokens' => 100
 ]);
 
 if ($response['success']) {
     echo $response['data']['content'];
 }
+```
 
-// Streaming requests with plugin context
-$client->send_streaming_request([
-    'messages' => [['role' => 'user', 'content' => 'Stream this response']],
-    'model' => 'gpt-4o-mini'  // Uses plugin-scoped configuration
+#### Upscaling Requests
+```php
+// Upscaling client
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'upscaling'  // REQUIRED
+]);
+$response = $client->send_request([
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x',
+    'quality_settings' => [
+        'creativity' => 7,
+        'detail' => 8
+    ]
 ]);
 
-// Test connection with plugin-scoped settings
-$test_result = $client->test_connection('openai');
+if ($response['success']) {
+    $job_id = $response['data']['job_id'];
+    // Handle async processing
+}
+```
+
+#### Multi-Type Plugin Usage
+```php
+// Single plugin using multiple AI types
+$llm_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm'
+]);
+
+$upscaling_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'upscaling'
+]);
+
+// Use text AI to analyze image
+$analysis = $llm_client->send_request([
+    'messages' => [['role' => 'user', 'content' => 'Describe this image for enhancement']]
+]);
+
+// Use upscaling AI to enhance image
+$enhanced = $upscaling_client->send_request([
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x'
+]);
 ```
 
 ### 4. Modular Prompt System
@@ -302,6 +349,14 @@ Each provider needs only 4 methods:
 - `send_raw_streaming_request()` - Send streaming request
 - `get_raw_models()` - Fetch available models
 - `is_configured()` - Check if provider is configured
+
+## Examples
+
+WordPress plugins using this library:
+
+- **[Data Machine](https://github.com/chubes4/data-machine)** - Automated content pipeline with AI processing and multi-platform publishing
+- **[AI Bot for bbPress](https://github.com/chubes4/ai-bot-for-bbpress)** - Multi-provider AI bot for bbPress forums with context-aware responses
+- **[WordSurf](https://github.com/chubes4/wordsurf)** - Agentic WordPress content editor with AI assistant and tool integration
 
 ## Contributing
 

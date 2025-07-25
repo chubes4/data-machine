@@ -84,7 +84,7 @@ class AI_HTTP_Core_ProviderSelector implements AI_HTTP_Component_Interface {
             ],
             'default_provider' => [
                 'type' => 'string',
-                'default' => 'openai',
+                'default' => null,
                 'description' => 'Default selected provider'
             ],
             'show_status' => [
@@ -104,7 +104,7 @@ class AI_HTTP_Core_ProviderSelector implements AI_HTTP_Component_Interface {
         return [
             'label' => 'AI Provider',
             'allowed_providers' => [],
-            'default_provider' => 'openai',
+            'default_provider' => null,
             'show_status' => true
         ];
     }
