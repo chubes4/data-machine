@@ -18,6 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
+// Ensure AI HTTP Client library is loaded
+if (!class_exists('AI_HTTP_Prompt_Manager')) {
+    require_once DATA_MACHINE_PATH . 'lib/ai-http-client/ai-http-client.php';
+}
+
 class PromptBuilder {
 
     /**
@@ -25,6 +30,12 @@ class PromptBuilder {
      * @var Projects
      */
     private $db_projects;
+
+    /**
+     * Plugin context for AI HTTP Client integration.
+     * @var string
+     */
+    private $plugin_context = 'data-machine';
 
     /**
      * Constructor.
@@ -52,27 +63,42 @@ class PromptBuilder {
             }
         }
 
-        // Add current date and time context
-        $current_datetime_str = wp_date('F j, Y, g:i a T');
-        $current_date_str = wp_date('F j, Y');
+        // Build context data for the library
+        $context = [
+            'project_id' => $project_id,
+            'user_id' => $user_id,
+            'current_datetime' => wp_date('F j, Y, g:i a T'),
+            'current_date' => wp_date('F j, Y')
+        ];
 
+        // Create time context variables for replacement
+        $variables = [
+            '{current_datetime}' => $context['current_datetime'],
+            '{current_date}' => $context['current_date']
+        ];
+
+        // Build base time directive template
         $date_instruction = <<<PROMPT
 --- MANDATORY TIME CONTEXT ---
-CURRENT DATE & TIME: {$current_datetime_str}
-RULE: You MUST treat {$current_date_str} as the definitive 'today' for determining past/present/future tense.
-ACTION: Frame all events relative to {$current_date_str}. Use past tense for completed events. Use present/future tense appropriately ONLY for events happening on or after {$current_date_str}.
-CONSTRAINT: DO NOT discuss events completed before {$current_date_str} as if they are still upcoming.
+CURRENT DATE & TIME: {current_datetime}
+RULE: You MUST treat {current_date} as the definitive 'today' for determining past/present/future tense.
+ACTION: Frame all events relative to {current_date}. Use past tense for completed events. Use present/future tense appropriately ONLY for events happening on or after {current_date}.
+CONSTRAINT: DO NOT discuss events completed before {current_date} as if they are still upcoming.
 KNOWLEDGE CUTOFF: Your internal knowledge cutoff is irrelevant; operate solely based on this date and provided context.
 --- END TIME CONTEXT ---
 PROMPT;
 
-        $final_prompt = $date_instruction;
-
+        // Use library utilities to build the system prompt
+        $base_prompt = AI_HTTP_Prompt_Manager::replace_variables($date_instruction, $variables);
+        
         if (!empty($project_prompt_base)) {
-            $final_prompt .= "\n\n" . $project_prompt_base;
+            $base_prompt .= "\n\n" . $project_prompt_base;
         }
 
-        return $final_prompt;
+        // Use library's system prompt builder with context injection
+        $enhanced_prompt = AI_HTTP_Prompt_Manager::build_system_prompt($base_prompt, $context);
+        
+        return $enhanced_prompt;
     }
 
     /**
@@ -83,12 +109,20 @@ PROMPT;
      * @return string The enhanced process data prompt.
      */
     public function build_process_data_prompt(string $base_prompt, array $input_data_packet): string {
-        $enhanced_prompt = $base_prompt;
-
-        // Add image-specific instruction if an image is present
+        // Build context data for the library
         $file_info = $input_data_packet['file_info'] ?? [];
         $has_image = !empty($file_info['url']) || (!empty($file_info['persistent_path']) && $this->is_image_file($file_info['persistent_path']));
+        
+        $context = [
+            'has_image' => $has_image,
+            'file_info' => $file_info,
+            'input_data' => $input_data_packet
+        ];
 
+        // Use library's context injection for image analysis
+        $enhanced_prompt = AI_HTTP_Prompt_Manager::inject_context($base_prompt, $context);
+        
+        // Add image-specific instruction if an image is present using library's modular approach
         if ($has_image) {
             $image_directive = "IMPORTANT INSTRUCTION: An image has been provided. Analyze the visual content of the image carefully. Prioritize information directly observed in the image, especially for identifying people, objects, or specific visual details, over potentially conflicting information in the text below.";
             $enhanced_prompt = $image_directive . "\n\n---\n\n" . $enhanced_prompt;
@@ -113,7 +147,19 @@ FACT-CHECKING DIRECTIVE:
 - Always cite any source that directly contradicts or disproves the user-provided content.
 PROMPT;
 
-        return $fact_check_directive . "\n\n" . $base_prompt;
+        // Build context for fact-checking
+        $context = [
+            'fact_check_mode' => true,
+            'directive_type' => 'fact_checking'
+        ];
+
+        // Combine directive with base prompt
+        $combined_prompt = $fact_check_directive . "\n\n" . $base_prompt;
+        
+        // Use library's context injection for extensibility
+        $enhanced_prompt = AI_HTTP_Prompt_Manager::inject_context($combined_prompt, $context);
+        
+        return $enhanced_prompt;
     }
 
     /**
@@ -128,6 +174,33 @@ PROMPT;
         $output_type = $module_job_config['output_type'] ?? '';
         $output_config = $module_job_config['output_config'] ?? [];
 
+        // Build format configuration for the library
+        $format_config = [
+            'output_type' => $output_type,
+            'output_config' => $output_config,
+            'input_data' => $input_data_packet
+        ];
+
+        // Build directive block using existing logic
+        $directive_block = $this->build_output_directive_block($output_type, $output_config);
+        
+        // Combine directive with base prompt
+        $combined_prompt = $directive_block . "\n\n" . $base_prompt;
+        
+        // Use library's response formatting utilities
+        $enhanced_prompt = AI_HTTP_Prompt_Manager::add_response_formatting($combined_prompt, $format_config);
+        
+        return $enhanced_prompt;
+    }
+
+    /**
+     * Build output directive block for finalization.
+     *
+     * @param string $output_type The output type.
+     * @param array  $output_config The output configuration.
+     * @return string The directive block.
+     */
+    private function build_output_directive_block(string $output_type, array $output_config): string {
         $directive_block = "\n--- RESPONSE FORMATTING AND INSTRUCTIONS ---";
         $directive_block .= "\n1.  **Strict Adherence:** Follow all instructions below precisely.";
 
@@ -198,8 +271,8 @@ PROMPT;
         }
 
         $directive_block .= "\n--- END RESPONSE FORMATTING AND INSTRUCTIONS ---";
-
-        return $directive_block . "\n\n" . $base_prompt;
+        
+        return $directive_block;
     }
 
     /**
@@ -213,8 +286,32 @@ PROMPT;
      * @return string The complete user message.
      */
     public function build_finalize_user_message(string $enhanced_prompt, string $initial_output, string $fact_check_results, array $module_job_config, array $input_metadata = []): string {
-        $user_message = $enhanced_prompt;
+        // Build context for the library
+        $context = [
+            'initial_output' => $initial_output,
+            'fact_check_results' => $fact_check_results,
+            'module_config' => $module_job_config,
+            'input_metadata' => $input_metadata
+        ];
 
+        // Create variables for replacement
+        $variables = [];
+        if (!empty($initial_output)) {
+            $variables['{initial_response}'] = $initial_output;
+        }
+        if (!empty($fact_check_results)) {
+            $variables['{fact_check_results}'] = $fact_check_results;
+        }
+
+        // Use library's user prompt builder
+        $user_message = AI_HTTP_Prompt_Manager::build_user_prompt($enhanced_prompt, $context);
+        
+        // Apply variable replacement if we have any
+        if (!empty($variables)) {
+            $user_message = AI_HTTP_Prompt_Manager::replace_variables($user_message, $variables);
+        }
+
+        // Add content sections
         if (!empty($initial_output)) {
             $user_message .= "\n\nInitial Response:\n" . $initial_output;
         }
@@ -229,8 +326,6 @@ PROMPT;
             $user_message .= "\n\nIMPORTANT: Please ensure the response starts *immediately* with a suitable post title formatted exactly like this (with no preceding text or blank lines):\nPOST_TITLE: [Your Suggested Title Here]\n\nFollow this title line immediately with the rest of your output. Do not print the post title again in the response.";
             $user_message .= "\n\nReminder: Do not use formatting markup for the initial directive lines (POST_TITLE, CATEGORY, TAGS).";
         }
-
-        // Note: Source URL is handled programmatically by output handlers, not passed to AI
 
         return $user_message;
     }

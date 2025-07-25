@@ -56,19 +56,13 @@ if (!class_exists('DataMachine\Constants')) {
         ];
 
         /**
-         * Default AI model for the initial data processing/generation step.
+         * Legacy AI model constants - these are deprecated.
+         * AI models are now configured via the AI HTTP Client library 
+         * through the admin interface per provider.
          */
-        const AI_MODEL_INITIAL = 'gpt-4.1-mini';
-
-        /**
-         * Default AI model for the fact-checking step.
-         */
-        const AI_MODEL_FACT_CHECK = 'gpt-4o-mini';
-
-        /**
-         * Default AI model for the finalization/refinement step.
-         */
-        const AI_MODEL_FINALIZE = 'gpt-4.1-mini';
+        const AI_MODEL_INITIAL = ''; // Deprecated - models configured via AI HTTP Client
+        const AI_MODEL_FACT_CHECK = ''; // Deprecated - models configured via AI HTTP Client  
+        const AI_MODEL_FINALIZE = ''; // Deprecated - models configured via AI HTTP Client
 
         /**
          * The name of the constant used to define a custom encryption key in wp-config.php.
@@ -195,6 +189,109 @@ if (!class_exists('DataMachine\Constants')) {
             // Ensure the key is exactly 32 bytes for AES-256 using SHA256 hash
             // The 'true' argument returns raw binary output.
             return hash('sha256', $raw_key, true);
+        }
+
+        // --- Handler Registry Helper Methods ---
+
+        /**
+         * Get all registered handlers via WordPress filter system.
+         * Replaces HandlerRegistry functionality.
+         *
+         * @return array Array with 'input' and 'output' keys containing handler arrays.
+         */
+        public static function get_registered_handlers(): array {
+            $default_handlers = [
+                'input' => [],
+                'output' => []
+            ];
+            
+            return apply_filters('dm_register_handlers', $default_handlers);
+        }
+
+        /**
+         * Get all registered input handlers.
+         *
+         * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
+         */
+        public static function get_input_handlers(): array {
+            $handlers = self::get_registered_handlers();
+            return $handlers['input'] ?? [];
+        }
+
+        /**
+         * Get all registered output handlers.
+         *
+         * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
+         */
+        public static function get_output_handlers(): array {
+            $handlers = self::get_registered_handlers();
+            return $handlers['output'] ?? [];
+        }
+
+        /**
+         * Get the class name for a specific input handler slug.
+         *
+         * @param string $slug The handler slug.
+         * @return string|null The class name or null if not found.
+         */
+        public static function get_input_handler_class(string $slug): ?string {
+            $handlers = self::get_input_handlers();
+            return $handlers[$slug]['class'] ?? null;
+        }
+
+        /**
+         * Get the class name for a specific output handler slug.
+         *
+         * @param string $slug The handler slug.
+         * @return string|null The class name or null if not found.
+         */
+        public static function get_output_handler_class(string $slug): ?string {
+            $handlers = self::get_output_handlers();
+            return $handlers[$slug]['class'] ?? null;
+        }
+
+        /**
+         * Get the label for a specific input handler slug.
+         *
+         * @param string $slug The handler slug.
+         * @return string The label or the slug if label cannot be determined.
+         */
+        public static function get_input_handler_label(string $slug): string {
+            $handlers = self::get_input_handlers();
+            return $handlers[$slug]['label'] ?? $slug;
+        }
+
+        /**
+         * Get the label for a specific output handler slug.
+         *
+         * @param string $slug The handler slug.
+         * @return string The label or the slug if label cannot be determined.
+         */
+        public static function get_output_handler_label(string $slug): string {
+            $handlers = self::get_output_handlers();
+            return $handlers[$slug]['label'] ?? $slug;
+        }
+
+        /**
+         * Get the handler info array for a specific input handler slug.
+         *
+         * @param string $slug The handler slug.
+         * @return array|null The handler info array or null if not found.
+         */
+        public static function get_input_handler(string $slug): ?array {
+            $handlers = self::get_input_handlers();
+            return $handlers[$slug] ?? null;
+        }
+
+        /**
+         * Get the handler info array for a specific output handler slug.
+         *
+         * @param string $slug The handler slug.
+         * @return array|null The handler info array or null if not found.
+         */
+        public static function get_output_handler(string $slug): ?array {
+            $handlers = self::get_output_handlers();
+            return $handlers[$slug] ?? null;
         }
     }
 } 

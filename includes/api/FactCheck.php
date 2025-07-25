@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Handles interaction with the gpt-4o-search-preview API for fact-checking.
+ * Handles fact-checking using unified AI HTTP Client library
+ * Supports multiple AI providers with web search capabilities
  *
  * @link       PLUGIN_URL
  * @since      0.1.0
@@ -12,8 +13,6 @@
 
 namespace DataMachine\Api;
 
-use DataMachine\Constants;
-
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
@@ -21,33 +20,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 class FactCheck {
 
     /**
-     * OpenAI API client instance.
-     * @var OpenAi
+     * Constructor. No dependencies needed - uses AI HTTP Client from global container.
      */
-    private $openai_api;
-
-    /**
-     * Constructor. Injects the OpenAI API client.
-     * @param OpenAi $openai_api
-     */
-    public function __construct($openai_api) {
-        $this->openai_api = $openai_api;
+    public function __construct() {
+        // AI HTTP Client is available via global container
     }
 
     /**
-     * Fact-check JSON data using gpt-4o-search-preview API.
+     * Fact-check content using unified AI HTTP Client library with web search capabilities
      *
      * @since    0.1.0
-     * @param    string    $api_key          OpenAI API Key.
-     * @param    string    $content_to_check Content data to fact-check.
-     * @param    string    $fact_check_prompt Fact Check Prompt from settings.
-     * @return   array|WP_Error                API response data or WP_Error on failure.
+     * @param    string    $system_prompt    System instructions for fact-checking
+     * @param    string    $user_prompt      User prompt/instructions
+     * @param    string    $content_to_check Content data to fact-check
+     * @return   array|WP_Error              Response data or WP_Error on failure
      */
-    public function fact_check_response( $api_key, $system_prompt, $user_prompt, $content_to_check ) {
-        // NOTE: Fact-checking directive is now handled by the centralized PromptBuilder class.
-        // The system_prompt parameter now contains the complete, enhanced prompt.
-
-        $api_endpoint = 'https://api.openai.com/v1/responses'; // Use Responses API endpoint
+    public function fact_check_response( $system_prompt, $user_prompt, $content_to_check ) {
+        // Get AI HTTP Client from global container
+        global $data_machine_container;
+        $ai_http_client = $data_machine_container['ai_http_client'] ?? null;
+        
+        if (!$ai_http_client) {
+            return new \WP_Error('ai_client_unavailable', 'AI HTTP Client not available in container');
+        }
 
         // Construct the user message by combining the module prompt and the content to check
         $user_message = $user_prompt;
@@ -55,78 +50,70 @@ class FactCheck {
             $user_message .= "\n\nContent to Fact Check:\n" . $content_to_check;
         }
 
-        // --- Prepare API Request using 'tools' parameter ---
-        $model = Constants::AI_MODEL_FACT_CHECK;
-
-        // Use the fact check prompt from settings to instruct the model.
-        // Include both system and user messages
-        $messages = [
-            ['role' => 'system', 'content' => $system_prompt],
-            ['role' => 'user', 'content' => $user_message],
+        // Build messages array
+        $messages = [];
+        
+        if (!empty($system_prompt)) {
+            $messages[] = [
+                'role' => 'system',
+                'content' => $system_prompt
+            ];
+        }
+        
+        $messages[] = [
+            'role' => 'user',
+            'content' => $user_message
         ];
 
-        $args = array(
-            'headers' => array(
-                'Authorization' => 'Bearer ' . $api_key,
-                'Content-Type'  => 'application/json',
-            ),
-            'body' => wp_json_encode( array(
-                'model'              => $model,
-                // Use 'input' instead of 'messages' for Responses API
-                'input'              => $messages, // Pass the messages array as input
-                // Use 'tools' parameter as defined for Responses API web search
-                'tools' => [
-                    [
-                        'type' => 'web_search_preview',
-                        'search_context_size' => 'low' // Set context size to low to save $
+        // Define web search tools for fact-checking
+        $tools = [
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'web_search',
+                    'description' => 'Search the web to verify facts and gather current information',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'query' => [
+                                'type' => 'string',
+                                'description' => 'The search query to verify facts'
+                            ]
+                        ],
+                        'required' => ['query']
                     ]
-                ],
-                // Optionally force tool usage if needed
-                'tool_choice' => ['type' => 'web_search_preview']
-            ) ),
-            'method'  => 'POST',
-            'timeout' => 60,
-        );
+                ]
+            ]
+        ];
 
-        $response = wp_remote_post( $api_endpoint, $args );
+        // Send step-aware request using AI HTTP Client library
+        $response = $ai_http_client->send_step_request('factcheck', [
+            'messages' => $messages,
+            'tools' => $tools
+        ]);
 
-        $response_code = wp_remote_retrieve_response_code( $response );
-        $response_body = wp_remote_retrieve_body( $response );
-        // Log raw response body only if not 200
-        if ( 200 !== $response_code ) {
-            return new WP_Error( 'openai_api_error', $model . ' API error: ' . $response_code . ' - ' . $response_body );
+        // Handle response
+        if (!$response['success']) {
+            return new \WP_Error(
+                'ai_api_error', 
+                'AI API error: ' . ($response['error'] ?? 'Unknown error'),
+                $response
+            );
         }
 
-        $decoded_response = json_decode( $response_body, true );
-
-        // Adjust response parsing for Responses API format
-        // Look for 'output_text' within the response structure
-        $fact_check_results = null;
-        // Check if the response structure is valid and contains the 'output' array
-        if (is_array($decoded_response) && isset($decoded_response['output']) && is_array($decoded_response['output'])) {
-            // Iterate through the 'output' array to find the assistant's message
-            foreach ($decoded_response['output'] as $output_item) {
-                // Check if this item is the assistant's message
-                if (isset($output_item['type']) && $output_item['type'] === 'message' && isset($output_item['role']) && $output_item['role'] === 'assistant') {
-                    // Check if the content array and the first content item exist
-                    if (isset($output_item['content'][0]) && is_array($output_item['content'][0])) {
-                        // Check if the first content item is of type 'output_text' and has 'text'
-                        if (isset($output_item['content'][0]['type']) && $output_item['content'][0]['type'] === 'output_text' && isset($output_item['content'][0]['text'])) {
-                            $fact_check_results = $output_item['content'][0]['text'];
-                            break; // Found the main text output, exit the loop
-                        }
-                    }
-                }
-            }
+        $content = $response['data']['content'] ?? '';
+        
+        if (empty($content)) {
+            return new \WP_Error(
+                'ai_response_empty', 
+                'AI response was empty or invalid',
+                $response
+            );
         }
 
-        if ($fact_check_results === null) {
-             return new WP_Error( 'openai_api_response_error', 'Invalid or unexpected ' . $model . ' API response format: ' . $response_body );
-        }
-
-        return array(
-            'status'             => 'success',
-            'fact_check_results' => trim($fact_check_results), // Trim whitespace
-        );
+        return [
+            'status' => 'success',
+            'fact_check_results' => trim($content)
+        ];
     }
 }

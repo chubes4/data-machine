@@ -51,6 +51,7 @@ window.dmDebugMode = true
 - **Dynamic Dependency Injection**: HandlerFactory uses reflection to resolve constructor dependencies automatically
 - **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator` class
 - **Action Scheduler**: Background processing with 2 max concurrent jobs
+- **Direct Filter Access**: Handler registration uses direct WordPress filter calls via `DataMachine\Constants` helper methods
 
 **Namespace Structure**:
 ```
@@ -58,9 +59,10 @@ DataMachine\
 ├── Admin\{Projects,ModuleConfig,RemoteLocations,OAuth}\
 ├── Database\{Modules,Projects,Jobs,ProcessedItems,RemoteLocations}\
 ├── Engine\{JobCreator,ProcessingOrchestrator,JobStatusManager,ProcessedItemsManager}\
-├── Handlers\{HandlerFactory,HandlerRegistry,Input\*,Output\*}\
+├── Handlers\{HandlerFactory,Input\*,Output\*}\
 ├── Helpers\{Logger,ActionScheduler,HttpService,Encryption}\
-└── Api\{OpenAI integration classes}\
+├── Api\{FactCheck,Finalize integration classes}\
+└── Constants (Handler helper methods + configuration)\
 ```
 
 ## Critical File Locations
@@ -86,7 +88,6 @@ includes/
 │   └── filters/           # AI utilities (prompt builder, parser, etc.)
 ├── handlers/              # Input/Output handlers
 │   ├── HandlerFactory.php              # Dynamic dependency injection via reflection
-│   ├── HandlerRegistry.php             # WordPress hook-based handler registration
 │   ├── input/BaseInputHandler.php      # Shared input logic
 │   └── input/output/      # Handler implementations
 ├── database/              # Custom wp_dm_* tables (no migrations)
@@ -140,6 +141,7 @@ add_action('dm_load_handler_template', function(&$loaded, $type, $slug, $config)
 **WordPress-Native Extensibility**: 
 - Core and external handlers use identical WordPress hook patterns
 - HandlerFactory resolves dependencies automatically for all handlers
+- Direct filter access via `DataMachine\Constants` helper methods
 - No filesystem scanning or core modifications needed
 
 **Handler Pattern**:
@@ -195,7 +197,8 @@ wp_dm_remote_locations - Remote WordPress credentials (encrypted)
 
 ## Common Issues
 
-**Handler Factory**: Now uses dynamic dependency resolution - no core modifications needed for new handlers
+**Handler Registration**: Use `DataMachine\Constants::get_*_handler*()` methods to access registered handlers
+**Handler Factory**: Uses dynamic dependency resolution - no core modifications needed for new handlers
 **Job Failures**: Check Action Scheduler status, jobs fail immediately with descriptive errors
 **Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
 **Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths
@@ -223,18 +226,18 @@ wp_dm_remote_locations - Remote WordPress credentials (encrypted)
 
 **AI Library Integration Pattern**:
 ```php
-// Access via dependency injection
-use DataMachine\Api\OpenAi;
+// Access via global container (current implementation)
+global $data_machine_container;
+$ai_http_client = $data_machine_container['ai_http_client'];
 
-class ProcessData {
-    private $openai;
-    
-    public function __construct(OpenAi $openai) {
-        $this->openai = $openai;
-    }
-    
-    // Library handles provider switching automatically
-    $response = $this->openai->generate_response($prompt, $model_config);
+// Send step-aware requests to AI providers
+$response = $ai_http_client->send_step_request('process', [
+    'messages' => $messages
+]);
+
+// Library handles provider switching and normalization automatically
+if ($response['success']) {
+    $content = $response['data']['content'];
 }
 ```
 
@@ -272,10 +275,11 @@ $location = $this->db_locations->get_location($location_id, null, true, true); /
 **Bootstrap Container**: Access dependencies via `global $data_machine_container` in hooks
 
 **Constants Configuration**: Global settings via `DataMachine\Constants` class
-- AI model defaults: gpt-4.1-mini, gpt-4o-mini
+- **Handler Helper Methods**: Direct access to registered handlers via WordPress filters
 - Cron intervals and job timeout settings
 - Memory limits and cleanup schedules
 - Encryption key management
+- **Handler Access**: `get_input_handlers()`, `get_output_handlers()`, `get_*_handler_class()`, etc.
 
 ## File Organization & PSR-4 Migration
 
@@ -287,6 +291,21 @@ The codebase has been fully migrated to PSR-4 namespacing with PascalCase filena
 - File paths match namespace structure: `includes/database/Jobs.php` for `DataMachine\Database\Jobs`
 
 **Current State**: All classes use PSR-4 autoloading via Composer with proper namespace declarations
+
+## Recent Architecture Changes
+
+**HandlerRegistry Removal**: The `HandlerRegistry` class has been removed as redundant. It was simply wrapping WordPress filter calls with no added value.
+
+**New Pattern**: Direct filter access via `DataMachine\Constants` helper methods:
+```php
+// Old (removed):
+$handlers = $handler_registry->get_input_handlers();
+
+// New (current):
+$handlers = \DataMachine\Constants::get_input_handlers();
+```
+
+**Impact**: Simplified architecture, removed 133+ lines of unnecessary wrapper code, cleaner dependency injection
 
 ## WordPress Development Standards
 

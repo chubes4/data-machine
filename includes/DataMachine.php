@@ -51,12 +51,6 @@ class DataMachine {
      */
     public $admin_page;
 
-	/**
-	 * OpenAI API class instance.
-	 * @since    0.1.0
-	 * @var      OpenAi    $openai_api    OpenAI API class instance.
-	 */
-	public $openai_api;
 
 	/**
 	 * FactCheck API class instance.
@@ -157,7 +151,6 @@ class DataMachine {
 		$version,
 		$register_settings,
 		$admin_page,
-		$openai_api,
 		$factcheck_api,
 		$finalize_api,
 		$process_data,
@@ -176,7 +169,6 @@ class DataMachine {
 		$this->version = $version;
 		$this->register_settings = $register_settings;
 		$this->admin_page = $admin_page;
-		$this->openai_api = $openai_api;
 		$this->factcheck_api = $factcheck_api;
 		$this->finalize_api = $finalize_api;
 		$this->process_data = $process_data;

@@ -12,8 +12,9 @@
 
 namespace DataMachine\Admin\ModuleConfig;
 
-use DataMachine\Handlers\{HandlerFactory, HandlerRegistry};
+use DataMachine\Handlers\HandlerFactory;
 use DataMachine\Admin\RemoteLocations\RemoteLocationService;
+use DataMachine\Constants;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -28,12 +29,6 @@ class SettingsFields {
      */
     private $handler_factory;
 
-    /**
-     * Handler Registry instance.
-     * @var HandlerRegistry
-     * @since 0.15.0
-     */
-    private $handler_registry;
 
     /**
      * Service for retrieving remote location options.
@@ -47,18 +42,15 @@ class SettingsFields {
      * Constructor.
      *
      * @param HandlerFactory   $handler_factory         Handler Factory instance.
-     * @param HandlerRegistry          $handler_registry        Handler Registry instance.
      * @param RemoteLocationService $remote_location_service Service for remote locations.
      * @since 0.15.0
      * @since 0.16.0 Added $remote_location_service dependency.
      */
     public function __construct(
         HandlerFactory $handler_factory,
-        HandlerRegistry $handler_registry,
         RemoteLocationService $remote_location_service
     ) {
         $this->handler_factory = $handler_factory;
-        $this->handler_registry = $handler_registry;
         $this->remote_location_service = $remote_location_service;
 
     }
@@ -123,9 +115,9 @@ class SettingsFields {
         // Get handlers from the registry service
 
         if ($handler_type === 'input') {
-            return $this->handler_registry->get_input_handler_class($handler_slug);
+            return Constants::get_input_handler_class($handler_slug);
         } elseif ($handler_type === 'output') {
-            return $this->handler_registry->get_output_handler_class($handler_slug);
+            return Constants::get_output_handler_class($handler_slug);
         }
 
         return null;

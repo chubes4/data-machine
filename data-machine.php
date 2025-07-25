@@ -27,6 +27,9 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 // Load Composer autoloader and dependencies (includes Action Scheduler)
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Load AI HTTP Client library for unified multi-provider AI integration
+require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
+
 // PSR-4 Autoloading - no manual includes needed
 use DataMachine\{DataMachine, Constants};
 use DataMachine\Admin\{AdminPage, AdminMenuAssets};
@@ -35,11 +38,11 @@ use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUplo
 use DataMachine\Admin\ModuleConfig\{RegisterSettings, SettingsFields, ModuleConfigHandler};
 use DataMachine\Admin\ModuleConfig\Ajax\{ModuleConfigAjax, RemoteLocationsAjax};
 use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, SyncRemoteLocations};
-use DataMachine\Api\{OpenAi, FactCheck, Finalize};
+use DataMachine\Api\{FactCheck, Finalize};
 use DataMachine\Database\{Jobs as DatabaseJobs, Modules as DatabaseModules, Projects as DatabaseProjects, ProcessedItems as DatabaseProcessedItems, RemoteLocations as DatabaseRemoteLocations};
 use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, ProcessData, ProcessedItemsManager};
 use DataMachine\Engine\Filters\{AiResponseParser, PromptBuilder, MarkdownConverter};
-use DataMachine\Handlers\{HandlerFactory, HandlerRegistry, HttpService};
+use DataMachine\Handlers\{HandlerFactory, HttpService};
 use DataMachine\Handlers\Input\Files as InputFiles;
 use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler};
 
@@ -97,8 +100,6 @@ function run_data_machine() {
     // Register core handlers using the same hook system external plugins will use
     add_filter('dm_register_handlers', 'data_machine_register_core_handlers');
 
-    // Handler registry
-    $handler_registry = new HandlerRegistry();
 
     // Create minimal handler instances for main plugin constructor
     // (These are legacy dependencies - actual handlers are created via factory)
@@ -107,13 +108,12 @@ function run_data_machine() {
     
     // Note: $input_files will be created after processed_items_manager is available
 
-    // API services
-    $openai_api = new OpenAi();
-    $factcheck_api = new FactCheck($openai_api);
-    $finalize_api = new Finalize($openai_api);
+    // API services - now use AI HTTP Client library directly
+    $factcheck_api = new FactCheck();
+    $finalize_api = new Finalize();
 
     // Process data
-    $process_data = new ProcessData($openai_api);
+    $process_data = new ProcessData();
 
 
 
@@ -153,7 +153,6 @@ function run_data_machine() {
 
     // Handler factory (replace with DI version if available)
     $handler_factory = new HandlerFactory(
-        $handler_registry,
         $logger,
         $processed_items_manager,
         $encryption_helper,
@@ -168,7 +167,7 @@ function run_data_machine() {
     );
 
     // Settings fields
-    $settings_fields = new SettingsFields($handler_factory, $handler_registry, $remote_location_service);
+    $settings_fields = new SettingsFields($handler_factory, $remote_location_service);
 
     // Admin page
     $admin_page = new AdminPage(
@@ -176,7 +175,6 @@ function run_data_machine() {
         $db_modules,
         $db_projects,
         $logger,
-        $handler_registry,
         $settings_fields,
         $handler_factory,
         $remote_locations_form_handler
@@ -185,7 +183,6 @@ function run_data_machine() {
     // Module handler
     $module_handler = new ModuleConfigHandler(
         $db_modules,
-        $handler_registry,
         $handler_factory,
         $logger
     );
@@ -205,6 +202,9 @@ function run_data_machine() {
         $db_modules
     );
 
+    // AI HTTP Client with plugin context
+    $ai_http_client = new AI_HTTP_Client(['plugin_context' => 'data-machine']);
+
     // Global container for Action Scheduler access
     global $data_machine_container;
     $data_machine_container = array(
@@ -215,7 +215,8 @@ function run_data_machine() {
         'job_status_manager' => $job_status_manager,
         'job_creator' => $job_creator,
         'action_scheduler' => $action_scheduler,
-        'logger' => $logger
+        'logger' => $logger,
+        'ai_http_client' => $ai_http_client
     );
 
     // Import/export handler
@@ -235,7 +236,6 @@ function run_data_machine() {
             DATA_MACHINE_VERSION,
         $register_settings,
         $admin_page,
-        $openai_api,
         $factcheck_api,
         $finalize_api,
         $process_data,

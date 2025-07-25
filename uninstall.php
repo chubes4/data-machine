@@ -11,13 +11,19 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 // Delete global plugin options (standardized storage)
-delete_option( 'openai_api_key' );
+// Note: OpenAI API key now managed by AI HTTP Client library
+delete_option( 'openai_api_key' ); // Legacy option cleanup
 delete_option( 'bluesky_username' );
 delete_option( 'bluesky_app_password' );
 delete_option( 'twitter_api_key' );
 delete_option( 'reddit_api_key' );
 delete_option( 'threads_app_credentials' );
 delete_option( 'facebook_app_credentials' );
+
+// Delete AI HTTP Client library options for this plugin context
+delete_option( 'ai_http_client_providers_data-machine' );
+delete_option( 'ai_http_client_selected_provider_data-machine' );
+// Note: Shared API keys (ai_http_client_shared_api_keys) preserved for other plugins
 
 // Delete legacy options from old storage system
 delete_option( 'dm_openai_api_key' );

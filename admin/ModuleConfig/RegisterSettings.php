@@ -209,12 +209,7 @@ class RegisterSettings {
             );
         }
         
-        // Register the global API key setting for the API Keys page
-        register_setting(
-            'dm_api_keys_group', // Option group for the page
-            'openai_api_key',      // Option name 
-            array( $this, 'sanitize_openai_api_key' ) // Sanitize callback
-        );
+        // OpenAI API key settings removed - now managed by AI HTTP Client library
 
 
         // Register Reddit OAuth settings for the API / Auth page (NEW)
@@ -283,22 +278,7 @@ class RegisterSettings {
             ['sanitize_callback' => 'sanitize_text_field']
         );
 
-        // Add settings section for API key on the API Keys page
-        add_settings_section(
-            'api_keys_section',   // ID
-            'OpenAI API Key',     // Title
-            array( $this, 'print_api_settings_section_info' ), // Callback for section description
-            'dm-api-keys'        // Page slug for the page
-        );
-
-        // Add settings field for API key on the API Keys page
-        add_settings_field(
-            'openai_api_key',    // ID
-            'API Key',           // Title (simpler as section gives context)
-            array( $this, 'openai_api_key_callback' ), // Callback to render the field
-            'dm-api-keys',      // Page slug for the page
-            'api_keys_section'   // Section ID
-        );
+        // Legacy OpenAI API key section removed - now managed by AI HTTP Client library
     }
 
     /**

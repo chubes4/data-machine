@@ -81,25 +81,106 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
     ?>
 
     <hr>
-    <h2>API Credentials</h2>
-    <p>Enter the API credentials for the services you want to use as data sources. Each section saves independently.</p>
+    <h2>AI Provider Configuration</h2>
+    <p>Configure AI providers for automated content processing. Data Machine supports multiple AI providers with shared API key management.</p>
 
-    <!-- OpenAI API Key -->
-    <h3 style="margin-top: 20px;">OpenAI API Key</h3>
-    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-        <input type="hidden" name="action" value="dm_save_openai_user_meta" />
-        <?php wp_nonce_field('dm_save_openai_user_meta_action'); ?>
-        <table class="form-table">
-            <tr>
-                <th scope="row"><label for="openai_api_key_user">OpenAI API Key</label></th>
-                <td>
-                    <input type="text" id="openai_api_key_user" name="openai_api_key_user" value="<?php echo esc_attr(get_option('openai_api_key', '')); ?>" class="regular-text" />
-                    <p class="description">Enter your API key from OpenAI for features like content generation or analysis.</p>
-                </td>
-            </tr>
-        </table>
-        <button type="submit" class="button button-primary">Save OpenAI API Key</button>
-    </form>
+    <!-- AI HTTP Client Provider Manager -->
+    <div style="margin: 20px 0;">
+        <?php
+        // Render the AI HTTP Client Provider Manager Component with step-specific configuration
+        if (class_exists('AI_HTTP_ProviderManager_Component')) {
+            ?>
+            
+            <!-- Global AI Provider Configuration -->
+            <h3>Global AI Provider Settings</h3>
+            <p>Configure default AI provider settings. These can be overridden per processing step below.</p>
+            <?php
+            echo AI_HTTP_ProviderManager_Component::render([
+                'plugin_context' => 'data-machine',
+                'components' => [
+                    'core' => ['provider_selector', 'api_key_input', 'model_selector'],
+                    'extended' => ['temperature_slider', 'system_prompt_field']
+                ],
+                'component_configs' => [
+                    'temperature_slider' => [
+                        'min' => 0,
+                        'max' => 1,
+                        'step' => 0.1,
+                        'default_value' => 0.7
+                    ]
+                ]
+            ]);
+            ?>
+            
+            <!-- Step-Specific AI Configuration -->
+            <h3 style="margin-top: 30px;">Step-Specific AI Configuration</h3>
+            <p>Override AI model selection for specific processing steps. Leave blank to use global settings.</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 15px;">
+                
+                <!-- Process Step Configuration -->
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
+                    <h4>Step 2: Process Data</h4>
+                    <p style="font-size: 12px; color: #666;">Analyzes and processes raw input data</p>
+                    <?php
+                    echo AI_HTTP_ProviderManager_Component::render([
+                        'plugin_context' => 'data-machine',
+                        'step_context' => 'process',
+                        'components' => [
+                            'core' => ['model_selector']
+                        ],
+                        'show_title' => false,
+                        'show_description' => false
+                    ]);
+                    ?>
+                </div>
+                
+                <!-- Fact Check Step Configuration -->
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
+                    <h4>Step 3: Fact Check</h4>
+                    <p style="font-size: 12px; color: #666;">Verifies information accuracy using web search</p>
+                    <?php
+                    echo AI_HTTP_ProviderManager_Component::render([
+                        'plugin_context' => 'data-machine',
+                        'step_context' => 'factcheck',
+                        'components' => [
+                            'core' => ['model_selector']
+                        ],
+                        'show_title' => false,
+                        'show_description' => false
+                    ]);
+                    ?>
+                </div>
+                
+                <!-- Finalize Step Configuration -->
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
+                    <h4>Step 4: Finalize</h4>
+                    <p style="font-size: 12px; color: #666;">Formats content for final output destination</p>
+                    <?php
+                    echo AI_HTTP_ProviderManager_Component::render([
+                        'plugin_context' => 'data-machine',
+                        'step_context' => 'finalize',
+                        'components' => [
+                            'core' => ['model_selector']
+                        ],
+                        'show_title' => false,
+                        'show_description' => false
+                    ]);
+                    ?>
+                </div>
+                
+            </div>
+            
+            <?php
+        } else {
+            echo '<div class="notice notice-warning"><p>AI HTTP Client library not loaded. Using legacy OpenAI integration.</p></div>';
+        }
+        ?>
+    </div>
+
+    <hr style="margin: 30px 0;">
+    <h2>Social Media & Platform Credentials</h2>
+    <p>Configure credentials for social media platforms and external services used for content publishing.</p>
 
     <!-- Bluesky Credentials -->
     <h3 style="margin-top: 20px;">Bluesky Credentials</h3>

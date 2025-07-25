@@ -12,7 +12,8 @@
 namespace DataMachine\Admin;
 
 use DataMachine\Database\{Modules, Projects};
-use DataMachine\Handlers\{HandlerFactory, HandlerRegistry};
+use DataMachine\Handlers\HandlerFactory;
+use DataMachine\Constants;
 use DataMachine\Helpers\Logger;
 use DataMachine\Admin\ModuleConfig\SettingsFields;
 
@@ -59,12 +60,6 @@ class AdminPage {
      */
     private $logger;
 
-    /**
-     * Handler Registry instance.
-     * @var HandlerRegistry
-     * @since NEXT_VERSION
-     */
-    public $handler_registry;
 
     /**
      * Settings Fields service instance.
@@ -102,7 +97,6 @@ class AdminPage {
      * @param    Modules            $db_modules             Injected DB Modules instance.
      * @param    Projects           $db_projects            Injected DB Projects instance.
      * @param    Logger                      $logger                 Injected Logger instance.
-     * @param    HandlerRegistry            $handler_registry       Injected Handler Registry instance.
      * @param    SettingsFields             $settings_fields        Injected Settings Fields instance.
      * @param    HandlerFactory             $handler_factory        Injected Handler Factory instance.
      * @param    \DataMachine\Admin\RemoteLocations\FormHandler $remote_locations_admin Injected Remote Locations Form Handler instance.
@@ -112,7 +106,6 @@ class AdminPage {
         Modules $db_modules,
         Projects $db_projects,
         Logger $logger,
-        HandlerRegistry $handler_registry,
         SettingsFields $settings_fields,
         HandlerFactory $handler_factory,
         \DataMachine\Admin\RemoteLocations\FormHandler $remote_locations_admin
@@ -121,7 +114,6 @@ class AdminPage {
         $this->db_modules = $db_modules;
         $this->db_projects = $db_projects;
         $this->logger = $logger;
-        $this->handler_registry = $handler_registry;
         $this->settings_fields = $settings_fields;
         $this->handler_factory = $handler_factory;
         $this->remote_locations_admin = $remote_locations_admin;
@@ -157,8 +149,8 @@ class AdminPage {
         $db_modules = $this->db_modules;
 
         // Get handler lists
-        $input_handlers = $handler_registry->get_input_handlers();
-        $output_handlers = $handler_registry->get_output_handlers();
+        $input_handlers = Constants::get_input_handlers();
+        $output_handlers = Constants::get_output_handlers();
 
         // Get available projects for the current user
         $user_id = get_current_user_id();

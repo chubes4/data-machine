@@ -29,15 +29,7 @@ class ApiAuthPage {
     public function __construct( ?Logger $logger = null ) {
         $this->logger = $logger;
         add_action( 'admin_init', array( $this, 'handle_api_keys_page_user_meta_save' ) );
-        add_action('admin_post_dm_save_openai_user_meta', function() {
-            // Debug: Log POST and SERVER data
-            // Debug logging removed for production
-            if (!current_user_can('manage_options')) wp_die('Unauthorized');
-            check_admin_referer('dm_save_openai_user_meta_action');
-            update_option('openai_api_key', sanitize_text_field($_POST['openai_api_key_user'] ?? ''));
-            wp_redirect(add_query_arg('openai_saved', 1, admin_url('admin.php?page=dm-api-keys')));
-            exit;
-        });
+        // Legacy OpenAI form processing removed - now managed by AI HTTP Client library
 
         add_action('admin_post_dm_save_bluesky_user_meta', function() {
             // Debug logging removed for production
@@ -148,12 +140,7 @@ class ApiAuthPage {
             }
         }
 
-        // Handle OpenAI API Key (global)
-        if (isset($_POST['openai_api_key_user'])) {
-            $openai_api_key = sanitize_text_field($_POST['openai_api_key_user']);
-            update_option('openai_api_key', $openai_api_key);
-            $updated = true;
-        }
+        // Legacy OpenAI API Key processing removed - now managed by AI HTTP Client library
 
         // Add a success notice if something was updated
         // Note: This might appear alongside the standard "Settings saved." notice from options.php

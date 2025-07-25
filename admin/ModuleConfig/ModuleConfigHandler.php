@@ -10,7 +10,8 @@
 namespace DataMachine\Admin\ModuleConfig;
 
 use DataMachine\Database\Modules;
-use DataMachine\Handlers\{HandlerFactory, HandlerRegistry};
+use DataMachine\Handlers\HandlerFactory;
+use DataMachine\Constants;
 use DataMachine\Helpers\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,8 +23,6 @@ class ModuleConfigHandler {
     /** @var Modules */
     private $db_modules;
 
-    /** @var HandlerRegistry */
-    private $handler_registry;
 
     /** @var HandlerFactory */
     private $handler_factory;
@@ -35,18 +34,15 @@ class ModuleConfigHandler {
      * Initialize the class and set its properties.
      *
      * @param Modules $db_modules         Injected DB Modules service.
-     * @param HandlerRegistry $handler_registry   Injected Handler Registry service.
      * @param HandlerFactory $handler_factory Injected Handler Factory service.
      * @param Logger $logger             Injected Logger service.
      */
     public function __construct(
         Modules $db_modules,
-        HandlerRegistry $handler_registry,
         HandlerFactory $handler_factory,
         Logger $logger
     ) {
         $this->db_modules = $db_modules;
-        $this->handler_registry = $handler_registry;
         $this->handler_factory = $handler_factory;
         $this->logger = $logger;
     }
@@ -403,14 +399,14 @@ class ModuleConfigHandler {
 
         if (isset($submitted_config_all[$handler_type_slug])) {
             //error_log("DM Sanitize Debug: Processing {$config_type} handler '{$handler_type_slug}'");
-            $get_handler_class_method = "get_{$config_type}_handler_class";
-
-            if (!method_exists($this->handler_registry, $get_handler_class_method)) {
-                 $this->logger->error("{$log_prefix} Invalid config type '{$config_type}' provided for registry lookup.", ['slug' => $handler_type_slug]);
-                 return [ $handler_type_slug => [] ];
+            if ($config_type === 'input') {
+                $handler_class = Constants::get_input_handler_class($handler_type_slug);
+            } elseif ($config_type === 'output') {
+                $handler_class = Constants::get_output_handler_class($handler_type_slug);
+            } else {
+                $this->logger->error("{$log_prefix} Invalid config type '{$config_type}' provided.", ['slug' => $handler_type_slug]);
+                return [ $handler_type_slug => [] ];
             }
-
-            $handler_class = $this->handler_registry->{$get_handler_class_method}($handler_type_slug);
             //error_log("DM Sanitize Debug: Handler class for '{$handler_type_slug}': " . ($handler_class ? $handler_class : 'NULL'));
 
             if ($handler_class) {

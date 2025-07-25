@@ -395,18 +395,13 @@ class ProcessingOrchestrator {
 	 * Execute process step logic (Step 2).
 	 */
 	private function execute_process_step_logic( int $job_id, array $input_data_packet, array $module_job_config ): bool {
-		$api_key = get_option( 'openai_api_key' );
-		if ( empty( $api_key ) ) {
-			return false;
-		}
-
 		$project_id = absint( $module_job_config['project_id'] ?? 0 );
 		$system_prompt = $this->prompt_builder->build_system_prompt( $project_id, $module_job_config['user_id'] ?? 0 );
 		$process_data_prompt = $module_job_config['process_data_prompt'] ?? '';
 
 		try {
 			$enhanced_process_prompt = $this->prompt_builder->build_process_data_prompt( $process_data_prompt, $input_data_packet );
-			$process_result = $this->process_data_handler->process_data( $api_key, $system_prompt, $enhanced_process_prompt, $input_data_packet );
+			$process_result = $this->process_data_handler->process_data( $system_prompt, $enhanced_process_prompt, $input_data_packet );
 
 			if ( isset( $process_result['status'] ) && $process_result['status'] === 'error' ) {
 				return false;
@@ -446,11 +441,6 @@ class ProcessingOrchestrator {
 			return true;
 		}
 
-		$api_key = get_option( 'openai_api_key' );
-		if ( empty( $api_key ) ) {
-			return false;
-		}
-
 		$project_id = absint( $module_job_config['project_id'] ?? 0 );
 		$system_prompt = $this->prompt_builder->build_system_prompt( $project_id, $module_job_config['user_id'] ?? 0 );
 		$fact_check_prompt = $module_job_config['fact_check_prompt'] ?? '';
@@ -462,7 +452,7 @@ class ProcessingOrchestrator {
 
 		try {
 			$enhanced_fact_check_prompt = $this->prompt_builder->build_fact_check_prompt( $fact_check_prompt );
-			$factcheck_result = $this->factcheck_api->fact_check_response( $api_key, $system_prompt, $enhanced_fact_check_prompt, $initial_output );
+			$factcheck_result = $this->factcheck_api->fact_check_response( $system_prompt, $enhanced_fact_check_prompt, $initial_output );
 
 			if ( is_wp_error( $factcheck_result ) ) {
 				return false;
@@ -487,11 +477,6 @@ class ProcessingOrchestrator {
 	 * Execute finalize step logic (Step 4).
 	 */
 	private function execute_finalize_step_logic( int $job_id, array $input_data_packet, array $module_job_config ): bool {
-		$api_key = get_option( 'openai_api_key' );
-		if ( empty( $api_key ) ) {
-			return false;
-		}
-
 		$project_id = absint( $module_job_config['project_id'] ?? 0 );
 		$system_prompt = $this->prompt_builder->build_system_prompt( $project_id, $module_job_config['user_id'] ?? 0 );
 		$finalize_response_prompt = $module_job_config['finalize_response_prompt'] ?? '';
@@ -510,7 +495,6 @@ class ProcessingOrchestrator {
 			$finalize_user_message = $this->prompt_builder->build_finalize_user_message( $enhanced_finalize_prompt, $initial_output, $fact_checked_content, $module_job_config, $input_data_packet['metadata'] ?? [] );
 
 			$finalize_result = $this->finalize_api->finalize_response(
-				$api_key,
 				$system_prompt,
 				$finalize_user_message,
 				$initial_output,

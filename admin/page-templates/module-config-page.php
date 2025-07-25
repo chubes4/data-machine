@@ -250,11 +250,11 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 					<td>
 						<select name="data_source_type" id="data_source_type" data-sync-hidden="#selected_input_type">
 							<?php 
-							$input_handlers_list = $handler_registry->get_input_handlers();
+							$input_handlers_list = \DataMachine\Constants::get_input_handlers();
 							foreach ($input_handlers_list as $slug => $handler_info):
 							?>
 								<option value="<?php echo esc_attr($slug); ?>" <?php selected($current_data_source_type, $slug); ?>>
-									<?php echo esc_html($handler_registry->get_input_handler_label($slug)); ?>
+									<?php echo esc_html(\DataMachine\Constants::get_input_handler_label($slug)); ?>
 								</option>
 							<?php endforeach; ?>
 						</select>
@@ -281,11 +281,11 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 					<td>
 						<select name="output_type" id="output_type" data-sync-hidden="#selected_output_type">
 							<?php 
-							$output_handlers_list = $handler_registry->get_output_handlers();
+							$output_handlers_list = \DataMachine\Constants::get_output_handlers();
 							foreach ($output_handlers_list as $slug => $handler_info):
 							?>
 								<option value="<?php echo esc_attr($slug); ?>" <?php selected($current_output_type, $slug); ?>>
-									<?php echo esc_html($handler_registry->get_output_handler_label($slug)); ?>
+									<?php echo esc_html(\DataMachine\Constants::get_output_handler_label($slug)); ?>
 								</option>
 							<?php endforeach; ?>
 						</select>

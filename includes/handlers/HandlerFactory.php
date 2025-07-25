@@ -14,14 +14,13 @@ use DataMachine\Database\{Modules, Projects, RemoteLocations};
 use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Handlers\HttpService;
 use DataMachine\Helpers\{Logger, EncryptionHelper};
+use DataMachine\Constants;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
 class HandlerFactory {
-
-    private $handler_registry;
     private $logger;
     private $processed_items_manager;
     private $encryption_helper;
@@ -38,7 +37,6 @@ class HandlerFactory {
      * Constructor. Injects all potential dependencies needed by any handler.
      */
     public function __construct(
-        HandlerRegistry $handler_registry,
         ?Logger $logger, // Logger is optional
         ProcessedItemsManager $processed_items_manager,
         EncryptionHelper $encryption_helper,
@@ -51,7 +49,6 @@ class HandlerFactory {
         Projects $db_projects,
         HttpService $handler_http_service
     ) {
-        $this->handler_registry = $handler_registry;
         $this->logger = $logger;
         $this->processed_items_manager = $processed_items_manager;
         $this->encryption_helper = $encryption_helper;
@@ -78,9 +75,9 @@ class HandlerFactory {
 
         try {
             if ($handler_type === 'input') {
-                $handler_info = $this->handler_registry->get_input_handler($handler_slug);
+                $handler_info = Constants::get_input_handler($handler_slug);
             } elseif ($handler_type === 'output') {
-                $handler_info = $this->handler_registry->get_output_handler($handler_slug);
+                $handler_info = Constants::get_output_handler($handler_slug);
             } else {
                  if ($this->logger) $this->logger->error('Invalid handler type requested.', ['type' => $handler_type, 'slug' => $handler_slug]);
                 return new \WP_Error('invalid_handler_type', 'Invalid handler type specified.', ['type' => $handler_type]);
