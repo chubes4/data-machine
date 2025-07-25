@@ -55,20 +55,25 @@ class AI_HTTP_Client {
     public function __construct($config = array()) {
         // Require ai_type parameter - no defaults
         if (empty($config['ai_type'])) {
-            throw new Exception('ai_type parameter is required. Specify "llm", "upscaling", or "generative".');
+            error_log('AI HTTP Client: ai_type parameter is required. Specify "llm", "upscaling", or "generative".');
+            $this->is_configured = false;
+            return;
         }
         
         // Validate ai_type
         $valid_types = array('llm', 'upscaling', 'generative');
         if (!in_array($config['ai_type'], $valid_types)) {
-            throw new Exception('Invalid ai_type "' . $config['ai_type'] . '". Must be one of: ' . implode(', ', $valid_types));
+            error_log('AI HTTP Client: Invalid ai_type "' . $config['ai_type'] . '". Must be one of: ' . implode(', ', $valid_types));
+            $this->is_configured = false;
+            return;
         }
         
         $this->ai_type = $config['ai_type'];
         
         // Graceful fallback for missing plugin context
         if (empty($config['plugin_context'])) {
-            $this->handle_missing_plugin_context();
+            error_log('AI HTTP Client: plugin_context parameter is required for proper configuration.');
+            $this->is_configured = false;
             return;
         }
         
