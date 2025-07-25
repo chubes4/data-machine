@@ -156,9 +156,11 @@ class AirdropRestApi extends BaseInputHandler {
 		$current_page = 1;
 		$max_pages = 10;
 		$hit_time_limit_boundary = false;
+		$items_added_this_page = 0;
 		$auth_header = 'Basic ' . base64_encode($remote_user . ':' . $remote_password);
 
-		while (count($eligible_items_packets) < $process_limit && $current_page <= $max_pages) {
+		while (count($eligible_items_packets) < $process_limit && $current_page <= $max_pages && !$hit_time_limit_boundary) {
+			$items_added_this_page = 0; // Reset counter for each page
 			$query_params = [
 				'post_type' => $post_type,
 				'post_status' => $post_status,
@@ -260,18 +262,28 @@ class AirdropRestApi extends BaseInputHandler {
 					]
 				];
 				array_push($eligible_items_packets, $input_data_packet);
+				$items_added_this_page++;
 
 				if (count($eligible_items_packets) >= $process_limit) {
 					break;
 				}
 			}
 
+			// Check if we should stop pagination early
 			$total_pages = $response_data['max_num_pages'] ?? ($response_headers['x-wp-totalpages'] ?? null);
 			if ($total_pages !== null && $current_page >= (int)$total_pages) {
+				$this->logger?->info('Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
 				break;
 			}
 
+			// Stop if we've hit process limit or time boundary
 			if (count($eligible_items_packets) >= $process_limit || $hit_time_limit_boundary) {
+				break;
+			}
+
+			// Stop after 1 empty page (no new items added) for efficiency
+			if ($items_added_this_page === 0) {
+				$this->logger?->info('Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
 				break;
 			}
 
@@ -279,7 +291,7 @@ class AirdropRestApi extends BaseInputHandler {
 		}
 
 		if (empty($eligible_items_packets)) {
-			return ['status' => 'no_new_items', 'message' => __('No new items found matching the criteria from the helper API endpoint.', 'data-machine')];
+			throw new Exception(__('No new items found matching the criteria from the helper API endpoint.', 'data-machine'));
 		}
 
 		// Return only the first item for "one coin, one operation" model
