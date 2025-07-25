@@ -88,11 +88,6 @@ class DataMachine {
 	public $orchestrator; // Added property
 
 
-	/**
-	 * Input handler for file uploads.
-	 * @var \DataMachine\Handlers\Input\Files
-	 */
-	public $input_files;
 
 	/**
 	 * Database Remote Locations class instance.
@@ -144,7 +139,6 @@ class DataMachine {
 		$process_data,
 		$db_modules,
 		$orchestrator,
-		$input_files,
 		$oauth_reddit,
 		$oauth_twitter,
 		$oauth_threads,
@@ -160,7 +154,6 @@ class DataMachine {
 		$this->process_data = $process_data;
 		$this->db_modules = $db_modules;
 		$this->orchestrator = $orchestrator;
-		$this->input_files = $input_files;
 		$this->db_remote_locations = $db_remote_locations;
 		$this->logger = $logger;
 		$this->oauth_twitter = $oauth_twitter;

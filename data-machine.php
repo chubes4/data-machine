@@ -101,6 +101,63 @@ function run_data_machine() {
     // Initialize core handler auto-registration system
     CoreHandlerRegistry::init();
 
+    // Register core handlers explicitly via filter system (replaces filesystem scanning)
+    add_filter('dm_register_handlers', function($handlers) {
+        // Input handlers
+        $handlers['input']['files'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\Files',
+            'label' => __('File Upload', 'data-machine')
+        ];
+        $handlers['input']['local_word_press'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\LocalWordPress',
+            'label' => __('Local WordPress', 'data-machine')
+        ];
+        $handlers['input']['airdrop_rest_api'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\AirdropRestApi',
+            'label' => __('Airdrop REST API (Helper Plugin)', 'data-machine')
+        ];
+        $handlers['input']['public_rest_api'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\PublicRestApi',
+            'label' => __('Public REST API', 'data-machine')
+        ];
+        $handlers['input']['rss'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\Rss',
+            'label' => 'RSS Feed'
+        ];
+        $handlers['input']['reddit'] = [
+            'class' => 'DataMachine\\Handlers\\Input\\Reddit',
+            'label' => 'Reddit Subreddit'
+        ];
+        
+        // Output handlers
+        $handlers['output']['publish_local'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\PublishLocal',
+            'label' => 'Publish Locally'
+        ];
+        $handlers['output']['publish_remote'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\PublishRemote',
+            'label' => 'Publish Remotely'
+        ];
+        $handlers['output']['twitter'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Twitter',
+            'label' => __('Post to Twitter', 'data-machine')
+        ];
+        $handlers['output']['facebook'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Facebook',
+            'label' => __('Facebook', 'data-machine')
+        ];
+        $handlers['output']['threads'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Threads',
+            'label' => __('Threads', 'data-machine')
+        ];
+        $handlers['output']['bluesky'] = [
+            'class' => 'DataMachine\\Handlers\\Output\\Bluesky',
+            'label' => __('Post to Bluesky', 'data-machine')
+        ];
+        
+        return $handlers;
+    }, 5); // Priority 5 to run before CoreHandlerRegistry (priority 10)
+
 
     // API services - now use AI HTTP Client library directly
     $factcheck_api = new FactCheck();
@@ -125,9 +182,6 @@ function run_data_machine() {
     
     // Processed items manager
     $processed_items_manager = new ProcessedItemsManager($db_processed_items, $logger);
-
-    // Create legacy Files handler with correct dependency
-    $input_files = new InputFiles($db_modules, $db_projects, $processed_items_manager, $logger);
 
     // Handler factory using PSR-4 autoloading and service locator pattern
     $handler_factory = new HandlerFactory();
@@ -175,6 +229,9 @@ function run_data_machine() {
     ]);
 
 
+    // Step configuration validator
+    $step_validator = new \DataMachine\Engine\StepConfigurationValidator();
+
     // Global container for Action Scheduler access
     global $data_machine_container;
     $data_machine_container = array(
@@ -188,14 +245,15 @@ function run_data_machine() {
         'job_creator' => $job_creator,
         'action_scheduler' => $action_scheduler,
         'logger' => $logger,
-        'ai_http_client' => $ai_http_client
+        'ai_http_client' => $ai_http_client,
+        'step_validator' => $step_validator
     );
 
     // Import/export handler
     $import_export_handler = new ImportExport($db_projects, $db_modules);
 
     // AJAX handlers
-    $module_ajax_handler = new ModuleConfigAjax($db_modules, $db_projects, $input_files, $db_remote_locations, $logger);
+    $module_ajax_handler = new ModuleConfigAjax($db_modules, $db_projects, $db_remote_locations, $logger);
     $dashboard_ajax_handler = new ProjectManagementAjax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_creator, $logger);
     $ajax_scheduler = new AjaxScheduler($db_projects, $db_modules, $scheduler);
     $ajax_auth = new \DataMachine\Admin\OAuth\AjaxAuth();
@@ -213,7 +271,6 @@ function run_data_machine() {
         $process_data,
         $db_modules,
         $orchestrator,
-        $input_files,
         $oauth_reddit,
         $oauth_twitter,
         $oauth_threads,

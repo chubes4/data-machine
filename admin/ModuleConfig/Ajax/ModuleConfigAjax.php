@@ -9,7 +9,6 @@
 namespace DataMachine\Admin\ModuleConfig\Ajax;
 
 use DataMachine\Database\{Modules, Projects, RemoteLocations};
-use DataMachine\Handlers\Input\Files;
 use DataMachine\Admin\RemoteLocations\RemoteLocationService;
 use DataMachine\Helpers\Logger;
 
@@ -23,9 +22,6 @@ class ModuleConfigAjax {
 
     /** @var Projects */
     private $db_projects;
-
-    /** @var Files */
-    private $input_files_handler;
 
     /** @var RemoteLocations */
     private $db_locations;
@@ -41,20 +37,17 @@ class ModuleConfigAjax {
      *
      * @param Modules $db_modules Modules DB service.
      * @param Projects $db_projects Projects DB service.
-     * @param Files $input_files_handler Files Input Handler service.
      * @param RemoteLocations $db_locations Remote Locations DB service.
      * @param Logger|null $logger Logger service (optional).
      */
     public function __construct(
         Modules $db_modules,
         Projects $db_projects,
-        Files $input_files_handler, // Inject specific handler
-        RemoteLocations $db_locations, // Inject remote locations DB handler
+        RemoteLocations $db_locations,
         ?Logger $logger = null
     ) {
         $this->db_modules = $db_modules;
         $this->db_projects = $db_projects;
-        $this->input_files_handler = $input_files_handler;
         $this->db_locations = $db_locations;
         $this->logger = $logger;
 
@@ -64,6 +57,20 @@ class ModuleConfigAjax {
         add_action('wp_ajax_dm_sync_remote_site_details', array($this, 'ajax_sync_remote_site_details'));
         add_action('wp_ajax_dm_get_handler_template', array($this, 'ajax_get_handler_template'));
         add_action('wp_ajax_dm_get_project_modules',  [ $this, 'ajax_get_project_modules' ] );
+    }
+
+    /**
+     * Get Files handler via factory pattern when needed.
+     * 
+     * @return object|\WP_Error Files handler instance or WP_Error on failure
+     */
+    private function get_files_handler() {
+        global $data_machine_container;
+        if (!isset($data_machine_container['handler_factory'])) {
+            return new \WP_Error('missing_factory', 'Handler factory not available in container');
+        }
+        
+        return $data_machine_container['handler_factory']->create_handler('input', 'files');
     }
 
     /**
