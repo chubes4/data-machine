@@ -105,20 +105,5 @@ class HandlerFactory {
         }
     }
 
-    /**
-     * Register an external handler for third-party plugin support.
-     * Note: External handlers should use the dm_register_handlers filter instead.
-     *
-     * @param string $type Handler type ('input' or 'output')
-     * @param string $slug Handler slug
-     * @param string $class_name Fully qualified class name
-     */
-    public function register_external_handler(string $type, string $slug, string $class_name): void {
-        $this->log_debug('External handler registration requested (use dm_register_handlers filter instead)', [
-            'type' => $type,
-            'slug' => $slug, 
-            'class' => $class_name
-        ]);
-    }
 
 } 

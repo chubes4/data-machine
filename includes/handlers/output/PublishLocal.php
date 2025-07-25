@@ -23,9 +23,11 @@ class PublishLocal extends BaseOutputHandler {
 
 	/**
 	 * Constructor.
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(?Logger $logger = null) {
-        parent::__construct($logger);
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 	}
 
 	/**
@@ -295,7 +297,7 @@ class PublishLocal extends BaseOutputHandler {
 	 * @param array $current_config Current configuration for this handler (used for default values).
 	 * @return array Associative array of field definitions.
 	 */
-	public function get_settings_fields(array $current_config = []): array {
+	public static function get_settings_fields(array $current_config = []): array {
 		// Get users for author dropdown
 		$users = get_users( array( 'fields' => array( 'ID', 'display_name' ), 'orderby' => 'display_name' ) );
 		// Get available post types

@@ -19,22 +19,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Files extends BaseInputHandler {
 
 	/**
-	 * Constructor. Dependencies are injected.
-	 * Calls parent constructor to set up common dependencies.
-	 *
-	 * @param Modules $db_modules Database modules handler.
-     * @param Projects $db_projects Database projects handler.
-     * @param ProcessedItemsManager $processed_items_manager Processed items manager.
-     * @param Logger|null $logger Optional logger.
+	 * Constructor.
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(
-        Modules $db_modules,
-        Projects $db_projects,
-        ProcessedItemsManager $processed_items_manager,
-        ?Logger $logger = null
-    ) {
-        // Call parent constructor with required dependencies
-        parent::__construct($db_modules, $db_projects, $processed_items_manager, $logger);
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 	}
 
 	/**

@@ -256,7 +256,7 @@ dmRemoteLocationManager = (function() {
     return {
         initialize,
         // triggerRemoteHandlerUpdate, // Removed - Likely only needed internally now
-        attachTemplateEventListeners, // Needed by HandlerTemplateManager
+        attachTemplateEventListeners, // Needed by form event listeners
         handlerConfigs // Expose handlerConfigs
     };
 

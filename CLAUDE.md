@@ -6,39 +6,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### WordPress Plugin Development
 ```bash
-# No build process - changes take effect immediately
-composer install           # Install dependencies
-composer dump-autoload     # After adding/removing classes
+# Install dependencies
+composer install
 
-# Database changes (no migrations - recreated on activation):
-# Deactivate → Reactivate plugin to recreate tables
+# After adding/removing classes
+composer dump-autoload
+
+# No build process - changes take effect immediately
+# Database changes: no migrations - recreated on plugin activation
 ```
 
-### Debugging & Testing
+### Testing & Debugging
 ```bash
-# Enable verbose browser logging:
+# Enable verbose browser logging
 window.dmDebugMode = true
 
-# Test jobs manually:
-# WordPress Admin → Data Machine → Projects → Run Now
-
-# Monitor job status:
-# WordPress Admin → Data Machine → Jobs
-# WordPress Admin → Tools → Action Scheduler
-
-# Debug specific job:
-# Check wp_dm_jobs table for step data (input_data, processed_data, etc.)
-# Action Scheduler logs show hook execution details
+# Test jobs manually: WordPress Admin → Data Machine → Projects → Run Now
+# Monitor jobs: WordPress Admin → Data Machine → Jobs  
+# Background processing: WordPress Admin → Tools → Action Scheduler
+# Database inspection: Check wp_dm_jobs table for step progression
 ```
 
 ### Development Workflow
 ```bash
-# Typical development cycle:
+# Standard cycle:
 1. Edit handler files (changes immediate)
-2. composer dump-autoload (if new files)
-3. Test via admin interface
-4. Check Action Scheduler for async job status
-5. Monitor wp_dm_jobs table for step progression
+2. composer dump-autoload (if new classes added)
+3. Test via WordPress admin interface  
+4. Monitor Action Scheduler for background job status
+5. Check wp_dm_jobs table for step data persistence
 ```
 
 ## Core Architecture
@@ -46,65 +42,67 @@ window.dmDebugMode = true
 **5-Step Async Pipeline**: Input Collection → AI Processing → Fact Check → Finalize → Output Publishing
 
 **Key Patterns**:
-- **WordPress-Native Hooks**: All handlers registered via `apply_filters('dm_register_handlers')` - no filesystem scanning
-- **PSR-4 Namespacing**: Modern namespace structure with `DataMachine\` root namespace
-- **Service Locator Pattern**: HandlerFactory uses PSR-4 autoloading + global container for dependencies
-- **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator` class
-- **Action Scheduler**: Background processing with 2 max concurrent jobs
-- **Direct Filter Access**: Handler registration uses direct WordPress filter calls via `DataMachine\Constants` helper methods
+- **WordPress-Native Hooks**: Handler registration via `apply_filters('dm_register_handlers')`
+- **PSR-4 Namespacing**: `DataMachine\` root namespace with autoloading
+- **Service Locator Pattern**: Dependencies accessible via global container
+- **Unified Job Creation**: All jobs flow through `DataMachine\Engine\JobCreator`
+- **Action Scheduler**: Background processing (2 max concurrent jobs)
+- **Bootstrap Container**: `global $data_machine_container` for dependency access
+- **Programmatic Forms**: Forms generated from field definitions, no template files needed
 
 **Namespace Structure**:
 ```
 DataMachine\
-├── Admin\{Projects,ModuleConfig,RemoteLocations,OAuth}\
-├── Database\{Modules,Projects,Jobs,ProcessedItems,RemoteLocations}\
-├── Engine\{JobCreator,ProcessingOrchestrator,JobStatusManager,ProcessedItemsManager}\
-├── Handlers\{HandlerFactory,Input\*,Output\*}\
-├── Helpers\{Logger,ActionScheduler,HttpService,Encryption}\
-├── Api\{FactCheck,Finalize integration classes}\
-└── Constants (Handler helper methods + configuration)\
+├── Admin\           # UI management (Projects, ModuleConfig, OAuth, RemoteLocations)
+├── Database\        # Custom wp_dm_* table abstractions
+├── Engine\          # Core processing pipeline (JobCreator, ProcessingOrchestrator)
+├── Handlers\        # Input/Output handlers with factory pattern
+├── Helpers\         # Utilities (Logger, ActionScheduler, HttpService, Encryption)
+├── Api\             # AI integration (FactCheck, Finalize)
+└── Constants        # Configuration and handler helper methods
 ```
 
 ## Critical File Locations
 
 ```
-data-machine.php           # Bootstrap: Service locator + core handler registration + hook registration
+data-machine.php           # Bootstrap: Service locator + handler registration + hooks
 
 admin/
-├── page-templates/         # Pure view templates (no business logic)
-├── ModuleConfig/          # Handler configuration system
-│   ├── handler-templates/  # Core handler form templates
-│   └── js/                # Frontend state management
-├── Projects/              # Job creation & scheduling
-├── RemoteLocations/       # Remote WordPress management
+├── page-templates/        # View templates (jobs.php, module-config-page.php, etc.)
+├── ModuleConfig/          # Handler configuration UI + AJAX handlers
+│   ├── FormRenderer.php   # Programmatic form generation from field definitions
+│   └── Ajax/              # AJAX handlers for module config
+├── Projects/              # Job scheduling + import/export
+├── RemoteLocations/       # Remote WordPress site management  
 └── OAuth/                 # Social media authentication
 
 includes/
-├── engine/                 # Core processing pipeline
-│   ├── JobCreator.php                   # Single entry point for all jobs
-│   ├── ProcessingOrchestrator.php       # 5-step async coordinator
-│   ├── JobStatusManager.php             # Centralized status updates
-│   ├── ProcessedItemsManager.php        # Deduplication management
-│   └── filters/           # AI utilities (prompt builder, parser, etc.)
-├── handlers/              # Input/Output handlers
-│   ├── HandlerFactory.php              # PSR-4 autoloading + service locator pattern
-│   ├── input/BaseInputHandler.php      # Shared input logic with service locator
-│   └── input/output/      # Handler implementations
-├── database/              # Custom wp_dm_* tables (no migrations)
-├── api/                   # OpenAI integration classes
-└── helpers/               # Logger, encryption, memory guard, constants
+├── engine/                # Core 5-step processing pipeline
+│   ├── JobCreator.php     # Single entry point for job creation
+│   ├── ProcessingOrchestrator.php  # Async step coordinator  
+│   └── filters/           # AI utilities (PromptBuilder, AiResponseParser)
+├── handlers/              # Input/Output handler implementations
+│   ├── HandlerFactory.php # PSR-4 autoloading + dependency injection
+│   └── input/, output/    # Handler implementations extending base classes
+├── database/              # Custom wp_dm_* table abstractions
+├── api/                   # AI provider integration (FactCheck, Finalize)
+├── CoreHandlerRegistry.php # Auto-discovery and registration system
+└── helpers/               # Utilities (Logger, EncryptionHelper, ActionScheduler)
+
+lib/ai-http-client/        # Multi-provider AI library (OpenAI, Anthropic, etc.)
 ```
 
 ## Handler Development
 
-**Adding Core Handlers**:
+### **Adding Core Handlers**:
 1. Create class extending `DataMachine\Handlers\Input\BaseInputHandler` or `DataMachine\Handlers\Output\BaseOutputHandler`
-2. Implement required methods: `get_input_data()` or `handle_output()`
-3. No constructor needed - dependencies available via service locator in base class
-4. Register in `data_machine_register_core_handlers()` function in `data-machine.php`
-5. **Done!** HandlerFactory uses PSR-4 autoloading: `new $className()`
+2. Implement required methods: `get_input_data()` or `handle_output()` 
+3. **CRITICAL**: Constructor must use service locator pattern - call `parent::__construct()` with no parameters
+4. **CRITICAL**: `get_settings_fields()` method must be `public static`
+5. Dependencies auto-injected via service locator pattern in base class
+6. CoreHandlerRegistry handles PSR-4 auto-discovery and registration
 
-**Adding External Handlers (Third-Party Plugins)**:
+### **Adding External Handlers (Third-Party Plugins)**:
 ```php
 // Third-party plugins register handlers via WordPress hooks:
 add_filter('dm_register_handlers', function($handlers) {
@@ -115,7 +113,7 @@ add_filter('dm_register_handlers', function($handlers) {
     return $handlers;
 });
 
-// Optional: Register settings fields
+// Register settings fields - MUST be static method
 add_filter('dm_handler_settings_fields', function($fields, $type, $slug, $config) {
     if ($type === 'input' && $slug === 'shopify_orders') {
         return [
@@ -128,38 +126,42 @@ add_filter('dm_handler_settings_fields', function($fields, $type, $slug, $config
     }
     return $fields;
 }, 10, 4);
-
-// Optional: Register custom template
-add_action('dm_load_handler_template', function(&$loaded, $type, $slug, $config) {
-    if ($type === 'input' && $slug === 'shopify_orders') {
-        include plugin_dir_path(__FILE__) . 'templates/shopify-settings.php';
-        $loaded = true;
-    }
-}, 10, 4);
 ```
 
-**WordPress-Native Extensibility**: 
-- Core and external handlers use identical WordPress hook patterns
-- HandlerFactory uses simple PSR-4 autoloading for all handlers
-- Base classes provide service locator access to dependencies
-- Direct filter access via `DataMachine\Constants` helper methods
-- No filesystem scanning or core modifications needed
-
-**Handler Pattern**:
+### **Handler Pattern**:
 ```php
 namespace DataMachine\Handlers\Input;
 
 class ExampleHandler extends BaseInputHandler {
+    // CRITICAL: Service locator constructor pattern
+    public function __construct() {
+        parent::__construct(); // No parameters - uses service locator
+    }
+    
     public function get_input_data(object $module, array $source_config, int $user_id): array {
-        // Dependencies available via service locator:
+        // Dependencies auto-available via service locator:
         // $this->logger, $this->db_modules, $this->db_projects, 
         // $this->processed_items_manager, $this->http_service
         
-        // Use $this->http_service for API calls
+        // Use $this->http_service for API calls (WordPress wp_remote_* functions)
         // Use $this->filter_processed_items() for deduplication
+        return ['processed_items' => $items];
+    }
+    
+    // CRITICAL: Must be static method
+    public static function get_settings_fields(array $current_config = []): array {
+        return [
+            'api_endpoint' => [
+                'type' => 'url',
+                'label' => 'API Endpoint',
+                'required' => true
+            ]
+        ];
     }
 }
 ```
+
+**Extensibility**: Core and external handlers use identical WordPress hook patterns. No filesystem scanning, no core modifications, no template files needed - forms generated programmatically from field definitions.
 
 ## Job Processing Flow
 
@@ -169,171 +171,109 @@ $job_creator->create_and_schedule_job($module, $user_id, $context, $optional_dat
 // Returns: ['success' => bool, 'message' => string, 'job_id' => int]
 ```
 
-**Async Steps**: Each step stores data in `wp_dm_jobs` table and schedules next step
-- Step 1: `dm_input_job_event` → `input_data` 
-- Step 2: `dm_process_job_event` → `processed_data`
-- Step 3: `dm_factcheck_job_event` → `fact_checked_data`
-- Step 4: `dm_finalize_job_event` → `finalized_data`
-- Step 5: `dm_output_job_event` → `result_data`
-
-## Configuration System
-
-**Module Config**: Handler-specific templates loaded via AJAX with state management
-**Remote Locations**: Form submissions (no AJAX) for reliability
-**Database Schema**: Custom `wp_dm_*` tables - no migrations, created on activation
+**5-Step Async Pipeline**: Each step stores data in `wp_dm_jobs` table and schedules next step
+1. `dm_input_job_event` → `input_data` (collect from sources)
+2. `dm_process_job_event` → `processed_data` (AI processing)  
+3. `dm_factcheck_job_event` → `fact_checked_data` (optional AI validation)
+4. `dm_finalize_job_event` → `finalized_data` (content finalization)
+5. `dm_output_job_event` → `result_data` (multi-platform publishing)
 
 ## Database Schema
 
 **Core Tables**:
-```sql
-wp_dm_jobs - 5-step pipeline data storage:
-├── job_id, module_id, user_id, status, current_step (1-5)
-├── input_data, processed_data, fact_checked_data, finalized_data, result_data
-├── cleanup_scheduled (data retention), created_at, updated_at
+- `wp_dm_jobs` - 5-step pipeline data with JSON fields for step results
+- `wp_dm_modules` - Handler configurations and settings  
+- `wp_dm_projects` - Project scheduling and management
+- `wp_dm_processed_items` - Deduplication tracking with content hashes
+- `wp_dm_remote_locations` - Encrypted remote WordPress credentials
 
-wp_dm_modules - Handler configuration and settings
-wp_dm_projects - Project scheduling and management
-wp_dm_processed_items - Deduplication tracking with content hashes
-wp_dm_remote_locations - Remote WordPress credentials (encrypted)
+**Key Fields**:
+```sql
+wp_dm_jobs: job_id, module_id, user_id, status, current_step (1-5),
+            input_data, processed_data, fact_checked_data, finalized_data, result_data
 ```
 
-## Common Issues
+**Configuration**: 
+- **Module Config**: AJAX-loaded handler templates with state management
+- **Remote Locations**: Form submissions (no AJAX) for reliability  
+- **No Migrations**: Tables recreated on plugin activation/deactivation
 
-**Handler Registration**: Use `DataMachine\Constants::get_*_handler*()` methods to access registered handlers
-**Handler Factory**: Uses PSR-4 autoloading + service locator - no manual dependency injection needed
-**Job Failures**: Check Action Scheduler status, jobs fail immediately with descriptive errors
-**Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
-**Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths
-**Global Container**: Access orchestrator/dependencies via `global $data_machine_container` in hooks
+## Common Development Issues
+
+- **Handler Registration**: Use `DataMachine\Constants::get_*_handler*()` methods to access registered handlers
+- **Job Failures**: Check Action Scheduler status - jobs fail immediately with descriptive errors  
+- **Large Content**: Stored in database step fields, not Action Scheduler args (8000 char limit)
+- **Asset Loading**: Use `DATA_MACHINE_PATH` constant for reliable file paths
+- **Global Container**: Access dependencies via `global $data_machine_container` in hooks
+- **PSR-4 Type Safety**: Always add `use` statements - missing imports cause fatal errors
 
 ## Dependencies
 
-- PHP 8.0+, WordPress 5.0+, MySQL 5.6+
-- Composer packages: monolog, parsedown, twitteroauth, action-scheduler
-- **AI HTTP Client Library** (`/lib/ai-http-client/`): Multi-provider AI integration with unified interface
-- **OpenAI API key** required for AI processing steps
+- **Core**: PHP 8.0+, WordPress 5.0+, MySQL 5.6+
+- **Composer**: monolog, parsedown, twitteroauth, action-scheduler
+- **AI Library**: `/lib/ai-http-client/` - Multi-provider AI integration
+- **API Keys**: At least one AI provider key required (OpenAI, Anthropic, etc.)
 
-## AI Integration Architecture
+## AI Integration
 
-**Multi-Provider AI Library**: Data Machine uses a custom AI HTTP Client library that supports multiple providers
-- **Providers Supported**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
-- **Plugin-Scoped Configuration**: Each plugin can use different models/providers
-- **Shared API Keys**: Efficient storage across multiple plugins using this library
-- **Unified Interface**: Standard request/response format regardless of provider
+**Multi-Provider Support**: Custom AI HTTP Client library supports OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
 
-**IMPORTANT - OpenAI Integration**: 
+**Critical Requirements**:
 - **ALWAYS use OpenAI Responses API**, never Chat Completions API
-- No hard-coded defaults for AI Provider APIs - if settings missing, fail with API error
-- AI library handles provider normalization automatically
+- No hard-coded defaults - fail with API error if settings missing
+- Library handles provider normalization automatically
 
-**AI Library Integration Pattern**:
+**Access Pattern**:
 ```php
-// Access via global container (current implementation)
 global $data_machine_container;
 $ai_http_client = $data_machine_container['ai_http_client'];
 
-// Send step-aware requests to AI providers
-$response = $ai_http_client->send_step_request('process', [
-    'messages' => $messages
-]);
-
-// Library handles provider switching and normalization automatically
+$response = $ai_http_client->send_step_request('process', ['messages' => $messages]);
 if ($response['success']) {
     $content = $response['data']['content'];
 }
 ```
 
-## Storage Architecture
+## Storage & Configuration
 
-**Configuration Storage**: All app-level credentials (API keys, Bluesky credentials) use global WordPress options
-- OpenAI: `openai_api_key`
-- Bluesky: `bluesky_username`, `bluesky_app_password`
-- Twitter/Facebook/Threads: OAuth tokens stored per-user in user meta
+**Credential Storage**:
+- **Global Options**: `openai_api_key`, `bluesky_username`, `bluesky_app_password`  
+- **User Meta**: OAuth tokens (Twitter/Facebook/Threads) stored per-user
+- **Encrypted**: Remote locations use `EncryptionHelper` for passwords
 
-**Database Tables**: Custom `wp_dm_*` tables managed without migrations
-- Recreated on plugin activation/deactivation cycle
-- `wp_dm_jobs` stores step data for async pipeline (no 8000 char limit like Action Scheduler)
-- Encrypted passwords for remote locations using `EncryptionHelper`
+**Action Scheduler Integration**:
+- **5 Hook Events**: `dm_input_job_event`, `dm_process_job_event`, `dm_factcheck_job_event`, `dm_finalize_job_event`, `dm_output_job_event`
+- **Concurrency**: Limited to 2 concurrent jobs
+- **Data Storage**: Large content in `wp_dm_jobs` table (no 8000 char Action Scheduler limit)
 
-## Critical Integration Points
+## PSR-4 Architecture
 
-**Action Scheduler Hooks**: Background processing limited to 2 concurrent jobs
-```php
-'dm_input_job_event', 'dm_process_job_event', 'dm_factcheck_job_event', 
-'dm_finalize_job_event', 'dm_output_job_event'
-```
+**Naming Conventions**: 
+- **Classes/Files**: PascalCase (PSR-4 standard)
+- **Database/Slugs**: snake_case (WordPress standard)
+- **Namespaces**: `DataMachine\Database\Jobs` matches `includes/database/Jobs.php`
 
-**Remote Locations**: Enhanced with system access for automated jobs
-```php
-$location = $this->db_locations->get_location($location_id, null, true, true); // System access
-```
-
-**PSR-4 Type Safety**: All constructor parameters use proper namespaced types
-- Always add `use` statements for dependencies  
-- Namespace declaration must come before `ABSPATH` check
+**Type Safety Requirements**:
+- Always add `use` statements for dependencies
+- Namespace declaration before `ABSPATH` check  
 - Missing imports cause fatal "Class not found" errors
-- **Naming Conventions**: PascalCase for classes/files (PSR-4), snake_case for slugs/identifiers/database (WordPress standard)
 
-**Bootstrap Container**: Access dependencies via `global $data_machine_container` in hooks
+**Service Locator Pattern**: 
+- HandlerFactory uses PSR-4 autoloading + global container
+- Dependencies accessible via `global $data_machine_container`
+- All handlers use consistent constructor pattern: `parent::__construct()` with no parameters
 
-**Constants Configuration**: Global settings via `DataMachine\Constants` class
-- **Handler Helper Methods**: Direct access to registered handlers via WordPress filters
-- Cron intervals and job timeout settings
-- Memory limits and cleanup schedules
-- Encryption key management
-- **Handler Access**: `get_input_handlers()`, `get_output_handlers()`, `get_*_handler_class()`, etc.
+## WordPress Standards
 
-## File Organization & PSR-4 Migration
+**HTTP Requests**: NEVER use cURL - ALWAYS use `wp_remote_get()` and `wp_remote_post()`
+**Security**: All output through escaping functions (`esc_html`, `esc_attr`, etc.) 
+**Code Style**: No inline CSS - external files only
+**Error Handling**: Return `WP_Error` objects, log via `DataMachine\Helpers\Logger`
 
-The codebase has been fully migrated to PSR-4 namespacing with PascalCase filenames:
+## Architecture Principles
 
-**New Structure**:
-- Old: `class-data-machine-*.php` files → New: PascalCase `*.php` files
-- Classes use full namespaces: `DataMachine\Database\Jobs` instead of `Data_Machine_Database_Jobs`
-- File paths match namespace structure: `includes/database/Jobs.php` for `DataMachine\Database\Jobs`
+**"Eating Our Own Dog Food"**: Core handlers use the **exact same** registration system as external handlers - no special core-only code paths.
 
-**Current State**: All classes use PSR-4 autoloading via Composer with proper namespace declarations
+**Zero Core Modifications**: External plugins can add handlers without touching Data Machine plugin code - purely hook-based extensibility.
 
-## Recent Architecture Changes
-
-**Service Locator Migration**: Replaced complex manual dependency injection with PSR-4 autoloading + service locator pattern.
-
-**HandlerFactory Simplification**: 
-```php
-// Old (removed): Complex reflection-based DI
-$handler_factory = new HandlerFactory($logger, $processed_items_manager, $encryption_helper, ...);
-
-// New (current): Simple PSR-4 autoloading
-$handler_factory = new HandlerFactory(); // Dependencies via service locator
-```
-
-**Bootstrap Streamlining**: 
-- Reduced from 373 lines to ~200 lines
-- Organized into `init_data_machine_services()` and `register_data_machine_hooks()`
-- Eliminated contradictory manual DI that fought against PSR-4/hooks system
-
-**HandlerRegistry Removal**: The `HandlerRegistry` class has been removed as redundant. It was simply wrapping WordPress filter calls with no added value.
-
-**Impact**: 50% reduction in complexity, leveraged existing PSR-4 + hooks architecture instead of undermining it
-
-## WordPress Development Standards
-
-**HTTP Requests**: 
-- **NEVER use cURL functions** - highly discouraged in WordPress
-- **ALWAYS use `wp_remote_get()` and `wp_remote_post()`** for all HTTP requests
-- AI HTTP Client library uses WordPress-native HTTP functions internally
-
-**Security & Output**:
-- **All output MUST be run through escaping functions** (`esc_html`, `esc_attr`, etc.)
-- Never include sensitive information (API keys, tokens) in code or commits
-- Use WordPress security functions throughout (`wp_verify_nonce`, `current_user_can`, etc.)
-
-**Code Style**:
-- **Never use inline CSS styles** - all styles in external files
-- Follow WordPress coding standards for HTML/CSS/JS
-- Use WordPress hooks and filters for extensibility
-
-**Error Handling**:
-- Return `WP_Error` objects for error conditions
-- Log errors via `DataMachine\Helpers\Logger` class
-- Provide helpful error messages to users via admin notices
+**Programmatic Everything**: Forms, validation, and templates generated from data structures - no hardcoded HTML files needed.

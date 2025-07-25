@@ -22,29 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class PublicRestApi extends BaseInputHandler {
 
-    /** @var HttpService */
-    private $http_service;
-
 	/**
 	 * Constructor.
-	 * Calls parent constructor with common dependencies.
-	 *
-     * @param Modules $db_modules
-     * @param Projects $db_projects
-     * @param ProcessedItemsManager $processed_items_manager
-     * @param HttpService $http_service
-     * @param Logger|null $logger
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(
-        Modules $db_modules,
-        Projects $db_projects,
-        ProcessedItemsManager $processed_items_manager,
-        HttpService $http_service,
-        ?Logger $logger = null
-    ) {
-        // Call parent constructor with common dependencies
-        parent::__construct($db_modules, $db_projects, $processed_items_manager, $logger);
-        $this->http_service = $http_service;
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 	}	
 
 	/**
@@ -64,7 +48,7 @@ class PublicRestApi extends BaseInputHandler {
             $this->logger?->add_admin_error(__('Missing module ID or user ID provided to Public REST handler.', 'data-machine'));
 			throw new Exception(esc_html__('Missing module ID or user ID provided to Public REST handler.', 'data-machine'));
 		}
-		if (!$this->db_processed_items || !$this->db_modules || !$this->db_projects) {
+		if (!$this->processed_items_manager || !$this->db_modules || !$this->db_projects) {
             $this->logger?->add_admin_error(__('Required database service not available in Public REST handler.', 'data-machine'));
 			throw new Exception(esc_html__('Required database service not available in Public REST handler.', 'data-machine'));
 		}

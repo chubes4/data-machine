@@ -29,24 +29,26 @@ class PublishRemote extends BaseOutputHandler {
      */
     private $db_locations;
 
-
-    /** @var HttpService */
-    private $http_service;
-
     /**
      * Constructor.
-     * @param RemoteLocations $db_locations
-     * @param HttpService $http_service
-     * @param Logger $logger
+     * Uses service locator pattern for dependency injection.
      */
-    public function __construct(
-        RemoteLocations $db_locations,
-        HttpService $http_service,
-        Logger $logger,
-    ) {
-        parent::__construct($logger);
-        $this->db_locations = $db_locations;
-        $this->http_service = $http_service;
+    public function __construct() {
+        // Call parent constructor to initialize common dependencies via service locator
+        parent::__construct();
+        
+        // Initialize handler-specific dependencies
+        $this->init_handler_dependencies();
+    }
+    
+    /**
+     * Initialize handler-specific dependencies via service locator.
+     */
+    private function init_handler_dependencies() {
+        global $data_machine_container;
+        
+        // Get remote locations service from container or create if needed
+        $this->db_locations = $data_machine_container['db_remote_locations'] ?? new RemoteLocations();
     }
 	/**
 	 * Handles publishing the AI output to a remote WordPress site via REST API.
@@ -429,7 +431,7 @@ class PublishRemote extends BaseOutputHandler {
 	 *
 	 * @return array Associative array of field definitions.
 	 */
-	public function get_settings_fields(array $current_config = []): array {
+	public static function get_settings_fields(array $current_config = []): array {
 		$locations_options = ['' => '-- Select Location --'];
 		$post_type_options = [ '' => '-- Select Location First --' ];
 		$category_options = [ '' => '-- Select Location First --', 'instruct_model' => '-- Instruct Model --' ];
@@ -440,28 +442,29 @@ class PublishRemote extends BaseOutputHandler {
 		$selected_category_id = $current_config['selected_remote_category_id'] ?? 'instruct_model';
 		$selected_tag_id = $current_config['selected_remote_tag_id'] ?? 'instruct_model';
 
-		// --- NEW: Retrieve site_info using injected db_locations ---
+		// --- Retrieve site_info using global container ---
 		$site_info = [];
 		$location_id = $current_config['location_id'] ?? null;
-		if ($location_id && $this->db_locations) { // Check if location_id is set and db_locations is injected
-			try {
-				$user_id = get_current_user_id(); // Need user context to get location
-				if ($user_id) {
-					$location = $this->db_locations->get_location($location_id, $user_id);
-					if ($location && !empty($location->synced_site_info)) {
-						$decoded_info = json_decode($location->synced_site_info, true);
-						// Verify decoding was successful and it's an array
-						if (is_array($decoded_info)) {
-							$site_info = $decoded_info;
-						} else {
-							$this->logger->warning('Failed to decode synced_site_info for location.', ['location_id' => $location_id, 'synced_info' => $location->synced_site_info]);
+		if ($location_id) {
+			global $data_machine_container;
+			$db_locations = $data_machine_container['db_remote_locations'] ?? null;
+			
+			if ($db_locations) {
+				try {
+					$user_id = get_current_user_id(); // Need user context to get location
+					if ($user_id) {
+						$location = $db_locations->get_location($location_id, $user_id);
+						if ($location && !empty($location->synced_site_info)) {
+							$decoded_info = json_decode($location->synced_site_info, true);
+							// Verify decoding was successful and it's an array
+							if (is_array($decoded_info)) {
+								$site_info = $decoded_info;
+							}
 						}
 					}
-				} else {
-					$this->logger->warning('Cannot retrieve site_info in get_settings_fields without user context.', ['location_id' => $location_id]);
+				} catch (\Exception $e) {
+					// Silently handle errors in static context
 				}
-			} catch (\Exception $e) {
-				$this->logger->error('Error retrieving location or site_info in get_settings_fields.', ['location_id' => $location_id, 'exception' => $e]);
 			}
 		}
 		// --- End site_info retrieval ---

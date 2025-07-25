@@ -30,13 +30,11 @@ class Threads extends BaseOutputHandler {
 
     /**
 	 * Constructor.
-	 *
-	 * @param HttpService $http_service HTTP service for API calls.
-	 * @param Logger|null $logger Optional Logger instance.
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(HttpService $http_service, ?Logger $logger = null) {
-		parent::__construct($logger);
-		$this->http_service = $http_service;
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 	}
 
     /**
@@ -303,7 +301,7 @@ class Threads extends BaseOutputHandler {
 	 * @param array $current_config Current configuration values for this handler (optional).
 	 * @return array An associative array defining the settings fields.
 	 */
-	public function get_settings_fields(array $current_config = []): array {
+	public static function get_settings_fields(array $current_config = []): array {
 		// Authentication is handled separately on the API Keys page.
 		return [
 			'include_images' => [

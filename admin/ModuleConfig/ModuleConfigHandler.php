@@ -51,10 +51,6 @@ class ModuleConfigHandler {
      * Initialize hooks for module handlers.
      */
     public function init_hooks() {
-        // Keep existing hooks if needed
-        // add_action('admin_post_dm_module_selection_update', array($this, 'handle_module_selection_update'));
-        // add_action('admin_post_dm_create_module', array($this, 'handle_new_module_creation'));
-
         // Add hook for handling the main module config save action
         add_action('admin_post_dm_save_module_config', array($this, 'handle_save_request'));
     }
@@ -117,13 +113,6 @@ class ModuleConfigHandler {
         $submitted_ds_config_all = $_POST['data_source_config'] ?? [];
         $submitted_output_config_all = $_POST['output_config'] ?? [];
 
-        // Log processed data for debugging
-        //error_log( 'DM Module Config: Processed data - ' .
-            //"Module ID: {$submitted_module_id}, " .
-            //"Project ID: {$project_id}, " .
-            //"Data Source: {$data_source_type_slug}, " .
-            //"Output: {$output_type_slug}, " .
-            //"Module Name: '{$module_name}'" );
 
         $this->logger->info('[Module Config Save] Starting save process via admin_post.', [
             'submitted_module_id' => $submitted_module_id,
@@ -304,21 +293,10 @@ class ModuleConfigHandler {
             // Now compare the PHP arrays (new $final_clean_... config is already nested)
             // Use wp_json_encode for a canonical comparison that ignores key order issues etc.
             
-            // DEBUG: Log the actual values being compared
-            //error_log('DM DEBUG - Data Source Config Comparison:');
-            //error_log('NEW (final_clean_ds_config): ' . wp_json_encode($final_clean_ds_config));
-            //error_log('EXISTING (existing_ds_config_for_comparison): ' . wp_json_encode($existing_ds_config_for_comparison));
-            //error_log('DS Config JSON comparison result: ' . (wp_json_encode($final_clean_ds_config) !== wp_json_encode($existing_ds_config_for_comparison) ? 'DIFFERENT' : 'SAME'));
-            
             if (wp_json_encode($final_clean_ds_config) !== wp_json_encode($existing_ds_config_for_comparison)) {
                 $update_data['data_source_config'] = $final_clean_ds_config; // Save the NEWLY sanitized (and nested) config
                 $this->logger->debug('[Module Config Save] Detected change in data_source_config.');
             }
-
-            //error_log('DM DEBUG - Output Config Comparison:');
-            //error_log('NEW (final_clean_output_config): ' . wp_json_encode($final_clean_output_config));
-            //error_log('EXISTING (existing_output_config_for_comparison): ' . wp_json_encode($existing_output_config_for_comparison));
-            //error_log('Output Config JSON comparison result: ' . (wp_json_encode($final_clean_output_config) !== wp_json_encode($existing_output_config_for_comparison) ? 'DIFFERENT' : 'SAME'));
 
             if (wp_json_encode($final_clean_output_config) !== wp_json_encode($existing_output_config_for_comparison)) {
                 $update_data['output_config'] = $final_clean_output_config; // Save the NEWLY sanitized (and nested) config
@@ -398,7 +376,6 @@ class ModuleConfigHandler {
         $log_prefix = '[Module Config Save]';
 
         if (isset($submitted_config_all[$handler_type_slug])) {
-            //error_log("DM Sanitize Debug: Processing {$config_type} handler '{$handler_type_slug}'");
             if ($config_type === 'input') {
                 $handler_class = Constants::get_input_handler_class($handler_type_slug);
             } elseif ($config_type === 'output') {
@@ -407,19 +384,15 @@ class ModuleConfigHandler {
                 $this->logger->error("{$log_prefix} Invalid config type '{$config_type}' provided.", ['slug' => $handler_type_slug]);
                 return [ $handler_type_slug => [] ];
             }
-            //error_log("DM Sanitize Debug: Handler class for '{$handler_type_slug}': " . ($handler_class ? $handler_class : 'NULL'));
 
             if ($handler_class) {
                 try {
-                    //error_log("DM Sanitize Debug: Creating handler instance for '{$handler_type_slug}' using unified factory method");
                     // Use the unified factory method: create_handler($handler_type, $handler_slug)
                     $handler_instance = $this->handler_factory->create_handler($config_type, $handler_type_slug);
 
                     if (method_exists($handler_instance, 'sanitize_settings')) {
                         $current_handler_submitted_config = $submitted_config_all[$handler_type_slug] ?? [];
-                        //error_log("DM Sanitize Debug: About to call sanitize_settings on '{$handler_type_slug}' with data: " . print_r($current_handler_submitted_config, true));
                         $sanitized_config_selected = $handler_instance->sanitize_settings($current_handler_submitted_config);
-                        //error_log("DM Sanitize Debug: Result from sanitize_settings on '{$handler_type_slug}': " . print_r($sanitized_config_selected, true));
                         $this->logger->debug("{$log_prefix} Sanitized {$config_type} config.", ['slug' => $handler_type_slug]);
                     } else {
                         $this->logger->warning("{$log_prefix} {$config_type} handler missing sanitize_settings method.", ['slug' => $handler_type_slug, 'handler_class' => $handler_class]);

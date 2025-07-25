@@ -1,18 +1,16 @@
 <?php
 /**
- * Centralized prompt builder for AI model interactions.
+ * Simplified prompt builder for AI model interactions.
  * 
- * Consolidates all prompt construction logic from across the codebase into a single,
- * maintainable class. Replaces scattered prompt modifications in multiple files.
+ * Lightweight interface that delegates all prompt construction to the AI HTTP Client library.
+ * Uses library's modular system with Data Machine specific sections and filters.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/helpers
+ * @subpackage Data_Machine/includes/engine/filters
  * @since      NEXT_VERSION
  */
 
 namespace DataMachine\Engine\Filters;
-
-use DataMachine\Database\Projects;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -26,24 +24,15 @@ if (!class_exists('AI_HTTP_Prompt_Manager')) {
 class PromptBuilder {
 
     /**
-     * Database handler for projects.
-     * @var Projects
-     */
-    private $db_projects;
-
-    /**
-     * Plugin context for AI HTTP Client integration.
-     * @var string
-     */
-    private $plugin_context = 'data-machine';
-
-    /**
      * Constructor.
-     *
-     * @param Projects $db_projects Instance of the project database handler.
+     * 
+     * Validates that the AI HTTP Client library is loaded.
      */
-    public function __construct(Projects $db_projects) {
-        $this->db_projects = $db_projects;
+    public function __construct() {
+        // Validate library is loaded
+        if (!class_exists('AI_HTTP_Prompt_Manager')) {
+            throw new \Exception('AI HTTP Client library is required for PromptBuilder');
+        }
     }
 
     /**
@@ -54,51 +43,15 @@ class PromptBuilder {
      * @return string The complete system prompt.
      */
     public function build_system_prompt(int $project_id, int $user_id): string {
-        $project_prompt_base = '';
-
-        if ($project_id > 0 && $this->db_projects && method_exists($this->db_projects, 'get_project')) {
-            $project = $this->db_projects->get_project($project_id, $user_id);
-            if ($project && !empty($project->project_prompt)) {
-                $project_prompt_base = $project->project_prompt;
-            }
-        }
-
-        // Build context data for the library
-        $context = [
-            'project_id' => $project_id,
-            'user_id' => $user_id,
-            'current_datetime' => wp_date('F j, Y, g:i a T'),
-            'current_date' => wp_date('F j, Y')
-        ];
-
-        // Create time context variables for replacement
-        $variables = [
-            '{current_datetime}' => $context['current_datetime'],
-            '{current_date}' => $context['current_date']
-        ];
-
-        // Build base time directive template
-        $date_instruction = <<<PROMPT
---- MANDATORY TIME CONTEXT ---
-CURRENT DATE & TIME: {current_datetime}
-RULE: You MUST treat {current_date} as the definitive 'today' for determining past/present/future tense.
-ACTION: Frame all events relative to {current_date}. Use past tense for completed events. Use present/future tense appropriately ONLY for events happening on or after {current_date}.
-CONSTRAINT: DO NOT discuss events completed before {current_date} as if they are still upcoming.
-KNOWLEDGE CUTOFF: Your internal knowledge cutoff is irrelevant; operate solely based on this date and provided context.
---- END TIME CONTEXT ---
-PROMPT;
-
-        // Use library utilities to build the system prompt
-        $base_prompt = AI_HTTP_Prompt_Manager::replace_variables($date_instruction, $variables);
-        
-        if (!empty($project_prompt_base)) {
-            $base_prompt .= "\n\n" . $project_prompt_base;
-        }
-
-        // Use library's system prompt builder with context injection
-        $enhanced_prompt = AI_HTTP_Prompt_Manager::build_system_prompt($base_prompt, $context);
-        
-        return $enhanced_prompt;
+        // Use library's modular system prompt builder with Data Machine sections
+        return AI_HTTP_Prompt_Manager::build_modular_system_prompt([
+            'sections' => ['datetime', 'project_context'],
+            'context' => [
+                'project_id' => $project_id,
+                'user_id' => $user_id
+            ],
+            'plugin_context' => 'data-machine'
+        ]);
     }
 
     /**
@@ -109,26 +62,23 @@ PROMPT;
      * @return string The enhanced process data prompt.
      */
     public function build_process_data_prompt(string $base_prompt, array $input_data_packet): string {
-        // Build context data for the library
+        // Determine if image is present
         $file_info = $input_data_packet['file_info'] ?? [];
         $has_image = !empty($file_info['url']) || (!empty($file_info['persistent_path']) && $this->is_image_file($file_info['persistent_path']));
         
-        $context = [
-            'has_image' => $has_image,
-            'file_info' => $file_info,
-            'input_data' => $input_data_packet
-        ];
-
-        // Use library's context injection for image analysis
-        $enhanced_prompt = AI_HTTP_Prompt_Manager::inject_context($base_prompt, $context);
+        // Use library's modular system with image analysis section if needed
+        $sections = $has_image ? ['image_analysis'] : [];
         
-        // Add image-specific instruction if an image is present using library's modular approach
-        if ($has_image) {
-            $image_directive = "IMPORTANT INSTRUCTION: An image has been provided. Analyze the visual content of the image carefully. Prioritize information directly observed in the image, especially for identifying people, objects, or specific visual details, over potentially conflicting information in the text below.";
-            $enhanced_prompt = $image_directive . "\n\n---\n\n" . $enhanced_prompt;
-        }
-
-        return $enhanced_prompt;
+        return AI_HTTP_Prompt_Manager::build_modular_system_prompt([
+            'base_prompt' => $base_prompt,
+            'sections' => $sections,
+            'context' => [
+                'has_image' => $has_image,
+                'file_info' => $file_info,
+                'input_data' => $input_data_packet
+            ],
+            'plugin_context' => 'data-machine'
+        ]);
     }
 
     /**
@@ -138,28 +88,16 @@ PROMPT;
      * @return string The enhanced fact check prompt.
      */
     public function build_fact_check_prompt(string $base_prompt): string {
-        $fact_check_directive = <<<PROMPT
-FACT-CHECKING DIRECTIVE:
-- When fact-checking, treat the user-provided content and post content as the primary source of truth unless you find a direct, credible, and more recent source that clearly disproves it.
-- Do not hedge, speculate, or state that information is "not officially announced" or "unconfirmed" unless you find a direct, credible source explicitly stating so.
-- If the user-provided content is a news announcement, event, update, or other factual statement, and you do not find a credible contradiction, you must treat it as accurate and confirmed.
-- If in doubt, defer to the user-provided content and do not introduce uncertainty.
-- Always cite any source that directly contradicts or disproves the user-provided content.
-PROMPT;
-
-        // Build context for fact-checking
-        $context = [
-            'fact_check_mode' => true,
-            'directive_type' => 'fact_checking'
-        ];
-
-        // Combine directive with base prompt
-        $combined_prompt = $fact_check_directive . "\n\n" . $base_prompt;
-        
-        // Use library's context injection for extensibility
-        $enhanced_prompt = AI_HTTP_Prompt_Manager::inject_context($combined_prompt, $context);
-        
-        return $enhanced_prompt;
+        // Use library's modular system with fact-checking directive section
+        return AI_HTTP_Prompt_Manager::build_modular_system_prompt([
+            'base_prompt' => $base_prompt,
+            'sections' => ['fact_check_directive'],
+            'context' => [
+                'fact_check_mode' => true,
+                'directive_type' => 'fact_checking'
+            ],
+            'plugin_context' => 'data-machine'
+        ]);
     }
 
     /**
@@ -174,33 +112,89 @@ PROMPT;
         $output_type = $module_job_config['output_type'] ?? '';
         $output_config = $module_job_config['output_config'] ?? [];
 
-        // Build format configuration for the library
-        $format_config = [
-            'output_type' => $output_type,
-            'output_config' => $output_config,
-            'input_data' => $input_data_packet
-        ];
+        // Use library's modular system with output directives section
+        return AI_HTTP_Prompt_Manager::build_modular_system_prompt([
+            'base_prompt' => $base_prompt,
+            'sections' => ['output_directives'],
+            'context' => [
+                'output_type' => $output_type,
+                'output_config' => $output_config,
+                'input_data' => $input_data_packet
+            ],
+            'plugin_context' => 'data-machine'
+        ]);
+    }
 
-        // Build directive block using existing logic
-        $directive_block = $this->build_output_directive_block($output_type, $output_config);
+
+    /**
+     * Build the complete user message for finalization with all context.
+     *
+     * @param string $enhanced_prompt The enhanced finalize prompt.
+     * @param string $initial_output The initial processing output.
+     * @param string $fact_check_results The fact check results.
+     * @param array  $module_job_config The module job configuration.
+     * @param array  $input_metadata The input metadata.
+     * @return string The complete user message.
+     */
+    public function build_finalize_user_message(string $enhanced_prompt, string $initial_output, string $fact_check_results, array $module_job_config, array $input_metadata = []): string {
+        // Use library's complete prompt builder with all enhancements and content sections
+        return AI_HTTP_Prompt_Manager::build_complete_prompt([
+            'base_prompt' => $enhanced_prompt,
+            'variables' => [
+                '{initial_response}' => $initial_output,
+                '{fact_check_results}' => $fact_check_results
+            ],
+            'sections' => ['content_sections'],
+            'context' => [
+                'initial_output' => $initial_output,
+                'fact_check_results' => $fact_check_results,
+                'module_config' => $module_job_config,
+                'input_metadata' => $input_metadata,
+                'output_type' => $module_job_config['output_type'] ?? null
+            ],
+            'plugin_context' => 'data-machine'
+        ]);
+    }
+    
+    /**
+     * Build content sections for finalize user message.
+     * Provides structured content including initial response and fact-check results.
+     *
+     * @param string $initial_output The initial processing output.
+     * @param string $fact_check_results The fact check results.
+     * @param array  $module_job_config The module job configuration.
+     * @return string The content sections.
+     */
+    public function build_content_sections(string $initial_output, string $fact_check_results, array $module_job_config): string {
+        $sections = [];
         
-        // Combine directive with base prompt
-        $combined_prompt = $directive_block . "\n\n" . $base_prompt;
-        
-        // Use library's response formatting utilities
-        $enhanced_prompt = AI_HTTP_Prompt_Manager::add_response_formatting($combined_prompt, $format_config);
-        
-        return $enhanced_prompt;
+        if (!empty($initial_output)) {
+            $sections[] = "\n\nInitial Response:\n" . $initial_output;
+        }
+
+        if (!empty($fact_check_results)) {
+            $sections[] = "\n\nFact Check Results:\n" . $fact_check_results;
+        }
+
+        // Add POST_TITLE instruction for publishing outputs
+        $output_type = $module_job_config['output_type'] ?? null;
+        if ($output_type === 'publish_local' || $output_type === 'publish_remote') {
+            $sections[] = "\n\nIMPORTANT: Please ensure the response starts *immediately* with a suitable post title formatted exactly like this (with no preceding text or blank lines):\nPOST_TITLE: [Your Suggested Title Here]\n\nFollow this title line immediately with the rest of your output. Do not print the post title again in the response.";
+            $sections[] = "\n\nReminder: Do not use formatting markup for the initial directive lines (POST_TITLE, CATEGORY, TAGS).";
+        }
+
+        return implode('', $sections);
     }
 
     /**
-     * Build output directive block for finalization.
-     *
-     * @param string $output_type The output type.
-     * @param array  $output_config The output configuration.
-     * @return string The directive block.
+     * Build output-specific directive blocks for Data Machine.
+     * Centralized management of all output formatting instructions.
+     * 
+     * @param string $output_type The output type
+     * @param array $output_config The output configuration
+     * @return string The directive block
      */
-    private function build_output_directive_block(string $output_type, array $output_config): string {
+    public function build_output_directives(string $output_type, array $output_config): string {
         $directive_block = "\n--- RESPONSE FORMATTING AND INSTRUCTIONS ---";
         $directive_block .= "\n1.  **Strict Adherence:** Follow all instructions below precisely.";
 
@@ -276,58 +270,144 @@ PROMPT;
     }
 
     /**
-     * Build the complete user message for finalization with all context.
-     *
-     * @param string $enhanced_prompt The enhanced finalize prompt.
-     * @param string $initial_output The initial processing output.
-     * @param string $fact_check_results The fact check results.
-     * @param array  $module_job_config The module job configuration.
-     * @param array  $input_metadata The input metadata.
-     * @return string The complete user message.
+     * Build datetime section for system prompts.
+     * Provides current date/time context with strict temporal framing rules.
+     * 
+     * @return string The datetime section content
      */
-    public function build_finalize_user_message(string $enhanced_prompt, string $initial_output, string $fact_check_results, array $module_job_config, array $input_metadata = []): string {
-        // Build context for the library
-        $context = [
-            'initial_output' => $initial_output,
-            'fact_check_results' => $fact_check_results,
-            'module_config' => $module_job_config,
-            'input_metadata' => $input_metadata
-        ];
-
-        // Create variables for replacement
-        $variables = [];
-        if (!empty($initial_output)) {
-            $variables['{initial_response}'] = $initial_output;
-        }
-        if (!empty($fact_check_results)) {
-            $variables['{fact_check_results}'] = $fact_check_results;
-        }
-
-        // Use library's user prompt builder
-        $user_message = AI_HTTP_Prompt_Manager::build_user_prompt($enhanced_prompt, $context);
+    public function build_datetime_section(): string {
+        $current_datetime = wp_date('F j, Y, g:i a T');
+        $current_date = wp_date('F j, Y');
         
-        // Apply variable replacement if we have any
-        if (!empty($variables)) {
-            $user_message = AI_HTTP_Prompt_Manager::replace_variables($user_message, $variables);
-        }
+        return <<<PROMPT
+--- MANDATORY TIME CONTEXT ---
+CURRENT DATE & TIME: {$current_datetime}
+RULE: You MUST treat {$current_date} as the definitive 'today' for determining past/present/future tense.
+ACTION: Frame all events relative to {$current_date}. Use past tense for completed events. Use present/future tense appropriately ONLY for events happening on or after {$current_date}.
+CONSTRAINT: DO NOT discuss events completed before {$current_date} as if they are still upcoming.
+KNOWLEDGE CUTOFF: Your internal knowledge cutoff is irrelevant; operate solely based on this date and provided context.
+--- END TIME CONTEXT ---
+PROMPT;
+    }
 
-        // Add content sections
-        if (!empty($initial_output)) {
-            $user_message .= "\n\nInitial Response:\n" . $initial_output;
+    /**
+     * Build project context section for system prompts.
+     * Includes project-specific instructions and context.
+     * 
+     * @param int $project_id The project ID
+     * @param int $user_id The user ID
+     * @return string The project context content
+     */
+    public function build_project_context_section(int $project_id, int $user_id): string {
+        global $data_machine_container;
+        $db_projects = $data_machine_container['db_projects'] ?? null;
+        
+        if ($project_id > 0 && $db_projects && method_exists($db_projects, 'get_project')) {
+            $project = $db_projects->get_project($project_id, $user_id);
+            if ($project && !empty($project->project_prompt)) {
+                return $project->project_prompt;
+            }
         }
+        
+        return '';
+    }
 
-        if (!empty($fact_check_results)) {
-            $user_message .= "\n\nFact Check Results:\n" . $fact_check_results;
+    /**
+     * Build image analysis directive section.
+     * Provides instructions for processing visual content.
+     * 
+     * @param bool $has_image Whether an image is present
+     * @return string The image analysis directive content
+     */
+    public function build_image_analysis_section(bool $has_image): string {
+        if ($has_image) {
+            return "IMPORTANT INSTRUCTION: An image has been provided. Analyze the visual content of the image carefully. Prioritize information directly observed in the image, especially for identifying people, objects, or specific visual details, over potentially conflicting information in the text below.";
         }
+        
+        return '';
+    }
 
-        // Add POST_TITLE instruction for publishing outputs
-        $output_type = $module_job_config['output_type'] ?? null;
-        if ($output_type === 'publish_local' || $output_type === 'publish_remote') {
-            $user_message .= "\n\nIMPORTANT: Please ensure the response starts *immediately* with a suitable post title formatted exactly like this (with no preceding text or blank lines):\nPOST_TITLE: [Your Suggested Title Here]\n\nFollow this title line immediately with the rest of your output. Do not print the post title again in the response.";
-            $user_message .= "\n\nReminder: Do not use formatting markup for the initial directive lines (POST_TITLE, CATEGORY, TAGS).";
-        }
+    /**
+     * Build fact-checking directive section.
+     * Provides robust fact-checking instructions and guidelines.
+     * 
+     * @return string The fact-checking directive content
+     */
+    public function build_fact_check_directive_section(): string {
+        return <<<PROMPT
+FACT-CHECKING DIRECTIVE:
+- When fact-checking, treat the user-provided content and post content as the primary source of truth unless you find a direct, credible, and more recent source that clearly disproves it.
+- Do not hedge, speculate, or state that information is "not officially announced" or "unconfirmed" unless you find a direct, credible source explicitly stating so.
+- If the user-provided content is a news announcement, event, update, or other factual statement, and you do not find a credible contradiction, you must treat it as accurate and confirmed.
+- If in doubt, defer to the user-provided content and do not introduce uncertainty.
+- Always cite any source that directly contradicts or disproves the user-provided content.
+PROMPT;
+    }
 
-        return $user_message;
+    /**
+     * Register all Data Machine prompt sections with the AI HTTP Client library.
+     * Centralizes all section registration for clean architecture.
+     */
+    public function register_all_sections(): void {
+        // DateTime section for system prompts
+        add_filter('ai_http_client_section_datetime', function($content, $context, $plugin_context) {
+            if ($plugin_context !== 'data-machine') {
+                return $content;
+            }
+            return $this->build_datetime_section();
+        }, 10, 3);
+        
+        // Project context section for system prompts
+        add_filter('ai_http_client_section_project_context', function($content, $context, $plugin_context) {
+            if ($plugin_context !== 'data-machine') {
+                return $content;
+            }
+            
+            $project_id = $context['project_id'] ?? 0;
+            $user_id = $context['user_id'] ?? 0;
+            return $this->build_project_context_section($project_id, $user_id);
+        }, 10, 3);
+        
+        // Image analysis directive section
+        add_filter('ai_http_client_section_image_analysis', function($content, $context, $plugin_context) {
+            if ($plugin_context !== 'data-machine') {
+                return $content;
+            }
+            
+            $has_image = $context['has_image'] ?? false;
+            return $this->build_image_analysis_section($has_image);
+        }, 10, 3);
+        
+        // Fact-checking directive section
+        add_filter('ai_http_client_section_fact_check_directive', function($content, $context, $plugin_context) {
+            if ($plugin_context !== 'data-machine') {
+                return $content;
+            }
+            return $this->build_fact_check_directive_section();
+        }, 10, 3);
+        
+        // Output formatting directives section
+        add_filter('ai_http_client_section_output_directives', function($content, $context, $plugin_context) {
+            if ($plugin_context !== 'data-machine') {
+                return $content;
+            }
+            
+            $output_type = $context['output_type'] ?? '';
+            $output_config = $context['output_config'] ?? [];
+            return $this->build_output_directives($output_type, $output_config);
+        }, 10, 3);
+        
+        // Content sections for finalize prompts
+        add_filter('ai_http_client_section_content_sections', function($content, $context, $plugin_context) {
+            if ($plugin_context !== 'data-machine') {
+                return $content;
+            }
+            
+            $initial_output = $context['initial_output'] ?? '';
+            $fact_check_results = $context['fact_check_results'] ?? '';
+            $module_config = $context['module_config'] ?? [];
+            return $this->build_content_sections($initial_output, $fact_check_results, $module_config);
+        }, 10, 3);
     }
 
     /**
@@ -342,32 +422,4 @@ PROMPT;
         return in_array($extension, $image_extensions);
     }
 
-    /**
-     * Determine the appropriate source name from metadata.
-     *
-     * @param array  $input_metadata The input metadata.
-     * @param string $source_url The source URL.
-     * @return string The source name.
-     */
-    private function determine_source_name(array $input_metadata, string $source_url): string {
-        if (!empty($input_metadata['subreddit'])) {
-            return 'r/' . esc_html($input_metadata['subreddit']);
-        } elseif (!empty($input_metadata['feed_url'])) {
-            $parsed_url = wp_parse_url($input_metadata['feed_url']);
-            if (!empty($parsed_url['host'])) {
-                return esc_html($parsed_url['host']);
-            } else {
-                return 'Original Feed';
-            }
-        } elseif (!empty($input_metadata['original_title'])) {
-            return esc_html($input_metadata['original_title']);
-        } else {
-            $parsed_url = wp_parse_url($source_url);
-            if (!empty($parsed_url['host'])) {
-                return esc_html($parsed_url['host']);
-            } else {
-                return 'Original Source';
-            }
-        }
-    }
 } 

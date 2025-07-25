@@ -25,13 +25,24 @@ class Twitter extends BaseOutputHandler {
 
     /**
 	 * Constructor.
-	 *
-     * @param \DataMachine\Admin\OAuth\Twitter $oauth_twitter Twitter OAuth service.
-     * @param Logger|null $logger Optional Logger instance.
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(\DataMachine\Admin\OAuth\Twitter $oauth_twitter, ?Logger $logger = null) {
-        parent::__construct($logger);
-        $this->oauth_twitter = $oauth_twitter;
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
+		
+		// Initialize handler-specific dependencies
+		$this->init_handler_dependencies();
+	}
+	
+	/**
+	 * Initialize handler-specific dependencies via service locator.
+	 */
+	private function init_handler_dependencies() {
+		global $data_machine_container;
+		
+		// Get OAuth Twitter service from container or create if needed
+		$this->oauth_twitter = $data_machine_container['oauth_twitter'] ?? new \DataMachine\Admin\OAuth\Twitter($this->logger);
 	}
 
     /**
@@ -325,7 +336,7 @@ class Twitter extends BaseOutputHandler {
      * @param array $current_config Current configuration values for this handler (optional).
      * @return array An associative array defining the settings fields.
 	 */
-	public function get_settings_fields(array $current_config = []): array {
+	public static function get_settings_fields(array $current_config = []): array {
         // Note: Actual authentication is handled on the API Keys page.
         return [
             'twitter_char_limit' => [

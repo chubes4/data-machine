@@ -22,29 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Rss extends BaseInputHandler {
 
-    /** @var HttpService */
-    private $http_service;
-
 	/**
 	 * Constructor.
-	 * Calls parent constructor with common dependencies.
-	 *
-	 * @param Modules $db_modules
-	 * @param Projects $db_projects
-	 * @param ProcessedItemsManager $processed_items_manager
-	 * @param HttpService $http_service
-	 * @param Logger|null $logger
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(
-		Modules $db_modules,
-		Projects $db_projects,
-		ProcessedItemsManager $processed_items_manager,
-		HttpService $http_service,
-		?Logger $logger = null
-	) {
-        // Call parent constructor with common dependencies
-        parent::__construct($db_modules, $db_projects, $processed_items_manager, $logger);
-        $this->http_service = $http_service;
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 	}
 
 	/**
@@ -376,6 +360,7 @@ class Rss extends BaseInputHandler {
 		
 		return $feed;
 	}
+
 
 	/**
 	 * Get the user-friendly label for this handler.

@@ -181,22 +181,34 @@ class ModuleConfigAjax {
             wp_send_json_error( ['message' => __('Missing or invalid handler type or slug.', 'data-machine')], 400 );
         }
 
-        // Try hook-based template loading first, fall back to file system
-        $template_loaded = false;
-        $template_html = '';
-        
-        // Allow external handlers to provide templates via hooks
-        ob_start();
-        $template_loaded = apply_filters('dm_load_handler_template', false, $handler_type, $handler_slug, $current_config);
-        if (!$template_loaded) {
-            // Fall back to core template files
-            $template_path = DATA_MACHINE_PATH . "admin/ModuleConfig/handler-templates/{$handler_type}/{$handler_slug}.php";
-            if (file_exists($template_path)) {
-                $template_loaded = true;
+        // Get current config for the module if needed
+        $current_config = [];
+        if ($module_id > 0) {
+            $module = $this->db_modules->get_module($module_id);
+            if ($module) {
+                $raw_config_string = ($handler_type === 'output') ? $module->output_config : $module->data_source_config;
+                $decoded_config = !empty($raw_config_string) ? json_decode(wp_unslash($raw_config_string), true) : [];
+                // Extract the config specific to this handler slug
+                if (is_array($decoded_config) && isset($decoded_config[$handler_slug])) {
+                    $current_config = $decoded_config[$handler_slug];
+                }
             }
         }
-
-        if ($template_loaded) {
+        
+        // Get field definitions via filter system - this is the unified approach
+        $fields = apply_filters('dm_handler_settings_fields', [], $handler_type, $handler_slug, $current_config);
+        
+        // Start output buffering for form content
+        ob_start();
+        
+        if (!empty($fields)) {
+            // Render form programmatically from field definitions
+            echo \DataMachine\Admin\ModuleConfig\FormRenderer::render_form_fields($fields, $current_config, $handler_slug);
+        } else {
+            echo '<p>' . __('No configuration options available for this handler.', 'data-machine') . '</p>';
+        }
+        // Always proceed with data preparation for remote handlers and form output
+        {
              // --- Initialize variables --- 
              $site_info                = null; 
              $saved_config             = null; 
@@ -324,47 +336,23 @@ class ModuleConfigAjax {
              } // End if (in_array($handler_slug, ...))
              // --- END Fetching data for remote handlers ---
 
-            // Make data available to the template via GLOBALS
-            $GLOBALS['dm_template_saved_config']             = $saved_config; // Pass saved config
-            $GLOBALS['dm_template_all_locations']            = $all_locations; // Pass all locations for dropdown
-            $GLOBALS['dm_template_selected_location_id']     = $location_id;  // Pass selected location ID
-            $GLOBALS['dm_template_enabled_taxonomies']     = $enabled_taxonomies_array; // Pass enabled slugs for conditional rows
-            // Pass the FILTERED options arrays
-            $GLOBALS['dm_template_filtered_post_type_options'] = $filtered_post_type_options;
-            $GLOBALS['dm_template_filtered_category_options']  = $filtered_category_options;
-            $GLOBALS['dm_template_filtered_tag_options']       = $filtered_tag_options;
-            $GLOBALS['dm_template_filtered_custom_taxonomies'] = $filtered_custom_taxonomies;
+            // Prepare template data in a secure, encapsulated way
+            $template_data = [
+                'saved_config' => $saved_config,
+                'all_locations' => $all_locations,
+                'selected_location_id' => $location_id,
+                'enabled_taxonomies' => $enabled_taxonomies_array,
+                'filtered_post_type_options' => $filtered_post_type_options,
+                'filtered_category_options' => $filtered_category_options,
+                'filtered_tag_options' => $filtered_tag_options,
+                'filtered_custom_taxonomies' => $filtered_custom_taxonomies
+            ];
 
-            // Template already loaded via hook or include core template
-            if (isset($template_path) && file_exists($template_path)) {
-                include $template_path;
-            }
             $template_html = ob_get_clean();
-
-            // --- Clean up globals after include --- 
-            unset(
-                $GLOBALS['dm_template_saved_config'], 
-                $GLOBALS['dm_template_all_locations'], 
-                $GLOBALS['dm_template_selected_location_id'],
-                $GLOBALS['dm_template_enabled_taxonomies'], // Keep this unset? Yes.
-                $GLOBALS['dm_template_filtered_post_type_options'],
-                $GLOBALS['dm_template_filtered_category_options'],
-                $GLOBALS['dm_template_filtered_tag_options'],
-                $GLOBALS['dm_template_filtered_custom_taxonomies']
-            );
-            // --- End cleanup ---
 
             // Send back the rendered HTML
             $response_data = ['html' => $template_html];
             wp_send_json_success($response_data);
-
-        } else {
-            $this->logger?->error('Handler template file not found.', [
-                'template_path' => $template_path,
-                'handler_type' => $handler_type,
-                'handler_slug' => $handler_slug,
-            ]);
-            wp_send_json_error( ['message' => __('Template not found.', 'data-machine'), 'template' => basename($template_path)], 404 );
         }
         // wp_send_json_error() already terminates execution
     }

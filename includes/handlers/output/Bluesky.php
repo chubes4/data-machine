@@ -24,24 +24,26 @@ class Bluesky extends BaseOutputHandler {
     /** @var EncryptionHelper|null */
     private $encryption_helper;
 
-    /** @var HttpService */
-    private $http_service;
-
     /**
      * Constructor.
-     * Calls parent constructor and adds handler-specific dependencies.
-     *
-     * @param EncryptionHelper $encryption_helper Encryption helper instance.
-     * @param HttpService $http_service HTTP service for API calls.
-     * @param Logger|null $logger Optional Logger instance.
+     * Uses service locator pattern for dependency injection.
      */
-    public function __construct(EncryptionHelper $encryption_helper, HttpService $http_service, ?Logger $logger = null) {
-        // Call parent constructor with logger
-        parent::__construct($logger);
+    public function __construct() {
+        // Call parent constructor to initialize common dependencies via service locator
+        parent::__construct();
         
-        // Set handler-specific dependencies
-        $this->encryption_helper = $encryption_helper;
-        $this->http_service = $http_service;
+        // Initialize handler-specific dependencies
+        $this->init_handler_dependencies();
+    }
+    
+    /**
+     * Initialize handler-specific dependencies via service locator.
+     */
+    private function init_handler_dependencies() {
+        global $data_machine_container;
+        
+        // Get encryption helper from container or create if needed
+        $this->encryption_helper = $data_machine_container['encryption_helper'] ?? new \DataMachine\Helpers\EncryptionHelper();
     }
 
     /**
@@ -304,7 +306,7 @@ class Bluesky extends BaseOutputHandler {
      * @param array $current_config Current configuration values for this handler (optional).
      * @return array An associative array defining the settings fields.
      */
-    public function get_settings_fields(array $current_config = []): array {
+    public static function get_settings_fields(array $current_config = []): array {
         // Handle and Password are now fetched from User Meta during handle(), not stored in module config.
         // The settings here are for *behaviour*.
         return [

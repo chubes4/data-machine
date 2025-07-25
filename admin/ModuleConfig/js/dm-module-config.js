@@ -13,7 +13,6 @@ import AjaxHandler from './module-config-ajax.js';
 import DMState, { UI_STATES } from './module-config-state.js';
 import createStateController from './module-state-controller.js';
 import ProjectModuleSelector from './project-module-selector.js';
-import HandlerTemplateManager from './handler-template-manager.js';
 import createRemoteLocationManager from './dm-module-config-remote-locations.js';
 import { populateHandlerFields, safePopulateHandlerFields } from './dm-module-config-ui-helpers.js';
 
@@ -203,54 +202,97 @@ try {
 		}
 		// --- End AJAX Template Fetching ---
 
-		// --- Handler Template Management (Modularized) ---
-		const handlerManager = HandlerTemplateManager({
-			inputSelector: document.getElementById('data_source_type'),
-			outputSelector: document.getElementById('output_type'),
-			inputContainer: document.getElementById('data-source-settings-container'),
-			outputContainer: document.getElementById('output-settings-container'),
-			fetchHandlerTemplate,
-			attachTemplateEventListeners: window.dmRemoteLocationManager?.attachTemplateEventListeners,
-				onInputTemplateLoaded: function(handlerSlug, contentHtml, placeholderDiv, handlerType) {
+		// --- Handler Template Management - Simplified for Data-Driven Forms ---
+		// Handler template management now uses programmatic form generation via FormRenderer
+		// Legacy HandlerTemplateManager replaced with direct fetchHandlerTemplate calls
+		const handlerManager = {
+			async refreshInput(locationId = null) {
+				const inputDropdown = document.getElementById('data_source_type');
+				const inputContainer = document.getElementById('data-source-settings-container');
+				if (!inputDropdown || !inputContainer) return;
+				
+				const handlerSlug = inputDropdown.value;
+				if (!handlerSlug) return;
+				
+				const moduleId = DMState.getState().currentModuleId;
+				const template = await fetchHandlerTemplate('input', handlerSlug, moduleId, locationId);
+				if (template && template.html) {
+					inputContainer.innerHTML = `<div class="dm-input-settings" data-handler-slug="${handlerSlug}">${template.html}</div>`;
+					
+					// Populate fields if we have config data
 					const state = DMState.getState();
-					if (handlerType === 'input' && state.data_source_config && state.data_source_config[handlerSlug] && placeholderDiv) {
-						let requiredFields = [];
-						if (handlerSlug === 'airdrop_rest_api') {
-							requiredFields = [
-								'data_source_config[airdrop_rest_api][rest_category]',
-								'data_source_config[airdrop_rest_api][rest_tag]',
-								'data_source_config[airdrop_rest_api][rest_post_type]',
-								'data_source_config[airdrop_rest_api][location_id]'
-							];
-							// Add custom taxonomies using utility function
-							requiredFields.push(...buildCustomTaxonomyRequiredFields(state.data_source_config, handlerSlug, 'data_source_config'));
+					if (state.data_source_config && state.data_source_config[handlerSlug]) {
+						const containerElement = inputContainer.querySelector(`.dm-input-settings[data-handler-slug="${handlerSlug}"]`);
+						if (containerElement) {
+							let requiredFields = [];
+							if (handlerSlug === 'airdrop_rest_api') {
+								requiredFields = buildCustomTaxonomyRequiredFields(state.data_source_config, handlerSlug, 'data_source_config');
+							}
+							safePopulateHandlerFields(state.data_source_config[handlerSlug], 'input', handlerSlug, containerElement, requiredFields);
 						}
-						safePopulateHandlerFields(state.data_source_config[handlerSlug], 'input', handlerSlug, placeholderDiv, requiredFields);
-					} else if (state.data_source_config && state.data_source_config[handlerSlug] && placeholderDiv) {
-						safePopulateHandlerFields(state.data_source_config[handlerSlug], 'input', handlerSlug, placeholderDiv, []);
-					}
-				},
-				onOutputTemplateLoaded: function(handlerSlug, contentHtml, placeholderDiv, handlerType) {
-					const state = DMState.getState();
-					if (handlerType === 'output' && state.output_config && state.output_config[handlerSlug] && placeholderDiv) {
-						let requiredFields = [];
-						if (handlerSlug === 'publish_remote') {
-							requiredFields = [
-								'output_config[publish_remote][selected_remote_category_id]',
-								'output_config[publish_remote][selected_remote_tag_id]',
-								'output_config[publish_remote][selected_remote_post_type]',
-								'output_config[publish_remote][location_id]'
-							];
-							// Add custom taxonomies using utility function
-							requiredFields.push(...buildCustomTaxonomyRequiredFields(state.output_config, handlerSlug, 'output_config'));
-						}
-						safePopulateHandlerFields(state.output_config[handlerSlug], 'output', handlerSlug, placeholderDiv, requiredFields);
-					} else if (state.output_config && state.output_config[handlerSlug] && placeholderDiv) {
-						safePopulateHandlerFields(state.output_config[handlerSlug], 'output', handlerSlug, placeholderDiv, []);
 					}
 				}
-		}, DMState);
-		// --- End Handler Template Management ---
+			},
+			
+			async refreshOutput(locationId = null) {
+				const outputDropdown = document.getElementById('output_type');
+				const outputContainer = document.getElementById('output-settings-container');
+				if (!outputDropdown || !outputContainer) return;
+				
+				const handlerSlug = outputDropdown.value;
+				if (!handlerSlug) return;
+				
+				const moduleId = DMState.getState().currentModuleId;
+				const template = await fetchHandlerTemplate('output', handlerSlug, moduleId, locationId);
+				if (template && template.html) {
+					outputContainer.innerHTML = `<div class="dm-output-settings" data-handler-slug="${handlerSlug}">${template.html}</div>`;
+					
+					// Populate fields if we have config data
+					const state = DMState.getState();
+					if (state.output_config && state.output_config[handlerSlug]) {
+						const containerElement = outputContainer.querySelector(`.dm-output-settings[data-handler-slug="${handlerSlug}"]`);
+						if (containerElement) {
+							let requiredFields = [];
+							if (handlerSlug === 'publish_remote') {
+								requiredFields = buildCustomTaxonomyRequiredFields(state.output_config, handlerSlug, 'output_config');
+							}
+							safePopulateHandlerFields(state.output_config[handlerSlug], 'output', handlerSlug, containerElement, requiredFields);
+						}
+					}
+				}
+			},
+			
+			clearInputContainer() {
+				const inputContainer = document.getElementById('data-source-settings-container');
+				if (inputContainer) inputContainer.innerHTML = '';
+			},
+			
+			clearOutputContainer() {
+				const outputContainer = document.getElementById('output-settings-container');
+				if (outputContainer) outputContainer.innerHTML = '';
+			}
+		};
+		// --- End Simplified Handler Management ---
+
+		// --- Add Event Listeners for Handler Type Dropdowns ---
+		// Wire up input/output type dropdowns to trigger form loading
+		const inputDropdown = document.getElementById('data_source_type');
+		const outputDropdown = document.getElementById('output_type');
+		
+		if (inputDropdown) {
+			inputDropdown.addEventListener('change', function() {
+				dmLog('Input handler type changed to: ' + this.value);
+				handlerManager.refreshInput();
+			});
+		}
+		
+		if (outputDropdown) {
+			outputDropdown.addEventListener('change', function() {
+				dmLog('Output handler type changed to: ' + this.value);
+				handlerManager.refreshOutput();
+			});
+		}
+		// --- End Handler Dropdown Event Listeners ---
 
 		// Tab navigation is handled by dm-module-config-ui-helpers.js
 
@@ -355,7 +397,7 @@ try {
 				if (DOMCache.inputDropdown) DOMCache.inputDropdown.value = state.selectedDataSourceSlug;
 				if (DOMCache.outputDropdown) DOMCache.outputDropdown.value = state.selectedOutputSlug;
 
-				// Now, explicitly trigger template loading based on the set dropdown values
+				// Now, explicitly trigger form loading based on the set dropdown values
 				// Load templates in parallel to improve performance
 				if (window.dmDebugMode) {
 				}
@@ -366,7 +408,7 @@ try {
 				if (window.dmDebugMode) {
 				}
 
-				// Populate handler config fields AFTER templates are loaded
+				// Populate handler config fields AFTER forms are loaded
 				const inputContainerElement = document.querySelector(`#data-source-settings-container .dm-input-settings[data-handler-slug="${state.selectedDataSourceSlug}"]`);
 				const outputContainerElement = document.querySelector(`#output-settings-container .dm-output-settings[data-handler-slug="${state.selectedOutputSlug}"]`);
 
@@ -611,7 +653,7 @@ try {
 			})()
 		]).then(() => {
 			 
-			 // --- BEGIN: Populate fields after templates are fully loaded --- 
+			 // --- BEGIN: Populate fields after forms are fully loaded --- 
 			 const postFetchState = DMState.getState();
 
 			 // If a module was loaded initially by PHP, populate its fields now
@@ -652,7 +694,7 @@ try {
 				 }
 			 } else {
 			 }
-			 // --- END: Populate fields after template loading completion --- 
+			 // --- END: Populate fields after form loading completion --- 
 
 			 // Now proceed with module loading dispatch if needed (e.g., if PHP didn't select one)
 			 if (!currentState.currentModuleId || currentState.currentModuleId === '0' || currentState.currentModuleId === null ) {

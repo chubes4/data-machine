@@ -454,7 +454,7 @@ class ProcessingOrchestrator {
 			$enhanced_fact_check_prompt = $this->prompt_builder->build_fact_check_prompt( $fact_check_prompt );
 			$factcheck_result = $this->factcheck_api->fact_check_response( $system_prompt, $enhanced_fact_check_prompt, $initial_output );
 
-			if ( is_wp_error( $factcheck_result ) ) {
+			if ( isset( $factcheck_result['status'] ) && $factcheck_result['status'] === 'error' ) {
 				return false;
 			}
 
@@ -503,7 +503,7 @@ class ProcessingOrchestrator {
 				$input_data_packet['metadata'] ?? []
 			);
 
-			if ( is_wp_error( $finalize_result ) ) {
+			if ( isset( $finalize_result['status'] ) && $finalize_result['status'] === 'error' ) {
 				return false;
 			}
 

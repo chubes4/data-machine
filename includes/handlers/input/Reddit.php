@@ -27,34 +27,26 @@ class Reddit extends BaseInputHandler {
 	/** @var \DataMachine\Admin\OAuth\Reddit */
 	private $oauth_reddit;
 
-    /** @var HttpService */
-    private $http_service;
-
 	/**
 	 * Constructor.
-	 * Calls parent constructor and adds handler-specific dependencies.
-	 *
-	 * @param Modules $db_modules
-	 * @param Projects $db_projects
-	 * @param ProcessedItemsManager $processed_items_manager
-	 * @param \DataMachine\Admin\OAuth\Reddit $oauth_reddit Reddit OAuth handler.
-	 * @param HttpService $http_service
-	 * @param Logger|null $logger Optional logger.
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(
-		Modules $db_modules,
-		Projects $db_projects,
-		ProcessedItemsManager $processed_items_manager,
-		\DataMachine\Admin\OAuth\Reddit $oauth_reddit,
-		HttpService $http_service,
-		?Logger $logger = null
-	) {
-        // Call parent constructor with common dependencies
-        parent::__construct($db_modules, $db_projects, $processed_items_manager, $logger);
-        
-        // Set handler-specific dependencies
-		$this->oauth_reddit = $oauth_reddit;
-		$this->http_service = $http_service;
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
+		
+		// Initialize handler-specific dependencies
+		$this->init_handler_dependencies();
+	}
+	
+	/**
+	 * Initialize handler-specific dependencies via service locator.
+	 */
+	private function init_handler_dependencies() {
+		global $data_machine_container;
+		
+		// Get OAuth Reddit service from container or create if needed
+		$this->oauth_reddit = $data_machine_container['oauth_reddit'] ?? new OAuthReddit($this->logger);
 	}
 
 	/**

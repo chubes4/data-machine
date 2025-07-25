@@ -26,34 +26,26 @@ class AirdropRestApi extends BaseInputHandler {
 	/** @var RemoteLocations */
 	private $db_remote_locations;
 
-    /** @var HttpService */
-    private $http_service;
-
 	/**
 	 * Constructor.
-	 * Calls parent constructor and adds handler-specific dependencies.
-	 *
-	 * @param Modules $db_modules
-	 * @param Projects $db_projects
-	 * @param ProcessedItemsManager $processed_items_manager
-	 * @param RemoteLocations $db_remote_locations
-	 * @param HttpService $http_service
-	 * @param Logger|null $logger
+	 * Uses service locator pattern for dependency injection.
 	 */
-	public function __construct(
-		Modules $db_modules,
-		Projects $db_projects,
-		ProcessedItemsManager $processed_items_manager,
-		RemoteLocations $db_remote_locations,
-		HttpService $http_service,
-		?Logger $logger = null
-	) {
-		// Call parent constructor with common dependencies
-		parent::__construct($db_modules, $db_projects, $processed_items_manager, $logger);
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 		
-		// Set handler-specific dependencies
-		$this->db_remote_locations = $db_remote_locations;
-		$this->http_service = $http_service;
+		// Initialize handler-specific dependencies
+		$this->init_handler_dependencies();
+	}
+	
+	/**
+	 * Initialize handler-specific dependencies via service locator.
+	 */
+	private function init_handler_dependencies() {
+		global $data_machine_container;
+		
+		// Get remote locations service from container or create if needed
+		$this->db_remote_locations = $data_machine_container['db_remote_locations'] ?? new RemoteLocations();
 	}
 
 	/**
@@ -302,11 +294,14 @@ class AirdropRestApi extends BaseInputHandler {
 	 * Get settings fields specific to the Airdrop REST API handler.
 	 *
 	 * @param array $current_config The current configuration values for the module.
-	 * @param RemoteLocations $db_remote_locations The injected remote locations database service.
 	 * @return array An array defining the settings fields for this input handler.
 	 */
-	public static function get_settings_fields(array $current_config = [], RemoteLocations $db_remote_locations = null): array {
-		$locations = $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : [];
+	public static function get_settings_fields(array $current_config = []): array {
+		global $data_machine_container;
+		
+		// Get remote locations service from container
+		$db_remote_locations = $data_machine_container['db_remote_locations'] ?? new RemoteLocations();
+		$locations = $db_remote_locations->get_locations_for_current_user();
 
 		$options = [0 => __('Select a Remote Location', 'data-machine')];
 		foreach ($locations as $loc) {

@@ -25,18 +25,16 @@ class Facebook extends BaseOutputHandler {
 
     const FACEBOOK_API_VERSION = 'v22.0'; // Define API version
 
-    /**
-	 * Constructor.
-	 * Calls parent constructor with logger.
-	 *
-	 * @param Logger|null $logger Optional Logger instance.
-	 */
-	/** @var HttpService */
+    /** @var HttpService */
     private $http_service;
 
-	public function __construct(HttpService $http_service, ?Logger $logger = null) {
-		parent::__construct($logger);
-		$this->http_service = $http_service;
+    /**
+	 * Constructor.
+	 * Uses service locator pattern for dependency injection.
+	 */
+	public function __construct() {
+		// Call parent constructor to initialize common dependencies via service locator
+		parent::__construct();
 	}
 
     /**
@@ -271,7 +269,7 @@ class Facebook extends BaseOutputHandler {
 	 * @param array $current_config Current configuration values for this handler (optional).
 	 * @return array An associative array defining the settings fields.
 	 */
-	public function get_settings_fields(array $current_config = []): array {
+	public static function get_settings_fields(array $current_config = []): array {
 		// Authentication is handled separately on the API Keys page.
 		return [
 			'facebook_target_id' => [

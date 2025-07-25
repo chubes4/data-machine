@@ -103,7 +103,7 @@ Remote locations are integrated into the Module Configuration page, allowing use
         *   The state update triggers the state subscriber in `dm-module-config.js`.
         *   The state subscriber calls `handlerTemplateManager.refreshInput` or `handlerTemplateManager.refreshOutput`, passing the new `selectedLocationId`.
 
-3.  **Handler Template Management (`handler-template-manager.js`):**
+3.  **Handler Form Management (`dm-module-config.js`):**
     *   Responsible for fetching and rendering the HTML for handler-specific configuration sections.
     *   The `renderTemplate` function is called when the main input/output handler changes or when `refreshInput`/`refreshOutput` is called (due to a location change).
     *   `renderTemplate` determines the correct `locationId` to use (from the passed argument or the current state for remote handlers).
@@ -112,7 +112,7 @@ Remote locations are integrated into the Module Configuration page, allowing use
 
 4.  **AJAX Communication (`module-config/js/module-config-ajax.js`, `module-config/ajax/class-module-config-ajax.php`, `module-config/ajax/module-config-remote-locations-ajax.php`):**
     *   **Frontend (`module-config-ajax.js`):** Provides functions like `fetchHandlerTemplate` and `getLocationSyncedInfo` to make AJAX calls to the backend. `fetchHandlerTemplate` sends the `handler_type`, `handler_slug`, `module_id`, and `location_id` to the backend.
-    *   **Backend (`module-config/ajax/class-module-config-ajax.php` - `ajax_get_handler_template`):** Handles the `wp_ajax_dm_get_handler_template` action. It receives the parameters, including `location_id`. If `location_id > 0`, it fetches the `synced_site_info` for that location using `Data_Machine_Database_Remote_Locations::get_location()` and makes this data available to the template via `$GLOBALS`. It then includes the relevant handler template file (`module-config/handler-templates/...`) and returns the rendered HTML.
+    *   **Backend (`module-config/ajax/class-module-config-ajax.php` - `ajax_get_handler_template`):** Handles the `wp_ajax_dm_get_handler_template` action. It receives the parameters, including `location_id`. If `location_id > 0`, it fetches the `synced_site_info` for that location. It then uses the `dm_handler_settings_fields` filter to get field definitions and renders forms programmatically via `FormRenderer::render_form_fields()`, returning the rendered HTML.
     *   **Backend (`module-config/ajax/module-config-remote-locations-ajax.php` - `get_user_locations_ajax_handler`, `get_location_synced_info_ajax_handler`):**
         *   `get_user_locations_ajax_handler`: Handles `wp_ajax_dm_get_user_locations`. Uses `Data_Machine_Remote_Location_Service::get_user_locations_for_js()` to fetch the list of locations for the current user and returns them as a JSON success response. This is likely used to populate the initial location dropdown options when the page loads or a handler is selected.
         *   `get_location_synced_info_ajax_handler`: Handles `wp_ajax_dm_get_location_synced_info`. Takes a `location_id`, fetches the location data (including `synced_site_info` and enabled types) using `Data_Machine_Database_Remote_Locations::get_location()`, filters the synced info based on the enabled post types and taxonomies, and returns the filtered data as a JSON success response (`enabled_site_info`). This endpoint is *not* currently used by `dm-module-config-remote-locations.js` for populating fields on location change in the current implementation, but it exists and could be used for a more frontend-driven approach.
@@ -150,7 +150,7 @@ When a user *selects* a location from the dropdown in the module configuration:
 5.  `handlerTemplateManager.renderTemplate` is called again, this time with the correct `locationId`.
 6.  A *second* AJAX request is made to `wp_ajax_dm_get_handler_template` with the correct `location_id` in the payload.
 7.  The backend (`ajax_get_handler_template`) receives the positive `location_id`, fetches the `synced_site_info`, and includes it when rendering the handler template.
-8.  The `handler-templates/...` PHP file receives the `site_info` data (via `$GLOBALS`) and uses it to populate the post type and taxonomy dropdowns.
+8.  The FormRenderer generates forms based on field definitions and uses the `site_info` data to populate the post type and taxonomy dropdown options.
 9.  `handlerTemplateManager` inserts the re-rendered HTML into the DOM and re-attaches event listeners.
 
 If selecting a location does not populate the dependent dropdowns, the issue is likely in this sequence:

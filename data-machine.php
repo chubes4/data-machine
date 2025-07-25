@@ -31,7 +31,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
 
 // PSR-4 Autoloading - no manual includes needed
-use DataMachine\{DataMachine, Constants};
+use DataMachine\{DataMachine, Constants, CoreHandlerRegistry};
 use DataMachine\Admin\{AdminPage, AdminMenuAssets};
 use DataMachine\Admin\OAuth\{Twitter as OAuthTwitter, Reddit as OAuthReddit, Threads as OAuthThreads, Facebook as OAuthFacebook, ApiAuthPage};
 use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUploadHandler, ProjectManagementAjax};
@@ -94,11 +94,12 @@ function run_data_machine() {
     $facebook_client_secret = get_option('facebook_app_secret', '');
     $oauth_facebook = new OAuthFacebook($facebook_client_id, $facebook_client_secret, $logger);
 
-    // Centralized prompt builder
-    $prompt_builder = new PromptBuilder($db_projects);
+    // Centralized prompt builder - now uses library for everything
+    $prompt_builder = new PromptBuilder();
+    $prompt_builder->register_all_sections();
 
-    // Register core handlers using the same hook system external plugins will use
-    add_filter('dm_register_handlers', 'data_machine_register_core_handlers');
+    // Initialize core handler auto-registration system
+    CoreHandlerRegistry::init();
 
 
     // API services - now use AI HTTP Client library directly
@@ -173,6 +174,7 @@ function run_data_machine() {
         'ai_type' => 'llm'
     ]);
 
+
     // Global container for Action Scheduler access
     global $data_machine_container;
     $data_machine_container = array(
@@ -244,73 +246,6 @@ function run_data_machine() {
 // Initialize after plugins_loaded to ensure Action Scheduler is available
 add_action('plugins_loaded', 'run_data_machine', 20);
 
-/**
- * Register all core handlers using the same hook system external plugins will use.
- * This "eats our own dog food" and validates the external API.
- *
- * @param array $handlers Existing handlers array
- * @return array Updated handlers array with core handlers registered
- */
-function data_machine_register_core_handlers($handlers) {
-    // Input Handlers - all using same API as external plugins
-    $handlers['input']['files'] = [
-        'class' => 'DataMachine\Handlers\Input\Files',
-        'label' => __('File Upload', 'data-machine')
-    ];
-    
-    $handlers['input']['rss'] = [
-        'class' => 'DataMachine\Handlers\Input\Rss',
-        'label' => __('RSS Feed', 'data-machine')
-    ];
-    
-    $handlers['input']['reddit'] = [
-        'class' => 'DataMachine\Handlers\Input\Reddit',
-        'label' => __('Reddit Posts', 'data-machine')
-    ];
-    
-    $handlers['input']['public_rest_api'] = [
-        'class' => 'DataMachine\Handlers\Input\PublicRestApi',
-        'label' => __('Public REST API', 'data-machine')
-    ];
-    
-    $handlers['input']['airdrop_rest_api'] = [
-        'class' => 'DataMachine\Handlers\Input\AirdropRestApi',
-        'label' => __('Airdrop REST API', 'data-machine')
-    ];
-
-    // Output Handlers - all using same API as external plugins
-    $handlers['output']['publish_local'] = [
-        'class' => 'DataMachine\Handlers\Output\PublishLocal',
-        'label' => __('WordPress Post', 'data-machine')
-    ];
-    
-    $handlers['output']['publish_remote'] = [
-        'class' => 'DataMachine\Handlers\Output\PublishRemote',
-        'label' => __('Remote WordPress', 'data-machine')
-    ];
-    
-    $handlers['output']['twitter'] = [
-        'class' => 'DataMachine\Handlers\Output\Twitter',
-        'label' => __('Twitter/X', 'data-machine')
-    ];
-    
-    $handlers['output']['facebook'] = [
-        'class' => 'DataMachine\Handlers\Output\Facebook',
-        'label' => __('Facebook', 'data-machine')
-    ];
-    
-    $handlers['output']['threads'] = [
-        'class' => 'DataMachine\Handlers\Output\Threads',
-        'label' => __('Threads', 'data-machine')
-    ];
-    
-    $handlers['output']['bluesky'] = [
-        'class' => 'DataMachine\Handlers\Output\Bluesky',
-        'label' => __('Bluesky', 'data-machine')
-    ];
-    
-    return $handlers;
-}
 
 /**
  * Allows JSON file uploads.
@@ -320,6 +255,7 @@ function dm_allow_json_upload($mimes) {
     return $mimes;
 }
 add_filter( 'upload_mimes', 'dm_allow_json_upload' );
+
 
 // Activation and deactivation hooks (if needed)
 register_activation_hook( __FILE__, 'activate_data_machine' );

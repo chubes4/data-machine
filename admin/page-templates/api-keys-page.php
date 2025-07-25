@@ -127,7 +127,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
                         'ai_type' => 'llm',
-                        'step_context' => 'process',
+                        'step_key' => 'process',
                         'components' => [
                             'core' => ['model_selector']
                         ],
@@ -145,7 +145,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
                         'ai_type' => 'llm',
-                        'step_context' => 'factcheck',
+                        'step_key' => 'factcheck',
                         'components' => [
                             'core' => ['model_selector']
                         ],
@@ -163,7 +163,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                     echo wp_kses_post(AI_HTTP_ProviderManager_Component::render([
                         'plugin_context' => 'data-machine',
                         'ai_type' => 'llm',
-                        'step_context' => 'finalize',
+                        'step_key' => 'finalize',
                         'components' => [
                             'core' => ['model_selector']
                         ],

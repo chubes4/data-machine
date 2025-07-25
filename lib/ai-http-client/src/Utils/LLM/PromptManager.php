@@ -329,30 +329,52 @@ class AI_HTTP_Prompt_Manager {
     /**
      * Build enhanced system prompt with modular sections
      *
-     * @param string $base_prompt Base system prompt
-     * @param array $context Context data
-     * @param array $options Modular prompt options
+     * @param string|array $config Configuration array or base prompt string (for backward compatibility)
+     * @param array $context Context data (when first param is string)
+     * @param array $options Modular prompt options (when first param is string)
      * @return string Complete system prompt
      */
-    public static function build_modular_system_prompt($base_prompt, $context = [], $options = []) {
+    public static function build_modular_system_prompt($config, $context = [], $options = []) {
+        // Handle both new array config and backward compatible string params
+        if (is_string($config)) {
+            // Backward compatibility: build_modular_system_prompt($base_prompt, $context, $options)
+            $base_prompt = $config;
+            $plugin_context = $options['plugin_context'] ?? 'default';
+        } else {
+            // New array config approach: build_modular_system_prompt(['base_prompt' => '...', ...])
+            $base_prompt = $config['base_prompt'] ?? '';
+            $context = $config['context'] ?? [];
+            $options = $config;
+            $plugin_context = $config['plugin_context'] ?? 'default';
+        }
+        
         $defaults = [
-            'include_tools' => true,
+            'include_tools' => false,
             'enabled_tools' => [],
             'tool_context' => 'default',
-            'sections' => []
+            'sections' => [],
+            'plugin_context' => $plugin_context
         ];
         
         $options = array_merge($defaults, $options);
         
-        // Start with base prompt processing
-        $prompt = self::build_system_prompt($base_prompt, $context);
+        // Start with base prompt processing if provided
+        $prompt_parts = [];
+        if (!empty($base_prompt)) {
+            $prompt_parts[] = self::build_system_prompt($base_prompt, $context);
+        }
         
-        // Add custom sections
+        // Add custom sections in order
         if (!empty($options['sections'])) {
-            foreach ($options['sections'] as $section_name => $section_content) {
-                $section_content = apply_filters("ai_http_client_section_{$section_name}", $section_content, $context);
+            foreach ($options['sections'] as $section_name) {
+                $section_content = apply_filters(
+                    "ai_http_client_section_{$section_name}", 
+                    '', 
+                    $context, 
+                    $options['plugin_context']
+                );
                 if (!empty($section_content)) {
-                    $prompt .= "\n\n" . $section_content;
+                    $prompt_parts[] = $section_content;
                 }
             }
         }
@@ -365,11 +387,72 @@ class AI_HTTP_Prompt_Manager {
                 
             $tool_section = self::build_tool_section($enabled_tools);
             if (!empty($tool_section)) {
-                $prompt .= "\n\n" . $tool_section;
+                $prompt_parts[] = $tool_section;
             }
         }
         
+        // Combine all parts
+        $final_prompt = implode("\n\n", $prompt_parts);
+        
         // Allow final prompt modification
-        return apply_filters('ai_http_client_modular_system_prompt', $prompt, $base_prompt, $context, $options);
+        return apply_filters('ai_http_client_modular_system_prompt', $final_prompt, $base_prompt, $context, $options);
+    }
+    
+    /**
+     * Add datetime context to existing context array
+     *
+     * @param array $context Existing context
+     * @param string $timezone Optional timezone (defaults to WordPress timezone)
+     * @return array Enhanced context with datetime information
+     */
+    public static function add_datetime_context($context = [], $timezone = null) {
+        $context['current_datetime'] = wp_date('F j, Y, g:i a T', null, $timezone);
+        $context['current_date'] = wp_date('F j, Y', null, $timezone);
+        $context['current_timestamp'] = wp_date('U', null, $timezone);
+        $context['current_year'] = wp_date('Y', null, $timezone);
+        $context['current_month'] = wp_date('F', null, $timezone);
+        
+        return $context;
+    }
+    
+    /**
+     * Build complete prompt configuration with all enhancements
+     *
+     * @param array $config Complete configuration array
+     * @return string Final processed prompt
+     */
+    public static function build_complete_prompt($config = []) {
+        $defaults = [
+            'base_prompt' => '',
+            'context' => [],
+            'variables' => [],
+            'sections' => [],
+            'plugin_context' => 'default',
+            'include_datetime' => false,
+            'include_tools' => false,
+            'format_config' => []
+        ];
+        
+        $config = array_merge($defaults, $config);
+        
+        // Add datetime context if requested
+        if ($config['include_datetime']) {
+            $config['context'] = self::add_datetime_context($config['context']);
+        }
+        
+        // Apply variable replacement to base prompt
+        if (!empty($config['variables'])) {
+            $config['base_prompt'] = self::replace_variables($config['base_prompt'], $config['variables']);
+        }
+        
+        // Build modular system prompt
+        $prompt = self::build_modular_system_prompt($config);
+        
+        // Add response formatting if specified
+        if (!empty($config['format_config'])) {
+            $prompt = self::add_response_formatting($prompt, $config['format_config']);
+        }
+        
+        return $prompt;
     }
 }
