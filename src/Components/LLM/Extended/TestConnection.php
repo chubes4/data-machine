@@ -114,7 +114,10 @@ class AI_HTTP_Extended_TestConnection implements AI_HTTP_Component_Interface {
             
             $provider = sanitize_text_field($_POST['provider']);
             
-            $client = new AI_HTTP_Client(['plugin_context' => $plugin_context]);
+            $client = new AI_HTTP_Client([
+                'plugin_context' => $plugin_context,
+                'ai_type' => 'llm'
+            ]);
             $result = $client->test_connection($provider);
             
             wp_send_json($result);
