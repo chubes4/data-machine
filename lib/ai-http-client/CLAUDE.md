@@ -4,456 +4,229 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI HTTP Client - WordPress library for multi-type AI provider communication with plugin-scoped configuration.
 
-## Core Architecture (Multi-Type AI Parameter System)
-
-### Distribution Pattern
-- **Production**: Git subtree in plugin's `/lib/ai-http-client/`
-- **Integration**: `require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';`
-- **Multi-Plugin**: Each plugin maintains separate configuration while sharing API keys
-- **Multi-Type**: Single library supports LLM, Upscaling, and Generative AI via `ai_type` parameter
-
-### Multi-Type Architecture
-The library uses a type-based parameter system for different AI capabilities:
-
-1. **AI_HTTP_Client** - Single client class with `ai_type` parameter routing
-2. **Type-Specific Normalizers** - Organized by AI type:
-   - `src/Normalizers/LLM/` - Text generation normalizers
-   - `src/Normalizers/Upscaling/` - Image upscaling normalizers  
-   - `src/Normalizers/Generative/` - Image generation normalizers
-3. **Type-Specific Providers** - Organized by AI type:
-   - `src/Providers/LLM/` - Text AI providers (OpenAI, Anthropic, Gemini, Grok, OpenRouter)
-   - `src/Providers/Upscaling/` - Image upscaling providers (Upsampler, etc.)
-   - `src/Providers/Generative/` - Image generation providers (Stable Diffusion, etc.)
-
-### AI Type Parameter System
-All instantiation requires explicit `ai_type` parameter - **no defaults**:
-
-```php
-// LLM client
-$llm_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin',
-    'ai_type' => 'llm'
-]);
-
-// Upscaling client  
-$upscaling_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin',
-    'ai_type' => 'upscaling'
-]);
-
-// Multi-type plugins can use both
-$generative_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin', 
-    'ai_type' => 'generative'
-]);
-```
-
-## Multi-Plugin Configuration Architecture
-
-### Plugin-Scoped Options Structure
-```php
-// Plugin-specific configuration (separate per plugin)
-ai_http_client_providers_myplugin = [
-    'openai' => ['model' => 'gpt-4', 'temperature' => 0.7, 'instructions' => '...'],
-    'anthropic' => ['model' => 'claude-3-sonnet', 'temperature' => 0.5]
-];
-
-// Plugin-specific provider selection
-ai_http_client_selected_provider_myplugin = 'openai';
-
-// Shared API keys (efficient, secure, shared across all plugins)
-ai_http_client_shared_api_keys = [
-    'openai' => 'sk-...',
-    'anthropic' => 'sk-...'
-];
-```
-
-### Benefits of Multi-Plugin Architecture
-- **Complete Plugin Isolation**: Each plugin can use different providers/models
-- **Shared API Keys**: Reduce duplication and improve security
-- **Independent Configuration**: Plugin A can use GPT-4, Plugin B can use Claude
-- **No Conflicts**: Multiple plugins on same site work independently
-- **Efficient Storage**: API keys stored once, settings stored per plugin
-
-## Standardized Data Formats by AI Type
-
-### LLM Request/Response Format
-```php
-// LLM Request
-[
-    'messages' => [['role' => 'user|assistant|system', 'content' => 'text']],
-    'model' => 'provider-model-name', // Optional - falls back to configured model
-    'max_tokens' => 1000,
-    'temperature' => 0.7,
-    'stream' => false,
-    'tools' => [] // Optional tool definitions
-]
-
-// LLM Response
-[
-    'success' => true|false,
-    'data' => [
-        'content' => 'response text',
-        'usage' => ['prompt_tokens' => X, 'completion_tokens' => Y, 'total_tokens' => Z],
-        'model' => 'actual-model-used',
-        'finish_reason' => 'stop|length|tool_calls|error',
-        'tool_calls' => null|[...], // Present when AI wants to call tools
-        'response_id' => 'response-id' // For OpenAI continuation (when available)
-    ],
-    'error' => null|'error message',
-    'provider' => 'openai|anthropic|gemini|grok|openrouter',
-    'raw_response' => null|[...] // Present on errors for debugging
-]
-```
-
-### Upscaling Request/Response Format
-```php
-// Upscaling Request
-[
-    'image_url' => 'https://example.com/image.jpg',
-    'scale_factor' => '4x', // 2x, 4x, 8x
-    'quality_settings' => [
-        'creativity' => 7,
-        'detail' => 8
-    ],
-    'webhook_url' => 'optional' // For async processing
-]
-
-// Upscaling Response  
-[
-    'success' => true|false,
-    'data' => [
-        'job_id' => 'abc123',
-        'status' => 'processing|completed',
-        'result_url' => 'https://upscaled-image.jpg', // When completed
-        'webhook_url' => 'https://...'
-    ],
-    'error' => null|'error message',
-    'provider' => 'upsampler',
-    'raw_response' => null|[...] // Present on errors for debugging
-]
-```
-
-### Generative Request/Response Format
-```php
-// Generative Request
-[
-    'prompt' => 'A beautiful landscape',
-    'negative_prompt' => 'blurry, low quality',
-    'style' => 'photorealistic',
-    'dimensions' => '1024x1024',
-    'count' => 1
-]
-
-// Generative Response
-[
-    'success' => true|false,
-    'data' => [
-        'images' => ['https://url1.jpg', 'https://url2.jpg'],
-        'metadata' => ['seed' => 12345, 'steps' => 50]
-    ],
-    'error' => null|'error message',
-    'provider' => 'stable-diffusion',
-    'raw_response' => null|[...] // Present on errors for debugging
-]
-```
-
-## Key Components
-
-### Core Architecture
-- **AI_HTTP_Client** - Main orchestrator (`src/class-client.php`)
-- **UnifiedRequestNormalizer** - Converts standard format to any provider format
-- **UnifiedResponseNormalizer** - Converts any provider format to standard format
-- **UnifiedStreamingNormalizer** - Handles streaming for all providers
-- **UnifiedToolResultsNormalizer** - Handles tool results continuation
-- **UnifiedConnectionTestNormalizer** - Handles connection testing
-- **UnifiedModelFetcher** - Fetches models from all providers
-
-### Provider Classes
-- **AI_HTTP_OpenAI_Provider** - Pure OpenAI API communication
-- **AI_HTTP_Anthropic_Provider** - Pure Anthropic API communication
-- **AI_HTTP_Gemini_Provider** - Pure Google Gemini API communication
-- **AI_HTTP_Grok_Provider** - Pure Grok/X.AI API communication
-- **AI_HTTP_OpenRouter_Provider** - Pure OpenRouter API communication
-
-### WordPress Integration
-- **OptionsManager** - Plugin-scoped WordPress options storage (`src/Utils/LLM/OptionsManager.php`)
-- **PromptManager** - Modular prompt building (`src/Utils/LLM/PromptManager.php`)
-- **WordPressSSEHandler** - WordPress-native SSE streaming endpoint (`src/Utils/LLM/WordPressSSEHandler.php`)
-- **ProviderManagerComponent** - Complete admin UI with plugin context + ai_type support (`src/Components/LLM/ProviderManagerComponent.php`)
-
 ## Development Commands
 
-### Composer Scripts
+### Testing & Analysis
 ```bash
-composer test          # Run PHPUnit test suite
-composer analyse       # Run PHPStan static analysis (level 5)
-composer check         # Run both tests and analysis
-composer dump-autoload # Regenerate autoloader after adding new classes
+# Run PHPUnit tests
+composer test
+
+# Run PHPStan static analysis (level 5)
+composer analyse
+
+# Run both tests and analysis
+composer check
+
+# Check PHP syntax for individual files
+php -l src/Providers/LLM/openai.php
 ```
 
-### Testing
-- PHPUnit configured for automated testing
-- PHPStan static analysis at level 5
-- Testing requires WordPress environment with library loaded
-- Use the TestConnection component (`src/Components/LLM/Extended/TestConnection.php`) for provider connectivity testing
-
-### Development Workflow (Multi-Type AI Parameter System)
-```php
-// Basic LLM testing setup - REQUIRES both plugin_context AND ai_type
-require_once 'ai-http-client.php';
-$client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm' // REQUIRED
-]);
-$response = $client->send_request([
-    'messages' => [['role' => 'user', 'content' => 'test']]
-]);
-var_dump($response);
-
-// Test upscaling (when implemented)
-$upscaling_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'upscaling' // REQUIRED
-]);
-
-// Test connection with plugin context
-$test_result = $client->test_connection('openai');
-var_dump($test_result);
-
-// Get available models using plugin-scoped configuration
-$models = $client->get_available_models('openai');
-var_dump($models);
-```
-
-### Version Management
-- Version defined in `ai-http-client.php` line 24: `AI_HTTP_CLIENT_VERSION`
-- Multiple plugins can include different versions safely
-- Highest version wins via `ai_http_client_version_check()`
-
-## Adding New Providers
-
-1. Create simple provider class in `src/Providers/` (e.g., `newprovider.php`)
-2. Add normalization logic to `UnifiedRequestNormalizer` and `UnifiedResponseNormalizer`
-3. Add provider case to `AI_HTTP_Client::get_provider()`
-4. Add provider loading to `ai-http-client.php`
-
-### New Provider Template
-```php
-// src/Providers/newprovider.php
-class AI_HTTP_NewProvider_Provider {
-    public function __construct($config) { /* ... */ }
-    public function send_raw_request($provider_request) { /* ... */ }
-    public function send_raw_streaming_request($provider_request, $callback) { /* ... */ }
-    public function get_raw_models() { /* ... */ }
-    public function is_configured() { /* ... */ }
-}
-```
-
-## Loading System
-
-The library uses a dual-loading system in `ai-http-client.php`:
-
-### Composer-First Loading
-1. **Composer Detection** - Checks for `/vendor/autoload.php`
-2. **Automatic Classmap** - Uses Composer's classmap autoloader for all classes
-3. **File Autoloading** - Main entry point loaded via Composer files directive
-
-### Manual Loading Fallback
-When Composer unavailable, uses manual `require_once` in dependency order:
-1. Shared utilities (FileUploadClient, ToolExecutor)
-2. **Unified Normalizers** - All normalization logic
-3. **Simple Providers** - Pure API communication
-4. **Main Client** - Unified orchestrator
-5. WordPress management components
-6. UI Components system
-
-### Version Management
-- `ai_http_client_version_check()` ensures highest version wins
-- Multiple plugins can safely include different versions
-- `AI_HTTP_CLIENT_VERSION` constant prevents conflicts
-
-## Critical Rules
-
-- **Use Unified Architecture** - All providers use the same normalizers
-- **No Provider-Specific Logic in Core** - All provider differences handled in unified normalizers
-- **Single Responsibility** - Providers only handle API communication, normalizers handle format conversion
-- **WordPress-Native** - Use WordPress APIs and security practices
-- **Plugin Context Required** - All AI_HTTP_Client and ProviderManagerComponent instances MUST include plugin context
-- **No Hardcoded Defaults** - All configuration should come from plugin-scoped WordPress options
-- **Shared API Keys** - API keys are shared across plugins for efficiency, other settings are plugin-specific
-
-## Supported Providers
-
-All providers are fully refactored and support the complete feature set:
-
-1. **OpenAI** - GPT models, Responses API, streaming, function calling, vision
-2. **Anthropic** - Claude models, streaming, function calling, vision
-3. **Google Gemini** - 2025 API, streaming, function calling, multi-modal
-4. **Grok/X.AI** - All models, reasoning_effort parameter, streaming
-5. **OpenRouter** - 100+ models, provider routing, fallbacks
-
-## WordPress Integration
-
-- **HTTP API**: `wp_remote_post()` for requests, cURL for streaming
-- **Options**: Single `ai_http_client_providers` option stores all settings
-- **Security**: WordPress sanitization functions throughout
-- **Filters**: Extensible via WordPress filter system
-
-## Git Subtree Commands
-
+### Git Subtree Operations (Primary Distribution Method)
 ```bash
-# Add library to plugin (first time)
+# Add as subtree to a WordPress plugin
 git subtree add --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
 
-# Update library in plugin
+# Update existing subtree
 git subtree pull --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
 
-# Push changes back to library
-git subtree push --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main
+# Push changes back (from main repo)
+git subtree push --prefix=lib/ai-http-client origin main
 ```
 
-## Quick Integration (Multi-Type AI Parameter System)
+## Core Architecture
 
-### LLM Integration
+### Multi-Type AI System
+The library supports three AI types via a single unified interface:
+- **LLM** (`ai_type: 'llm'`) - Text generation (OpenAI, Anthropic, Gemini, Grok, OpenRouter)
+- **Upscaling** (`ai_type: 'upscaling'`) - Image upscaling (planned)
+- **Generative** (`ai_type: 'generative'`) - Image generation (planned)
+
+**Critical Rule**: ALL instantiation requires explicit `ai_type` parameter - no defaults exist.
+
+### "Round Plug" Design Pattern
+```
+Standard Input → Unified Normalizers → Provider APIs → Standard Output
+```
+
+1. **Standard Input**: Unified request format across all providers
+2. **Unified Normalizers**: Convert standard format to provider-specific formats
+3. **Provider Classes**: Pure API communication (recently refactored with Base_LLM_Provider)
+4. **Standard Output**: Unified response format regardless of provider
+
+### Provider Architecture (Recently Refactored)
+**Base Class Hierarchy**:
+- `Base_LLM_Provider` - Common HTTP operations, auth patterns, error handling
+- Provider-specific classes extend base class with minimal customization:
+  - `AI_HTTP_OpenAI_Provider` - OpenAI Responses API + organization headers
+  - `AI_HTTP_Anthropic_Provider` - x-api-key + anthropic-version headers
+  - `AI_HTTP_Gemini_Provider` - Model-in-URL pattern + x-goog-api-key
+  - `AI_HTTP_Grok_Provider` - Standard Bearer token (simplest implementation)
+  - `AI_HTTP_OpenRouter_Provider` - Bearer token + HTTP-Referer + X-Title
+
+**Refactoring Impact**: Eliminated 330+ lines of duplicated code (31% reduction) while maintaining 100% API compatibility.
+
+### Multi-Plugin Isolation System
+**Configuration Scoping**:
 ```php
-// 1. Include library
-require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
+// Plugin-specific settings (isolated)
+ai_http_client_providers_myplugin_llm = [...provider configs...]
+ai_http_client_selected_provider_myplugin_llm = 'openai'
 
-// 2. Add LLM admin UI
-echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug', // REQUIRED
-    'ai_type' => 'llm' // REQUIRED
-]);
+// Shared API keys (efficient, no duplication)
+ai_http_client_shared_api_keys = ['openai' => 'sk-...', 'anthropic' => 'sk-...']
+```
 
-// 3. Send LLM request
+**Benefits**:
+- Multiple plugins can use different providers simultaneously
+- API keys shared across all plugins for efficiency
+- Zero configuration conflicts between plugins
+- Each plugin maintains independent AI settings
+
+### Request Flow Architecture
+```
+AI_HTTP_Client
+├── init_normalizers_for_type() -> Routes to LLM/Upscaling/Generative normalizers
+├── send_request()
+│   ├── validate_request()
+│   ├── get_provider() -> Creates/caches provider instance from Base_LLM_Provider
+│   ├── request_normalizer->normalize() -> Converts to provider format
+│   ├── provider->send_raw_request() -> Pure API call
+│   └── response_normalizer->normalize() -> Converts to standard format
+└── Plugin-scoped OptionsManager -> Retrieves configuration by plugin_context + ai_type
+```
+
+### Loading System
+**Dual Loading Strategy**:
+1. **Composer Autoloader** (preferred for modern development)
+2. **Manual Loading** (WordPress compatibility via `ai_http_client_manual_load()`)
+
+**Version Conflict Resolution**:
+- Multiple plugins can include different versions
+- Highest version wins globally via `ai_http_client_version_check()`
+- Prevents duplicate class loading
+
+## Key Implementation Patterns
+
+### Error Handling Philosophy
+- **Fail Fast**: No defaults, explicit configuration required
+- **Clear Errors**: Provider-specific error messages with context
+- **Graceful Degradation**: Plugins log errors rather than fatal exceptions
+
+### WordPress Integration
+- Uses `wp_remote_post()` for HTTP requests (with cURL fallback for streaming)
+- WordPress options system for configuration storage
+- Plugin-aware admin components with zero styling
+- Follows WordPress coding standards and security practices
+
+### Component System
+**Modular UI Components**:
+- `AI_HTTP_ProviderManager_Component` - Complete admin interface
+- Core components: provider_selector, api_key_input, model_selector, test_connection
+- Extended components: temperature_slider, system_prompt_field, max_tokens_input
+
+**Component Registry Pattern**:
+```php
+AI_HTTP_Component_Registry::get_component('provider_selector')->render($args)
+```
+
+### Security Considerations
+- API keys stored in WordPress options with proper sanitization
+- No hardcoded credentials or defaults
+- Input sanitization via WordPress functions
+- Plugin context validation prevents unauthorized access
+
+## Critical Configuration Requirements
+
+### Client Instantiation
+```php
+// REQUIRED parameters - will fail without both
 $client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug', // REQUIRED
-    'ai_type' => 'llm' // REQUIRED
-]);
-$response = $client->send_request([
-    'messages' => [['role' => 'user', 'content' => 'Hello AI!']],
-    'max_tokens' => 100
+    'plugin_context' => 'my-plugin-slug',  // Plugin isolation
+    'ai_type' => 'llm'                     // AI type routing
 ]);
 ```
 
-### Upscaling Integration
+### OptionsManager Usage
 ```php
-// 1. Include same library
-require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
+// REQUIRED parameters - constructor updated in v2.x.x
+$options = new AI_HTTP_Options_Manager('my-plugin-slug', 'llm');
+```
 
-// 2. Add upscaling admin UI
+### Component Rendering
+```php
+// REQUIRED parameters for admin UI
 echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug', // REQUIRED
-    'ai_type' => 'upscaling' // REQUIRED
-]);
-
-// 3. Send upscaling request
-$client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug', // REQUIRED
-    'ai_type' => 'upscaling' // REQUIRED
-]);
-$response = $client->send_request([
-    'image_url' => 'https://example.com/image.jpg',
-    'scale_factor' => '4x'
-]);
-```
-
-### Multi-Type Plugin Usage
-```php
-// Single plugin using multiple AI types
-$llm_client = new AI_HTTP_Client([
     'plugin_context' => 'my-plugin-slug',
     'ai_type' => 'llm'
 ]);
-
-$upscaling_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'upscaling'
-]);
-
-// Use both in same plugin
-$text_analysis = $llm_client->send_request([
-    'messages' => [['role' => 'user', 'content' => 'Analyze this image']]
-]);
-
-$enhanced_image = $upscaling_client->send_request([
-    'image_url' => 'https://example.com/image.jpg',
-    'scale_factor' => '4x'
-]);
 ```
 
-## Continuation Support (Agentic Systems)
+## Distribution & Integration
 
+### WordPress Plugin Integration
+**Recommended Pattern** (like Action Scheduler):
 ```php
-// OpenAI: Use response ID from Responses API
-$response_id = $client->get_last_response_id();
-$continuation = $client->continue_with_tool_results($response_id, $tool_results);
+// In plugin main file
+require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
 
-// Anthropic: Use conversation history
-$continuation = $client->continue_with_tool_results($conversation_history, $tool_results, 'anthropic');
-
-// All providers support continuation through unified architecture
-```
-
-## Breaking Changes (Multi-Type AI Parameter System)
-
-### Constructor Changes
-```php
-// OLD (no longer supported)
-$client = new AI_HTTP_Client();
-$client = new AI_HTTP_Client(['plugin_context' => 'my-plugin-slug']);
-$component = AI_HTTP_ProviderManager_Component::render(['plugin_context' => 'my-plugin-slug']);
-
-// NEW (required - ai_type parameter mandatory)
+// Usage in plugin
 $client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm' // REQUIRED: 'llm', 'upscaling', or 'generative'
-]);
-$component = AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm' // REQUIRED
+    'plugin_context' => get_option('stylesheet'), // or plugin slug
+    'ai_type' => 'llm'
 ]);
 ```
 
-### No Hardcoded Defaults Policy
-- **No default ai_type** - must be explicitly specified
-- **No default provider** - must be configured via admin UI
-- **No default timeouts** - use WordPress defaults
-- **Library fails fast** with clear error messages when configuration missing
+### Version Management
+- Library manages its own versioning and conflicts
+- Multiple plugins can safely include different versions
+- No external dependencies beyond WordPress
 
-### Migration from Previous Version
-1. **Add ai_type parameter** to all AI_HTTP_Client instantiations
-2. **API keys automatically migrate** to shared storage on first save
-3. **Plugin-specific settings** remain isolated per plugin
-4. **No data loss** - existing configurations continue working per plugin
+## Breaking Changes History
 
-## Error Handling
+### v2.x.x - AI Type Scoping
+**Constructor Changes**:
+- `AI_HTTP_Options_Manager($plugin_context, $ai_type)` - added required ai_type parameter
+- `AI_HTTP_Client(['plugin_context' => '...', 'ai_type' => '...'])` - added required ai_type
+- All component rendering requires ai_type parameter
 
-- **Logging Requirements**: All providers log their raw error responses for debugging
-- **Fallback System**: `AI_HTTP_Client` supports automatic fallback to other providers
-- **Standardized Errors**: All errors return consistent format via `create_error_response()`
-- **WordPress Integration**: Uses WordPress error logging functions
+**Migration**: Add 'llm' as second parameter for existing LLM functionality.
 
-## API-Specific Notes
+## Architecture Scalability
 
-### OpenAI
-- Uses **Responses API** (not Chat Completions)
-- Converts `messages` → `input` and `max_tokens` → `max_output_tokens`
-- Handles tool calling via flat format (not nested)
+### Multi-Type Readiness
+Current architecture supports future AI types:
+- `src/Normalizers/LLM/` - Text AI normalizers (implemented)
+- `src/Normalizers/Upscaling/` - Image upscaling normalizers (planned)
+- `src/Normalizers/Generative/` - Image generation normalizers (planned)
+- `src/Providers/LLM/` - Text AI providers (implemented with Base_LLM_Provider)
+- `src/Providers/Upscaling/` - Image upscaling providers (planned)
+- `src/Providers/Generative/` - Image generation providers (planned)
 
-### Anthropic
-- Extracts system messages from messages array to `system` parameter
-- Temperature constrained to 0-1 range
+### Adding New Providers
+1. Create provider class extending `Base_LLM_Provider`
+2. Override `get_default_base_url()`, `get_provider_name()`, `get_auth_headers()`
+3. Implement `send_raw_request()`, `send_raw_streaming_request()`, `get_raw_models()`
+4. Add provider routing to `AI_HTTP_Client::create_llm_provider()`
+5. Add normalization logic to `UnifiedRequestNormalizer` and `UnifiedResponseNormalizer`
+6. Update manual loading in `ai-http-client.php`
 
-### Google Gemini
-- Converts messages to `contents` format with `role` and `parts`
-- Uses `generationConfig` for temperature and maxOutputTokens
+**Provider Requirements**: ~80 lines of code (vs ~220 before base class refactoring)
 
-### Grok/X.AI
-- OpenAI-compatible format with optional `reasoning_effort` parameter
-- Supports all standard OpenAI features
+## Streaming & Advanced Features
 
-### OpenRouter
-- OpenAI-compatible format with provider routing
-- Supports 100+ models from multiple providers
+### Streaming Support
+- Uses cURL for real-time streaming responses
+- WordPress-native fallback for non-streaming requests
+- Provider-agnostic streaming via unified normalizers
+
+### Tool/Function Calling
+- Unified tool format across all providers
+- Provider-specific tool normalization (OpenAI vs Anthropic formats)
+- Continuation support for multi-turn tool interactions
+
+### Step-Aware Configuration
+- Plugin-specific step configurations for different AI use cases
+- Automatic prompt/parameter injection based on step context
+- Dynamic tool enabling per step
+
+This architecture enables WordPress plugin developers to integrate multiple AI providers with minimal code while maintaining complete isolation between plugins and AI types.

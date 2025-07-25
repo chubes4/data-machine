@@ -107,7 +107,8 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedConnectionTestNormalizer.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedModelFetcher.php';
         
-        // 2.7. Simple Providers (NEW ARCHITECTURE)
+        // 2.7. LLM Provider Base Class and Providers (NEW ARCHITECTURE)
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/Base_LLM_Provider.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openai.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/gemini.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/anthropic.php';

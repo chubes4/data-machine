@@ -1,6 +1,6 @@
 <?php
 /**
- * AI HTTP Client - Simplified OpenRouter Provider
+ * AI HTTP Client - OpenRouter Provider
  * 
  * Single Responsibility: Pure OpenRouter API communication only
  * No normalization logic - just sends/receives raw data
@@ -12,13 +12,10 @@
 
 defined('ABSPATH') || exit;
 
-class AI_HTTP_OpenRouter_Provider {
+class AI_HTTP_OpenRouter_Provider extends Base_LLM_Provider {
 
-    private $api_key;
-    private $base_url = 'https://openrouter.ai/api/v1';
     private $http_referer;
     private $app_title;
-    private $timeout = 30;
 
     /**
      * Constructor
@@ -26,171 +23,36 @@ class AI_HTTP_OpenRouter_Provider {
      * @param array $config Provider configuration
      */
     public function __construct($config = array()) {
-        $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
+        parent::__construct($config);
         $this->http_referer = isset($config['http_referer']) ? $config['http_referer'] : '';
         $this->app_title = isset($config['app_title']) ? $config['app_title'] : 'AI HTTP Client';
-        $this->timeout = isset($config['timeout']) ? intval($config['timeout']) : 30;
-        
-        if (isset($config['base_url']) && !empty($config['base_url'])) {
-            $this->base_url = rtrim($config['base_url'], '/');
-        }
     }
 
     /**
-     * Send raw request to OpenRouter API
+     * Get default base URL for OpenRouter
      *
-     * @param array $provider_request Already normalized for OpenRouter
-     * @return array Raw OpenRouter response
-     * @throws Exception If request fails
+     * @return string Default base URL
      */
-    public function send_raw_request($provider_request) {
-        if (!$this->is_configured()) {
-            throw new Exception('OpenRouter provider not configured - missing API key');
-        }
-
-        $url = $this->base_url . '/chat/completions';
-        $headers = $this->get_auth_headers();
-        $headers['Content-Type'] = 'application/json';
-
-        $response = wp_remote_post($url, array(
-            'headers' => $headers,
-            'body' => wp_json_encode($provider_request),
-            'timeout' => $this->timeout,
-            'method' => 'POST'
-        ));
-
-        if (is_wp_error($response)) {
-            throw new Exception('OpenRouter API request failed: ' . $response->get_error_message());
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $decoded_response = json_decode($body, true);
-
-        if ($status_code !== 200) {
-            $error_message = 'OpenRouter API error (HTTP ' . $status_code . ')';
-            if (isset($decoded_response['error']['message'])) {
-                $error_message .= ': ' . $decoded_response['error']['message'];
-            }
-            throw new Exception($error_message);
-        }
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid JSON response from OpenRouter API');
-        }
-
-        return $decoded_response;
+    protected function get_default_base_url() {
+        return 'https://openrouter.ai/api/v1';
     }
 
     /**
-     * Send raw streaming request to OpenRouter API
+     * Get provider name for error messages
      *
-     * @param array $provider_request Already normalized for OpenRouter
-     * @param callable $callback Optional callback for each chunk
-     * @return string Full response content
-     * @throws Exception If request fails
+     * @return string Provider name
      */
-    public function send_raw_streaming_request($provider_request, $callback = null) {
-        if (!$this->is_configured()) {
-            throw new Exception('OpenRouter provider not configured - missing API key');
-        }
-
-        $url = $this->base_url . '/chat/completions';
-        $headers = $this->get_auth_headers();
-        $headers['Content-Type'] = 'application/json';
-
-        $provider_request['stream'] = true;
-
-        $response_body = '';
-        $ch = curl_init();
-        curl_setopt_array($ch, array(
-            CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => wp_json_encode($provider_request),
-            CURLOPT_HTTPHEADER => $this->format_curl_headers($headers),
-            CURLOPT_WRITEFUNCTION => function($ch, $data) use ($callback, &$response_body) {
-                $response_body .= $data; // Capture response for error logging
-                if ($callback && is_callable($callback)) {
-                    call_user_func($callback, $data);
-                } else {
-                    echo $data;
-                    flush();
-                }
-                return strlen($data);
-            },
-            CURLOPT_TIMEOUT => $this->timeout,
-            CURLOPT_RETURNTRANSFER => false
-        ));
-
-        $result = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-
-        if ($result === false) {
-            throw new Exception('OpenRouter streaming request failed: ' . $error);
-        }
-
-        if ($http_code !== 200) {
-            throw new Exception('OpenRouter streaming request failed with HTTP ' . $http_code);
-        }
-
-        return '';
-    }
-
-    /**
-     * Get available models from OpenRouter API
-     *
-     * @return array Raw models response
-     * @throws Exception If request fails
-     */
-    public function get_raw_models() {
-        if (!$this->is_configured()) {
-            return array();
-        }
-
-        $url = $this->base_url . '/models';
-        $headers = $this->get_auth_headers();
-
-        $response = wp_remote_get($url, array(
-            'headers' => $headers,
-            'timeout' => $this->timeout
-        ));
-
-        if (is_wp_error($response)) {
-            throw new Exception('OpenRouter models request failed: ' . $response->get_error_message());
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $decoded_response = json_decode($body, true);
-
-        if ($status_code !== 200) {
-            throw new Exception('OpenRouter models request failed with HTTP ' . $status_code);
-        }
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid JSON response from OpenRouter models API');
-        }
-
-        return $decoded_response;
-    }
-
-    /**
-     * Check if provider is configured
-     *
-     * @return bool True if configured
-     */
-    public function is_configured() {
-        return !empty($this->api_key);
+    protected function get_provider_name() {
+        return 'OpenRouter';
     }
 
     /**
      * Get authentication headers for OpenRouter API
+     * Includes optional HTTP-Referer and X-Title headers
      *
      * @return array Headers array
      */
-    private function get_auth_headers() {
+    protected function get_auth_headers() {
         $headers = array(
             'Authorization' => 'Bearer ' . $this->api_key
         );
@@ -207,16 +69,50 @@ class AI_HTTP_OpenRouter_Provider {
     }
 
     /**
-     * Format headers for cURL
+     * Send raw request to OpenRouter API
      *
-     * @param array $headers Associative headers array
-     * @return array Indexed headers array for cURL
+     * @param array $provider_request Already normalized for OpenRouter
+     * @return array Raw OpenRouter response
+     * @throws Exception If request fails
      */
-    private function format_curl_headers($headers) {
-        $formatted = array();
-        foreach ($headers as $key => $value) {
-            $formatted[] = $key . ': ' . $value;
+    public function send_raw_request($provider_request) {
+        if (!$this->is_configured()) {
+            throw new Exception('OpenRouter provider not configured - missing API key');
         }
-        return $formatted;
+
+        $url = $this->base_url . '/chat/completions';
+        return $this->execute_post_request($url, $provider_request);
+    }
+
+    /**
+     * Send raw streaming request to OpenRouter API
+     *
+     * @param array $provider_request Already normalized for OpenRouter
+     * @param callable $callback Optional callback for each chunk
+     * @return string Full response content
+     * @throws Exception If request fails
+     */
+    public function send_raw_streaming_request($provider_request, $callback = null) {
+        if (!$this->is_configured()) {
+            throw new Exception('OpenRouter provider not configured - missing API key');
+        }
+
+        $url = $this->base_url . '/chat/completions';
+        return $this->execute_streaming_curl($url, $provider_request, $callback);
+    }
+
+    /**
+     * Get available models from OpenRouter API
+     *
+     * @return array Raw models response
+     * @throws Exception If request fails
+     */
+    public function get_raw_models() {
+        if (!$this->is_configured()) {
+            return array();
+        }
+
+        $url = $this->base_url . '/models';
+        return $this->execute_get_request($url);
     }
 }
