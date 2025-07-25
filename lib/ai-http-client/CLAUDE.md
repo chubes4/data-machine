@@ -2,37 +2,51 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-AI HTTP Client - WordPress library for unified AI provider communication with multi-plugin support.
+AI HTTP Client - WordPress library for multi-type AI provider communication with plugin-scoped configuration.
 
-## Core Architecture (Unified Multi-Plugin)
+## Core Architecture (Multi-Type AI Parameter System)
 
 ### Distribution Pattern
 - **Production**: Git subtree in plugin's `/lib/ai-http-client/`
 - **Integration**: `require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';`
 - **Multi-Plugin**: Each plugin maintains separate configuration while sharing API keys
+- **Multi-Type**: Single library supports LLM, Upscaling, and Generative AI via `ai_type` parameter
 
-### Unified Architecture
-The library uses a fully unified architecture with shared normalizers:
+### Multi-Type Architecture
+The library uses a type-based parameter system for different AI capabilities:
 
-1. **AI_HTTP_Client** - Main orchestrator using unified normalizers
-2. **Unified Normalizers** - Shared logic for all providers:
-   - `UnifiedRequestNormalizer` - Standard → Provider format conversion
-   - `UnifiedResponseNormalizer` - Provider → Standard format conversion  
-   - `UnifiedStreamingNormalizer` - Streaming request/response handling
-   - `UnifiedToolResultsNormalizer` - Tool results continuation handling
-   - `UnifiedConnectionTestNormalizer` - Connection testing logic
-   - `UnifiedModelFetcher` - Model fetching for all providers
-3. **Simple Providers** - Pure API communication only (no normalization logic)
+1. **AI_HTTP_Client** - Single client class with `ai_type` parameter routing
+2. **Type-Specific Normalizers** - Organized by AI type:
+   - `src/Normalizers/LLM/` - Text generation normalizers
+   - `src/Normalizers/Upscaling/` - Image upscaling normalizers  
+   - `src/Normalizers/Generative/` - Image generation normalizers
+3. **Type-Specific Providers** - Organized by AI type:
+   - `src/Providers/LLM/` - Text AI providers (OpenAI, Anthropic, Gemini, Grok, OpenRouter)
+   - `src/Providers/Upscaling/` - Image upscaling providers (Upsampler, etc.)
+   - `src/Providers/Generative/` - Image generation providers (Stable Diffusion, etc.)
 
-### Provider Structure (Simplified)
-Each provider is now a single file in `src/Providers/`:
-- `openai.php` - `AI_HTTP_OpenAI_Provider`
-- `anthropic.php` - `AI_HTTP_Anthropic_Provider`
-- `gemini.php` - `AI_HTTP_Gemini_Provider`
-- `grok.php` - `AI_HTTP_Grok_Provider`
-- `openrouter.php` - `AI_HTTP_OpenRouter_Provider`
+### AI Type Parameter System
+All instantiation requires explicit `ai_type` parameter - **no defaults**:
 
-All normalization logic is centralized in unified normalizers.
+```php
+// LLM client
+$llm_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin',
+    'ai_type' => 'llm'
+]);
+
+// Upscaling client  
+$upscaling_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin',
+    'ai_type' => 'upscaling'
+]);
+
+// Multi-type plugins can use both
+$generative_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin', 
+    'ai_type' => 'generative'
+]);
+```
 
 ## Multi-Plugin Configuration Architecture
 
@@ -61,10 +75,11 @@ ai_http_client_shared_api_keys = [
 - **No Conflicts**: Multiple plugins on same site work independently
 - **Efficient Storage**: API keys stored once, settings stored per plugin
 
-## Standardized Data Formats
+## Standardized Data Formats by AI Type
 
-### Request Format
+### LLM Request/Response Format
 ```php
+// LLM Request
 [
     'messages' => [['role' => 'user|assistant|system', 'content' => 'text']],
     'model' => 'provider-model-name', // Optional - falls back to configured model
@@ -73,10 +88,8 @@ ai_http_client_shared_api_keys = [
     'stream' => false,
     'tools' => [] // Optional tool definitions
 ]
-```
 
-### Response Format
-```php
+// LLM Response
 [
     'success' => true|false,
     'data' => [
@@ -89,6 +102,58 @@ ai_http_client_shared_api_keys = [
     ],
     'error' => null|'error message',
     'provider' => 'openai|anthropic|gemini|grok|openrouter',
+    'raw_response' => null|[...] // Present on errors for debugging
+]
+```
+
+### Upscaling Request/Response Format
+```php
+// Upscaling Request
+[
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x', // 2x, 4x, 8x
+    'quality_settings' => [
+        'creativity' => 7,
+        'detail' => 8
+    ],
+    'webhook_url' => 'optional' // For async processing
+]
+
+// Upscaling Response  
+[
+    'success' => true|false,
+    'data' => [
+        'job_id' => 'abc123',
+        'status' => 'processing|completed',
+        'result_url' => 'https://upscaled-image.jpg', // When completed
+        'webhook_url' => 'https://...'
+    ],
+    'error' => null|'error message',
+    'provider' => 'upsampler',
+    'raw_response' => null|[...] // Present on errors for debugging
+]
+```
+
+### Generative Request/Response Format
+```php
+// Generative Request
+[
+    'prompt' => 'A beautiful landscape',
+    'negative_prompt' => 'blurry, low quality',
+    'style' => 'photorealistic',
+    'dimensions' => '1024x1024',
+    'count' => 1
+]
+
+// Generative Response
+[
+    'success' => true|false,
+    'data' => [
+        'images' => ['https://url1.jpg', 'https://url2.jpg'],
+        'metadata' => ['seed' => 12345, 'steps' => 50]
+    ],
+    'error' => null|'error message',
+    'provider' => 'stable-diffusion',
     'raw_response' => null|[...] // Present on errors for debugging
 ]
 ```
@@ -252,25 +317,73 @@ git subtree pull --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-
 git subtree push --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main
 ```
 
-## Quick Integration (Multi-Plugin Architecture)
+## Quick Integration (Multi-Type AI Parameter System)
 
+### LLM Integration
 ```php
 // 1. Include library
 require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
 
-// 2. Add admin UI with plugin context
+// 2. Add LLM admin UI
 echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug' // REQUIRED
+    'plugin_context' => 'my-plugin-slug', // REQUIRED
+    'ai_type' => 'llm' // REQUIRED
 ]);
 
-// 3. Send request with plugin context
+// 3. Send LLM request
 $client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug' // REQUIRED
+    'plugin_context' => 'my-plugin-slug', // REQUIRED
+    'ai_type' => 'llm' // REQUIRED
 ]);
 $response = $client->send_request([
     'messages' => [['role' => 'user', 'content' => 'Hello AI!']],
     'max_tokens' => 100
-    // Model uses plugin-scoped configuration
+]);
+```
+
+### Upscaling Integration
+```php
+// 1. Include same library
+require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
+
+// 2. Add upscaling admin UI
+echo AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug', // REQUIRED
+    'ai_type' => 'upscaling' // REQUIRED
+]);
+
+// 3. Send upscaling request
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug', // REQUIRED
+    'ai_type' => 'upscaling' // REQUIRED
+]);
+$response = $client->send_request([
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x'
+]);
+```
+
+### Multi-Type Plugin Usage
+```php
+// Single plugin using multiple AI types
+$llm_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm'
+]);
+
+$upscaling_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'upscaling'
+]);
+
+// Use both in same plugin
+$text_analysis = $llm_client->send_request([
+    'messages' => [['role' => 'user', 'content' => 'Analyze this image']]
+]);
+
+$enhanced_image = $upscaling_client->send_request([
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x'
 ]);
 ```
 
@@ -287,21 +400,34 @@ $continuation = $client->continue_with_tool_results($conversation_history, $tool
 // All providers support continuation through unified architecture
 ```
 
-## Breaking Changes (Multi-Plugin Update)
+## Breaking Changes (Multi-Type AI Parameter System)
 
 ### Constructor Changes
 ```php
 // OLD (no longer supported)
 $client = new AI_HTTP_Client();
-$component = AI_HTTP_ProviderManager_Component::render();
-
-// NEW (required)
 $client = new AI_HTTP_Client(['plugin_context' => 'my-plugin-slug']);
 $component = AI_HTTP_ProviderManager_Component::render(['plugin_context' => 'my-plugin-slug']);
+
+// NEW (required - ai_type parameter mandatory)
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm' // REQUIRED: 'llm', 'upscaling', or 'generative'
+]);
+$component = AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm' // REQUIRED
+]);
 ```
 
-### Migration from Single-Plugin
-1. **Update all instantiations** to include plugin context
+### No Hardcoded Defaults Policy
+- **No default ai_type** - must be explicitly specified
+- **No default provider** - must be configured via admin UI
+- **No default timeouts** - use WordPress defaults
+- **Library fails fast** with clear error messages when configuration missing
+
+### Migration from Previous Version
+1. **Add ai_type parameter** to all AI_HTTP_Client instantiations
 2. **API keys automatically migrate** to shared storage on first save
 3. **Plugin-specific settings** remain isolated per plugin
 4. **No data loss** - existing configurations continue working per plugin
