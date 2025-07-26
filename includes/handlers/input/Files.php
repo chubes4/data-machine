@@ -11,6 +11,7 @@ namespace DataMachine\Handlers\Input;
 use DataMachine\Database\{Modules, Projects};
 use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Helpers\Logger;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -29,10 +30,10 @@ class Files extends BaseInputHandler {
      * @param object $module The full module object containing configuration and context.
      * @param array  $source_config Decoded data_source_config specific to this handler (flat array, not sub-array).
      * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
-     * @return array An array containing a single standardized input data packet for the uploaded file.
+     * @return DataPacket A standardized data packet for the uploaded file.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
+	public function get_input_data(object $module, array $source_config, int $user_id): DataPacket {
         // Use base class validation - replaces ~20 lines of duplicated code
         $validated = $this->validate_basic_requirements($module, $user_id);
         $module_id = $validated['module_id'];
@@ -45,7 +46,8 @@ class Files extends BaseInputHandler {
         
         if (!$next_file) {
             $logger?->info('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
-            return []; // No data to process
+            // Return empty packet for no data scenario
+            return new DataPacket('No Data', 'No unprocessed files available', 'files');
         }
 
         // Validate the file still exists

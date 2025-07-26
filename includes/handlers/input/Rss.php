@@ -15,6 +15,7 @@ use DataMachine\Database\{Modules, Projects};
 use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Handlers\HttpService;
 use DataMachine\Helpers\Logger;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -37,40 +38,28 @@ class Rss extends BaseInputHandler {
 	 * @param object $module The full module object containing configuration and context.
 	 * @param array  $source_config Decoded data_source_config specific to this handler.
 	 * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
-	 * @return array An array of standardized input data packets, or an array indicating no new items (e.g., ['status' => 'no_new_items']).
+	 * @return DataPacket A standardized data packet for RSS data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
-		// Log the raw source_config received
-		$this->logger?->info('RSS Input: Entering get_input_data. Raw source_config received:', $source_config);
-
-		// Get module ID from the module object
-		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-
-		if ( empty( $module_id ) || empty( $user_id ) ) {
-			throw new Exception(esc_html__( 'Missing module ID or user ID provided to RSS handler.', 'data-machine' ));
-		}
-
-		// Check if dependencies were injected correctly (basic check)
-		if (!$this->db_processed_items || !$this->db_modules || !$this->db_projects) {
-			throw new Exception(esc_html__( 'Required database service not available in RSS handler.', 'data-machine' ));
-		}
-
-		// Ownership Check (using the trait method)
-		$project = $this->get_module_with_ownership_check($module, $user_id, $this->db_projects);
+	public function get_input_data(object $module, array $source_config, int $user_id): DataPacket {
+		// Use base class validation - replaces ~20 lines of duplicated code
+		$validated = $this->validate_basic_requirements($module, $user_id);
+		$module_id = $validated['module_id'];
+		$project = $validated['project'];
+		
+		$logger = $this->get_logger();
+		$logger?->info('RSS Input: Entering get_input_data. Raw source_config received:', $source_config);
 
 		// --- Configuration --- 
 		// Access settings from nested config structure
 		$config = $source_config['rss'] ?? [];
 		$feed_url = trim( $config['feed_url'] ?? '' );
-		$process_limit = max(1, absint( $config['item_count'] ?? 1 ));
-		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
-		$search_term = trim( $config['search'] ?? '' );
-		$search_keywords = [];
-		if (!empty($search_term)) {
-			$search_keywords = array_map('trim', explode(',', $search_term));
-			$search_keywords = array_filter($search_keywords);
-		}
+		
+		// Use base class common config parsing
+		$common_config = $this->parse_common_config($config);
+		$process_limit = $common_config['process_limit'];
+		$timeframe_limit = $common_config['timeframe_limit'];
+		$search_keywords = $common_config['search_keywords'];
 		
 		// More robust URL validation
 		if (empty($feed_url)) {
@@ -102,24 +91,12 @@ class Rss extends BaseInputHandler {
 		$this->logger?->info("RSS Input: Fetched {$total_items_fetched} total items from feed: {$feed_url}");
 
 		if ( empty($feed_items) ) {
-			$this->logger?->info("RSS Input: Feed found but contains no items: {$feed_url}");
-			return ['status' => 'no_new_items', 'message' => __('No items found in the RSS feed.', 'data-machine')];
+			$logger?->info("RSS Input: Feed found but contains no items: {$feed_url}");
+			return new DataPacket('No Data', 'No items found in the RSS feed', 'rss');
 		}
 
-		// Calculate cutoff timestamp
-		$cutoff_timestamp = null;
-		if ($timeframe_limit !== 'all_time') {
-			$interval_map = [
-				'24_hours' => '-24 hours',
-				'72_hours' => '-72 hours',
-				'7_days'   => '-7 days',
-				'30_days'  => '-30 days'
-			];
-			if (isset($interval_map[$timeframe_limit])) {
-				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp'));
-				$this->logger?->info("RSS Input: Using cutoff timestamp: {$cutoff_timestamp} for timeframe: {$timeframe_limit}");
-			}
-		}
+		// Calculate cutoff timestamp using base class method
+		$cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
 		// --- End Configuration ---
 
 		$eligible_items_packets = [];
@@ -130,30 +107,19 @@ class Rss extends BaseInputHandler {
 		foreach ($feed_items as $item) {
 			$items_checked++;
 
-			// 1. Check timeframe limit
-			if ($cutoff_timestamp !== null) {
-				$item_timestamp = $item->get_date('U');
-				if (!$item_timestamp || $item_timestamp < $cutoff_timestamp) {
-					continue;
-				}
+			// 1. Check timeframe limit using base class method
+			$item_timestamp = $item->get_date('U');
+			if (!$this->filter_by_timeframe($cutoff_timestamp, $item_timestamp)) {
+				continue;
 			}
 
-			// 2. Check search term filter
+			// 2. Check search term filter using base class method
 			$title = $item->get_title() ?? '';
 			$content = $item->get_content() ?? '';
-			if (!empty($search_keywords)) {
-				$text_to_search = $title . ' ' . wp_strip_all_tags($content);
-				$found_keyword = false;
-				foreach ($search_keywords as $keyword) {
-					if (mb_stripos($text_to_search, $keyword) !== false) {
-						$found_keyword = true;
-						break;
-					}
-				}
-				if (!$found_keyword) {
-					$this->logger?->debug("Data Machine RSS Input: Skipping item (search filter). Title: {$title}");
-					continue;
-				}
+			$text_to_search = $title . ' ' . wp_strip_all_tags($content);
+			if (!$this->filter_by_search_terms($text_to_search, $search_keywords)) {
+				$logger?->debug("RSS Input: Skipping item (search filter). Title: {$title}");
+				continue;
 			}
 
 			// 3. Check if processed
@@ -167,49 +133,43 @@ class Rss extends BaseInputHandler {
 				$this->logger?->warning("RSS Input: Used get_id(true) as fallback ID for item #{$items_checked}. Permalink was empty.");
 			}
 			if (empty($current_item_id)) {
-				$this->logger?->error("RSS Input: Skipping item #{$items_checked} due to empty ID/Permalink.", ['feed_url' => $feed_url]);
+				$logger?->error("RSS Input: Skipping item #{$items_checked} due to empty ID/Permalink.", ['feed_url' => $feed_url]);
 				continue;
 			}
 
 			if ( $this->check_if_processed($module_id, 'rss', $current_item_id) ) {
-				$this->logger?->debug("RSS Input: Skipping item (already processed). ID: {$current_item_id}");
+				$logger?->debug("RSS Input: Skipping item (already processed). ID: {$current_item_id}");
 				continue;
 			}
 
 			// --- Item is ELIGIBLE! --- 
 			$link = $item->get_permalink() ?? $feed_url;
-			$content_string = "Source: " . $feed_title . "\n\nTitle: " . $title . "\n\n" . wp_strip_all_tags($content);
+			$content_body = "Source: " . $feed_title . "\n\n" . wp_strip_all_tags($content);
 
-			$input_data_packet = [
-				'data' => [
-					'content_string' => $content_string,
-					'file_info' => null
-				],
-				'metadata' => [
-					'source_type' => 'rss',
-					'item_identifier_to_log' => $current_item_id,
-					'original_id' => $current_item_id,
-					'source_url' => $link,
-					'original_title' => $title,
-					'feed_url' => $feed_url,
-					'original_date_gmt' => gmdate('Y-m-d\TH:i:s', $item->get_date('U')),
-				]
+			// Create standardized DataPacket directly
+			$additional_metadata = [
+				'item_identifier_to_log' => $current_item_id,
+				'original_id' => $current_item_id,
+				'feed_url' => $feed_url,
+				'original_date_gmt' => gmdate('Y-m-d\TH:i:s', $item->get_date('U')),
 			];
-			array_push($eligible_items_packets, $input_data_packet);
+			
+			$data_packet = $this->create_data_packet($title, $content_body, 'rss', $link, $additional_metadata);
+			array_push($eligible_items_packets, $data_packet);
 
 			if (count($eligible_items_packets) >= $process_limit) {
 				break;
 			}
 		} // End foreach
 
-		$this->logger?->info("RSS Input: Finished loop. Checked {$items_checked} items. Found " . count($eligible_items_packets) . " eligible items.");
+		$logger?->info("RSS Input: Finished loop. Checked {$items_checked} items. Found " . count($eligible_items_packets) . " eligible items.");
 
 		// --- Return Results ---
 		if (empty($eligible_items_packets)) {
-			return ['status' => 'no_new_items', 'message' => __('No new items found matching the criteria in the feed.', 'data-machine')];
+			return new DataPacket('No Data', 'No new items found matching the criteria in the feed', 'rss');
 		}
 
-		// Return only the first item for "one coin, one operation" model
+		// Return only the first item for closed-door philosophy
 		return $eligible_items_packets[0];
 	}
 

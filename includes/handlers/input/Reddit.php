@@ -17,6 +17,7 @@ use DataMachine\Admin\OAuth\Reddit as OAuthReddit;
 use DataMachine\Handlers\HttpService;
 use DataMachine\Helpers\Logger;
 use DataMachine\Helpers\EncryptionHelper;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -40,10 +41,10 @@ class Reddit extends BaseInputHandler {
 	 * @param object $module The full module object containing configuration and context.
 	 * @param array  $source_config Decoded data_source_config specific to this handler.
 	 * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
-	 * @return array An array of standardized input data packets, or an array indicating no new items (e.g., ['status' => 'no_new_items']).
+	 * @return DataPacket A standardized data packet for Reddit data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
+	public function get_input_data(object $module, array $source_config, int $user_id): DataPacket {
 		$logger = $this->get_logger();
 		$logger?->info('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
 
@@ -498,7 +499,7 @@ class Reddit extends BaseInputHandler {
 		$logger?->info('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'module_id' => $module_id]);
 
 		if (empty($eligible_items_packets)) {
-			return ['status' => 'no_new_items', 'message' => __('No new items found from the Reddit source matching the criteria.', 'data-machine')];
+			return new DataPacket('No Data', 'No new items found from the Reddit source matching the criteria', 'reddit');
 		}
 
 		// Return only the first item for "one coin, one operation" model

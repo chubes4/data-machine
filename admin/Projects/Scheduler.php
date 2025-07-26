@@ -20,48 +20,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Scheduler {
 
-    /** @var ?Logger */
-    private $logger;
-
-    /** @var JobCreator */
-    private $job_creator;
-
-    /** @var Projects */
-    private $db_projects;
-
-    /** @var Modules */
-    private $db_modules;
-
-    /** @var ActionScheduler */
-    private $action_scheduler;
-
-    /** @var Jobs */
-    private $db_jobs;
-
     /**
-     * Constructor.
-     *
-     * @param JobCreator $job_creator Job Creator service.
-     * @param Projects $db_projects Projects DB service.
-     * @param Modules $db_modules Modules DB service.
-     * @param ActionScheduler $action_scheduler Action Scheduler service.
-     * @param Jobs $db_jobs Jobs DB service.
-     * @param Logger|null $logger Logger service (optional).
+     * Constructor with filter-based service access.
+     * Uses pure filter-based architecture for dependency resolution.
      */
-    public function __construct(
-        JobCreator $job_creator,
-        Projects $db_projects,
-        Modules $db_modules,
-        ActionScheduler $action_scheduler,
-        Jobs $db_jobs,
-        ?Logger $logger = null
-    ) {
-        $this->job_creator = $job_creator;
-        $this->db_projects = $db_projects;
-        $this->db_modules = $db_modules;
-        $this->action_scheduler = $action_scheduler;
-        $this->db_jobs = $db_jobs;
-        $this->logger = $logger;
+    public function __construct() {
+        // Parameter-less constructor - all services accessed via filters
     }
 
     /**
@@ -83,12 +47,12 @@ class Scheduler {
      * @return array Modified schedules.
      */
     public function add_custom_cron_schedules( $schedules ) {
-        // Use the constants to define schedules
-        foreach (Constants::CRON_SCHEDULES as $interval_slug => $details) {
+        // Use the filter-based method to get schedules (allows third-party extensions)
+        foreach (Constants::get_cron_schedules() as $interval_slug => $details) {
             $schedules[$interval_slug] = array(
                 // 'interval' => wp_get_schedule_interval($interval), // OLD - Incorrect function
-                'interval' => $details['interval'], // Use interval in seconds from constant
-                'display'  => $details['label'] // Use label from constant (already translated)
+                'interval' => $details['interval'], // Use interval in seconds from method
+                'display'  => $details['label'] // Use label from method (already translated)
             );
         }
         // Ensure standard WP intervals are present (hourly, twicedaily, daily)
@@ -107,15 +71,23 @@ class Scheduler {
         $hook = 'dm_run_project_schedule_callback';
         $args = ['project_id' => $project_id];
 
+        // Get action scheduler service
+        $action_scheduler = apply_filters('dm_get_service', null, 'action_scheduler');
+        if (!$action_scheduler) {
+            return;
+        }
+
         // Always clear the existing hook first
-        $this->action_scheduler->cancel_scheduled_jobs( $hook, $args );
+        $action_scheduler->cancel_scheduled_jobs( $hook, $args );
 
         // Schedule if active and interval is valid
         $allowed_intervals = Constants::get_project_cron_intervals();
         if ($status === 'active' && in_array($interval, $allowed_intervals)) {
-            // Get interval in seconds from constants
-            $interval_seconds = Constants::CRON_SCHEDULES[$interval]['interval'];
-            $this->action_scheduler->schedule_recurring_job( time(), $interval_seconds, $hook, $args );
+            // Get interval in seconds from filter-based method
+            $interval_seconds = Constants::get_cron_interval_seconds($interval);
+            if ($interval_seconds !== null) {
+                $action_scheduler->schedule_recurring_job( time(), $interval_seconds, $hook, $args );
+            }
         }
     }
 
@@ -129,15 +101,23 @@ class Scheduler {
         $hook = 'dm_run_module_schedule_callback';
         $args = ['module_id' => $module_id];
 
+        // Get action scheduler service
+        $action_scheduler = apply_filters('dm_get_service', null, 'action_scheduler');
+        if (!$action_scheduler) {
+            return;
+        }
+
         // Always clear the existing hook first
-        $this->action_scheduler->cancel_scheduled_jobs( $hook, $args );
+        $action_scheduler->cancel_scheduled_jobs( $hook, $args );
 
         // Schedule if active and interval is valid AND NOT project_schedule/manual
         $allowed_intervals = Constants::get_module_cron_intervals();
         if ($status === 'active' && in_array($interval, $allowed_intervals)) {
-            // Get interval in seconds from constants
-            $interval_seconds = Constants::CRON_SCHEDULES[$interval]['interval'];
-            $this->action_scheduler->schedule_recurring_job( time(), $interval_seconds, $hook, $args );
+            // Get interval in seconds from filter-based method
+            $interval_seconds = Constants::get_cron_interval_seconds($interval);
+            if ($interval_seconds !== null) {
+                $action_scheduler->schedule_recurring_job( time(), $interval_seconds, $hook, $args );
+            }
         }
     }
 
@@ -146,7 +126,10 @@ class Scheduler {
      * @param int $project_id The project ID.
      */
     public function unschedule_project(int $project_id) {
-        $this->action_scheduler->cancel_scheduled_jobs( 'dm_run_project_schedule_callback', ['project_id' => $project_id] );
+        $action_scheduler = apply_filters('dm_get_service', null, 'action_scheduler');
+        if ($action_scheduler) {
+            $action_scheduler->cancel_scheduled_jobs( 'dm_run_project_schedule_callback', ['project_id' => $project_id] );
+        }
     }
 
     /**
@@ -154,7 +137,10 @@ class Scheduler {
      * @param int $module_id The module ID.
      */
     public function unschedule_module(int $module_id) {
-        $this->action_scheduler->cancel_scheduled_jobs( 'dm_run_module_schedule_callback', ['module_id' => $module_id] );
+        $action_scheduler = apply_filters('dm_get_service', null, 'action_scheduler');
+        if ($action_scheduler) {
+            $action_scheduler->cancel_scheduled_jobs( 'dm_run_module_schedule_callback', ['module_id' => $module_id] );
+        }
     }
 
     /**
@@ -216,21 +202,27 @@ class Scheduler {
      * @param int $project_id The ID of the project to run.
      */
     public function dm_run_project_schedule_callback(int $project_id) {
-        $logger = $this->logger; // Use injected logger
+        $logger = apply_filters('dm_get_service', null, 'logger');
         $log_prefix = "Data Machine Scheduler (Project Callback: {$project_id}): ";
 
-        // Get the Job Creator service from property
-        $job_creator = $this->job_creator;
-        if (!$job_creator) { // Should not happen if constructor enforces type
-             $error_message = $log_prefix . "Job Creator service not available (should be injected).";
+        // Get the Job Creator service via filter
+        $job_creator = apply_filters('dm_get_service', null, 'job_creator');
+        if (!$job_creator) {
+             $error_message = $log_prefix . "Job Creator service not available.";
              $logger?->critical($error_message, ['project_id' => $project_id]);
              return; // Cannot proceed without the creator
         }
 
         try {
-            // 1. Get DB dependencies from properties
-            $db_projects = $this->db_projects;
-            $db_modules = $this->db_modules;
+            // 1. Get DB dependencies via filters
+            $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+            $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+            $db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
+            
+            if (!$db_projects || !$db_modules || !$db_jobs) {
+                $logger?->critical($log_prefix . "Required database services not available.", ['project_id' => $project_id]);
+                return;
+            }
 
             // 2. Verify project exists and is active (using DB method - get project without user check)
             $project = $db_projects->get_project($project_id);
@@ -250,14 +242,14 @@ class Scheduler {
             }
 
             // 3. Clean up stuck jobs before processing (safety net)
-            $stuck_jobs_cleaned = $this->db_jobs->cleanup_stuck_jobs(); // Uses constant timeout
+            $stuck_jobs_cleaned = $db_jobs->cleanup_stuck_jobs(); // Uses constant timeout
             if ($stuck_jobs_cleaned > 0) {
                 $logger?->info($log_prefix . "Cleaned up {$stuck_jobs_cleaned} stuck jobs (>" . Constants::JOB_STUCK_TIMEOUT_HOURS . " hours old).", ['project_id' => $project_id, 'cleaned_count' => $stuck_jobs_cleaned]);
             }
 
             // 4. Periodic maintenance: cleanup old jobs and log files (run once per day per project)
             if ($this->should_run_maintenance($project_id)) {
-                $old_jobs_cleaned = $this->db_jobs->cleanup_old_jobs(); // Uses constant timeout
+                $old_jobs_cleaned = $db_jobs->cleanup_old_jobs(); // Uses constant timeout
                 if ($old_jobs_cleaned > 0) {
                     $logger?->info($log_prefix . "Cleaned up {$old_jobs_cleaned} old completed/failed jobs (>" . Constants::JOB_CLEANUP_OLD_DAYS . " days old).", ['project_id' => $project_id, 'cleaned_count' => $old_jobs_cleaned]);
                 }
@@ -341,21 +333,26 @@ class Scheduler {
      * @param int $module_id The ID of the module to run.
      */
     public function dm_run_module_schedule_callback(int $module_id) {
-        $logger = $this->logger; // Use injected logger
+        $logger = apply_filters('dm_get_service', null, 'logger');
         $log_prefix = "Data Machine Scheduler (Module Callback: {$module_id}): ";
 
-        // Get the Job Creator service from property
-        $job_creator = $this->job_creator;
-        if (!$job_creator) { // Should not happen
-             $error_message = $log_prefix . "Job Creator service not available (should be injected).";
+        // Get the Job Creator service via filter
+        $job_creator = apply_filters('dm_get_service', null, 'job_creator');
+        if (!$job_creator) {
+             $error_message = $log_prefix . "Job Creator service not available.";
              $logger?->critical($error_message, ['module_id' => $module_id]);
              return; // Cannot proceed
         }
 
         try {
-            // 1. Get DB dependencies from properties
-            $db_modules = $this->db_modules;
-            $db_projects = $this->db_projects; // Need projects DB to get user_id
+            // 1. Get DB dependencies via filters
+            $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+            $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+            
+            if (!$db_modules || !$db_projects) {
+                $logger?->critical($log_prefix . "Required database services not available.", ['module_id' => $module_id]);
+                return;
+            }
 
             // 2. Fetch module (using DB method)
             $module = $db_modules->get_module($module_id);

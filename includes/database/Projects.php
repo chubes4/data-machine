@@ -224,7 +224,8 @@ class Projects {
             project_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             user_id bigint(20) unsigned NOT NULL,
             project_name varchar(255) NOT NULL DEFAULT '',
-            project_prompt text NULL,
+            step_prompts longtext NULL,
+            pipeline_configuration longtext NULL,
             schedule_interval varchar(50) NOT NULL DEFAULT 'manual',
             schedule_status varchar(20) NOT NULL DEFAULT 'paused',
             last_run_at datetime NULL DEFAULT NULL,
@@ -280,6 +281,200 @@ class Projects {
         }
 
         return $deleted; // Returns 1 on success, 0 if no match, false on error
+    }
+
+    /**
+     * Update the step prompts for a specific project.
+     *
+     * @param int   $project_id   The ID of the project to update.
+     * @param array $step_prompts Array of step prompts in the format:
+     *                            {"process": {"process_data_prompt": "..."}, "factcheck": {...}}
+     * @param int   $user_id      The ID of the user making the change (for ownership check).
+     * @return bool|int           Number of rows updated (usually 1) or false on failure/permission error.
+     */
+    public function update_project_step_prompts( $project_id, $step_prompts, $user_id ) {
+        global $wpdb;
+
+        $project_id = absint( $project_id );
+        $user_id = absint( $user_id );
+
+        if ( empty( $project_id ) || empty( $user_id ) ) {
+            return false;
+        }
+
+        // Validate that step_prompts is an array
+        if ( ! is_array( $step_prompts ) ) {
+            return false;
+        }
+
+        // Convert to JSON
+        $json_prompts = wp_json_encode( $step_prompts );
+        if ( $json_prompts === false ) {
+            return false; // JSON encoding failed
+        }
+
+        // Update the project WHERE project_id matches AND user_id matches (ensures ownership)
+        $updated = $wpdb->update(
+            $this->table_name,
+            array( 
+                'step_prompts' => $json_prompts,
+                'updated_at' => current_time( 'mysql', 1 )
+            ),
+            array( 
+                'project_id' => $project_id,
+                'user_id' => $user_id
+            ),
+            array( 
+                '%s', // step_prompts JSON
+                '%s'  // updated_at
+            ),
+            array( 
+                '%d', // project_id
+                '%d'  // user_id
+            )
+        );
+
+        if ( false === $updated ) {
+            return false;
+        }
+
+        return $updated; // Returns number of rows affected (0 or 1 usually)
+    }
+
+    /**
+     * Get step prompts for a specific project.
+     *
+     * @param int      $project_id The ID of the project.
+     * @param int|null $user_id    (Optional) The ID of the user to verify ownership.
+     * @return array|null          Array of step prompts or null if not found/no access.
+     */
+    public function get_project_step_prompts( $project_id, $user_id = null ) {
+        $project = $this->get_project( $project_id, $user_id );
+        
+        if ( ! $project || empty( $project->step_prompts ) ) {
+            return [];
+        }
+
+        $prompts = json_decode( $project->step_prompts, true );
+        return is_array( $prompts ) ? $prompts : [];
+    }
+
+    /**
+     * Initialize default step prompts for a project based on current pipeline configuration.
+     *
+     * @param int $project_id The ID of the project.
+     * @param int $user_id    The ID of the user (for ownership verification).
+     * @return bool           True on success, false on failure.
+     */
+    public function initialize_default_step_prompts( $project_id, $user_id ) {
+        // Use the ProjectPromptsService via filter-based access
+        $project_prompts_service = apply_filters('dm_get_service', null, 'project_prompts_service');
+        
+        if ( ! $project_prompts_service ) {
+            return false; // Service not available
+        }
+
+        return $project_prompts_service->create_default_step_prompts( $project_id );
+    }
+
+    /**
+     * Update the pipeline configuration for a specific project.
+     *
+     * @param int   $project_id         The ID of the project to update.
+     * @param array $pipeline_config    Array containing pipeline configuration:
+     *                                  {"steps": ["input", "process", "output"], "ai_steps": ["process"]}
+     * @param int   $user_id           The ID of the user making the change (for ownership check).
+     * @return bool|int                Number of rows updated (usually 1) or false on failure/permission error.
+     */
+    public function update_project_pipeline_configuration( $project_id, $pipeline_config, $user_id ) {
+        global $wpdb;
+
+        $project_id = absint( $project_id );
+        $user_id = absint( $user_id );
+
+        if ( empty( $project_id ) || empty( $user_id ) ) {
+            return false;
+        }
+
+        // Validate that pipeline_config is an array
+        if ( ! is_array( $pipeline_config ) ) {
+            return false;
+        }
+
+        // Convert to JSON
+        $json_config = wp_json_encode( $pipeline_config );
+        if ( $json_config === false ) {
+            return false; // JSON encoding failed
+        }
+
+        // Update the project WHERE project_id matches AND user_id matches (ensures ownership)
+        $updated = $wpdb->update(
+            $this->table_name,
+            array( 
+                'pipeline_configuration' => $json_config,
+                'updated_at' => current_time( 'mysql', 1 )
+            ),
+            array( 
+                'project_id' => $project_id,
+                'user_id' => $user_id
+            ),
+            array( 
+                '%s', // pipeline_configuration JSON
+                '%s'  // updated_at
+            ),
+            array( 
+                '%d', // project_id
+                '%d'  // user_id
+            )
+        );
+
+        if ( false === $updated ) {
+            return false;
+        }
+
+        return $updated; // Returns number of rows affected (0 or 1 usually)
+    }
+
+    /**
+     * Get pipeline configuration for a specific project.
+     *
+     * @param int      $project_id The ID of the project.
+     * @param int|null $user_id    (Optional) The ID of the user to verify ownership.
+     * @return array|null          Array of pipeline configuration or empty array if not found/no access.
+     */
+    public function get_project_pipeline_configuration( $project_id, $user_id = null ) {
+        $project = $this->get_project( $project_id, $user_id );
+        
+        if ( ! $project || empty( $project->pipeline_configuration ) ) {
+            return [];
+        }
+
+        $config = json_decode( $project->pipeline_configuration, true );
+        return is_array( $config ) ? $config : [];
+    }
+
+    /**
+     * Initialize default pipeline configuration for a project.
+     *
+     * @param int $project_id The ID of the project.
+     * @param int $user_id    The ID of the user (for ownership verification).
+     * @return bool           True on success, false on failure.
+     */
+    public function initialize_default_pipeline_configuration( $project_id, $user_id ) {
+        // Default 5-step pipeline configuration
+        $default_config = [
+            'steps' => ['input', 'process', 'factcheck', 'finalize', 'output'],
+            'ai_steps' => ['process', 'factcheck', 'finalize'],
+            'step_configs' => [
+                'input' => ['class' => 'DataMachine\\Engine\\Steps\\InputStep', 'required' => true],
+                'process' => ['class' => 'DataMachine\\Engine\\Steps\\ProcessStep', 'required' => true],
+                'factcheck' => ['class' => 'DataMachine\\Engine\\Steps\\FactCheckStep', 'required' => false],
+                'finalize' => ['class' => 'DataMachine\\Engine\\Steps\\FinalizeStep', 'required' => true],
+                'output' => ['class' => 'DataMachine\\Engine\\Steps\\OutputStep', 'required' => true]
+            ]
+        ];
+
+        return $this->update_project_pipeline_configuration( $project_id, $default_config, $user_id );
     }
 
 } // End class

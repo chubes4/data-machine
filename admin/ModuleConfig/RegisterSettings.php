@@ -57,24 +57,14 @@ class RegisterSettings {
     private $fields = array();
 
     /**
-     * Admin notices.
-     *
-     * @since    NEXT_VERSION
-     * @access   private
-     * @var      object    $admin_notices    Admin notices object.
-     */
-    private $admin_notices;
-
-    /**
      * Initialize the class and set its properties.
+     * Uses filter-based service access for dependencies.
      *
      * @since    NEXT_VERSION
-     * @param    string                                $version    The plugin version.
-     * @param    object                                $admin_notices    Admin notices object.
+     * @param    string    $version    The plugin version.
      */
-    public function __construct( $version, $admin_notices = null ) {
+    public function __construct( $version ) {
         $this->version = $version;
-        $this->admin_notices = $admin_notices;
         
         // Define default sections
         $this->sections = array(
@@ -159,7 +149,7 @@ class RegisterSettings {
                 'args'        => array(
                     'label_for' => 'schedule_frequency',
                     'desc'      => 'Select how often to run data machine.', // Translate later
-                    'options'   => Constants::CRON_SCHEDULES,
+                    'options'   => Constants::get_cron_schedules(),
                 ),
             ),
         );

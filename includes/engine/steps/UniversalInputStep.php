@@ -8,7 +8,6 @@ if (!defined('ABSPATH')) {
 
 use DataMachine\Engine\Interfaces\PipelineStepInterface;
 use DataMachine\Constants;
-use DataMachine\DataPacket;
 
 /**
  * Universal Input Step - Executes any input handler
@@ -21,13 +20,10 @@ use DataMachine\DataPacket;
  * Handler selection is determined by step configuration, enabling
  * complete flexibility in pipeline composition.
  */
-class InputStep extends BasePipelineStep implements PipelineStepInterface {
+class UniversalInputStep extends BasePipelineStep implements PipelineStepInterface {
 
     /**
-     * Execute input data collection with configurable handler (Closed-Door Philosophy)
-     * 
-     * Collects data from external sources only, returns DataPacket format.
-     * No backward looking - only forward data passing.
+     * Execute input data collection with configurable handler
      * 
      * @param int $job_id The job ID to process
      * @return bool True on success, false on failure
@@ -37,7 +33,7 @@ class InputStep extends BasePipelineStep implements PipelineStepInterface {
         $db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
 
         try {
-            $logger->info('Input Step: Starting data collection (closed-door)', ['job_id' => $job_id]);
+            $logger->info('Universal Input Step: Starting data collection', ['job_id' => $job_id]);
 
             // Get job and module configuration
             $job = $db_jobs->get_job($job_id);
@@ -54,33 +50,34 @@ class InputStep extends BasePipelineStep implements PipelineStepInterface {
             $handler_name = $step_config['handler'];
             $handler_config = $step_config['config'] ?? [];
 
-            // Execute input handler and ensure DataPacket return
-            $data_packet = $this->execute_input_handler_direct($handler_name, $job, $handler_config);
+            // Execute input handler via filter
+            $input_data = apply_filters('dm_execute_input_handler', null, $handler_name, $job, $handler_config);
 
-            if (!$data_packet instanceof DataPacket) {
-                return $this->fail_job($job_id, 'Input handler must return DataPacket: ' . $handler_name);
+            if ($input_data === null) {
+                // Fallback to direct handler execution if no filter override
+                $input_data = $this->execute_input_handler_direct($handler_name, $job, $handler_config);
             }
 
-            if (!$data_packet->hasContent()) {
-                return $this->fail_job($job_id, 'Input handler returned empty DataPacket: ' . $handler_name);
+            if (empty($input_data)) {
+                return $this->fail_job($job_id, 'Input handler returned no data: ' . $handler_name);
             }
 
-            // Store DataPacket for next step (closed-door: only forward data flow)
-            $success = $this->store_step_data_packet($job_id, $data_packet);
+            // Store input data in standardized format
+            $success = $this->store_step_data($job_id, 'input_data', $input_data);
 
             if ($success) {
-                $logger->info('Input Step: Data collection completed', [
+                $item_count = isset($input_data['processed_items']) ? count($input_data['processed_items']) : 1;
+                $logger->info('Universal Input Step: Data collection completed', [
                     'job_id' => $job_id,
                     'handler' => $handler_name,
-                    'content_length' => $data_packet->getContentLength(),
-                    'source_type' => $data_packet->metadata['source_type'] ?? 'unknown'
+                    'items_collected' => $item_count
                 ]);
             }
 
             return $success;
 
         } catch (\Exception $e) {
-            $logger->error('Input Step: Exception during data collection', [
+            $logger->error('Universal Input Step: Exception during data collection', [
                 'job_id' => $job_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -145,15 +142,15 @@ class InputStep extends BasePipelineStep implements PipelineStepInterface {
      * @param string $handler_name Input handler name
      * @param object $job Job object
      * @param array $handler_config Handler configuration
-     * @return DataPacket|null DataPacket or null on failure
+     * @return array|null Input data or null on failure
      */
-    private function execute_input_handler_direct(string $handler_name, object $job, array $handler_config): ?DataPacket {
+    private function execute_input_handler_direct(string $handler_name, object $job, array $handler_config): ?array {
         $logger = apply_filters('dm_get_service', null, 'logger');
 
         // Get handler info from Constants registry
         $handler_info = Constants::get_input_handler($handler_name);
         if (!$handler_info || !class_exists($handler_info['class'])) {
-            $logger->error('Input Step: Handler not found or invalid', [
+            $logger->error('Universal Input Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'job_id' => $job->job_id
             ]);
@@ -168,45 +165,21 @@ class InputStep extends BasePipelineStep implements PipelineStepInterface {
             $db_modules = apply_filters('dm_get_service', null, 'db_modules');
             $module = $db_modules->get_module($job->module_id);
             if (!$module) {
-                $logger->error('Input Step: Module not found', [
+                $logger->error('Universal Input Step: Module not found', [
                     'module_id' => $job->module_id,
                     'job_id' => $job->job_id
                 ]);
                 return null;
             }
 
-            // Execute handler - must return DataPacket
+            // Execute handler
             $user_id = json_decode($job->module_config ?? '{}', true)['user_id'] ?? 0;
-            $result = $handler->get_input_data($module, $handler_config, $user_id);
+            $input_data = $handler->get_input_data($module, $handler_config, $user_id);
 
-            // Ensure we have a DataPacket
-            if ($result instanceof DataPacket) {
-                return $result;
-            }
-
-            // If handler returns legacy format, convert to DataPacket
-            if (is_array($result)) {
-                try {
-                    return DataPacket::fromLegacyInputData($result);
-                } catch (\Exception $e) {
-                    $logger->error('Input Step: Failed to convert legacy data to DataPacket', [
-                        'handler' => $handler_name,
-                        'job_id' => $job->job_id,
-                        'error' => $e->getMessage()
-                    ]);
-                    return null;
-                }
-            }
-
-            $logger->error('Input Step: Handler returned invalid data type', [
-                'handler' => $handler_name,
-                'job_id' => $job->job_id,
-                'type' => gettype($result)
-            ]);
-            return null;
+            return $input_data;
 
         } catch (\Exception $e) {
-            $logger->error('Input Step: Handler execution failed', [
+            $logger->error('Universal Input Step: Handler execution failed', [
                 'handler' => $handler_name,
                 'job_id' => $job->job_id,
                 'exception' => $e->getMessage()

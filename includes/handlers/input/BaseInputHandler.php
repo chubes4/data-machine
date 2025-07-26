@@ -14,6 +14,7 @@ use DataMachine\Database\{Modules, Projects};
 use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Handlers\HttpService;
 use DataMachine\Contracts\LoggerInterface;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -239,18 +240,48 @@ class BaseInputHandler {
     }
     
     /**
-     * Create standardized input data packet structure.
-     * All handlers should use this method to ensure consistent packet format.
+     * Create standardized DataPacket from content and metadata.
+     * All input handlers must use this method for consistent output.
      *
-     * @param array $data Data section (content_string, file_info)
-     * @param array $metadata Metadata section (source_type, identifiers, dates, etc.)
-     * @return array Standardized input data packet
+     * @param string $title Content title
+     * @param string $body Content body
+     * @param string $source_type Handler source type
+     * @param string|null $source_url Source URL
+     * @param array $additional_metadata Additional metadata
+     * @return DataPacket Standardized data packet
      */
-    protected function create_input_data_packet($data, $metadata) {
-        return [
-            'data' => $data,
-            'metadata' => $metadata
-        ];
+    protected function create_data_packet(string $title, string $body, string $source_type, ?string $source_url = null, array $additional_metadata = []): DataPacket {
+        $packet = new DataPacket($title, $body, $source_type);
+        
+        if ($source_url) {
+            $packet->metadata['source_url'] = $source_url;
+        }
+        
+        // Merge additional metadata
+        if (!empty($additional_metadata)) {
+            $packet->metadata = array_merge($packet->metadata, $additional_metadata);
+        }
+        
+        return $packet;
+    }
+    
+    /**
+     * Add image to DataPacket from metadata.
+     * Helper method for adding image attachments.
+     *
+     * @param DataPacket $packet The data packet
+     * @param array $metadata Input metadata with potential image URL
+     * @return DataPacket Modified packet with image
+     */
+    protected function add_image_from_metadata(DataPacket $packet, array $metadata): DataPacket {
+        if (!empty($metadata['image_source_url'])) {
+            $packet->addImage(
+                $metadata['image_source_url'],
+                $packet->content['title'] ?: 'Content Image'
+            );
+        }
+        
+        return $packet;
     }
     
     /**

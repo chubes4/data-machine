@@ -15,6 +15,7 @@ namespace DataMachine\Handlers\Input;
 use DataMachine\Database\{Modules, Projects};
 use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Helpers\Logger;
+use DataMachine\DataPacket;
 use Exception;
 use InvalidArgumentException;
 use WP_Query;
@@ -31,33 +32,16 @@ class LocalWordPress extends BaseInputHandler {
 	 * @param object $module The full module object containing configuration and context.
 	 * @param array  $source_config Decoded data_source_config for the specific module run.
 	 * @param int    $user_id The ID of the user context.
-	 * @return array The standardized input data packet.
+	 * @return DataPacket The standardized data packet.
 	 * @throws Exception If input data is invalid or cannot be retrieved.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
-		// Get module ID from the module object
-		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
+	public function get_input_data(object $module, array $source_config, int $user_id): DataPacket {
+		// Use base class validation - replaces ~20 lines of duplicated code
+		$validated = $this->validate_basic_requirements($module, $user_id);
+		$module_id = $validated['module_id'];
+		$project = $validated['project'];
 		
-		// Use the passed $user_id for validation
-		if (empty($module_id) || empty($user_id)) {
-			throw new Exception(esc_html__('Missing module ID or user ID.', 'data-machine'));
-		}
-
-		// Get dependencies
-		$db_modules = $this->db_modules;
-		$db_projects = $this->db_projects;
-		if (!$this->processed_items_manager || !$db_modules || !$db_projects) {
-			throw new Exception(esc_html__('Required database service not available.', 'data-machine'));
-		}
-
-		// Need to check ownership via project
-		if (!$module || !isset($module->project_id)) {
-			throw new Exception(esc_html__('Invalid module or project association missing.', 'data-machine'));
-		}
-		$project = $db_projects->get_project($module->project_id, $user_id);
-		if (!$project) {
-			throw new Exception(esc_html__('Permission denied for this module.', 'data-machine'));
-		}
+		$logger = $this->get_logger();
 
 		// --- Configuration ---
 		// Access config from nested structure
@@ -68,28 +52,23 @@ class LocalWordPress extends BaseInputHandler {
 		$tag_id = absint($config['tag_id'] ?? 0);
 		$orderby = sanitize_text_field($config['orderby'] ?? 'date');
 		$order = sanitize_text_field($config['order'] ?? 'DESC');
-		$search = sanitize_text_field($config['search'] ?? '');
-		$process_limit = max(1, absint($config['item_count'] ?? 1));
-		$timeframe_limit = sanitize_text_field($config['timeframe_limit'] ?? 'all_time');
 		
-		// Calculate date query parameters
+		// Use base class common config parsing
+		$common_config = $this->parse_common_config($config);
+		$process_limit = $common_config['process_limit'];
+		$timeframe_limit = $common_config['timeframe_limit'];
+		$search = $common_config['search_term'];
+		
+		// Calculate date query parameters using base class method
+		$cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
 		$date_query = [];
-		if ($timeframe_limit !== 'all_time') {
-			$interval_map = [
-				'24_hours' => '-24 hours',
-				'72_hours' => '-72 hours',
-				'7_days'   => '-7 days',
-				'30_days'  => '-30 days'
+		if ($cutoff_timestamp !== null) {
+			$date_query = [
+				[
+					'after' => date('Y-m-d H:i:s', $cutoff_timestamp),
+					'inclusive' => true,
+				]
 			];
-			if (isset($interval_map[$timeframe_limit])) {
-				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
-				$date_query = [
-					[
-						'after' => date('Y-m-d H:i:s', $cutoff_timestamp),
-						'inclusive' => true,
-					]
-				];
-			}
 		}
 		// --- End Configuration ---
 
@@ -130,7 +109,7 @@ class LocalWordPress extends BaseInputHandler {
 		$posts = $wp_query->posts;
 
 		if (empty($posts)) {
-			throw new Exception(__('No posts found matching the criteria.', 'data-machine'));
+			return new DataPacket('No Data', 'No posts found matching the criteria', 'local_wordpress');
 		}
 
 		// Find first unprocessed post
@@ -169,27 +148,28 @@ class LocalWordPress extends BaseInputHandler {
 			$source_name = $site_name ?: 'Local WordPress';
 			$content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 			
-			$input_data_packet = [
-				'data' => [
-					'content_string' => $content_string,
-					'file_info' => null
-				],
-				'metadata' => [
-					'source_type' => 'local_wordpress',
-					'item_identifier_to_log' => $post_id,
-					'original_id' => $post_id,
-					'source_url' => $source_link,
-					'original_title' => $title,
-					'image_source_url' => $image_url,
-					'original_date_gmt' => $post->post_date_gmt
-				]
+			// Use base class method to create standardized packet
+			$data = [
+				'content_string' => $content_string,
+				'file_info' => null
 			];
 			
+			$metadata = [
+				'source_type' => 'local_wordpress',
+				'item_identifier_to_log' => $post_id,
+				'original_id' => $post_id,
+				'source_url' => $source_link,
+				'original_title' => $title,
+				'image_source_url' => $image_url,
+				'original_date_gmt' => $post->post_date_gmt
+			];
+			
+			$input_data_packet = $this->create_input_data_packet($data, $metadata);
 			$eligible_items_packets[] = $input_data_packet;
 		}
 
 		if (empty($eligible_items_packets)) {
-			throw new Exception(__('No new posts found matching the criteria.', 'data-machine'));
+			return new DataPacket('No Data', 'No new posts found matching the criteria', 'local_wordpress');
 		}
 
 		// Return only the first item for "one coin, one operation" model

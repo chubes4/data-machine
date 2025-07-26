@@ -8,7 +8,6 @@ if (!defined('ABSPATH')) {
 
 use DataMachine\Engine\Interfaces\PipelineStepInterface;
 use DataMachine\Constants;
-use DataMachine\DataPacket;
 
 /**
  * Universal Output Step - Executes any output handler
@@ -21,13 +20,10 @@ use DataMachine\DataPacket;
  * Handler selection is determined by step configuration, enabling
  * complete flexibility in publishing workflows.
  */
-class OutputStep extends BasePipelineStep implements PipelineStepInterface {
+class UniversalOutputStep extends BasePipelineStep implements PipelineStepInterface {
 
     /**
-     * Execute output publishing with configurable handler (Closed-Door Philosophy)
-     * 
-     * Publishes DataPacket from previous step only.
-     * No backward looking - only forward data consumption.
+     * Execute output publishing with configurable handler
      * 
      * @param int $job_id The job ID to process
      * @return bool True on success, false on failure
@@ -37,7 +33,7 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
         $db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
 
         try {
-            $logger->info('Output Step: Starting data publishing (closed-door)', ['job_id' => $job_id]);
+            $logger->info('Universal Output Step: Starting data publishing', ['job_id' => $job_id]);
 
             // Get job and module configuration
             $job = $db_jobs->get_job($job_id);
@@ -54,14 +50,19 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
             $handler_name = $step_config['handler'];
             $handler_config = $step_config['config'] ?? [];
 
-            // Get DataPacket from previous step only (closed-door: no backward looking)
-            $data_packet = $this->get_previous_step_data_packet($job_id);
-            if (!$data_packet) {
-                return $this->fail_job($job_id, 'No DataPacket available from previous step');
+            // Get processed data from previous step(s)
+            $processed_data = $this->get_previous_step_data($job_id);
+            if (empty($processed_data)) {
+                return $this->fail_job($job_id, 'No processed data available for output');
             }
 
-            // Execute output handler with DataPacket
-            $output_result = $this->execute_output_handler_direct($handler_name, $data_packet, $job, $handler_config);
+            // Execute output handler via filter
+            $output_result = apply_filters('dm_execute_output_handler', null, $handler_name, $processed_data, $job, $handler_config);
+
+            if ($output_result === null) {
+                // Fallback to direct handler execution if no filter override
+                $output_result = $this->execute_output_handler_direct($handler_name, $processed_data, $job, $handler_config);
+            }
 
             if (!$output_result || (isset($output_result['success']) && !$output_result['success'])) {
                 $error_message = 'Output handler failed: ' . $handler_name;
@@ -71,20 +72,11 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
                 return $this->fail_job($job_id, $error_message);
             }
 
-            // Create result DataPacket for final storage
-            $result_packet = new DataPacket(
-                'Output Complete',
-                json_encode($output_result, JSON_PRETTY_PRINT),
-                'output_handler'
-            );
-            $result_packet->metadata['handler_used'] = $handler_name;
-            $result_packet->metadata['output_success'] = $output_result['success'] ?? true;
-            
-            // Store result DataPacket
-            $success = $this->store_step_data_packet($job_id, $result_packet);
+            // Store output result
+            $success = $this->store_step_data($job_id, 'output_result', $output_result);
 
             if ($success) {
-                $logger->info('Output Step: Data publishing completed', [
+                $logger->info('Universal Output Step: Data publishing completed', [
                     'job_id' => $job_id,
                     'handler' => $handler_name,
                     'output_success' => $output_result['success'] ?? true
@@ -94,7 +86,7 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
             return $success;
 
         } catch (\Exception $e) {
-            $logger->error('Output Step: Exception during publishing', [
+            $logger->error('Universal Output Step: Exception during publishing', [
                 'job_id' => $job_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -153,23 +145,55 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
         return null;
     }
 
+    /**
+     * Get processed data from previous pipeline step(s)
+     * 
+     * @param int $job_id Job ID
+     * @return array Processed data for output publishing
+     */
+    private function get_previous_step_data(int $job_id): array {
+        // Try to get data from the most recent AI processing step
+        $all_step_data = $this->get_all_step_data($job_id);
+        
+        // Look for AI-processed data first
+        if (isset($all_step_data['ai_processed_data'])) {
+            return $all_step_data['ai_processed_data'];
+        }
+
+        // Fallback to other step data
+        foreach (['finalized_data', 'fact_checked_data', 'processed_data', 'input_data'] as $data_field) {
+            if (isset($all_step_data[$data_field]) && !empty($all_step_data[$data_field])) {
+                return $all_step_data[$data_field];
+            }
+        }
+
+        // Legacy numbered access fallback
+        for ($step = 5; $step >= 1; $step--) {
+            $step_data = $this->get_step_data($job_id, $step);
+            if (!empty($step_data)) {
+                return $step_data;
+            }
+        }
+
+        return [];
+    }
 
     /**
      * Execute output handler directly using Constants registry
      * 
      * @param string $handler_name Output handler name
-     * @param DataPacket $data_packet DataPacket to publish
+     * @param array $processed_data Processed data to publish
      * @param object $job Job object
      * @param array $handler_config Handler configuration
      * @return array|null Output result or null on failure
      */
-    private function execute_output_handler_direct(string $handler_name, DataPacket $data_packet, object $job, array $handler_config): ?array {
+    private function execute_output_handler_direct(string $handler_name, array $processed_data, object $job, array $handler_config): ?array {
         $logger = apply_filters('dm_get_service', null, 'logger');
 
         // Get handler info from Constants registry
         $handler_info = Constants::get_output_handler($handler_name);
         if (!$handler_info || !class_exists($handler_info['class'])) {
-            $logger->error('Output Step: Handler not found or invalid', [
+            $logger->error('Universal Output Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'job_id' => $job->job_id
             ]);
@@ -184,7 +208,7 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
             $db_modules = apply_filters('dm_get_service', null, 'db_modules');
             $module = $db_modules->get_module($job->module_id);
             if (!$module) {
-                $logger->error('Output Step: Module not found', [
+                $logger->error('Universal Output Step: Module not found', [
                     'module_id' => $job->module_id,
                     'job_id' => $job->job_id
                 ]);
@@ -192,16 +216,16 @@ class OutputStep extends BasePipelineStep implements PipelineStepInterface {
             }
 
             // Prepare module with output configuration
-            $module->output_config = json_encode($handler_config);
+            $module->output_config = $handler_config;
 
-            // Execute handler with DataPacket (standardized interface)
+            // Execute handler
             $user_id = json_decode($job->module_config ?? '{}', true)['user_id'] ?? 0;
-            $output_result = $handler->handle_output($data_packet, $module, $user_id);
+            $output_result = $handler->handle_output($processed_data, $module, $user_id);
 
             return $output_result;
 
         } catch (\Exception $e) {
-            $logger->error('Output Step: Handler execution failed', [
+            $logger->error('Universal Output Step: Handler execution failed', [
                 'handler' => $handler_name,
                 'job_id' => $job->job_id,
                 'exception' => $e->getMessage()

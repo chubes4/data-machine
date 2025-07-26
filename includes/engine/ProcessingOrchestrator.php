@@ -24,44 +24,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ProcessingOrchestrator {
 
-	/** @var LoggerInterface */
-	private LoggerInterface $logger;
-
-	/** @var ActionSchedulerInterface */
-	private ActionSchedulerInterface $action_scheduler;
-
-	/** @var Jobs */
-	private Jobs $db_jobs;
-
 	/**
-	 * Constructor with dependency injection.
-	 *
-	 * @param LoggerInterface $logger Logger service for error and info logging.
-	 * @param ActionSchedulerInterface $action_scheduler Service for scheduling background jobs.
-	 * @param Jobs $db_jobs Database service for job data management.
+	 * Constructor with filter-based service access.
+	 * Uses pure filter-based architecture for dependency resolution.
 	 */
-	public function __construct(
-		LoggerInterface $logger,
-		ActionSchedulerInterface $action_scheduler,
-		Jobs $db_jobs
-	) {
-		$this->logger = $logger;
-		$this->action_scheduler = $action_scheduler;
-		$this->db_jobs = $db_jobs;
+	public function __construct() {
+		// Parameter-less constructor - all services accessed via filters
 	}
 	/**
-	 * Execute a pipeline step dynamically based on registered steps.
+	 * Execute a pipeline step with closed-door philosophy.
+	 * 
+	 * Each step operates on DataPacket from previous step only,
+	 * with no backward looking or complex data retrieval.
 	 *
-	 * @param string $step_name The step name (e.g., 'input', 'process').
+	 * @param string $step_name The step name (e.g., 'input', 'ai', 'output').
 	 * @param int $job_id The job ID.
 	 * @return bool True on success, false on failure.
 	 */
 	public function execute_step( string $step_name, int $job_id ): bool {
 		try {
+			// Get services via filters
+			$logger = apply_filters('dm_get_service', null, 'logger');
+			$db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
+			
+			if (!$logger || !$db_jobs) {
+				return false;
+			}
+			
 			$pipeline_steps = $this->get_pipeline_steps();
 			
 			if ( ! isset( $pipeline_steps[ $step_name ] ) ) {
-				$this->logger->error( 'Pipeline step not found', [
+				$logger->error( 'Pipeline step not found', [
 					'step_name' => $step_name,
 					'job_id' => $job_id,
 					'available_steps' => array_keys( $pipeline_steps )
@@ -73,7 +66,7 @@ class ProcessingOrchestrator {
 			$step_class = $step_config['class'];
 
 			if ( ! class_exists( $step_class ) ) {
-				$this->logger->error( 'Pipeline step class not found', [
+				$logger->error( 'Pipeline step class not found', [
 					'step_name' => $step_name,
 					'class' => $step_class,
 					'job_id' => $job_id
@@ -81,10 +74,13 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Create step instance with dependency injection via service locator
+			// Update job's current step before execution
+			$db_jobs->update_current_step_name( $job_id, $step_name );
+
+			// Create step instance (parameter-less constructor)
 			$step_instance = $this->create_step_instance( $step_class );
 			if ( ! $step_instance instanceof PipelineStepInterface ) {
-				$this->logger->error( 'Pipeline step must implement PipelineStepInterface', [
+				$logger->error( 'Pipeline step must implement PipelineStepInterface', [
 					'step_name' => $step_name,
 					'class' => $step_class,
 					'job_id' => $job_id
@@ -92,30 +88,42 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
+			// Execute step (closed-door: step handles own data flow)
 			$result = $step_instance->execute( $job_id );
 
+			// Schedule next step if current step succeeded and has next step
 			if ( $result && isset( $step_config['next'] ) && $step_config['next'] ) {
 				$next_step = $step_config['next'];
 				$next_hook = 'dm_' . $next_step . '_job_event';
 				
 				if ( ! $this->schedule_next_step( $job_id, $next_hook ) ) {
-					$this->logger->error( 'Failed to schedule next step', [
+					$logger->error( 'Failed to schedule next step', [
 						'current_step' => $step_name,
 						'next_step' => $next_step,
 						'job_id' => $job_id
 					] );
 					return false;
 				}
+			} elseif ( $result && ! isset( $step_config['next'] ) ) {
+				// Final step completed successfully
+				$logger->info( 'Pipeline completed successfully', [
+					'final_step' => $step_name,
+					'job_id' => $job_id
+				] );
 			}
 
 			return $result;
 
-		} catch ( Exception $e ) {
-			$this->logger->error( 'Exception in pipeline step execution', [
-				'step_name' => $step_name,
-				'job_id' => $job_id,
-				'error' => $e->getMessage()
-			] );
+		} catch ( \Exception $e ) {
+			$logger = apply_filters('dm_get_service', null, 'logger');
+			if ($logger) {
+				$logger->error( 'Exception in pipeline step execution', [
+					'step_name' => $step_name,
+					'job_id' => $job_id,
+					'error' => $e->getMessage(),
+					'trace' => $e->getTraceAsString()
+				] );
+			}
 			return false;
 		}
 	}
@@ -150,7 +158,20 @@ class ProcessingOrchestrator {
 	 * @return bool True on success, false on failure.
 	 */
 	private function schedule_next_step( int $job_id, string $hook ): bool {
-		$action_id = $this->action_scheduler->schedule_single_job(
+		$action_scheduler = apply_filters('dm_get_service', null, 'action_scheduler');
+		$logger = apply_filters('dm_get_service', null, 'logger');
+		
+		if (!$action_scheduler) {
+			if ($logger) {
+				$logger->error( 'Action scheduler service not available', [
+					'job_id' => $job_id,
+					'hook' => $hook
+				] );
+			}
+			return false;
+		}
+		
+		$action_id = $action_scheduler->schedule_single_job(
 			$hook,
 			['job_id' => $job_id],
 			time() + 1 // Schedule immediately
@@ -158,8 +179,8 @@ class ProcessingOrchestrator {
 
 		$success = $action_id !== false && $action_id !== 0;
 		
-		if ( ! $success ) {
-			$this->logger->error( 'Failed to schedule next step', [
+		if ( ! $success && $logger ) {
+			$logger->error( 'Failed to schedule next step', [
 				'job_id' => $job_id,
 				'hook' => $hook,
 				'action_id' => $action_id

@@ -12,6 +12,7 @@
 namespace DataMachine\Handlers\Output;
 
 use DataMachine\Helpers\Logger;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -33,13 +34,40 @@ class Bluesky extends BaseOutputHandler {
     /**
      * Handles publishing the AI output to Bluesky.
      *
+     * @param DataPacket $finalized_data The finalized data packet from processing.
+     * @param object $module Module object.
+     * @param int $user_id The ID of the user whose Bluesky account should be used.
+     * @return array Result array on success or failure.
+     */
+    public function handle_output(DataPacket $finalized_data, object $module, int $user_id): array {
+        // Extract content from DataPacket
+        $content_for_output = $finalized_data->getContentForOutput();
+        $ai_output_string = $content_for_output['body'] ?? $content_for_output['title'] ?? '';
+        
+        // Get module config
+        $module_job_config = [
+            'output_config' => json_decode($module->output_config ?? '{}', true)
+        ];
+        
+        // Extract metadata
+        $input_metadata = [
+            'source_url' => $finalized_data->metadata['source_url'] ?? null,
+            'image_source_url' => !empty($finalized_data->attachments['images']) ? $finalized_data->attachments['images'][0]['url'] : null
+        ];
+        
+        return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
+    }
+
+    /**
+     * Legacy method for handling Bluesky output (kept for backward compatibility).
+     *
      * @param string $ai_output_string The finalized string from the AI.
      * @param array $module_job_config Configuration specific to this output job.
      * @param int|null $user_id The ID of the user whose Bluesky account should be used. Default null uses site settings.
      * @param array $input_metadata Metadata from the original input source.
-     * @return array|WP_Error Result array on success, WP_Error on failure.
+     * @return array Result array on success or failure.
      */
-    public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array|WP_Error {
+    public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array {
         $logger = $this->get_logger();
         $logger?->info('Starting Bluesky output handling.', ['user_id' => $user_id]);
 

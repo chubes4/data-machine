@@ -13,6 +13,7 @@ namespace DataMachine\Handlers\Output;
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 use DataMachine\Helpers\Logger;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -31,13 +32,43 @@ class Twitter extends BaseOutputHandler {
     /**
 	 * Handles posting the AI output to Twitter.
 	 *
+	 * @param DataPacket $finalized_data The finalized data packet from processing.
+	 * @param object $module Module object.
+	 * @param int $user_id The ID of the user whose Twitter account should be used.
+	 * @return array Result array on success or failure.
+	 */
+	public function handle_output(DataPacket $finalized_data, object $module, int $user_id): array {
+		// Get OAuth Twitter service
+		$this->oauth_twitter = apply_filters('dm_get_service', null, 'oauth_twitter');
+		
+		// Extract content from DataPacket
+		$content_for_output = $finalized_data->getContentForOutput();
+		$ai_output_string = $content_for_output['body'] ?? $content_for_output['title'] ?? '';
+		
+		// Get module config
+		$module_job_config = [
+			'output_config' => json_decode($module->output_config ?? '{}', true)
+		];
+		
+		// Extract metadata
+		$input_metadata = [
+			'source_url' => $finalized_data->metadata['source_url'] ?? null,
+			'image_source_url' => !empty($finalized_data->attachments['images']) ? $finalized_data->attachments['images'][0]['url'] : null
+		];
+		
+		return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
+	}
+
+	/**
+	 * Legacy method for handling Twitter output (kept for backward compatibility).
+	 *
 	 * @param string $ai_output_string The finalized string from the AI.
 	 * @param array $module_job_config Configuration specific to this output job.
 	 * @param int|null $user_id The ID of the user whose Twitter account should be used.
 	 * @param array $input_metadata Metadata from the original input source (e.g., original URL, timestamp).
-	 * @return array|WP_Error Result array on success (e.g., ['tweet_id' => '...', 'message' => '...']), WP_Error on failure.
+	 * @return array Result array on success or failure.
 	 */
-	public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array|WP_Error {
+	public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array {
         $this->logger?->info('Starting Twitter output handling.', ['user_id' => $user_id]);
         
         // 1. Get config
@@ -66,7 +97,10 @@ class Twitter extends BaseOutputHandler {
                 'error_code' => $connection->get_error_code(),
                 'error_message' => $connection->get_error_message(),
              ]);
-             return $connection; // Return the WP_Error from the auth handler
+             return [
+                 'success' => false,
+                 'error' => $connection->get_error_message()
+             ];
         }
 
         // 5. Parse AI output using inherited method
@@ -258,6 +292,7 @@ class Twitter extends BaseOutputHandler {
                  $tweet_url = "https://twitter.com/anyuser/status/".$tweet_id;
 
                  return [
+                     'success' => true,
                      'status' => 'success', // Use 'status' key for consistency
                      'tweet_id' => $tweet_id,
                      'output_url' => $tweet_url, // Use 'output_url' key

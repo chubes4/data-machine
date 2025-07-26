@@ -13,6 +13,7 @@
 namespace DataMachine\Handlers\Input;
 
 use DataMachine\Database\RemoteLocations;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -35,10 +36,10 @@ class AirdropRestApi extends BaseInputHandler {
 	 * @param object $module The full module object containing configuration and context.
 	 * @param array  $source_config Decoded data_source_config for the specific module run.
 	 * @param int    $user_id The ID of the user context.
-	 * @return array The standardized input data packet.
+	 * @return DataPacket The standardized data packet.
 	 * @throws Exception If input data is invalid or cannot be retrieved.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
+	public function get_input_data(object $module, array $source_config, int $user_id): DataPacket {
 		// Validate basic requirements and get dependencies
 		$validation_result = $this->validate_basic_requirements($module, $user_id);
 		$module_id = $validation_result['module_id'];
@@ -68,9 +69,10 @@ class AirdropRestApi extends BaseInputHandler {
 		$remote_user = trim($location->target_username ?? '');
 		$remote_password = $location->password ?? null;
 
-		// Access other settings from config
-		$process_limit = max(1, absint($config['item_count'] ?? 1));
-		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+		// Use base class common config parsing
+		$common_config = $this->parse_common_config($config);
+		$process_limit = $common_config['process_limit'];
+		$timeframe_limit = $common_config['timeframe_limit'];
 		$fetch_batch_size = min(100, max(10, $process_limit * 2));
 
 		if (empty($endpoint_url_base) || !filter_var($endpoint_url_base, FILTER_VALIDATE_URL)) {
@@ -82,19 +84,8 @@ class AirdropRestApi extends BaseInputHandler {
 			throw new Exception(sprintf(esc_html__('Missing username or application password for Remote Location: %s.', 'data-machine'), esc_html($location->location_name ?? $location_id)));
 		}
 
-		// Calculate cutoff timestamp
-		$cutoff_timestamp = null;
-		if ($timeframe_limit !== 'all_time') {
-			$interval_map = [
-				'24_hours' => '-24 hours',
-				'72_hours' => '-72 hours',
-				'7_days'   => '-7 days',
-				'30_days'  => '-30 days'
-			];
-			if (isset($interval_map[$timeframe_limit])) {
-				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
-			}
-		}
+		// Calculate cutoff timestamp using base class method
+		$cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
 		// --- End Configuration ---
 
 		$api_url_base = trailingslashit($endpoint_url_base) . 'wp-json/dma/v1/query-posts';
@@ -162,12 +153,13 @@ class AirdropRestApi extends BaseInputHandler {
 					continue;
 				}
 
+				// Check timeframe limit using base class method
 				if ($cutoff_timestamp !== null) {
 					if (empty($post['post_date_gmt'])) {
 						continue;
 					}
 					$item_timestamp = strtotime($post['post_date_gmt']);
-					if ($item_timestamp === false || $item_timestamp < $cutoff_timestamp) {
+					if (!$this->filter_by_timeframe($cutoff_timestamp, $item_timestamp)) {
 						if ($orderby === 'date' && $order === 'DESC') {
 							$hit_time_limit_boundary = true;
 						}
@@ -203,21 +195,24 @@ class AirdropRestApi extends BaseInputHandler {
 				$source_host = parse_url($source_link, PHP_URL_HOST);
 				$source_name = $source_host ? ucwords(str_replace(['www.', '.com', '.org', '.net'], '', $source_host)) : 'Unknown Source';
 				$content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
-				$input_data_packet = [
-					'data' => [
-						'content_string' => $content_string,
-						'file_info' => null
-					],
-					'metadata' => [
-						'source_type' => 'airdrop_rest_api',
-						'item_identifier_to_log' => $current_item_id,
-						'original_id' => $current_item_id,
-						'source_url' => $source_link,
-						'original_title' => $title,
-						'image_source_url' => $image_url,
-						'original_date_gmt' => $post['post_date_gmt'] ?? null
-					]
+				
+				// Use base class method to create standardized packet
+				$data = [
+					'content_string' => $content_string,
+					'file_info' => null
 				];
+				
+				$metadata = [
+					'source_type' => 'airdrop_rest_api',
+					'item_identifier_to_log' => $current_item_id,
+					'original_id' => $current_item_id,
+					'source_url' => $source_link,
+					'original_title' => $title,
+					'image_source_url' => $image_url,
+					'original_date_gmt' => $post['post_date_gmt'] ?? null
+				];
+				
+				$input_data_packet = $this->create_input_data_packet($data, $metadata);
 				array_push($eligible_items_packets, $input_data_packet);
 				$items_added_this_page++;
 
@@ -250,7 +245,7 @@ class AirdropRestApi extends BaseInputHandler {
 		}
 
 		if (empty($eligible_items_packets)) {
-			throw new Exception(__('No new items found matching the criteria from the helper API endpoint.', 'data-machine'));
+			return new DataPacket('No Data', 'No new items found matching the criteria from the helper API endpoint', 'airdrop_rest_api');
 		}
 
 		// Return only the first item for "one coin, one operation" model

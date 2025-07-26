@@ -13,6 +13,7 @@ use DataMachine\Database\Modules;
 use DataMachine\Handlers\HandlerFactory;
 use DataMachine\Constants;
 use DataMachine\Helpers\Logger;
+use DataMachine\Engine\PipelineStepRegistry;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -20,31 +21,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ModuleConfigHandler {
 
-    /** @var Modules */
-    private $db_modules;
-
-
-    /** @var HandlerFactory */
-    private $handler_factory;
-
-    /** @var Logger */
-    private $logger;
-
     /**
-     * Initialize the class and set its properties.
-     *
-     * @param Modules $db_modules         Injected DB Modules service.
-     * @param HandlerFactory $handler_factory Injected Handler Factory service.
-     * @param Logger $logger             Injected Logger service.
+     * Initialize the class - uses filter-based service access.
+     * No constructor dependencies - pure filter-based architecture.
      */
-    public function __construct(
-        Modules $db_modules,
-        HandlerFactory $handler_factory,
-        Logger $logger
-    ) {
-        $this->db_modules = $db_modules;
-        $this->handler_factory = $handler_factory;
-        $this->logger = $logger;
+    public function __construct() {
+        // Parameter-less constructor - all services accessed via filters
     }
 
     /**
@@ -98,15 +80,11 @@ class ModuleConfigHandler {
         // Use the project ID from the hidden field
         $project_id = $submitted_project_id_hidden;
 
-        // Get other fields (rest are mostly correct)
+        // Get other fields
         $module_name = isset($_POST['module_name']) ? sanitize_text_field($_POST['module_name']) : '';
-        $process_prompt = isset($_POST['process_data_prompt']) ? wp_kses_post(wp_unslash($_POST['process_data_prompt'])) : '';
-        $fact_check_prompt = isset($_POST['fact_check_prompt']) ? wp_kses_post(wp_unslash($_POST['fact_check_prompt'])) : '';
-        $finalize_prompt = isset($_POST['finalize_response_prompt']) ? wp_kses_post(wp_unslash($_POST['finalize_response_prompt'])) : '';
-        // START: Add skip_fact_check retrieval and sanitization
-        // Checkbox value is '1' if checked, otherwise the hidden field sends '0'
-        $skip_fact_check = isset($_POST['skip_fact_check']) ? absint($_POST['skip_fact_check']) : 0;
-        // END: Add skip_fact_check retrieval and sanitization
+        
+        // Process dynamic prompt fields from pipeline steps
+        $prompt_data = $this->process_dynamic_prompt_fields($_POST);
         // Get types from hidden fields (synced by JS)
         $data_source_type_slug = isset($_POST['data_source_type']) ? sanitize_key($_POST['data_source_type']) : 'files';
         $output_type_slug = isset($_POST['output_type']) ? sanitize_key($_POST['output_type']) : 'publish_local';
@@ -114,69 +92,131 @@ class ModuleConfigHandler {
         $submitted_output_config_all = $_POST['output_config'] ?? [];
 
 
-        $this->logger->info('[Module Config Save] Starting save process via admin_post.', [
+        // --- Validate required fields ---
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        
+        $logger->info('[Module Config Save] Starting save process via admin_post.', [
             'submitted_module_id' => $submitted_module_id,
             'project_id' => $project_id,
             'user_id' => $user_id
         ]);
-
-        // --- Validate required fields ---
+        
         // Check if module ID is missing (null or empty string, but allow 'new')
         if ( is_null($submitted_module_id) || ($submitted_module_id !== 'new' && $submitted_module_id <= 0) ) {
-            $this->logger->error('[Module Config Save] Error: Missing or invalid module ID.', ['raw_module_id' => $_POST['module_id'] ?? 'not_set', 'raw_current_module' => $_POST['current_module'] ?? 'not_set']);
-            $this->logger->add_admin_error(__('Module ID is missing or invalid.', 'data-machine'));
-            $this->redirect_after_save('error'); // Redirect even on error
+            $logger->error('[Module Config Save] Error: Missing or invalid module ID.', ['raw_module_id' => $_POST['module_id'] ?? 'not_set', 'raw_current_module' => $_POST['current_module'] ?? 'not_set']);
+            $logger->add_admin_error(__('Module ID is missing or invalid.', 'data-machine'));
+            $this->redirect_after_save('error', null, $project_id); // Redirect even on error
             return;
         }
         if ($submitted_module_id === 'new' && empty($project_id)) {
-            $this->logger->error('[Module Config Save] Error: Missing project ID for new module.');
-            $this->logger->add_admin_error(__('Project ID is required to create a new module.', 'data-machine'));
-            $this->redirect_after_save('error');
+            $logger->error('[Module Config Save] Error: Missing project ID for new module.');
+            $logger->add_admin_error(__('Project ID is required to create a new module.', 'data-machine'));
+            $this->redirect_after_save('error', null, $project_id);
             return;
         }
         if (empty($module_name)) {
-            $this->logger->error('[Module Config Save] Error: Missing module name.');
-            $this->logger->add_admin_error(__('Module name is required.', 'data-machine'));
-            $this->redirect_after_save('error');
+            $logger->error('[Module Config Save] Error: Missing module name.');
+            $logger->add_admin_error(__('Module name is required.', 'data-machine'));
+            $this->redirect_after_save('error', null, $project_id);
             return;
         }
 
         // --- Sanitize Configs ---
         
-        // Use class properties for dependencies - with validation error handling
+        // Use filter-based service access - with validation error handling
         try {
             $final_clean_ds_config = $this->sanitize_input_config($data_source_type_slug, $submitted_ds_config_all);
         } catch (\InvalidArgumentException $e) {
-            $this->logger->add_admin_error($e->getMessage());
-            $this->redirect_after_save('error');
+            $logger->add_admin_error($e->getMessage());
+            $this->redirect_after_save('error', null, $project_id);
             return;
         }
         
         try {
             $final_clean_output_config = $this->sanitize_output_config($output_type_slug, $submitted_output_config_all);
         } catch (\InvalidArgumentException $e) {
-            $this->logger->add_admin_error($e->getMessage());
-            $this->redirect_after_save('error');
+            $logger->add_admin_error($e->getMessage());
+            $this->redirect_after_save('error', null, $project_id);
             return;
         }
         
 
         // --- Handle Module Create / Update ---
         if ($submitted_module_id === 'new') {
-            $this->handle_new_module_create($project_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id);
+            $this->handle_new_module_create($project_id, $module_name, $prompt_data, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id);
             // Redirect is handled within handle_new_module_create
             return;
         }
 
-        $this->handle_existing_module_update($submitted_module_id, $user_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id);
+        $this->handle_existing_module_update($submitted_module_id, $user_id, $module_name, $prompt_data, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id);
         // Redirect is handled within handle_existing_module_update
     }
 
     // --- Private Helper Methods ---
 
     /**
+     * Process dynamic prompt fields from pipeline steps.
+     *
+     * @param array $post_data The POST data array.
+     * @return array Array of processed prompt field data.
+     */
+    private function process_dynamic_prompt_fields(array $post_data): array {
+        $pipeline_step_registry = apply_filters('dm_get_service', null, 'pipeline_step_registry');
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        
+        if (!$pipeline_step_registry) {
+            $logger->error('[Module Config Save] PipelineStepRegistry service not available.');
+            return [];
+        }
+        
+        $prompt_fields = $pipeline_step_registry->get_all_prompt_fields();
+        $processed_data = [];
+        
+        foreach ($prompt_fields as $step_name => $step_data) {
+            $step_fields = $step_data['prompt_fields'] ?? [];
+            
+            foreach ($step_fields as $field_name => $field_config) {
+                if (isset($post_data[$field_name])) {
+                    $processed_data[$field_name] = $this->sanitize_prompt_field_value(
+                        $post_data[$field_name], 
+                        $field_config
+                    );
+                } else {
+                    // Set default value if field not present
+                    $processed_data[$field_name] = $field_config['default'] ?? '';
+                }
+            }
+        }
+        
+        return $processed_data;
+    }
+    
+    /**
+     * Sanitize a prompt field value based on its configuration.
+     *
+     * @param mixed $value The field value to sanitize.
+     * @param array $field_config The field configuration.
+     * @return mixed The sanitized value.
+     */
+    private function sanitize_prompt_field_value($value, array $field_config) {
+        $field_type = $field_config['type'] ?? 'text';
+        
+        switch ($field_type) {
+            case 'textarea':
+                return wp_kses_post(wp_unslash($value));
+            case 'checkbox':
+                return absint($value);
+            case 'number':
+                return absint($value);
+            case 'text':
+            default:
+                return sanitize_text_field($value);
+        }
+    }
+
+    /**
      * Sanitizes input configuration using the appropriate handler.
-     * Uses class properties for dependencies.
+     * Uses filter-based service access.
      */
     private function sanitize_input_config($data_source_type_slug, $submitted_ds_config_all) {
         return $this->sanitize_config($data_source_type_slug, 'input', $submitted_ds_config_all);
@@ -184,7 +224,7 @@ class ModuleConfigHandler {
 
     /**
      * Sanitizes output configuration using the appropriate handler.
-     * Uses class properties for dependencies.
+     * Uses filter-based service access.
      */
     private function sanitize_output_config($output_type_slug, $submitted_output_config_all) {
         return $this->sanitize_config($output_type_slug, 'output', $submitted_output_config_all);
@@ -192,51 +232,51 @@ class ModuleConfigHandler {
 
     /**
      * Handles creation of a new module.
-     * Uses class properties for dependencies ($db_modules, $logger).
+     * Uses filter-based service access.
      */
-    private function handle_new_module_create($project_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id) {
-        $module_data = array(
-            'module_name' => $module_name,
-            'process_data_prompt' => $process_prompt,
-            'fact_check_prompt' => $fact_check_prompt,
-            'finalize_response_prompt' => $finalize_prompt,
-            'skip_fact_check' => $skip_fact_check,
-            'data_source_type' => $data_source_type_slug,
-            'data_source_config' => $final_clean_ds_config,
-            'output_type' => $output_type_slug,
-            'output_config' => $final_clean_output_config,
-            // Add defaults for schedule if needed
-             'schedule_interval' => 'project_schedule',
-             'schedule_status' => 'active',
+    private function handle_new_module_create($project_id, $module_name, $prompt_data, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $user_id) {
+        $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        
+        // Build module data with dynamic prompt fields
+        $module_data = array_merge(
+            [
+                'module_name' => $module_name,
+                'data_source_type' => $data_source_type_slug,
+                'data_source_config' => $final_clean_ds_config,
+                'output_type' => $output_type_slug,
+                'output_config' => $final_clean_output_config,
+                // Add defaults for schedule if needed
+                'schedule_interval' => 'project_schedule',
+                'schedule_status' => 'active',
+            ],
+            $prompt_data // Add all dynamic prompt fields
         );
 
-        // Use class property db_modules
-        $new_module_id = $this->db_modules->create_module($project_id, $module_data);
+        // Use filter-based service access
+        $new_module_id = $db_modules->create_module($project_id, $module_data);
 
         if ($new_module_id) {
-            $this->logger->info('[Module Config Save] New module created successfully.', ['new_module_id' => $new_module_id, 'project_id' => $project_id]);
-            update_user_meta($user_id, 'Data_Machine_current_project', $project_id);
-            // Always update active module after create
-            update_user_meta($user_id, 'Data_Machine_current_module', $new_module_id);
-            // Use class property logger for notices
-            $this->logger->add_admin_success(__('New module created successfully.', 'data-machine'));
-            $this->redirect_after_save('success', $new_module_id); // Redirect with new module ID
+            $logger->info('[Module Config Save] New module created successfully.', ['new_module_id' => $new_module_id, 'project_id' => $project_id]);
+            $logger->add_admin_success(__('New module created successfully.', 'data-machine'));
+            $this->redirect_after_save('success', $new_module_id, $project_id); // Redirect with new module ID and project ID
         } else {
-            $this->logger->error('[Module Config Save] Failed to create new module in DB.', ['project_id' => $project_id]);
-            // Use class property logger for notices
-            $this->logger->add_admin_error(__('Failed to create new module.', 'data-machine'));
-            $this->redirect_after_save('error');
+            $logger->error('[Module Config Save] Failed to create new module in DB.', ['project_id' => $project_id]);
+            $logger->add_admin_error(__('Failed to create new module.', 'data-machine'));
+            $this->redirect_after_save('error', null, $project_id);
         }
     }
 
     /**
      * Handles update of an existing module.
-     * Uses class properties for dependencies ($db_modules, $logger).
+     * Uses filter-based service access.
      */
-    private function handle_existing_module_update($submitted_module_id, $user_id, $module_name, $process_prompt, $fact_check_prompt, $finalize_prompt, $skip_fact_check, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id) {
+    private function handle_existing_module_update($submitted_module_id, $user_id, $module_name, $prompt_data, $data_source_type_slug, $final_clean_ds_config, $output_type_slug, $final_clean_output_config, $project_id) {
+        $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        
         $module_id_to_update = absint($submitted_module_id);
-        // Use class property db_modules
-        $existing_module = $this->db_modules->get_module($module_id_to_update); // Pass user ID for ownership check in get_module if implemented there
+        $existing_module = $db_modules->get_module($module_id_to_update); // Pass user ID for ownership check in get_module if implemented there
 
         // Perform ownership check - IMPORTANT: Assumes get_module doesn't check or we need another way
         // Let's assume db_modules->update_module handles the check internally based on user_id
@@ -251,7 +291,7 @@ class ModuleConfigHandler {
                     }
                     if (!isset($final_clean_output_config['publish_remote']['remote_site_info'])) {
                         $final_clean_output_config['publish_remote']['remote_site_info'] = $existing_output_config_for_check['publish_remote']['remote_site_info'];
-                        $this->logger->debug('[Module Config Save] Preserved existing remote_site_info for publish_remote.');
+                        $logger->debug('[Module Config Save] Preserved existing remote_site_info for publish_remote.');
                     }
                 }
             }
@@ -259,10 +299,22 @@ class ModuleConfigHandler {
             // Prepare data for update
             $update_data = array();
             if ($module_name !== $existing_module->module_name) $update_data['module_name'] = $module_name;
-            if ($process_prompt !== $existing_module->process_data_prompt) $update_data['process_data_prompt'] = $process_prompt;
-            if ($fact_check_prompt !== $existing_module->fact_check_prompt) $update_data['fact_check_prompt'] = $fact_check_prompt;
-            if ($finalize_prompt !== $existing_module->finalize_response_prompt) $update_data['finalize_response_prompt'] = $finalize_prompt;
-            if ($skip_fact_check !== (int)$existing_module->skip_fact_check) $update_data['skip_fact_check'] = $skip_fact_check;
+            
+            // Process dynamic prompt fields
+            foreach ($prompt_data as $field_name => $field_value) {
+                $existing_value = $existing_module->$field_name ?? '';
+                
+                // Handle different data types for comparison
+                if (is_numeric($field_value) && is_numeric($existing_value)) {
+                    if ((int)$field_value !== (int)$existing_value) {
+                        $update_data[$field_name] = $field_value;
+                    }
+                } else {
+                    if ($field_value !== $existing_value) {
+                        $update_data[$field_name] = $field_value;
+                    }
+                }
+            }
             if ($data_source_type_slug !== $existing_module->data_source_type) $update_data['data_source_type'] = $data_source_type_slug;
             if ($output_type_slug !== $existing_module->output_type) $update_data['output_type'] = $output_type_slug;
 
@@ -295,50 +347,38 @@ class ModuleConfigHandler {
             
             if (wp_json_encode($final_clean_ds_config) !== wp_json_encode($existing_ds_config_for_comparison)) {
                 $update_data['data_source_config'] = $final_clean_ds_config; // Save the NEWLY sanitized (and nested) config
-                $this->logger->debug('[Module Config Save] Detected change in data_source_config.');
+                $logger->debug('[Module Config Save] Detected change in data_source_config.');
             }
 
             if (wp_json_encode($final_clean_output_config) !== wp_json_encode($existing_output_config_for_comparison)) {
                 $update_data['output_config'] = $final_clean_output_config; // Save the NEWLY sanitized (and nested) config
-                $this->logger->debug('[Module Config Save] Detected change in output_config.');
+                $logger->debug('[Module Config Save] Detected change in output_config.');
             }
             // --- End Revised Config Comparison ---
 
             $updated = false;
             if (!empty($update_data)) {
-                $this->logger->debug('[Module Config Save] Attempting DB update.', ['update_data_keys' => array_keys($update_data)]);
-                // Use class property db_modules, pass user_id for ownership check
-                $updated = $this->db_modules->update_module($module_id_to_update, $update_data, $user_id);
+                $logger->debug('[Module Config Save] Attempting DB update.', ['update_data_keys' => array_keys($update_data)]);
+                $updated = $db_modules->update_module($module_id_to_update, $update_data, $user_id);
                 if ($updated === false) {
-                    $this->logger->error('[Module Config Save] Failed to update module in DB.', ['module_id' => $module_id_to_update]);
-                    // Use class property logger for notices
-                    $this->logger->add_admin_error(__('Failed to update module settings.', 'data-machine'));
-                    $this->redirect_after_save('error', $module_id_to_update); // Redirect even on error
+                    $logger->error('[Module Config Save] Failed to update module in DB.', ['module_id' => $module_id_to_update]);
+                    $logger->add_admin_error(__('Failed to update module settings.', 'data-machine'));
+                    $this->redirect_after_save('error', $module_id_to_update, $project_id); // Redirect even on error
                     return;
                 }
-            }
-
-            // Always update active module after update, regardless of dropdown presence
-            update_user_meta($user_id, 'Data_Machine_current_module', $module_id_to_update); // <-- Always set active module
-            // Always update project meta as well
-            if (isset($_POST['Data_Machine_current_project_selector'])) {
-                $selected_project_via_dropdown = absint($_POST['Data_Machine_current_project_selector']);
-                update_user_meta($user_id, 'Data_Machine_current_project', $selected_project_via_dropdown);
-            } else {
-                update_user_meta($user_id, 'Data_Machine_current_project', $project_id);
             }
 
             // Add notice and redirect
             $message = $updated ? __('Module settings updated successfully.', 'data-machine') : __('Module settings saved (no changes detected).', 'data-machine');
             $notice_type = $updated ? 'success' : 'info';
-            $this->logger->add_admin_notice( $notice_type, $message );
-            $this->logger->info('[Module Config Save] Update process completed.', ['module_id' => $module_id_to_update, 'changes_made' => (bool)$updated]);
-            $this->redirect_after_save($notice_type, $module_id_to_update);
+            $logger->add_admin_notice( $notice_type, $message );
+            $logger->info('[Module Config Save] Update process completed.', ['module_id' => $module_id_to_update, 'changes_made' => (bool)$updated]);
+            $this->redirect_after_save($notice_type, $module_id_to_update, $project_id);
 
         } else {
-            $this->logger->error('[Module Config Save] Invalid module ID or permission denied for update.', ['module_id' => $module_id_to_update, 'user_id' => $user_id]);
-            $this->logger->add_admin_error(__('Invalid module selection or permission denied.', 'data-machine'));
-            $this->redirect_after_save('error');
+            $logger->error('[Module Config Save] Invalid module ID or permission denied for update.', ['module_id' => $module_id_to_update, 'user_id' => $user_id]);
+            $logger->add_admin_error(__('Invalid module selection or permission denied.', 'data-machine'));
+            $this->redirect_after_save('error', null, $project_id);
         }
     }
 
@@ -347,14 +387,20 @@ class ModuleConfigHandler {
      *
      * @param string $notice_type Type of notice ('success', 'error', 'info').
      * @param int|null $module_id Optional module ID to select after redirect.
+     * @param int|null $project_id Optional project ID to select after redirect.
      */
-    private function redirect_after_save(string $notice_type, ?int $module_id = null) {
+    private function redirect_after_save(string $notice_type, ?int $module_id = null, ?int $project_id = null) {
          $redirect_url = add_query_arg(array(
             'page' => 'dm-module-config', // Your admin page slug
             'dm_notice_type' => $notice_type // Use a different param than logger transient
         ), admin_url('admin.php'));
 
-        // Optionally add module ID to select it after redirect
+        // Add project ID to maintain project selection
+        if ($project_id !== null) {
+            $redirect_url = add_query_arg('project_id', $project_id, $redirect_url);
+        }
+
+        // Add module ID to maintain module selection  
         if ($module_id !== null) {
             $redirect_url = add_query_arg('module_id', $module_id, $redirect_url);
         }
@@ -372,6 +418,9 @@ class ModuleConfigHandler {
      * @return array The sanitized configuration, nested under the handler slug key.
      */
     private function sanitize_config(string $handler_type_slug, string $config_type, array $submitted_config_all): array {
+        $handler_factory = apply_filters('dm_get_service', null, 'handler_factory');
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        
         $sanitized_config_selected = [];
         $log_prefix = '[Module Config Save]';
 
@@ -381,37 +430,37 @@ class ModuleConfigHandler {
             } elseif ($config_type === 'output') {
                 $handler_class = Constants::get_output_handler_class($handler_type_slug);
             } else {
-                $this->logger->error("{$log_prefix} Invalid config type '{$config_type}' provided.", ['slug' => $handler_type_slug]);
+                $logger->error("{$log_prefix} Invalid config type '{$config_type}' provided.", ['slug' => $handler_type_slug]);
                 return [ $handler_type_slug => [] ];
             }
 
             if ($handler_class) {
                 try {
                     // Use the unified factory method: create_handler($handler_type, $handler_slug)
-                    $handler_instance = $this->handler_factory->create_handler($config_type, $handler_type_slug);
+                    $handler_instance = $handler_factory->create_handler($config_type, $handler_type_slug);
 
                     if (method_exists($handler_instance, 'sanitize_settings')) {
                         $current_handler_submitted_config = $submitted_config_all[$handler_type_slug] ?? [];
                         $sanitized_config_selected = $handler_instance->sanitize_settings($current_handler_submitted_config);
-                        $this->logger->debug("{$log_prefix} Sanitized {$config_type} config.", ['slug' => $handler_type_slug]);
+                        $logger->debug("{$log_prefix} Sanitized {$config_type} config.", ['slug' => $handler_type_slug]);
                     } else {
-                        $this->logger->warning("{$log_prefix} {$config_type} handler missing sanitize_settings method.", ['slug' => $handler_type_slug, 'handler_class' => $handler_class]);
+                        $logger->warning("{$log_prefix} {$config_type} handler missing sanitize_settings method.", ['slug' => $handler_type_slug, 'handler_class' => $handler_class]);
                         // Keep $sanitized_config_selected as []
                     }
                 } catch (\InvalidArgumentException $e) {
                     // Validation error - re-throw with additional context for main handler
-                    $this->logger->error("{$log_prefix} Validation error in {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
+                    $logger->error("{$log_prefix} Validation error in {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
                     throw new \InvalidArgumentException($e->getMessage(), 0, $e);
                 } catch (\Exception $e) {
-                    $this->logger->error("{$log_prefix} Error getting/sanitizing {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
+                    $logger->error("{$log_prefix} Error getting/sanitizing {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
                     // Keep $sanitized_config_selected as []
                 }
             } else {
-                $this->logger->warning("{$log_prefix} {$config_type} handler class not found.", ['slug' => $handler_type_slug]);
+                $logger->warning("{$log_prefix} {$config_type} handler class not found.", ['slug' => $handler_type_slug]);
                 // Keep $sanitized_config_selected as []
             }
         } else {
-            $this->logger->debug("{$log_prefix} No config submitted for selected {$config_type} handler.", ['slug' => $handler_type_slug]);
+            $logger->debug("{$log_prefix} No config submitted for selected {$config_type} handler.", ['slug' => $handler_type_slug]);
             // Keep $sanitized_config_selected as []
         }
 

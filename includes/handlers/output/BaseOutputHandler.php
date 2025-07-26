@@ -12,6 +12,7 @@ namespace DataMachine\Handlers\Output;
 
 use DataMachine\Database\{Modules, Projects};
 use DataMachine\Contracts\LoggerInterface;
+use DataMachine\DataPacket;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -115,7 +116,7 @@ abstract class BaseOutputHandler {
     }
     
     
-    abstract public function handle_output(array $finalized_data, object $module, int $user_id): array;
+    abstract public function handle_output(DataPacket $finalized_data, object $module, int $user_id): array;
     
     abstract public static function get_settings_fields(array $current_config = []): array;
 }

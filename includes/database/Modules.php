@@ -11,8 +11,6 @@
 
 namespace DataMachine\Database;
 
-use DataMachine\Helpers\Logger;
-
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
@@ -28,24 +26,14 @@ class Modules {
      */
     private $table_name;
 
-    /** @var Projects */
-    private $db_projects;
-
-    /** @var ?Logger */
-    private $logger;
-
     /**
      * Initialize the class and set its properties.
      *
-     * @since    0.2.0 (Refactored for DI 0.13.0)
-     * @param Projects $db_projects The database projects service.
-     * @param Logger|null $logger The logger service (optional).
+     * @since    0.2.0 (Refactored for filter-based architecture)
      */
-    public function __construct(Projects $db_projects, ?Logger $logger = null) {
+    public function __construct() {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_modules';
-        $this->db_projects = $db_projects;
-        $this->logger = $logger;
     }
 
     /**
@@ -63,9 +51,6 @@ class Modules {
             module_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             project_id bigint(20) unsigned NOT NULL,
             module_name varchar(255) NOT NULL DEFAULT '',
-            process_data_prompt longtext DEFAULT NULL,
-            fact_check_prompt longtext DEFAULT NULL,
-            finalize_response_prompt longtext DEFAULT NULL,
             skip_fact_check TINYINT(1) NOT NULL DEFAULT 0,
             data_source_type varchar(50) DEFAULT 'files' NOT NULL,
             data_source_config longtext DEFAULT NULL,
@@ -97,13 +82,12 @@ class Modules {
 
         // Ensure project_id is valid
         if ( empty( $project_id ) || ! is_numeric( $project_id ) ) {
-            if ($this->logger) {
-                $this->logger->error('Failed to create module: Invalid project_id', [
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error('Failed to create module: Invalid project_id', [
                     'project_id' => $project_id,
                     'module_data' => $module_data
                 ]);
-            } else {
-                		// Debug logging removed for production
             }
             return false;
         }
@@ -112,9 +96,6 @@ class Modules {
             'project_id' => absint( $project_id ), // Use project_id
             // 'user_id' removed
             'module_name' => isset( $module_data['module_name'] ) ? sanitize_text_field( $module_data['module_name'] ) : 'New Module',
-            'process_data_prompt' => isset( $module_data['process_data_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['process_data_prompt'] ) ) : '',
-            'fact_check_prompt' => isset( $module_data['fact_check_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['fact_check_prompt'] ) ) : '',
-            'finalize_response_prompt' => isset( $module_data['finalize_response_prompt'] ) ? wp_kses_post( wp_unslash( $module_data['finalize_response_prompt'] ) ) : '',
             'data_source_type' => isset( $module_data['data_source_type'] ) ? sanitize_text_field( $module_data['data_source_type'] ) : 'files', // Default to files
             'data_source_config' => isset( $module_data['data_source_config'] ) ? wp_json_encode( $module_data['data_source_config'] ) : null, // Store config as JSON
             'output_type' => isset( $module_data['output_type'] ) ? sanitize_text_field( $module_data['output_type'] ) : 'data_export', // Default to data
@@ -128,9 +109,6 @@ class Modules {
             '%d', // project_id
             // '%d', // user_id format removed
             '%s', // module_name
-            '%s', // process_data_prompt
-            '%s', // fact_check_prompt
-            '%s', // finalize_response_prompt
             '%s', // data_source_type
             '%s', // data_source_config (JSON string)
             '%s', // output_type
@@ -145,10 +123,9 @@ class Modules {
         if ( $result ) {
             return $wpdb->insert_id;
         } else {
-            if ($this->logger) {
-                $this->logger->error('Failed to insert new module.', ['db_error' => $wpdb->last_error, 'data' => $data]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error('Failed to insert new module.', ['db_error' => $wpdb->last_error, 'data' => $data]);
             }
             return false;
         }
@@ -165,8 +142,9 @@ class Modules {
     public function get_modules_for_project( $project_id, $user_id ) {
         global $wpdb;
    
-        // First, verify the user owns the project using the injected dependency
-        $project = $this->db_projects->get_project( $project_id, $user_id );
+        // First, verify the user owns the project using filter-based service access
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $project = $db_projects->get_project( $project_id, $user_id );
    
         if ( ! $project ) {
             return null; // Project not found or user doesn't own it
@@ -211,22 +189,21 @@ class Modules {
         // Get the module first to find its project_id
         $existing_module = $this->get_module( $module_id );
         if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
-            if ($this->logger) {
-                $this->logger->warning('Attempted to update non-existent module or module missing project ID.', ['module_id' => $module_id]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('Attempted to update non-existent module or module missing project ID.', ['module_id' => $module_id]);
             }
             return false; // Module not found or missing project ID
         }
    
-        // Verify the user owns the project associated with the module using injected dependency
-        $project = $this->db_projects->get_project( $existing_module->project_id, $user_id );
+        // Verify the user owns the project associated with the module using filter-based service access
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $project = $db_projects->get_project( $existing_module->project_id, $user_id );
    
         if ( ! $project ) {
-            if ($this->logger) {
-                $this->logger->warning('User attempted to update module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('User attempted to update module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
             }
             return false; // User doesn't own the project this module belongs to
         }
@@ -237,9 +214,6 @@ class Modules {
    
         $fields_to_update = [
             'module_name'              => '%s',
-            'process_data_prompt'      => '%s',
-            'fact_check_prompt'        => '%s',
-            'finalize_response_prompt' => '%s',
             'data_source_type'         => '%s',
             'data_source_config'       => '%s', // Expects JSON encoded string
             'output_type'              => '%s',
@@ -256,8 +230,6 @@ class Modules {
                 if ( in_array( $field, [ 'data_source_config', 'output_config' ] ) ) {
                     // Assume it's already a correctly structured array/object for encoding
                     $data[ $field ] = wp_json_encode( $value );
-                } elseif ( in_array( $field, [ 'process_data_prompt', 'fact_check_prompt', 'finalize_response_prompt' ] ) ) {
-                    $data[ $field ] = wp_kses_post( wp_unslash( $value ) ); // Unslash before kses
                 } elseif ( $field === 'skip_fact_check' ) {
                     $data[ $field ] = absint( $value ); // Ensure it's 0 or 1
                 } else {
@@ -281,10 +253,9 @@ class Modules {
    
         // Log errors on failure
         if ( $result === false ) {
-            if ($this->logger) {
-                $this->logger->error('Failed to update module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error('Failed to update module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             }
         }
    
@@ -305,22 +276,21 @@ class Modules {
         // Get the module first to find its project_id
         $existing_module = $this->get_module( $module_id );
         if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
-            if ($this->logger) {
-                $this->logger->warning('Attempted to delete non-existent module or module missing project ID.', ['module_id' => $module_id]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('Attempted to delete non-existent module or module missing project ID.', ['module_id' => $module_id]);
             }
             return false; // Module not found
         }
    
-        // Verify the user owns the project associated with the module using injected dependency
-        $project = $this->db_projects->get_project( $existing_module->project_id, $user_id );
+        // Verify the user owns the project associated with the module using filter-based service access
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $project = $db_projects->get_project( $existing_module->project_id, $user_id );
    
         if ( ! $project ) {
-            if ($this->logger) {
-                $this->logger->warning('User attempted to delete module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('User attempted to delete module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
             }
             return false; // User doesn't own the project
         }
@@ -334,10 +304,9 @@ class Modules {
    
         // Log errors on failure
         if ( $result === false ) {
-            if ($this->logger) {
-                $this->logger->error('Failed to delete module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error('Failed to delete module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             }
         }
    
@@ -389,22 +358,21 @@ class Modules {
         // Get the module first to find its project_id
         $existing_module = $this->get_module( $module_id );
         if ( ! $existing_module || ! isset( $existing_module->project_id ) ) {
-            if ($this->logger) {
-                $this->logger->warning('Attempted to update schedule for non-existent module or module missing project ID.', ['module_id' => $module_id]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('Attempted to update schedule for non-existent module or module missing project ID.', ['module_id' => $module_id]);
             }
             return false;
         }
 
-        // Verify the user owns the project associated with the module using injected dependency
-        $project = $this->db_projects->get_project( $existing_module->project_id, $user_id );
+        // Verify the user owns the project associated with the module using filter-based service access
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $project = $db_projects->get_project( $existing_module->project_id, $user_id );
 
         if ( ! $project ) {
-            if ($this->logger) {
-                $this->logger->warning('User attempted to update schedule for module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
-            } else {
-                		// Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('User attempted to update schedule for module they do not own.', ['module_id' => $module_id, 'user_id' => $user_id, 'project_id' => $existing_module->project_id]);
             }
             return false;
         }
@@ -430,10 +398,9 @@ class Modules {
         );
 
         if ( false === $updated ) {
-            if ($this->logger) {
-                $this->logger->error('Failed to update schedule for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
-            } else {
-                // Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error('Failed to update schedule for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             }
             return false;
         }
@@ -453,13 +420,13 @@ class Modules {
     public function update_module_schedules( $project_id, $user_id, $module_schedules ) {
         global $wpdb;
 
-        // Verify the user owns the project using the injected dependency
-        $project = $this->db_projects->get_project( $project_id, $user_id );
+        // Verify the user owns the project using filter-based service access
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $project = $db_projects->get_project( $project_id, $user_id );
         if ( ! $project ) {
-            if ($this->logger) {
-                $this->logger->warning('User attempted to update schedules for project they do not own.', ['project_id' => $project_id, 'user_id' => $user_id]);
-            } else {
-                 // Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->warning('User attempted to update schedules for project they do not own.', ['project_id' => $project_id, 'user_id' => $user_id]);
             }
             return false;
         }
@@ -477,10 +444,9 @@ class Modules {
             // Get the module to ensure it belongs to the correct project (redundant check, but safe)
              $existing_module = $this->get_module( $module_id );
              if ( ! $existing_module || $existing_module->project_id != $project_id ) {
-                 if ($this->logger) {
-                    $this->logger->warning('Attempted to update schedule for module not belonging to the specified project.', ['module_id' => $module_id, 'project_id' => $project_id, 'user_id' => $user_id]);
-                 } else {
-                    // Debug logging removed for production
+                 $logger = apply_filters('dm_get_service', null, 'logger');
+                 if ($logger) {
+                    $logger->warning('Attempted to update schedule for module not belonging to the specified project.', ['module_id' => $module_id, 'project_id' => $project_id, 'user_id' => $user_id]);
                  }
                  continue;
              }
@@ -498,10 +464,9 @@ class Modules {
             if ( $updated !== false ) {
                 $rows_affected += $updated;
             } else {
-                 if ($this->logger) {
-                    $this->logger->error('Failed to update module schedule in batch.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
-                 } else {
-                    // Debug logging removed for production
+                 $logger = apply_filters('dm_get_service', null, 'logger');
+                 if ($logger) {
+                    $logger->error('Failed to update module schedule in batch.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
                  }
                 // Optionally decide if the entire operation should fail
             }
@@ -539,10 +504,9 @@ class Modules {
 
         if ( false === $updated ) {
             // Use logger if available
-            if ($this->logger) {
-                $this->logger->error('Failed to update last_run_at for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
-            } else {
-                 // Debug logging removed for production
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error('Failed to update last_run_at for module.', ['module_id' => $module_id, 'db_error' => $wpdb->last_error]);
             }
             return false;
         }

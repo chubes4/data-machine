@@ -15,6 +15,7 @@ use DataMachine\Database\{Modules, Projects};
 use DataMachine\Engine\ProcessedItemsManager;
 use DataMachine\Handlers\HttpService;
 use DataMachine\Helpers\Logger;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -37,10 +38,10 @@ class PublicRestApi extends BaseInputHandler {
      * @param object $module The full module object containing configuration and context.
      * @param array  $source_config Decoded data_source_config specific to this handler.
      * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
-     * @return array An array of standardized input data packets, or an array indicating no new items (e.g., ['status' => 'no_new_items']).
+     * @return DataPacket A standardized data packet for public REST API data.
      * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
+	public function get_input_data(object $module, array $source_config, int $user_id): DataPacket {
         $this->logger?->info('Public REST API Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
 
 		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;

@@ -93,33 +93,18 @@ class AdminPage {
      * Initialize the class and set its properties.
      *
      * @since    0.1.0
-     * @param    string                                   $version                The plugin version.
-     * @param    Modules            $db_modules             Injected DB Modules instance.
-     * @param    Projects           $db_projects            Injected DB Projects instance.
-     * @param    Logger                      $logger                 Injected Logger instance.
-     * @param    SettingsFields             $settings_fields        Injected Settings Fields instance.
-     * @param    HandlerFactory             $handler_factory        Injected Handler Factory instance.
-     * @param    \DataMachine\Admin\RemoteLocations\FormHandler $remote_locations_admin Injected Remote Locations Form Handler instance.
      */
-    public function __construct(
-        $version,
-        Modules $db_modules,
-        Projects $db_projects,
-        Logger $logger,
-        SettingsFields $settings_fields,
-        HandlerFactory $handler_factory,
-        \DataMachine\Admin\RemoteLocations\FormHandler $remote_locations_admin
-    ) {
-        $this->version = $version;
-        $this->db_modules = $db_modules;
-        $this->db_projects = $db_projects;
-        $this->logger = $logger;
-        $this->settings_fields = $settings_fields;
-        $this->handler_factory = $handler_factory;
-        $this->remote_locations_admin = $remote_locations_admin;
-        // Instantiate the module config handler with all required dependencies
+    public function __construct() {
+        $this->version = apply_filters('dm_get_service', null, 'version');
+        $this->db_modules = apply_filters('dm_get_service', null, 'db_modules');
+        $this->db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $this->logger = apply_filters('dm_get_service', null, 'logger');
+        $this->settings_fields = apply_filters('dm_get_service', null, 'settings_fields');
+        $this->handler_factory = apply_filters('dm_get_service', null, 'handler_factory');
+        $this->remote_locations_admin = apply_filters('dm_get_service', null, 'remote_locations_admin');
+        // Instantiate the module config handler using filter-based service access
         require_once plugin_dir_path(__FILE__) . 'ModuleConfig/ModuleConfigHandler.php';
-        $this->module_config_handler = new \DataMachine\Admin\ModuleConfig\ModuleConfigHandler($db_modules, $handler_factory, $logger);
+        $this->module_config_handler = apply_filters('dm_get_service', null, 'module_config_handler');
         // Hook for project management page (if any form processing is needed in future)
         add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_management_page' ) );
         // Hook for API keys page (if any form processing is needed in future)

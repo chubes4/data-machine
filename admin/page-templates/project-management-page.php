@@ -1,6 +1,6 @@
 <?php
 /**
- * Template for the Project Management page.
+ * Template for the Project Management page with card-based layout and step-specific prompts.
  */
 
 use DataMachine\Constants;
@@ -13,162 +13,244 @@ $user_id = get_current_user_id();
 // Fetch projects for the current user
 $projects = $db_projects->get_projects_for_user( $user_id );
 
+// Get pipeline step registry for prompt fields
+$pipeline_registry = apply_filters('dm_get_service', null, 'pipeline_step_registry');
+$project_prompts_service = apply_filters('dm_get_service', null, 'project_prompts_service');
+
 ?>
 <div class="wrap">
     <h1>Projects</h1>
-    <p>Manage your data machine projects and their schedules.</p>
+    <p>Manage your data machine projects with step-specific prompts and pipeline configuration.</p>
     
-    <div style="margin-bottom: 15px;">
+    <div style="margin-bottom: 20px;">
         <button type="button" id="create-new-project" class="button button-primary">Create New Project</button>
         <span class="spinner" id="create-project-spinner" style="float: none; vertical-align: middle;"></span>
     </div>
 
-    <table class="wp-list-table widefat fixed striped projects">
-        <thead>
-            <tr>
-                <th>Project Name</th>
-                <th>Prompt</th>
-                <th>Modules</th>
-                <th>Schedule</th>
-                <th>Status</th>
-                <th>Last Run</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if ( ! empty( $projects ) && is_array( $projects ) ) : ?>
-                <?php foreach ( $projects as $project ) : ?>
-                    <?php
-                    // Fetch modules for the current project
-                    $modules = $db_modules->get_modules_for_project( $project->project_id, $user_id );
-                    $module_names = [];
-                    $has_file_modules = false;
-                    $file_modules = [];
-                    if ( ! empty( $modules ) && is_array( $modules ) ) {
-                        foreach ( $modules as $module ) {
-                            $module_names[] = esc_html( $module->module_name );
-                            
-                            // Check if this is a file module
-                            if ( isset( $module->data_source_type ) && $module->data_source_type === 'files' ) {
-                                $has_file_modules = true;
-                                $file_modules[] = $module;
-                            }
+    <div class="dm-projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <?php if ( ! empty( $projects ) && is_array( $projects ) ) : ?>
+            <?php foreach ( $projects as $project ) : ?>
+                <?php
+                // Fetch modules for the current project
+                $modules = $db_modules->get_modules_for_project( $project->project_id, $user_id );
+                $module_names = [];
+                $has_file_modules = false;
+                $file_modules = [];
+                if ( ! empty( $modules ) && is_array( $modules ) ) {
+                    foreach ( $modules as $module ) {
+                        $module_names[] = esc_html( $module->module_name );
+                        
+                        // Check if this is a file module
+                        if ( isset( $module->data_source_type ) && $module->data_source_type === 'files' ) {
+                            $has_file_modules = true;
+                            $file_modules[] = $module;
                         }
                     }
-                    $modules_display = ! empty( $module_names ) ? implode( ', ', $module_names ) : 'No modules';
+                }
+                $modules_display = ! empty( $module_names ) ? implode( ', ', $module_names ) : 'No modules';
 
-                    // --- Schedule Display Logic ---
-                    $project_interval = $project->schedule_interval ?? 'manual';
-                    // Use constant label for project schedule
-                    $project_schedule_label = Constants::get_cron_label($project_interval);
-                    if (!$project_schedule_label && $project_interval === 'manual') {
-                        $project_schedule_label = 'Manual'; // Handle manual case explicitly if not in constants
+                // Get project step prompts
+                $project_step_prompts = $project_prompts_service ? $project_prompts_service->get_project_step_prompts($project->project_id) : [];
+                $prompt_steps = $pipeline_registry ? $pipeline_registry->get_prompt_steps_in_order() : [];
+
+                // Schedule display logic
+                $project_interval = $project->schedule_interval ?? 'manual';
+                $project_schedule_label = Constants::get_cron_label($project_interval);
+                if (!$project_schedule_label && $project_interval === 'manual') {
+                    $project_schedule_label = 'Manual';
+                }
+                $project_schedule_display = esc_html( $project_schedule_label ?? ucfirst( str_replace( '_', ' ', $project_interval ) ) );
+
+                $module_exceptions = [];
+                if ( ! empty( $modules ) && is_array( $modules ) ) {
+                    foreach ( $modules as $module ) {
+                        $module_interval = $module->schedule_interval ?? 'manual';
+                        if ( $module_interval !== 'project_schedule' ) {
+                            $module_schedule_label = Constants::get_cron_label($module_interval);
+                            if (!$module_schedule_label && $module_interval === 'manual') {
+                                $module_schedule_label = 'Manual';
+                            }
+                            $module_schedule_display = esc_html( $module_schedule_label ?? ucfirst( str_replace( '_', ' ', $module_interval ) ) );
+                            $module_exceptions[] = esc_html( $module->module_name ) . ': ' . $module_schedule_display;
+                        }
                     }
-                    $project_schedule_display = esc_html( $project_schedule_label ?? ucfirst( str_replace( '_', ' ', $project_interval ) ) ); // Fallback just in case
+                }
 
-                    $module_exceptions = [];
-
-                    if ( ! empty( $modules ) && is_array( $modules ) ) {
-                        foreach ( $modules as $module ) {
-                            $module_interval = $module->schedule_interval ?? 'manual';
-                            // Show module schedule if it's NOT 'project_schedule'
-                            if ( $module_interval !== 'project_schedule' ) {
-                                // Use constant label for module schedule
-                                $module_schedule_label = Constants::get_cron_label($module_interval);
-                                if (!$module_schedule_label && $module_interval === 'manual') {
-                                    $module_schedule_label = 'Manual'; // Handle manual case explicitly if not in constants
+                $final_schedule_display = $project_schedule_display;
+                if ( ! empty( $module_exceptions ) ) {
+                    $final_schedule_display .= ' (' . implode( ', ', $module_exceptions ) . ')';
+                }
+                ?>
+                <div class="dm-project-card" 
+                     data-project-id="<?php echo esc_attr( $project->project_id ); ?>"
+                     style="border: 1px solid #ccd0d4; border-radius: 4px; background: #fff; padding: 20px; box-shadow: 0 1px 1px rgba(0,0,0,0.04);">
+                    
+                    <!-- Project Header -->
+                    <div class="dm-project-header" style="border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 18px; line-height: 1.3;">
+                            <?php echo esc_html( $project->project_name ); ?>
+                        </h3>
+                        <div style="display: flex; gap: 15px; font-size: 13px; color: #666;">
+                            <span><strong>Status:</strong> <?php echo esc_html( ucfirst( $project->schedule_status ?? 'paused' ) ); ?></span>
+                            <span><strong>Schedule:</strong> <?php echo wp_kses_post($final_schedule_display); ?></span>
+                            <span><strong>Last Run:</strong> 
+                                <?php
+                                if (!empty($project->last_run_at)) {
+                                    echo esc_html( human_time_diff( strtotime( $project->last_run_at ), current_time( 'timestamp' ) ) . ' ago' );
+                                } else {
+                                    echo esc_html__('Never', 'data-machine');
                                 }
-                                $module_schedule_display = esc_html( $module_schedule_label ?? ucfirst( str_replace( '_', ' ', $module_interval ) ) ); // Fallback
-                                $module_exceptions[] = esc_html( $module->module_name ) . ': ' . $module_schedule_display;
-                            }
-                        }
-                    }
+                                ?>
+                            </span>
+                        </div>
+                    </div>
 
-                    $final_schedule_display = $project_schedule_display;
-                    if ( ! empty( $module_exceptions ) ) {
-                        $final_schedule_display .= ' (' . implode( ', ', $module_exceptions ) . ')';
-                    }
-                    // --- End Schedule Display Logic ---
-                    ?>
-                    <tr data-project-id="<?php echo esc_attr( $project->project_id ); ?>">
-                        <td><?php echo esc_html( $project->project_name ); ?></td>
-                        <td>
-                            <div class="dm-project-prompt-editable"
-                                 contenteditable="true"
-                                 data-project-id="<?php echo esc_attr($project->project_id); ?>"
-                                 style="min-width:180px; min-height:32px; border:1px solid #e2e2e2; padding:4px; background:#fff; border-radius:3px;"
-                                 spellcheck="true"
-                            ><?php echo esc_html($project->project_prompt ?? ''); ?></div>
-                            <span class="dm-prompt-save-spinner spinner" style="float:none;vertical-align:middle;display:none;"></span>
-                        </td>
-                        <td><?php echo wp_kses_post($modules_display); ?></td>
-                        <td><?php echo wp_kses_post($final_schedule_display); ?></td>
-                        <td><?php echo esc_html( ucfirst( $project->schedule_status ?? 'paused' ) ); ?></td>
-                        <td><?php
-                            if (!empty($project->last_run_at)) {
-                                // Display human-readable time difference
-                                echo esc_html( human_time_diff( strtotime( $project->last_run_at ), current_time( 'timestamp' ) ) . ' ago' );
-                            } else {
-                                echo esc_html__('Never', 'data-machine');
-                            }
-                        ?></td>
-                        <td><button class="button action-button run-now-button">Run Now</button> <button class="button action-button edit-schedule-button">Edit Schedule</button>
-                            <?php if ( $has_file_modules ) : ?>
-                                <button class="button action-button upload-files-button" 
-                                        data-project-id="<?php echo esc_attr( $project->project_id ); ?>"
-                                        data-file-modules="<?php echo esc_attr( json_encode( array_map( function($m) { return ['id' => $m->module_id, 'name' => $m->module_name]; }, $file_modules ) ) ); ?>">
-                                    Upload Files
-                                </button>
-                            <?php endif; ?>
-                            <?php
-                            // Add Export Button
-                            $export_url = add_query_arg(
-                                array(
-                                    'action'     => 'dm_export_project', // Action hook for our export function
-                                    'project_id' => $project->project_id,
-                                    '_wpnonce'   => wp_create_nonce( 'dm_export_project_' . $project->project_id ), // Nonce for security
-                                ),
-                                admin_url( 'admin-post.php' )
-                            );
-                            ?>
-                            <a href="<?php echo esc_url( $export_url ); ?>" class="button action-button export-project-button">Export</a>
-                            <?php
-                            // Add Delete Button
-                            $delete_url = add_query_arg(
-                                array(
-                                    'action'     => 'dm_delete_project',
-                                    'project_id' => $project->project_id,
-                                    '_wpnonce'   => wp_create_nonce( 'dm_delete_project_' . $project->project_id ),
-                                ),
-                                admin_url( 'admin-post.php' )
-                            );
-                            ?>
-                            <a 
-                                href="<?php echo esc_url( $delete_url ); ?>" 
-                                class="button action-button delete-project-button button-link-delete" 
-                                onclick="return confirm('<?php echo esc_js( sprintf( /* translators: %s: Project name */ __( 'Are you sure you want to permanently delete the project \'%s\' and ALL its modules? This cannot be undone.', 'data-machine' ), $project->project_name ) ); ?>');"
-                            >Delete</a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <tr>
-                    <td colspan="6"><?php echo esc_html__('No projects found. Click \'Create New Project\' above to get started.', 'data-machine'); ?></td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-        <tfoot>
-            <tr>
-                <th>Project Name</th>
-                <th>Prompt</th>
-                <th>Modules</th>
-                <th>Schedule</th>
-                <th>Status</th>
-                <th>Last Run</th>
-                <th>Actions</th>
-            </tr>
-        </tfoot>
-    </table>
+                    <!-- Pipeline Step Prompts -->
+                    <div class="dm-pipeline-prompts" style="margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; color: #23282d;">
+                            Pipeline Step Prompts
+                        </h4>
+                        
+                        <?php if (!empty($prompt_steps)) : ?>
+                            <div class="dm-step-prompts" style="display: flex; flex-direction: column; gap: 15px;">
+                                <?php foreach ($prompt_steps as $step_name => $step_info) : ?>
+                                    <div class="dm-step-prompt-group" 
+                                         data-step="<?php echo esc_attr($step_name); ?>"
+                                         style="border: 1px solid #e2e4e7; border-radius: 3px; padding: 12px; background: #f9f9f9;">
+                                        
+                                        <div class="dm-step-header" style="margin-bottom: 10px;">
+                                            <strong style="color: #0073aa; text-transform: capitalize;">
+                                                <?php echo esc_html(str_replace('_', ' ', $step_name)); ?> Step
+                                            </strong>
+                                        </div>
+                                        
+                                        <?php foreach ($step_info['prompt_fields'] as $field_name => $field_config) : ?>
+                                            <?php
+                                            $current_value = isset($project_step_prompts[$step_name][$field_name]) 
+                                                ? $project_step_prompts[$step_name][$field_name] 
+                                                : ($field_config['default'] ?? '');
+                                            $field_id = "prompt_{$project->project_id}_{$step_name}_{$field_name}";
+                                            ?>
+                                            <div class="dm-prompt-field" style="margin-bottom: 8px;">
+                                                <label for="<?php echo esc_attr($field_id); ?>" 
+                                                       style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
+                                                    <?php echo esc_html($field_config['label'] ?? ucwords(str_replace('_', ' ', $field_name))); ?>
+                                                    <?php if (!empty($field_config['required'])) : ?>
+                                                        <span style="color: #d63638;">*</span>
+                                                    <?php endif; ?>
+                                                </label>
+                                                
+                                                <?php if ($field_config['type'] === 'textarea') : ?>
+                                                    <textarea 
+                                                        id="<?php echo esc_attr($field_id); ?>"
+                                                        class="dm-step-prompt-field"
+                                                        data-project-id="<?php echo esc_attr($project->project_id); ?>"
+                                                        data-step="<?php echo esc_attr($step_name); ?>"
+                                                        data-field="<?php echo esc_attr($field_name); ?>"
+                                                        rows="3"
+                                                        style="width: 100%; font-size: 12px; padding: 6px; border: 1px solid #ddd; border-radius: 2px; resize: vertical;"
+                                                        placeholder="<?php echo esc_attr($field_config['placeholder'] ?? ''); ?>"
+                                                    ><?php echo esc_textarea($current_value); ?></textarea>
+                                                <?php else : ?>
+                                                    <input 
+                                                        type="<?php echo esc_attr($field_config['type'] ?? 'text'); ?>"
+                                                        id="<?php echo esc_attr($field_id); ?>"
+                                                        class="dm-step-prompt-field"
+                                                        data-project-id="<?php echo esc_attr($project->project_id); ?>"
+                                                        data-step="<?php echo esc_attr($step_name); ?>"
+                                                        data-field="<?php echo esc_attr($field_name); ?>"
+                                                        value="<?php echo esc_attr($current_value); ?>"
+                                                        style="width: 100%; font-size: 12px; padding: 6px; border: 1px solid #ddd; border-radius: 2px;"
+                                                        placeholder="<?php echo esc_attr($field_config['placeholder'] ?? ''); ?>"
+                                                    />
+                                                <?php endif; ?>
+                                                
+                                                <?php if (!empty($field_config['description'])) : ?>
+                                                    <p style="margin: 4px 0 0 0; font-size: 11px; color: #666; font-style: italic;">
+                                                        <?php echo esc_html($field_config['description']); ?>
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else : ?>
+                            <p style="color: #666; font-style: italic; margin: 0;">No prompts required for current pipeline configuration.</p>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Project Modules -->
+                    <div class="dm-project-modules" style="margin-bottom: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #23282d;">
+                            Modules
+                        </h4>
+                        <p style="margin: 0; font-size: 13px; color: #666;">
+                            <?php echo wp_kses_post($modules_display); ?>
+                        </p>
+                    </div>
+
+                    <!-- Project Actions -->
+                    <div class="dm-project-actions" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start;">
+                        <button class="button button-primary run-now-button" 
+                                style="font-size: 12px; padding: 4px 12px; height: auto;">
+                            Run Now
+                        </button>
+                        <button class="button edit-schedule-button" 
+                                style="font-size: 12px; padding: 4px 12px; height: auto;">
+                            Edit Schedule
+                        </button>
+                        
+                        <?php if ( $has_file_modules ) : ?>
+                            <button class="button upload-files-button" 
+                                    data-project-id="<?php echo esc_attr( $project->project_id ); ?>"
+                                    data-file-modules="<?php echo esc_attr( json_encode( array_map( function($m) { return ['id' => $m->module_id, 'name' => $m->module_name]; }, $file_modules ) ) ); ?>"
+                                    style="font-size: 12px; padding: 4px 12px; height: auto;">
+                                Upload Files
+                            </button>
+                        <?php endif; ?>
+                        
+                        <?php
+                        $export_url = add_query_arg(
+                            array(
+                                'action'     => 'dm_export_project',
+                                'project_id' => $project->project_id,
+                                '_wpnonce'   => wp_create_nonce( 'dm_export_project_' . $project->project_id ),
+                            ),
+                            admin_url( 'admin-post.php' )
+                        );
+                        ?>
+                        <a href="<?php echo esc_url( $export_url ); ?>" 
+                           class="button export-project-button"
+                           style="font-size: 12px; padding: 4px 12px; height: auto; text-decoration: none;">
+                            Export
+                        </a>
+                        
+                        <?php
+                        $delete_url = add_query_arg(
+                            array(
+                                'action'     => 'dm_delete_project',
+                                'project_id' => $project->project_id,
+                                '_wpnonce'   => wp_create_nonce( 'dm_delete_project_' . $project->project_id ),
+                            ),
+                            admin_url( 'admin-post.php' )
+                        );
+                        ?>
+                        <a href="<?php echo esc_url( $delete_url ); ?>" 
+                           class="button delete-project-button button-link-delete" 
+                           style="font-size: 12px; padding: 4px 12px; height: auto; text-decoration: none; color: #d63638;"
+                           onclick="return confirm('<?php echo esc_js( sprintf( __( 'Are you sure you want to permanently delete the project \'%s\' and ALL its modules? This cannot be undone.', 'data-machine' ), $project->project_name ) ); ?>');">
+                            Delete
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else : ?>
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666; font-style: italic;">
+                <p>No projects found. Click 'Create New Project' above to get started.</p>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <script>

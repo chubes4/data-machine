@@ -43,7 +43,7 @@ use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, Pr
 use DataMachine\Engine\Filters\{AiResponseParser, PromptBuilder, MarkdownConverter};
 use DataMachine\Handlers\{HandlerFactory, HttpService};
 use DataMachine\Handlers\Input\Files as InputFiles;
-use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler};
+use DataMachine\Helpers\{Logger, MemoryGuard, EncryptionHelper, ActionScheduler, ProjectPromptsService, ProjectPipelineConfigService};
 use DataMachine\Contracts\{LoggerInterface, ActionSchedulerInterface};
 
 
@@ -54,89 +54,28 @@ use DataMachine\Contracts\{LoggerInterface, ActionSchedulerInterface};
  * @since    0.1.0
  */
 function run_data_machine() {
-    // Simple service registry using filter-based access
-    $services = [];
-    
-    // Core services - simple instantiation
-    $services['logger'] = new Logger();
-    $services['encryption_helper'] = new EncryptionHelper();
-    $services['action_scheduler'] = new ActionScheduler($services['logger']);
-    $services['memory_guard'] = new MemoryGuard($services['logger']);
-    
-    // Database services
-    $services['db_projects'] = new DatabaseProjects();
-    $services['db_modules'] = new DatabaseModules($services['db_projects'], $services['logger']);
-    $services['db_jobs'] = new DatabaseJobs($services['db_projects'], $services['logger']);
-    $services['db_processed_items'] = new DatabaseProcessedItems($services['logger']);
-    $services['db_remote_locations'] = new DatabaseRemoteLocations();
-    
-    // Handler services
-    $services['http_service'] = new HttpService($services['logger']);
-    
-    // OAuth services
-    $services['oauth_twitter'] = new OAuthTwitter($services['logger']);
-    $services['oauth_reddit'] = new OAuthReddit($services['logger']);
-    $threads_client_id = get_option('threads_app_id', '');
-    $threads_client_secret = get_option('threads_app_secret', '');
-    $services['oauth_threads'] = new OAuthThreads($threads_client_id, $threads_client_secret, $services['logger']);
-    $facebook_client_id = get_option('facebook_app_id', '');
-    $facebook_client_secret = get_option('facebook_app_secret', '');
-    $services['oauth_facebook'] = new OAuthFacebook($facebook_client_id, $facebook_client_secret, $services['logger']);
-    
-    // AI and engine services
-    $services['prompt_builder'] = new PromptBuilder();
-    $services['prompt_builder']->register_all_sections();
-    $services['ai_http_client'] = new AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-    $services['job_status_manager'] = new JobStatusManager($services['db_jobs'], $services['db_projects'], $services['logger']);
-    $services['job_creator'] = new JobCreator($services['db_jobs'], $services['db_modules'], $services['db_projects'], $services['action_scheduler'], $services['logger']);
-    $services['processed_items_manager'] = new ProcessedItemsManager($services['db_processed_items'], $services['logger']);
-    $services['handler_factory'] = new HandlerFactory($services['logger']);
-    $services['scheduler'] = new Scheduler($services['job_creator'], $services['db_projects'], $services['db_modules'], $services['action_scheduler'], $services['db_jobs'], $services['logger']);
-    $services['orchestrator'] = new ProcessingOrchestrator($services['logger'], $services['action_scheduler'], $services['db_jobs']);
-    
-    // Get frequently used services for convenience
-    $logger = $services['logger'];
-    $db_projects = $services['db_projects'];
-    $db_modules = $services['db_modules'];
-    $db_jobs = $services['db_jobs'];
-    $db_processed_items = $services['db_processed_items'];
-    $db_remote_locations = $services['db_remote_locations'];
-    $handler_factory = $services['handler_factory'];
-    $job_creator = $services['job_creator'];
-    $orchestrator = $services['orchestrator'];
-    $scheduler = $services['scheduler'];
-    
-    // Filter-based service access
-    add_filter('dm_get_service', function($service, $service_name) use ($services) {
-        return $services[$service_name] ?? null;
-    }, 10, 2);
+    // Initialize pure filter-based service registry
+    \DataMachine\ServiceRegistry::init();
     
     // Admin setup
     if (is_admin()) {
-        new ApiAuthPage($logger);
+        new ApiAuthPage();
+        $logger = apply_filters('dm_get_service', null, 'logger');
         add_action('admin_notices', array($logger, 'display_admin_notices'));
     }
 
     // Initialize core handler auto-registration system
     CoreHandlerRegistry::init();
 
-    // Register default 5-step pipeline
+    // Register universal 3-step pipeline architecture
     add_filter('dm_register_pipeline_steps', function($steps) {
         return [
             'input' => [
                 'class' => 'DataMachine\\Engine\\Steps\\InputStep',
-                'next' => 'process'
+                'next' => 'ai'
             ],
-            'process' => [
-                'class' => 'DataMachine\\Engine\\Steps\\ProcessStep', 
-                'next' => 'factcheck'
-            ],
-            'factcheck' => [
-                'class' => 'DataMachine\\Engine\\Steps\\FactCheckStep',
-                'next' => 'finalize'
-            ],
-            'finalize' => [
-                'class' => 'DataMachine\\Engine\\Steps\\FinalizeStep',
+            'ai' => [
+                'class' => 'DataMachine\\Engine\\Steps\\AIStep',
                 'next' => 'output'
             ],
             'output' => [
@@ -147,31 +86,11 @@ function run_data_machine() {
     }, 5);
 
 
-    // Additional services
-    $remote_location_service = new RemoteLocationService($db_remote_locations);
-    $sync_remote_locations = new SyncRemoteLocations($db_remote_locations, $logger);
-    $remote_locations_form_handler = new RemoteLocationsFormHandler($db_remote_locations, $logger, $sync_remote_locations);
+    // Admin initialization
+    new AdminPage();
 
-    // Settings fields
-    $settings_fields = new SettingsFields($handler_factory, $remote_location_service);
-
-    // Admin page
-    $admin_page = new AdminPage(
-        DATA_MACHINE_VERSION,
-        $db_modules,
-        $db_projects,
-        $logger,
-        $settings_fields,
-        $handler_factory,
-        $remote_locations_form_handler
-    );
-
-    // Module handler
-    $module_handler = new ModuleConfigHandler(
-        $db_modules,
-        $handler_factory,
-        $logger
-    );
+    // Module handler - uses filter-based service access
+    $module_handler = new ModuleConfigHandler();
     $module_handler->init_hooks();
 
 
@@ -260,4 +179,36 @@ function activate_data_machine() {
 
 	// Set a transient flag for first-time admin notice or setup wizard (optional)
 	set_transient( 'dm_activation_notice', true, 5 * MINUTE_IN_SECONDS );
+	
+	// Clean up legacy active project/module user meta keys
+	dm_cleanup_legacy_user_meta();
+}
+
+/**
+ * Clean up orphaned user meta keys from the legacy active project/module system.
+ * This removes the Data_Machine_current_project and Data_Machine_current_module
+ * user meta keys that are no longer needed after removing the active selection feature.
+ */
+function dm_cleanup_legacy_user_meta() {
+	global $wpdb;
+	
+	// Delete legacy user meta keys for active project/module selections
+	$legacy_keys = [
+		'Data_Machine_current_project',
+		'Data_Machine_current_module',
+		'auto_data_collection_current_project', // Old plugin name
+		'auto_data_collection_current_module'   // Old plugin name
+	];
+	
+	foreach ($legacy_keys as $meta_key) {
+		$deleted = $wpdb->delete(
+			$wpdb->usermeta,
+			['meta_key' => $meta_key],
+			['%s']
+		);
+		
+		if ($deleted !== false && $deleted > 0) {
+			error_log("Data Machine: Cleaned up {$deleted} orphaned user meta entries for key: {$meta_key}");
+		}
+	}
 }

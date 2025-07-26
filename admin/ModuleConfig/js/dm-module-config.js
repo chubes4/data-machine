@@ -85,8 +85,8 @@ try {
 			outputDropdown: document.getElementById('output_type'),
 			
 			// Form selectors
-			projectSelector: document.getElementById('current_project'),
-			moduleSelector: document.getElementById('current_module'),
+			projectSelector: document.getElementById('selected_project'),
+			moduleSelector: document.getElementById('selected_module'),
 			projectIdField: document.querySelector('input[name="project_id"]'),
 			selectedProjectIdField: document.getElementById('selected_project_id_for_save'),
 			selectedModuleIdField: document.getElementById('selected_module_id_for_save'),

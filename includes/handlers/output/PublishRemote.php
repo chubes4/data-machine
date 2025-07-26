@@ -16,6 +16,7 @@ use DataMachine\Engine\Filters\{AiResponseParser, MarkdownConverter};
 use DataMachine\Database\RemoteLocations;
 use DataMachine\Helpers\Logger;
 use DataMachine\Handlers\HttpService;
+use DataMachine\DataPacket;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -40,13 +41,41 @@ class PublishRemote extends BaseOutputHandler {
 	/**
 	 * Handles publishing the AI output to a remote WordPress site via REST API.
 	 *
+	 * @param DataPacket $finalized_data The finalized data packet from processing.
+	 * @param object $module Module object.
+	 * @param int $user_id The ID of the user context.
+	 * @return array Result array on success or failure.
+	 */
+	public function handle_output(DataPacket $finalized_data, object $module, int $user_id): array {
+		// Extract content from DataPacket
+		$content_for_output = $finalized_data->getContentForOutput();
+		$ai_output_string = $content_for_output['body'] ?? $content_for_output['title'] ?? '';
+		
+		// Get module config
+		$module_job_config = [
+			'output_config' => json_decode($module->output_config ?? '{}', true)
+		];
+		
+		// Extract metadata
+		$input_metadata = [
+			'original_date_gmt' => $finalized_data->metadata['date_created'] ?? null,
+			'source_url' => $finalized_data->metadata['source_url'] ?? null,
+			'image_source_url' => !empty($finalized_data->attachments['images']) ? $finalized_data->attachments['images'][0]['url'] : null
+		];
+		
+		return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
+	}
+
+	/**
+	 * Legacy method for handling remote publishing (kept for backward compatibility).
+	 *
 	 * @param string $ai_output_string The finalized string from the AI.
 	 * @param array $module_job_config Configuration specific to this output job (credentials, post_type, etc.).
 	 * @param int|null $user_id The ID of the user context (not directly used for remote publish author).
 	 * @param array $input_metadata Metadata from the original input source (e.g., original URL, timestamp).
-	 * @return array|WP_Error Result array on success, WP_Error on failure.
+	 * @return array Result array on success or failure.
 	 */
-	public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array|WP_Error {
+	public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array {
 		// Initialize variables to avoid undefined variable warnings
 		$assigned_category_name = null;
 		$assigned_category_id = null;

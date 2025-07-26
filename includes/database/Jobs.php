@@ -27,28 +27,14 @@ class Jobs {
      */
     private $table_name;
 
-    /**
-     * Optional reference to the projects database class.
-     * @var Projects|null
-     */
-    private $db_projects;
-
-    /**
-     * Logger instance for debugging and monitoring.
-     * @var Logger|null
-     */
-    private $logger;
 
     /**
      * Initialize the class.
-     * @param Projects|null $db_projects Optional projects DB for updating last_run_at.
-     * @param Logger|null $logger Optional logger for debugging.
+     * Uses filter-based service access for dependencies.
      */
-    public function __construct(?Projects $db_projects = null, ?LoggerInterface $logger = null) {
+    public function __construct() {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_jobs';
-        $this->db_projects = $db_projects;
-        $this->logger = $logger;
     }
 
     /**
@@ -143,20 +129,22 @@ class Jobs {
             module_id bigint(20) unsigned NOT NULL,
             user_id bigint(20) unsigned NOT NULL,
             status varchar(20) NOT NULL DEFAULT 'pending', /* pending, running, completed, failed, completed_with_errors */
-            current_step tinyint(1) NOT NULL DEFAULT 1, /* 1=input, 2=process, 3=factcheck, 4=finalize, 5=output */
+            current_step_name varchar(50) NULL DEFAULT NULL, /* Dynamic step name (e.g., 'input', 'process', 'custom_analyze') */
+            step_sequence longtext NULL, /* JSON array of step names in execution order */
             module_config longtext NULL, /* JSON config used for this specific job run */
-            input_data longtext NULL, /* JSON raw input data from Step 1 */
-            processed_data longtext NULL, /* JSON processed data from Step 2 */
-            fact_checked_data longtext NULL, /* JSON fact-checked data from Step 3 */
-            finalized_data longtext NULL, /* JSON finalized data from Step 4 */
-            result_data longtext NULL, /* JSON final output/result/error from Step 5 */
+            step_data longtext NULL, /* JSON object with dynamic step data */
+            input_data longtext NULL, /* DEPRECATED: Legacy field for migration compatibility */
+            processed_data longtext NULL, /* DEPRECATED: Legacy field for migration compatibility */
+            fact_checked_data longtext NULL, /* DEPRECATED: Legacy field for migration compatibility */
+            finalized_data longtext NULL, /* DEPRECATED: Legacy field for migration compatibility */
+            result_data longtext NULL, /* DEPRECATED: Legacy field for migration compatibility */
             cleanup_scheduled datetime NULL DEFAULT NULL, /* When data cleanup should occur */
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,
             PRIMARY KEY  (job_id),
             KEY status (status),
-            KEY current_step (current_step),
+            KEY current_step_name (current_step_name),
             KEY module_id (module_id),
             KEY user_id (user_id),
             KEY cleanup_scheduled (cleanup_scheduled)
@@ -253,7 +241,8 @@ class Jobs {
         }
 
         // Update project last_run_at using existing services if available
-        if ($this->db_projects && !empty($job->module_id)) {
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        if ($db_projects && !empty($job->module_id)) {
             // Get project_id from modules table using single query
             $project_id = $wpdb->get_var($wpdb->prepare(
                 "SELECT project_id FROM {$wpdb->prefix}dm_modules WHERE module_id = %d", 
@@ -271,11 +260,14 @@ class Jobs {
                 );
                 
                 // Log project update failure if logger available
-                if (false === $project_updated && $this->logger) {
-                    $this->logger->warning('Failed to update project last_run_at', [
-                        'job_id' => $job_id,
-                        'project_id' => $project_id
-                    ]);
+                if (false === $project_updated) {
+                    $logger = apply_filters('dm_get_service', null, 'logger');
+                    if ($logger) {
+                        $logger->warning('Failed to update project last_run_at', [
+                            'job_id' => $job_id,
+                            'project_id' => $project_id
+                        ]);
+                    }
                 }
             }
         }
@@ -338,10 +330,11 @@ class Jobs {
         }
         
         // Log each stuck job being cleaned up
-        if ( $this->logger ) {
+        $logger = apply_filters('dm_get_service', null, 'logger');
+        if ( $logger ) {
             foreach ( $stuck_jobs as $job ) {
                 $hours_stuck = round( ( time() - strtotime( $job->created_at ) ) / 3600, 1 );
-                $this->logger->warning( "Cleaning up stuck job - marking as failed", [
+                $logger->warning( "Cleaning up stuck job - marking as failed", [
                     'job_id' => $job->job_id,
                     'module_id' => $job->module_id,
                     'status' => $job->status,
@@ -447,13 +440,16 @@ class Jobs {
         );
         
         if ( $updated === false ) {
-            $this->logger && $this->logger->error( 'Database update failed', [
-                'job_id' => $job_id,
-                'step' => $step,
-                'field' => $field,
-                'data_length' => strlen($data),
-                'wpdb_error' => $wpdb->last_error
-            ]);
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ($logger) {
+                $logger->error( 'Database update failed', [
+                    'job_id' => $job_id,
+                    'step' => $step,
+                    'field' => $field,
+                    'data_length' => strlen($data),
+                    'wpdb_error' => $wpdb->last_error
+                ]);
+            }
         }
         
         return $updated !== false;
@@ -489,6 +485,235 @@ class Jobs {
         ) );
         
         return $data;
+    }
+    
+    /**
+     * Update step data for a specific step by name (NEW DYNAMIC METHOD).
+     *
+     * @param int    $job_id    The job ID.
+     * @param string $step_name The step name (e.g., 'input', 'process', 'custom_analyze').
+     * @param string $data      JSON data for this step.
+     * @return bool True on success, false on failure.
+     */
+    public function update_step_data_by_name( int $job_id, string $step_name, string $data ): bool {
+        global $wpdb;
+        
+        if ( empty( $job_id ) || empty( $step_name ) ) {
+            return false;
+        }
+        
+        // Get current step data
+        $current_step_data = $this->get_job_step_data( $job_id );
+        
+        // Update the specific step
+        $current_step_data[$step_name] = json_decode( $data, true );
+        
+        // Save back to database
+        $updated_json = wp_json_encode( $current_step_data );
+        
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'step_data' => $updated_json
+            ],
+            ['job_id' => $job_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        if ( $updated === false ) {
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ( $logger ) {
+                $logger->error( 'Database step data update failed', [
+                    'job_id' => $job_id,
+                    'step_name' => $step_name,
+                    'data_length' => strlen($data),
+                    'wpdb_error' => $wpdb->last_error
+                ]);
+            }
+        }
+        
+        return $updated !== false;
+    }
+    
+    /**
+     * Get step data for a specific step by name (NEW DYNAMIC METHOD).
+     *
+     * @param int    $job_id    The job ID.
+     * @param string $step_name The step name (e.g., 'input', 'process', 'custom_analyze').
+     * @return string|null Step data as JSON string or null if not found.
+     */
+    public function get_step_data_by_name( int $job_id, string $step_name ): ?string {
+        global $wpdb;
+        
+        if ( empty( $job_id ) || empty( $step_name ) ) {
+            return null;
+        }
+        
+        // Get all step data
+        $all_step_data = $this->get_job_step_data( $job_id );
+        
+        if ( isset( $all_step_data[$step_name] ) ) {
+            return wp_json_encode( $all_step_data[$step_name] );
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get all step data for a job as an associative array.
+     *
+     * @param int $job_id The job ID.
+     * @return array Array of step data keyed by step name.
+     */
+    public function get_job_step_data( int $job_id ): array {
+        global $wpdb;
+        
+        if ( empty( $job_id ) ) {
+            return [];
+        }
+        
+        $step_data_json = $wpdb->get_var( $wpdb->prepare(
+            "SELECT step_data FROM {$this->table_name} WHERE job_id = %d",
+            $job_id
+        ) );
+        
+        if ( empty( $step_data_json ) ) {
+            return [];
+        }
+        
+        $step_data = json_decode( $step_data_json, true );
+        return is_array( $step_data ) ? $step_data : [];
+    }
+    
+    /**
+     * Get step sequence for a job.
+     *
+     * @param int $job_id The job ID.
+     * @return array Array of step names in execution order.
+     */
+    public function get_job_step_sequence( int $job_id ): array {
+        global $wpdb;
+        
+        if ( empty( $job_id ) ) {
+            return [];
+        }
+        
+        $step_sequence_json = $wpdb->get_var( $wpdb->prepare(
+            "SELECT step_sequence FROM {$this->table_name} WHERE job_id = %d",
+            $job_id
+        ) );
+        
+        if ( empty( $step_sequence_json ) ) {
+            return [];
+        }
+        
+        $step_sequence = json_decode( $step_sequence_json, true );
+        return is_array( $step_sequence ) ? $step_sequence : [];
+    }
+    
+    /**
+     * Set step sequence for a job.
+     *
+     * @param int   $job_id       The job ID.
+     * @param array $step_sequence Array of step names in execution order.
+     * @return bool True on success, false on failure.
+     */
+    public function set_job_step_sequence( int $job_id, array $step_sequence ): bool {
+        global $wpdb;
+        
+        if ( empty( $job_id ) || empty( $step_sequence ) ) {
+            return false;
+        }
+        
+        $step_sequence_json = wp_json_encode( $step_sequence );
+        
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'step_sequence' => $step_sequence_json
+            ],
+            ['job_id' => $job_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        return $updated !== false;
+    }
+    
+    /**
+     * Get current step name for a job.
+     *
+     * @param int $job_id The job ID.
+     * @return string|null Current step name or null if not found.
+     */
+    public function get_current_step_name( int $job_id ): ?string {
+        global $wpdb;
+        
+        if ( empty( $job_id ) ) {
+            return null;
+        }
+        
+        return $wpdb->get_var( $wpdb->prepare(
+            "SELECT current_step_name FROM {$this->table_name} WHERE job_id = %d",
+            $job_id
+        ) );
+    }
+    
+    /**
+     * Update current step name for a job.
+     *
+     * @param int    $job_id    The job ID.
+     * @param string $step_name The current step name.
+     * @return bool True on success, false on failure.
+     */
+    public function update_current_step_name( int $job_id, string $step_name ): bool {
+        global $wpdb;
+        
+        if ( empty( $job_id ) || empty( $step_name ) ) {
+            return false;
+        }
+        
+        $updated = $wpdb->update(
+            $this->table_name,
+            [
+                'current_step_name' => $step_name
+            ],
+            ['job_id' => $job_id],
+            ['%s'],
+            ['%d']
+        );
+        
+        return $updated !== false;
+    }
+    
+    /**
+     * Advance job to next step in sequence.
+     *
+     * @param int $job_id The job ID.
+     * @return bool True on success, false on failure.
+     */
+    public function advance_job_to_next_step( int $job_id ): bool {
+        $current_step = $this->get_current_step_name( $job_id );
+        $step_sequence = $this->get_job_step_sequence( $job_id );
+        
+        if ( empty( $current_step ) || empty( $step_sequence ) ) {
+            return false;
+        }
+        
+        $current_index = array_search( $current_step, $step_sequence );
+        if ( $current_index === false ) {
+            return false;
+        }
+        
+        $next_index = $current_index + 1;
+        if ( $next_index >= count( $step_sequence ) ) {
+            // No more steps - job should be marked complete
+            return false;
+        }
+        
+        $next_step = $step_sequence[$next_index];
+        return $this->update_current_step_name( $job_id, $next_step );
     }
     
     /**
