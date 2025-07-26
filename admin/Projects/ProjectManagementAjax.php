@@ -19,49 +19,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 class ProjectManagementAjax {
 
-	/** @var Projects */
-	private $db_projects;
-
-	/** @var Modules */
-	private $db_modules;
-
-	/** @var Jobs */
-	private $db_jobs;
-
-	/** @var ProcessedItems */
-	private $db_processed_items;
-
-	/** @var ?Logger */
-	private $logger;
-
-	/** @var JobCreator */
-	private $job_creator;
+	// All services accessed via filter-based architecture
 
 	/**
-	 * Constructor: wires hooks and dependencies.
-	 *
-	 * @param Projects $db_projects Projects DB service.
-	 * @param Modules $db_modules Modules DB service.
-	 * @param Jobs $db_jobs Jobs DB service.
-	 * @param ProcessedItems $db_processed_items Processed Items DB service.
-	 * @param JobCreator $job_creator Job Creator service.
-	 * @param Logger|null $logger Logger service (optional).
+	 * Constructor.
+	 * Uses filter-based service access for dependencies.
 	 */
-	public function __construct(
-		Projects  $db_projects,
-		Modules   $db_modules,
-		Jobs      $db_jobs,
-		ProcessedItems $db_processed_items,
-		JobCreator        $job_creator,
-		?Logger            $logger = null // Add optional logger
-	) {
-		$this->db_projects          = $db_projects;
-		$this->db_modules           = $db_modules;
-		$this->db_jobs              = $db_jobs;
-		$this->db_processed_items   = $db_processed_items;
-		$this->job_creator          = $job_creator;
-		$this->logger               = $logger;
-
+	public function __construct() {
 		add_action( 'wp_ajax_dm_run_now',              [ $this, 'handle_run_now' ] );
 		add_action( 'wp_ajax_dm_create_project',       [ $this, 'create_project_ajax_handler' ] );
 		add_action( 'wp_ajax_dm_edit_project_prompt',  [ $this, 'handle_edit_project_prompt' ] );
@@ -85,7 +49,8 @@ class ProjectManagementAjax {
 		}
 
 		$user_id = get_current_user_id();
-		$project = $this->db_projects->get_project( $project_id, $user_id );
+		$db_projects = apply_filters('dm_get_service', null, 'db_projects');
+		$project = $db_projects->get_project( $project_id, $user_id );
 
 		if ( ! $project ) {
 			wp_send_json_error( 'Project not found or permission denied.', 404 );
@@ -132,22 +97,26 @@ class ProjectManagementAjax {
 			return;
 		}
 
-		$project = $this->db_projects->get_project( $project_id );
+		$db_projects = apply_filters('dm_get_service', null, 'db_projects');
+		$project = $db_projects->get_project( $project_id );
 		if ( ! $project || intval( $project->user_id ) !== intval( $user_id ) ) {
 			wp_send_json_error( [ 'message' => __( 'Project not found or permission denied.', 'data-machine' ) ] );
 			return;
 		}
 
-		$modules = $this->db_modules->get_modules_for_project( $project_id, $user_id );
+		$db_modules = apply_filters('dm_get_service', null, 'db_modules');
+		$modules = $db_modules->get_modules_for_project( $project_id, $user_id );
 		if ( ! $modules ) {
 			wp_send_json_success( [ 'message' => __( 'No modules found in this project to schedule.', 'data-machine' ) ] );
 			return;
 		}
 
 		// Clean up stuck jobs before processing
-		$stuck_jobs_cleaned = $this->db_jobs->cleanup_stuck_jobs();
-		if ($stuck_jobs_cleaned > 0 && $this->logger) {
-			$this->logger->info("Run Now: Cleaned up {$stuck_jobs_cleaned} stuck jobs (>" . Constants::JOB_STUCK_TIMEOUT_HOURS . " hours old).", [
+		$db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
+		$stuck_jobs_cleaned = $db_jobs->cleanup_stuck_jobs();
+		$logger = apply_filters('dm_get_service', null, 'logger');
+		if ($stuck_jobs_cleaned > 0 && $logger) {
+			$logger->info("Run Now: Cleaned up {$stuck_jobs_cleaned} stuck jobs (>" . Constants::JOB_STUCK_TIMEOUT_HOURS . " hours old).", [
 				'project_id' => $project_id, 
 				'cleaned_count' => $stuck_jobs_cleaned,
 				'context' => 'run_now'
@@ -157,8 +126,7 @@ class ProjectManagementAjax {
 		$jobs_scheduled  = 0;
 		$scheduled_names = [];
 		$errors          = [];
-		$logger          = $this->logger; // Use injected logger
-		$db_processed    = $this->db_processed_items; // Use injected processed items DB
+		$db_processed    = apply_filters('dm_get_service', null, 'db_processed_items');
 
 		foreach ( $modules as $module ) {
 			$module_id   = $module->module_id;
@@ -178,12 +146,12 @@ class ProjectManagementAjax {
 
 			// NEW: Call Job Creator to schedule the job
 			try {
-				// Ensure the job_creator property is set
-				if (empty($this->job_creator)) {
+				$job_creator = apply_filters('dm_get_service', null, 'job_creator');
+				if (empty($job_creator)) {
 					throw new Exception('Job Creator service is not available in Ajax Projects handler.');
 				}
 
-				$result = $this->job_creator->create_and_schedule_job((array) $module, $user_id, 'run_now');
+				$result = $job_creator->create_and_schedule_job((array) $module, $user_id, 'run_now');
 
 				if (!$result['success']) {
 					$error_message = sprintf("Failed to schedule job for module '%s': %s", $module_name, $result['message']);
@@ -243,7 +211,8 @@ class ProjectManagementAjax {
 			return;
 		}
 
-		$project_id = $this->db_projects->create_project( $user_id, $project_name );
+		$db_projects = apply_filters('dm_get_service', null, 'db_projects');
+		$project_id = $db_projects->create_project( $user_id, $project_name );
 		if ( false === $project_id ) {
 			wp_send_json_error( [ 'message' => __( 'Failed to create project in database.', 'data-machine' ) ] );
 			return;

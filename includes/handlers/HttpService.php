@@ -54,7 +54,8 @@ class HttpService {
         // Handle WordPress HTTP errors (network issues, timeouts, etc.)
         if (is_wp_error($response)) {
             $error_message = sprintf(
-                __('Failed to connect to %s: %s', 'data-machine'),
+                /* translators: %1$s: context/service name, %2$s: error message */
+                __('Failed to connect to %1$s: %2$s', 'data-machine'),
                 $context,
                 $response->get_error_message()
             );
@@ -77,7 +78,8 @@ class HttpService {
         
         if ($status_code < 200 || $status_code >= 300) {
             $error_message = sprintf(
-                __('%s returned HTTP %d', 'data-machine'),
+                /* translators: %1$s: context/service name, %2$d: HTTP status code */
+                __('%1$s returned HTTP %2$d', 'data-machine'),
                 $context,
                 $status_code
             );
@@ -150,7 +152,8 @@ class HttpService {
         // Use same error handling as GET method
         if (is_wp_error($response)) {
             $error_message = sprintf(
-                __('Failed to post to %s: %s', 'data-machine'),
+                /* translators: %1$s: context/service name, %2$s: error message */
+                __('Failed to post to %1$s: %2$s', 'data-machine'),
                 $context,
                 $response->get_error_message()
             );
@@ -173,7 +176,8 @@ class HttpService {
         // POST requests can return various success codes
         if ($status_code < 200 || $status_code >= 400) {
             $error_message = sprintf(
-                __('%s POST returned HTTP %d', 'data-machine'),
+                /* translators: %1$s: context/service name, %2$d: HTTP status code */
+                __('%1$s POST returned HTTP %2$d', 'data-machine'),
                 $context,
                 $status_code
             );
@@ -223,6 +227,7 @@ class HttpService {
         if (empty($json_string)) {
             $this->logger && $this->logger->error("Handler HTTP: Empty JSON response from {$context}.");
             return new WP_Error('empty_json_response', sprintf(
+                /* translators: %s: context/service name */
                 __('Empty response from %s', 'data-machine'),
                 $context
             ));
@@ -238,7 +243,8 @@ class HttpService {
             ]);
             
             return new WP_Error('json_decode_error', sprintf(
-                __('Invalid JSON from %s: %s', 'data-machine'),
+                /* translators: %1$s: context/service name, %2$s: JSON error message */
+                __('Invalid JSON from %1$s: %2$s', 'data-machine'),
                 $context,
                 $json_error
             ));
@@ -247,6 +253,7 @@ class HttpService {
         if (!is_array($decoded)) {
             $this->logger && $this->logger->error("Handler HTTP: Non-array JSON response from {$context}.");
             return new WP_Error('invalid_json_structure', sprintf(
+                /* translators: %s: context/service name */
                 __('Unexpected JSON structure from %s', 'data-machine'),
                 $context
             ));

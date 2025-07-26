@@ -108,39 +108,28 @@ class DataMachine {
 	public $oauth_reddit;
 
 	/**
-	 * Initialize the class and set its properties.
+	 * Initialize the class using filter-based service access.
 	 * @since    0.1.0
 	 */
-	// Streamlined constructor with only needed dependencies
-	public function __construct(
-		$version,
-		$register_settings,
-		$admin_page,
-		$db_modules,
-		$orchestrator,
-		$oauth_reddit,
-		$oauth_twitter,
-		$oauth_threads,
-		$oauth_facebook,
-		$db_remote_locations,
-		$logger
-	) {
-		$this->version = $version;
-		$this->register_settings = $register_settings;
-		$this->admin_page = $admin_page;
-		$this->db_modules = $db_modules;
-		$this->orchestrator = $orchestrator;
-		$this->db_remote_locations = $db_remote_locations;
-		$this->logger = $logger;
-		$this->oauth_twitter = $oauth_twitter;
-		$this->oauth_threads = $oauth_threads;
-		$this->oauth_facebook = $oauth_facebook;
-		$this->oauth_reddit = $oauth_reddit;
+	public function __construct() {
+		$this->version = DATA_MACHINE_VERSION;
+		
+		// All services accessed via filters for pure filter-based architecture
+		$this->register_settings = new \DataMachine\Admin\ModuleConfig\RegisterSettings(DATA_MACHINE_VERSION);
+		$this->admin_page = new \DataMachine\Admin\AdminPage();
+		$this->db_modules = apply_filters('dm_get_service', null, 'db_modules');
+		$this->orchestrator = apply_filters('dm_get_service', null, 'orchestrator');
+		$this->db_remote_locations = apply_filters('dm_get_service', null, 'db_remote_locations');
+		$this->logger = apply_filters('dm_get_service', null, 'logger');
+		$this->oauth_twitter = apply_filters('dm_get_service', null, 'oauth_twitter');
+		$this->oauth_threads = apply_filters('dm_get_service', null, 'oauth_threads');
+		$this->oauth_facebook = apply_filters('dm_get_service', null, 'oauth_facebook');
+		$this->oauth_reddit = apply_filters('dm_get_service', null, 'oauth_reddit');
 		// Register hooks for OAuth handlers
-		$oauth_reddit->register_hooks();
-		$oauth_twitter->register_hooks();
-		$oauth_threads->register_hooks();
-		$oauth_facebook->register_hooks();
+		$this->oauth_reddit->register_hooks();
+		$this->oauth_twitter->register_hooks();
+		$this->oauth_threads->register_hooks();
+		$this->oauth_facebook->register_hooks();
 	}
 
 	/**
@@ -149,11 +138,7 @@ class DataMachine {
 	 */
 	public function run() {
 		// Instantiate and initialize admin menu/assets handler
-		$admin_menu_assets = new AdminMenuAssets(
-			$this->version,
-			$this->admin_page,
-			$this->db_modules
-		);
+		$admin_menu_assets = new AdminMenuAssets();
 		$admin_menu_assets->init_hooks();
 
 		// Initialize settings registration handler
@@ -161,11 +146,7 @@ class DataMachine {
 		$register_settings->init_hooks();
 
 		// Initialize module handler
-		$module_handler = new ModuleConfigHandler(
-			$this->db_modules,
-			$this->admin_page->handler_factory,
-			$this->logger
-		);
+		$module_handler = new ModuleConfigHandler();
 		$module_handler->init_hooks();
 
 		// Remove legacy/placeholder null assignments for AJAX handlers and others

@@ -104,3 +104,657 @@
 .dm-settings-hidden {
     display: none;
 }
+
+/* Pipeline Builder Styles */
+.dm-pipeline-step-card {
+    position: relative;
+    transition: box-shadow 0.2s ease;
+}
+
+.dm-pipeline-step-card:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dm-step-drag-handle:hover {
+    color: #0073aa !important;
+}
+
+.dm-pipeline-steps-list.ui-sortable .dm-pipeline-step-card {
+    cursor: move;
+}
+
+.dm-step-placeholder {
+    border: 2px dashed #0073aa;
+    background: #f0f8ff;
+    height: 80px;
+    margin: 5px 0;
+    border-radius: 4px;
+}
+
+.dm-remove-step-btn:hover {
+    background-color: #f0f0f0 !important;
+    border-radius: 2px;
+}
+
+.dm-add-step-controls {
+    background: #f9f9f9;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.dm-step-header {
+    align-items: center;
+}
+
+.dm-step-config select,
+.dm-step-config input {
+    border: 1px solid #ddd;
+    border-radius: 2px;
+}
+
+.dm-step-config select:focus,
+.dm-step-config input:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+    outline: none;
+}
+
+/* Loading and empty states */
+.dm-pipeline-loading,
+.dm-no-steps {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+}
+
+/* Step type icons */
+.dm-step-header .dashicons {
+    vertical-align: middle;
+}
+
+/* Project card full-width layout */
+.dm-projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dm-project-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Pipeline builder responsive layout */
+.dm-pipeline-prompts {
+    width: 100%;
+}
+
+.dm-pipeline-builder {
+    width: 100%;
+}
+
+/* Horizontal Pipeline Builder Styles */
+.dm-horizontal-pipeline-container {
+    position: relative;
+    overflow: visible;
+}
+
+.dm-horizontal-pipeline-flow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 0;
+    min-height: 80px;
+}
+
+.dm-horizontal-step-card {
+    flex-shrink: 0;
+    min-width: 160px;
+    max-width: 200px;
+    background: #fff;
+    border: 2px solid #e2e4e7;
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.dm-horizontal-step-card:hover {
+    border-color: #0073aa;
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.15);
+    transform: translateY(-1px);
+}
+
+.dm-horizontal-step-card.dm-step-input {
+    border-color: #00a32a;
+}
+
+.dm-horizontal-step-card.dm-step-ai {
+    border-color: #8b5cf6;
+}
+
+.dm-horizontal-step-card.dm-step-output {
+    border-color: #f59e0b;
+}
+
+.dm-horizontal-step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.dm-horizontal-step-icon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dm-horizontal-step-icon .dashicons {
+    font-size: 16px;
+}
+
+.dm-step-input .dm-horizontal-step-icon {
+    color: #00a32a;
+}
+
+.dm-step-ai .dm-horizontal-step-icon {
+    color: #8b5cf6;
+}
+
+.dm-step-output .dm-horizontal-step-icon {
+    color: #f59e0b;
+}
+
+.dm-horizontal-step-number {
+    background: #f0f0f1;
+    color: #646970;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.dm-horizontal-step-content {
+    font-size: 11px;
+    color: #646970;
+    line-height: 1.3;
+    min-height: 24px;
+}
+
+.dm-horizontal-step-handler {
+    font-weight: 500;
+    color: #1e1e1e;
+    margin-bottom: 2px;
+}
+
+.dm-horizontal-step-config {
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.dm-horizontal-step-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    background: #d63638;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.dm-horizontal-step-card:hover .dm-horizontal-step-remove,
+.dm-horizontal-step-card:hover .dm-step-configure {
+    opacity: 1;
+}
+
+.dm-horizontal-step-card:hover .dm-horizontal-step-remove {
+    display: flex;
+}
+
+.dm-horizontal-step-remove:hover {
+    background: #b32d2e;
+    transform: scale(1.1);
+}
+
+.dm-horizontal-pipeline-arrow {
+    flex-shrink: 0;
+    color: #8c8f94;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.dm-horizontal-add-step {
+    flex-shrink: 0;
+    min-width: 140px;
+    height: 80px;
+    background: transparent;
+    border: 2px dashed #c3c4c7;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #646970;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dm-horizontal-add-step:hover {
+    border-color: #0073aa;
+    background: rgba(0, 115, 170, 0.05);
+    color: #0073aa;
+}
+
+.dm-horizontal-add-step .dashicons {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.dm-horizontal-add-step-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    min-width: 140px;
+    margin-top: 4px;
+    display: none;
+}
+
+.dm-horizontal-add-step-dropdown.show {
+    display: block;
+}
+
+.dm-horizontal-add-step-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f1;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s ease;
+}
+
+.dm-horizontal-add-step-option:last-child {
+    border-bottom: none;
+}
+
+.dm-horizontal-add-step-option:hover {
+    background: #f6f7f7;
+}
+
+.dm-horizontal-add-step-option .dashicons {
+    font-size: 14px;
+}
+
+.dm-horizontal-empty-state {
+    text-align: center;
+    padding: 30px 20px;
+    color: #646970;
+    font-style: italic;
+}
+
+.dm-horizontal-empty-state .dashicons {
+    font-size: 32px;
+    opacity: 0.5;
+    margin-bottom: 8px;
+}
+
+/* Drag and drop styles */
+.dm-horizontal-step-card.dm-dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.dm-horizontal-pipeline-flow.dm-drag-over {
+    background: rgba(0, 115, 170, 0.1);
+    border-radius: 4px;
+}
+
+.dm-horizontal-drop-indicator {
+    width: 3px;
+    background: #0073aa;
+    border-radius: 2px;
+    margin: 0 4px;
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+.dm-horizontal-drop-indicator.active {
+    opacity: 1;
+    height: 60px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dm-horizontal-pipeline-flow {
+        gap: 8px;
+    }
+    
+    .dm-horizontal-step-card {
+        min-width: 140px;
+        max-width: 160px;
+        padding: 10px;
+    }
+    
+    .dm-horizontal-add-step {
+        min-width: 120px;
+        height: 70px;
+    }
+}
+
+@media (max-width: 600px) {
+    .dm-add-step-controls > div {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .dm-add-step-controls select {
+        margin-top: 8px;
+    }
+    
+    .dm-project-header > div {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .dm-project-actions {
+        justify-content: flex-start !important;
+    }
+    
+    .dm-horizontal-pipeline-flow {
+        gap: 6px;
+        padding: 6px 0;
+    }
+    
+    .dm-horizontal-step-card {
+        min-width: 120px;
+        max-width: 140px;
+        padding: 8px;
+    }
+    
+    .dm-horizontal-step-icon {
+        font-size: 10px;
+    }
+    
+    .dm-horizontal-step-content {
+        font-size: 10px;
+    }
+}
+
+/* Universal Modal Styles */
+.dm-modal {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.dm-modal-dialog {
+    animation: dm-modal-fade-in 0.2s ease-out;
+}
+
+@keyframes dm-modal-fade-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.dm-modal-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dm-modal-close:hover {
+    background: #f0f0f1;
+    border-radius: 2px;
+}
+
+.dm-modal-content {
+    line-height: 1.6;
+}
+
+.dm-modal-content .form-table {
+    margin: 0;
+}
+
+.dm-modal-content .form-table th {
+    padding-left: 0;
+    width: 30%;
+    vertical-align: top;
+    padding-top: 8px;
+}
+
+.dm-modal-content .form-table td {
+    padding-left: 0;
+    padding-bottom: 16px;
+}
+
+.dm-modal-content input[type="text"],
+.dm-modal-content input[type="email"],
+.dm-modal-content input[type="url"],
+.dm-modal-content input[type="number"],
+.dm-modal-content select,
+.dm-modal-content textarea {
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 14px;
+}
+
+.dm-modal-content input:focus,
+.dm-modal-content select:focus,
+.dm-modal-content textarea:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+    outline: none;
+}
+
+.dm-modal-content .description {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #646970;
+    font-style: italic;
+}
+
+.dm-modal-footer {
+    border-radius: 0 0 6px 6px;
+}
+
+/* Configuration button specific styles */
+.dm-step-configure {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.dm-step-configure:hover {
+    opacity: 1 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal loading states */
+.dm-modal-loading .spinner {
+    margin: 0;
+}
+
+/* Modal error state */
+.dm-modal-error {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+/* Body class when modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* AI Step Configuration Form Styles */
+.dm-ai-step-config {
+    max-width: 100%;
+}
+
+.dm-ai-config-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e4e7;
+}
+
+.dm-ai-config-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e1e1e;
+}
+
+.dm-ai-config-header p {
+    margin: 0;
+    color: #646970;
+    font-size: 14px;
+}
+
+.dm-provider-manager-wrapper {
+    margin-bottom: 20px;
+}
+
+.dm-ai-config-fallback {
+    border: 1px solid #e2e4e7;
+    border-radius: 6px;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.dm-ai-config-fallback .notice {
+    margin: 0 0 20px 0;
+}
+
+.dm-ai-config-fallback .form-table {
+    margin: 0;
+}
+
+.dm-ai-config-fallback .form-table th {
+    padding-left: 0;
+    width: 150px;
+}
+
+.dm-ai-config-fallback .form-table td {
+    padding-right: 0;
+}
+
+.dm-step-status {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e2e4e7;
+}
+
+.dm-step-status label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.dm-step-status label input[type="checkbox"] {
+    margin: 0;
+}
+
+.dm-step-status .description {
+    margin: 6px 0 0 0;
+    color: #646970;
+    font-size: 13px;
+}
+
+/* Enhanced horizontal step card hover effects */
+.dm-horizontal-step-card:hover .dm-step-configure {
+    opacity: 1 !important;
+}
+
+.dm-horizontal-step-card .dm-step-configure {
+    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* AI Provider specific styling */
+.dm-ai-step-config input[type="number"] {
+    width: 120px;
+}
+
+.dm-ai-step-config .regular-text {
+    width: 300px;
+}
+
+.dm-ai-step-config .small-text {
+    width: 80px;
+}
+
+/* Modal content adjustments */
+.dm-modal-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 140px);
+}
+
+.dm-modal-content .form-table th {
+    padding-left: 10px;
+    vertical-align: top;
+    padding-top: 15px;
+}
+
+.dm-modal-content .form-table td {
+    padding-right: 10px;
+    padding-top: 10px;
+}
+
+/* Success/Error states for configuration */
+.dm-config-success {
+    border-left: 4px solid #00a32a;
+    background: #e6ffe6;
+    padding: 12px;
+    margin: 10px 0;
+}
+
+.dm-config-error {
+    border-left: 4px solid #d63638;
+    background: #ffe6e6;
+    padding: 12px;
+    margin: 10px 0;
+}

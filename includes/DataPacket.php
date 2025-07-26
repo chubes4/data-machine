@@ -460,7 +460,7 @@ class DataPacket implements \JsonSerializable {
     public static function fromJson(string $json): self {
         $data = json_decode($json, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \InvalidArgumentException('Invalid JSON: ' . json_last_error_msg());
+            throw new \InvalidArgumentException('Invalid JSON: ' . esc_html(json_last_error_msg()));
         }
         
         return self::fromArray($data);

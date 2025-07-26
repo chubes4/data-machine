@@ -106,10 +106,10 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 								</option>
 							<?php endforeach; ?>
 						<?php else: ?>
-							 <option value=""><?php _e('No projects found', 'data-machine'); ?></option>
+							 <option value=""><?php esc_html_e('No projects found', 'data-machine'); ?></option>
 						<?php endif; ?>
 					</select>
-					<p class="description"><?php _e('Select the project to configure modules for. ', 'data-machine'); ?> <a href="<?php echo esc_url(admin_url('admin.php?page=project-management')); ?>"><?php _e('Create a new project', 'data-machine'); ?></a> <?php _e('on the Projects page to get started.', 'data-machine'); ?></p>
+					<p class="description"><?php esc_html_e('Select the project to configure modules for. ', 'data-machine'); ?> <a href="<?php echo esc_url(admin_url('admin.php?page=project-management')); ?>"><?php esc_html_e('Create a new project', 'data-machine'); ?></a> <?php esc_html_e('on the Projects page to get started.', 'data-machine'); ?></p>
 				</td>
 			</tr>
 		</table>
@@ -121,9 +121,9 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 		<?php if (empty($selected_project_id)): ?>
 			<div class="notice notice-warning inline">
 				<p>
-					<strong><?php _e('No project selected.', 'data-machine'); ?></strong> 
-									<?php _e('You need to create a project via the Projects page before configuring modules.', 'data-machine'); ?>
-				<a href="<?php echo esc_url(admin_url('admin.php?page=dm-project-management')); ?>" class="button button-secondary"><?php _e('Go to Projects', 'data-machine'); ?></a>
+					<strong><?php esc_html_e('No project selected.', 'data-machine'); ?></strong> 
+									<?php esc_html_e('You need to create a project via the Projects page before configuring modules.', 'data-machine'); ?>
+				<a href="<?php echo esc_url(admin_url('admin.php?page=dm-project-management')); ?>" class="button button-secondary"><?php esc_html_e('Go to Projects', 'data-machine'); ?></a>
 				</p>
 			</div>
 		<?php endif; ?>
@@ -141,16 +141,16 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 									</option>
 								<?php endforeach; ?>
 							<?php else: ?>
-								 <option value=""><?php echo empty($selected_project_id) ? __('Please create a project first', 'data-machine') : __('No modules in this project', 'data-machine'); ?></option>
+								 <option value=""><?php echo empty($selected_project_id) ? esc_html__('Please create a project first', 'data-machine') : esc_html__('No modules in this project', 'data-machine'); ?></option>
 							<?php endif; ?>
 						</select>
 						<!-- Removed redundant "Create New Module" button -->
 						<span class="spinner" id="module-spinner" style="float: none; vertical-align: middle;"></span>
 						<p class="description">
 							<?php if (empty($selected_project_id)): ?>
-								<?php _e('You must create a project first before you can create or configure modules.', 'data-machine'); ?>
+								<?php esc_html_e('You must create a project first before you can create or configure modules.', 'data-machine'); ?>
 							<?php else: ?>
-								<?php _e('Select the module to configure, or create a new one within the selected project.', 'data-machine'); ?>
+								<?php esc_html_e('Select the module to configure, or create a new one within the selected project.', 'data-machine'); ?>
 							<?php endif; ?>
 						</p>
 					</td>
@@ -259,7 +259,7 @@ if ($logger && method_exists($logger, 'get_pending_notices')) {
 					<td>
 						<input type="hidden" name="skip_fact_check" value="0">
 						<input type="checkbox" id="skip_fact_check" name="skip_fact_check" value="1" <?php checked(1, $selected_module ? (int)$selected_module->skip_fact_check : 0); ?>>
-						<p class="description"><?php _e('If checked, the fact-checking step (including web search) will be skipped during processing to save API costs.', 'data-machine'); ?></p>
+						<p class="description"><?php esc_html_e('If checked, the fact-checking step (including web search) will be skipped during processing to save API costs.', 'data-machine'); ?></p>
 					</td>
 				</tr>
 				<tr id="finalize-prompt-row">

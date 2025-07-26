@@ -56,12 +56,18 @@ class Jobs {
             return false;
         }
 
+        // Get project_id from module_id to set up pipeline sequence
+        $project_id = $this->get_project_id_from_module( $module_id );
+        $step_sequence = $this->build_step_sequence_for_project( $project_id );
+
         $data = array(
             'module_id' => absint( $module_id ),
             'user_id' => absint( $user_id ),
             'status' => 'pending',
             'module_config' => $module_config_json,
             'input_data' => is_string( $input_data_json ) ? $input_data_json : null, // Ensure input data is string or null
+            'step_sequence' => wp_json_encode( $step_sequence ), // Add step sequence
+            'current_step_name' => $step_sequence[0] ?? 'input', // Set first step as current
             'created_at' => current_time( 'mysql', 1 ), // GMT time
         );
 
@@ -71,6 +77,8 @@ class Jobs {
             '%s', // status
             '%s', // module_config
             '%s', // input_data
+            '%s', // step_sequence
+            '%s', // current_step_name
             '%s', // created_at
         );
 
@@ -776,6 +784,83 @@ class Jobs {
         );
         
         return $updated !== false;
+    }
+
+    /**
+     * Get project_id from module_id.
+     *
+     * @param int $module_id The module ID.
+     * @return int|null The project ID or null if not found.
+     */
+    private function get_project_id_from_module( int $module_id ): ?int {
+        global $wpdb;
+        
+        if ( empty( $module_id ) ) {
+            return null;
+        }
+        
+        $project_id = $wpdb->get_var( $wpdb->prepare(
+            "SELECT project_id FROM {$wpdb->prefix}dm_modules WHERE module_id = %d",
+            $module_id
+        ) );
+        
+        return $project_id ? (int) $project_id : null;
+    }
+
+    /**
+     * Build step sequence for a project based on its pipeline configuration.
+     *
+     * @param int|null $project_id The project ID.
+     * @return array Array of step names in execution order.
+     */
+    private function build_step_sequence_for_project( ?int $project_id ): array {
+        // Default 3-step sequence
+        $default_sequence = ['input', 'ai', 'output'];
+        
+        if ( ! $project_id ) {
+            return $default_sequence;
+        }
+        
+        // Get project pipeline configuration service
+        $project_pipeline_service = apply_filters('dm_get_service', null, 'project_pipeline_config_service');
+        if ( ! $project_pipeline_service ) {
+            return $default_sequence;
+        }
+        
+        try {
+            $pipeline_config = $project_pipeline_service->get_project_pipeline_config( $project_id );
+            
+            // Validate configuration
+            $validation = $project_pipeline_service->validate_pipeline_config( $pipeline_config );
+            if ( ! $validation['valid'] ) {
+                return $default_sequence;
+            }
+            
+            // Build sequence from project configuration
+            $sequence = [];
+            foreach ( $pipeline_config as $step ) {
+                if ( isset( $step['type'] ) && isset( $step['order'] ) ) {
+                    $sequence[ $step['order'] ] = $step['type'];
+                }
+            }
+            
+            // Sort by order and extract step names
+            ksort( $sequence );
+            $sequence = array_values( $sequence );
+            
+            return ! empty( $sequence ) ? $sequence : $default_sequence;
+            
+        } catch ( \Exception $e ) {
+            // Log error and fall back to default
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            if ( $logger ) {
+                $logger->warning( 'Error building step sequence for project, using default', [
+                    'project_id' => $project_id,
+                    'error' => $e->getMessage()
+                ] );
+            }
+            return $default_sequence;
+        }
     }
 
 } 

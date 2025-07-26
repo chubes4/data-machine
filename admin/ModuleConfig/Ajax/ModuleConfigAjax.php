@@ -17,39 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 class ModuleConfigAjax {
 
-    /** @var Modules */
-    private $db_modules;
-
-    /** @var Projects */
-    private $db_projects;
-
-    /** @var RemoteLocations */
-    private $db_locations;
-
-    /** @var ?Logger */
-    private $logger;
-
     /** @var array Simple cache for site info to avoid redundant JSON decoding */
     private static $site_info_cache = [];
 
     /**
      * Constructor.
-     *
-     * @param Modules $db_modules Modules DB service.
-     * @param Projects $db_projects Projects DB service.
-     * @param RemoteLocations $db_locations Remote Locations DB service.
-     * @param Logger|null $logger Logger service (optional).
+     * Uses filter-based service access for dependencies.
      */
-    public function __construct(
-        Modules $db_modules,
-        Projects $db_projects,
-        RemoteLocations $db_locations,
-        ?Logger $logger = null
-    ) {
-        $this->db_modules = $db_modules;
-        $this->db_projects = $db_projects;
-        $this->db_locations = $db_locations;
-        $this->logger = $logger;
+    public function __construct() {
 
         // Register AJAX hooks
         add_action('wp_ajax_get_module_data', array($this, 'get_module_data_ajax_handler'));
@@ -95,10 +70,10 @@ class ModuleConfigAjax {
 			return;
 		}
 
-        // Get dependencies from properties
-        $db_modules = $this->db_modules;
-        $db_projects = $this->db_projects;
-        $logger = $this->logger;
+        // Get dependencies from filter-based service access
+        $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+        $db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $logger = apply_filters('dm_get_service', null, 'logger');
 
 		// --- Ownership Check (using Project) ---
         $module = $db_modules->get_module($module_id); // Get module without user check first
@@ -191,7 +166,8 @@ class ModuleConfigAjax {
         // Get current config for the module if needed
         $current_config = [];
         if ($module_id > 0) {
-            $module = $this->db_modules->get_module($module_id);
+            $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+            $module = $db_modules->get_module($module_id);
             if ($module) {
                 $raw_config_string = ($handler_type === 'output') ? $module->output_config : $module->data_source_config;
                 $decoded_config = !empty($raw_config_string) ? json_decode(wp_unslash($raw_config_string), true) : [];
@@ -210,9 +186,9 @@ class ModuleConfigAjax {
         
         if (!empty($fields)) {
             // Render form programmatically from field definitions
-            echo \DataMachine\Admin\ModuleConfig\FormRenderer::render_form_fields($fields, $current_config, $handler_slug);
+            echo wp_kses_post(\DataMachine\Admin\ModuleConfig\FormRenderer::render_form_fields($fields, $current_config, $handler_slug));
         } else {
-            echo '<p>' . __('No configuration options available for this handler.', 'data-machine') . '</p>';
+            echo '<p>' . esc_html__('No configuration options available for this handler.', 'data-machine') . '</p>';
         }
         // Always proceed with data preparation for remote handlers and form output
         {
@@ -232,7 +208,8 @@ class ModuleConfigAjax {
              if (in_array($handler_slug, ['publish_remote', 'airdrop_rest_api'])) {
                  // Fetch all locations for dropdown
                  // RemoteLocationService class auto-loaded via PSR-4
-                 $remote_location_service = new RemoteLocationService($this->db_locations);
+                 $db_locations = apply_filters('dm_get_service', null, 'db_remote_locations');
+                 $remote_location_service = new RemoteLocationService($db_locations);
                  $all_locations = $remote_location_service->get_user_locations_for_js($user_id); 
 
                  // Fetch specific location's info if ID provided
@@ -246,7 +223,7 @@ class ModuleConfigAjax {
                          $enabled_post_types_array = $cached_data['enabled_post_types'];
                          $enabled_taxonomies_array = $cached_data['enabled_taxonomies'];
                      } else {
-                         $location_data = $this->db_locations->get_location($location_id, $user_id, false); 
+                         $location_data = $db_locations->get_location($location_id, $user_id, false); 
                          
                          if ($location_data) {
                              // Decode synced info
@@ -323,7 +300,7 @@ class ModuleConfigAjax {
 
                  // Fetch saved module config if an ID is provided
                  if ($module_id > 0) {
-                     $module = $this->db_modules->get_module($module_id);
+                     $module = $db_modules->get_module($module_id);
                      if ($module) {
                          $raw_config_string = ($handler_type === 'output') ? $module->output_config : $module->data_source_config;
                          $decoded_config = !empty($raw_config_string) ? json_decode(wp_unslash($raw_config_string), true) : [];
@@ -382,11 +359,13 @@ class ModuleConfigAjax {
 		}
 
         try {
-            // Use the injected db_modules service (available in this class)
-            $modules = $this->db_modules->get_modules_for_project( $project_id, $user_id );
+            // Use filter-based service access
+            $db_modules = apply_filters('dm_get_service', null, 'db_modules');
+            $modules = $db_modules->get_modules_for_project( $project_id, $user_id );
             if ( null === $modules ) { // Check if project exists/permission denied
                 // Use logger if available
-                $this->logger?->warning('Attempt to fetch modules for invalid/inaccessible project.', [
+                $logger = apply_filters('dm_get_service', null, 'logger');
+                $logger?->warning('Attempt to fetch modules for invalid/inaccessible project.', [
                     'project_id' => $project_id,
                     'user_id' => $user_id
                 ]);
@@ -407,7 +386,8 @@ class ModuleConfigAjax {
             wp_send_json_success( [ 'modules' => $formatted_modules ] );
 
         } catch (\Exception $e) {
-            $this->logger?->error('Error fetching project modules via AJAX (in Module Config Handler).', [
+            $logger = apply_filters('dm_get_service', null, 'logger');
+            $logger?->error('Error fetching project modules via AJAX (in Module Config Handler).', [
                 'project_id' => $project_id,
                 'user_id' => $user_id,
                 'error' => $e->getMessage()

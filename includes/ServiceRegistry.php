@@ -20,11 +20,11 @@ class ServiceRegistry {
     private static function register_core_services() {
         // Immediate services (no dependencies)
         self::register('logger', function() {
-            return new \DataMachine\Logger();
+            return new \DataMachine\Helpers\Logger();
         });
 
         self::register('encryption_helper', function() {
-            return new \DataMachine\EncryptionHelper();
+            return new \DataMachine\Helpers\EncryptionHelper();
         });
 
         self::register('db_projects', function() {
@@ -38,12 +38,12 @@ class ServiceRegistry {
         // Services with dependencies (lazy initialization)
         self::register('action_scheduler', function() {
             $logger = self::get('logger');
-            return new \DataMachine\ActionScheduler($logger);
+            return new \DataMachine\Helpers\ActionScheduler($logger);
         });
 
         self::register('memory_guard', function() {
             $logger = self::get('logger');
-            return new \DataMachine\MemoryGuard($logger);
+            return new \DataMachine\Helpers\MemoryGuard($logger);
         });
 
         self::register('db_modules', function() {
@@ -65,31 +65,31 @@ class ServiceRegistry {
 
         self::register('http_service', function() {
             $logger = self::get('logger');
-            return new \DataMachine\HttpService($logger);
+            return new \DataMachine\Handlers\HttpService($logger);
         });
 
         self::register('oauth_twitter', function() {
             $logger = self::get('logger');
-            return new \DataMachine\Admin\OAuth\OAuthTwitter($logger);
+            return new \DataMachine\Admin\OAuth\Twitter($logger);
         });
 
         self::register('oauth_reddit', function() {
             $logger = self::get('logger');
-            return new \DataMachine\Admin\OAuth\OAuthReddit($logger);
+            return new \DataMachine\Admin\OAuth\Reddit($logger);
         });
 
         self::register('oauth_threads', function() {
             $threads_client_id = get_option('threads_app_id', '');
             $threads_client_secret = get_option('threads_app_secret', '');
             $logger = self::get('logger');
-            return new \DataMachine\Admin\OAuth\OAuthThreads($threads_client_id, $threads_client_secret, $logger);
+            return new \DataMachine\Admin\OAuth\Threads($threads_client_id, $threads_client_secret, $logger);
         });
 
         self::register('oauth_facebook', function() {
             $facebook_client_id = get_option('facebook_app_id', '');
             $facebook_client_secret = get_option('facebook_app_secret', '');
             $logger = self::get('logger');
-            return new \DataMachine\Admin\OAuth\OAuthFacebook($facebook_client_id, $facebook_client_secret, $logger);
+            return new \DataMachine\Admin\OAuth\Facebook($facebook_client_id, $facebook_client_secret, $logger);
         });
 
         self::register('prompt_builder', function() {
@@ -124,30 +124,19 @@ class ServiceRegistry {
             return new \DataMachine\ProcessedItemsManager($db_processed_items, $logger);
         });
 
-        self::register('handler_factory', function() {
-            $logger = self::get('logger');
-            return new \DataMachine\Handlers\HandlerFactory($logger);
-        });
+        // HandlerFactory removed - using direct filter-based access via Constants class instead
+        // This aligns with pure filter-based architecture principles
 
         self::register('pipeline_step_registry', function() {
             return new \DataMachine\Engine\PipelineStepRegistry();
         });
 
         self::register('scheduler', function() {
-            $job_creator = self::get('job_creator');
-            $db_projects = self::get('db_projects');
-            $db_modules = self::get('db_modules');
-            $action_scheduler = self::get('action_scheduler');
-            $db_jobs = self::get('db_jobs');
-            $logger = self::get('logger');
-            return new \DataMachine\Admin\Projects\Scheduler($job_creator, $db_projects, $db_modules, $action_scheduler, $db_jobs, $logger);
+            return new \DataMachine\Admin\Projects\Scheduler();
         });
 
         self::register('orchestrator', function() {
-            $logger = self::get('logger');
-            $action_scheduler = self::get('action_scheduler');
-            $db_jobs = self::get('db_jobs');
-            return new \DataMachine\Engine\ProcessingOrchestrator($logger, $action_scheduler, $db_jobs);
+            return new \DataMachine\Engine\ProcessingOrchestrator();
         });
 
         self::register('project_prompts_service', function() {
@@ -155,7 +144,19 @@ class ServiceRegistry {
         });
 
         self::register('project_pipeline_config_service', function() {
-            return new \DataMachine\Helpers\ProjectPipelineConfigService();
+            return new \DataMachine\Services\ProjectPipelineConfigService();
+        });
+
+        self::register('admin_page', function() {
+            return new \DataMachine\Admin\AdminPage();
+        });
+
+        self::register('fluid_context_bridge', function() {
+            return new \DataMachine\Engine\FluidContextBridge();
+        });
+
+        self::register('ai_step_config_service', function() {
+            return new \DataMachine\Services\AiStepConfigService();
         });
     }
 

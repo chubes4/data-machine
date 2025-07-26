@@ -10,22 +10,25 @@ use DataMachine\Engine\Interfaces\PipelineStepInterface;
 use DataMachine\DataPacket;
 
 /**
- * Universal AI Step - Configurable AI processing with user-defined prompts
+ * Universal AI Step - Fluid-by-default AI processing with full pipeline context
  * 
- * This step can perform any AI operation based on user configuration:
- * - Summarization, fact-checking, enhancement, translation
- * - Content analysis, research, writing assistance
- * - Any AI task defined by user prompts
+ * This step automatically receives ALL previous DataPackets in the pipeline,
+ * enabling powerful agentic workflows:
+ * - AI Step 1: Process with input context
+ * - AI Step 2: Fact-check with input + AI Step 1 context
+ * - AI Step 3: Refine with input + AI Step 1 + AI Step 2 context
  * 
- * Standardized input/output ensures seamless data flow between pipeline steps.
+ * Each AI step gets progressively more intelligent context for enhanced processing.
+ * Supports any AI operation: summarization, fact-checking, enhancement, translation,
+ * content analysis, research, writing assistance, and complex multi-step workflows.
  */
 class AIStep extends BasePipelineStep implements PipelineStepInterface {
 
     /**
-     * Execute AI processing with configurable prompt (Closed-Door Philosophy)
+     * Execute AI processing with fluid context system
      * 
-     * Transforms DataPacket from previous step only.
-     * No backward looking - pure sequential transformation.
+     * Automatically aggregates ALL previous DataPackets for comprehensive context.
+     * Enables powerful agentic workflows where each AI step builds on full pipeline history.
      * 
      * @param int $job_id The job ID to process
      * @return bool True on success, false on failure
@@ -35,7 +38,7 @@ class AIStep extends BasePipelineStep implements PipelineStepInterface {
         $ai_http_client = apply_filters('dm_get_service', null, 'ai_http_client');
 
         try {
-            $logger->info('AI Step: Starting AI processing (closed-door)', ['job_id' => $job_id]);
+            $logger->info('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
 
             // Get step configuration from project or job
             $step_config = $this->get_step_configuration($job_id, 'ai');
@@ -43,23 +46,90 @@ class AIStep extends BasePipelineStep implements PipelineStepInterface {
                 return $this->fail_job($job_id, 'AI step configuration not found');
             }
 
-            // Validate required prompt configuration
+            // Validate required configuration
             $prompt = $step_config['prompt'] ?? '';
+            $title = $step_config['title'] ?? 'AI Processing';
+            
             if (empty($prompt)) {
                 return $this->fail_job($job_id, 'AI step requires prompt configuration');
             }
 
-            // Get DataPacket from previous step only (closed-door: no backward looking)
-            $input_packet = $this->get_previous_step_data_packet($job_id);
-            if (!$input_packet) {
-                return $this->fail_job($job_id, 'No DataPacket available from previous step');
+            // Fluid context system: Always aggregate context from all previous steps
+            $logger->info('AI Step: Using fluid context system for enhanced AI interaction', ['job_id' => $job_id]);
+            
+            $all_packets = $this->get_all_previous_data_packets($job_id);
+            if (empty($all_packets)) {
+                return $this->fail_job($job_id, 'No DataPackets available from previous steps for fluid context');
             }
 
-            // Prepare AI request with user-defined prompt
-            $messages = $this->build_ai_messages($prompt, $input_packet, $step_config);
+            // Use FluidContextBridge for enhanced AI request
+            $context_bridge = apply_filters('dm_get_service', null, 'fluid_context_bridge');
+            $aggregated_context = $context_bridge->aggregate_pipeline_context($all_packets);
+            $enhanced_request = $context_bridge->build_ai_request($aggregated_context, $step_config);
+            
+            if (empty($enhanced_request['messages'])) {
+                return $this->fail_job($job_id, 'Failed to build enhanced AI request from fluid context');
+            }
+            
+            $messages = $enhanced_request['messages'];
+            
+            // Use the most recent packet as the primary input for output processing
+            $input_packet = end($all_packets);
 
-            // Execute AI request using existing library
-            $ai_response = $ai_http_client->send_step_request('ai', ['messages' => $messages]);
+            // Get step-specific AI configuration
+            $ai_config_service = apply_filters('dm_get_service', null, 'ai_step_config_service');
+            $step_ai_config = null;
+            if ($ai_config_service) {
+                $project_id = $this->get_project_id_from_job($job);
+                if ($project_id) {
+                    // Get step position from job or step configuration
+                    $step_position = $this->get_step_position_from_job($job_id);
+                    if ($step_position !== null) {
+                        $step_ai_config = $ai_config_service->get_step_ai_config($project_id, $step_position);
+                        
+                        // Check if AI processing is disabled for this step
+                        if (isset($step_ai_config['enabled']) && !$step_ai_config['enabled']) {
+                            $logger->info('AI Step: Processing disabled for this step, passing data through', [
+                                'job_id' => $job_id,
+                                'project_id' => $project_id,
+                                'step_position' => $step_position
+                            ]);
+                            
+                            // Pass through the most recent DataPacket unchanged
+                            $success = $this->store_step_data_packet($job_id, $input_packet);
+                            return $success;
+                        }
+                        
+                        $logger->info('AI Step: Using step-specific AI configuration', [
+                            'job_id' => $job_id,
+                            'project_id' => $project_id,
+                            'step_position' => $step_position,
+                            'provider' => $step_ai_config['provider'] ?? 'default',
+                            'model' => $step_ai_config['model'] ?? 'default'
+                        ]);
+                    }
+                }
+            }
+
+            // Prepare AI request parameters with step-specific configuration
+            $ai_request = ['messages' => $messages];
+            
+            // Add step-specific AI parameters if available
+            if ($step_ai_config && !empty($step_ai_config['provider'])) {
+                $ai_request['provider'] = $step_ai_config['provider'];
+            }
+            if ($step_ai_config && !empty($step_ai_config['model'])) {
+                $ai_request['model'] = $step_ai_config['model'];
+            }
+            if ($step_ai_config && isset($step_ai_config['temperature'])) {
+                $ai_request['temperature'] = $step_ai_config['temperature'];
+            }
+            if ($step_ai_config && isset($step_ai_config['max_tokens'])) {
+                $ai_request['max_tokens'] = $step_ai_config['max_tokens'];
+            }
+
+            // Execute AI request using ai-http-client with step-specific configuration
+            $ai_response = $ai_http_client->send_step_request('ai', $ai_request);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
@@ -80,11 +150,12 @@ class AIStep extends BasePipelineStep implements PipelineStepInterface {
                     'provider' => $ai_response['provider'] ?? 'unknown',
                     'usage' => $ai_response['data']['usage'] ?? [],
                     'prompt_used' => $prompt,
+                    'step_title' => $title,
                     'processing_time' => time()
                 ]
             ], $input_packet);
 
-            // Store transformed DataPacket for next step (closed-door: only forward data flow)
+            // Store transformed DataPacket for next step (maintains fluid context chain)
             $success = $this->store_step_data_packet($job_id, $ai_output_packet);
 
             if ($success) {
@@ -143,35 +214,6 @@ class AIStep extends BasePipelineStep implements PipelineStepInterface {
         return $job_config['ai_step_config'] ?? null;
     }
 
-
-    /**
-     * Build AI messages array from prompt and DataPacket
-     * 
-     * @param string $prompt User-defined prompt
-     * @param DataPacket $input_packet Input DataPacket to process
-     * @param array $step_config Step configuration
-     * @return array Messages array for AI request
-     */
-    private function build_ai_messages(string $prompt, DataPacket $input_packet, array $step_config): array {
-        // Get formatted content from DataPacket for AI processing
-        $content_text = $input_packet->getContentForAI();
-        
-        // Build system message with context
-        $system_message = "You are an AI assistant helping with content processing. ";
-        $system_message .= "Process the provided content according to the user's instructions. ";
-        $system_message .= "Return your response in a clear, structured format.";
-
-        // Build user message with prompt and content
-        $user_message = $prompt . "\n\n";
-        $user_message .= "Content to process:\n" . $content_text;
-
-        return [
-            ['role' => 'system', 'content' => $system_message],
-            ['role' => 'user', 'content' => $user_message]
-        ];
-    }
-
-
     /**
      * Get project ID from job context
      * 
@@ -189,39 +231,82 @@ class AIStep extends BasePipelineStep implements PipelineStepInterface {
     }
 
     /**
+     * Get step position from job context
+     * 
+     * @param int $job_id Job ID
+     * @return int|null Step position (0-based) or null if not found
+     */
+    private function get_step_position_from_job(int $job_id): ?int {
+        $db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
+        if (!$db_jobs) {
+            return null;
+        }
+
+        $job = $db_jobs->get_job($job_id);
+        if (!$job) {
+            return null;
+        }
+
+        // Try to get step position from job step_name or step_order
+        if (isset($job->step_name) && preg_match('/ai_(\d+)/', $job->step_name, $matches)) {
+            return intval($matches[1]);
+        }
+
+        // Try to get from step_order field if it exists
+        if (isset($job->step_order) && is_numeric($job->step_order)) {
+            return intval($job->step_order);
+        }
+
+        // Fallback: Try to determine from pipeline configuration
+        $project_id = $this->get_project_id_from_job($job);
+        if ($project_id) {
+            $pipeline_service = apply_filters('dm_get_service', null, 'project_pipeline_config_service');
+            if ($pipeline_service) {
+                $pipeline_steps = $pipeline_service->get_project_pipeline_steps($project_id, get_current_user_id());
+                if (!empty($pipeline_steps['steps'])) {
+                    // Find the AI step position
+                    $ai_step_count = 0;
+                    foreach ($pipeline_steps['steps'] as $index => $step) {
+                        if ($step['type'] === 'ai') {
+                            if ($ai_step_count === 0) {
+                                // This is likely our step - return its position
+                                return $index;
+                            }
+                            $ai_step_count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ultimate fallback - assume position 0
+        return 0;
+    }
+
+    /**
      * Define prompt fields for AI step configuration
+     * 
+     * Fluid context is enabled by default - AI steps automatically receive
+     * full pipeline context for powerful agentic workflows.
      * 
      * @return array Prompt field definitions for UI
      */
     public static function get_prompt_fields(): array {
         return [
+            'title' => [
+                'type' => 'text',
+                'label' => 'Step Title',
+                'description' => 'A descriptive name for this AI processing step (e.g., "Content Summarizer", "Fact Checker", "Content Refiner")',
+                'required' => true,
+                'placeholder' => 'e.g., "Content Summarizer", "SEO Optimizer", "Language Translator"'
+            ],
             'prompt' => [
                 'type' => 'textarea',
                 'label' => 'AI Prompt',
-                'description' => 'Define what you want the AI to do with the input data',
+                'description' => 'Define what you want the AI to do. Fluid context automatically provides ALL previous pipeline data. Use variables: {{packet_count}}, {{source_types}}, {{all_titles}}, {{content_previews}}, {{processing_steps}}',
                 'required' => true,
-                'placeholder' => 'Example: Summarize this content in 3 bullet points...'
-            ],
-            'model' => [
-                'type' => 'select',
-                'label' => 'AI Model',
-                'description' => 'Choose the AI model for processing',
-                'options' => [
-                    'gpt-4' => 'GPT-4 (Balanced)',
-                    'gpt-4o' => 'GPT-4o (Fast)',
-                    'claude-3-sonnet' => 'Claude 3 Sonnet',
-                    'claude-3-haiku' => 'Claude 3 Haiku (Fast)',
-                ],
-                'default' => 'gpt-4'
-            ],
-            'temperature' => [
-                'type' => 'number',
-                'label' => 'Creativity (Temperature)',
-                'description' => 'Lower = more focused, Higher = more creative',
-                'min' => 0,
-                'max' => 2,
-                'step' => 0.1,
-                'default' => 0.7
+                'placeholder' => 'Example: Analyze the {{packet_count}} content sources from {{source_types}}. Create a comprehensive summary highlighting key insights from all sources...',
+                'rows' => 8
             ]
         ];
     }

@@ -128,7 +128,7 @@ class AirdropRestApi extends BaseInputHandler {
 			$http_service = $this->get_http_service();
 			$http_response = $http_service->get($current_api_url, $args, 'Airdrop REST API');
 			if (is_wp_error($http_response)) {
-				if ($current_page === 1) throw new Exception($http_response->get_error_message());
+				if ($current_page === 1) throw new Exception(esc_html($http_response->get_error_message()));
 				else break;
 			}
 
@@ -138,7 +138,7 @@ class AirdropRestApi extends BaseInputHandler {
 			// Parse JSON response with error handling
 			$response_data = $http_service->parse_json($body, 'Airdrop REST API');
 			if (is_wp_error($response_data)) {
-				if ($current_page === 1) throw new Exception($response_data->get_error_message());
+				if ($current_page === 1) throw new Exception(esc_html($response_data->get_error_message()));
 				else break;
 			}
 			$posts_data = $response_data['posts'] ?? [];
@@ -192,7 +192,7 @@ class AirdropRestApi extends BaseInputHandler {
 				// --- End Fallback ---
 
 				// Extract source name from URL host
-				$source_host = parse_url($source_link, PHP_URL_HOST);
+				$source_host = wp_parse_url($source_link, PHP_URL_HOST);
 				$source_name = $source_host ? ucwords(str_replace(['www.', '.com', '.org', '.net'], '', $source_host)) : 'Unknown Source';
 				$content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 				
@@ -402,7 +402,7 @@ class AirdropRestApi extends BaseInputHandler {
 		
 		// Validate required location_id
 		if (empty($sanitized['location_id'])) {
-			throw new InvalidArgumentException(__('Remote Location is required for Airdrop REST API input handler.', 'data-machine'));
+			throw new InvalidArgumentException(esc_html__('Remote Location is required for Airdrop REST API input handler.', 'data-machine'));
 		}
 		$sanitized['rest_post_type'] = sanitize_text_field($raw_settings['rest_post_type'] ?? 'post');
 		$sanitized['rest_post_status'] = sanitize_text_field($raw_settings['rest_post_status'] ?? 'publish');

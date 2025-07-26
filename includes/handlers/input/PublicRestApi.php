@@ -105,14 +105,14 @@ class PublicRestApi extends BaseInputHandler {
 			// Use HTTP service - replaces ~25 lines of duplicated HTTP code
 			$http_response = $this->http_service->get($next_page_url, [], 'Public REST API');
 			if (is_wp_error($http_response)) {
-				if ($pages_fetched === 1) throw new Exception($http_response->get_error_message());
+				if ($pages_fetched === 1) throw new Exception(esc_html($http_response->get_error_message()));
 				else break;
 			}
 
 			// Parse JSON response with error handling
 			$response_data = $this->http_service->parse_json($http_response['body'], 'Public REST API');
 			if (is_wp_error($response_data)) {
-				if ($pages_fetched === 1) throw new Exception($response_data->get_error_message());
+				if ($pages_fetched === 1) throw new Exception(esc_html($response_data->get_error_message()));
 				else break;
 			}
 
@@ -200,7 +200,7 @@ class PublicRestApi extends BaseInputHandler {
 							$content_html .= $content_raw;
 						}
 						$content_to_check = $content_html;
-						$text_to_search = $title_to_check . ' ' . strip_tags($content_to_check);
+						$text_to_search = $title_to_check . ' ' . wp_strip_all_tags($content_to_check);
 						$found_keyword = false;
 						foreach ($keywords as $keyword) {
 							if (mb_stripos($text_to_search, $keyword) !== false) {
@@ -226,7 +226,7 @@ class PublicRestApi extends BaseInputHandler {
 				} elseif (is_string($content_parts)) {
 					$full_content_html .= $content_parts;
 				}
-				if (empty(trim(strip_tags($full_content_html)))) {
+				if (empty(trim(wp_strip_all_tags($full_content_html)))) {
 					$content_fallback = $item['content']['rendered'] ?? $item['excerpt'] ?? '';
 					if(is_string($content_fallback)) {
 						$full_content_html = $content_fallback;
@@ -235,7 +235,7 @@ class PublicRestApi extends BaseInputHandler {
 				$source_link = $item['url'] ?? $item['link'] ?? $item['permalink'] ?? $api_endpoint_url;
 				$original_date_string_for_meta = is_string($original_date_value) ? $original_date_value : null;
 				// Extract source name from API endpoint URL
-				$api_host = parse_url($api_endpoint_url, PHP_URL_HOST);
+				$api_host = wp_parse_url($api_endpoint_url, PHP_URL_HOST);
 				$source_name = $api_host ? ucwords(str_replace(['www.', '.com', '.org', '.net'], '', $api_host)) : 'Unknown Source';
 				$content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . wp_strip_all_tags($full_content_html);
 				$input_data_packet = [

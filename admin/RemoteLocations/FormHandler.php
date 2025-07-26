@@ -56,7 +56,7 @@ class FormHandler {
      * @since NEXT_VERSION
      */
     public function display_page() {
-        $action = $_GET['action'] ?? 'list';
+        $action = isset($_GET['action']) ? sanitize_text_field(wp_unslash($_GET['action'])) : 'list';
         $template_to_load = '';
         $template_data = [];
         $page_title = get_admin_page_title(); // Use the registered page title
@@ -68,7 +68,7 @@ class FormHandler {
 
             if ($is_editing) {
                 // Verify nonce for editing
-                if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'edit_location_' . $location_id)) {
+                if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'edit_location_' . $location_id)) {
                     // Add an admin notice using injected logger
                     $this->logger?->add_admin_error(
                         __('Nonce verification failed! Cannot edit location.', 'data-machine')
@@ -131,19 +131,19 @@ class FormHandler {
      * Handles the admin-post action for adding a new location.
      */
     public function handle_add_location() {
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'dm_add_location')) {
-            wp_die(__('Nonce verification failed!', 'data-machine'));
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'dm_add_location')) {
+            wp_die(esc_html__('Nonce verification failed!', 'data-machine'));
         }
     
         if (!current_user_can('manage_options')) { // Check capability
-            wp_die(__('Permission denied!', 'data-machine'));
+            wp_die(esc_html__('Permission denied!', 'data-machine'));
         }
     
         $data = array(
-            'location_name'   => sanitize_text_field($_POST['location_name'] ?? ''),
-            'target_site_url' => esc_url_raw($_POST['target_site_url'] ?? ''),
-            'target_username' => sanitize_text_field($_POST['target_username'] ?? ''),
-            'password'        => $_POST['password'] ?? '' // Keep raw for encryption
+            'location_name'   => isset($_POST['location_name']) ? sanitize_text_field(wp_unslash($_POST['location_name'])) : '',
+            'target_site_url' => isset($_POST['target_site_url']) ? esc_url_raw(wp_unslash($_POST['target_site_url'])) : '',
+            'target_username' => isset($_POST['target_username']) ? sanitize_text_field(wp_unslash($_POST['target_username'])) : '',
+            'password'        => isset($_POST['password']) ? wp_unslash($_POST['password']) : '' // Keep raw for encryption
         );
     
         if (empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username']) || !isset($data['password']) || $data['password'] === '') {
@@ -167,7 +167,11 @@ class FormHandler {
                     $this->logger?->add_admin_success(__('Remote location added and synced successfully! Configuration options are now available.', 'data-machine'));
                 } else {
                     $this->logger?->add_admin_success(__('Remote location added successfully.', 'data-machine'));
-                    $this->logger?->add_admin_error(sprintf(__('Sync failed: %s', 'data-machine'), $sync_result['message']));
+                    $this->logger?->add_admin_error(sprintf(
+                        /* translators: %s: error message */
+                        __('Sync failed: %s', 'data-machine'), 
+                        $sync_result['message']
+                    ));
                 }
             } else {
                 $this->logger?->add_admin_success(__('Remote location added successfully.', 'data-machine'));
@@ -202,20 +206,20 @@ class FormHandler {
     public function handle_update_location() {
         $location_id = isset($_POST['location_id']) ? absint($_POST['location_id']) : 0;
     
-        if (!$location_id || !isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'dm_update_location_' . $location_id)) {
-            wp_die(__('Nonce verification failed or invalid location ID!', 'data-machine'));
+        if (!$location_id || !isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'dm_update_location_' . $location_id)) {
+            wp_die(esc_html__('Nonce verification failed or invalid location ID!', 'data-machine'));
         }
     
         if (!current_user_can('manage_options')) { // Check capability
-            wp_die(__('Permission denied!', 'data-machine'));
+            wp_die(esc_html__('Permission denied!', 'data-machine'));
         }
     
         $data = array();
-        if (!empty($_POST['location_name'])) $data['location_name'] = sanitize_text_field($_POST['location_name']);
-        if (!empty($_POST['target_site_url'])) $data['target_site_url'] = esc_url_raw($_POST['target_site_url']);
-        if (!empty($_POST['target_username'])) $data['target_username'] = sanitize_text_field($_POST['target_username']);
+        if (!empty($_POST['location_name'])) $data['location_name'] = sanitize_text_field(wp_unslash($_POST['location_name']));
+        if (!empty($_POST['target_site_url'])) $data['target_site_url'] = esc_url_raw(wp_unslash($_POST['target_site_url']));
+        if (!empty($_POST['target_username'])) $data['target_username'] = sanitize_text_field(wp_unslash($_POST['target_username']));
         if (isset($_POST['password']) && $_POST['password'] !== '') {
-            $data['password'] = $_POST['password']; // Keep raw for encryption in DB class
+            $data['password'] = wp_unslash($_POST['password']); // Keep raw for encryption in DB class
         }
 
         // Handle enabled post types and taxonomies
@@ -331,13 +335,13 @@ class FormHandler {
     public function handle_delete_location() {
         // Verify nonce
         $location_id = absint($_GET['location_id'] ?? 0);
-        if (!wp_verify_nonce($_GET['_wpnonce'] ?? '', 'dm_delete_location_' . $location_id)) {
-            wp_die(__('Nonce verification failed.', 'data-machine'));
+        if (!wp_verify_nonce(isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '', 'dm_delete_location_' . $location_id)) {
+            wp_die(esc_html__('Nonce verification failed.', 'data-machine'));
         }
 
         // Check user permissions
         if (!current_user_can('manage_options')) {
-            wp_die(__('Permission denied.', 'data-machine'));
+            wp_die(esc_html__('Permission denied.', 'data-machine'));
         }
 
         // Delete the location
@@ -359,13 +363,13 @@ class FormHandler {
     public function handle_sync_location() {
         // Verify nonce
         $location_id = absint($_GET['location_id'] ?? 0);
-        if (!wp_verify_nonce($_GET['_wpnonce'] ?? '', 'dm_sync_location_' . $location_id)) {
-            wp_die(__('Nonce verification failed.', 'data-machine'));
+        if (!wp_verify_nonce(isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '', 'dm_sync_location_' . $location_id)) {
+            wp_die(esc_html__('Nonce verification failed.', 'data-machine'));
         }
 
         // Check user permissions
         if (!current_user_can('manage_options')) {
-            wp_die(__('Permission denied.', 'data-machine'));
+            wp_die(esc_html__('Permission denied.', 'data-machine'));
         }
 
         // Sync the location using the sync service

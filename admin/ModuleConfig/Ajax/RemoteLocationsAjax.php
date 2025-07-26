@@ -24,16 +24,11 @@ class RemoteLocationsAjax {
 
     /**
      * Constructor.
-     *
-     * @param RemoteLocations $db_locations Remote Locations DB service.
-     * @param Logger|null $logger Logger service (optional).
+     * Uses filter-based service access.
      */
-    public function __construct(
-        RemoteLocations $db_locations,
-        ?Logger $logger = null
-    ) {
-        $this->db_locations = $db_locations;
-        $this->logger = $logger;
+    public function __construct() {
+        $this->db_locations = apply_filters('dm_get_service', null, 'db_remote_locations');
+        $this->logger = apply_filters('dm_get_service', null, 'logger');
 
         add_action('wp_ajax_dm_get_user_locations', [$this, 'get_user_locations_ajax_handler']);
         add_action('wp_ajax_dm_get_location_synced_info', [$this, 'get_location_synced_info_ajax_handler']);

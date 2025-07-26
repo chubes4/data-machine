@@ -463,7 +463,12 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
                         echo '<span style="color:red;">(' . esc_html__('Token Expired - Refresh Needed', 'data-machine') . ')</span> ';
                     } else {
                         $expires_display = human_time_diff($now, $expires_timestamp) . ' left';
-                         echo '<span style="color:#888;">(' . esc_html(sprintf(__('Token expires: %s - %s', 'data-machine'), date('Y-m-d H:i', $expires_timestamp), $expires_display)) . ')</span> ';
+                         echo '<span style="color:#888;">(' . esc_html(sprintf(
+                             /* translators: %1$s: expiration date, %2$s: time remaining */
+                             __('Token expires: %1$s - %2$s', 'data-machine'), 
+                             gmdate('Y-m-d H:i', $expires_timestamp), 
+                             $expires_display
+                         )) . ')</span> ';
                     }
               } else {
                    echo '<span style="color:orange;">(' . esc_html__('Token expiry unknown', 'data-machine') . ')</span> ';

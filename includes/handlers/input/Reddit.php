@@ -226,7 +226,7 @@ class Reddit extends BaseInputHandler {
 			$http_service = $this->get_http_service();
 			$http_response = $http_service->get($reddit_url, $args, 'Reddit API');
 			if (is_wp_error($http_response)) {
-				if ($pages_fetched === 1) throw new Exception($http_response->get_error_message());
+				if ($pages_fetched === 1) throw new Exception(esc_html($http_response->get_error_message()));
 				else break;
 			}
 
@@ -236,7 +236,7 @@ class Reddit extends BaseInputHandler {
 			// Parse JSON response with error handling
 			$response_data = $http_service->parse_json($body, 'Reddit API');
 			if (is_wp_error($response_data)) {
-				if ($pages_fetched === 1) throw new Exception($response_data->get_error_message());
+				if ($pages_fetched === 1) throw new Exception(esc_html($response_data->get_error_message()));
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
@@ -428,7 +428,7 @@ class Reddit extends BaseInputHandler {
 						$mime_type = 'image/jpeg';
 					} else {
 						$direct_url = $url;
-						$ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+						$ext = strtolower(pathinfo(wp_parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
 						$mime_map = [
 							'jpg' => 'image/jpeg',
 							'jpeg' => 'image/jpeg',

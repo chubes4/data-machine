@@ -28,19 +28,12 @@ class AjaxScheduler {
 
     /**
      * Constructor.
-     *
-     * @param Projects $db_projects Projects DB service.
-     * @param Modules $db_modules Modules DB service.
-     * @param Scheduler $scheduler Scheduler service.
+     * Uses filter-based service access.
      */
-    public function __construct(
-        Projects $db_projects,
-        Modules $db_modules,
-        Scheduler $scheduler
-    ) {
-        $this->db_projects = $db_projects;
-        $this->db_modules = $db_modules;
-        $this->scheduler = $scheduler;
+    public function __construct() {
+        $this->db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $this->db_modules = apply_filters('dm_get_service', null, 'db_modules');
+        $this->scheduler = apply_filters('dm_get_service', null, 'scheduler');
 
         // Register AJAX hooks for scheduling actions
         add_action('wp_ajax_dm_edit_schedule', [$this, 'handle_edit_schedule']);

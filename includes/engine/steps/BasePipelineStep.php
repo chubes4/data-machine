@@ -88,6 +88,48 @@ abstract class BasePipelineStep implements PipelineStepInterface {
             return null;
         }
     }
+
+    /**
+     * Get all previous step data packets for fluid context aggregation.
+     *
+     * @param int $job_id The job ID.
+     * @return array Array of DataPacket objects from all previous steps.
+     */
+    protected function get_all_previous_data_packets(int $job_id): array {
+        $current_position = $this->get_current_step_position($job_id);
+        if ($current_position === null || $current_position === 0) {
+            return []; // No previous steps
+        }
+        
+        $sequence = $this->get_job_step_sequence($job_id);
+        $db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
+        $data_packets = [];
+        
+        // Get data packets from all previous steps
+        for ($i = 0; $i < $current_position; $i++) {
+            $step_name = $sequence[$i] ?? null;
+            if (!$step_name) {
+                continue;
+            }
+            
+            $json_data = $db_jobs->get_step_data_by_name($job_id, $step_name);
+            if (!$json_data) {
+                continue;
+            }
+            
+            try {
+                $packet = \DataMachine\DataPacket::fromJson($json_data);
+                if ($packet) {
+                    $data_packets[] = $packet;
+                }
+            } catch (\Exception $e) {
+                // Skip malformed packets
+                continue;
+            }
+        }
+        
+        return $data_packets;
+    }
     
     
     /**

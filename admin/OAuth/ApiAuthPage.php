@@ -38,9 +38,9 @@ class ApiAuthPage {
                 exit;
             }
             check_admin_referer('dm_save_bluesky_user_meta_action');
-            update_option('bluesky_username', sanitize_text_field($_POST['bluesky_username'] ?? ''));
+            update_option('bluesky_username', isset($_POST['bluesky_username']) ? sanitize_text_field(wp_unslash($_POST['bluesky_username'])) : '');
             if (isset($_POST['bluesky_app_password']) && $_POST['bluesky_app_password'] !== '') {
-                $encrypted_password = EncryptionHelper::encrypt($_POST['bluesky_app_password']);
+                $encrypted_password = EncryptionHelper::encrypt(wp_unslash($_POST['bluesky_app_password']));
                 update_option('bluesky_app_password', $encrypted_password);
             }
             wp_redirect(add_query_arg('bluesky_saved', 1, admin_url('admin.php?page=dm-api-keys')));
@@ -56,8 +56,8 @@ class ApiAuthPage {
                 exit;
             }
             check_admin_referer('dm_save_twitter_user_meta_action');
-            update_option('twitter_api_key', sanitize_text_field($_POST['twitter_api_key'] ?? ''));
-            update_option('twitter_api_secret', sanitize_text_field($_POST['twitter_api_secret'] ?? ''));
+            update_option('twitter_api_key', isset($_POST['twitter_api_key']) ? sanitize_text_field(wp_unslash($_POST['twitter_api_key'])) : '');
+            update_option('twitter_api_secret', isset($_POST['twitter_api_secret']) ? sanitize_text_field(wp_unslash($_POST['twitter_api_secret'])) : '');
             wp_redirect(add_query_arg('twitter_saved', 1, admin_url('admin.php?page=dm-api-keys')));
             exit;
         });
@@ -69,9 +69,9 @@ class ApiAuthPage {
                 exit;
             }
             check_admin_referer('dm_save_reddit_user_meta_action');
-            update_option('reddit_oauth_client_id', sanitize_text_field($_POST['reddit_oauth_client_id'] ?? ''));
-            update_option('reddit_oauth_client_secret', sanitize_text_field($_POST['reddit_oauth_client_secret'] ?? ''));
-            update_option('reddit_developer_username', sanitize_text_field($_POST['reddit_developer_username'] ?? ''));
+            update_option('reddit_oauth_client_id', isset($_POST['reddit_oauth_client_id']) ? sanitize_text_field(wp_unslash($_POST['reddit_oauth_client_id'])) : '');
+            update_option('reddit_oauth_client_secret', isset($_POST['reddit_oauth_client_secret']) ? sanitize_text_field(wp_unslash($_POST['reddit_oauth_client_secret'])) : '');
+            update_option('reddit_developer_username', isset($_POST['reddit_developer_username']) ? sanitize_text_field(wp_unslash($_POST['reddit_developer_username'])) : '');
             wp_redirect(add_query_arg('reddit_saved', 1, admin_url('admin.php?page=dm-api-keys')));
             exit;
         });
@@ -83,8 +83,8 @@ class ApiAuthPage {
                 exit;
             }
             check_admin_referer('dm_save_threads_user_meta_action');
-            update_option('threads_app_id', sanitize_text_field($_POST['threads_app_id'] ?? ''));
-            update_option('threads_app_secret', sanitize_text_field($_POST['threads_app_secret'] ?? ''));
+            update_option('threads_app_id', isset($_POST['threads_app_id']) ? sanitize_text_field(wp_unslash($_POST['threads_app_id'])) : '');
+            update_option('threads_app_secret', isset($_POST['threads_app_secret']) ? sanitize_text_field(wp_unslash($_POST['threads_app_secret'])) : '');
             wp_redirect(add_query_arg('threads_saved', 1, admin_url('admin.php?page=dm-api-keys')));
             exit;
         });
@@ -96,8 +96,8 @@ class ApiAuthPage {
                 exit;
             }
             check_admin_referer('dm_save_facebook_user_meta_action');
-            update_option('facebook_app_id', sanitize_text_field($_POST['facebook_app_id'] ?? ''));
-            update_option('facebook_app_secret', sanitize_text_field($_POST['facebook_app_secret'] ?? ''));
+            update_option('facebook_app_id', isset($_POST['facebook_app_id']) ? sanitize_text_field(wp_unslash($_POST['facebook_app_id'])) : '');
+            update_option('facebook_app_secret', isset($_POST['facebook_app_secret']) ? sanitize_text_field(wp_unslash($_POST['facebook_app_secret'])) : '');
             wp_redirect(add_query_arg('facebook_saved', 1, admin_url('admin.php?page=dm-api-keys')));
             exit;
         });
@@ -111,14 +111,14 @@ class ApiAuthPage {
      */
     public function handle_api_keys_page_user_meta_save() {
         // Check if this is a POST request for the API keys page
-        if ( 'POST' !== $_SERVER['REQUEST_METHOD'] ||
+        if ( 'POST' !== (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '') ||
              !isset($_POST['option_page']) || 'dm_api_keys_group' !== $_POST['option_page'] ) {
             return; // Not our form submission
         }
 
         // Verify the nonce specific to user meta fields on this page
         if ( !isset($_POST['_wpnonce_dm_api_keys_user_meta']) || 
-             !wp_verify_nonce($_POST['_wpnonce_dm_api_keys_user_meta'], 'dm_save_api_keys_user_meta') ) {
+             !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce_dm_api_keys_user_meta'])), 'dm_save_api_keys_user_meta') ) {
             // Nonce failed, log or add an error notice? Silently return for now.
             return;
         }
@@ -133,7 +133,7 @@ class ApiAuthPage {
 
         // Handle Bluesky Username
         if ( isset($_POST['bluesky_username']) ) {
-            $bluesky_username = sanitize_text_field($_POST['bluesky_username']);
+            $bluesky_username = sanitize_text_field(wp_unslash($_POST['bluesky_username']));
             update_option('bluesky_username', $bluesky_username);
             $updated = true;
         }
@@ -141,7 +141,7 @@ class ApiAuthPage {
         // Handle Bluesky Password (always update on save)
         if ( isset($_POST['bluesky_app_password']) ) {
             try {
-                $encrypted_password = EncryptionHelper::encrypt($_POST['bluesky_app_password']);
+                $encrypted_password = EncryptionHelper::encrypt(wp_unslash($_POST['bluesky_app_password']));
                 if ($encrypted_password === false) {
                     // Error logging removed for production
                     $this->logger?->error('Failed to encrypt Bluesky app password. It was not saved.');
@@ -163,7 +163,7 @@ class ApiAuthPage {
             add_action( 'admin_notices', function() {
                 ?>
                 <div class="notice notice-success is-dismissible">
-                    <p><?php _e( 'API settings updated.', 'data-machine' ); ?></p>
+                    <p><?php esc_html_e( 'API settings updated.', 'data-machine' ); ?></p>
                 </div>
                 <?php
             } );

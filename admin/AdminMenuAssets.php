@@ -64,17 +64,14 @@ class AdminMenuAssets {
     private $api_keys_hook_suffix = false; // Added property for API keys page
 
     /**
-     * Initialize the class and set its properties.
+     * Initialize the class using filter-based service access.
      *
      * @since    NEXT_VERSION
-     * @param    string                             $version             The plugin version.
-     * @param    AdminPage    $admin_page_handler  The handler for page display callbacks.
-     * @param    Modules $db_modules          The database modules instance.
      */
-    public function __construct( $version, AdminPage $admin_page_handler, Modules $db_modules ) {
-        $this->version = $version;
-        $this->admin_page_handler = $admin_page_handler;
-        $this->db_modules = $db_modules;
+    public function __construct() {
+        $this->version = DATA_MACHINE_VERSION;
+        $this->admin_page_handler = apply_filters('dm_get_service', null, 'admin_page');
+        $this->db_modules = apply_filters('dm_get_service', null, 'db_modules');
     }
 
     /**
@@ -187,6 +184,19 @@ class AdminMenuAssets {
         $js_project_management_url = $plugin_base_url . 'assets/js/data-machine-project-management.js';
         $js_project_management_version = file_exists($js_project_management_path) ? filemtime($js_project_management_path) : $this->version;
         wp_enqueue_script( 'data-machine-project-management-js', $js_project_management_url, array( 'jquery' ), $js_project_management_version, true );
+        
+        // Enqueue pipeline builder JavaScript
+        $js_pipeline_builder_path = $plugin_base_path . 'admin/js/project-pipeline-builder.js';
+        $js_pipeline_builder_url = $plugin_base_url . 'admin/js/project-pipeline-builder.js';
+        $js_pipeline_builder_version = file_exists($js_pipeline_builder_path) ? filemtime($js_pipeline_builder_path) : $this->version;
+        wp_enqueue_script( 'data-machine-pipeline-builder-js', $js_pipeline_builder_url, array( 'jquery', 'jquery-ui-sortable' ), $js_pipeline_builder_version, true );
+
+        // Enqueue pipeline modal JavaScript
+        $js_pipeline_modal_path = $plugin_base_path . 'admin/js/pipeline-modal.js';
+        $js_pipeline_modal_url = $plugin_base_url . 'admin/js/pipeline-modal.js';
+        $js_pipeline_modal_version = file_exists($js_pipeline_modal_path) ? filemtime($js_pipeline_modal_path) : $this->version;
+        wp_enqueue_script( 'data-machine-pipeline-modal-js', $js_pipeline_modal_url, array( 'jquery' ), $js_pipeline_modal_version, true );
+
         wp_localize_script( 'data-machine-project-management-js', 'dm_project_params', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
@@ -196,6 +206,54 @@ class AdminMenuAssets {
             'upload_files_nonce' => wp_create_nonce( 'dm_upload_files_nonce' ),
             'get_queue_status_nonce' => wp_create_nonce( 'dm_get_queue_status_nonce' ),
             'cron_schedules' => Constants::get_cron_schedules_for_js(),
+        ) );
+
+        // Localize pipeline modal script
+        wp_localize_script( 'data-machine-pipeline-modal-js', 'dmPipelineModal', array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'get_modal_content_nonce' => wp_create_nonce( 'dm_get_modal_content_nonce' ),
+            'save_modal_config_nonce' => wp_create_nonce( 'dm_save_modal_config_nonce' ),
+            'strings' => array(
+                'configureStep' => __( 'Configure Step', 'data-machine' ),
+                'saving' => __( 'Saving...', 'data-machine' ),
+                'save' => __( 'Save Configuration', 'data-machine' ),
+                'cancel' => __( 'Cancel', 'data-machine' ),
+                'close' => __( 'Close', 'data-machine' ),
+                'errorLoading' => __( 'Error loading configuration', 'data-machine' ),
+                'errorSaving' => __( 'Error saving configuration', 'data-machine' ),
+                'configSaved' => __( 'Configuration saved successfully', 'data-machine' ),
+            ),
+        ) );
+
+        // Localize pipeline builder script
+        wp_localize_script( 'data-machine-pipeline-builder-js', 'dmPipelineBuilder', array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'get_pipeline_steps_nonce' => wp_create_nonce( 'dm_get_pipeline_steps_nonce' ),
+            'add_pipeline_step_nonce' => wp_create_nonce( 'dm_add_pipeline_step_nonce' ),
+            'remove_pipeline_step_nonce' => wp_create_nonce( 'dm_remove_pipeline_step_nonce' ),
+            'reorder_pipeline_steps_nonce' => wp_create_nonce( 'dm_reorder_pipeline_steps_nonce' ),
+            'get_available_step_types_nonce' => wp_create_nonce( 'dm_get_available_step_types_nonce' ),
+            'strings' => array(
+                'pipelineSteps' => __( 'Pipeline Steps', 'data-machine' ),
+                'loadingSteps' => __( 'Loading pipeline steps...', 'data-machine' ),
+                'addStep' => __( 'Add Step', 'data-machine' ),
+                'selectStepType' => __( 'Select step type...', 'data-machine' ),
+                'inputStep' => __( 'Input Step', 'data-machine' ),
+                'aiStep' => __( 'AI Step', 'data-machine' ),
+                'outputStep' => __( 'Output Step', 'data-machine' ),
+                'handler' => __( 'Handler', 'data-machine' ),
+                'selectHandler' => __( 'Select handler...', 'data-machine' ),
+                'noHandlerSelected' => __( 'No handler selected', 'data-machine' ),
+                'noStepsConfigured' => __( 'No pipeline steps configured. Add a step to get started.', 'data-machine' ),
+                'selectStepTypeFirst' => __( 'Please select a step type first.', 'data-machine' ),
+                'confirmRemoveStep' => __( 'Are you sure you want to remove this step?', 'data-machine' ),
+                'errorLoading' => __( 'Error loading pipeline steps', 'data-machine' ),
+                'errorAddingStep' => __( 'Error adding pipeline step', 'data-machine' ),
+                'errorRemovingStep' => __( 'Error removing pipeline step', 'data-machine' ),
+                'errorReordering' => __( 'Error reordering pipeline steps', 'data-machine' ),
+                'errorUpdatingConfig' => __( 'Error updating step configuration', 'data-machine' ),
+                'handlerSelected' => __( 'Handler selected', 'data-machine' ),
+            ),
         ) );
     }
 

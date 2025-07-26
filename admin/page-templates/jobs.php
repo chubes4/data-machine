@@ -52,7 +52,7 @@ $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'jobs';
 function render_jobs_tab() {
     // Use the PSR-4 namespaced class
     if (!class_exists('DataMachine\Admin\JobsListTable')) {
-        echo '<div class="error"><p>' . __('Error: Jobs List Table class not found. Please ensure the plugin is properly activated.', 'data-machine') . '</p></div>';
+        echo '<div class="error"><p>' . esc_html__('Error: Jobs List Table class not found. Please ensure the plugin is properly activated.', 'data-machine') . '</p></div>';
         return;
     }
 

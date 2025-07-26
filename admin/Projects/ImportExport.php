@@ -20,30 +20,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class ImportExport {
 
 	/**
-	 * Instance of the Projects database class.
-	 * @var Projects
-	 */
-	private $db_projects;
-
-	/**
-	 * Instance of the Modules database class.
-	 * @var Modules
-	 */
-	private $db_modules;
-
-	/**
 	 * Constructor.
-	 * Stores DB handlers and adds action hooks.
-	 *
-	 * @param Projects $db_projects The Projects DB service.
-	 * @param Modules  $db_modules  The Modules DB service.
+	 * Uses filter-based service access for dependencies.
 	 */
-	public function __construct(
-		Projects $db_projects,
-		Modules $db_modules
-	) {
-		$this->db_projects = $db_projects;
-		$this->db_modules = $db_modules;
+	public function __construct() {
 
 		// Hook the export function to the admin_post action
 		add_action( 'admin_post_dm_export_project', array( $this, 'handle_project_export' ) );
@@ -80,13 +60,15 @@ class ImportExport {
 		// 2. Fetch Data
 		// Use get_project, passing user_id for ownership check
 		$current_user_id = get_current_user_id();
-		$project = $this->db_projects->get_project( $project_id, $current_user_id );
+		$db_projects = apply_filters('dm_get_service', null, 'db_projects');
+		$project = $db_projects->get_project( $project_id, $current_user_id );
 		if ( ! $project ) {
 			wp_die( esc_html__( 'Project not found or you do not have permission to access it.', 'data-machine' ) );
 		}
 
 		// Fetch modules, passing user_id as required by the method
-		$modules = $this->db_modules->get_modules_for_project( $project_id, $current_user_id );
+		$db_modules = apply_filters('dm_get_service', null, 'db_modules');
+		$modules = $db_modules->get_modules_for_project( $project_id, $current_user_id );
 
 		// 4. Prepare Data for Export (Exclude IDs and User ID)
 		$export_data = array(
@@ -143,12 +125,12 @@ class ImportExport {
 
 		// 5. Generate JSON and Trigger Download
 		$project_slug = sanitize_title( $project->project_name ?: 'project' );
-		$filename     = sprintf( 'dm-export-%s-%s.json', $project_slug, date( 'Ymd-His' ) );
+		$filename     = sprintf( 'dm-export-%s-%s.json', $project_slug, gmdate( 'Ymd-His' ) );
 		$json_data    = wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 
 		if ( $json_data === false ) {
 			/* translators: %s: JSON encoding error message */
-			wp_die( sprintf( esc_html__( 'Failed to encode data to JSON. Error: %s', 'data-machine' ), json_last_error_msg() ) );
+			wp_die( sprintf( esc_html__( 'Failed to encode data to JSON. Error: %s', 'data-machine' ), esc_html(json_last_error_msg()) ) );
 		}
 
 		// Set headers for download
@@ -241,7 +223,8 @@ class ImportExport {
 
 		// Add any other allowed project fields here after sanitization
 
-		$new_project_id = $this->db_projects->create_project( $sanitized_project_data );
+		$db_projects = apply_filters('dm_get_service', null, 'db_projects');
+		$new_project_id = $db_projects->create_project( $sanitized_project_data );
 
 		if ( is_wp_error( $new_project_id ) ) {
 			/* translators: %s: Error message */
@@ -290,7 +273,8 @@ class ImportExport {
 
 				// Add any other allowed module fields here after sanitization
 
-				$new_module_id = $this->db_modules->create_module( $sanitized_module_data );
+				$db_modules = apply_filters('dm_get_service', null, 'db_modules');
+				$new_module_id = $db_modules->create_module( $sanitized_module_data );
 
 				if ( is_wp_error( $new_module_id ) ) {
 					/* translators: %1$s: Module name, %2$s: Error message */
@@ -355,7 +339,8 @@ class ImportExport {
 		$current_user_id = get_current_user_id();
 
 		// 3. Perform Deletion (using DB class methods)
-		$deleted = $this->db_projects->delete_project( $project_id, $current_user_id );
+		$db_projects = apply_filters('dm_get_service', null, 'db_projects');
+		$deleted = $db_projects->delete_project( $project_id, $current_user_id );
 
 		if ( is_wp_error( $deleted ) ) {
 			// Handle WP_Error (e.g., permission denied, not found)
@@ -411,7 +396,7 @@ class ImportExport {
                 printf(
                     '<div class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>',
                     esc_attr( $type ),
-                    $message // Already sanitized with wp_kses_post
+                    wp_kses_post($message) // Escape message output
                 );
             }
             delete_transient( 'dm_import_notice' );

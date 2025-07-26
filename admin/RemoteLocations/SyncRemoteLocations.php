@@ -80,6 +80,7 @@ class SyncRemoteLocations {
 
         if (is_wp_error($response)) {
             $error_message = sprintf(
+                /* translators: %s: error message */
                 __('Failed to connect to remote site: %s', 'data-machine'),
                 $response->get_error_message()
             );
@@ -98,7 +99,8 @@ class SyncRemoteLocations {
             $error_data = json_decode($body, true);
             $error_message = isset($error_data['message']) ? $error_data['message'] : __('Unknown error occurred on the remote site.', 'data-machine');
             $full_error = sprintf(
-                __('Remote site returned an error (Code: %d): %s', 'data-machine'),
+                /* translators: %1$d: HTTP response code, %2$s: error message */
+                __('Remote site returned an error (Code: %1$d): %2$s', 'data-machine'),
                 $response_code,
                 $error_message
             );

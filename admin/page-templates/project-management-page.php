@@ -27,7 +27,7 @@ $project_prompts_service = apply_filters('dm_get_service', null, 'project_prompt
         <span class="spinner" id="create-project-spinner" style="float: none; vertical-align: middle;"></span>
     </div>
 
-    <div class="dm-projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px;">
+    <div class="dm-projects-list" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
         <?php if ( ! empty( $projects ) && is_array( $projects ) ) : ?>
             <?php foreach ( $projects as $project ) : ?>
                 <?php
@@ -105,79 +105,18 @@ $project_prompts_service = apply_filters('dm_get_service', null, 'project_prompt
                         </div>
                     </div>
 
-                    <!-- Pipeline Step Prompts -->
+                    <!-- Pipeline Configuration -->
                     <div class="dm-pipeline-prompts" style="margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; color: #23282d;">
-                            Pipeline Step Prompts
+                        <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #23282d; display: flex; align-items: center; gap: 8px;">
+                            <span class="dashicons dashicons-networking" style="font-size: 16px; color: #0073aa;"></span>
+                            Pipeline Steps
                         </h4>
-                        
-                        <?php if (!empty($prompt_steps)) : ?>
-                            <div class="dm-step-prompts" style="display: flex; flex-direction: column; gap: 15px;">
-                                <?php foreach ($prompt_steps as $step_name => $step_info) : ?>
-                                    <div class="dm-step-prompt-group" 
-                                         data-step="<?php echo esc_attr($step_name); ?>"
-                                         style="border: 1px solid #e2e4e7; border-radius: 3px; padding: 12px; background: #f9f9f9;">
-                                        
-                                        <div class="dm-step-header" style="margin-bottom: 10px;">
-                                            <strong style="color: #0073aa; text-transform: capitalize;">
-                                                <?php echo esc_html(str_replace('_', ' ', $step_name)); ?> Step
-                                            </strong>
-                                        </div>
-                                        
-                                        <?php foreach ($step_info['prompt_fields'] as $field_name => $field_config) : ?>
-                                            <?php
-                                            $current_value = isset($project_step_prompts[$step_name][$field_name]) 
-                                                ? $project_step_prompts[$step_name][$field_name] 
-                                                : ($field_config['default'] ?? '');
-                                            $field_id = "prompt_{$project->project_id}_{$step_name}_{$field_name}";
-                                            ?>
-                                            <div class="dm-prompt-field" style="margin-bottom: 8px;">
-                                                <label for="<?php echo esc_attr($field_id); ?>" 
-                                                       style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 12px;">
-                                                    <?php echo esc_html($field_config['label'] ?? ucwords(str_replace('_', ' ', $field_name))); ?>
-                                                    <?php if (!empty($field_config['required'])) : ?>
-                                                        <span style="color: #d63638;">*</span>
-                                                    <?php endif; ?>
-                                                </label>
-                                                
-                                                <?php if ($field_config['type'] === 'textarea') : ?>
-                                                    <textarea 
-                                                        id="<?php echo esc_attr($field_id); ?>"
-                                                        class="dm-step-prompt-field"
-                                                        data-project-id="<?php echo esc_attr($project->project_id); ?>"
-                                                        data-step="<?php echo esc_attr($step_name); ?>"
-                                                        data-field="<?php echo esc_attr($field_name); ?>"
-                                                        rows="3"
-                                                        style="width: 100%; font-size: 12px; padding: 6px; border: 1px solid #ddd; border-radius: 2px; resize: vertical;"
-                                                        placeholder="<?php echo esc_attr($field_config['placeholder'] ?? ''); ?>"
-                                                    ><?php echo esc_textarea($current_value); ?></textarea>
-                                                <?php else : ?>
-                                                    <input 
-                                                        type="<?php echo esc_attr($field_config['type'] ?? 'text'); ?>"
-                                                        id="<?php echo esc_attr($field_id); ?>"
-                                                        class="dm-step-prompt-field"
-                                                        data-project-id="<?php echo esc_attr($project->project_id); ?>"
-                                                        data-step="<?php echo esc_attr($step_name); ?>"
-                                                        data-field="<?php echo esc_attr($field_name); ?>"
-                                                        value="<?php echo esc_attr($current_value); ?>"
-                                                        style="width: 100%; font-size: 12px; padding: 6px; border: 1px solid #ddd; border-radius: 2px;"
-                                                        placeholder="<?php echo esc_attr($field_config['placeholder'] ?? ''); ?>"
-                                                    />
-                                                <?php endif; ?>
-                                                
-                                                <?php if (!empty($field_config['description'])) : ?>
-                                                    <p style="margin: 4px 0 0 0; font-size: 11px; color: #666; font-style: italic;">
-                                                        <?php echo esc_html($field_config['description']); ?>
-                                                    </p>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endforeach; ?>
+                        <div class="dm-horizontal-pipeline-container" style="background: #f8f9fa; border: 1px solid #e2e4e7; border-radius: 6px; padding: 15px;">
+                            <!-- Horizontal pipeline builder will be inserted here by JavaScript -->
+                            <div class="dm-pipeline-loading" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                                Loading pipeline steps...
                             </div>
-                        <?php else : ?>
-                            <p style="color: #666; font-style: italic; margin: 0;">No prompts required for current pipeline configuration.</p>
-                        <?php endif; ?>
+                        </div>
                     </div>
 
                     <!-- Project Modules -->
@@ -239,14 +178,18 @@ $project_prompts_service = apply_filters('dm_get_service', null, 'project_prompt
                         <a href="<?php echo esc_url( $delete_url ); ?>" 
                            class="button delete-project-button button-link-delete" 
                            style="font-size: 12px; padding: 4px 12px; height: auto; text-decoration: none; color: #d63638;"
-                           onclick="return confirm('<?php echo esc_js( sprintf( __( 'Are you sure you want to permanently delete the project \'%s\' and ALL its modules? This cannot be undone.', 'data-machine' ), $project->project_name ) ); ?>');">
+                           onclick="return confirm('<?php echo esc_js( sprintf( 
+                               /* translators: %s: project name */
+                               __( 'Are you sure you want to permanently delete the project \'%s\' and ALL its modules? This cannot be undone.', 'data-machine' ), 
+                               $project->project_name 
+                           ) ); ?>');">
                             Delete
                         </a>
                     </div>
                 </div>
             <?php endforeach; ?>
         <?php else : ?>
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666; font-style: italic;">
+            <div style="text-align: center; padding: 40px; color: #666; font-style: italic;">
                 <p>No projects found. Click 'Create New Project' above to get started.</p>
             </div>
         <?php endif; ?>
@@ -455,5 +398,42 @@ jQuery(document).ready(function($) {
             <button type="button" id="dm-upload-start" class="button button-primary">Upload Files</button>
             <button type="button" id="dm-upload-cancel" class="button">Cancel</button>
         </p>
+    </div>
+</div>
+
+<!-- Universal Configuration Modal -->
+<div id="dm-config-modal" class="dm-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
+    <div class="dm-modal-dialog" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background-color: white; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden;">
+        
+        <!-- Modal Header -->
+        <div class="dm-modal-header" style="padding: 20px; border-bottom: 1px solid #e2e4e7; display: flex; align-items: center; justify-content: space-between;">
+            <h2 id="dm-modal-title" style="margin: 0; font-size: 18px; font-weight: 600; color: #1e1e1e;">Configure Step</h2>
+            <button type="button" class="dm-modal-close" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #646970; padding: 4px; line-height: 1;">
+                <span class="dashicons dashicons-no-alt"></span>
+            </button>
+        </div>
+        
+        <!-- Modal Content -->
+        <div class="dm-modal-content" style="padding: 20px; overflow-y: auto; max-height: calc(80vh - 140px);">
+            <div id="dm-modal-loading" style="text-align: center; padding: 40px;">
+                <span class="spinner is-active" style="display: inline-block; float: none;"></span>
+                <p style="margin-top: 16px; color: #646970; font-style: italic;">Loading configuration options...</p>
+            </div>
+            <div id="dm-modal-body" style="display: none;">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div id="dm-modal-error" style="display: none; text-align: center; padding: 40px;">
+                <span class="dashicons dashicons-warning" style="font-size: 32px; color: #d63638; opacity: 0.7;"></span>
+                <p style="margin-top: 12px; color: #d63638; font-weight: 500;">Error loading configuration</p>
+                <p style="margin-top: 8px; color: #646970; font-size: 14px;">Please try again or contact support if the problem persists.</p>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="dm-modal-footer" style="padding: 16px 20px; border-top: 1px solid #e2e4e7; background: #f9f9f9; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="button dm-modal-cancel">Cancel</button>
+            <button type="button" class="button button-primary dm-modal-save" style="display: none;">Save Configuration</button>
+        </div>
+        
     </div>
 </div>

@@ -165,7 +165,7 @@ class AdminPage {
     public function display_api_keys_page() {
         // Security check: Ensure user has capabilities
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.', 'data-machine'));
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'data-machine'));
         }
 
 
@@ -181,7 +181,7 @@ class AdminPage {
     public function display_remote_locations_page() {
         // Ensure the capability is checked before displaying the page
         if (!current_user_can('manage_options')) { // Adjust capability as needed
-            wp_die(__( 'Sorry, you are not allowed to access this page.', 'data-machine' ));
+            wp_die(esc_html__( 'Sorry, you are not allowed to access this page.', 'data-machine' ));
         }
         $remote_locations_handler = $this->remote_locations_admin; // Use injected property
 
@@ -197,7 +197,7 @@ class AdminPage {
     public function display_jobs_page() {
         // Security check
         if (!current_user_can('manage_options')) {
-            wp_die(__('Permission denied.', 'data-machine'));
+            wp_die(esc_html__('Permission denied.', 'data-machine'));
         }
 
         // Make logger instance available to the template
@@ -221,11 +221,11 @@ class AdminPage {
     public function handle_update_log_level() {
         // Security checks
         if (!current_user_can('manage_options')) {
-            wp_die(__('Permission denied.', 'data-machine'));
+            wp_die(esc_html__('Permission denied.', 'data-machine'));
         }
 
-        if (!wp_verify_nonce($_POST['dm_log_level_nonce'] ?? '', 'dm_update_log_level')) {
-            wp_die(__('Security check failed.', 'data-machine'));
+        if (!wp_verify_nonce(isset($_POST['dm_log_level_nonce']) ? sanitize_text_field(wp_unslash($_POST['dm_log_level_nonce'])) : '', 'dm_update_log_level')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'));
         }
 
         $new_log_level = sanitize_key($_POST['dm_log_level'] ?? 'info');
@@ -249,11 +249,11 @@ class AdminPage {
     public function handle_clear_logs() {
         // Security checks
         if (!current_user_can('manage_options')) {
-            wp_die(__('Permission denied.', 'data-machine'));
+            wp_die(esc_html__('Permission denied.', 'data-machine'));
         }
 
-        if (!wp_verify_nonce($_POST['dm_clear_logs_nonce'] ?? '', 'dm_clear_logs')) {
-            wp_die(__('Security check failed.', 'data-machine'));
+        if (!wp_verify_nonce(isset($_POST['dm_clear_logs_nonce']) ? sanitize_text_field(wp_unslash($_POST['dm_clear_logs_nonce'])) : '', 'dm_clear_logs')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'));
         }
 
         if ($this->logger->clear_logs()) {
@@ -276,7 +276,7 @@ class AdminPage {
             wp_send_json_error(['message' => 'Permission denied.']);
         }
 
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_refresh_logs')) {
+        if (!wp_verify_nonce(isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '', 'dm_refresh_logs')) {
             wp_send_json_error(['message' => 'Security check failed.']);
         }
 

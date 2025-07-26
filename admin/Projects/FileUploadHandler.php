@@ -52,21 +52,14 @@ class FileUploadHandler {
     private $logger;
 
     /**
-     * Initialize the class and set its properties.
+     * Initialize the class using filter-based service access.
      *
      * @since    NEXT_VERSION
-     * @param    Modules  $db_modules   Database modules instance.
-     * @param    Projects $db_projects  Database projects instance.  
-     * @param    Logger|null       $logger       Logger instance.
      */
-    public function __construct(
-        Modules $db_modules,
-        Projects $db_projects,
-        ?Logger $logger = null
-    ) {
-        $this->db_modules = $db_modules;
-        $this->db_projects = $db_projects;
-        $this->logger = $logger;
+    public function __construct() {
+        $this->db_modules = apply_filters('dm_get_service', null, 'db_modules');
+        $this->db_projects = apply_filters('dm_get_service', null, 'db_projects');
+        $this->logger = apply_filters('dm_get_service', null, 'logger');
 
         // Register AJAX actions
         add_action( 'wp_ajax_dm_upload_files_to_queue', array( $this, 'handle_upload_files_ajax' ) );
@@ -180,8 +173,8 @@ class FileUploadHandler {
             $new_filename = 'queue_' . $module_id . '_' . time() . '_' . wp_generate_password(8, false) . '.' . sanitize_file_name($file_extension);
             $persistent_path = $persistent_dir . $new_filename;
 
-            // Move file to persistent storage
-            if (!move_uploaded_file($file['tmp_name'], $persistent_path)) {
+            // Move file to persistent storage using WordPress file handling
+            if (!wp_mkdir_p(dirname($persistent_path)) || !copy($file['tmp_name'], $persistent_path)) {
                 throw new Exception('Failed to move uploaded file to persistent storage.');
             }
 
@@ -257,7 +250,7 @@ class FileUploadHandler {
         $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         
         if (!in_array($file_extension, $allowed_extensions, true)) {
-            throw new Exception('File type not allowed. Allowed types: ' . implode(', ', $allowed_extensions));
+            throw new Exception('File type not allowed. Allowed types: ' . esc_html(implode(', ', $allowed_extensions)));
         }
 
         // MIME type validation
@@ -268,7 +261,7 @@ class FileUploadHandler {
         ];
 
         if (!in_array($file['type'], $allowed_mime_types, true)) {
-            throw new Exception('MIME type not allowed: ' . $file['type']);
+            throw new Exception('MIME type not allowed: ' . esc_html($file['type']));
         }
 
         // Basic security scan for suspicious content
@@ -290,7 +283,7 @@ class FileUploadHandler {
      */
     public function handle_upload_files_ajax() {
         // Verify nonce
-        if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'dm_upload_files_nonce' ) ) {
+        if ( ! wp_verify_nonce( isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '', 'dm_upload_files_nonce' ) ) {
             wp_send_json_error( 'Invalid nonce.' );
             return;
         }

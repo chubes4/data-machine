@@ -34,7 +34,7 @@ require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
 use DataMachine\{DataMachine, Constants, CoreHandlerRegistry};
 use DataMachine\Admin\{AdminPage, AdminMenuAssets};
 use DataMachine\Admin\OAuth\{Twitter as OAuthTwitter, Reddit as OAuthReddit, Threads as OAuthThreads, Facebook as OAuthFacebook, ApiAuthPage};
-use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUploadHandler, ProjectManagementAjax};
+use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUploadHandler, ProjectManagementAjax, PipelineManagementAjax, ModalConfigAjax};
 use DataMachine\Admin\ModuleConfig\{RegisterSettings, SettingsFields, ModuleConfigHandler};
 use DataMachine\Admin\ModuleConfig\Ajax\{ModuleConfigAjax, RemoteLocationsAjax};
 use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, SyncRemoteLocations};
@@ -95,34 +95,25 @@ function run_data_machine() {
 
 
     // Import/export handler
-    $import_export_handler = new ImportExport($db_projects, $db_modules);
+    $import_export_handler = new ImportExport();
 
     // AJAX handlers
-    $module_ajax_handler = new ModuleConfigAjax($db_modules, $db_projects, $db_remote_locations, $logger);
-    $dashboard_ajax_handler = new ProjectManagementAjax($db_projects, $db_modules, $db_jobs, $db_processed_items, $job_creator, $logger);
-    $ajax_scheduler = new AjaxScheduler($db_projects, $db_modules, $scheduler);
+    $module_ajax_handler = new ModuleConfigAjax();
+    $dashboard_ajax_handler = new ProjectManagementAjax();
+    $ajax_scheduler = new AjaxScheduler();
     $ajax_auth = new \DataMachine\Admin\OAuth\AjaxAuth();
-    $remote_locations_ajax_handler = new RemoteLocationsAjax($db_remote_locations, $logger);
-    $file_upload_handler = new FileUploadHandler($db_modules, $db_projects, $logger);
+    $remote_locations_ajax_handler = new RemoteLocationsAjax();
+    $file_upload_handler = new FileUploadHandler();
+    $pipeline_management_ajax_handler = new PipelineManagementAjax();
+    $modal_config_ajax_handler = new ModalConfigAjax();
+    $modal_config_ajax_handler->init_hooks();
 
     // --- Instantiate Main Plugin ---
     $register_settings = new RegisterSettings(DATA_MACHINE_VERSION);
-    $plugin = new DataMachine(
-        DATA_MACHINE_VERSION,
-        $register_settings,
-        $admin_page,
-        $db_modules,
-        $orchestrator,
-        $services['oauth_reddit'],
-        $services['oauth_twitter'],
-        $services['oauth_threads'],
-        $services['oauth_facebook'],
-        $db_remote_locations,
-        $logger
-	);
+    $plugin = new DataMachine();
 
-	// --- Run the Plugin ---
-	$plugin->run();
+    // --- Run the Plugin ---
+    $plugin->run();
 
     // Register hooks for AJAX handlers
     add_action( 'wp_ajax_dm_get_module_data', array( $module_ajax_handler, 'get_module_data_ajax_handler' ) );
@@ -133,6 +124,7 @@ function run_data_machine() {
 
     // Register async pipeline step hooks dynamically
     $pipeline_steps = apply_filters( 'dm_register_pipeline_steps', [] );
+    $orchestrator = apply_filters('dm_get_service', null, 'orchestrator');
     foreach ( $pipeline_steps as $step_name => $step_config ) {
         $hook_name = 'dm_' . $step_name . '_job_event';
         
@@ -142,7 +134,146 @@ function run_data_machine() {
         }, 10, 1 );
     }
 
-    $scheduler->init_hooks();
+    // Initialize scheduler hooks
+    $scheduler = apply_filters('dm_get_service', null, 'scheduler');
+    if ($scheduler) {
+        $scheduler->init_hooks();
+    }
+
+    // Example modal content providers (for demonstration and testing)
+    add_filter('dm_get_modal_content', 'dm_register_example_modal_content', 10, 2);
+}
+
+/**
+ * Example modal content provider for demonstration.
+ * Shows how external plugins can register configuration interfaces.
+ *
+ * @param mixed $content Current content (null if none registered)
+ * @param array $context Modal context with project_id, step_id, step_type, modal_type, user_id
+ * @return array|mixed Modal content array or original content
+ */
+function dm_register_example_modal_content($content, $context) {
+    if ($content !== null) {
+        return $content; // Another provider already handled this
+    }
+
+    $step_type = $context['step_type'] ?? '';
+    $modal_type = $context['modal_type'] ?? '';
+
+    // Example AI step configuration
+    if ($step_type === 'ai' && $modal_type === 'ai_config') {
+        return [
+            'content' => '
+                <div class="dm-ai-config-form">
+                    <table class="form-table">
+                        <tbody>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai-step-title">' . esc_html__('Step Title', 'data-machine') . '</label>
+                                </th>
+                                <td>
+                                    <input type="text" id="ai-step-title" name="title" class="regular-text" 
+                                           placeholder="' . esc_attr__('e.g., Content Summarizer', 'data-machine') . '" />
+                                    <p class="description">' . esc_html__('A descriptive name for this AI processing step.', 'data-machine') . '</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai-step-prompt">' . esc_html__('AI Prompt', 'data-machine') . '</label>
+                                </th>
+                                <td>
+                                    <textarea id="ai-step-prompt" name="prompt" rows="6" class="large-text" 
+                                              placeholder="' . esc_attr__('Enter the prompt instructions for the AI...', 'data-machine') . '"></textarea>
+                                    <p class="description">' . esc_html__('The prompt that will be sent to the AI model for processing.', 'data-machine') . '</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai-step-model">' . esc_html__('AI Model', 'data-machine') . '</label>
+                                </th>
+                                <td>
+                                    <select id="ai-step-model" name="model">
+                                        <option value="gpt-4">' . esc_html__('GPT-4 (Recommended)', 'data-machine') . '</option>
+                                        <option value="gpt-3.5-turbo">' . esc_html__('GPT-3.5 Turbo (Faster)', 'data-machine') . '</option>
+                                        <option value="claude-3-sonnet">' . esc_html__('Claude 3 Sonnet', 'data-machine') . '</option>
+                                    </select>
+                                    <p class="description">' . esc_html__('Select the AI model to use for this step.', 'data-machine') . '</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai-step-temperature">' . esc_html__('Temperature', 'data-machine') . '</label>
+                                </th>
+                                <td>
+                                    <input type="number" id="ai-step-temperature" name="temperature" 
+                                           min="0" max="2" step="0.1" value="0.7" class="small-text" />
+                                    <p class="description">' . esc_html__('Controls randomness: 0 = focused, 2 = creative.', 'data-machine') . '</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            ',
+            'show_save_button' => true,
+            'data' => [
+                'step_type' => $step_type,
+                'modal_type' => $modal_type
+            ]
+        ];
+    }
+
+    // Example input/output step configuration 
+    if (in_array($step_type, ['input', 'output']) && $modal_type === 'handler_config') {
+        $step_label = $step_type === 'input' ? __('Input', 'data-machine') : __('Output', 'data-machine');
+        
+        return [
+            'content' => '
+                <div class="dm-handler-config-form">
+                    <table class="form-table">
+                        <tbody>
+                            <tr>
+                                <th scope="row">
+                                    <label for="handler-type">' . sprintf(esc_html__('%s Handler', 'data-machine'), $step_label) . '</label>
+                                </th>
+                                <td>
+                                    <select id="handler-type" name="handler">
+                                        <option value="">' . esc_html__('Select handler...', 'data-machine') . '</option>
+                                        ' . ($step_type === 'input' ? '
+                                        <option value="files">' . esc_html__('File Upload', 'data-machine') . '</option>
+                                        <option value="rss">' . esc_html__('RSS Feed', 'data-machine') . '</option>
+                                        <option value="twitter">' . esc_html__('Twitter', 'data-machine') . '</option>
+                                        ' : '
+                                        <option value="wordpress">' . esc_html__('WordPress Posts', 'data-machine') . '</option>
+                                        <option value="twitter">' . esc_html__('Twitter', 'data-machine') . '</option>
+                                        <option value="email">' . esc_html__('Email', 'data-machine') . '</option>
+                                        ') . '
+                                    </select>
+                                    <p class="description">' . sprintf(esc_html__('Choose how data will be %s.', 'data-machine'), $step_type === 'input' ? 'collected' : 'output') . '</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="handler-config">' . esc_html__('Configuration', 'data-machine') . '</label>
+                                </th>
+                                <td>
+                                    <textarea id="handler-config" name="config" rows="4" class="large-text" 
+                                              placeholder="' . esc_attr__('Handler-specific configuration will appear here...', 'data-machine') . '"></textarea>
+                                    <p class="description">' . esc_html__('Configuration options will depend on the selected handler.', 'data-machine') . '</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            ',
+            'show_save_button' => true,
+            'data' => [
+                'step_type' => $step_type,
+                'modal_type' => $modal_type
+            ]
+        ];
+    }
+
+    return $content; // Return original if no match
 }
 
 

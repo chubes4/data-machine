@@ -155,9 +155,7 @@ class ListTable extends \WP_List_Table {
                 // Convert from GMT to local time by adding timezone offset
                 $timezone_offset = current_time('timestamp') - current_time('timestamp', true);
                 $adjusted_timestamp = $stored_timestamp + $timezone_offset;
-                error_log(sprintf('DM Sync Time - Detected GMT storage, adjusting: %s -> %s (offset: %d)',
-                    date('Y-m-d H:i:s', $stored_timestamp), date('Y-m-d H:i:s', $adjusted_timestamp), $timezone_offset
-                ));
+                // Debug: GMT storage detected, adjusting timestamp
                 $timestamp = $adjusted_timestamp;
             } else {
                 // Use stored timestamp as-is (local time storage)
@@ -218,7 +216,11 @@ class ListTable extends \WP_List_Table {
         $delete_link = sprintf(
             '<a href="%s" class="button button-link-delete button-small" style="color: #d63638;" onclick="return confirm(\'%s\')">%s</a>',
             esc_url($delete_url),
-            esc_js(sprintf(__('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine'), $item->location_name)),
+            esc_js(sprintf(
+                /* translators: %s: location name */
+                __('Are you sure you want to delete the location "%s"? This cannot be undone.', 'data-machine'), 
+                $item->location_name
+            )),
             __('Delete', 'data-machine')
         );
 
