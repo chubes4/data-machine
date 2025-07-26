@@ -186,7 +186,7 @@ class AI_HTTP_ProviderManager_Component {
                             $component_config,
                             $current_values
                         );
-                        echo $component_html;
+                        echo wp_kses_post($component_html);
                         // Debug: Add a comment to verify component rendering
                         echo '<!-- Component ' . esc_html($component_name) . ' rendered successfully -->';
                     } catch (Exception $e) {
@@ -208,12 +208,12 @@ class AI_HTTP_ProviderManager_Component {
                     }
                     
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
                             $component_name,
                             $unique_id,
                             $component_config,
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -232,12 +232,12 @@ class AI_HTTP_ProviderManager_Component {
                     }
                     
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
                             $component_name,
                             $unique_id,
                             $component_config,
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering custom component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -262,12 +262,12 @@ class AI_HTTP_ProviderManager_Component {
                     <?php
                     // Render TestConnection component
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
                             'test_connection',
                             $unique_id,
                             [],
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering test connection component: ' . esc_html($e->getMessage()) . ' -->';
                     }

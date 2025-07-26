@@ -39,7 +39,7 @@ class AI_HTTP_Unified_Tool_Results_Normalizer {
                 return $this->normalize_openrouter_continuation($tool_results, $context_data);
             
             default:
-                throw new Exception("Tool continuation not supported for provider: {$provider_name}");
+                throw new Exception('Tool continuation not supported for specified provider');
         }
     }
 

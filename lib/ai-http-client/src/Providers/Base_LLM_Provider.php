@@ -126,7 +126,7 @@ class Base_LLM_Provider {
                 if ($callback && is_callable($callback)) {
                     call_user_func($callback, $data);
                 } else {
-                    echo $data;
+                    echo esc_html($data);
                     flush();
                 }
                 return strlen($data);
@@ -142,12 +142,12 @@ class Base_LLM_Provider {
 
         if ($result === false) {
             $provider_name = $this->get_provider_name();
-            throw new Exception($provider_name . ' streaming request failed: ' . $error);
+            throw new Exception('Streaming request failed');
         }
 
         if ($http_code !== 200) {
             $provider_name = $this->get_provider_name();
-            throw new Exception($provider_name . ' streaming request failed with HTTP ' . $http_code);
+            throw new Exception('Streaming request failed with HTTP error');
         }
 
         return '';
@@ -174,7 +174,7 @@ class Base_LLM_Provider {
 
         if (is_wp_error($response)) {
             $provider_name = $this->get_provider_name();
-            throw new Exception($provider_name . ' API request failed: ' . $response->get_error_message());
+            throw new Exception('API request failed');
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -200,7 +200,7 @@ class Base_LLM_Provider {
 
         if (is_wp_error($response)) {
             $provider_name = $this->get_provider_name();
-            throw new Exception($provider_name . ' API request failed: ' . $response->get_error_message());
+            throw new Exception('API request failed');
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -226,12 +226,12 @@ class Base_LLM_Provider {
             if (isset($decoded_response['error']['message'])) {
                 $error_message .= ': ' . $decoded_response['error']['message'];
             }
-            throw new Exception($error_message);
+            throw new Exception('API returned error response');
         }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             $provider_name = $this->get_provider_name();
-            throw new Exception('Invalid JSON response from ' . $provider_name . ' API');
+            throw new Exception('Invalid JSON response from API');
         }
 
         return $decoded_response;

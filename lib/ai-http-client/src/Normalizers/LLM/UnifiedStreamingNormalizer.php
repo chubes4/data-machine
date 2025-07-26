@@ -38,7 +38,7 @@ class AI_HTTP_Unified_Streaming_Normalizer {
                 return $this->normalize_openrouter_streaming_request($standard_request);
             
             default:
-                throw new Exception("Streaming not supported for provider: {$provider_name}");
+                throw new Exception('Streaming not supported for specified provider');
         }
     }
 

@@ -55,7 +55,7 @@ class AI_HTTP_Unified_Model_Fetcher {
                 return self::fetch_openrouter_models($provider_config);
             
             default:
-                throw new Exception("Unsupported provider for model fetching: {$provider_name}");
+                throw new Exception('Unsupported provider for model fetching');
         }
     }
 

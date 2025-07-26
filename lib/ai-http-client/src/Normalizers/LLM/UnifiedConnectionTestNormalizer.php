@@ -38,7 +38,7 @@ class AI_HTTP_Unified_Connection_Test_Normalizer {
                 return $this->create_openrouter_test_request($config);
             
             default:
-                throw new Exception("Connection test not supported for provider: {$provider_name}");
+                throw new Exception('Connection test not supported for specified provider');
         }
     }
 

@@ -193,7 +193,7 @@ class AI_HTTP_WordPressSSEHandler {
                 break;
 
             default:
-                throw new Exception('Unsupported AI provider: ' . $provider_name);
+                throw new Exception('Unsupported AI provider specified');
         }
 
         // Cache the instance
@@ -249,12 +249,12 @@ class AI_HTTP_WordPressSSEHandler {
 
         // Handle CURL errors
         if ($result === false || !empty($error)) {
-            throw new Exception('Streaming request failed: ' . $error);
+            throw new Exception('Streaming request failed');
         }
 
         // Handle HTTP errors
         if ($http_code !== 200) {
-            throw new Exception('Streaming request failed with HTTP ' . $http_code);
+            throw new Exception('Streaming request failed with HTTP error');
         }
 
         // Send completion event
@@ -452,7 +452,7 @@ class AI_HTTP_WordPressSSEHandler {
      * Send SSE event to client
      */
     private function send_sse_event($event_type, $data) {
-        echo "event: " . $event_type . "\n";
+        echo 'event: ' . esc_html($event_type) . "\n";
         echo "data: " . wp_json_encode($data) . "\n\n";
         flush();
     }

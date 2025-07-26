@@ -37,16 +37,16 @@ class AI_HTTP_File_Upload_Client {
         }
 
         if (!file_exists($file_path)) {
-            throw new Exception('File not found: ' . $file_path);
+            throw new Exception('File not found');
         }
 
         if (!is_readable($file_path)) {
-            throw new Exception('File not readable: ' . $file_path);
+            throw new Exception('File not readable');
         }
 
         $file_size = filesize($file_path);
         if ($file_size === false) {
-            throw new Exception('Could not determine file size: ' . $file_path);
+            throw new Exception('Could not determine file size');
         }
 
         // Convert headers array to cURL format
@@ -87,16 +87,16 @@ class AI_HTTP_File_Upload_Client {
         curl_close($ch);
 
         if ($response === false) {
-            throw new Exception('cURL file upload error: ' . $error);
+            throw new Exception('File upload error occurred');
         }
 
         if ($http_code >= 400) {
-            throw new Exception("HTTP {$http_code} file upload error: " . $response);
+            throw new Exception('HTTP file upload error occurred');
         }
 
         $decoded_response = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid JSON response from file upload: ' . $response);
+            throw new Exception('Invalid JSON response from file upload');
         }
 
         return $decoded_response;
@@ -118,7 +118,7 @@ class AI_HTTP_File_Upload_Client {
         $file_path = get_attached_file($attachment_id);
         
         if (!$file_path) {
-            throw new Exception('Attachment not found: ' . $attachment_id);
+            throw new Exception('Attachment not found');
         }
 
         return self::upload_file($file_path, $upload_url, $headers, $purpose, $timeout);
@@ -176,12 +176,12 @@ class AI_HTTP_File_Upload_Client {
      */
     public static function encode_file_base64($file_path) {
         if (!file_exists($file_path)) {
-            throw new Exception('File not found: ' . $file_path);
+            throw new Exception('File not found');
         }
 
         $content = file_get_contents($file_path);
         if ($content === false) {
-            throw new Exception('Could not read file: ' . $file_path);
+            throw new Exception('Could not read file');
         }
 
         $mime_type = self::get_mime_type($file_path);

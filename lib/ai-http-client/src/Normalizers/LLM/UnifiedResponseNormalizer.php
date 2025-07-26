@@ -46,7 +46,7 @@ class AI_HTTP_Unified_Response_Normalizer {
                 return $this->normalize_from_openrouter($provider_response);
             
             default:
-                throw new Exception("Unsupported provider: {$provider_name}");
+                throw new Exception('Unsupported provider specified');
         }
     }
 

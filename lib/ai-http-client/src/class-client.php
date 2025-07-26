@@ -122,7 +122,7 @@ class AI_HTTP_Client {
                 break;
                 
             default:
-                throw new Exception('Unsupported ai_type: ' . $this->ai_type);
+                throw new Exception('Unsupported ai_type specified');
         }
     }
 
@@ -191,7 +191,7 @@ class AI_HTTP_Client {
     public function send_streaming_request($request, $provider_name = null, $completion_callback = null) {
         // Check if streaming is supported for this AI type
         if ($this->streaming_normalizer === null) {
-            throw new Exception('Streaming is not supported for ai_type: ' . $this->ai_type);
+            throw new Exception('Streaming is not supported for specified ai_type');
         }
         
         // Return early if client is not properly configured
@@ -228,13 +228,13 @@ class AI_HTTP_Client {
             return $provider->send_raw_streaming_request($streaming_request, function($chunk) use ($provider_name) {
                 $processed = $this->streaming_normalizer->process_streaming_chunk($chunk, $provider_name);
                 if ($processed && isset($processed['content'])) {
-                    echo $processed['content'];
+                    echo esc_html($processed['content']);
                     flush();
                 }
             });
             
         } catch (Exception $e) {
-            throw new Exception("Streaming failed for {$provider_name}: " . $e->getMessage());
+            throw new Exception('Streaming request failed');
         }
     }
 
@@ -251,7 +251,7 @@ class AI_HTTP_Client {
     public function continue_with_tool_results($context_data, $tool_results, $provider_name = null, $completion_callback = null) {
         // Check if tool results are supported for this AI type
         if ($this->tool_results_normalizer === null) {
-            throw new Exception('Tool results are not supported for ai_type: ' . $this->ai_type);
+            throw new Exception('Tool results are not supported for specified ai_type');
         }
         
         // Get provider from options if not specified
@@ -288,7 +288,7 @@ class AI_HTTP_Client {
             }
             
         } catch (Exception $e) {
-            throw new Exception("Tool continuation failed for {$provider_name}: " . $e->getMessage());
+            throw new Exception('Tool continuation request failed');
         }
     }
 
@@ -397,7 +397,7 @@ class AI_HTTP_Client {
                 break;
                 
             default:
-                throw new Exception("Unsupported ai_type: {$this->ai_type}");
+                throw new Exception('Unsupported ai_type for provider creation');
         }
         
         return $this->providers[$provider_name];
@@ -429,7 +429,7 @@ class AI_HTTP_Client {
                 return new AI_HTTP_OpenRouter_Provider($provider_config);
             
             default:
-                throw new Exception("LLM provider '{$provider_name}' not supported");
+                throw new Exception('LLM provider not supported');
         }
     }
 
@@ -448,7 +448,7 @@ class AI_HTTP_Client {
                 return new AI_HTTP_Upsampler_Provider($provider_config);
             
             default:
-                throw new Exception("Upscaling provider '{$provider_name}' not supported");
+                throw new Exception('Upscaling provider not supported');
         }
     }
 
@@ -467,7 +467,7 @@ class AI_HTTP_Client {
                 return new AI_HTTP_StableDiffusion_Provider($provider_config);
             
             default:
-                throw new Exception("Generative provider '{$provider_name}' not supported");
+                throw new Exception('Generative provider not supported');
         }
     }
 
