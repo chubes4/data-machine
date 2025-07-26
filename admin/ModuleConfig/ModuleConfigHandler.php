@@ -50,18 +50,18 @@ class ModuleConfigHandler {
         // The action name here corresponds to the form's _wpnonce_... field name
         check_admin_referer( 'dm_save_module_settings_action', '_wpnonce_dm_save_module' );
         if ( ! current_user_can( 'manage_options' ) ) { // Or appropriate capability check
-            wp_die( __( 'Permission denied.', 'data-machine' ) );
+            wp_die( esc_html__( 'Permission denied.', 'data-machine' ) );
         }
 
         $user_id = get_current_user_id();
 
         // --- Get Submitted Data ---
         // Get values from the hidden fields synced by JS
-        $submitted_module_id_hidden = isset($_POST['module_id']) ? sanitize_text_field($_POST['module_id']) : null;
+        $submitted_module_id_hidden = isset($_POST['module_id']) ? sanitize_text_field(wp_unslash($_POST['module_id'])) : null;
         $submitted_project_id_hidden = isset($_POST['project_id']) ? absint($_POST['project_id']) : 0;
 
         // Check the module select field specifically for 'new'
-        $module_select_value = isset($_POST['current_module']) ? sanitize_text_field($_POST['current_module']) : null;
+        $module_select_value = isset($_POST['current_module']) ? sanitize_text_field(wp_unslash($_POST['current_module'])) : null;
 
         // Determine the final module ID: prioritize 'new' from select, otherwise use hidden field
         if ($module_select_value === 'new') {
@@ -81,15 +81,15 @@ class ModuleConfigHandler {
         $project_id = $submitted_project_id_hidden;
 
         // Get other fields
-        $module_name = isset($_POST['module_name']) ? sanitize_text_field($_POST['module_name']) : '';
+        $module_name = isset($_POST['module_name']) ? sanitize_text_field(wp_unslash($_POST['module_name'])) : '';
         
         // Process dynamic prompt fields from pipeline steps
         $prompt_data = $this->process_dynamic_prompt_fields($_POST);
         // Get types from hidden fields (synced by JS)
         $data_source_type_slug = isset($_POST['data_source_type']) ? sanitize_key($_POST['data_source_type']) : 'files';
         $output_type_slug = isset($_POST['output_type']) ? sanitize_key($_POST['output_type']) : 'publish_local';
-        $submitted_ds_config_all = $_POST['data_source_config'] ?? [];
-        $submitted_output_config_all = $_POST['output_config'] ?? [];
+        $submitted_ds_config_all = isset($_POST['data_source_config']) ? wp_unslash($_POST['data_source_config']) : [];
+        $submitted_output_config_all = isset($_POST['output_config']) ? wp_unslash($_POST['output_config']) : [];
 
 
         // --- Validate required fields ---
@@ -103,7 +103,7 @@ class ModuleConfigHandler {
         
         // Check if module ID is missing (null or empty string, but allow 'new')
         if ( is_null($submitted_module_id) || ($submitted_module_id !== 'new' && $submitted_module_id <= 0) ) {
-            $logger->error('[Module Config Save] Error: Missing or invalid module ID.', ['raw_module_id' => $_POST['module_id'] ?? 'not_set', 'raw_current_module' => $_POST['current_module'] ?? 'not_set']);
+            $logger->error('[Module Config Save] Error: Missing or invalid module ID.', ['raw_module_id' => isset($_POST['module_id']) ? sanitize_text_field(wp_unslash($_POST['module_id'])) : 'not_set', 'raw_current_module' => isset($_POST['current_module']) ? sanitize_text_field(wp_unslash($_POST['current_module'])) : 'not_set']);
             $logger->add_admin_error(__('Module ID is missing or invalid.', 'data-machine'));
             $this->redirect_after_save('error', null, $project_id); // Redirect even on error
             return;
@@ -449,10 +449,10 @@ class ModuleConfigHandler {
                     }
                 } catch (\InvalidArgumentException $e) {
                     // Validation error - re-throw with additional context for main handler
-                    $logger->error("{$log_prefix} Validation error in {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
-                    throw new \InvalidArgumentException($e->getMessage(), 0, $e);
+                    $logger->error("{$log_prefix} Validation error in {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => esc_html($e->getMessage())]);
+                    throw new \InvalidArgumentException('Validation error occurred');
                 } catch (\Exception $e) {
-                    $logger->error("{$log_prefix} Error getting/sanitizing {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => $e->getMessage()]);
+                    $logger->error("{$log_prefix} Error getting/sanitizing {$config_type} handler.", ['slug' => $handler_type_slug, 'error' => esc_html($e->getMessage())]);
                     // Keep $sanitized_config_selected as []
                 }
             } else {
