@@ -30,8 +30,21 @@ class Twitter {
      * Constructor - parameter-less for pure filter-based architecture
      */
     public function __construct() {
-        // Initialize authentication handler
-        $this->auth = new TwitterAuth();
+        // No dependencies initialized in constructor for pure filter-based architecture
+    }
+
+    /**
+     * Get Twitter auth handler via filter system.
+     * 
+     * @return TwitterAuth
+     * @throws \Exception If auth service not available
+     */
+    private function get_auth() {
+        $auth = apply_filters('dm_get_twitter_auth', null);
+        if (!$auth) {
+            throw new \Exception(esc_html__('Twitter auth service not available. This indicates a core filter registration issue.', 'data-machine'));
+        }
+        return $auth;
     }
 
     /**
@@ -90,7 +103,8 @@ class Twitter {
         }
 
         // 3. Get authenticated connection using TwitterAuth
-        $connection = $this->auth->get_connection($user_id);
+        $auth = $this->get_auth();
+        $connection = $auth->get_connection($user_id);
 
         // 4. Handle connection errors
         if (is_wp_error($connection)) {

@@ -32,8 +32,21 @@ class Facebook {
      * Constructor - parameter-less for pure filter-based architecture
      */
     public function __construct() {
-        // Initialize authentication handler
-        $this->auth = new FacebookAuth();
+        // No dependencies initialized in constructor for pure filter-based architecture
+    }
+
+    /**
+     * Get Facebook auth handler via filter system.
+     * 
+     * @return FacebookAuth
+     * @throws \Exception If auth service not available
+     */
+    private function get_auth() {
+        $auth = apply_filters('dm_get_facebook_auth', null);
+        if (!$auth) {
+            throw new \Exception(esc_html__('Facebook auth service not available. This indicates a core filter registration issue.', 'data-machine'));
+        }
+        return $auth;
     }
 
     /**
@@ -96,8 +109,9 @@ class Facebook {
         }
 
         // 3. Get authenticated Page credentials using FacebookAuth
-        $page_id = $this->auth->get_page_id($user_id);
-        $page_access_token = $this->auth->get_page_access_token($user_id);
+        $auth = $this->get_auth();
+        $page_id = $auth->get_page_id($user_id);
+        $page_access_token = $auth->get_page_access_token($user_id);
 
         if (empty($page_id) || empty($page_access_token)) {
             $logger && $logger->error('Facebook Output: Failed to get Page ID or Page Access Token.', [

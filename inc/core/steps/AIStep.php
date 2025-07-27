@@ -72,7 +72,10 @@ class AIStep extends BasePipelineStep {
             // Use FluidContextBridge for enhanced AI request
             $context_bridge = apply_filters('dm_get_fluid_context_bridge', null);
             $aggregated_context = $context_bridge->aggregate_pipeline_context($all_packets);
-            $enhanced_request = $context_bridge->build_ai_request($aggregated_context, $step_config);
+            
+            // Get project ID for including project prompts in AI request
+            $project_id = $this->get_project_id_from_job($job);
+            $enhanced_request = $context_bridge->build_ai_request($aggregated_context, $step_config, $project_id);
             
             if (empty($enhanced_request['messages'])) {
                 return $this->fail_job($job_id, 'Failed to build enhanced AI request from fluid context');
@@ -83,40 +86,45 @@ class AIStep extends BasePipelineStep {
             // Use the most recent packet as the primary input for output processing
             $input_packet = end($all_packets);
 
-            // Get step-specific AI configuration
-            $ai_config_service = apply_filters('dm_get_ai_step_config_service', null);
+            // Get step-specific AI configuration using direct database access
             $step_ai_config = null;
-            if ($ai_config_service) {
-                $db_jobs = apply_filters('dm_get_db_jobs', null);
-                $job = $db_jobs->get_job($job_id);
-                $project_id = $this->get_project_id_from_job($job);
-                if ($project_id) {
-                    // Get step position from job or step configuration
-                    $step_position = $this->get_step_position_from_job($job_id);
-                    if ($step_position !== null) {
-                        $step_ai_config = $ai_config_service->get_step_ai_config($project_id, $step_position);
-                        
-                        // Check if AI processing is disabled for this step
-                        if (isset($step_ai_config['enabled']) && !$step_ai_config['enabled']) {
-                            $logger->info('AI Step: Processing disabled for this step, passing data through', [
-                                'job_id' => $job_id,
-                                'project_id' => $project_id,
-                                'step_position' => $step_position
-                            ]);
-                            
-                            // Pass through the most recent DataPacket unchanged
-                            $success = $this->store_step_data_packet($job_id, $input_packet);
-                            return $success;
-                        }
-                        
-                        $logger->info('AI Step: Using step-specific AI configuration', [
+            $db_jobs = apply_filters('dm_get_db_jobs', null);
+            $job = $db_jobs->get_job($job_id);
+            $project_id = $this->get_project_id_from_job($job);
+            if ($project_id) {
+                // Get step position from job or step configuration
+                $step_position = $this->get_step_position_from_job($job_id);
+                if ($step_position !== null) {
+                    // Direct WordPress options access for AI step configuration
+                    $ai_option_key = "dm_ai_step_config_{$project_id}_{$step_position}";
+                    $step_ai_config = get_option($ai_option_key, [
+                        'provider' => '',
+                        'model' => '',
+                        'temperature' => 0.7,
+                        'max_tokens' => 2000,
+                        'enabled' => true
+                    ]);
+                    
+                    // Check if AI processing is disabled for this step
+                    if (isset($step_ai_config['enabled']) && !$step_ai_config['enabled']) {
+                        $logger->info('AI Step: Processing disabled for this step, passing data through', [
                             'job_id' => $job_id,
                             'project_id' => $project_id,
-                            'step_position' => $step_position,
-                            'provider' => $step_ai_config['provider'] ?? 'default',
-                            'model' => $step_ai_config['model'] ?? 'default'
+                            'step_position' => $step_position
                         ]);
+                        
+                        // Pass through the most recent DataPacket unchanged
+                        $success = $this->store_step_data_packet($job_id, $input_packet);
+                        return $success;
                     }
+                    
+                    $logger->info('AI Step: Using step-specific AI configuration', [
+                        'job_id' => $job_id,
+                        'project_id' => $project_id,
+                        'step_position' => $step_position,
+                        'provider' => $step_ai_config['provider'] ?? 'default',
+                        'model' => $step_ai_config['model'] ?? 'default'
+                    ]);
                 }
             }
 
@@ -196,9 +204,8 @@ class AIStep extends BasePipelineStep {
      * @return array|null Step configuration or null if not found
      */
     private function get_step_configuration(int $job_id, string $step_name): ?array {
-        // Get configuration from project pipeline config service
-        $project_pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        $project_prompts_service = apply_filters('dm_get_project_prompts_service', null);
+        // Get configuration from direct database access
+        $db_projects = apply_filters('dm_get_db_projects', null);
         $db_jobs = apply_filters('dm_get_db_jobs', null);
 
         // Get job to find project context
@@ -208,13 +215,11 @@ class AIStep extends BasePipelineStep {
         }
 
         // Try to get step configuration from project
-        if ($project_pipeline_service && $project_prompts_service) {
-            $project_id = $this->get_project_id_from_job($job);
-            if ($project_id) {
-                $step_prompts = $project_prompts_service->get_project_step_prompts($project_id, $step_name);
-                if (!empty($step_prompts)) {
-                    return $step_prompts;
-                }
+        $project_id = $this->get_project_id_from_job($job);
+        if ($project_id) {
+            $step_prompts = apply_filters('dm_get_project_prompt', null, $project_id);
+            if (!empty($step_prompts) && isset($step_prompts[$step_name])) {
+                return $step_prompts[$step_name];
             }
         }
 
@@ -269,13 +274,14 @@ class AIStep extends BasePipelineStep {
         // Fallback: Try to determine from pipeline configuration
         $project_id = $this->get_project_id_from_job($job);
         if ($project_id) {
-            $pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-            if ($pipeline_service) {
-                $pipeline_steps = $pipeline_service->get_project_pipeline_steps($project_id, get_current_user_id());
-                if (!empty($pipeline_steps['steps'])) {
+            $db_projects = apply_filters('dm_get_db_projects', null);
+            if ($db_projects) {
+                $config = $db_projects->get_project_pipeline_configuration($project_id);
+                $pipeline_steps = isset($config['steps']) ? $config['steps'] : [];
+                if (!empty($pipeline_steps)) {
                     // Find the AI step position
                     $ai_step_count = 0;
-                    foreach ($pipeline_steps['steps'] as $index => $step) {
+                    foreach ($pipeline_steps as $index => $step) {
                         if ($step['type'] === 'ai') {
                             if ($ai_step_count === 0) {
                                 // This is likely our step - return its position

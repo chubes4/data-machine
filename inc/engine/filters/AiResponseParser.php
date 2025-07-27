@@ -49,12 +49,26 @@ class AiResponseParser {
     private $parsed = false;
 
     /**
-     * Constructor.
+     * Parameter-less constructor for pure filter-based architecture.
+     * Data is set via set_raw_output() method.
+     */
+    public function __construct() {
+        // Parameter-less constructor - data provided via methods
+    }
+    
+    /**
+     * Set the raw AI output string for parsing.
      *
      * @param string $ai_output_string The raw text output from the AI.
+     * @return self For method chaining.
      */
-    public function __construct( $ai_output_string ) {
+    public function set_raw_output( $ai_output_string ) {
         $this->raw_output = $ai_output_string;
+        $this->parsed = false; // Reset parsing state
+        $this->content = null;
+        $this->directives = [];
+        $this->custom_taxonomies = [];
+        return $this;
     }
 
     /**
@@ -63,6 +77,13 @@ class AiResponseParser {
      */
     public function parse() {
         if ($this->parsed) {
+            return;
+        }
+        
+        // Ensure raw_output is set before parsing
+        if (empty($this->raw_output)) {
+            $this->content = '';
+            $this->parsed = true;
             return;
         }
 

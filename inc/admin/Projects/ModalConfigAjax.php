@@ -96,7 +96,7 @@ class ModalConfigAjax {
 
         try {
             // Get logger service
-            $logger = apply_filters( 'dm_get_service', null, 'logger' );
+            $logger = apply_filters( 'dm_get_logger', null );
 
             // Prepare context for content providers
             $context = array(
@@ -205,7 +205,7 @@ class ModalConfigAjax {
 
         try {
             // Get logger service
-            $logger = apply_filters( 'dm_get_service', null, 'logger' );
+            $logger = apply_filters( 'dm_get_logger', null );
 
             // Prepare context for save handlers
             $context = array(

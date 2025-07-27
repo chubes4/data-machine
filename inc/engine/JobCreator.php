@@ -33,7 +33,7 @@ class JobCreator {
      * Create and schedule a job for the async pipeline.
      *
      * This is the single entry point for all job creation, regardless of source.
-     * Always schedules dm_input_job_event to start the async pipeline.
+     * Always schedules dm_step_position_0_job_event to start the async pipeline.
      *
      * @param array       $module Module configuration array.
      * @param int         $user_id User ID creating the job.
@@ -93,10 +93,10 @@ class JobCreator {
                 ];
             }
 
-            // Schedule Step 1: Input Processing (starts async pipeline)
+            // Schedule Step 1: Input Processing (starts async pipeline at position 0)
             $action_id = as_schedule_single_action(
                 time() + 1, // Start immediately
-                'dm_input_job_event',
+                'dm_step_position_0_job_event',
                 ['job_id' => $job_id],
                 \DataMachine\Core\Constants::ACTION_GROUP
             );

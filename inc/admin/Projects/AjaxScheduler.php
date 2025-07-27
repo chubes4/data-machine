@@ -195,7 +195,7 @@ class AjaxScheduler {
         }
 
         // 5. Get Modules Data
-        $modules = $this->db_modules->get_modules_for_project( $project_id, $user_id );
+        $modules = $this->db_modules->get_modules_for_project( $project_id );
         if ($modules === null) { // Check for null specifically, empty array is okay
              wp_send_json_error( 'Could not retrieve modules for project.', 500 );
         }

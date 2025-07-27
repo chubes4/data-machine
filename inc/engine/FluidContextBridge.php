@@ -86,9 +86,10 @@ class FluidContextBridge {
      * 
      * @param array $aggregated_context Context from aggregate_pipeline_context()
      * @param array $ai_step_config AI step configuration from Data Machine
+     * @param int|null $project_id Project ID for including project-level prompts
      * @return array Enhanced request ready for ai-http-client->send_request()
      */
-    public function build_ai_request(array $aggregated_context, array $ai_step_config): array {
+    public function build_ai_request(array $aggregated_context, array $ai_step_config, ?int $project_id = null): array {
         $logger = apply_filters('dm_get_logger', null);
 
         // Extract base configuration
@@ -106,6 +107,18 @@ class FluidContextBridge {
 
         // Build enhanced context for ai-http-client
         $context_data = $this->prepare_context_data($aggregated_context);
+        
+        // Include project prompts if project_id is provided
+        if ($project_id) {
+            $project_prompts = apply_filters('dm_get_project_prompt', null, $project_id);
+            if (!empty($project_prompts)) {
+                $context_data['project_prompts'] = $project_prompts;
+                $logger->debug('FluidContextBridge: Included project prompts in context', [
+                    'project_id' => $project_id,
+                    'prompt_steps' => array_keys($project_prompts)
+                ]);
+            }
+        }
 
         // Use ai-http-client's PromptManager for enhanced prompt building if available
         if (class_exists('AI_HTTP_Prompt_Manager')) {

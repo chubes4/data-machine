@@ -14,7 +14,6 @@ namespace DataMachine\Admin;
 use DataMachine\Database\{Modules, Projects};
 use DataMachine\Core\Constants;
 use DataMachine\Helpers\Logger;
-use DataMachine\Admin\ModuleConfig\SettingsFields;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -60,12 +59,6 @@ class AdminPage {
     private $logger;
 
 
-    /**
-     * Settings Fields service instance.
-     * @var \DataMachine\Admin\ModuleConfig\SettingsFields
-     * @since NEXT_VERSION
-     */
-    private $settings_fields;
 
 
     /**
@@ -75,12 +68,6 @@ class AdminPage {
      */
     private $remote_locations_admin;
 
-    /**
-     * Module Config Handler instance.
-     * @var \DataMachine\Admin\ModuleConfig\ModuleConfigHandler
-     * @since NEXT_VERSION
-     */
-    private $module_config_handler;
 
     /**
      * Initialize the class and set its properties.
@@ -92,11 +79,7 @@ class AdminPage {
         $this->db_modules = apply_filters('dm_get_db_modules', null);
         $this->db_projects = apply_filters('dm_get_db_projects', null);
         $this->logger = apply_filters('dm_get_logger', null);
-        $this->settings_fields = apply_filters('dm_get_settings_fields', null);
         $this->remote_locations_admin = apply_filters('dm_get_remote_locations_admin', null);
-        // Instantiate the module config handler using filter-based service access
-        require_once plugin_dir_path(__FILE__) . 'ModuleConfig/ModuleConfigHandler.php';
-        $this->module_config_handler = apply_filters('dm_get_module_config_handler', null);
         // Hook for project management page (if any form processing is needed in future)
         add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_management_page' ) );
         // Hook for API keys page (if any form processing is needed in future)
@@ -116,26 +99,11 @@ class AdminPage {
 
 
     /**
-     * Display the settings page content by including the template file.
+     * Module configuration is now handled through the project management interface.
+     * 
+     * @deprecated Removed in favor of project-based pipeline configuration
      */
-    public function display_settings_page() {
-        // Dependencies
-        $db_projects = $this->db_projects;
-        $db_modules = $this->db_modules;
-
-        // Get handler lists
-        $input_handlers = Constants::get_input_handlers();
-        $output_handlers = Constants::get_output_handlers();
-
-        // Get available projects for the current user
-        $user_id = get_current_user_id();
-        $projects = $db_projects ? $db_projects->get_projects_for_user($user_id) : [];
-
-        // All fetched variables ($db_projects, $db_modules,
-        // $input_handlers, $output_handlers, $projects, $user_id)
-        // are available to the included template.
-        include_once plugin_dir_path( __FILE__ ) . 'page-templates/module-config-page.php';
-    }
+    // Method removed - module config page template no longer exists
 
     /**
      * Display the project management page content.

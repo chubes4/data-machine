@@ -7,15 +7,10 @@ use DataMachine\Core\Constants;
 
 // Database classes are provided by caller via dependency injection
 
-// Get current user ID
-$user_id = get_current_user_id();
+// Fetch all projects
+$projects = $db_projects->get_all_projects();
 
-// Fetch projects for the current user
-$projects = $db_projects->get_projects_for_user( $user_id );
-
-// Get pipeline step registry for prompt fields
-$pipeline_registry = apply_filters('dm_get_pipeline_step_registry', null);
-$project_prompts_service = apply_filters('dm_get_project_prompts_service', null);
+// Project prompts are now accessed via dm_get_project_prompt filter
 
 ?>
 <div class="wrap">
@@ -32,26 +27,57 @@ $project_prompts_service = apply_filters('dm_get_project_prompts_service', null)
             <?php foreach ( $projects as $project ) : ?>
                 <?php
                 // Fetch modules for the current project
-                $modules = $db_modules->get_modules_for_project( $project->project_id, $user_id );
+                $modules = $db_modules->get_modules_for_project( $project->project_id );
                 $module_names = [];
-                $has_file_modules = false;
-                $file_modules = [];
+                // All module types are supported through the pipeline system
                 if ( ! empty( $modules ) && is_array( $modules ) ) {
                     foreach ( $modules as $module ) {
                         $module_names[] = esc_html( $module->module_name );
-                        
-                        // Check if this is a file module
-                        if ( isset( $module->data_source_type ) && $module->data_source_type === 'files' ) {
-                            $has_file_modules = true;
-                            $file_modules[] = $module;
-                        }
+                        // File module logic removed - now handled through pipeline system
                     }
                 }
                 $modules_display = ! empty( $module_names ) ? implode( ', ', $module_names ) : 'No modules';
 
-                // Get project step prompts
-                $project_step_prompts = $project_prompts_service ? $project_prompts_service->get_project_step_prompts($project->project_id) : [];
-                $prompt_steps = $pipeline_registry ? $pipeline_registry->get_prompt_steps_in_order() : [];
+                // Get project step prompts using filter system
+                $project_step_prompts = apply_filters('dm_get_project_prompt', null, $project->project_id) ?: [];
+                
+                // Get prompt steps directly from registered step types
+                $registered_step_types = apply_filters('dm_register_step_types', []);
+                $prompt_steps = [];
+                
+                // Build prompt steps from registered step types
+                $execution_order = ['input', 'ai', 'processing', 'output'];
+                foreach ($execution_order as $step_type) {
+                    foreach ($registered_step_types as $step_name => $step_config) {
+                        if (($step_config['type'] ?? '') === $step_type) {
+                            // Check if step has prompt fields
+                            $has_prompt_fields = false;
+                            if (isset($step_config['prompt_fields']) && !empty($step_config['prompt_fields'])) {
+                                $has_prompt_fields = true;
+                            } else {
+                                // Fall back to checking step class method
+                                $step_class = $step_config['class'] ?? null;
+                                if ($step_class && class_exists($step_class) && method_exists($step_class, 'get_prompt_fields')) {
+                                    try {
+                                        $fields = $step_class::get_prompt_fields();
+                                        if (!empty($fields)) {
+                                            $has_prompt_fields = true;
+                                        }
+                                    } catch (\Exception $e) {
+                                        // Ignore errors for display purposes
+                                    }
+                                }
+                            }
+                            
+                            if ($has_prompt_fields) {
+                                $prompt_steps[$step_name] = [
+                                    'step_config' => $step_config,
+                                    'prompt_fields' => $step_config['prompt_fields'] ?? []
+                                ];
+                            }
+                        }
+                    }
+                }
 
                 // Schedule display logic
                 $project_interval = $project->schedule_interval ?? 'manual';
@@ -174,14 +200,9 @@ $project_prompts_service = apply_filters('dm_get_project_prompts_service', null)
                             Edit Schedule
                         </button>
                         
-                        <?php if ( $has_file_modules ) : ?>
-                            <button class="button upload-files-button" 
-                                    data-project-id="<?php echo esc_attr( $project->project_id ); ?>"
-                                    data-file-modules="<?php echo esc_attr( json_encode( array_map( function($m) { return ['id' => $m->module_id, 'name' => $m->module_name]; }, $file_modules ) ) ); ?>"
-                                    style="font-size: 12px; padding: 4px 12px; height: auto;">
-                                Upload Files
-                            </button>
-                        <?php endif; ?>
+                        <?php 
+                        // File handling is integrated into the pipeline system
+                        ?>
                         
                         <?php
                         $export_url = add_query_arg(
@@ -374,66 +395,6 @@ jQuery(document).ready(function($) {
     </div>
 </div>
 
-<!-- File Upload Modal -->
-<div id="dm-upload-files-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
-    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border: 1px solid #ccc; width: 600px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-        <h2>Upload Files</h2>
-        <input type="hidden" id="dm-upload-project-id" value="">
-        <input type="hidden" id="dm-upload-module-id" value="">
-        <p><strong>Project:</strong> <span id="dm-upload-project-name"></span></p>
-        <p><strong>Module:</strong> <span id="dm-upload-module-name"></span></p>
-        
-        <form id="dm-file-upload-form" enctype="multipart/form-data" style="border: 1px solid #ddd; padding: 15px; margin: 15px 0;">
-            <fieldset>
-                <legend>Select Files to Upload</legend>
-                <table class="form-table">
-                    <tbody>
-                        <tr>
-                            <th scope="row">
-                                <label for="dm-file-uploads">Files</label>
-                            </th>
-                            <td>
-                                <input type="file" name="file_uploads[]" id="dm-file-uploads" multiple accept=".txt,.csv,.json,.pdf,.docx,.doc,.jpg,.jpeg,.png,.gif">
-                                <p class="description">
-                                    Select multiple files to upload. Supported types: TXT, CSV, JSON, PDF, DOCX, DOC, JPG, JPEG, PNG, GIF.<br>
-                                    Maximum file size: 100MB per file.
-                                </p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <div id="dm-upload-file-list" style="margin-top: 10px; display: none;">
-                    <strong><?php echo esc_html__('Selected files:', 'data-machine'); ?></strong>
-                    <ul id="dm-upload-selected-files"></ul>
-                </div>
-            </fieldset>
-        </form>
-
-        <div id="dm-upload-progress" style="display: none; margin: 15px 0;">
-            <div style="background: #f1f1f1; border-radius: 3px; padding: 3px;">
-                <div id="dm-upload-progress-bar" style="background: #0073aa; height: 20px; border-radius: 3px; width: 0%; text-align: center; line-height: 20px; color: white; font-size: 12px;"></div>
-            </div>
-            <p id="dm-upload-status"><?php echo esc_html__('Preparing upload...', 'data-machine'); ?></p>
-        </div>
-
-        <div id="dm-upload-results" style="display: none; margin: 15px 0;">
-            <h4><?php echo esc_html__('Upload Results', 'data-machine'); ?></h4>
-            <div id="dm-upload-success-list"></div>
-            <div id="dm-upload-error-list"></div>
-        </div>
-
-        <div id="dm-current-queue-status" style="border: 1px solid #ddd; padding: 10px; margin: 15px 0; background: #f9f9f9;">
-            <h4><?php echo esc_html__('Current Queue Status', 'data-machine'); ?></h4>
-            <p>Loading queue status...</p>
-        </div>
-        
-        <p class="submit">
-            <button type="button" id="dm-upload-start" class="button button-primary">Upload Files</button>
-            <button type="button" id="dm-upload-cancel" class="button">Cancel</button>
-        </p>
-    </div>
-</div>
 
 <!-- Universal Configuration Modal -->
 <div id="dm-config-modal" class="dm-modal" style="display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">

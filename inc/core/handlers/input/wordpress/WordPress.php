@@ -960,7 +960,10 @@ class WordPress {
      */
     private static function get_remote_airdrop_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_db_remote_locations', null) ?? new RemoteLocations();
+        $db_remote_locations = apply_filters('dm_get_db_remote_locations', null);
+        if (!$db_remote_locations) {
+            throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
+        }
         $locations = $db_remote_locations->get_locations_for_current_user();
 
         $options = [0 => __('Select a Remote Location', 'data-machine')];

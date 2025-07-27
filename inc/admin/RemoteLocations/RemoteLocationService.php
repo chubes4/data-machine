@@ -51,19 +51,12 @@ class RemoteLocationService {
      * @since 0.16.0
      */
     public function get_user_locations_for_options(int $user_id): array {
-        if ($user_id <= 0) {
-            // Return an error indication suitable for a dropdown
-            // Using esc_html__ for translation readiness and escaping.
-            return ['' => esc_html__('-- Error: Invalid User ID --', 'data-machine')];
-        }
-
         // Start with the default option, escaped and translatable.
         $options = ['' => esc_html__('-- Select Location --', 'data-machine')];
 
         // Retrieve locations using filter-based service access
-        // It's assumed get_locations_for_user returns an array of objects or empty array/null on failure.
         $db_locations = apply_filters('dm_get_db_remote_locations', null);
-        $locations = $db_locations ? $db_locations->get_locations_for_user($user_id) : [];
+        $locations = $db_locations ? $db_locations->get_all_locations() : [];
 
         // Check if locations were retrieved successfully and is an array
         if (!empty($locations) && is_array($locations)) {
@@ -90,7 +83,7 @@ class RemoteLocationService {
      */
     public function get_user_locations_for_js(int $user_id): array {
         $db_locations = apply_filters('dm_get_db_remote_locations', null);
-        $locations = $db_locations ? $db_locations->get_locations_for_user($user_id) : [];
+        $locations = $db_locations ? $db_locations->get_all_locations() : [];
         $result = [];
         if (!empty($locations) && is_array($locations)) {
             foreach ($locations as $location) {
@@ -105,7 +98,22 @@ class RemoteLocationService {
         return $result;
     }
 
-    // Potential future method:
-    // public function get_all_locations_for_options(): array { ... }
+    /**
+     * Retrieves all remote locations, formatted for JavaScript (AJAX/JS usage).
+     *
+     * @return array Array of objects: [ [ 'location_id' => ..., 'location_name' => ... ], ... ]
+     */
+    public function get_all_locations_for_js(): array {
+        return $this->get_user_locations_for_js(0); // Reuse existing logic
+    }
+
+    /**
+     * Retrieves all remote locations, formatted as options for a select dropdown.
+     *
+     * @return array An associative array suitable for dropdown options [value => label].
+     */
+    public function get_all_locations_for_options(): array {
+        return $this->get_user_locations_for_options(0); // Reuse existing logic
+    }
 
 } // End class RemoteLocationService 

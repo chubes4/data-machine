@@ -38,7 +38,6 @@ class RemoteLocations {
 
         $sql = "CREATE TABLE {$table_name} (
             location_id bigint unsigned NOT NULL auto_increment,
-            user_id bigint unsigned NOT NULL,
             location_name varchar(255) NOT NULL,
             target_site_url varchar(255) NOT NULL,
             target_username varchar(100) NOT NULL,
@@ -50,8 +49,7 @@ class RemoteLocations {
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at datetime NOT NULL,
             PRIMARY KEY  (location_id),
-            KEY idx_user_id (user_id),
-            KEY idx_user_location_name (user_id, location_name(191))
+            KEY idx_location_name (location_name(191))
         ) {$charset_collate};";
 
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
@@ -61,15 +59,14 @@ class RemoteLocations {
     /**
      * Adds a new remote location.
      *
-     * @param int $user_id The ID of the user adding the location.
      * @param array $data Location data: ['location_name', 'target_site_url', 'target_username', 'password'].
      * @return int|false The new location ID on success, false on failure.
      */
-    public function add_location(int $user_id, array $data) {
+    public function add_location(array $data) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
-        if (empty($user_id) || empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username']) || !isset($data['password'])) {
+        if (empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username']) || !isset($data['password'])) {
             return false; // Basic validation
         }
 
@@ -83,7 +80,6 @@ class RemoteLocations {
         $result = $wpdb->insert(
             $table_name,
             array(
-                'user_id' => $user_id,
                 'location_name' => sanitize_text_field($data['location_name']),
                 'target_site_url' => esc_url_raw(untrailingslashit($data['target_site_url'])),
                 'target_username' => sanitize_text_field($data['target_username']),
@@ -91,7 +87,7 @@ class RemoteLocations {
                 'created_at' => current_time('mysql', 1),
                 'updated_at' => current_time('mysql', 1),
             ),
-            array('%d', '%s', '%s', '%s', '%s', '%s', '%s') // Data formats
+            array('%s', '%s', '%s', '%s', '%s', '%s') // Data formats
         );
 
         if ($result === false) {
@@ -106,19 +102,12 @@ class RemoteLocations {
      * Updates an existing remote location.
      *
      * @param int $location_id The ID of the location to update.
-     * @param int $user_id The ID of the user performing the update (for ownership check).
      * @param array $data Data to update. Can include 'location_name', 'target_site_url', 'target_username', 'password'.
-     * @return bool True on success, false on failure or if permission denied.
+     * @return bool True on success, false on failure.
      */
-    public function update_location(int $location_id, int $user_id, array $data) {
+    public function update_location(int $location_id, array $data) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
-
-        // Verify ownership first
-        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
-        if (!$owner_id || (int)$owner_id !== $user_id) {
-            return false; // Permission denied or location not found
-        }
 
         $update_data = array();
         $update_formats = array();
@@ -173,9 +162,9 @@ class RemoteLocations {
         $result = $wpdb->update(
             $table_name,
             $update_data,
-            array('location_id' => $location_id, 'user_id' => $user_id), // WHERE clause
+            array('location_id' => $location_id), // WHERE clause
             $update_formats, // Format of data being updated
-            array('%d', '%d') // Format of WHERE clause
+            array('%d') // Format of WHERE clause
         );
 
         // $wpdb->update returns number of rows affected or false on error.
@@ -186,23 +175,16 @@ class RemoteLocations {
      * Deletes a remote location.
      *
      * @param int $location_id The ID of the location to delete.
-     * @param int $user_id The ID of the user performing the deletion (for ownership check).
-     * @return bool True on success, false on failure or if permission denied.
+     * @return bool True on success, false on failure.
      */
-    public function delete_location(int $location_id, int $user_id) {
+    public function delete_location(int $location_id) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
-        // Optional: Verify ownership before deleting (good practice)
-        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
-        if (!$owner_id || (int)$owner_id !== $user_id) {
-            return false; // Permission denied or location not found
-        }
-
         $result = $wpdb->delete(
             $table_name,
-            array('location_id' => $location_id, 'user_id' => $user_id), // WHERE clause
-            array('%d', '%d') // Format of WHERE clause
+            array('location_id' => $location_id), // WHERE clause
+            array('%d') // Format of WHERE clause
         );
 
         // $wpdb->delete returns number of rows affected or false on error.
@@ -213,29 +195,17 @@ class RemoteLocations {
      * Retrieves a single remote location by ID.
      *
      * @param int $location_id The location ID.
-     * @param int|null $user_id The user ID for ownership check. If null, allows system access.
      * @param bool $decrypt_password Whether to decrypt the password.
-     * @param bool $allow_system_access Whether to allow access without user verification.
-     * @return object|null Location object on success, null if not found or permission denied.
+     * @return object|null Location object on success, null if not found.
      */
-    public function get_location(int $location_id, ?int $user_id, bool $decrypt_password = false, bool $allow_system_access = false): ?object {
+    public function get_location(int $location_id, bool $decrypt_password = false): ?object {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
-        if ($allow_system_access && $user_id === null) {
-            // System access - get location without user verification
-            $location = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM $table_name WHERE location_id = %d",
-                $location_id
-            ));
-        } else {
-            // Normal access - verify user ownership
-            $location = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM $table_name WHERE location_id = %d AND user_id = %d",
-                $location_id,
-                $user_id
-            ));
-        }
+        $location = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE location_id = %d",
+            $location_id
+        ));
 
         if (!$location) {
             return null;
@@ -258,21 +228,19 @@ class RemoteLocations {
     }
 
     /**
-     * Retrieves all remote locations for a specific user.
+     * Retrieves all remote locations.
      * Passwords are NOT included.
      *
-     * @param int $user_id The user ID.
      * @return array Array of location objects.
      */
-    public function get_locations_for_user(int $user_id): array {
+    public function get_all_locations(): array {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
-        $results = $wpdb->get_results($wpdb->prepare(
-            "SELECT location_id, user_id, location_name, target_site_url, target_username, last_sync_time, created_at, updated_at
-             FROM $table_name WHERE user_id = %d ORDER BY location_name ASC",
-            $user_id
-        ));
+        $results = $wpdb->get_results(
+            "SELECT location_id, location_name, target_site_url, target_username, last_sync_time, created_at, updated_at
+             FROM $table_name ORDER BY location_name ASC"
+        );
 
         // Check if results is null (indicates DB error) or empty
         if (is_null($results)) {
@@ -290,32 +258,25 @@ class RemoteLocations {
     }
 
     /**
-     * Retrieves all remote locations for the current user.
+     * Retrieves all remote locations.
      * Convenience method for admin interface.
      *
      * @return array Array of location objects.
      */
     public function get_locations_for_current_user(): array {
-        return $this->get_locations_for_user(get_current_user_id());
+        return $this->get_all_locations();
     }
 
     /**
      * Updates the synced site info and last sync time for a location.
      *
      * @param int $location_id The location ID.
-     * @param int $user_id The user ID for ownership check.
      * @param string|null $site_info_json JSON string of the site info, or null to clear.
      * @return bool True on success, false on failure.
      */
-    public function update_synced_info(int $location_id, int $user_id, ?string $site_info_json): bool {
+    public function update_synced_info(int $location_id, ?string $site_info_json): bool {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_remote_locations';
-
-        // Verify ownership first
-        $owner_id = $wpdb->get_var($wpdb->prepare("SELECT user_id FROM {$wpdb->prefix}dm_remote_locations WHERE location_id = %d", $location_id));
-        if (!$owner_id || (int)$owner_id !== $user_id) {
-            return false; // Permission denied or location not found
-        }
 
         $update_data = array(
             'synced_site_info' => $site_info_json, // Store JSON as string
@@ -327,9 +288,9 @@ class RemoteLocations {
         $result = $wpdb->update(
             $table_name,
             $update_data,
-            array('location_id' => $location_id, 'user_id' => $user_id), // WHERE clause
+            array('location_id' => $location_id), // WHERE clause
             $update_formats,
-            array('%d', '%d') // Format of WHERE clause
+            array('%d') // Format of WHERE clause
         );
 
         return $result !== false;

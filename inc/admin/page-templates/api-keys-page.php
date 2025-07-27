@@ -406,7 +406,7 @@ $reddit_account = get_user_meta(get_current_user_id(), 'data_machine_reddit_acco
     <h3>Twitter Account</h3>
     <div id="twitter-accounts-list">
         <?php
-        $twitter_account = \DataMachine\Admin\OAuth\Twitter::get_account_details(get_current_user_id());
+        $twitter_account = \DataMachine\Core\Handlers\Output\Twitter\TwitterAuth::get_account_details(get_current_user_id());
         if (empty($twitter_account)):
         ?>
             <p><?php echo esc_html__('No Twitter account authenticated yet.', 'data-machine'); ?></p>

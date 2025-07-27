@@ -353,8 +353,8 @@
             $button.prop('disabled', true).text('Uploading...');
             $('#dm-upload-progress').show();
             
-            // Start file upload
-            uploadFilesToQueue(files);
+            // File upload functionality is now handled through the pipeline system
+            alert('File uploads are now handled through the pipeline builder interface. Please configure file inputs using the pipeline system.');
         });
         
         // Upload cancel button handler  
@@ -392,8 +392,7 @@
         // Reset modal state
         resetUploadModal();
         
-        // Load current queue status
-        loadQueueStatus(module.id);
+        // File processing is handled directly through the pipeline system
         
         // Show modal
         $modal.show();
@@ -438,45 +437,9 @@
     }
 
     /**
-     * Load and display queue status for a module.
-     * @param {number} moduleId - Module ID
+     * File status monitoring is now handled through the Jobs interface.
+     * File processing happens directly through the pipeline system.
      */
-    function loadQueueStatus(moduleId) {
-        const $statusDiv = $('#dm-current-queue-status');
-        $statusDiv.html('<h4>Current Queue Status</h4><p>Loading...</p>');
-        
-        $.ajax({
-            url: dm_project_params.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'dm_get_queue_status',
-                nonce: dm_project_params.get_queue_status_nonce,
-                module_id: moduleId
-            },
-            success: function(response) {
-                if (response.success) {
-                    const status = response.data;
-                    $statusDiv.html(`
-                        <h4>Current Queue Status</h4>
-                        <p><strong>Total files:</strong> ${status.total}</p>
-                        <p><strong>Pending:</strong> ${status.pending} | <strong>Processing:</strong> ${status.processing || 0} | <strong>Completed:</strong> ${status.completed || 0}</p>
-                        <p><strong>Status:</strong> ${status.total > 0 ? 'Files ready for processing' : 'Queue is empty - upload files to get started'}</p>
-                    `);
-                } else {
-                    $statusDiv.html(`
-                        <h4>Current Queue Status</h4>
-                        <p style="color: #d63638;">Error loading queue status: ${response.data}</p>
-                    `);
-                }
-            },
-            error: function() {
-                $statusDiv.html(`
-                    <h4>Current Queue Status</h4>
-                    <p style="color: #d63638;">Network error loading queue status.</p>
-                `);
-            }
-        });
-    }
 
     /**
      * Format file size in human readable format.
@@ -492,84 +455,9 @@
     }
 
     /**
-     * Upload files to the queue via AJAX.
-     * @param {FileList} files - Files to upload
+     * File uploads are now handled through the pipeline system.
+     * Users configure file inputs using the pipeline builder interface.
      */
-    function uploadFilesToQueue(files) {
-        const projectId = $('#dm-upload-project-id').val();
-        const moduleId = $('#dm-upload-module-id').val();
-        const $progressBar = $('#dm-upload-progress-bar');
-        const $status = $('#dm-upload-status');
-        const $results = $('#dm-upload-results');
-        const $successList = $('#dm-upload-success-list');
-        const $errorList = $('#dm-upload-error-list');
-        
-        // Prepare form data
-        const formData = new FormData();
-        formData.append('action', 'dm_upload_files_to_queue');
-        formData.append('nonce', dm_project_params.upload_files_nonce); // We'll need to add this nonce
-        formData.append('project_id', projectId);
-        formData.append('module_id', moduleId);
-        
-        // Add all files
-        for (let i = 0; i < files.length; i++) {
-            formData.append('file_uploads[]', files[i]);
-        }
-        
-        $status.text(`Uploading ${files.length} file(s)...`);
-        $progressBar.css('width', '20%').text('20%');
-        
-        $.ajax({
-            url: dm_project_params.ajax_url,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            xhr: function() {
-                const xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener("progress", function(evt) {
-                    if (evt.lengthComputable) {
-                        const percentComplete = Math.round((evt.loaded / evt.total) * 100);
-                        $progressBar.css('width', percentComplete + '%').text(percentComplete + '%');
-                        $status.text(`Uploading... ${percentComplete}%`);
-                    }
-                }, false);
-                return xhr;
-            },
-            success: function(response) {
-                $progressBar.css('width', '100%').text('Complete');
-                
-                if (response.success) {
-                    $status.text('Upload completed successfully!');
-                    $successList.html(`<div class="notice notice-success"><p>${response.data.message}</p></div>`);
-                    
-                    // Reload queue status
-                    loadQueueStatus(moduleId);
-                    
-                    // Reset form
-                    setTimeout(() => {
-                        resetUploadModal();
-                        $('#dm-upload-files-modal').hide();
-                    }, 2000);
-                    
-                } else {
-                    $status.text('Upload failed.');
-                    $errorList.html(`<div class="notice notice-error"><p>Error: ${response.data}</p></div>`);
-                }
-                
-                $results.show();
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                $progressBar.css('width', '100%').text('Error').css('background', '#d63638');
-                $status.text('Upload failed due to network error.');
-                $errorList.html(`<div class="notice notice-error"><p>Network Error: ${textStatus}</p></div>`);
-                $results.show();
-            },
-            complete: function() {
-                $('#dm-upload-start').prop('disabled', false).text('Upload Files');
-            }
-        });
-    }
 
     /**
      * Helper function to make AJAX requests with consistent handling for:

@@ -38,8 +38,11 @@ class RemoteLocationsAjax {
         // Get service via filter-based access
         $db_locations = apply_filters('dm_get_db_remote_locations', null);
         
-        // RemoteLocationService class auto-loaded via PSR-4
-        $remote_location_service = new RemoteLocationService();
+        // Get remote location service via filter-based access
+        $remote_location_service = apply_filters('dm_get_remote_location_service', null);
+        if (!$remote_location_service) {
+            throw new \Exception(esc_html__('Remote location service not available. This indicates a core filter registration issue.', 'data-machine'));
+        }
         $locations = $remote_location_service->get_all_locations_for_js();
         wp_send_json_success($locations);
     }

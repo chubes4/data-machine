@@ -135,11 +135,12 @@ class OutputStep extends BasePipelineStep {
         }
 
         // Try project-level pipeline configuration
-        $project_pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ($project_pipeline_service) {
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ($db_projects) {
             $project_id = $this->get_project_id_from_job($job);
             if ($project_id) {
-                $pipeline_config = $project_pipeline_service->get_project_pipeline_config($project_id);
+                $config = $db_projects->get_project_pipeline_configuration($project_id);
+                $pipeline_config = isset($config['steps']) ? $config['steps'] : [];
                 // Find output step configuration in pipeline
                 foreach ($pipeline_config as $step) {
                     if ($step['type'] === 'output') {
@@ -193,9 +194,15 @@ class OutputStep extends BasePipelineStep {
             // Prepare module with output configuration
             $module->output_config = json_encode($handler_config);
 
-            // Execute handler with DataPacket (standardized interface)
+            // Universal JSON DataPacket interface - simple and direct
             $user_id = json_decode($job->module_config ?? '{}', true)['user_id'] ?? 0;
-            $output_result = $handler->handle_output($data_packet, $module, $user_id);
+            
+            // Convert DataPacket to pure JSON object
+            $json_data_packet = json_decode(json_encode($data_packet));
+            $json_data_packet->output_config = $handler_config;
+            
+            // Execute handler with pure JSON object - beautiful simplicity
+            $output_result = $handler->handle_output($json_data_packet, $user_id);
 
             return $output_result;
 

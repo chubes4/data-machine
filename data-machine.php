@@ -34,20 +34,7 @@ require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
 require_once __DIR__ . '/inc/DataMachineFilters.php';
 
 // PSR-4 Autoloading - no manual includes needed
-use DataMachine\Core\{DataMachine, Constants, CoreHandlerRegistry};
-use DataMachine\Admin\{AdminPage, AdminMenuAssets};
-use DataMachine\Admin\OAuth\{Twitter as OAuthTwitter, Reddit as OAuthReddit, Threads as OAuthThreads, Facebook as OAuthFacebook, ApiAuthPage, AjaxAuth};
-use DataMachine\Admin\Projects\{Scheduler, AjaxScheduler, ImportExport, FileUploadHandler, ProjectManagementAjax, PipelineManagementAjax, ProjectPipelineStepsAjax, ModalConfigAjax};
-use DataMachine\Admin\ModuleConfig\{RegisterSettings, SettingsFields, ModuleConfigHandler};
-use DataMachine\Admin\ModuleConfig\Ajax\{ModuleConfigAjax, RemoteLocationsAjax};
-use DataMachine\Admin\RemoteLocations\{RemoteLocationService, FormHandler as RemoteLocationsFormHandler, SyncRemoteLocations};
-use DataMachine\Database\{Jobs as DatabaseJobs, Modules as DatabaseModules, Projects as DatabaseProjects, ProcessedItems as DatabaseProcessedItems, RemoteLocations as DatabaseRemoteLocations};
-use DataMachine\Engine\{JobCreator, ProcessingOrchestrator, JobStatusManager, ProcessedItemsManager};
-use DataMachine\Engine\Filters\{AiResponseParser, PromptBuilder, MarkdownConverter};
-use DataMachine\Core\Handlers\HttpService;
-use DataMachine\Core\Handlers\Input\Files as InputFiles;
-use DataMachine\Helpers\{Logger, EncryptionHelper, ProjectPromptsService, ProjectPipelineConfigService};
-
+use DataMachine\Core\{DataMachine};
 
 
 
@@ -58,10 +45,13 @@ use DataMachine\Helpers\{Logger, EncryptionHelper, ProjectPromptsService, Projec
  */
 function run_data_machine() {
     // Initialize pure filter-based service registry
-    // ServiceRegistry removed - all services now use ultra-direct filters
+    // All services use ultra-direct filter-based access
     
     // Register ultra-direct service filters for most heavily used services
     dm_register_direct_service_filters();
+    
+    // Register utility filters for external handlers
+    dm_register_utility_filters();
     
     // Admin setup
     if (is_admin()) {
@@ -71,8 +61,8 @@ function run_data_machine() {
         add_action('admin_notices', array($logger, 'display_admin_notices'));
     }
 
-    // Initialize core handler auto-registration system
-    CoreHandlerRegistry::init();
+    // Auto-load all core handlers so they can self-register
+    dm_autoload_core_handlers();
 
     // Register core step types
     add_filter('dm_register_step_types', function($step_types) {
@@ -97,58 +87,51 @@ function run_data_machine() {
         return $step_types;
     }, 5);
 
-    // Maintain compatibility with existing dm_register_pipeline_step_types filter
-    add_filter('dm_register_pipeline_step_types', function($step_types) {
-        $registered_step_types = apply_filters('dm_register_step_types', []);
-        return $registered_step_types;
-    }, 10);
+    // Dual filter system cleanup complete - only dm_register_step_types filter remains
+    // External plugins should now exclusively use dm_register_step_types filter
+    // External plugins use dm_register_step_types filter for extensibility
 
 
     // Admin initialization - use filter-based service access
     $admin_page = apply_filters('dm_get_admin_page', null);
 
-    // Module handler - uses pure filter-based service access
-    $module_handler = apply_filters('dm_get_module_config_handler', null);
-    $module_handler->init_hooks();
+    // Module configuration is now handled through the pipeline system
 
     // Import/export handler - pure filter-based instantiation
     $import_export_handler = apply_filters('dm_get_import_export_handler', null);
 
     // AJAX handlers - all use pure filter-based instantiation for extensibility
-    $module_ajax_handler = apply_filters('dm_get_module_ajax_handler', null);
+    // Module AJAX functionality handled through pipeline system
     $dashboard_ajax_handler = apply_filters('dm_get_dashboard_ajax_handler', null);
     $ajax_scheduler = apply_filters('dm_get_ajax_scheduler', null);
     $ajax_auth = apply_filters('dm_get_ajax_auth', null);
     $remote_locations_ajax_handler = apply_filters('dm_get_remote_locations_ajax_handler', null);
-    $file_upload_handler = apply_filters('dm_get_file_upload_handler', null);
+    // File handling is integrated into the pipeline system
     $pipeline_management_ajax_handler = apply_filters('dm_get_pipeline_management_ajax_handler', null);
     $pipeline_steps_ajax_handler = apply_filters('dm_get_pipeline_steps_ajax_handler', null);
     $modal_config_ajax_handler = apply_filters('dm_get_modal_config_ajax_handler', null);
     $modal_config_ajax_handler->init_hooks();
 
     // --- Main Plugin Instantiation - pure filter-based for external override capability ---
-    $register_settings = apply_filters('dm_get_register_settings', null);
+    // Settings are now handled through the modern pipeline configuration
     $plugin = apply_filters('dm_get_data_machine_plugin', null);
 
     // --- Run the Plugin ---
     $plugin->run();
 
     // Register hooks for AJAX handlers
-    add_action( 'wp_ajax_dm_get_module_data', array( $module_ajax_handler, 'get_module_data_ajax_handler' ) );
+    // Module data is handled through the pipeline system
 
     add_action( 'wp_ajax_dm_run_now', array( $dashboard_ajax_handler, 'handle_run_now' ) );
     add_action( 'wp_ajax_dm_edit_schedule', array( $dashboard_ajax_handler, 'handle_edit_schedule' ) );
     add_action( 'wp_ajax_dm_get_project_schedule_data', array( $dashboard_ajax_handler, 'handle_get_project_schedule_data' ) );
 
-    // Register async pipeline step hooks dynamically using current step types
-    $pipeline_steps = apply_filters( 'dm_register_pipeline_step_types', [] );
+    // Register position-based pipeline step hooks (supports 0-99 positions)
     $orchestrator = apply_filters('dm_get_orchestrator', null);
-    foreach ( $pipeline_steps as $step_name => $step_config ) {
-        $hook_name = 'dm_' . $step_name . '_job_event';
-        
-        // All steps use the unified dynamic orchestrator
-        add_action( $hook_name, function( $job_id ) use ( $orchestrator, $step_name ) {
-            return $orchestrator->execute_step( $step_name, $job_id );
+    for ( $position = 0; $position < 100; $position++ ) {
+        $hook_name = 'dm_step_position_' . $position . '_job_event';
+        add_action( $hook_name, function( $job_id ) use ( $orchestrator, $position ) {
+            return $orchestrator->execute_step( $position, $job_id );
         }, 10, 1 );
     }
 
@@ -158,6 +141,38 @@ function run_data_machine() {
         $scheduler->init_hooks();
     }
 
+}
+
+/**
+ * Auto-load all core handlers so they can self-register via filters.
+ * 
+ * This function implements the "plugins within plugins" architecture by ensuring
+ * all handler files are loaded, allowing their self-registration code to execute.
+ */
+function dm_autoload_core_handlers(): void {
+    $handler_directories = [
+        DATA_MACHINE_PATH . 'inc/core/handlers/input/',
+        DATA_MACHINE_PATH . 'inc/core/handlers/output/'
+    ];
+    
+    foreach ($handler_directories as $directory) {
+        if (!is_dir($directory)) {
+            continue;
+        }
+        
+        // Get all subdirectories (each handler type)
+        $handler_types = glob($directory . '*', GLOB_ONLYDIR);
+        
+        foreach ($handler_types as $handler_type_dir) {
+            // Load the main handler file (assumes same name as directory)
+            $handler_name = basename($handler_type_dir);
+            $handler_file = $handler_type_dir . '/' . ucfirst($handler_name) . '.php';
+            
+            if (file_exists($handler_file)) {
+                require_once $handler_file;
+            }
+        }
+    }
 }
 
 // Initialize after plugins_loaded to ensure Action Scheduler is available

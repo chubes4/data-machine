@@ -245,7 +245,7 @@ class Scheduler {
             }
 
             // 5. Fetch modules for project (using DB method, needs project owner context)
-            $modules = $db_modules->get_modules_for_project($project_id, $project_owner_user_id);
+            $modules = $db_modules->get_modules_for_project($project_id);
             if (empty($modules)) {
                 $logger?->info($log_prefix . "No modules found for project {$project_id}.", ['project_id' => $project_id]);
                 return;
@@ -268,8 +268,7 @@ class Scheduler {
                     $logger?->debug($log_prefix . "Module {$module->module_id} skipped: schedule_status is '{$module->schedule_status}', not 'active'", ['module_id' => $module->module_id]);
                     continue; // Skip paused modules
                 }
-                // File modules are now supported via queue system
-                // No need to skip file modules anymore
+                // All module types are supported through the pipeline system
 
                 // d. If passes filters, call Job Creator to create and schedule the job
                 $job_result = $job_creator->create_and_schedule_job((array) $module, $project_owner_user_id, 'cron_project');
@@ -359,8 +358,7 @@ class Scheduler {
                  return;
             }
 
-            // File modules are now supported via queue system
-            // No need to skip file modules anymore
+            // All module types are supported through the pipeline system
 
             // 7. Get project owner user_id
             $project = $db_projects->get_project($module->project_id);

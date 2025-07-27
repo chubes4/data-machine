@@ -20,24 +20,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 class SyncRemoteLocations {
 
-    /** @var DatabaseRemoteLocations */
-    private $db_locations;
-
-    /** @var ?Logger */
-    private $logger;
-
     /**
-     * Initialize with dependencies.
-     *
-     * @param DatabaseRemoteLocations $db_locations Database handler for remote locations.
-     * @param Logger|null $logger Logger service (optional).
+     * Constructor.
+     * Pure filter-based architecture - no dependencies.
      */
-    public function __construct(
-        DatabaseRemoteLocations $db_locations,
-        ?Logger $logger = null
-    ) {
-        $this->db_locations = $db_locations;
-        $this->logger = $logger;
+    public function __construct() {
+        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -48,8 +36,18 @@ class SyncRemoteLocations {
      * @return array Result array: ['success' => bool, 'message' => string, 'data' => array|null]
      */
     public function sync_location_data(int $location_id, int $user_id): array {
+        // Get database service via filter
+        $db_locations = apply_filters('dm_get_db_remote_locations', null);
+        if (!$db_locations) {
+            return [
+                'success' => false,
+                'message' => __('Database service not available.', 'data-machine'),
+                'data' => null
+            ];
+        }
+
         // Get location with decrypted password
-        $location = $this->db_locations->get_location($location_id, $user_id, true);
+        $location = $db_locations->get_location($location_id, $user_id, true);
 
         if (!$location || empty($location->target_site_url) || empty($location->target_username) || !isset($location->password)) {
             return [
@@ -84,7 +82,7 @@ class SyncRemoteLocations {
                 __('Failed to connect to remote site: %s', 'data-machine'),
                 $response->get_error_message()
             );
-            $this->logger?->add_admin_error($error_message, ['location_id' => $location_id]);
+            $logger = apply_filters('dm_get_logger', null); $logger && $logger->add_admin_error($error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'message' => $error_message,
@@ -104,7 +102,7 @@ class SyncRemoteLocations {
                 $response_code,
                 $error_message
             );
-            $this->logger?->add_admin_error($full_error, ['location_id' => $location_id, 'response_code' => $response_code]);
+            $logger = apply_filters('dm_get_logger', null); $logger && $logger->add_admin_error($full_error, ['location_id' => $location_id, 'response_code' => $response_code]);
             return [
                 'success' => false,
                 'message' => $full_error,
@@ -115,7 +113,7 @@ class SyncRemoteLocations {
         $decoded_data = json_decode($body, true);
         
         // Enhanced debugging for sync issues
-        $this->logger?->debug('Sync API Response', [
+        $logger = apply_filters('dm_get_logger', null); $logger && $logger->debug('Sync API Response', [
             'location_id' => $location_id,
             'response_code' => $response_code,
             'raw_body' => substr($body, 0, 500), // First 500 chars
@@ -130,7 +128,7 @@ class SyncRemoteLocations {
                 'Expected post_types and taxonomies keys. Received: %s',
                 $decoded_data ? implode(', ', array_keys($decoded_data)) : 'null/empty response'
             );
-            $this->logger?->add_admin_error($error_message . ' ' . $detailed_error, ['location_id' => $location_id, 'raw_response' => $body]);
+            $logger = apply_filters('dm_get_logger', null); $logger && $logger->add_admin_error($error_message . ' ' . $detailed_error, ['location_id' => $location_id, 'raw_response' => $body]);
             return [
                 'success' => false,
                 'message' => $error_message . ' Check logs for details.',
@@ -144,7 +142,7 @@ class SyncRemoteLocations {
         $site_info_json = wp_json_encode($filtered_data);
         if ($site_info_json === false) {
             $error_message = __('Failed to process data received from the remote site (JSON encoding failed).', 'data-machine');
-            $this->logger?->add_admin_error($error_message, ['location_id' => $location_id]);
+            $logger = apply_filters('dm_get_logger', null); $logger && $logger->add_admin_error($error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'message' => $error_message,
@@ -153,11 +151,11 @@ class SyncRemoteLocations {
         }
 
         // Update the database
-        $updated = $this->db_locations->update_synced_info($location_id, $user_id, $site_info_json);
+        $updated = $db_locations->update_synced_info($location_id, $user_id, $site_info_json);
 
         if ($updated) {
             $success_message = __('Remote site data synced successfully!', 'data-machine');
-            $this->logger?->add_admin_success($success_message, ['location_id' => $location_id]);
+            $logger = apply_filters('dm_get_logger', null); $logger && $logger->add_admin_success($success_message, ['location_id' => $location_id]);
             return [
                 'success' => true,
                 'message' => $success_message,
@@ -165,7 +163,7 @@ class SyncRemoteLocations {
             ];
         } else {
             $error_message = __('Failed to save synced data to the database.', 'data-machine');
-            $this->logger?->add_admin_error($error_message, ['location_id' => $location_id]);
+            $logger = apply_filters('dm_get_logger', null); $logger && $logger->add_admin_error($error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'message' => $error_message,
@@ -192,7 +190,7 @@ class SyncRemoteLocations {
         }
 
         // Debug: Log what we received from the API
-        $this->logger?->debug('Processing sync data', [
+        $logger = apply_filters('dm_get_logger', null); $logger && $logger->debug('Processing sync data', [
             'location_id' => $location->location_id ?? 'unknown',
             'post_types_count' => count($decoded_data['post_types'] ?? []),
             'post_types_keys' => array_keys($decoded_data['post_types'] ?? []),

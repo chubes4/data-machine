@@ -29,6 +29,7 @@ class PipelineManagementAjax {
         add_action( 'wp_ajax_dm_update_step_config', [ $this, 'handle_update_step_config' ] );
         add_action( 'wp_ajax_dm_get_modal_content', [ $this, 'handle_get_modal_content' ] );
         add_action( 'wp_ajax_dm_save_modal_config', [ $this, 'handle_save_modal_config' ] );
+        add_action( 'wp_ajax_dm_get_dynamic_step_types', [ $this, 'handle_get_dynamic_step_types' ] );
     }
 
     /**
@@ -46,21 +47,21 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing project ID.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
-        // Get project pipeline configuration
-        $config_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ( ! $config_service ) {
-            wp_send_json_error( 'Pipeline configuration service not available.', 500 );
+        // Get project pipeline configuration using direct database access
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ( ! $db_projects ) {
+            wp_send_json_error( 'Database projects service not available.', 500 );
         }
 
-        $pipeline_steps = $config_service->get_project_pipeline_config( $project_id );
+        $config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $pipeline_steps = isset($config['steps']) ? $config['steps'] : [];
 
         wp_send_json_success( [ 'pipeline_steps' => $pipeline_steps ] );
     }
@@ -84,12 +85,11 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing required parameters.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
         // Validate step type using dynamic filter system
@@ -99,12 +99,34 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Invalid step type.', 400 );
         }
 
-        $config_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ( ! $config_service ) {
-            wp_send_json_error( 'Pipeline configuration service not available.', 500 );
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ( ! $db_projects ) {
+            wp_send_json_error( 'Database projects service not available.', 500 );
         }
 
-        $result = $config_service->add_pipeline_step( $project_id, $step_type, $handler_id, $position );
+        // Add pipeline step using direct database operations
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Create new step configuration
+        $new_step = [
+            'type' => $step_type,
+            'slug' => $handler_id,
+            'config' => [],
+            'position' => $position
+        ];
+        
+        // Insert at the specified position
+        array_splice( $steps, $position, 0, [$new_step] );
+        
+        // Update positions
+        foreach ( $steps as $index => &$step ) {
+            $step['position'] = $index;
+        }
+        
+        // Save updated configuration
+        $updated_config = array_merge( $current_config, ['steps' => $steps] );
+        $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
 
         if ( $result ) {
             wp_send_json_success( [ 'message' => 'Pipeline step added successfully.' ] );
@@ -130,20 +152,44 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing required parameters.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
-        $config_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ( ! $config_service ) {
-            wp_send_json_error( 'Pipeline configuration service not available.', 500 );
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ( ! $db_projects ) {
+            wp_send_json_error( 'Database projects service not available.', 500 );
         }
 
-        $result = $config_service->remove_pipeline_step( $project_id, $step_id );
+        // Remove pipeline step using direct database operations
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Find and remove step by step_id (slug)
+        $removed = false;
+        foreach ( $steps as $index => $step ) {
+            if ( isset($step['slug']) && $step['slug'] === $step_id ) {
+                array_splice( $steps, $index, 1 );
+                $removed = true;
+                break;
+            }
+        }
+        
+        if ( $removed ) {
+            // Update positions
+            foreach ( $steps as $index => &$step ) {
+                $step['position'] = $index;
+            }
+            
+            // Save updated configuration
+            $updated_config = array_merge( $current_config, ['steps' => $steps] );
+            $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
+        } else {
+            $result = false;
+        }
 
         if ( $result ) {
             wp_send_json_success( [ 'message' => 'Pipeline step removed successfully.' ] );
@@ -169,23 +215,45 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing required parameters.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
         // Sanitize step order array
         $sanitized_order = array_map( 'sanitize_text_field', $step_order );
 
-        $config_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ( ! $config_service ) {
-            wp_send_json_error( 'Pipeline configuration service not available.', 500 );
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ( ! $db_projects ) {
+            wp_send_json_error( 'Database projects service not available.', 500 );
         }
 
-        $result = $config_service->reorder_pipeline_steps( $project_id, $sanitized_order );
+        // Reorder pipeline steps using direct database operations
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Create a map of steps by slug/id
+        $step_map = [];
+        foreach ( $steps as $step ) {
+            $step_key = isset($step['slug']) ? $step['slug'] : $step['type'];
+            $step_map[$step_key] = $step;
+        }
+        
+        // Reorder steps based on sanitized order
+        $reordered_steps = [];
+        foreach ( $sanitized_order as $index => $step_id ) {
+            if ( isset( $step_map[$step_id] ) ) {
+                $step = $step_map[$step_id];
+                $step['position'] = $index;
+                $reordered_steps[] = $step;
+            }
+        }
+        
+        // Save updated configuration
+        $updated_config = array_merge( $current_config, ['steps' => $reordered_steps] );
+        $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
 
         if ( $result ) {
             wp_send_json_success( [ 'message' => 'Pipeline steps reordered successfully.' ] );
@@ -196,6 +264,7 @@ class PipelineManagementAjax {
 
     /**
      * Get available step types and their metadata.
+     * Uses the dynamic filter system to enable external plugin step types.
      */
     public function handle_get_available_step_types() {
         check_ajax_referer( 'dm_get_available_step_types_nonce', 'nonce' );
@@ -204,23 +273,17 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Permission denied.', 403 );
         }
 
-        $step_types = [
-            'input' => [
-                'label' => __( 'Input Step', 'data-machine' ),
-                'description' => __( 'Collect data from various sources', 'data-machine' ),
-                'icon' => 'dashicons-download'
-            ],
-            'ai' => [
-                'label' => __( 'AI Processing Step', 'data-machine' ),
-                'description' => __( 'Process data using AI models', 'data-machine' ),
-                'icon' => 'dashicons-admin-tools'
-            ],
-            'output' => [
-                'label' => __( 'Output Step', 'data-machine' ),
-                'description' => __( 'Send processed data to destinations', 'data-machine' ),
-                'icon' => 'dashicons-upload'
-            ]
-        ];
+        // Use filter system to get ALL registered step types including external ones
+        $registered_step_types = apply_filters('dm_register_step_types', []);
+        $step_types = [];
+
+        foreach ($registered_step_types as $type => $config) {
+            $step_types[$type] = [
+                'label' => $config['label'] ?? ucfirst( str_replace( '_', ' ', $type ) ),
+                'description' => $config['description'] ?? '',
+                'icon' => $config['icon'] ?? 'dashicons-admin-generic'
+            ];
+        }
 
         wp_send_json_success( [ 'step_types' => $step_types ] );
     }
@@ -241,7 +304,7 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing step type.', 400 );
         }
 
-        // Use direct filter-based access instead of handler factory service locator pattern
+        // Use direct filter-based access and support custom step types
         $handlers = [];
         if ( $step_type === 'input' ) {
             $handlers = \DataMachine\Core\Constants::get_input_handlers();
@@ -255,6 +318,29 @@ class PipelineManagementAjax {
                     'description' => __( 'Standard AI processing using configured models', 'data-machine' )
                 ]
             ];
+        } else {
+            // Allow custom step types to provide their own handlers via filters
+            $handlers = apply_filters( "dm_get_{$step_type}_handlers", [] );
+            
+            // If no specific filter handler found, try generic custom handler filter
+            if ( empty( $handlers ) ) {
+                $handlers = apply_filters( 'dm_get_custom_step_handlers', [], $step_type );
+            }
+            
+            // Provide default handler if none found
+            if ( empty( $handlers ) ) {
+                $registered_step_types = apply_filters('dm_register_step_types', []);
+                $step_config = $registered_step_types[$step_type] ?? null;
+                
+                if ( $step_config ) {
+                    $handlers = [
+                        'default' => [
+                            'label' => $step_config['label'] ?? ucfirst( str_replace( '_', ' ', $step_type ) ),
+                            'description' => $step_config['description'] ?? ''
+                        ]
+                    ];
+                }
+            }
         }
 
         wp_send_json_success( [ 'handlers' => $handlers ] );
@@ -279,23 +365,45 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing required parameters.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
         // Sanitize configuration array
         $sanitized_config = array_map( 'sanitize_text_field', $config );
 
-        $config_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ( ! $config_service ) {
-            wp_send_json_error( 'Pipeline configuration service not available.', 500 );
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ( ! $db_projects ) {
+            wp_send_json_error( 'Database projects service not available.', 500 );
         }
 
-        $result = $config_service->update_step_config( $project_id, $step_id, $handler_id, $sanitized_config );
+        // Update step configuration using direct database operations
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Find and update step by step_id (slug)
+        $updated = false;
+        foreach ( $steps as &$step ) {
+            if ( isset($step['slug']) && $step['slug'] === $step_id ) {
+                $step['config'] = $sanitized_config;
+                if ( $handler_id ) {
+                    $step['slug'] = $handler_id;
+                }
+                $updated = true;
+                break;
+            }
+        }
+        
+        if ( $updated ) {
+            // Save updated configuration
+            $updated_config = array_merge( $current_config, ['steps' => $steps] );
+            $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
+        } else {
+            $result = false;
+        }
 
         if ( $result ) {
             wp_send_json_success( [ 'message' => 'Step configuration updated successfully.' ] );
@@ -323,12 +431,11 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing required parameters.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
         try {
@@ -343,14 +450,123 @@ class PipelineManagementAjax {
                     $step_position + 1 
                 );
                 
-                $ai_config_service = apply_filters('dm_get_ai_step_config_service', null);
-                if ( $ai_config_service ) {
-                    $content = $ai_config_service->render_step_ai_config_form( $project_id, $step_position, $step_id );
-                } else {
-                    $content = '<div class="notice notice-error"><p>' . 
-                        esc_html__( 'AI configuration service not available.', 'data-machine' ) . 
-                        '</p></div>';
-                }
+                // Direct AI step configuration using WordPress options
+                $ai_option_key = "dm_ai_step_config_{$project_id}_{$step_position}";
+                $current_ai_config = get_option($ai_option_key, [
+                    'provider' => '',
+                    'model' => '',
+                    'temperature' => 0.7,
+                    'max_tokens' => 2000,
+                    'enabled' => true
+                ]);
+                
+                ob_start();
+                ?>
+                <div class="dm-ai-step-config" data-project-id="<?php echo esc_attr($project_id); ?>" data-step-position="<?php echo esc_attr($step_position); ?>" data-step-id="<?php echo esc_attr($step_id); ?>">
+                    
+                    <div class="dm-ai-config-header" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e2e4e7;">
+                        <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e1e1e;">
+                            <?php 
+                            /* translators: %s: step position number */
+                            echo esc_html(sprintf(__('AI Configuration - Step %d', 'data-machine'), $step_position + 1)); 
+                            ?>
+                        </h3>
+                        <p style="margin: 0; color: #646970; font-size: 14px;">
+                            <?php esc_html_e('Configure the AI provider and model for this specific step. Each step can use different providers to create powerful multi-model workflows.', 'data-machine'); ?>
+                        </p>
+                    </div>
+
+                    <!-- AI Provider Selection -->
+                    <div class="dm-provider-config" style="margin-bottom: 20px;">
+                        <label for="ai_provider_<?php echo esc_attr($step_id); ?>" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                            <?php esc_html_e('AI Provider', 'data-machine'); ?>
+                        </label>
+                        <select id="ai_provider_<?php echo esc_attr($step_id); ?>" name="provider" style="width: 100%; padding: 8px; border: 1px solid #ccd0d4; border-radius: 4px;">
+                            <option value=""><?php esc_html_e('Use Global Default', 'data-machine'); ?></option>
+                            <option value="openai" <?php selected($current_ai_config['provider'], 'openai'); ?>><?php esc_html_e('OpenAI', 'data-machine'); ?></option>
+                            <option value="anthropic" <?php selected($current_ai_config['provider'], 'anthropic'); ?>><?php esc_html_e('Anthropic', 'data-machine'); ?></option>
+                            <option value="google" <?php selected($current_ai_config['provider'], 'google'); ?>><?php esc_html_e('Google', 'data-machine'); ?></option>
+                        </select>
+                    </div>
+
+                    <!-- AI Model Selection -->
+                    <div class="dm-model-config" style="margin-bottom: 20px;">
+                        <label for="ai_model_<?php echo esc_attr($step_id); ?>" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                            <?php esc_html_e('AI Model', 'data-machine'); ?>
+                        </label>
+                        <input type="text" 
+                               id="ai_model_<?php echo esc_attr($step_id); ?>" 
+                               name="model" 
+                               value="<?php echo esc_attr($current_ai_config['model']); ?>" 
+                               placeholder="<?php esc_attr_e('e.g., gpt-4, claude-3-opus, gemini-pro', 'data-machine'); ?>"
+                               style="width: 100%; padding: 8px; border: 1px solid #ccd0d4; border-radius: 4px;">
+                        <p class="description" style="margin: 6px 0 0 0; color: #646970; font-size: 13px;">
+                            <?php esc_html_e('Leave empty to use the default model for the selected provider.', 'data-machine'); ?>
+                        </p>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="dm-advanced-config" style="margin-bottom: 20px;">
+                        <details>
+                            <summary style="cursor: pointer; margin-bottom: 12px; font-weight: 500;">
+                                <?php esc_html_e('Advanced Settings', 'data-machine'); ?>
+                            </summary>
+                            
+                            <div style="margin-left: 16px;">
+                                <div style="margin-bottom: 16px;">
+                                    <label for="ai_temperature_<?php echo esc_attr($step_id); ?>" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                                        <?php esc_html_e('Temperature', 'data-machine'); ?>
+                                    </label>
+                                    <input type="number" 
+                                           id="ai_temperature_<?php echo esc_attr($step_id); ?>" 
+                                           name="temperature" 
+                                           value="<?php echo esc_attr($current_ai_config['temperature']); ?>" 
+                                           min="0" 
+                                           max="2" 
+                                           step="0.1"
+                                           style="width: 100px; padding: 8px; border: 1px solid #ccd0d4; border-radius: 4px;">
+                                    <p class="description" style="margin: 6px 0 0 0; color: #646970; font-size: 13px;">
+                                        <?php esc_html_e('Controls randomness. Lower values (0.1-0.3) for focused tasks, higher values (0.7-1.0) for creative tasks.', 'data-machine'); ?>
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-bottom: 16px;">
+                                    <label for="ai_max_tokens_<?php echo esc_attr($step_id); ?>" style="display: block; margin-bottom: 8px; font-weight: 500;">
+                                        <?php esc_html_e('Max Tokens', 'data-machine'); ?>
+                                    </label>
+                                    <input type="number" 
+                                           id="ai_max_tokens_<?php echo esc_attr($step_id); ?>" 
+                                           name="max_tokens" 
+                                           value="<?php echo esc_attr($current_ai_config['max_tokens']); ?>" 
+                                           min="1" 
+                                           max="100000"
+                                           style="width: 120px; padding: 8px; border: 1px solid #ccd0d4; border-radius: 4px;">
+                                    <p class="description" style="margin: 6px 0 0 0; color: #646970; font-size: 13px;">
+                                        <?php esc_html_e('Maximum number of tokens to generate in the response.', 'data-machine'); ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Step Status -->
+                    <div class="dm-step-status" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e4e7;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                            <input type="checkbox" 
+                                   name="enabled" 
+                                   value="1" 
+                                   <?php checked($current_ai_config['enabled'], true); ?>
+                                   style="margin: 0;">
+                            <?php esc_html_e('Enable AI processing for this step', 'data-machine'); ?>
+                        </label>
+                        <p class="description" style="margin: 6px 0 0 0; color: #646970; font-size: 13px;">
+                            <?php esc_html_e('Uncheck to skip AI processing and pass data through unchanged.', 'data-machine'); ?>
+                        </p>
+                    </div>
+
+                </div>
+                <?php
+                $content = ob_get_clean();
             } elseif ( $step_type === 'input' ) {
                 $title = sprintf( 
                     /* translators: %s: step position number */
@@ -366,8 +582,32 @@ class PipelineManagementAjax {
                 );
                 $content = '<p>' . esc_html__( 'Output step configuration coming soon.', 'data-machine' ) . '</p>';
             } else {
-                $title = __( 'Configure Step', 'data-machine' );
-                $content = '<p>' . esc_html__( 'Unknown step type.', 'data-machine' ) . '</p>';
+                // Handle custom step types dynamically
+                $registered_step_types = apply_filters('dm_register_step_types', []);
+                $step_config = $registered_step_types[$step_type] ?? null;
+                
+                if ( $step_config ) {
+                    $title = sprintf( 
+                        /* translators: 1: Step label, 2: step position number */
+                        __( 'Configure %1$s %2$d', 'data-machine' ), 
+                        $step_config['label'] ?? ucfirst( str_replace( '_', ' ', $step_type ) ),
+                        $step_position + 1 
+                    );
+                    $content = '<div class="dm-custom-step-config">';
+                    $content .= '<p>' . sprintf(
+                        /* translators: %s: step type name */
+                        esc_html__( 'This is a custom %s step. Configuration options should be provided by the plugin that registered this step type.', 'data-machine' ),
+                        esc_html( $step_config['label'] ?? $step_type )
+                    ) . '</p>';
+                    if ( ! empty( $step_config['description'] ) ) {
+                        $content .= '<p><strong>' . esc_html__( 'Description:', 'data-machine' ) . '</strong> ' . esc_html( $step_config['description'] ) . '</p>';
+                    }
+                    $content .= '<p><em>' . esc_html__( 'Use the dm_get_modal_content filter to provide custom configuration interface.', 'data-machine' ) . '</em></p>';
+                    $content .= '</div>';
+                } else {
+                    $title = __( 'Configure Step', 'data-machine' );
+                    $content = '<p>' . esc_html__( 'Unknown step type.', 'data-machine' ) . '</p>';
+                }
             }
 
             // Allow filtering of modal content for extensibility
@@ -408,32 +648,74 @@ class PipelineManagementAjax {
             wp_send_json_error( 'Missing required parameters.', 400 );
         }
 
-        $user_id = get_current_user_id();
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
-            wp_send_json_error( 'Project not found or permission denied.', 404 );
+            wp_send_json_error( 'Project not found.', 404 );
         }
 
         try {
             $result = false;
             
             if ( $step_type === 'ai' ) {
-                $ai_config_service = apply_filters('dm_get_ai_step_config_service', null);
-                if ( $ai_config_service ) {
-                    $response = $ai_config_service->handle_ajax_save( $config_data, $project_id, $step_position );
-                    if ( $response['success'] ) {
-                        wp_send_json_success( $response );
-                    } else {
-                        wp_send_json_error( $response['message'], 400 );
-                    }
+                // Direct AI step configuration save using WordPress options
+                $ai_option_key = "dm_ai_step_config_{$project_id}_{$step_position}";
+                
+                // Sanitize configuration data
+                $sanitized_config = [
+                    'provider' => sanitize_text_field($config_data['provider'] ?? ''),
+                    'model' => sanitize_text_field($config_data['model'] ?? ''),
+                    'temperature' => floatval($config_data['temperature'] ?? 0.7),
+                    'max_tokens' => intval($config_data['max_tokens'] ?? 2000),
+                    'enabled' => (bool)($config_data['enabled'] ?? true)
+                ];
+                
+                // Validate temperature range
+                $sanitized_config['temperature'] = max(0, min(2, $sanitized_config['temperature']));
+                
+                // Validate max_tokens range
+                $sanitized_config['max_tokens'] = max(1, min(100000, $sanitized_config['max_tokens']));
+                
+                $result = update_option($ai_option_key, $sanitized_config);
+                
+                if ( $result ) {
+                    wp_send_json_success( [
+                        'success' => true,
+                        'message' => __('AI configuration saved successfully.', 'data-machine'),
+                        'data' => $sanitized_config
+                    ] );
                 } else {
-                    wp_send_json_error( 'AI configuration service not available.', 500 );
+                    wp_send_json_error( 'Failed to save AI configuration.', 400 );
                 }
             } else {
-                // Handle other step types here
-                wp_send_json_error( 'Configuration save not implemented for this step type.', 501 );
+                // Allow external plugins to handle custom step type configuration saves
+                $custom_save_result = apply_filters( 'dm_save_modal_config', null, $step_type, $config_data, $project_id, $step_position, $step_id );
+                
+                if ( $custom_save_result !== null ) {
+                    // Custom step type handler processed the save
+                    if ( is_array( $custom_save_result ) && isset( $custom_save_result['success'] ) ) {
+                        if ( $custom_save_result['success'] ) {
+                            wp_send_json_success( $custom_save_result );
+                        } else {
+                            wp_send_json_error( $custom_save_result['message'] ?? 'Configuration save failed.', 400 );
+                        }
+                    } elseif ( $custom_save_result === true ) {
+                        wp_send_json_success( [ 'message' => 'Configuration saved successfully.' ] );
+                    } else {
+                        wp_send_json_error( 'Configuration save failed.', 400 );
+                    }
+                } else {
+                    // No custom handler found for this step type
+                    wp_send_json_error( 
+                        sprintf(
+                            /* translators: %s: step type name */
+                            __( 'Configuration save not implemented for step type: %s', 'data-machine' ),
+                            esc_html( $step_type )
+                        ), 
+                        501 
+                    );
+                }
             }
 
         } catch ( \Exception $e ) {

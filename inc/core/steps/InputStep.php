@@ -121,11 +121,12 @@ class InputStep extends BasePipelineStep {
         }
 
         // Try project-level pipeline configuration
-        $project_pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ($project_pipeline_service) {
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ($db_projects) {
             $project_id = $this->get_project_id_from_job($job);
             if ($project_id) {
-                $pipeline_config = $project_pipeline_service->get_project_pipeline_config($project_id);
+                $config = $db_projects->get_project_pipeline_configuration($project_id);
+                $pipeline_config = isset($config['steps']) ? $config['steps'] : [];
                 // Find input step configuration in pipeline
                 foreach ($pipeline_config as $step) {
                     if ($step['type'] === 'input') {

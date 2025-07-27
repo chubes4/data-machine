@@ -21,30 +21,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ProcessedItemsManager {
 
-	/**
-	 * Database processed items service.
-	 * @var ProcessedItems
-	 */
-	private $db_processed_items;
-
-	/**
-	 * Logger instance for debugging and monitoring.
-	 * @var Logger|null
-	 */
-	private $logger;
+	// Services accessed via filters - no instance variables needed
 
 	/**
 	 * Constructor.
 	 *
-	 * @param ProcessedItems $db_processed_items Database service.
-	 * @param Logger|null $logger Optional logger instance.
+	 * Uses filter-based architecture for service access.
 	 */
-	public function __construct(
-		ProcessedItems $db_processed_items,
-		?Logger $logger = null
-	) {
-		$this->db_processed_items = $db_processed_items;
-		$this->logger = $logger;
+	public function __construct() {
+		// Services accessed via filters when needed
 	}
 
 	/**
@@ -57,7 +42,8 @@ class ProcessedItemsManager {
 	 */
 	public function is_item_processed( int $module_id, string $source_type, string $identifier ): bool {
 		if ( empty( $module_id ) || empty( $source_type ) || empty( $identifier ) ) {
-			$this->logger?->warning( 'ProcessedItemsManager: Invalid parameters for duplicate check', [
+			$logger = apply_filters('dm_get_logger', null);
+			$logger?->warning( 'ProcessedItemsManager: Invalid parameters for duplicate check', [
 				'module_id' => $module_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
@@ -65,10 +51,12 @@ class ProcessedItemsManager {
 			return false;
 		}
 
-		$is_processed = $this->db_processed_items->has_item_been_processed( $module_id, $source_type, $identifier );
+		$db_processed_items = apply_filters('dm_get_db_processed_items', null);
+		$is_processed = $db_processed_items->has_item_been_processed( $module_id, $source_type, $identifier );
 		
 		if ( $is_processed ) {
-			$this->logger?->debug( 'ProcessedItemsManager: Item already processed, skipping', [
+			$logger = apply_filters('dm_get_logger', null);
+			$logger?->debug( 'ProcessedItemsManager: Item already processed, skipping', [
 				'module_id' => $module_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
@@ -94,7 +82,8 @@ class ProcessedItemsManager {
 			if ( empty( $source_type ) ) $missing_fields[] = 'source_type';
 			if ( empty( $identifier ) ) $missing_fields[] = 'identifier';
 			
-			$this->logger?->error( 'ProcessedItemsManager: Cannot mark item as processed - missing required data', [
+			$logger = apply_filters('dm_get_logger', null);
+			$logger?->error( 'ProcessedItemsManager: Cannot mark item as processed - missing required data', [
 				'job_id' => $job_id,
 				'module_id' => $module_id,
 				'source_type' => $source_type,
@@ -104,17 +93,19 @@ class ProcessedItemsManager {
 			return false;
 		}
 
-		$success = $this->db_processed_items->add_processed_item( $module_id, $source_type, $identifier );
+		$db_processed_items = apply_filters('dm_get_db_processed_items', null);
+		$success = $db_processed_items->add_processed_item( $module_id, $source_type, $identifier );
 		
+		$logger = apply_filters('dm_get_logger', null);
 		if ( $success ) {
-			$this->logger?->info( 'ProcessedItemsManager: Item marked as processed successfully', [
+			$logger?->info( 'ProcessedItemsManager: Item marked as processed successfully', [
 				'job_id' => $job_id,
 				'module_id' => $module_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
 		} else {
-			$this->logger?->error( 'ProcessedItemsManager: Failed to mark item as processed', [
+			$logger?->error( 'ProcessedItemsManager: Failed to mark item as processed', [
 				'job_id' => $job_id,
 				'module_id' => $module_id,
 				'source_type' => $source_type,

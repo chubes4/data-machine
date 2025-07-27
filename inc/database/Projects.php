@@ -32,25 +32,23 @@ class Projects {
     }
 
     /**
-     * Create a new project for a user.
+     * Create a new project.
      *
      * @since 0.13.0 // or appropriate version
-     * @param int    $user_id       The ID of the user creating the project.
      * @param string $project_name  The name of the project.
      * @param array  $project_data Optional. Additional data for the project (e.g., schedule settings).
      * @return int|false The ID of the newly created project or false on failure.
      */
-    public function create_project( $user_id, $project_name, $project_data = array() ) {
+    public function create_project( $project_name, $project_data = array() ) {
         global $wpdb;
 
-        if ( empty( $user_id ) || empty( $project_name ) ) {
+        if ( empty( $project_name ) ) {
             		// Debug logging removed for production
             return false;
         }
 
         // Prepare data for insertion
         $data = array(
-            'user_id'      => absint( $user_id ),
             'project_name' => sanitize_text_field( $project_name ),
             // Use provided schedule data or fall back to defaults
             'schedule_interval' => isset( $project_data['schedule_interval'] ) ? sanitize_text_field( $project_data['schedule_interval'] ) : 'daily',
@@ -61,7 +59,6 @@ class Projects {
 
         // Define formats for the data
         $format = array(
-            '%d', // user_id
             '%s', // project_name
             '%s', // schedule_interval
             '%s', // schedule_status
@@ -81,34 +78,27 @@ class Projects {
     }
 
     /**
-     * Retrieve all projects for a specific user.
+     * Retrieve all projects.
      *
-     * @param int $user_id The ID of the user.
      * @return array|null An array of project objects or null if none found.
      */
-    public function get_projects_for_user( $user_id ) {
+    public function get_all_projects() {
         global $wpdb;
-        $results = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM $this->table_name WHERE user_id = %d ORDER BY project_name ASC",
-            absint( $user_id )
-        ) );
+        $results = $wpdb->get_results(
+            "SELECT * FROM $this->table_name ORDER BY project_name ASC"
+        );
         return $results;
     }
 
     /**
      * Retrieve a specific project by its ID.
      *
-     * @param int      $project_id The ID of the project.
-     * @param int|null $user_id    (Optional) The ID of the user to verify ownership.
-     * @return object|null         The project object or null if not found or ownership mismatch.
+     * @param int $project_id The ID of the project.
+     * @return object|null    The project object or null if not found.
      */
-    public function get_project( $project_id, $user_id = null ) {
+    public function get_project( $project_id ) {
         global $wpdb;
         $query = $wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE project_id = %d", absint( $project_id ) );
-
-        if ( $user_id !== null ) {
-            $query .= $wpdb->prepare( " AND user_id = %d", absint( $user_id ) );
-        }
 
         $project = $wpdb->get_row( $query );
         return $project;
@@ -120,10 +110,9 @@ class Projects {
      * @param int    $project_id The ID of the project to update.
      * @param string $interval   The new schedule interval (e.g., 'hourly', 'manual').
      * @param string $status     The new schedule status ('active', 'paused').
-     * @param int    $user_id    The ID of the user making the change (for ownership check).
-     * @return bool|int          Number of rows updated (usually 1) or false on failure/permission error.
+     * @return bool|int          Number of rows updated (usually 1) or false on failure.
      */
-    public function update_project_schedule( $project_id, $interval, $status, $user_id ) {
+    public function update_project_schedule( $project_id, $interval, $status ) {
         global $wpdb;
 
         // +++ DETAILED DEBUG LOGGING +++
@@ -142,7 +131,7 @@ class Projects {
             return false;
         }
 
-        // Update the project WHERE project_id matches AND user_id matches (ensures ownership)
+        // Update the project WHERE project_id matches
         $updated = $wpdb->update(
             $this->table_name,
             array( // Data to update
@@ -151,15 +140,13 @@ class Projects {
                 // updated_at is handled by DB trigger/default
             ),
             array( // WHERE clause
-                'project_id' => absint( $project_id ),
-                'user_id' => absint( $user_id )
+                'project_id' => absint( $project_id )
             ),
             array( // Data format
                 '%s', // interval
                 '%s'  // status
             ),
             array( // WHERE format
-                '%d',
                 '%d'
             )
         );
@@ -222,7 +209,6 @@ class Projects {
         // Comments are kept outside the SQL string itself
         $sql = "CREATE TABLE $table_name (
             project_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            user_id bigint(20) unsigned NOT NULL,
             project_name varchar(255) NOT NULL DEFAULT '',
             step_prompts longtext NULL,
             pipeline_configuration longtext NULL,
@@ -231,8 +217,7 @@ class Projects {
             last_run_at datetime NULL DEFAULT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY  (project_id),
-            KEY user_id (user_id)
+            PRIMARY KEY  (project_id)
         ) $charset_collate;";
 
         // Execute the SQL query using dbDelta
@@ -240,33 +225,29 @@ class Projects {
     }
 
     /**
-     * Delete a specific project, verifying user ownership.
+     * Delete a specific project.
      *
      * @param int $project_id The ID of the project to delete.
-     * @param int $user_id    The ID of the user attempting the deletion.
-     * @return int|false The number of rows deleted (should be 1) or false on failure/permission error.
+     * @return int|false The number of rows deleted (should be 1) or false on failure.
      */
-    public function delete_project( $project_id, $user_id ) {
+    public function delete_project( $project_id ) {
         global $wpdb;
 
         $project_id = absint( $project_id );
-        $user_id = absint( $user_id );
 
-        if ( empty( $project_id ) || empty( $user_id ) ) {
+        if ( empty( $project_id ) ) {
             		// Debug logging removed for production
             return false;
         }
 
-        // Delete the project WHERE project_id and user_id match
+        // Delete the project WHERE project_id matches
         $deleted = $wpdb->delete(
             $this->table_name,
             array( 
-                'project_id' => $project_id,
-                'user_id'    => $user_id
+                'project_id' => $project_id
             ), // WHERE clause
             array( 
-                '%d', // Format for project_id
-                '%d'  // Format for user_id
+                '%d' // Format for project_id
             ) // Format for WHERE clause
         );
 
@@ -274,7 +255,7 @@ class Projects {
         if ( false === $deleted ) {
             		// Debug logging removed for production
         } elseif ( $deleted === 0 ) {
-            // This might happen if the project existed but didn't belong to the user, or was already deleted.
+            // This might happen if the project was already deleted.
 		// Debug logging removed for production;
              // We might still return false here as the intended action didn't complete as expected.
              return false; 
@@ -289,16 +270,14 @@ class Projects {
      * @param int   $project_id   The ID of the project to update.
      * @param array $step_prompts Array of step prompts in the format:
      *                            {"process": {"process_data_prompt": "..."}, "factcheck": {...}}
-     * @param int   $user_id      The ID of the user making the change (for ownership check).
-     * @return bool|int           Number of rows updated (usually 1) or false on failure/permission error.
+     * @return bool|int           Number of rows updated (usually 1) or false on failure.
      */
-    public function update_project_step_prompts( $project_id, $step_prompts, $user_id ) {
+    public function update_project_step_prompts( $project_id, $step_prompts ) {
         global $wpdb;
 
         $project_id = absint( $project_id );
-        $user_id = absint( $user_id );
 
-        if ( empty( $project_id ) || empty( $user_id ) ) {
+        if ( empty( $project_id ) ) {
             return false;
         }
 
@@ -313,7 +292,7 @@ class Projects {
             return false; // JSON encoding failed
         }
 
-        // Update the project WHERE project_id matches AND user_id matches (ensures ownership)
+        // Update the project WHERE project_id matches
         $updated = $wpdb->update(
             $this->table_name,
             array( 
@@ -321,16 +300,14 @@ class Projects {
                 'updated_at' => current_time( 'mysql', 1 )
             ),
             array( 
-                'project_id' => $project_id,
-                'user_id' => $user_id
+                'project_id' => $project_id
             ),
             array( 
                 '%s', // step_prompts JSON
                 '%s'  // updated_at
             ),
             array( 
-                '%d', // project_id
-                '%d'  // user_id
+                '%d' // project_id
             )
         );
 
@@ -344,12 +321,11 @@ class Projects {
     /**
      * Get step prompts for a specific project.
      *
-     * @param int      $project_id The ID of the project.
-     * @param int|null $user_id    (Optional) The ID of the user to verify ownership.
-     * @return array|null          Array of step prompts or null if not found/no access.
+     * @param int $project_id The ID of the project.
+     * @return array|null     Array of step prompts or null if not found.
      */
-    public function get_project_step_prompts( $project_id, $user_id = null ) {
-        $project = $this->get_project( $project_id, $user_id );
+    public function get_project_step_prompts( $project_id ) {
+        $project = $this->get_project( $project_id );
         
         if ( ! $project || empty( $project->step_prompts ) ) {
             return [];
@@ -363,18 +339,43 @@ class Projects {
      * Initialize default step prompts for a project based on current pipeline configuration.
      *
      * @param int $project_id The ID of the project.
-     * @param int $user_id    The ID of the user (for ownership verification).
      * @return bool           True on success, false on failure.
      */
-    public function initialize_default_step_prompts( $project_id, $user_id ) {
-        // Use the ProjectPromptsService via filter-based access
-        $project_prompts_service = apply_filters('dm_get_project_prompts_service', null);
+    public function initialize_default_step_prompts( $project_id ) {
+        // Get registered step types directly from filter system
+        $registered_step_types = apply_filters('dm_register_step_types', []);
+        $default_prompts = [];
         
-        if ( ! $project_prompts_service ) {
-            return false; // Service not available
+        // Build prompt steps from registered step types in execution order
+        $execution_order = ['input', 'ai', 'processing', 'output'];
+        foreach ($execution_order as $step_type) {
+            foreach ($registered_step_types as $step_name => $step_config) {
+                if (($step_config['type'] ?? '') === $step_type) {
+                    $prompt_fields = [];
+                    
+                    // Check if prompt fields are defined directly in step config
+                    if (isset($step_config['prompt_fields']) && !empty($step_config['prompt_fields'])) {
+                        $prompt_fields = $step_config['prompt_fields'];
+                    }
+                    
+                    if (!empty($prompt_fields)) {
+                        $step_prompts = [];
+                        
+                        foreach ( $prompt_fields as $field_name => $field_config ) {
+                            // Set default values based on field configuration
+                            $step_prompts[$field_name] = $field_config['default'] ?? '';
+                        }
+                        
+                        if ( ! empty( $step_prompts ) ) {
+                            $default_prompts[$step_name] = $step_prompts;
+                        }
+                    }
+                }
+            }
         }
-
-        return $project_prompts_service->create_default_step_prompts( $project_id );
+        
+        // Update project step prompts using native database operations
+        return $this->update_project_step_prompts( $project_id, $default_prompts );
     }
 
     /**
@@ -383,16 +384,14 @@ class Projects {
      * @param int   $project_id         The ID of the project to update.
      * @param array $pipeline_config    Array containing pipeline configuration:
      *                                  {"steps": ["input", "process", "output"], "ai_steps": ["process"]}
-     * @param int   $user_id           The ID of the user making the change (for ownership check).
-     * @return bool|int                Number of rows updated (usually 1) or false on failure/permission error.
+     * @return bool|int                Number of rows updated (usually 1) or false on failure.
      */
-    public function update_project_pipeline_configuration( $project_id, $pipeline_config, $user_id ) {
+    public function update_project_pipeline_configuration( $project_id, $pipeline_config ) {
         global $wpdb;
 
         $project_id = absint( $project_id );
-        $user_id = absint( $user_id );
 
-        if ( empty( $project_id ) || empty( $user_id ) ) {
+        if ( empty( $project_id ) ) {
             return false;
         }
 
@@ -407,7 +406,7 @@ class Projects {
             return false; // JSON encoding failed
         }
 
-        // Update the project WHERE project_id matches AND user_id matches (ensures ownership)
+        // Update the project WHERE project_id matches
         $updated = $wpdb->update(
             $this->table_name,
             array( 
@@ -415,16 +414,14 @@ class Projects {
                 'updated_at' => current_time( 'mysql', 1 )
             ),
             array( 
-                'project_id' => $project_id,
-                'user_id' => $user_id
+                'project_id' => $project_id
             ),
             array( 
                 '%s', // pipeline_configuration JSON
                 '%s'  // updated_at
             ),
             array( 
-                '%d', // project_id
-                '%d'  // user_id
+                '%d' // project_id
             )
         );
 
@@ -438,12 +435,11 @@ class Projects {
     /**
      * Get pipeline configuration for a specific project.
      *
-     * @param int      $project_id The ID of the project.
-     * @param int|null $user_id    (Optional) The ID of the user to verify ownership.
-     * @return array|null          Array of pipeline configuration or empty array if not found/no access.
+     * @param int $project_id The ID of the project.
+     * @return array|null     Array of pipeline configuration or empty array if not found.
      */
-    public function get_project_pipeline_configuration( $project_id, $user_id = null ) {
-        $project = $this->get_project( $project_id, $user_id );
+    public function get_project_pipeline_configuration( $project_id ) {
+        $project = $this->get_project( $project_id );
         
         if ( ! $project || empty( $project->pipeline_configuration ) ) {
             return [];
@@ -457,24 +453,39 @@ class Projects {
      * Initialize default pipeline configuration for a project.
      *
      * @param int $project_id The ID of the project.
-     * @param int $user_id    The ID of the user (for ownership verification).
      * @return bool           True on success, false on failure.
      */
-    public function initialize_default_pipeline_configuration( $project_id, $user_id ) {
-        // Default 5-step pipeline configuration
+    public function initialize_default_pipeline_configuration( $project_id ) {
+        // Default 3-step universal pipeline configuration using correct namespace and existing classes
         $default_config = [
-            'steps' => ['input', 'process', 'factcheck', 'finalize', 'output'],
-            'ai_steps' => ['process', 'factcheck', 'finalize'],
+            'steps' => [
+                [
+                    'type' => 'input',
+                    'slug' => 'input_step',
+                    'config' => [],
+                    'position' => 0
+                ],
+                [
+                    'type' => 'ai',
+                    'slug' => 'ai_processing',
+                    'config' => [],
+                    'position' => 1
+                ],
+                [
+                    'type' => 'output',
+                    'slug' => 'output_step',
+                    'config' => [],
+                    'position' => 2
+                ]
+            ],
             'step_configs' => [
-                'input' => ['class' => 'DataMachine\\Engine\\Steps\\InputStep', 'required' => true],
-                'process' => ['class' => 'DataMachine\\Engine\\Steps\\ProcessStep', 'required' => true],
-                'factcheck' => ['class' => 'DataMachine\\Engine\\Steps\\FactCheckStep', 'required' => false],
-                'finalize' => ['class' => 'DataMachine\\Engine\\Steps\\FinalizeStep', 'required' => true],
-                'output' => ['class' => 'DataMachine\\Engine\\Steps\\OutputStep', 'required' => true]
+                'input' => ['class' => 'DataMachine\\Core\\Steps\\InputStep', 'required' => true],
+                'ai' => ['class' => 'DataMachine\\Core\\Steps\\AIStep', 'required' => true],
+                'output' => ['class' => 'DataMachine\\Core\\Steps\\OutputStep', 'required' => true]
             ]
         ];
 
-        return $this->update_project_pipeline_configuration( $project_id, $default_config, $user_id );
+        return $this->update_project_pipeline_configuration( $project_id, $default_config );
     }
 
 } // End class

@@ -135,25 +135,17 @@ class Modules {
     }
 
     /**
-     * Retrieve all modules for a specific project, verifying user ownership.
+     * Retrieve all modules for a specific project.
      *
-     * @since    0.2.0 (Refactored 0.12.0, DI 0.13.0)
+     * @since    0.2.0 (Refactored 0.12.0, DI 0.13.0, User dependency removed 0.16.0)
      * @param    int      $project_id   The ID of the project.
-     * @param    int      $user_id      The ID of the user requesting the modules.
-     * @return   array|null             An array of module objects or null if none found or user doesn't own project.
+     * @return   array|null             An array of module objects or null if none found.
      */
-    public function get_modules_for_project( $project_id, $user_id ) {
+    public function get_modules_for_project( $project_id ) {
         global $wpdb;
    
-        // First, verify the user owns the project using filter-based service access
-        $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
-   
-        if ( ! $project ) {
-            return null; // Project not found or user doesn't own it
-        }
-   
-        // User owns the project, now get the modules
+        // Direct module retrieval - user ownership verification removed for simplified architecture
+        // User access control is now handled at the admin page level via WordPress capabilities
         $results = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM $this->table_name WHERE project_id = %d ORDER BY module_name ASC",
             absint( $project_id )
@@ -417,23 +409,11 @@ class Modules {
      *
      * @since    0.15.0 // Or current version
      * @param    int      $project_id       The ID of the project.
-     * @param    int      $user_id          The ID of the user requesting the update.
      * @param    array    $module_schedules Associative array [module_id => ['interval' => '...', 'status' => '...']].
-     * @return   bool                     True if ownership verified and updates attempted, false otherwise.
+     * @return   bool                     True if updates attempted, false otherwise.
      */
-    public function update_module_schedules( $project_id, $user_id, $module_schedules ) {
+    public function update_module_schedules( $project_id, $module_schedules ) {
         global $wpdb;
-
-        // Verify the user owns the project using filter-based service access
-        $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
-        if ( ! $project ) {
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->warning('User attempted to update schedules for project they do not own.', ['project_id' => $project_id, 'user_id' => $user_id]);
-            }
-            return false;
-        }
 
         if ( ! is_array( $module_schedules ) || empty( $module_schedules ) ) {
             return false; // Nothing to update
@@ -445,12 +425,12 @@ class Modules {
                 continue; // Skip invalid data
             }
 
-            // Get the module to ensure it belongs to the correct project (redundant check, but safe)
+            // Get the module to ensure it belongs to the correct project
              $existing_module = $this->get_module( $module_id );
              if ( ! $existing_module || $existing_module->project_id != $project_id ) {
                  $logger = apply_filters('dm_get_logger', null);
                  if ($logger) {
-                    $logger->warning('Attempted to update schedule for module not belonging to the specified project.', ['module_id' => $module_id, 'project_id' => $project_id, 'user_id' => $user_id]);
+                    $logger->warning('Attempted to update schedule for module not belonging to the specified project.', ['module_id' => $module_id, 'project_id' => $project_id]);
                  }
                  continue;
              }

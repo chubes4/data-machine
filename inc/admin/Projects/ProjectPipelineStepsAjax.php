@@ -60,28 +60,27 @@ class ProjectPipelineStepsAjax {
             );
         }
 
-        $user_id = get_current_user_id();
-        
-        // Verify project ownership
+        // Verify project exists
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
             wp_send_json_error( 
                 /* translators: Error message when project is not found */
-                __( 'Project not found or permission denied.', 'data-machine' ), 
+                __( 'Project not found.', 'data-machine' ), 
                 404 
             );
         }
 
-        // Get pipeline steps using the service
-        $pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        $pipeline_steps = $pipeline_service->get_project_pipeline_steps( $project_id, $user_id );
+        // Get pipeline steps using direct database access
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        $config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $pipeline_steps = isset($config['steps']) ? $config['steps'] : [];
 
         wp_send_json_success( [
             'project_id' => $project_id,
             'project_name' => esc_html( $project->project_name ),
-            'steps' => $pipeline_steps['steps'] ?? []
+            'steps' => $pipeline_steps
         ] );
     }
 
@@ -113,23 +112,44 @@ class ProjectPipelineStepsAjax {
             );
         }
 
-        $user_id = get_current_user_id();
-        
-        // Verify project ownership
+        // Verify project exists
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
             wp_send_json_error( 
                 /* translators: Error message when project is not found */
-                __( 'Project not found or permission denied.', 'data-machine' ), 
+                __( 'Project not found.', 'data-machine' ), 
                 404 
             );
         }
 
-        // Add the step using the service
-        $pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        $result = $pipeline_service->add_step_to_project( $project_id, $step_type, $step_config, $position, $user_id );
+        // Add the step using direct database operations
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        
+        // Get current configuration
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Create new step configuration
+        $new_step = [
+            'type' => $step_type,
+            'slug' => $step_config['slug'] ?? $step_type,
+            'config' => $step_config,
+            'position' => $position
+        ];
+        
+        // Insert at the specified position
+        array_splice( $steps, $position, 0, [$new_step] );
+        
+        // Update positions
+        foreach ( $steps as $index => &$step ) {
+            $step['position'] = $index;
+        }
+        
+        // Save updated configuration
+        $updated_config = array_merge( $current_config, ['steps' => $steps] );
+        $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
 
         if ( ! $result ) {
             wp_send_json_error( 
@@ -140,12 +160,13 @@ class ProjectPipelineStepsAjax {
         }
 
         // Get updated pipeline steps
-        $updated_steps = $pipeline_service->get_project_pipeline_steps( $project_id, $user_id );
+        $config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $updated_steps = isset($config['steps']) ? $config['steps'] : [];
 
         wp_send_json_success( [
             /* translators: Success message when pipeline step is added */
             'message' => __( 'Pipeline step added successfully.', 'data-machine' ),
-            'steps' => $updated_steps['steps'] ?? []
+            'steps' => $updated_steps
         ] );
     }
 
@@ -174,23 +195,40 @@ class ProjectPipelineStepsAjax {
             );
         }
 
-        $user_id = get_current_user_id();
-        
-        // Verify project ownership
+        // Verify project exists
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
             wp_send_json_error( 
                 /* translators: Error message when project is not found */
-                __( 'Project not found or permission denied.', 'data-machine' ), 
+                __( 'Project not found.', 'data-machine' ), 
                 404 
             );
         }
 
-        // Remove the step using the service
-        $pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        $result = $pipeline_service->remove_step_from_project( $project_id, $step_position, $user_id );
+        // Remove the step using direct database operations
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        
+        // Get current configuration
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Remove step at position
+        if ( isset( $steps[$step_position] ) ) {
+            array_splice( $steps, $step_position, 1 );
+            
+            // Update positions
+            foreach ( $steps as $index => &$step ) {
+                $step['position'] = $index;
+            }
+            
+            // Save updated configuration
+            $updated_config = array_merge( $current_config, ['steps' => $steps] );
+            $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
+        } else {
+            $result = false;
+        }
 
         if ( ! $result ) {
             wp_send_json_error( 
@@ -201,12 +239,13 @@ class ProjectPipelineStepsAjax {
         }
 
         // Get updated pipeline steps
-        $updated_steps = $pipeline_service->get_project_pipeline_steps( $project_id, $user_id );
+        $config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $updated_steps = isset($config['steps']) ? $config['steps'] : [];
 
         wp_send_json_success( [
             /* translators: Success message when pipeline step is removed */
             'message' => __( 'Pipeline step removed successfully.', 'data-machine' ),
-            'steps' => $updated_steps['steps'] ?? []
+            'steps' => $updated_steps
         ] );
     }
 
@@ -236,23 +275,38 @@ class ProjectPipelineStepsAjax {
             );
         }
 
-        $user_id = get_current_user_id();
-        
-        // Verify project ownership
+        // Verify project exists
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
             wp_send_json_error( 
                 /* translators: Error message when project is not found */
-                __( 'Project not found or permission denied.', 'data-machine' ), 
+                __( 'Project not found.', 'data-machine' ), 
                 404 
             );
         }
 
-        // Reorder steps using the service
-        $pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        $result = $pipeline_service->reorder_project_steps( $project_id, $new_order, $user_id );
+        // Reorder steps using direct database operations
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        
+        // Get current configuration
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Reorder steps based on new order array
+        $reordered_steps = [];
+        foreach ( $new_order as $index => $old_position ) {
+            if ( isset( $steps[$old_position] ) ) {
+                $step = $steps[$old_position];
+                $step['position'] = $index;
+                $reordered_steps[] = $step;
+            }
+        }
+        
+        // Save updated configuration
+        $updated_config = array_merge( $current_config, ['steps' => $reordered_steps] );
+        $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
 
         if ( ! $result ) {
             wp_send_json_error( 
@@ -263,12 +317,13 @@ class ProjectPipelineStepsAjax {
         }
 
         // Get updated pipeline steps
-        $updated_steps = $pipeline_service->get_project_pipeline_steps( $project_id, $user_id );
+        $config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $updated_steps = isset($config['steps']) ? $config['steps'] : [];
 
         wp_send_json_success( [
             /* translators: Success message when pipeline steps are reordered */
             'message' => __( 'Pipeline steps reordered successfully.', 'data-machine' ),
-            'steps' => $updated_steps['steps'] ?? []
+            'steps' => $updated_steps
         ] );
     }
 
@@ -287,7 +342,7 @@ class ProjectPipelineStepsAjax {
         }
 
         // Get available pipeline steps from the registry
-        $pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
+        $db_projects = apply_filters('dm_get_db_projects', null);
         $available_steps = $pipeline_service->get_available_step_types();
 
         // Get available handlers from constants
@@ -414,22 +469,20 @@ class ProjectPipelineStepsAjax {
             );
         }
 
-        $user_id = get_current_user_id();
-        
-        // Verify project ownership
+        // Verify project exists
         $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $project_id, $user_id );
+        $project = $db_projects->get_project( $project_id );
 
         if ( ! $project ) {
             wp_send_json_error( 
                 /* translators: Error message when project is not found */
-                __( 'Project not found or permission denied.', 'data-machine' ), 
+                __( 'Project not found.', 'data-machine' ), 
                 404 
             );
         }
 
         // Get available step types for flexible pipeline construction
-        $available_step_types = apply_filters('dm_register_pipeline_step_types', []);
+        $available_step_types = apply_filters('dm_register_step_types', []);
 
         // Format response for frontend consumption
         $formatted_steps = [];

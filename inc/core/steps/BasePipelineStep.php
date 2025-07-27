@@ -15,7 +15,7 @@
  * - Graceful handling of different method signatures
  * 
  * FILTER-BASED SERVICES:
- * - All services accessed via ultra-direct filters like apply_filters('dm_get_service_name', null)
+ * - All services accessed via ultra-direct filters like apply_filters('dm_get_logger', null)
  * - Parameter-less constructors only
  * - Maximum external override capabilities
  *
@@ -259,15 +259,6 @@ class BasePipelineStep {
     }
 
     /**
-     * Get the project prompts service.
-     *
-     * @return object The project prompts service.
-     */
-    protected function get_project_prompts_service() {
-        return apply_filters('dm_get_project_prompts_service', null);
-    }
-
-    /**
      * Get a specific prompt for a pipeline step from the project configuration.
      *
      * @param int    $job_id      The job ID (used to find the associated project).
@@ -289,8 +280,13 @@ class BasePipelineStep {
             return '';
         }
 
-        // Get project prompts
-        $project_prompts_service = $this->get_project_prompts_service();
-        return $project_prompts_service->get_step_prompt($module->project_id, $step_name, $prompt_field);
+        // Get project prompts using filter system
+        $project_prompts = apply_filters('dm_get_project_prompt', null, $module->project_id);
+        
+        if (isset($project_prompts[$step_name][$prompt_field])) {
+            return (string) $project_prompts[$step_name][$prompt_field];
+        }
+        
+        return '';
     }
 }

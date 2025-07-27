@@ -48,12 +48,11 @@ class ProjectManagementAjax {
 			wp_send_json_error( 'Missing project ID.', 400 );
 		}
 
-		$user_id = get_current_user_id();
 		$db_projects = apply_filters('dm_get_db_projects', null);
-		$project = $db_projects->get_project( $project_id, $user_id );
+		$project = $db_projects->get_project( $project_id );
 
 		if ( ! $project ) {
-			wp_send_json_error( 'Project not found or permission denied.', 404 );
+			wp_send_json_error( 'Project not found.', 404 );
 		}
 
 		global $wpdb;
@@ -61,9 +60,9 @@ class ProjectManagementAjax {
 		$updated = $wpdb->update(
 			$table,
 			[ 'project_prompt' => $project_prompt ],
-			[ 'project_id' => $project_id, 'user_id' => $user_id ],
+			[ 'project_id' => $project_id ],
 			[ '%s' ],
-			[ '%d', '%d' ]
+			[ '%d' ]
 		);
 
 		if ( false === $updated ) {
@@ -90,22 +89,20 @@ class ProjectManagementAjax {
 		}
 
 		$project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
-		$user_id    = get_current_user_id();
-
-		if ( empty( $project_id ) || empty( $user_id ) ) {
-			wp_send_json_error( [ 'message' => __( 'Missing project ID or user ID.', 'data-machine' ) ] );
+		if ( empty( $project_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Missing project ID.', 'data-machine' ) ] );
 			return;
 		}
 
 		$db_projects = apply_filters('dm_get_db_projects', null);
 		$project = $db_projects->get_project( $project_id );
-		if ( ! $project || intval( $project->user_id ) !== intval( $user_id ) ) {
-			wp_send_json_error( [ 'message' => __( 'Project not found or permission denied.', 'data-machine' ) ] );
+		if ( ! $project ) {
+			wp_send_json_error( [ 'message' => __( 'Project not found.', 'data-machine' ) ] );
 			return;
 		}
 
 		$db_modules = apply_filters('dm_get_db_modules', null);
-		$modules = $db_modules->get_modules_for_project( $project_id, $user_id );
+		$modules = $db_modules->get_modules_for_project( $project_id );
 		if ( ! $modules ) {
 			wp_send_json_success( [ 'message' => __( 'No modules found in this project to schedule.', 'data-machine' ) ] );
 			return;
@@ -137,8 +134,7 @@ class ProjectManagementAjax {
 				$this->log( $logger, $project_id, $module_id, $module_name, 'Skipping – paused.' );
 				continue;
 			}
-			// File modules are now supported via queue system
-			// No need to skip file modules anymore
+			// All module types are supported through the pipeline system
 			if ( ( $module->schedule_interval ?? '' ) !== 'project_schedule' ) {
 				$this->log( $logger, $project_id, $module_id, $module_name, 'Skipping – schedule not project_schedule.' );
 				continue;
@@ -204,15 +200,14 @@ class ProjectManagementAjax {
 		check_ajax_referer( 'dm_create_project_nonce', 'nonce' );
 
 		$project_name = isset( $_POST['project_name'] ) ? sanitize_text_field( wp_unslash( $_POST['project_name'] ) ) : '';
-		$user_id      = get_current_user_id();
 
-		if ( '' === trim( $project_name ) || ! $user_id ) {
+		if ( '' === trim( $project_name ) ) {
 			wp_send_json_error( [ 'message' => __( 'Project name is required.', 'data-machine' ) ] );
 			return;
 		}
 
 		$db_projects = apply_filters('dm_get_db_projects', null);
-		$project_id = $db_projects->create_project( $user_id, $project_name );
+		$project_id = $db_projects->create_project( $project_name );
 		if ( false === $project_id ) {
 			wp_send_json_error( [ 'message' => __( 'Failed to create project in database.', 'data-machine' ) ] );
 			return;

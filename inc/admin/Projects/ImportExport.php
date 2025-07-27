@@ -66,9 +66,9 @@ class ImportExport {
 			wp_die( esc_html__( 'Project not found or you do not have permission to access it.', 'data-machine' ) );
 		}
 
-		// Fetch modules, passing user_id as required by the method
+		// Fetch modules for project - user ownership verification removed for simplified architecture
 		$db_modules = apply_filters('dm_get_db_modules', null);
-		$modules = $db_modules->get_modules_for_project( $project_id, $current_user_id );
+		$modules = $db_modules->get_modules_for_project( $project_id );
 
 		// 4. Prepare Data for Export (Exclude IDs and User ID)
 		$export_data = array(

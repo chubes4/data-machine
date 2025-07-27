@@ -9,7 +9,9 @@
 
 namespace DataMachine\Admin\OAuth;
 
-use DataMachine\Admin\OAuth\{Twitter, Facebook, Threads};
+use DataMachine\Core\Handlers\Output\Twitter\TwitterAuth;
+use DataMachine\Core\Handlers\Output\Threads\ThreadsAuth;
+use DataMachine\Core\Handlers\Output\Facebook\FacebookAuth;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -82,9 +84,9 @@ class AjaxAuth {
             wp_send_json_error(['message' => __('Permission denied.', 'data-machine')]);
         }
 
-        // Twitter class auto-loaded via PSR-4
+        // TwitterAuth class auto-loaded via PSR-4
         // Call the remove method
-        $removed = Twitter::remove_account($user_id);
+        $removed = TwitterAuth::remove_account($user_id);
 
         if ($removed) {
             wp_send_json_success(['message' => __('Twitter account connection removed successfully.', 'data-machine')]);
@@ -100,8 +102,8 @@ class AjaxAuth {
      * @return string|null Twitter User ID or null.
      */
     private function get_stored_twitter_user_id(int $user_id): ?string {
-        // Twitter class auto-loaded via PSR-4
-        $account = Twitter::get_account_details($user_id);
+        // TwitterAuth class auto-loaded via PSR-4
+        $account = TwitterAuth::get_account_details($user_id);
         return $account['user_id'] ?? null;
     }
 
@@ -123,8 +125,12 @@ class AjaxAuth {
             wp_send_json_error(['message' => __('Threads App ID and Secret must be configured first.', 'data-machine')]);
         }
 
-        // Threads class auto-loaded via PSR-4
-        $oauth_handler = new Threads($app_id, $app_secret);
+        // Get threads auth service via filter-based access
+        $oauth_handler = apply_filters('dm_get_threads_auth', null);
+        if (!$oauth_handler) {
+            wp_send_json_error(['message' => __('Threads auth service not available. This indicates a core filter registration issue.', 'data-machine')]);
+            return;
+        }
         $auth_url = $oauth_handler->get_authorization_url($user_id);
 
         wp_send_json_success(['authorization_url' => $auth_url]);
@@ -148,8 +154,12 @@ class AjaxAuth {
             wp_send_json_error(['message' => __('Facebook App ID and Secret must be configured first.', 'data-machine')]);
         }
 
-        // Facebook class auto-loaded via PSR-4
-        $oauth_handler = new Facebook($app_id, $app_secret);
+        // Get facebook auth service via filter-based access
+        $oauth_handler = apply_filters('dm_get_facebook_auth', null);
+        if (!$oauth_handler) {
+            wp_send_json_error(['message' => __('Facebook auth service not available. This indicates a core filter registration issue.', 'data-machine')]);
+            return;
+        }
         $auth_url = $oauth_handler->get_authorization_url($user_id);
 
         wp_send_json_success(['authorization_url' => $auth_url]);
@@ -169,8 +179,8 @@ class AjaxAuth {
             wp_send_json_error(['message' => __('Permission denied.', 'data-machine')]);
         }
 
-        // Threads class auto-loaded via PSR-4
-        $removed = Threads::remove_account($user_id);
+        // ThreadsAuth class auto-loaded via PSR-4
+        $removed = ThreadsAuth::remove_account($user_id);
 
         if ($removed) {
             wp_send_json_success(['message' => __('Threads account connection removed successfully.', 'data-machine')]);
@@ -199,9 +209,9 @@ class AjaxAuth {
         $nonce_action = 'dm_remove_facebook_account_' . $facebook_user_id;
         check_ajax_referer($nonce_action, '_ajax_nonce');
 
-        // Facebook class auto-loaded via PSR-4
+        // FacebookAuth class auto-loaded via PSR-4
         // Proceed with removal 
-        $removed = Facebook::remove_account($user_id);
+        $removed = FacebookAuth::remove_account($user_id);
 
         if ($removed) {
             wp_send_json_success(['message' => __('Facebook account connection removed successfully.', 'data-machine')]);

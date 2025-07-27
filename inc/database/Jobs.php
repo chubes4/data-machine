@@ -39,19 +39,18 @@ class Jobs {
     /**
      * Create a new job record in the database.
      *
-     * @param array $job_data The job data array containing module_id, user_id, module_config, and input_data.
+     * @param array $job_data The job data array containing module_id, module_config, and input_data.
      * @return int|false The job ID on success, false on failure.
      */
     public function create_job(array $job_data): int|false {
         // Extract data from standardized array format
         $module_id = $job_data['module_id'] ?? 0;
-        $user_id = $job_data['user_id'] ?? 0;
         $module_config_json = $job_data['module_config'] ?? '{}';
         $input_data_json = $job_data['input_data'] ?? null;
         global $wpdb;
 
         // Basic validation
-        if ( empty( $module_id ) || empty( $user_id ) || ! is_string( $module_config_json ) ) {
+        if ( empty( $module_id ) || ! is_string( $module_config_json ) ) {
             return false;
         }
 
@@ -73,7 +72,6 @@ class Jobs {
 
         $data = array(
             'module_id' => absint( $module_id ),
-            'user_id' => absint( $user_id ),
             'status' => 'pending',
             'module_config' => $module_config_json,
             'input_data' => is_string( $input_data_json ) ? $input_data_json : null, // Ensure input data is string or null
@@ -84,7 +82,6 @@ class Jobs {
 
         $format = array(
             '%d', // module_id
-            '%d', // user_id
             '%s', // status
             '%s', // module_config
             '%s', // input_data
@@ -146,7 +143,6 @@ class Jobs {
         $sql = "CREATE TABLE $table_name (
             job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             module_id bigint(20) unsigned NOT NULL,
-            user_id bigint(20) unsigned NOT NULL,
             status varchar(20) NOT NULL DEFAULT 'pending', /* pending, running, completed, failed, completed_with_errors */
             current_step_name varchar(50) NULL DEFAULT NULL, /* Dynamic step name (e.g., 'input', 'process', 'custom_analyze') */
             step_sequence longtext NULL, /* JSON array of step names in execution order */
@@ -165,7 +161,6 @@ class Jobs {
             KEY status (status),
             KEY current_step_name (current_step_name),
             KEY module_id (module_id),
-            KEY user_id (user_id),
             KEY cleanup_scheduled (cleanup_scheduled)
         ) $charset_collate;";
 
@@ -829,22 +824,23 @@ class Jobs {
             return [];
         }
         
-        // Get project pipeline configuration service
-        $project_pipeline_service = apply_filters('dm_get_project_pipeline_config_service', null);
-        if ( ! $project_pipeline_service ) {
+        // Get direct database access to projects
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        if ( ! $db_projects ) {
             return [];
         }
         
         try {
-            $pipeline_config = $project_pipeline_service->get_project_pipeline_steps( $project_id );
+            $config = $db_projects->get_project_pipeline_configuration( $project_id );
+            $pipeline_steps = isset($config['steps']) ? $config['steps'] : [];
             
-            if ( empty( $pipeline_config ) || ! isset( $pipeline_config['steps'] ) ) {
+            if ( empty( $pipeline_steps ) ) {
                 return [];
             }
             
             // Build sequence from project configuration
             $sequence = [];
-            foreach ( $pipeline_config['steps'] as $step ) {
+            foreach ( $pipeline_steps as $step ) {
                 if ( isset( $step['type'] ) && isset( $step['position'] ) ) {
                     $sequence[ $step['position'] ] = $step['type'];
                 }
