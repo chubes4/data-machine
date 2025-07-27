@@ -1,6 +1,6 @@
 # Data Machine
 
-A comprehensive WordPress plugin that transforms your site into a Universal Content Processing Platform. Built with pure WordPress-native hooks and filters, Data Machine provides an infinitely extensible pipeline for content automation, AI processing, and multi-platform publishing.
+A highly extensible WordPress plugin that transforms your site into a Universal Content Processing Platform. Featuring a **pure filter-based dependency architecture** and **intuitive horizontal pipeline builder**, Data Machine provides infinitely extensible content automation with visual workflow construction through WordPress-native patterns.
 
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
@@ -8,19 +8,20 @@ A comprehensive WordPress plugin that transforms your site into a Universal Cont
 
 ## Overview
 
-Data Machine provides advanced content automation through its **Extensible Pipeline Architecture**. Unlike rigid automation tools, Data Machine uses pure WordPress filters to create a completely customizable processing pipeline that can be extended by any plugin without touching core code. Collect data from any source, process it through custom workflows, and publish everywhere - all through WordPress-native extensibility patterns.
+Data Machine features an **innovative architecture** that takes WordPress-native patterns to their logical conclusion. With its **95%+ pure filter-based dependency system** and **intuitive visual pipeline builder**, it provides a highly extensible content automation platform built entirely on WordPress's core architectural principles.
 
 ### Key Features
 
-- **🔄 Infinitely Extensible Pipeline**: Plugin-based pipeline steps registered via WordPress filters - add, remove, or modify any processing step
-- **🎯 Pure WordPress-Native Architecture**: Built entirely on WordPress hooks and filters for maximum compatibility and extensibility
-- **🔌 Universal Plugin Integration**: Any WordPress plugin can extend Data Machine without core modifications
-- **📡 Extensible Handler System**: Input/output handlers registered dynamically - support any data source or publishing platform
-- **🤖 Multi-Provider AI Integration**: OpenAI, Anthropic, Gemini, Grok, OpenRouter with per-step configuration flexibility
-- **🚀 Filter-Based Service Architecture**: All services accessible via WordPress filters - no dependency injection complexity
-- **⏰ Dynamic Background Processing**: Action Scheduler hooks generated automatically from pipeline configuration
-- **🎯 Zero Core Modifications**: External plugins use identical patterns as core handlers - true extensibility
-- **🔐 WordPress-Standard Security**: Built on WordPress security patterns with encrypted credential storage
+- **🎨 Intuitive Pipeline Builder**: Drag-and-drop visual pipeline construction with position-based execution
+- **🔄 Pure Filter-Based Architecture**: 95%+ WordPress-native dependency system eliminating constructor injection complexity
+- **⚡ Ultra-Direct Service Access**: All 32+ services accessible via `apply_filters('dm_get_service', null)` pattern
+- **🎯 Universal Modal Configuration**: All step configuration through contextual modals, eliminating complex navigation
+- **🧠 Fluid Context System**: AI steps automatically receive ALL previous pipeline DataPackets for enhanced context
+- **🤖 Multi-Model Workflows**: Different AI providers/models per step (GPT-4 → Claude → Gemini chains)
+- **🔌 Zero Constructor Dependencies**: Maximum WordPress compatibility with parameter-less constructors
+- **📡 Self-Registering Handlers**: "Plugins within plugins" pattern with auto-loading and filter registration
+- **🚀 Position-Based Execution**: Linear pipeline execution using user-controlled ordering (0-99 positions)
+- **🎯 External Override Capability**: Any service can be overridden by external plugins via filter priority
 
 ## Architecture Overview
 
@@ -63,8 +64,10 @@ add_filter('dm_register_pipeline_steps', function($steps) {
 // Input handler registration  
 add_filter('dm_register_input_handlers', function($handlers) {
     $handlers['shopify'] = [
-        'class' => 'MyPlugin\ShopifyHandler',
-        'label' => 'Shopify Integration'
+        'class' => 'MyPlugin\\ShopifyHandler',
+        'label' => 'Shopify Integration',
+        'auth_class' => 'MyPlugin\\ShopifyAuth',
+        'settings_class' => 'MyPlugin\\ShopifySettings'
     ];
     return $handlers;
 });
@@ -72,8 +75,10 @@ add_filter('dm_register_input_handlers', function($handlers) {
 // Output handler registration
 add_filter('dm_register_output_handlers', function($handlers) {
     $handlers['custom_api'] = [
-        'class' => 'MyPlugin\CustomApiHandler',
-        'label' => 'Custom API Output'
+        'class' => 'MyPlugin\\CustomApiHandler',
+        'label' => 'Custom API Output',
+        'auth_class' => 'MyPlugin\\CustomApiAuth',
+        'settings_class' => 'MyPlugin\\CustomApiSettings'
     ];
     return $handlers;
 });
@@ -103,7 +108,6 @@ data-machine/
 │   ├── handlers/                # Extensible input/output handlers
 │   ├── database/               # WordPress table abstractions
 │   ├── helpers/                # Filter-based utility services
-│   ├── CoreHandlerRegistry.php # Auto-discovery system
 │   └── DataMachine.php         # Filter-based service bootstrap
 ├── lib/ai-http-client/           # Multi-provider AI library
 ├── assets/                      # Frontend assets
@@ -215,33 +219,16 @@ class SentimentAnalysisStep extends BasePipelineStep implements PipelineStepInte
 ### Adding Custom Input Handlers
 
 ```php
-// Register input handler via WordPress filter
+// Single registration with integrated auth and settings
 add_filter('dm_register_input_handlers', function($handlers) {
     $handlers['shopify_orders'] = [
-        'class' => 'MyPlugin\ShopifyOrdersHandler',
-        'label' => 'Shopify Orders'
+        'class' => 'MyPlugin\\ShopifyOrdersHandler',
+        'label' => 'Shopify Orders',
+        'auth_class' => 'MyPlugin\\ShopifyAuth',
+        'settings_class' => 'MyPlugin\\ShopifySettings'
     ];
     return $handlers;
 });
-
-// Register settings fields
-add_filter('dm_handler_settings_fields', function($fields, $type, $slug, $config) {
-    if ($type === 'input' && $slug === 'shopify_orders') {
-        return [
-            'api_key' => [
-                'type' => 'text',
-                'label' => 'Shopify API Key',
-                'required' => true
-            ],
-            'store_url' => [
-                'type' => 'url', 
-                'label' => 'Store URL',
-                'required' => true
-            ]
-        ];
-    }
-    return $fields;
-}, 10, 4);
 
 // Implement the handler
 namespace MyPlugin;
@@ -290,8 +277,9 @@ class ShopifyOrdersHandler extends BaseInputHandler {
 // Register output handler
 add_filter('dm_register_output_handlers', function($handlers) {
     $handlers['discord'] = [
-        'class' => 'MyPlugin\DiscordHandler',
-        'label' => 'Discord Webhook'
+        'class' => 'MyPlugin\\DiscordHandler',
+        'label' => 'Discord Webhook',
+        'settings_class' => 'MyPlugin\\DiscordSettings'
     ];
     return $handlers;
 });
