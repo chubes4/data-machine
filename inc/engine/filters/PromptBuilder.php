@@ -266,6 +266,20 @@ class PromptBuilder {
 
         $directive_block .= "\n--- END RESPONSE FORMATTING AND INSTRUCTIONS ---";
         
+        /**
+         * Allow handlers and external plugins to contribute additional output directives.
+         * 
+         * This filter enables handlers to append their own specific directives to the core
+         * directive block, maintaining consistency while allowing extensibility.
+         *
+         * @param string $directive_block The current directive block with core instructions
+         * @param string $output_type     The output type (e.g., 'twitter', 'publish_local', etc.)
+         * @param array  $output_config   The complete output configuration array
+         * 
+         * @since NEXT_VERSION
+         */
+        $directive_block = apply_filters('dm_get_output_directive', $directive_block, $output_type, $output_config);
+        
         return $directive_block;
     }
 
