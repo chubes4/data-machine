@@ -6,5 +6,5 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'a42bbc76956a812b814a20ed39b362b9' => $baseDir . '/includes/Constants.php',
+    'd4b0aeb1d29b9930e8349cb218fc74e6' => $baseDir . '/inc/core/Constants.php',
 );

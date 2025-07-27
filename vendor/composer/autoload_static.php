@@ -7,7 +7,7 @@ namespace Composer\Autoload;
 class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
 {
     public static $files = array (
-        'a42bbc76956a812b814a20ed39b362b9' => __DIR__ . '/../..' . '/includes/Constants.php',
+        'd4b0aeb1d29b9930e8349cb218fc74e6' => __DIR__ . '/../..' . '/inc/core/Constants.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -21,8 +21,12 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         ),
         'D' => 
         array (
+            'DataMachine\\Services\\' => 21,
+            'DataMachine\\Helpers\\' => 20,
+            'DataMachine\\Engine\\' => 19,
+            'DataMachine\\Database\\' => 21,
+            'DataMachine\\Core\\' => 17,
             'DataMachine\\Admin\\' => 18,
-            'DataMachine\\' => 12,
         ),
         'C' => 
         array (
@@ -43,13 +47,29 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
         ),
+        'DataMachine\\Services\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/inc/services',
+        ),
+        'DataMachine\\Helpers\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/inc/helpers',
+        ),
+        'DataMachine\\Engine\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/inc/engine',
+        ),
+        'DataMachine\\Database\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/inc/database',
+        ),
+        'DataMachine\\Core\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/inc/core',
+        ),
         'DataMachine\\Admin\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/admin',
-        ),
-        'DataMachine\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/includes',
+            0 => __DIR__ . '/../..' . '/inc/admin',
         ),
         'Composer\\CaBundle\\' => 
         array (

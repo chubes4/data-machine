@@ -24,22 +24,22 @@ $service = apply_filters('dm_get_service', null, 'service_name');
 - **WordPress-Native**: Complete alignment with WordPress architectural patterns
 - **Eliminates Brittleness**: No complex dependency chains or injection failures
 
-### ServiceRegistry Architecture
+### Ultra-Direct Service Access
 
-The new `ServiceRegistry` class provides centralized service management with lazy loading and external override capabilities:
+The new ultra-direct filter system provides the most efficient access pattern possible for critical services:
 
 ```php
 // Core service registration with dependency resolution
-self::register('db_jobs', function() {
-    $db_projects = self::get('db_projects');
-    $logger = self::get('logger');
-    return new \DataMachine\Database\Jobs($db_projects, $logger);
-});
+$logger = apply_filters('dm_get_logger', null);
+$db_jobs = apply_filters('dm_get_db_jobs', null);
+$ai_client = apply_filters('dm_get_ai_http_client', null);
+$orchestrator = apply_filters('dm_get_orchestrator', null);
+$fluid_bridge = apply_filters('dm_get_fluid_context_bridge', null);
 
 // External override capability via specific filters
-add_filter('dm_service_override_logger', function($service) {
+add_filter('dm_get_logger', function($service) {
     return new CustomLoggerClass();
-});
+}, 20);
 ```
 
 ### Revolutionary Pipeline Architecture
@@ -74,6 +74,12 @@ Input/output handlers are registered via `dm_register_handlers` filter, enabling
 # Install/update dependencies
 composer install
 composer dump-autoload    # After adding new classes
+
+# AI HTTP Client library testing (in lib/ai-http-client/)
+cd lib/ai-http-client/
+composer test      # PHPUnit tests
+composer analyse   # PHPstan static analysis 
+composer check     # Run both test and analyse
 ```
 
 No build process required - changes take effect immediately. Database schema is recreated on plugin activation/deactivation.
@@ -81,7 +87,7 @@ No build process required - changes take effect immediately. Database schema is 
 ## Key Components
 
 ### Core Architecture
-- **ServiceRegistry**: Pure filter-based dependency management with external override capabilities
+- **Ultra-Direct Service Filters**: Pure filter-based dependency management with external override capabilities
 - **DataPacket**: Standardized data format with content, metadata, processing, and attachments arrays
 - **ProcessingOrchestrator**: Coordinates dynamic step execution with fluid context support
 - **FluidContextBridge**: Bridges DataMachine pipeline data with ai-http-client context management
@@ -98,50 +104,130 @@ No build process required - changes take effect immediately. Database schema is 
 - **Database Classes**: WordPress table abstractions with filter-based access
 - **Modal Content Filters**: `dm_get_modal_content` and `dm_save_modal_config` for infinite extensibility
 
+## Directory Structure
+
+Based on PSR-4 autoloading configuration:
+
+```
+inc/
+├── core/                    # DataMachine\Core\
+│   ├── Constants.php        # Plugin constants
+│   ├── CoreHandlerRegistry.php
+│   ├── DataMachine.php      # Main plugin class
+│   ├── DataPacket.php       # Standardized data format
+│   ├── handlers/            # Core handler system
+│   └── steps/               # Pipeline step implementations
+├── admin/                   # DataMachine\Admin\
+│   ├── AdminPage.php        # Main admin interface
+│   ├── OAuth/               # OAuth integrations
+│   ├── Projects/            # Project management
+│   ├── ModuleConfig/        # Module configuration
+│   └── RemoteLocations/     # Remote location management
+├── engine/                  # DataMachine\Engine\
+│   ├── ProcessingOrchestrator.php
+│   ├── FluidContextBridge.php
+│   ├── PipelineStepRegistry.php
+│   └── filters/             # Processing filters
+├── database/                # DataMachine\Database\
+│   ├── Jobs.php             # Job management
+│   ├── Projects.php         # Project data
+│   └── ...                  # Other database classes
+├── services/                # DataMachine\Services\
+│   ├── ProjectPipelineConfigService.php
+│   └── AiStepConfigService.php
+└── helpers/                 # DataMachine\Helpers\
+    ├── Logger.php           # Logging system
+    └── ...                  # Utility classes
+```
+
 ## Testing & Debugging
 
+### Monitoring & Inspection
 - **Jobs Monitoring**: Data Machine → Jobs in WordPress admin
 - **Background Processing**: WordPress → Tools → Action Scheduler
 - **Database**: `wp_dm_jobs` table contains step data in JSON format
+- **Pipeline Flow Validation**: FlowValidationEngine validates step configurations
+
+### Development Debugging
 - **Browser Debug**: Enable `window.dmDebugMode = true` for verbose logging
-- **Service Override Testing**: Use filter patterns like `dm_service_override_{service_name}`
+- **WordPress Debug**: Enable WP_DEBUG for validation logging
+- **Service Override Testing**: Use filter patterns like `dm_get_{service_name}` filters
+- **Ultra-Direct Service Testing**: Test critical services via direct filters
+
+### Testing Framework
+- **Main Plugin**: No testing framework currently configured - manual testing via WordPress admin
+- **AI HTTP Client**: PHPUnit tests available in `lib/ai-http-client/` directory
+- **Service Architecture**: Filter-based override testing for external plugin integration
 
 ## Development Patterns
 
 ### Service Access (Universal Pattern)
 ```php
 // 100% filter-based access - used throughout entire codebase
-$logger = apply_filters('dm_get_service', null, 'logger');
-$db_jobs = apply_filters('dm_get_service', null, 'db_jobs');
-$ai_http_client = apply_filters('dm_get_service', null, 'ai_http_client');
+$logger = apply_filters('dm_get_logger', null);
+$db_jobs = apply_filters('dm_get_db_jobs', null);
+$ai_http_client = apply_filters('dm_get_ai_http_client', null);
 ```
 
 ### Service Override Capability
 ```php
 // External plugins can override any service
-add_filter('dm_service_override_logger', function($service) {
+add_filter('dm_get_logger', function($service) {
     return new MyCustomLogger();
-});
+}, 20);
 
 // Service-specific override with higher priority
-add_filter('dm_service_override_ai_http_client', function($service) {
+add_filter('dm_get_ai_http_client', function($service) {
     return new MyCustomAIClient();
 }, 20);
 ```
 
+### Universal 3-Step Pipeline Registration
+```php
+// Register the universal Input → AI → Output pipeline (auto-registered in core)
+add_filter('dm_register_step_types', function($step_types) {
+    $step_types['input'] = [
+        'class' => 'DataMachine\\Core\\Steps\\InputStep',
+        'label' => __('Input Step', 'data-machine'),
+        'type' => 'input'
+    ];
+    
+    $step_types['ai'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AIStep', 
+        'label' => __('AI Processing Step', 'data-machine'),
+        'type' => 'ai'
+    ];
+    
+    $step_types['output'] = [
+        'class' => 'DataMachine\\Core\\Steps\\OutputStep',
+        'label' => __('Output Step', 'data-machine'),
+        'type' => 'output'
+    ];
+    
+    return $step_types;
+}, 5);
+```
+
 ### Handler Registration
 ```php
-add_filter('dm_register_handlers', function($handlers) {
-    $handlers['input']['custom'] = ['class' => 'MyPlugin\CustomHandler', 'label' => 'Custom Source'];
+// Input handlers
+add_filter('dm_register_input_handlers', function($handlers) {
+    $handlers['custom_source'] = ['class' => 'MyPlugin\CustomHandler', 'label' => 'Custom Source'];
+    return $handlers;
+});
+
+// Output handlers  
+add_filter('dm_register_output_handlers', function($handlers) {
+    $handlers['custom_destination'] = ['class' => 'MyPlugin\CustomHandler', 'label' => 'Custom Destination'];
     return $handlers;
 });
 ```
 
 ### Pipeline Extension
 ```php
-add_filter('dm_register_pipeline_steps', function($steps) {
-    $steps['custom_step'] = ['class' => 'MyPlugin\CustomStep', 'next' => 'ai'];
-    return $steps;
+add_filter('dm_register_step_types', function($step_types) {
+    $step_types['custom_step'] = ['class' => 'MyPlugin\CustomStep', 'type' => 'custom'];
+    return $step_types;
 });
 ```
 
@@ -157,8 +243,8 @@ class CustomHandler extends BaseInputHandler {
     
     public function get_input_data(object $module, array $source_config, int $user_id): array {
         // All service access via filters
-        $logger = apply_filters('dm_get_service', null, 'logger');
-        $http_service = apply_filters('dm_get_service', null, 'http_service');
+        $logger = apply_filters('dm_get_logger', null);
+        $http_service = apply_filters('dm_get_http_service', null);
         
         return ['processed_items' => $items];
     }
@@ -188,7 +274,7 @@ add_filter('dm_save_modal_config', function($result, $step_type, $config_data) {
 ### Multi-Model AI Workflow Configuration
 ```php
 // Configure different AI models per step via AiStepConfigService
-$ai_config_service = apply_filters('dm_get_service', null, 'ai_step_config_service');
+$ai_config_service = apply_filters('dm_get_ai_step_config_service', null);
 
 // Step 1: GPT-4 for analysis
 $ai_config_service->save_step_ai_config($project_id, 0, [
@@ -214,11 +300,11 @@ $ai_config_service->save_step_ai_config($project_id, 2, [
 
 ### Fluid Context Bridge Integration
 ```php
-class CustomAIStep extends \DataMachine\Engine\Steps\BasePipelineStep {
+class CustomAIStep extends \DataMachine\Core\Steps\BasePipelineStep {
     
-    public function process(\DataMachine\DataPacket $data_packet, array $pipeline_context = []): \DataMachine\DataPacket {
-        $fluid_bridge = apply_filters('dm_get_service', null, 'fluid_context_bridge');
-        $ai_http_client = apply_filters('dm_get_service', null, 'ai_http_client');
+    public function process(\DataMachine\Core\DataPacket $data_packet, array $pipeline_context = []): \DataMachine\Core\DataPacket {
+        $fluid_bridge = apply_filters('dm_get_fluid_context_bridge', null);
+        $ai_http_client = apply_filters('dm_get_ai_http_client', null);
         
         // Aggregate all previous pipeline context
         $aggregated_context = $fluid_bridge->aggregate_pipeline_context($pipeline_context);
@@ -237,16 +323,16 @@ class CustomAIStep extends \DataMachine\Engine\Steps\BasePipelineStep {
 
 ## Available Services
 
-The ServiceRegistry provides these core services (all accessible via `dm_get_service` filter):
+The ultra-direct filter system provides these core services (all accessible via direct filter patterns):
 
-- **Core Services**: `logger`, `encryption_helper`, `memory_guard`
-- **Database Services**: `db_jobs`, `db_modules`, `db_projects`, `db_processed_items`, `db_remote_locations`
-- **Engine Services**: `orchestrator`, `job_creator`, `job_status_manager`, `action_scheduler`
-- **Handler Services**: `processed_items_manager`, `http_service`
-- **AI Services**: `ai_http_client`, `prompt_builder`, `fluid_context_bridge`
-- **OAuth Services**: `oauth_twitter`, `oauth_reddit`, `oauth_threads`, `oauth_facebook`
-- **Pipeline Services**: `pipeline_step_registry`, `project_prompts_service`, `project_pipeline_config_service`
-- **Configuration Services**: `ai_step_config_service` (step-specific AI configuration management)
+- **Core Services**: `dm_get_logger`, `dm_get_encryption_helper`
+- **Database Services**: `dm_get_db_jobs`, `dm_get_db_modules`, `dm_get_db_projects`, `dm_get_db_processed_items`, `dm_get_db_remote_locations`
+- **Engine Services**: `dm_get_orchestrator`, `dm_get_job_creator`, `dm_get_job_status_manager`
+- **Handler Services**: `dm_get_processed_items_manager`, `dm_get_http_service`
+- **AI Services**: `dm_get_ai_http_client`, `dm_get_prompt_builder`, `dm_get_fluid_context_bridge`
+- **OAuth Services**: `dm_get_oauth_twitter`, `dm_get_oauth_reddit`, `dm_get_oauth_threads`, `dm_get_oauth_facebook`
+- **Pipeline Services**: `dm_get_pipeline_step_registry`, `dm_get_project_prompts_service`, `dm_get_project_pipeline_config_service`
+- **Configuration Services**: `dm_get_ai_step_config_service` (step-specific AI configuration management)
 
 ## Revolutionary User Experience Transformation
 
@@ -309,50 +395,126 @@ The Data Machine architecture represents a revolutionary transformation: **compl
 - **Responsive Design**: Pipeline builder adapts to different screen sizes
 - **Visual Hierarchy**: Clear step progression with color-coded step types
 
-## Commit Message Suggestions
+## Contributing
 
-Based on this revolutionary architectural transformation, I suggest the following commit structure:
+### Simplified Two-Pattern API
 
-### Major Architecture Commit
-```
-feat: Revolutionary horizontal pipeline builder with universal modal system
+Data Machine uses a revolutionary simplified API architecture with just two core patterns for infinite extensibility. No interfaces, inheritance, or complex requirements - just direct filter registration.
 
-Transform complex configuration into intuitive visual workflow construction:
-- Horizontal card-based pipeline builder with drag-and-drop
-- Universal modal configuration system eliminating config pages  
-- Multi-model AI workflows with step-specific provider configuration
-- FluidContextBridge for enhanced AI context aggregation
-- Pure filter-based modal content extensibility
+### Input Handler Registration
 
-BREAKING CHANGE: Configuration UI completely reimagined - all settings now 
-configured through contextual modals instead of separate pages.
+Register input handlers using the `dm_register_input_handlers` filter:
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
+```php
+add_filter('dm_register_input_handlers', function($handlers) {
+    $handlers['my_custom_source'] = [
+        'class' => 'MyPlugin\CustomInputHandler',
+        'label' => 'My Custom Data Source'
+    ];
+    return $handlers;
+});
 ```
 
-### Service Architecture Commit
+### Output Handler Registration
+
+Register output handlers using the `dm_register_output_handlers` filter:
+
+```php
+add_filter('dm_register_output_handlers', function($handlers) {
+    $handlers['my_custom_destination'] = [
+        'class' => 'MyPlugin\CustomOutputHandler', 
+        'label' => 'My Custom Destination'
+    ];
+    return $handlers;
+});
 ```
-feat: Enhanced service architecture with AI step configuration
 
-Add specialized services for revolutionary pipeline management:
-- ProjectPipelineConfigService for step ordering and configuration
-- AiStepConfigService for per-step AI provider/model settings
-- FluidContextBridge for ai-http-client integration and context aggregation
-- Enhanced ServiceRegistry with new configuration services
+### Minimal Handler Implementation
 
-Enables different AI providers per step (GPT-4 → Claude → Gemini workflows)
-with superior context flow between pipeline steps.
+Handlers need only implement the required method and return/accept DataPackets:
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
+#### Input Handler Example
+```php
+namespace MyPlugin;
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+class CustomInputHandler {
+    public function get_input_data(object $module, array $source_config, int $user_id): array {
+        // Access services via filters
+        $logger = apply_filters('dm_get_logger', null);
+        $http_service = apply_filters('dm_get_http_service', null);
+        
+        // Your custom logic here
+        $items = [/* your data */];
+        
+        return ['processed_items' => $items];
+    }
+}
+```
+
+#### Output Handler Example
+```php
+namespace MyPlugin;
+
+class CustomOutputHandler {
+    public function handle_output(\DataMachine\Core\DataPacket $data_packet, array $destination_config, int $user_id): bool {
+        // Access services via filters
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // Process the DataPacket
+        $content = $data_packet->content;
+        $metadata = $data_packet->metadata;
+        
+        // Your custom output logic here
+        
+        return true; // Success
+    }
+}
+```
+
+### DataPacket Compliance
+
+The only structural requirement is DataPacket compliance. DataPackets contain:
+
+- **content**: Primary content array
+- **metadata**: Associated metadata  
+- **processing**: Processing history and context
+- **attachments**: File attachments
+
+### Development Flow
+
+1. **Fork Repository**: Create your own fork of the Data Machine repository
+2. **Create Feature Branch**: `git checkout -b feature/my-custom-handler`
+3. **Direct Filter Registration**: Use `dm_register_input_handlers` or `dm_register_output_handlers`
+4. **Implement Handler Class**: Follow minimal structure with DataPacket compliance
+5. **Test Functionality**: Verify handler works in Data Machine pipelines
+6. **Submit Pull Request**: Submit your contribution for review
+
+### No Complex Requirements
+
+- **No Interfaces**: Direct class implementation without interface requirements
+- **No Inheritance**: No mandatory base class extensions
+- **No Constructor Dependencies**: Parameter-less constructors only
+- **No Registration Complexity**: Simple filter-based registration
+- **Barrier-Free**: External plugins use identical patterns as core code
+
+### Filter-Based Service Access
+
+All handlers access services via the universal filter pattern:
+
+```php
+// Universal service access pattern
+$service = apply_filters('dm_get_{service_name}', null);
+
+// Available core services
+$logger = apply_filters('dm_get_logger', null);
+$db_jobs = apply_filters('dm_get_db_jobs', null);
+$http_service = apply_filters('dm_get_http_service', null);
+$ai_http_client = apply_filters('dm_get_ai_http_client', null);
 ```
 
 ## Important Notes
 
-- Uses PSR-4 namespacing with `DataMachine\` namespace
+- Uses PSR-4 namespacing with `DataMachine\` namespace structure
 - All WordPress security patterns enforced (escaping, sanitization, capability checks)
 - External plugins can extend functionality using identical patterns as core code
 - AI integration supports multiple providers via `lib/ai-http-client/`

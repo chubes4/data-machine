@@ -11,11 +11,15 @@
     },
     "autoload": {
         "psr-4": {
-            "DataMachine\\": "includes/",
-            "DataMachine\\Admin\\": "admin/"
+            "DataMachine\\Core\\": "inc/core/",
+            "DataMachine\\Admin\\": "inc/admin/",
+            "DataMachine\\Engine\\": "inc/engine/",
+            "DataMachine\\Database\\": "inc/database/",
+            "DataMachine\\Services\\": "inc/services/",
+            "DataMachine\\Helpers\\": "inc/helpers/"
         },
         "files": [
-            "includes/Constants.php"
+            "inc/core/Constants.php"
         ]
     }
 }

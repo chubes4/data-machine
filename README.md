@@ -39,7 +39,8 @@ Data Machine's **Extensible Pipeline Architecture** transforms WordPress into a 
 
 EXTENSIBLE VIA WORDPRESS FILTERS:
 • dm_register_pipeline_steps    - Add/modify pipeline steps
-• dm_register_handlers         - Add input/output handlers  
+• dm_register_input_handlers   - Add input handlers
+• dm_register_output_handlers  - Add output handlers  
 • dm_get_service              - Access/override any service
 ```
 
@@ -59,11 +60,20 @@ add_filter('dm_register_pipeline_steps', function($steps) {
     return $steps;
 });
 
-// Handler registration  
-add_filter('dm_register_handlers', function($handlers) {
-    $handlers['input']['shopify'] = [
+// Input handler registration  
+add_filter('dm_register_input_handlers', function($handlers) {
+    $handlers['shopify'] = [
         'class' => 'MyPlugin\ShopifyHandler',
         'label' => 'Shopify Integration'
+    ];
+    return $handlers;
+});
+
+// Output handler registration
+add_filter('dm_register_output_handlers', function($handlers) {
+    $handlers['custom_api'] = [
+        'class' => 'MyPlugin\CustomApiHandler',
+        'label' => 'Custom API Output'
     ];
     return $handlers;
 });
@@ -75,7 +85,7 @@ add_filter('dm_register_handlers', function($handlers) {
 - **Backend**: PHP 8.0+ with PSR-4 namespacing  
 - **Service System**: Filter-based service registry (`dm_get_service`)
 - **Pipeline**: Dynamic step registration via `dm_register_pipeline_steps`
-- **Handlers**: Automatic discovery with `dm_register_handlers` filter
+- **Handlers**: Direct registration with `dm_register_input_handlers` and `dm_register_output_handlers` filters
 - **Database**: Custom WordPress tables (`wp_dm_*`) with JSON step data
 - **Job Processing**: Dynamic Action Scheduler hooks from pipeline config
 - **AI Integration**: Multi-provider library with step-aware configuration
@@ -205,9 +215,9 @@ class SentimentAnalysisStep extends BasePipelineStep implements PipelineStepInte
 ### Adding Custom Input Handlers
 
 ```php
-// Register handler via WordPress filter
-add_filter('dm_register_handlers', function($handlers) {
-    $handlers['input']['shopify_orders'] = [
+// Register input handler via WordPress filter
+add_filter('dm_register_input_handlers', function($handlers) {
+    $handlers['shopify_orders'] = [
         'class' => 'MyPlugin\ShopifyOrdersHandler',
         'label' => 'Shopify Orders'
     ];
@@ -278,8 +288,8 @@ class ShopifyOrdersHandler extends BaseInputHandler {
 
 ```php
 // Register output handler
-add_filter('dm_register_handlers', function($handlers) {
-    $handlers['output']['discord'] = [
+add_filter('dm_register_output_handlers', function($handlers) {
+    $handlers['discord'] = [
         'class' => 'MyPlugin\DiscordHandler',
         'label' => 'Discord Webhook'
     ];
@@ -391,7 +401,7 @@ add_filter('dm_get_service', function($service, $name) {
 2. Create a feature branch
 3. Follow pure WordPress filter patterns for extensibility
 4. Use `apply_filters('dm_get_service', null, 'service_name')` for service access
-5. Register handlers via `dm_register_handlers` filter (no core modifications)
+5. Register handlers via `dm_register_input_handlers` and `dm_register_output_handlers` filters (no core modifications)
 6. Register pipeline steps via `dm_register_pipeline_steps` filter
 7. Implement proper interfaces (`PipelineStepInterface` for steps)
 8. Add proper error handling with `WP_Error`
