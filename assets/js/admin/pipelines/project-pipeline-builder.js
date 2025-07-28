@@ -206,9 +206,8 @@
             `;
         }
         
-        // Input/Output steps show handler information
-        const handlerLabel = getHandlerDisplayName(step.handler) || 'No handler';
-        const configPreview = getConfigPreview(step.config, step.type);
+        // Input/Output steps show handler information and allow adding handlers
+        const handlersHtml = generateStepHandlersHtml(step);
         
         return `
             <div class="dm-horizontal-step-card dm-step-${step.type}" 
@@ -225,8 +224,17 @@
                 </div>
                 
                 <div class="dm-horizontal-step-content">
-                    <div class="dm-horizontal-step-handler">${handlerLabel}</div>
-                    <div class="dm-horizontal-step-config">${configPreview}</div>
+                    ${handlersHtml}
+                    
+                    <div class="dm-add-handler-section" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+                        <button type="button" class="dm-add-handler-btn" 
+                                data-step-id="${step.id}" 
+                                data-step-type="${step.type}"
+                                style="background: none; border: 1px dashed #ccc; color: #666; font-size: 10px; padding: 4px 8px; border-radius: 3px; cursor: pointer; width: 100%; transition: all 0.2s ease;">
+                            <span class="dashicons dashicons-plus-alt" style="font-size: 10px; vertical-align: middle;"></span>
+                            Add Handler
+                        </button>
+                    </div>
                 </div>
                 
                 <button type="button" class="dm-step-configure dm-horizontal-step-config" 
@@ -286,7 +294,7 @@
     }
     
     /**
-     * Load available step types for flexible pipeline construction.
+     * Load available step types from the universal filter system.
      * @param {number} projectId - The project ID
      * @param {number} currentPosition - Current position in pipeline
      * @param {jQuery} $dropdown - The dropdown element to populate
@@ -302,64 +310,81 @@
             url: dmPipelineBuilder.ajax_url,
             type: 'POST',
             data: {
-                action: 'dm_get_dynamic_next_steps',
-                nonce: dmPipelineBuilder.get_dynamic_next_steps_nonce || dmPipelineBuilder.nonce,
+                action: 'dm_get_dynamic_step_types',
+                nonce: dmPipelineBuilder.get_pipeline_steps_nonce || dmPipelineBuilder.nonce,
                 project_id: projectId,
                 current_position: currentPosition
             },
             success: function(response) {
-                if (response.success && response.data.available_steps) {
-                    populateStepDropdown($dropdown, response.data.available_steps);
+                if (response.success && response.data.step_types) {
+                    populateStepDropdownFromFilter($dropdown, response.data.step_types);
                 } else {
-                    console.warn('No dynamic steps available, using flexible step options');
+                    console.warn('No dynamic step types available, using flexible step options');
                     showFlexibleStepOptions($dropdown);
                 }
             },
             error: function(xhr, status, error) {
-                console.warn('Error loading dynamic steps, using flexible step options:', error);
+                console.warn('Error loading dynamic step types, using flexible step options:', error);
                 showFlexibleStepOptions($dropdown);
             }
         });
     }
     
     /**
-     * Populate step dropdown with dynamic step options.
+     * Populate step dropdown with step types from the universal filter system.
      * @param {jQuery} $dropdown - The dropdown element
-     * @param {Array} availableSteps - Array of available step options
+     * @param {Array} stepTypes - Array of step type configurations from dm_register_pipeline_steps
      */
-    function populateStepDropdown($dropdown, availableSteps) {
+    function populateStepDropdownFromFilter($dropdown, stepTypes) {
         let dropdownHTML = '';
         
-        if (availableSteps.length === 0) {
+        if (stepTypes.length === 0) {
             dropdownHTML = `
                 <div class="dm-add-step-empty" style="padding: 12px; text-align: center; color: #666;">
                     <span class="dashicons dashicons-info"></span>
-                    No more steps can be added
+                    No step types registered
                 </div>
             `;
         } else {
-            availableSteps.forEach(step => {
-                const stepIcon = getStepTypeIcon(step.type);
+            stepTypes.forEach(step => {
+                const stepIcon = step.icon || getStepTypeIcon(step.type);
                 const stepColor = getStepTypeColor(step.type);
-                const recommendationBadge = step.recommendation ? 
-                    `<span class="dm-step-recommendation" style="background: ${stepColor}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; margin-left: 4px;">
-                        ${Math.round(step.recommendation.strength * 100)}%
-                    </span>` : '';
+                const hasHandlers = step.supports && step.supports.includes('handlers');
                 
                 dropdownHTML += `
                     <div class="dm-horizontal-add-step-option" 
                          data-step-type="${step.type}" 
                          data-step-name="${step.name}"
-                         title="${step.description}${step.recommendation ? ' - ' + step.recommendation.reasoning : ''}">
+                         data-has-handlers="${hasHandlers}"
+                         title="${step.description || ''}">
                         <span class="dashicons ${stepIcon}" style="color: ${stepColor};"></span>
                         ${step.label}
-                        ${recommendationBadge}
+                        ${hasHandlers ? '<small style="display: block; color: #666; font-size: 10px;">Supports handlers</small>' : ''}
                     </div>
                 `;
             });
         }
         
         $dropdown.html(dropdownHTML);
+    }
+    
+    /**
+     * Legacy function for backward compatibility.
+     * @param {jQuery} $dropdown - The dropdown element
+     * @param {Array} availableSteps - Array of available step options
+     */
+    function populateStepDropdown($dropdown, availableSteps) {
+        // Convert legacy format to new format if needed
+        const stepTypes = availableSteps.map(step => ({
+            name: step.name || step.type,
+            type: step.type,
+            label: step.label,
+            description: step.description || '',
+            icon: step.icon,
+            supports: step.has_handlers ? ['handlers'] : []
+        }));
+        
+        populateStepDropdownFromFilter($dropdown, stepTypes);
     }
     
     /**
@@ -511,6 +536,61 @@
     }
 
     /**
+     * Generate HTML for step handlers display.
+     * @param {Object} step - The step object
+     * @return {string} HTML string for handlers
+     */
+    function generateStepHandlersHtml(step) {
+        if (!step.handlers || Object.keys(step.handlers).length === 0) {
+            return `
+                <div class="dm-no-handlers" style="font-size: 10px; color: #999; font-style: italic; text-align: center; padding: 4px 0;">
+                    No handlers configured
+                </div>
+            `;
+        }
+        
+        let handlersHtml = '<div class="dm-step-handlers">';
+        
+        Object.entries(step.handlers).forEach(([instanceId, handler]) => {
+            const handlerLabel = getHandlerDisplayName(handler.type) || handler.type;
+            const enabledStatus = handler.enabled ? 'enabled' : 'disabled';
+            const statusColor = handler.enabled ? '#46b450' : '#dc3232';
+            
+            handlersHtml += `
+                <div class="dm-handler-card" 
+                     data-handler-instance-id="${instanceId}"
+                     data-handler-type="${handler.type}"
+                     style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 3px; padding: 6px 8px; margin-bottom: 4px; font-size: 10px; position: relative;">
+                    
+                    <div class="dm-handler-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <div class="dm-handler-name" style="font-weight: 500; color: #23282d;">${handlerLabel}</div>
+                        <div class="dm-handler-status" style="width: 6px; height: 6px; border-radius: 50%; background-color: ${statusColor};"></div>
+                    </div>
+                    
+                    <div class="dm-handler-actions" style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" class="dm-configure-handler-btn" 
+                                data-handler-instance-id="${instanceId}"
+                                data-handler-type="${handler.type}"
+                                style="background: none; border: none; color: #666; font-size: 8px; cursor: pointer; padding: 1px 3px;"
+                                title="Configure Handler">
+                            <span class="dashicons dashicons-admin-settings" style="font-size: 8px;"></span>
+                        </button>
+                        <button type="button" class="dm-remove-handler-btn" 
+                                data-handler-instance-id="${instanceId}"
+                                style="background: none; border: none; color: #dc3232; font-size: 8px; cursor: pointer; padding: 1px 3px;"
+                                title="Remove Handler">
+                            <span class="dashicons dashicons-no-alt" style="font-size: 8px;"></span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        handlersHtml += '</div>';
+        return handlersHtml;
+    }
+
+    /**
      * Initialize drag and drop functionality for horizontal reordering.
      * @param {jQuery} $flow - The pipeline flow container
      */
@@ -572,9 +652,15 @@
         $card.on('click', '.dm-horizontal-add-step-option', function(e) {
             e.stopPropagation();
             const stepType = $(this).data('step-type');
+            const stepName = $(this).data('step-name') || stepType;
+            const hasHandlers = $(this).data('has-handlers') === 'true' || $(this).data('has-handlers') === true;
+            
             $(this).closest('.dm-horizontal-add-step-dropdown').removeClass('show');
             
-            addHorizontalPipelineStep(projectId, stepType, $card);
+            addHorizontalPipelineStep(projectId, stepType, $card, {
+                step_name: stepName,
+                has_handlers: hasHandlers
+            });
         });
 
         // Remove step button
@@ -590,7 +676,7 @@
         // Step card click for configuration
         $card.on('click', '.dm-horizontal-step-card', function(e) {
             // Don't trigger if clicking specific buttons
-            if ($(e.target).closest('.dm-horizontal-step-remove, .dm-step-configure').length) {
+            if ($(e.target).closest('.dm-horizontal-step-remove, .dm-step-configure, .dm-add-handler-btn, .dm-configure-handler-btn, .dm-remove-handler-btn').length) {
                 return;
             }
             
@@ -604,6 +690,36 @@
                 console.log('Modal handler not available. Configure step:', stepId, stepType);
             }
         });
+
+        // Add Handler button click
+        $card.on('click', '.dm-add-handler-btn', function(e) {
+            e.stopPropagation();
+            const $button = $(this);
+            const stepId = $button.data('step-id');
+            const stepType = $button.data('step-type');
+            
+            showHandlerSelectionDropdown($button, projectId, stepId, stepType);
+        });
+
+        // Configure Handler button click
+        $card.on('click', '.dm-configure-handler-btn', function(e) {
+            e.stopPropagation();
+            const handlerInstanceId = $(this).data('handler-instance-id');
+            const handlerType = $(this).data('handler-type');
+            
+            console.log('Configure handler:', handlerInstanceId, handlerType);
+            // TODO: Implement handler configuration modal
+        });
+
+        // Remove Handler button click
+        $card.on('click', '.dm-remove-handler-btn', function(e) {
+            e.stopPropagation();
+            const handlerInstanceId = $(this).data('handler-instance-id');
+            
+            if (confirm('Remove this handler?')) {
+                removeHandlerFromStep(projectId, stepId, handlerInstanceId, $card);
+            }
+        });
     }
 
     /**
@@ -611,13 +727,17 @@
      * @param {number} projectId - The project ID
      * @param {string} stepType - The step type
      * @param {jQuery} $card - The project card element
+     * @param {Object} stepOptions - Additional step options (step_name, has_handlers, etc.)
      */
-    function addHorizontalPipelineStep(projectId, stepType, $card) {
+    function addHorizontalPipelineStep(projectId, stepType, $card, stepOptions = {}) {
         if (!dmPipelineBuilder || !dmPipelineBuilder.ajax_url) {
             console.warn('Pipeline builder AJAX configuration not found');
             alert('Configuration error - cannot add step');
             return;
         }
+        
+        // Get current steps count for position calculation
+        const currentStepsCount = $card.find('.dm-horizontal-step-card').length;
         
         $.ajax({
             url: dmPipelineBuilder.ajax_url,
@@ -627,13 +747,27 @@
                 nonce: dmPipelineBuilder.add_pipeline_step_nonce,
                 project_id: projectId,
                 step_type: stepType,
-                step_config: {},
-                position: -1
+                step_config: {
+                    step_name: stepOptions.step_name || stepType,
+                    has_handlers: stepOptions.has_handlers || false
+                },
+                position: currentStepsCount // Add at end
             },
             success: function(response) {
                 if (response.success) {
+                    console.log('Pipeline step added successfully:', {
+                        projectId: projectId,
+                        stepType: stepType,
+                        stepOptions: stepOptions
+                    });
+                    
                     // Reload pipeline steps to reflect changes
                     loadHorizontalPipelineSteps($card, projectId);
+                    
+                    // Also trigger module step creation if applicable
+                    if (stepOptions.has_handlers) {
+                        triggerModuleStepCreation(projectId, stepType, response.data);
+                    }
                 } else {
                     console.error('Error adding step:', response.data);
                     alert('Error adding step: ' + (response.data || 'Unknown error'));
@@ -714,10 +848,225 @@
         return steps;
     }
 
+    /**
+     * Trigger module step creation when a step with handlers is added to the pipeline.
+     * @param {number} projectId - The project ID
+     * @param {string} stepType - The step type
+     * @param {Object} stepData - Response data from step creation
+     */
+    function triggerModuleStepCreation(projectId, stepType, stepData) {
+        // Find the module builder for this project
+        const moduleBuilder = window.DataMachine && window.DataMachine.StepFlowBuilder;
+        if (!moduleBuilder) {
+            console.log('Module builder not available - step card creation skipped');
+            return;
+        }
+        
+        console.log('Triggering module step creation for step with handlers:', {
+            projectId: projectId,
+            stepType: stepType,
+            stepData: stepData
+        });
+        
+        // Create mirrored module step card
+        if (typeof moduleBuilder.createModuleStepCard === 'function') {
+            moduleBuilder.createModuleStepCard(projectId, stepType, stepData);
+        } else {
+            console.log('Module step card creation method not available');
+        }
+    }
+    
+    /**
+     * Show handler selection dropdown for a step.
+     * @param {jQuery} $button - The "Add Handler" button
+     * @param {number} projectId - The project ID
+     * @param {string} stepId - The step ID
+     * @param {string} stepType - The step type
+     */
+    function showHandlerSelectionDropdown($button, projectId, stepId, stepType) {
+        // Remove any existing dropdowns
+        $('.dm-handler-selection-dropdown').remove();
+        
+        // Create dropdown element
+        const $dropdown = $(`
+            <div class="dm-handler-selection-dropdown" style="
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                border: 1px solid #ccd0d4;
+                border-radius: 4px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                z-index: 9999;
+                max-height: 200px;
+                overflow-y: auto;
+            ">
+                <div class="dm-dropdown-loading" style="padding: 12px; text-align: center; color: #666;">
+                    <span class="dashicons dashicons-update-alt" style="animation: spin 1s linear infinite;"></span>
+                    Loading handlers...
+                </div>
+            </div>
+        `);
+        
+        // Position dropdown relative to button
+        $button.css('position', 'relative').append($dropdown);
+        
+        // Load available handlers
+        loadHandlersForStep(stepType, $dropdown, function(handlers) {
+            populateHandlerDropdown($dropdown, handlers, function(selectedHandlerId) {
+                addHandlerToStep(projectId, stepId, stepType, selectedHandlerId, $button.closest('.dm-project-card'));
+                $dropdown.remove();
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        setTimeout(() => {
+            $(document).one('click', function(e) {
+                if (!$(e.target).closest('.dm-handler-selection-dropdown, .dm-add-handler-btn').length) {
+                    $dropdown.remove();
+                }
+            });
+        }, 100);
+    }
+
+    /**
+     * Load available handlers for a step type.
+     * @param {string} stepType - The step type
+     * @param {jQuery} $dropdown - The dropdown element
+     * @param {Function} onSuccess - Success callback with handlers data
+     */
+    function loadHandlersForStep(stepType, $dropdown, onSuccess) {
+        if (!dmPipelineBuilder || !dmPipelineBuilder.ajax_url) {
+            $dropdown.find('.dm-dropdown-loading').html('<span style="color: #d63638;">Configuration error</span>');
+            return;
+        }
+        
+        $.ajax({
+            url: dmPipelineBuilder.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'dm_get_step_handlers',
+                nonce: dmPipelineBuilder.get_pipeline_steps_nonce,
+                step_type: stepType
+            },
+            success: function(response) {
+                if (response.success && response.data && response.data.handlers) {
+                    onSuccess(response.data.handlers);
+                } else {
+                    $dropdown.find('.dm-dropdown-loading').html('<span style="color: #d63638;">No handlers available</span>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading handlers:', error);
+                $dropdown.find('.dm-dropdown-loading').html('<span style="color: #d63638;">Error loading handlers</span>');
+            }
+        });
+    }
+
+    /**
+     * Populate handler dropdown with available handlers.
+     * @param {jQuery} $dropdown - The dropdown element
+     * @param {Object} handlers - Available handlers
+     * @param {Function} onSelect - Selection callback
+     */
+    function populateHandlerDropdown($dropdown, handlers, onSelect) {
+        if (!handlers || Object.keys(handlers).length === 0) {
+            $dropdown.html('<div style="padding: 12px; text-align: center; color: #666;">No handlers available</div>');
+            return;
+        }
+        
+        let dropdownHtml = '';
+        Object.entries(handlers).forEach(([handlerId, handler]) => {
+            dropdownHtml += `
+                <div class="dm-handler-option" 
+                     data-handler-id="${handlerId}"
+                     style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 11px; transition: background-color 0.2s ease;"
+                     onmouseover="this.style.backgroundColor='#f8f9fa'"
+                     onmouseout="this.style.backgroundColor='white'">
+                    <div style="font-weight: 500; margin-bottom: 2px;">${handler.label || handlerId}</div>
+                    ${handler.description ? `<div style="color: #666; font-size: 10px;">${handler.description}</div>` : ''}
+                </div>
+            `;
+        });
+        
+        $dropdown.html(dropdownHtml);
+        
+        // Bind click events
+        $dropdown.find('.dm-handler-option').on('click', function() {
+            const handlerId = $(this).data('handler-id');
+            onSelect(handlerId);
+        });
+    }
+
+    /**
+     * Add a handler to an existing step.
+     * @param {number} projectId - The project ID
+     * @param {string} stepId - The step ID
+     * @param {string} stepType - The step type
+     * @param {string} handlerId - The selected handler ID
+     * @param {jQuery} $card - The project card element
+     */
+    function addHandlerToStep(projectId, stepId, stepType, handlerId, $card) {
+        if (!dmPipelineBuilder || !dmPipelineBuilder.ajax_url) {
+            alert('Configuration error - cannot add handler');
+            return;
+        }
+        
+        $.ajax({
+            url: dmPipelineBuilder.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'dm_add_handler_to_step',
+                nonce: dmPipelineBuilder.get_pipeline_steps_nonce,
+                project_id: projectId,
+                step_id: stepId,
+                step_type: stepType,
+                handler_id: handlerId
+            },
+            success: function(response) {
+                if (response.success) {
+                    console.log('Handler added successfully:', {
+                        stepId: stepId,
+                        handlerId: handlerId,
+                        instanceId: response.data.handler_instance_id
+                    });
+                    
+                    // Reload pipeline steps to reflect changes
+                    loadHorizontalPipelineSteps($card, projectId);
+                } else {
+                    console.error('Error adding handler:', response.data);
+                    alert('Error adding handler: ' + (response.data || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error adding handler:', error);
+                alert('Error adding handler.');
+            }
+        });
+    }
+
+    /**
+     * Remove a handler from a step.
+     * @param {number} projectId - The project ID
+     * @param {string} stepId - The step ID
+     * @param {string} handlerInstanceId - The handler instance ID
+     * @param {jQuery} $card - The project card element
+     */
+    function removeHandlerFromStep(projectId, stepId, handlerInstanceId, $card) {
+        // TODO: Implement handler removal AJAX call
+        console.log('Remove handler:', handlerInstanceId);
+        alert('Handler removal functionality coming soon!');
+    }
+
     // Expose functions for external use if needed
     window.dmHorizontalPipelineBuilder = window.dmHorizontalPipelineBuilder || {};
     window.dmHorizontalPipelineBuilder.loadHorizontalPipelineSteps = loadHorizontalPipelineSteps;
     window.dmHorizontalPipelineBuilder.initializeHorizontalPipelineBuilder = initializeHorizontalPipelineBuilder;
     window.dmHorizontalPipelineBuilder.renderHorizontalPipelineSteps = renderHorizontalPipelineSteps;
+    window.dmHorizontalPipelineBuilder.addHorizontalPipelineStep = addHorizontalPipelineStep;
+    window.dmHorizontalPipelineBuilder.triggerModuleStepCreation = triggerModuleStepCreation;
+    window.dmHorizontalPipelineBuilder.showHandlerSelectionDropdown = showHandlerSelectionDropdown;
+    window.dmHorizontalPipelineBuilder.addHandlerToStep = addHandlerToStep;
 
 })(jQuery);

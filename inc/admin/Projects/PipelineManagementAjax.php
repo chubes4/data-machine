@@ -30,6 +30,7 @@ class PipelineManagementAjax {
         add_action( 'wp_ajax_dm_get_modal_content', [ $this, 'handle_get_modal_content' ] );
         add_action( 'wp_ajax_dm_save_modal_config', [ $this, 'handle_save_modal_config' ] );
         add_action( 'wp_ajax_dm_get_dynamic_step_types', [ $this, 'handle_get_dynamic_step_types' ] );
+        add_action( 'wp_ajax_dm_add_handler_to_step', [ $this, 'handle_add_handler_to_step' ] );
     }
 
     /**
@@ -63,7 +64,20 @@ class PipelineManagementAjax {
         $config = $db_projects->get_project_pipeline_configuration( $project_id );
         $pipeline_steps = isset($config['steps']) ? $config['steps'] : [];
 
-        wp_send_json_success( [ 'pipeline_steps' => $pipeline_steps ] );
+        // Transform steps for frontend consumption
+        $formatted_steps = [];
+        foreach ( $pipeline_steps as $index => $step ) {
+            $formatted_steps[] = [
+                'id' => $step['slug'] ?? 'step_' . $index,
+                'type' => $step['type'] ?? 'unknown',
+                'order' => $step['position'] ?? $index,
+                'handler' => $step['slug'] ?? '',
+                'config' => $step['config'] ?? [],
+                'handlers' => $step['handlers'] ?? []
+            ];
+        }
+
+        wp_send_json_success( [ 'steps' => $formatted_steps ] );
     }
 
     /**
@@ -735,19 +749,30 @@ class PipelineManagementAjax {
         }
 
         // Get all registered step types from the filter system
-        $registered_step_types = apply_filters('dm_register_step_types', []);
+        $registered_step_types = apply_filters('dm_register_pipeline_steps', []);
         
         // Format for frontend consumption
         $step_types = [];
         foreach ($registered_step_types as $step_name => $step_config) {
+            // Determine supported features
+            $supports = [];
+            if ( isset($step_config['has_handlers']) && $step_config['has_handlers'] ) {
+                $supports[] = 'handlers';
+            }
+            
+            // Get icon with fallback
+            $icon = $step_config['icon'] ?? $this->get_default_step_icon($step_name);
+            
             $step_types[] = [
                 'name' => $step_name,
-                'type' => $step_config['type'] ?? $step_name,
+                'type' => $step_name, // Type is same as name for core steps
                 'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_name)),
                 'description' => $step_config['description'] ?? '',
-                'category' => $step_config['category'] ?? 'custom',
-                'icon' => $step_config['icon'] ?? 'dashicons-admin-generic',
-                'supports' => $step_config['supports'] ?? []
+                'category' => $step_config['category'] ?? 'core',
+                'icon' => $icon,
+                'supports' => $supports,
+                'has_handlers' => $step_config['has_handlers'] ?? false,
+                'class' => $step_config['class'] ?? null
             ];
         }
 
@@ -755,5 +780,112 @@ class PipelineManagementAjax {
             'step_types' => $step_types,
             'type_names' => array_keys($registered_step_types)
         ] );
+    }
+    
+    /**
+     * Get default icon for a step type.
+     * 
+     * @param string $step_name The step name.
+     * @return string The dashicon class.
+     */
+    private function get_default_step_icon( $step_name ) {
+        $icon_map = [
+            'input' => 'dashicons-download',
+            'ai' => 'dashicons-admin-tools',
+            'output' => 'dashicons-upload',
+            'transform' => 'dashicons-admin-generic',
+            'filter' => 'dashicons-filter'
+        ];
+        
+        return $icon_map[$step_name] ?? 'dashicons-marker';
+    }
+
+    /**
+     * Add a handler to an existing pipeline step.
+     * Creates a new handler configuration within the step card.
+     */
+    public function handle_add_handler_to_step() {
+        check_ajax_referer( 'dm_get_pipeline_steps_nonce', 'nonce' ); // Reuse existing nonce
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( 'Permission denied.', 403 );
+        }
+
+        $project_id = isset( $_POST['project_id'] ) ? absint( $_POST['project_id'] ) : 0;
+        $step_id = isset( $_POST['step_id'] ) ? sanitize_text_field( $_POST['step_id'] ) : '';
+        $step_type = isset( $_POST['step_type'] ) ? sanitize_text_field( $_POST['step_type'] ) : '';
+        $handler_id = isset( $_POST['handler_id'] ) ? sanitize_text_field( $_POST['handler_id'] ) : '';
+
+        if ( ! $project_id || ! $step_id || ! $step_type || ! $handler_id ) {
+            wp_send_json_error( 'Missing required parameters.', 400 );
+        }
+
+        $db_projects = apply_filters('dm_get_db_projects', null);
+        $project = $db_projects->get_project( $project_id );
+
+        if ( ! $project ) {
+            wp_send_json_error( 'Project not found.', 404 );
+        }
+
+        // Get current pipeline configuration 
+        $current_config = $db_projects->get_project_pipeline_configuration( $project_id );
+        $steps = isset($current_config['steps']) ? $current_config['steps'] : [];
+        
+        // Find the step to add handler to
+        $step_found = false;
+        foreach ( $steps as &$step ) {
+            if ( isset($step['slug']) && $step['slug'] === $step_id ) {
+                // Initialize handlers array if it doesn't exist
+                if ( ! isset($step['handlers']) || ! is_array($step['handlers']) ) {
+                    $step['handlers'] = [];
+                }
+                
+                // Add new handler configuration
+                $handler_instance_id = $handler_id . '_' . uniqid();
+                $step['handlers'][$handler_instance_id] = [
+                    'type' => $handler_id,
+                    'config' => [],
+                    'enabled' => true,
+                    'created_at' => current_time('mysql')
+                ];
+                
+                $step_found = true;
+                break;
+            }
+        }
+        
+        if ( ! $step_found ) {
+            wp_send_json_error( 'Step not found.', 404 );
+        }
+        
+        // Save updated configuration
+        $updated_config = array_merge( $current_config, ['steps' => $steps] );
+        $result = $db_projects->update_project_pipeline_configuration( $project_id, $updated_config );
+
+        if ( $result ) {
+            // Get handler details for response
+            $handlers = [];
+            if ( $step_type === 'input' ) {
+                $handlers = \DataMachine\Core\Constants::get_input_handlers();
+            } elseif ( $step_type === 'output' ) {
+                $handlers = \DataMachine\Core\Constants::get_output_handlers();
+            } else {
+                // Allow custom step types to provide their own handlers via filters
+                $handlers = apply_filters( "dm_get_{$step_type}_handlers", [] );
+            }
+            
+            $handler_info = $handlers[$handler_id] ?? [
+                'label' => ucfirst(str_replace('_', ' ', $handler_id)),
+                'description' => ''
+            ];
+
+            wp_send_json_success( [
+                'message' => 'Handler added successfully.',
+                'handler_instance_id' => $handler_instance_id,
+                'handler_info' => $handler_info
+            ] );
+        } else {
+            wp_send_json_error( 'Failed to add handler to step.', 500 );
+        }
     }
 }

@@ -758,3 +758,187 @@ body.modal-open {
     padding: 12px;
     margin: 10px 0;
 }
+
+/* Handler Selection and Management Styles */
+.dm-step-handlers {
+    margin-bottom: 8px;
+}
+
+.dm-handler-card {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.dm-handler-card:hover {
+    background: #f0f0f0;
+    border-color: #0073aa;
+}
+
+.dm-handler-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.dm-handler-name {
+    font-weight: 500;
+    color: #23282d;
+}
+
+.dm-handler-status {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #46b450;
+}
+
+.dm-handler-status.disabled {
+    background-color: #dc3232;
+}
+
+.dm-handler-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+.dm-configure-handler-btn,
+.dm-remove-handler-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 8px;
+    cursor: pointer;
+    padding: 1px 3px;
+    transition: color 0.2s ease;
+}
+
+.dm-configure-handler-btn:hover {
+    color: #0073aa;
+}
+
+.dm-remove-handler-btn {
+    color: #dc3232;
+}
+
+.dm-remove-handler-btn:hover {
+    color: #b32d2e;
+}
+
+.dm-no-handlers {
+    font-size: 10px;
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 4px 0;
+}
+
+.dm-add-handler-section {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+}
+
+.dm-add-handler-btn {
+    background: none;
+    border: 1px dashed #ccc;
+    color: #666;
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.dm-add-handler-btn:hover {
+    border-color: #0073aa;
+    color: #0073aa;
+    background: rgba(0, 115, 170, 0.05);
+}
+
+.dm-add-handler-btn .dashicons {
+    font-size: 10px;
+    vertical-align: middle;
+}
+
+/* Handler Selection Dropdown */
+.dm-handler-selection-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 9999;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 11px;
+}
+
+.dm-dropdown-loading {
+    padding: 12px;
+    text-align: center;
+    color: #666;
+}
+
+.dm-handler-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 11px;
+    transition: background-color 0.2s ease;
+}
+
+.dm-handler-option:last-child {
+    border-bottom: none;
+}
+
+.dm-handler-option:hover {
+    background-color: #f8f9fa;
+}
+
+.dm-handler-option div:first-child {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.dm-handler-option div:last-child {
+    color: #666;
+    font-size: 10px;
+}
+
+/* Responsive adjustments for handler functionality */
+@media (max-width: 600px) {
+    .dm-handler-card {
+        padding: 4px 6px;
+        font-size: 9px;
+    }
+    
+    .dm-add-handler-btn {
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+    
+    .dm-handler-selection-dropdown {
+        font-size: 10px;
+    }
+    
+    .dm-handler-option {
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+}
