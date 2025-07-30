@@ -71,11 +71,13 @@ class Pipelines
                 'menu_title' => __('Pipelines', 'data-machine'),
                 'capability' => 'manage_options',
                 'callback' => [$this, 'render_content'],
-                'description' => __('Build and configure your data processing pipelines with drag-and-drop components.', 'data-machine')
+                'description' => __('Build and configure your data processing pipelines with drag-and-drop components.', 'data-machine'),
+                'position' => 10
             ];
             return $pages;
         }, 10);
     }
+
 
     /**
      * Render the main pipelines page content.
@@ -90,9 +92,8 @@ class Pipelines
     {
         // Get services via filter system
         $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
         
-        if (!$db_pipelines || !$db_flows) {
+        if (!$db_pipelines) {
             echo '<div class="dm-admin-error">' . esc_html__('Database services unavailable.', 'data-machine') . '</div>';
             return;
         }
@@ -101,12 +102,10 @@ class Pipelines
         $current_pipeline_id = $this->get_current_pipeline_id();
         $current_pipeline = null;
         $pipeline_steps = [];
-        $pipeline_flows = [];
 
         if ($current_pipeline_id) {
             $current_pipeline = $db_pipelines->get_pipeline($current_pipeline_id);
             $pipeline_steps = $this->get_pipeline_steps($current_pipeline_id);
-            $pipeline_flows = $db_flows->get_flows_by_pipeline($current_pipeline_id);
         }
 
         // Get all pipelines for switcher
@@ -148,45 +147,59 @@ class Pipelines
                 </div>
             </div>
 
-            <?php if ($current_pipeline_id): ?>
+            <!-- Always show both sections -->
+            <div class="dm-pipeline-builder-container">
                 
-                <!-- Top Section: Pipeline Steps -->
+                <!-- TOP SECTION: Pipeline Steps -->
                 <div class="dm-pipeline-section dm-pipeline-steps-section">
                     <div class="dm-section-header">
                         <h2><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h2>
                         <p class="dm-section-description">
-                            <?php esc_html_e('Add and configure the processing steps for your pipeline. Drag to reorder.', 'data-machine'); ?>
+                            <?php esc_html_e('Define your pipeline structure by adding steps', 'data-machine'); ?>
                         </p>
-                        <button type="button" class="button button-primary dm-add-step-btn">
-                            <?php esc_html_e('Add Step', 'data-machine'); ?>
-                        </button>
+                        <?php if ($current_pipeline_id): ?>
+                            <button type="button" class="button button-primary dm-add-step-btn">
+                                <?php esc_html_e('Add Step', 'data-machine'); ?>
+                            </button>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="dm-pipeline-steps-container" id="dm-pipeline-steps">
-                        <?php $this->render_pipeline_steps($pipeline_steps); ?>
+                        <?php if ($current_pipeline_id): ?>
+                            <?php $this->render_pipeline_steps($pipeline_steps); ?>
+                        <?php else: ?>
+                            <div class="dm-empty-steps">
+                                <p><?php esc_html_e('Select or create a pipeline to define steps.', 'data-machine'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                <!-- Bottom Section: Pipeline Data Flow -->
-                <div class="dm-pipeline-section dm-pipeline-flow-section">
+                <!-- BOTTOM SECTION: Handler Configuration (Mirrored) -->
+                <div class="dm-pipeline-section dm-pipeline-handlers-section">
                     <div class="dm-section-header">
-                        <h2><?php esc_html_e('Pipeline Data Flow', 'data-machine'); ?></h2>
+                        <h2><?php esc_html_e('Handler Configuration', 'data-machine'); ?></h2>
                         <p class="dm-section-description">
-                            <?php esc_html_e('Configure handlers for each step that processes data. Each flow can have its own schedule.', 'data-machine'); ?>
+                            <?php esc_html_e('Add handlers to each step defined above', 'data-machine'); ?>
                         </p>
-                        <button type="button" class="button button-primary dm-add-flow-btn">
-                            <?php esc_html_e('Add Data Flow', 'data-machine'); ?>
-                        </button>
                     </div>
                     
-                    <div class="dm-pipeline-flows-container" id="dm-pipeline-flows">
-                        <?php $this->render_pipeline_flows($pipeline_flows, $pipeline_steps); ?>
+                    <div class="dm-pipeline-handlers-container" id="dm-pipeline-handlers">
+                        <?php if ($current_pipeline_id): ?>
+                            <?php $this->render_pipeline_handlers($pipeline_steps); ?>
+                        <?php else: ?>
+                            <div class="dm-empty-handlers">
+                                <p><?php esc_html_e('Pipeline steps will appear here for handler configuration.', 'data-machine'); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
-            <?php else: ?>
+            </div>
+
+            <?php if (!$current_pipeline_id): ?>
                 
-                <!-- Empty State -->
+                <!-- Empty State Overlay -->
                 <div class="dm-empty-state">
                     <div class="dm-empty-state-content">
                         <h3><?php esc_html_e('No Pipeline Selected', 'data-machine'); ?></h3>

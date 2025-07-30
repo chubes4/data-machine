@@ -53,7 +53,8 @@ class Jobs
                 'menu_title' => __('Jobs', 'data-machine'),
                 'capability' => 'manage_options',
                 'callback' => [$this, 'render_content'],
-                'description' => __('Monitor and manage your pipeline processing jobs with real-time status updates.', 'data-machine')
+                'description' => __('Monitor and manage your pipeline processing jobs with real-time status updates.', 'data-machine'),
+                'position' => 20
             ];
             return $pages;
         }, 10);

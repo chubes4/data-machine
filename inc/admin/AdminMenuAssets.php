@@ -30,22 +30,14 @@ class AdminMenuAssets {
     private $version;
 
     /**
-     * Hook suffix for the Remote Locations page. Used for conditional asset loading.
+     * Dynamic storage for all registered page hook suffixes.
+     * Replaces individual properties with unified storage system.
      *
      * @since    NEXT_VERSION
      * @access   private
-     * @var      string|false
+     * @var      array
      */
-    private $remote_locations_hook_suffix = false;
-    
-    /**
-     * Hook suffix for the API Keys page. Used for conditional asset loading.
-     *
-     * @since    NEXT_VERSION
-     * @access   private
-     * @var      string|false
-     */
-    private $api_keys_hook_suffix = false; // Added property for API keys page
+    private $page_hook_suffixes = [];
 
     /**
      * Initialize the class with zero constructor dependencies.
@@ -73,7 +65,7 @@ class AdminMenuAssets {
      * 
      * Uses the same pattern as WordPress core admin pages with zero hardcoded lists.
      * Pages register themselves via dm_register_admin_pages filter.
-     * First registered page becomes top-level menu automatically.
+     * Pages are ordered by position parameter with alphabetical fallback.
      *
      * @since    NEXT_VERSION
      */
@@ -86,13 +78,28 @@ class AdminMenuAssets {
             return;
         }
         
-        // Use first registered page as top-level menu (no hardcoded dashboard)
+        // Sort pages by position, then alphabetically by menu_title
+        uasort($registered_pages, function($a, $b) {
+            $pos_a = $a['position'] ?? 50; // Default position 50
+            $pos_b = $b['position'] ?? 50;
+            
+            if ($pos_a === $pos_b) {
+                // Same position - sort alphabetically by menu_title
+                $title_a = $a['menu_title'] ?? $a['page_title'] ?? '';
+                $title_b = $b['menu_title'] ?? $b['page_title'] ?? '';
+                return strcasecmp($title_a, $title_b);
+            }
+            
+            return $pos_a <=> $pos_b;
+        });
+        
+        // Use first sorted page as top-level menu
         $first_page = reset($registered_pages);
         $first_slug = key($registered_pages);
         
         $main_menu_hook = add_menu_page(
             $first_page['page_title'] ?? __('Data Machine', 'data-machine'),
-            __('Data Machine', 'data-machine'),
+            $first_page['menu_title'] ?? $first_page['page_title'] ?? __('Data Machine', 'data-machine'),
             $first_page['capability'] ?? 'manage_options',
             'dm-' . $first_slug,
             $first_page['callback'],
@@ -103,7 +110,7 @@ class AdminMenuAssets {
         // Store hook suffix for first page
         $this->store_hook_suffix($first_slug, $main_menu_hook);
         
-        // Add remaining pages as submenus
+        // Add remaining pages as submenus (already sorted)
         $remaining_pages = array_slice($registered_pages, 1, null, true);
         foreach ($remaining_pages as $slug => $page_config) {
             $callback = $page_config['callback'] ?? null;
@@ -129,193 +136,99 @@ class AdminMenuAssets {
     
     
     /**
-     * Store hook suffix for asset loading.
+     * Store hook suffix for dynamic asset loading.
+     * 
+     * Works with any registered page via parameter-based discovery.
      *
      * @param string $page_slug Page slug
      * @param string $hook_suffix WordPress hook suffix
      */
     private function store_hook_suffix($page_slug, $hook_suffix) {
-        // Store hook suffixes for asset loading
-        switch ($page_slug) {
-            case 'remote-locations':
-                $this->remote_locations_hook_suffix = $hook_suffix;
-                break;
-            // Add other page hook suffixes as needed
-        }
+        $this->page_hook_suffixes[$page_slug] = $hook_suffix;
     }
 
     /**
-     * Enqueue admin assets (CSS and JS).
+     * Enqueue admin assets via dynamic page detection.
+     * 
+     * Uses parameter-based asset discovery aligned with filter-based architecture.
      *
      * @since    NEXT_VERSION
      * @param    string    $hook_suffix    The current admin page hook.
      */
     public function enqueue_admin_assets( $hook_suffix ) {
-        $project_management_hooks = [
-            'toplevel_page_dm-project-management', // Main menu page
-            'data-machine_page_dm-project-management',
-        ];
+        // Find matching page slug for this hook suffix
+        $current_page_slug = null;
+        foreach ($this->page_hook_suffixes as $slug => $stored_hook) {
+            if ($stored_hook === $hook_suffix) {
+                $current_page_slug = $slug;
+                break;
+            }
+        }
         
-        $jobs_hooks = [
-            'data-machine_page_dm-jobs',
-        ];
+        if (!$current_page_slug) {
+            return; // No registered page for this hook
+        }
         
-        // Module config hooks removed - page deprecated in favor of pipeline builder
-        // Module configuration is now handled through the horizontal pipeline system
-
-        if ( in_array($hook_suffix, $project_management_hooks, true) ) {
-            $this->enqueue_project_management_assets();
-        } elseif ( in_array($hook_suffix, $jobs_hooks, true) ) {
-            $this->enqueue_jobs_assets();
-        } elseif ( $hook_suffix === $this->remote_locations_hook_suffix ) {
-            $this->enqueue_remote_locations_assets();
-        // API Keys page asset enqueuing removed - replaced with handler-level configuration via universal modal system
+        // Get page-specific assets via filter system
+        $page_assets = apply_filters('dm_get_page_assets', null, $current_page_slug);
+        
+        if ($page_assets) {
+            $this->enqueue_page_assets($page_assets, $current_page_slug);
         }
     }
 
-    private function enqueue_project_management_assets() {
-        $plugin_base_path = DATA_MACHINE_PATH;
-        $plugin_base_url = plugins_url( '/', 'data-machine/data-machine.php' );
-        
-        // Enqueue main admin CSS
-        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
-        
-        // Enqueue projects-specific CSS
-        $css_projects_path = $plugin_base_path . 'assets/css/admin-projects.css';
-        $css_projects_url = $plugin_base_url . 'assets/css/admin-projects.css';
-        $css_projects_version = file_exists($css_projects_path) ? filemtime($css_projects_path) : $this->version;
-        wp_enqueue_style( 'data-machine-admin-projects', $css_projects_url, array(), $css_projects_version, 'all' );
-        $js_project_management_path = $plugin_base_path . 'assets/js/admin/core/data-machine-project-management.js';
-        $js_project_management_url = $plugin_base_url . 'assets/js/admin/core/data-machine-project-management.js';
-        $js_project_management_version = file_exists($js_project_management_path) ? filemtime($js_project_management_path) : $this->version;
-        wp_enqueue_script( 'data-machine-project-management-js', $js_project_management_url, array( 'jquery' ), $js_project_management_version, true );
-        
-        // Enqueue project editing JavaScript
-        $js_project_editing_path = $plugin_base_path . 'assets/js/admin/core/data-machine-project-editing.js';
-        $js_project_editing_url = $plugin_base_url . 'assets/js/admin/core/data-machine-project-editing.js';
-        $js_project_editing_version = file_exists($js_project_editing_path) ? filemtime($js_project_editing_path) : $this->version;
-        wp_enqueue_script( 'data-machine-project-editing-js', $js_project_editing_url, array( 'jquery' ), $js_project_editing_version, true );
-        
-        // Enqueue pipeline builder JavaScript
-        $js_pipeline_builder_path = $plugin_base_path . 'assets/js/admin/pipelines/project-pipeline-builder.js';
-        $js_pipeline_builder_url = $plugin_base_url . 'assets/js/admin/pipelines/project-pipeline-builder.js';
-        $js_pipeline_builder_version = file_exists($js_pipeline_builder_path) ? filemtime($js_pipeline_builder_path) : $this->version;
-        wp_enqueue_script( 'data-machine-pipeline-builder-js', $js_pipeline_builder_url, array( 'jquery', 'jquery-ui-sortable' ), $js_pipeline_builder_version, true );
 
-        // Enqueue pipeline modal JavaScript
-        $js_pipeline_modal_path = $plugin_base_path . 'assets/js/admin/pipelines/pipeline-modal.js';
-        $js_pipeline_modal_url = $plugin_base_url . 'assets/js/admin/pipelines/pipeline-modal.js';
-        $js_pipeline_modal_version = file_exists($js_pipeline_modal_path) ? filemtime($js_pipeline_modal_path) : $this->version;
-        wp_enqueue_script( 'data-machine-pipeline-modal-js', $js_pipeline_modal_url, array( 'jquery' ), $js_pipeline_modal_version, true );
 
-        wp_localize_script( 'data-machine-project-management-js', 'dm_project_params', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'create_project_nonce' => wp_create_nonce( 'dm_create_project_nonce' ),
-            'run_now_nonce' => wp_create_nonce( 'dm_run_now_nonce' ),
-            'get_schedule_data_nonce' => wp_create_nonce( 'dm_get_schedule_data_nonce' ),
-            'edit_schedule_nonce' => wp_create_nonce( 'dm_edit_schedule_nonce' ),
-            // Pipeline system nonces and standard WordPress AJAX functionality
-            'cron_schedules' => apply_filters('dm_get_constants', null)->get_cron_schedules_for_js(),
-        ) );
 
-        // Localize pipeline modal script
-        wp_localize_script( 'data-machine-pipeline-modal-js', 'dmPipelineModal', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'get_modal_content_nonce' => wp_create_nonce( 'dm_get_modal_content_nonce' ),
-            'save_modal_config_nonce' => wp_create_nonce( 'dm_save_modal_config_nonce' ),
-            'strings' => array(
-                'configureStep' => __( 'Configure Step', 'data-machine' ),
-                'saving' => __( 'Saving...', 'data-machine' ),
-                'save' => __( 'Save Configuration', 'data-machine' ),
-                'cancel' => __( 'Cancel', 'data-machine' ),
-                'close' => __( 'Close', 'data-machine' ),
-                'errorLoading' => __( 'Error loading configuration', 'data-machine' ),
-                'errorSaving' => __( 'Error saving configuration', 'data-machine' ),
-                'configSaved' => __( 'Configuration saved successfully', 'data-machine' ),
-            ),
-        ) );
-
-        // Localize pipeline builder script
-        wp_localize_script( 'data-machine-pipeline-builder-js', 'dmPipelineBuilder', array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'get_pipeline_steps_nonce' => wp_create_nonce( 'dm_get_pipeline_steps_nonce' ),
-            'add_pipeline_step_nonce' => wp_create_nonce( 'dm_add_pipeline_step_nonce' ),
-            'remove_pipeline_step_nonce' => wp_create_nonce( 'dm_remove_pipeline_step_nonce' ),
-            'reorder_pipeline_steps_nonce' => wp_create_nonce( 'dm_reorder_pipeline_steps_nonce' ),
-            'get_available_step_types_nonce' => wp_create_nonce( 'dm_get_available_step_types_nonce' ),
-            'get_dynamic_next_steps_nonce' => wp_create_nonce( 'dm_get_dynamic_next_steps_nonce' ),
-            'strings' => array(
-                'pipelineSteps' => __( 'Pipeline Steps', 'data-machine' ),
-                'loadingSteps' => __( 'Loading pipeline steps...', 'data-machine' ),
-                'addStep' => __( 'Add Step', 'data-machine' ),
-                'selectStepType' => __( 'Select step type...', 'data-machine' ),
-                'inputStep' => __( 'Input Step', 'data-machine' ),
-                'aiStep' => __( 'AI Step', 'data-machine' ),
-                'outputStep' => __( 'Output Step', 'data-machine' ),
-                'handler' => __( 'Handler', 'data-machine' ),
-                'selectHandler' => __( 'Select handler...', 'data-machine' ),
-                'noHandlerSelected' => __( 'No handler selected', 'data-machine' ),
-                'noStepsConfigured' => __( 'No pipeline steps configured. Add a step to get started.', 'data-machine' ),
-                'selectStepTypeFirst' => __( 'Please select a step type first.', 'data-machine' ),
-                'confirmRemoveStep' => __( 'Are you sure you want to remove this step?', 'data-machine' ),
-                'errorLoading' => __( 'Error loading pipeline steps', 'data-machine' ),
-                'errorAddingStep' => __( 'Error adding pipeline step', 'data-machine' ),
-                'errorRemovingStep' => __( 'Error removing pipeline step', 'data-machine' ),
-                'errorReordering' => __( 'Error reordering pipeline steps', 'data-machine' ),
-                'errorUpdatingConfig' => __( 'Error updating step configuration', 'data-machine' ),
-                'handlerSelected' => __( 'Handler selected', 'data-machine' ),
-            ),
-        ) );
-    }
 
     /**
-     * Enqueue assets for the jobs page.
+     * Enqueue assets for a specific page using parameter-based configuration.
      *
-     * @since NEXT_VERSION
+     * @param array  $assets Page asset configuration
+     * @param string $page_slug Page slug for context
      */
-    private function enqueue_jobs_assets() {
+    private function enqueue_page_assets($assets, $page_slug) {
         $plugin_base_path = DATA_MACHINE_PATH;
-        $plugin_base_url = plugins_url( '/', 'data-machine/data-machine.php' );
+        $plugin_base_url = plugins_url('/', 'data-machine/data-machine.php');
         
-        // Enqueue main admin CSS
-        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
+        // Enqueue CSS files
+        if (!empty($assets['css'])) {
+            foreach ($assets['css'] as $handle => $css_config) {
+                $css_path = $plugin_base_path . $css_config['file'];
+                $css_url = $plugin_base_url . $css_config['file'];
+                $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
+                
+                wp_enqueue_style(
+                    $handle,
+                    $css_url,
+                    $css_config['deps'] ?? [],
+                    $css_version,
+                    $css_config['media'] ?? 'all'
+                );
+            }
+        }
         
-        // Enqueue jobs-specific CSS
-        $css_jobs_path = $plugin_base_path . 'assets/css/admin-jobs.css';
-        $css_jobs_url = $plugin_base_url . 'assets/css/admin-jobs.css';
-        $css_jobs_version = file_exists($css_jobs_path) ? filemtime($css_jobs_path) : $this->version;
-        wp_enqueue_style( 'data-machine-admin-jobs', $css_jobs_url, array(), $css_jobs_version, 'all' );
-        
-        // Enqueue jobs JavaScript
-        $js_jobs_path = $plugin_base_path . 'assets/js/admin/core/data-machine-jobs.js';
-        $js_jobs_url = $plugin_base_url . 'assets/js/admin/core/data-machine-jobs.js';
-        $js_jobs_version = file_exists($js_jobs_path) ? filemtime($js_jobs_path) : $this->version;
-        wp_enqueue_script( 'data-machine-jobs-js', $js_jobs_url, array( 'jquery' ), $js_jobs_version, true );
+        // Enqueue JS files
+        if (!empty($assets['js'])) {
+            foreach ($assets['js'] as $handle => $js_config) {
+                $js_path = $plugin_base_path . $js_config['file'];
+                $js_url = $plugin_base_url . $js_config['file'];
+                $js_version = file_exists($js_path) ? filemtime($js_path) : $this->version;
+                
+                wp_enqueue_script(
+                    $handle,
+                    $js_url,
+                    $js_config['deps'] ?? ['jquery'],
+                    $js_version,
+                    $js_config['in_footer'] ?? true
+                );
+                
+                // Add localization if provided
+                if (!empty($js_config['localize'])) {
+                    wp_localize_script($handle, $js_config['localize']['object'], $js_config['localize']['data']);
+                }
+            }
+        }
     }
 
-
-    private function enqueue_remote_locations_assets() {
-        $plugin_base_path = DATA_MACHINE_PATH;
-        $plugin_base_url = plugins_url( '/', 'data-machine/data-machine.php' );
-        $css_path = $plugin_base_path . 'assets/css/data-machine-admin.css';
-        $css_url = $plugin_base_url . 'assets/css/data-machine-admin.css';
-        $css_version = file_exists($css_path) ? filemtime($css_path) : $this->version;
-        wp_enqueue_style( 'data-machine-admin', $css_url, array(), $css_version, 'all' );
-        $js_remote_path = $plugin_base_path . 'assets/js/admin/core/data-machine-remote-locations.js';
-        $js_remote_url = $plugin_base_url . 'assets/js/admin/core/data-machine-remote-locations.js';
-        $js_remote_version = file_exists($js_remote_path) ? filemtime($js_remote_path) : $this->version;
-        wp_enqueue_script( 'dm-remote-locations-admin-js', $js_remote_url, array('jquery'), $js_remote_version, true );
-        $remote_locations_params = array(
-            'ajax_url' => admin_url('admin-ajax.php')
-        );
-        wp_localize_script('dm-remote-locations-admin-js', 'dmRemoteLocationsParams', $remote_locations_params);
-    }
-
-    // API keys assets enqueuing method removed - replaced with handler-level configuration via universal modal system
 } // End class
