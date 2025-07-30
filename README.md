@@ -9,21 +9,21 @@ Transform WordPress into a **Universal Content Processing Platform** with AI-pow
 ## Core Capabilities
 
 - **🎨 Visual Pipeline Builder**: Drag-and-drop workflow construction with real-time configuration
-- **🔄 Multi-Input Context Collection**: Gather data from RSS, Reddit, Google Sheets, APIs simultaneously
+- **🔄 Multi-Source Context Collection**: Gather data from RSS, Reddit, Files, WordPress simultaneously
 - **🤖 Multi-AI Model Workflows**: Chain different AI providers (GPT-4 → Claude → Gemini) in single pipelines
-- **📧 Custom Step Types**: Email automation, custom processing, agentic content workflows
-- **🌐 Bidirectional Handlers**: Google Sheets, WordPress as both input and output destinations
+- **📤 Multi-Platform Publishing**: Post to Facebook, Twitter, Threads, WordPress automatically
+- **🌐 Bidirectional WordPress**: WordPress as both input source and output destination
 - **🔌 100% Filter-Based**: Pure WordPress architecture with zero constructor dependencies
-- **⚡ Future-Ready**: Built for agentic AI workflows and WordSurf integration
+- **🚀 Infinitely Extensible**: Add any handler type - everything auto-integrates via filter system
 
-## Real-World Example: Comprehensive Content Workflow
+## Real-World Example: Core Content Workflow
 
 ```
-RSS Feed Input        →  AI Analysis (GPT-4)     →  Content Enhancement  →  Remote WordPress
+RSS Feed Input        →  AI Analysis (GPT-4)     →  Content Enhancement  →  Twitter Post
      ↓                        ↓                         ↓                      ↓
-Reddit Posts          →  AI Summary (Claude)     →  Custom Validation   →  Email Notification
+Reddit Posts          →  AI Summary (Claude)     →  Custom Validation   →  Facebook Post
      ↓                        ↓                         ↓                      ↓
-Google Sheets Data    →  Context Collection      →  Agentic Updates     →  Success Tracking
+WordPress Content     →  Context Collection      →  Final Processing    →  WordPress Post
 ```
 
 **Context Collection Power**: Each AI step receives ALL previous inputs and processing results, enabling sophisticated cross-referencing and analysis across multiple data sources.
@@ -64,9 +64,9 @@ $output_handlers = apply_filters('dm_get_handlers', null, 'output');
 
 ## Key Features
 
-### Multi-Input Context Collection
+### Multi-Source Context Collection
 Collect data from multiple sources simultaneously - each AI step receives ALL previous inputs:
-- **RSS feeds** + **Reddit posts** + **Google Sheets data** = Rich context for analysis
+- **RSS feeds** + **Reddit posts** + **WordPress content** + **Local files** = Rich context for analysis
 - **Cross-reference capabilities** across different data sources
 - **Intelligent deduplication** and content correlation
 
@@ -76,73 +76,114 @@ Chain different AI providers in single pipelines:
 - **Step-specific models**: Use the best AI for each task
 - **Context preservation**: Each step builds on previous AI analysis
 
-### Custom Step Types
-Extend beyond input/output with specialized processing:
-- **Email Steps**: AWS SES automation, campaign management
-- **Custom Processing**: Sentiment analysis, data validation, content enhancement
-- **Agentic Workflows**: Future WordSurf integration for intelligent content updates
+### Core Handlers Included
 
-### Bidirectional Handlers
-Handlers that work as both input and output:
-- **Google Sheets**: Read data for processing, write results back
-- **WordPress**: Source content from posts, publish processed content
-- **Database Systems**: Query for inputs, store processed results
+**Input Handlers (Gather Data)**:
+- **Files**: Process local files and uploads
+- **Reddit**: Fetch posts from subreddits via Reddit API
+- **RSS**: Monitor and process RSS feeds
+- **WordPress**: Source content from WordPress posts/pages
+
+**Output Handlers (Publish Content)**:
+- **Facebook**: Post to Facebook pages/profiles
+- **Threads**: Publish to Threads (Meta's Twitter alternative)
+- **Twitter**: Tweet content with media support
+- **WordPress**: Create/update WordPress posts/pages
+
+**AI Integration**:
+- **Multi-Provider AI HTTP Client**: OpenAI, Anthropic, Google, Grok, OpenRouter
+- **Built-in Agentic Features**: Streaming, tool calling, function execution
+
+### Extension Examples (Not Included)
+
+The filter-based architecture makes adding custom handlers trivial. Common extensions:
+
+**Database & Sheets**:
+- **Google Sheets**: Read/write spreadsheet data
+- **Airtable**: Database operations
+- **MySQL/PostgreSQL**: Custom database handlers
+
+**Communication**:
+- **AWS SES**: Email automation and campaigns
+- **Slack/Discord**: Team notifications
+- **SMS/WhatsApp**: Mobile messaging
+
+**Advanced Processing**:
+- **Contact List Management**: CRM integration
+- **Image Processing**: Visual content workflows
+- **Custom APIs**: Any REST/GraphQL endpoint
 
 ## Practical Examples
 
-### Example 1: Email Campaign Automation
+### Example 1: Core Content Processing Pipeline
 
-**Workflow**: Contact List → Content Analysis → Personalized Email
+**Workflow**: RSS Feed → AI Analysis → Twitter Post
 
 ```php
-// Custom Email Step Type
-add_filter('dm_get_steps', function($steps) {
-    $steps['aws_ses_email'] = new \MyPlugin\Steps\AWSEmailStep();
-    return $steps;
-});
+// Using core handlers - RSS input, AI processing, Twitter output
+// Pipeline Configuration:
+// Step 1: RSS Input (fetch latest posts)
+// Step 2: AI Analysis (GPT-4 content enhancement)
+// Step 3: Twitter Output (publish enhanced content)
 
-class AWSEmailStep {
+// Each step receives complete context automatically:
+$context = apply_filters('dm_get_context', null);
+$rss_content = $context['all_previous_packets'][0];    // Original RSS data
+$ai_analysis = $context['all_previous_packets'][1];    // AI-enhanced content
+```
+
+### Example 2: Multi-Source Social Media Publishing
+
+**Workflow**: Reddit + WordPress → AI Summary → Multi-Platform Publishing
+
+```php
+// Using core handlers for comprehensive workflow
+// Step 1: Reddit Input (r/technology posts)
+// Step 2: WordPress Input (existing blog posts)
+// Step 3: AI Analysis (Claude content correlation)
+// Step 4: Facebook Output (publish summary)
+// Step 5: Threads Output (alternative summary)
+// Step 6: Twitter Output (condensed version)
+
+// All outputs receive enriched context from multiple sources
+$context = apply_filters('dm_get_context', null);
+$reddit_posts = $context['all_previous_packets'][0];
+$wp_content = $context['all_previous_packets'][1];
+$ai_summary = $context['all_previous_packets'][2];
+```
+
+### Example 3: Extension - Email Campaign Automation
+
+**Extension Workflow**: Contact List → Content Analysis → Personalized Email
+
+```php
+// Extension example - AWS SES Email Handler (not included in core)
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'output') {
+        $handlers['aws_ses'] = new \MyPlugin\Handlers\AWSEmailHandler();
+    }
+    return $handlers;
+}, 10, 2);
+
+class AWSEmailHandler {
     public function execute(int $job_id, ?\DataMachine\Engine\DataPacket $data_packet = null): bool {
-        $logger = apply_filters('dm_get_logger', null);
-        
         // Access all previous context for personalization
         $context = apply_filters('dm_get_context', null);
-        $all_data = $context['all_previous_packets'] ?? [];
+        $contact_data = $context['all_previous_packets'][0] ?? null;
+        $ai_personalization = $context['all_previous_packets'][1] ?? null;
         
         // Send personalized email using AWS SES
-        return $this->send_personalized_email($data_packet, $all_data);
+        return $this->send_personalized_email($data_packet, $contact_data, $ai_personalization);
     }
 }
 ```
 
-### Example 2: Multi-AI Content Analysis Pipeline
+### Example 4: Extension - Google Sheets Integration
 
-**Workflow**: RSS + Reddit → GPT-4 Analysis → Claude Summary → Google Sheets Output
-
-```php
-// Multi-input context collection automatically available
-// Each AI step receives ALL previous inputs and AI analysis
-
-// Pipeline Configuration:
-// Step 1: RSS Input (tech news)
-// Step 2: Reddit Input (r/technology posts) 
-// Step 3: GPT-4 Analysis (trend identification)
-// Step 4: Claude Summary (executive summary)
-// Step 5: Google Sheets Output (tracking sheet)
-
-// Each AI step has access to:
-$context = apply_filters('dm_get_context', null);
-$rss_data = $context['all_previous_packets'][0];     // RSS content
-$reddit_data = $context['all_previous_packets'][1];   // Reddit posts
-$gpt4_analysis = $context['all_previous_packets'][2]; // GPT-4 insights
-```
-
-### Example 3: Bidirectional Google Sheets Handler
-
-**Use Case**: Read customer data, process with AI, write results back
+**Extension Workflow**: Google Sheets Input → AI Processing → Google Sheets Output
 
 ```php
-// Bidirectional handler - works as both input and output
+// Extension example - Google Sheets Handler (not included in core)
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input' || $type === 'output') {
         $handlers['google_sheets'] = new \MyPlugin\Handlers\GoogleSheetsHandler();
@@ -153,64 +194,23 @@ add_filter('dm_get_handlers', function($handlers, $type) {
 class GoogleSheetsHandler {
     // INPUT: Read data from sheets
     public function get_input_data(object $module, array $source_config, int $user_id): array {
-        $logger = apply_filters('dm_get_logger', null);
-        
-        // Read customer data from Google Sheets
         $customer_data = $this->fetch_sheets_data(
             $source_config['sheet_id'], 
             $source_config['input_range']
         );
-        
         return ['processed_items' => $customer_data];
     }
     
     // OUTPUT: Write processed results back
     public function execute(int $job_id, ?\DataMachine\Engine\DataPacket $data_packet = null): bool {
-        if (!$data_packet) return false;
-        
-        // Access context for complete analysis history
         $context = apply_filters('dm_get_context', null);
         $ai_analysis = $context['all_previous_packets'] ?? [];
         
-        // Write AI analysis results back to sheets
         return $this->update_sheets_data(
             $data_packet->metadata['sheet_id'],
             $data_packet->metadata['output_range'], 
             $ai_analysis
         );
-    }
-}
-```
-
-### Example 4: Future WordSurf Integration
-
-**Agentic Content Workflows**: RSS/Reddit → AI Analysis → Intelligent Content Updates
-
-```php
-// Future integration pattern for agentic content workflows
-add_filter('dm_get_steps', function($steps) {
-    $steps['wordsurf_agentic'] = new \WordSurf\Integration\AgenticContentStep();
-    return $steps;
-});
-
-class AgenticContentStep {
-    public function execute(int $job_id, ?\DataMachine\Engine\DataPacket $data_packet = null): bool {
-        // Access complete pipeline context
-        $context = apply_filters('dm_get_context', null);
-        $rss_data = $context['all_previous_packets'][0] ?? null;
-        $reddit_data = $context['all_previous_packets'][1] ?? null;
-        $ai_analysis = $context['all_previous_packets'][2] ?? null;
-        
-        // Agentic decision making:
-        // - Should we update existing content?
-        // - Create new content?
-        // - Merge insights from multiple sources?
-        
-        return $this->make_intelligent_content_decisions([
-            'sources' => [$rss_data, $reddit_data],
-            'analysis' => $ai_analysis,
-            'current_content' => $data_packet
-        ]);
     }
 }
 ```

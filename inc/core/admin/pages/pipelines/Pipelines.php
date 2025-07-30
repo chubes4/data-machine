@@ -47,6 +47,7 @@ class Pipelines
     {
         // Register immediately for admin menu discovery (not on init hook)
         $this->register_admin_page();
+        $this->register_page_assets();
         add_action('wp_ajax_dm_get_pipeline_steps', [$this, 'ajax_get_pipeline_steps']);
         add_action('wp_ajax_dm_add_pipeline_step', [$this, 'ajax_add_pipeline_step']);
         add_action('wp_ajax_dm_remove_pipeline_step', [$this, 'ajax_remove_pipeline_step']);
@@ -78,6 +79,80 @@ class Pipelines
         }, 10);
     }
 
+    /**
+     * Register pipeline-specific assets for this page.
+     * 
+     * Pages self-register their assets to maintain full self-sufficiency.
+     */
+    public function register_page_assets()
+    {
+        add_filter('dm_get_page_assets', function($assets, $page_slug) {
+            if ($page_slug !== 'pipelines') {
+                return $assets;
+            }
+            
+            return [
+                'css' => [
+                    'dm-admin-core' => [
+                        'file' => 'assets/css/data-machine-admin.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
+                    'dm-admin-pipelines' => [
+                        'file' => 'assets/css/admin-pipelines.css',
+                        'deps' => ['dm-admin-core'],
+                        'media' => 'all'
+                    ]
+                ],
+                'js' => [
+                    'dm-pipeline-builder' => [
+                        'file' => 'assets/js/admin/pipelines/pipeline-builder.js',
+                        'deps' => ['jquery', 'jquery-ui-sortable'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmPipelineBuilder',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'get_pipeline_steps_nonce' => wp_create_nonce('dm_get_pipeline_steps'),
+                                'add_pipeline_step_nonce' => wp_create_nonce('dm_add_pipeline_step'),
+                                'remove_pipeline_step_nonce' => wp_create_nonce('dm_remove_pipeline_step'),
+                                'reorder_pipeline_steps_nonce' => wp_create_nonce('dm_reorder_pipeline_steps'),
+                                'get_dynamic_step_types_nonce' => wp_create_nonce('dm_get_dynamic_step_types'),
+                                'get_available_handlers_nonce' => wp_create_nonce('dm_get_available_handlers'),
+                                'strings' => [
+                                    'pipelineSteps' => __('Pipeline Steps', 'data-machine'),
+                                    'addStep' => __('Add Step', 'data-machine'),
+                                    'selectStepType' => __('Select step type...', 'data-machine'),
+                                    'confirmRemoveStep' => __('Are you sure you want to remove this step?', 'data-machine'),
+                                    'errorAddingStep' => __('Error adding pipeline step', 'data-machine'),
+                                    'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
+                                ]
+                            ]
+                        ]
+                    ],
+                    'dm-pipeline-modal' => [
+                        'file' => 'assets/js/admin/pipelines/pipeline-modal.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmPipelineModal',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
+                                'save_modal_config_nonce' => wp_create_nonce('dm_save_modal_config'),
+                                'strings' => [
+                                    'configureStep' => __('Configure Step', 'data-machine'),
+                                    'saving' => __('Saving...', 'data-machine'),
+                                    'save' => __('Save Configuration', 'data-machine'),
+                                    'cancel' => __('Cancel', 'data-machine'),
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ];
+        }, 10, 2);
+    }
 
     /**
      * Render the main pipelines page content.

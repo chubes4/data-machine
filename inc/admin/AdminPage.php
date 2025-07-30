@@ -88,49 +88,15 @@ class AdminPage {
             return;
         }
         
-        // Prepare context data for templates
-        $context = $this->prepare_page_context($page_slug);
-        
-        // Call the page callback
+        // Call the page callback directly - pages are self-sufficient via filters
         $callback = $page_config['callback'];
         if (is_callable($callback)) {
-            call_user_func($callback, $context);
+            call_user_func($callback);
         } else {
             echo '<div class="notice notice-error"><p>' . esc_html__('Page callback not callable.', 'data-machine') . '</p></div>';
         }
     }
     
-    /**
-     * Prepare context data for page templates.
-     * 
-     * Uses filter-based service access for pure filter-based architecture.
-     *
-     * @param string $page_slug The current page slug
-     * @return array Context data for the template
-     */
-    private function prepare_page_context($page_slug) {
-        $context = [];
-        
-        // Add common context data via filter-based service access
-        $context['db_projects'] = apply_filters('dm_get_database_service', null, 'projects');
-        $context['db_modules'] = apply_filters('dm_get_database_service', null, 'modules');
-        $context['logger'] = apply_filters('dm_get_logger', null);
-        
-        // Add page-specific context data
-        switch ($page_slug) {
-            case 'dm-project-management':
-                // Projects page specific context
-                break;
-            case 'dm-jobs':
-                // Jobs page specific context
-                break;
-            case 'dm-remote-locations':
-                // Remote locations page specific context
-                break;
-        }
-        
-        return $context;
-    }
 
 
 

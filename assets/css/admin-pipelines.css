@@ -1,8 +1,8 @@
 /**
- * Data Machine Admin Project Management Styles
+ * Data Machine Admin Pipeline Management Styles
  * 
- * Extracted from inline styles for better code organization and maintainability.
- * Used by: inc/core/admin/pages/projects/ProjectManagement.php
+ * Styles for the visual pipeline builder and drag-and-drop interface.
+ * Used by: inc/core/admin/pages/pipelines/Pipelines.php
  *
  * @since NEXT_VERSION
  */

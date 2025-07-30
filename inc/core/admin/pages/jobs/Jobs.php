@@ -37,6 +37,7 @@ class Jobs
     {
         // Register immediately for admin menu discovery (not on init hook)
         $this->register_admin_page();
+        $this->register_page_assets();
     }
 
     /**
@@ -58,6 +59,52 @@ class Jobs
             ];
             return $pages;
         }, 10);
+    }
+
+    /**
+     * Register job-specific assets for this page.
+     * 
+     * Pages self-register their assets to maintain full self-sufficiency.
+     */
+    public function register_page_assets()
+    {
+        add_filter('dm_get_page_assets', function($assets, $page_slug) {
+            if ($page_slug !== 'jobs') {
+                return $assets;
+            }
+            
+            return [
+                'css' => [
+                    'dm-admin-core' => [
+                        'file' => 'assets/css/data-machine-admin.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
+                    'dm-admin-jobs' => [
+                        'file' => 'assets/css/admin-jobs.css',
+                        'deps' => ['dm-admin-core'],
+                        'media' => 'all'
+                    ]
+                ],
+                'js' => [
+                    'dm-jobs-admin' => [
+                        'file' => 'assets/js/admin/core/data-machine-jobs.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmJobsAdmin',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'strings' => [
+                                    'loading' => __('Loading...', 'data-machine'),
+                                    'error' => __('An error occurred', 'data-machine'),
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ];
+        }, 10, 2);
     }
 
     /**
