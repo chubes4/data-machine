@@ -12,7 +12,7 @@
 
 namespace DataMachine\Engine;
 
-use DataMachine\Core\Database\{Jobs, Projects};
+use DataMachine\Core\Database\Jobs\Jobs;
 use DataMachine\Admin\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {

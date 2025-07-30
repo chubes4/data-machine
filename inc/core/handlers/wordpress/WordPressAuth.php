@@ -1,15 +1,18 @@
 <?php
 /**
- * Handles WordPress API key authentication for output.
+ * Unified WordPress API key authentication.
+ * 
+ * Handles authentication for both input and output WordPress operations.
+ * Uses shared credential storage to avoid duplication.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/wordpress
+ * @subpackage Data_Machine/inc/core/handlers/wordpress
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Output\WordPress;
+namespace DataMachine\Core\Handlers\WordPress;
 
-if ( ! defined( 'ABSPATH' ) ) {
+if (!defined('ABSPATH')) {
     exit;
 }
 
@@ -111,7 +114,8 @@ class WordPressAuth {
             'stored_at' => time()
         ];
 
-        return update_user_meta($user_id, 'data_machine_wordpress_output_credentials', $credentials) !== false;
+        // Use unified meta key for both input and output operations
+        return update_user_meta($user_id, 'data_machine_wordpress_credentials', $credentials) !== false;
     }
 
     /**
@@ -125,7 +129,7 @@ class WordPressAuth {
             return null;
         }
 
-        $credentials = get_user_meta($user_id, 'data_machine_wordpress_output_credentials', true);
+        $credentials = get_user_meta($user_id, 'data_machine_wordpress_credentials', true);
         if (empty($credentials) || !is_array($credentials)) {
             return null;
         }
@@ -162,9 +166,14 @@ class WordPressAuth {
             return false;
         }
 
-        return delete_user_meta($user_id, 'data_machine_wordpress_output_credentials') !== false;
+        return delete_user_meta($user_id, 'data_machine_wordpress_credentials') !== false;
     }
+}
 
-} // End class
-
-// Note: Registration now handled by unified WordPress auth component
+// Self-register via parameter-based auth system
+add_filter('dm_get_auth', function($auth, $handler_slug) {
+    if ($handler_slug === 'wordpress') {
+        return new \DataMachine\Core\Handlers\WordPress\WordPressAuth();
+    }
+    return $auth;
+}, 10, 2);

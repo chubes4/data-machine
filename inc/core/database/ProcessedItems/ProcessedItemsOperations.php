@@ -33,19 +33,19 @@ class ProcessedItemsOperations {
     }
 
     /**
-     * Checks if a specific item has already been processed for a given module and source type.
+     * Checks if a specific item has already been processed for a given flow and source type.
      *
-     * @param int    $module_id      The ID of the module.
+     * @param int    $flow_id        The ID of the flow.
      * @param string $source_type    The type of the data source (e.g., 'rss', 'reddit').
      * @param string $item_identifier The unique identifier for the item (e.g., GUID, post ID).
      * @return bool True if the item has been processed, false otherwise.
      */
-    public function has_item_been_processed( int $module_id, string $source_type, string $item_identifier ): bool {
+    public function has_item_been_processed( int $flow_id, string $source_type, string $item_identifier ): bool {
         global $wpdb;
 
         $count = $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} WHERE module_id = %d AND source_type = %s AND item_identifier = %s",
-            $module_id,
+            "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_id = %d AND source_type = %s AND item_identifier = %s",
+            $flow_id,
             $source_type,
             $item_identifier
         ) );
@@ -56,21 +56,21 @@ class ProcessedItemsOperations {
     /**
      * Adds a record indicating an item has been processed.
      *
-     * @param int    $module_id      The ID of the module.
+     * @param int    $flow_id        The ID of the flow.
      * @param string $source_type    The type of the data source.
      * @param string $item_identifier The unique identifier for the item.
      * @return bool True on successful insertion, false otherwise.
      */
-    public function add_processed_item( int $module_id, string $source_type, string $item_identifier ): bool {
+    public function add_processed_item( int $flow_id, string $source_type, string $item_identifier ): bool {
         global $wpdb;
 
         // Check if it exists first to avoid unnecessary insert attempts and duplicate key errors
-        if ($this->has_item_been_processed($module_id, $source_type, $item_identifier)) {
+        if ($this->has_item_been_processed($flow_id, $source_type, $item_identifier)) {
             // Item already processed - return true to indicate success (idempotent behavior)
             $logger = apply_filters('dm_get_logger', null);
             if ($logger) {
                 $logger->info("Item already processed, skipping duplicate insert.", [
-                    'module_id' => $module_id,
+                    'flow_id' => $flow_id,
                     'source_type' => $source_type,
                     'item_identifier' => substr($item_identifier, 0, 100) . '...'
                 ]);
@@ -81,13 +81,13 @@ class ProcessedItemsOperations {
         $result = $wpdb->insert(
             $this->table_name,
             array(
-                'module_id'       => $module_id,
+                'flow_id'         => $flow_id,
                 'source_type'     => $source_type,
                 'item_identifier' => $item_identifier,
                 // processed_timestamp defaults to NOW()
             ),
             array(
-                '%d', // module_id
+                '%d', // flow_id
                 '%s', // source_type
                 '%s', // item_identifier
             )
@@ -102,7 +102,7 @@ class ProcessedItemsOperations {
                  $logger = apply_filters('dm_get_logger', null);
                  if ($logger) {
                      $logger->info("Duplicate key detected during insert - item already processed by another process.", [
-                         'module_id' => $module_id,
+                         'flow_id' => $flow_id,
                          'source_type' => $source_type,
                          'item_identifier' => substr($item_identifier, 0, 100) . '...'
                      ]);
@@ -114,7 +114,7 @@ class ProcessedItemsOperations {
              $logger = apply_filters('dm_get_logger', null);
              if ($logger) {
                  $logger->error("Failed to insert processed item.", [
-                     'module_id' => $module_id,
+                     'flow_id' => $flow_id,
                      'source_type' => $source_type,
                      'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
                      'db_error' => $db_error

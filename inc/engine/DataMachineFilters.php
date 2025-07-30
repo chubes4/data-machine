@@ -109,7 +109,6 @@ function dm_register_direct_service_filters() {
  * Pure parameter-based system with no legacy filter patterns.
  * 
  * Usage: $db_service = apply_filters('dm_get_database_service', null, 'jobs');
- * Usage: $db_service = apply_filters('dm_get_database_service', null, 'projects');
  * Usage: $db_service = apply_filters('dm_get_database_service', null, 'pipelines');
  * Usage: $db_service = apply_filters('dm_get_database_service', null, 'flows');
  * Usage: $db_service = apply_filters('dm_get_database_service', null, 'processed_items');
@@ -144,16 +143,16 @@ function dm_register_database_service_system() {
         switch ($type) {
             case 'jobs':
                 return new \DataMachine\Core\Database\Jobs\Jobs();
-            case 'projects':
-                return new \DataMachine\Core\Database\Projects();
             case 'pipelines':
-                return new \DataMachine\Core\Database\Pipelines();
+                return new \DataMachine\Core\Database\Pipelines\Pipelines();
             case 'flows':
-                return new \DataMachine\Core\Database\Flows();
+                return new \DataMachine\Core\Database\Flows\Flows();
             case 'processed_items':
                 return new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
             case 'remote_locations':
+                // TODO: Fix RemoteLocations class loading issue
                 return new \DataMachine\Core\Database\RemoteLocations\RemoteLocations();
+                // throw new Exception("RemoteLocations database service temporarily disabled due to class loading issue");
             default:
                 throw new Exception("Unknown database service type: {$type}");
         }
@@ -699,6 +698,26 @@ function dm_register_universal_handler_system() {
         
         return null; // No settings available
     }, 10, 3);
+    
+    // Parameter-based authentication system - auto-links to handlers via matching parameters
+    // Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
+    // Usage: $auth = apply_filters('dm_get_auth', null, 'wordpress');
+    // External Plugin Example:
+    // add_filter('dm_get_auth', function($auth, $handler_slug) {
+    //     if ($handler_slug === 'instagram') {
+    //         return new MyPlugin\Handlers\Instagram\InstagramAuth();
+    //     }
+    //     return $auth;
+    // }, 10, 2);
+    add_filter('dm_get_auth', function($auth, $handler_slug) {
+        if ($auth !== null) {
+            return $auth; // External override provided
+        }
+        
+        // Core returns null - auth components self-register via this same filter
+        // This enables pure parameter-based auto-linking with zero hardcoding
+        return null;
+    }, 5, 2);
 }
 
 /**
@@ -717,6 +736,31 @@ function dm_register_universal_handler_system() {
  */
 function dm_register_utility_filters() {
     
+    /**
+     * Initialize admin page registry for pure self-registration pattern.
+     * 
+     * Admin pages register themselves using this filter, eliminating any hardcoded
+     * page lists and following the same pure parameter-based architecture as handlers.
+     * 
+     * Core Usage: 
+     * - Pages: add_filter('dm_register_admin_pages', function($pages) { $pages['slug'] = $config; return $pages; });
+     * - Discovery: $all_pages = apply_filters('dm_register_admin_pages', []);
+     * 
+     * External Plugin Integration:
+     * add_filter('dm_register_admin_pages', function($pages) {
+     *     $pages['analytics'] = [
+     *         'page_title' => 'Analytics Dashboard',
+     *         'menu_title' => 'Analytics', 
+     *         'capability' => 'manage_options',
+     *         'callback' => [$this, 'render_analytics_page']
+     *     ];
+     *     return $pages;
+     * }, 10);
+     */
+    add_filter('dm_register_admin_pages', function($pages) {
+        // Initialize empty registry - pages add themselves to this
+        return is_array($pages) ? $pages : [];
+    }, 5);
     
     /**
      * Parse common configuration fields.
@@ -853,4 +897,104 @@ function dm_register_utility_filters() {
         return true; // Item passes time filter
         
     }, 10, 3);
+    
+    /**
+     * Enhanced handler class auto-discovery utility.
+     * 
+     * Automatically discovers handler class names based on naming conventions,
+     * reducing registration boilerplate. Supports multiple fallback patterns
+     * for maximum compatibility with external plugins.
+     * 
+     * @param string|null $class_name Existing class name (null if not found)
+     * @param string $handler_name Handler name/key (e.g., 'twitter', 'reddit')
+     * @param string $handler_type Handler type ('input' or 'output')
+     * @return string|null Discovered class name or null if not found
+     */
+    add_filter('dm_auto_discover_handler_class', function($class_name, $handler_name, $handler_type) {
+        // External override provided - respect it
+        if ($class_name !== null) {
+            return $class_name;
+        }
+        
+        // Get handler registration information for explicit class
+        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
+        if (isset($handlers[$handler_name]['class']) && class_exists($handlers[$handler_name]['class'])) {
+            return $handlers[$handler_name]['class'];
+        }
+        
+        // Auto-discovery: Primary naming convention
+        // Handler: 'twitter' -> 'DataMachine\Core\Handlers\Output\Twitter\Twitter'
+        $primary_class = sprintf(
+            'DataMachine\\Core\\Handlers\\%s\\%s\\%s',
+            ucfirst($handler_type),
+            ucfirst($handler_name),
+            ucfirst($handler_name)
+        );
+        
+        if (class_exists($primary_class)) {
+            return $primary_class;
+        }
+        
+        // Fallback patterns for external plugins and alternate structures
+        $fallback_patterns = [
+            sprintf('DataMachine\\Handlers\\%s\\%s', ucfirst($handler_type), ucfirst($handler_name)),
+            sprintf('DataMachine\\%s\\%s', ucfirst($handler_type), ucfirst($handler_name)),
+            sprintf('%s\\%s', ucfirst($handler_type), ucfirst($handler_name)),
+            ucfirst($handler_name), // Simple class name
+            sprintf('%sHandler', ucfirst($handler_name)), // Common pattern
+            sprintf('%s%s', ucfirst($handler_name), ucfirst($handler_type)) // TwitterOutput, etc.
+        ];
+        
+        foreach ($fallback_patterns as $pattern) {
+            if (class_exists($pattern)) {
+                return $pattern;
+            }
+        }
+        
+        return null;
+    }, 10, 3);
+}
+
+/**
+ * Register parameter-based step auto-discovery system.
+ * 
+ * Enables pipeline steps to be auto-discovered and registered through
+ * the same pure filter-based pattern as handlers (parameter-based) and admin pages (collection-based).
+ * 
+ * External plugins can register custom step types via:
+ * add_filter('dm_get_steps', function($step_config, $step_type) {
+ *     if ($step_type === 'custom_step') {
+ *         return [
+ *             'label' => __('Custom Step', 'my-plugin'),
+ *             'has_handlers' => true,
+ *             'description' => __('Custom processing step', 'my-plugin'),
+ *             'class' => 'MyPlugin\\Steps\\CustomStep'
+ *         ];
+ *     }
+ *     return $step_config;
+ * }, 10, 2);
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_register_step_auto_discovery_system() {
+    
+    /**
+     * Parameter-based step registration filter.
+     * 
+     * Enables auto-discovery of pipeline step types through parameter-based
+     * filter system for maximum extensibility.
+     * 
+     * @param mixed $step_config Existing step configuration (null if not found)
+     * @param string $step_type Step type to register ('input', 'ai', 'output', etc.)
+     * @return array|null Step configuration array or null if not found
+     */
+    add_filter('dm_get_steps', function($step_config, $step_type) {
+        // External override provided - respect it
+        if ($step_config !== null) {
+            return $step_config;
+        }
+        
+        // No configuration found - allow external plugins to provide it
+        return null;
+    }, 5, 2);
 }

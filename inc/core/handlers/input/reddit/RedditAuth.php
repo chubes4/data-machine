@@ -10,7 +10,6 @@
 namespace DataMachine\Core\Handlers\Input\Reddit;
 
 use DataMachine\Admin\Logger;
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -32,6 +31,15 @@ class RedditAuth {
      */
     private function get_logger() {
         return apply_filters('dm_get_logger', null);
+    }
+
+    /**
+     * Get encryption helper service via filter
+     *
+     * @return object|null EncryptionHelper instance or null if not available
+     */
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_encryption_helper', null);
     }
 
     /**
@@ -224,8 +232,14 @@ class RedditAuth {
 
         // --- 5. Store Tokens and User Info (Encrypted) --- 
         // Encrypt the tokens before storing
-        $encrypted_access_token = EncryptionHelper::encrypt($access_token);
-        $encrypted_refresh_token = $refresh_token ? EncryptionHelper::encrypt($refresh_token) : null;
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Reddit OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_service_unavailable'));
+            exit;
+        }
+        $encrypted_access_token = $encryption_helper->encrypt($access_token);
+        $encrypted_refresh_token = $refresh_token ? $encryption_helper->encrypt($refresh_token) : null;
         
         if ($encrypted_access_token === false || ($refresh_token && $encrypted_refresh_token === false)) {
             $this->get_logger()?->error('Reddit OAuth Error: Failed to encrypt tokens.', ['user_id' => $user_id]);
@@ -265,7 +279,12 @@ class RedditAuth {
             return false;
         }
         // Decrypt the refresh token
-        $refresh_token = EncryptionHelper::decrypt($reddit_account['refresh_token']);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Reddit Token Refresh Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
+            return false;
+        }
+        $refresh_token = $encryption_helper->decrypt($reddit_account['refresh_token']);
         if ($refresh_token === false) {
             $this->get_logger()->error('Reddit Token Refresh Error: Failed to decrypt refresh token.', ['user_id' => $user_id]);
             return false;
@@ -332,8 +351,13 @@ class RedditAuth {
         $new_token_expires_at = time() + intval($new_expires_in);
 
         // Encrypt the tokens before storing
-        $encrypted_new_access_token = EncryptionHelper::encrypt($new_access_token);
-        $encrypted_new_refresh_token = EncryptionHelper::encrypt($new_refresh_token);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Reddit Token Refresh Error: Encryption helper service unavailable during token storage.', ['user_id' => $user_id]);
+            return false;
+        }
+        $encrypted_new_access_token = $encryption_helper->encrypt($new_access_token);
+        $encrypted_new_refresh_token = $encryption_helper->encrypt($new_refresh_token);
         
         if ($encrypted_new_access_token === false || $encrypted_new_refresh_token === false) {
             $this->get_logger()->error('Reddit Token Refresh Error: Failed to encrypt new tokens.', ['user_id' => $user_id]);
@@ -355,3 +379,11 @@ class RedditAuth {
     }
 
 } // End class
+
+// Self-register via parameter-based auth system
+add_filter('dm_get_auth', function($auth, $handler_slug) {
+    if ($handler_slug === 'reddit') {
+        return new \DataMachine\Core\Handlers\Input\Reddit\RedditAuth();
+    }
+    return $auth;
+}, 10, 2);

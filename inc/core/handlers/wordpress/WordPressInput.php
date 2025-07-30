@@ -12,7 +12,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Input\WordPress;
+namespace DataMachine\Core\Handlers\WordPress;
 
 use DataMachine\Core\Database\RemoteLocations;
 use Exception;
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class WordPress {
+class WordPressInput {
 
     /**
      * Parameter-less constructor for pure filter-based architecture.
@@ -1177,10 +1177,4 @@ class WordPress {
     }
 }
 
-// Self-register via universal parameter-based handler system
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input') {
-        $handlers['wordpress'] = new \DataMachine\Core\Handlers\Input\WordPress\WordPress();
-    }
-    return $handlers;
-}, 10, 2);
+// Note: Registration handled by main WordPress handler class

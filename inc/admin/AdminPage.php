@@ -72,33 +72,31 @@ class AdminPage {
         // Get current page slug
         $current_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
         
-        // Get all registered admin pages
-        $registered_pages = apply_filters('dm_register_admin_pages', []);
-        
-        // Find the matching page configuration
-        $page_config = null;
-        foreach ($registered_pages as $page) {
-            if (isset($page['menu_slug']) && $page['menu_slug'] === $current_page) {
-                $page_config = $page;
-                break;
-            }
+        // Extract page slug from WordPress menu format (remove 'dm-' prefix)
+        $page_slug = $current_page;
+        if (strpos($page_slug, 'dm-') === 0) {
+            $page_slug = substr($page_slug, 3); // Remove 'dm-' prefix
         }
         
+        // Get page configuration using collection-based registry
+        $all_pages = apply_filters('dm_register_admin_pages', []);
+        $page_config = $all_pages[$page_slug] ?? null;
+        
         // If no page config found, show error
-        if (!$page_config || !isset($page_config['content_renderer'])) {
+        if (!$page_config || !isset($page_config['callback'])) {
             echo '<div class="notice notice-error"><p>' . esc_html__('Page configuration not found.', 'data-machine') . '</p></div>';
             return;
         }
         
         // Prepare context data for templates
-        $context = $this->prepare_page_context($current_page);
+        $context = $this->prepare_page_context($page_slug);
         
-        // Call the content renderer
-        $content_renderer = $page_config['content_renderer'];
-        if (is_callable($content_renderer)) {
-            echo call_user_func($content_renderer, $context);
+        // Call the page callback
+        $callback = $page_config['callback'];
+        if (is_callable($callback)) {
+            call_user_func($callback, $context);
         } else {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Content renderer not callable.', 'data-machine') . '</p></div>';
+            echo '<div class="notice notice-error"><p>' . esc_html__('Page callback not callable.', 'data-machine') . '</p></div>';
         }
     }
     

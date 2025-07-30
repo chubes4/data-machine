@@ -12,7 +12,6 @@
 
 namespace DataMachine\Core\Database\RemoteLocations;
 
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -35,6 +34,15 @@ class RemoteLocationsOperations {
     }
 
     /**
+     * Get encryption helper service via filter
+     *
+     * @return object|null EncryptionHelper instance or null if not available
+     */
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_encryption_helper', null);
+    }
+
+    /**
      * Adds a new remote location.
      *
      * @param array $data Location data: ['location_name', 'target_site_url', 'target_username', 'password'].
@@ -48,7 +56,11 @@ class RemoteLocationsOperations {
         }
 
         // Use the Encryption Helper
-        $encrypted_password = EncryptionHelper::encrypt($data['password']);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            return false;
+        }
+        $encrypted_password = $encryption_helper->encrypt($data['password']);
         if ($encrypted_password === false) {
             return false;
         }
@@ -100,7 +112,11 @@ class RemoteLocationsOperations {
         }
         if (isset($data['password'])) { // Allow updating with an empty password if intended
             // Use the Encryption Helper
-            $encrypted_password = EncryptionHelper::encrypt($data['password']);
+            $encryption_helper = $this->get_encryption_helper();
+            if (!$encryption_helper) {
+                return false;
+            }
+            $encrypted_password = $encryption_helper->encrypt($data['password']);
             if ($encrypted_password === false) {
                  return false;
             }
@@ -180,7 +196,12 @@ class RemoteLocationsOperations {
 
         if ($decrypt_password && isset($location->encrypted_password)) {
             // Use the Encryption Helper
-            $location->password = EncryptionHelper::decrypt($location->encrypted_password);
+            $encryption_helper = $this->get_encryption_helper();
+            if ($encryption_helper) {
+                $location->password = $encryption_helper->decrypt($location->encrypted_password);
+            } else {
+                $location->password = false;
+            }
             if ($location->password === false) {
                 // Optionally handle decryption failure, e.g., set password to null or an error indicator
                 unset($location->password);

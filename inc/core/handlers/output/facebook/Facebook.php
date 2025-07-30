@@ -406,10 +406,7 @@ class Facebook {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'output') {
-        $handlers['facebook'] = [
-            'has_auth' => true,
-            'label' => __('Facebook', 'data-machine')
-        ];
+        $handlers['facebook'] = new \DataMachine\Core\Handlers\Output\Facebook\Facebook();
     }
     return $handlers;
 }, 10, 2);

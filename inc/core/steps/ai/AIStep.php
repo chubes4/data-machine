@@ -369,3 +369,16 @@ class AIStep {
         return false;
     }
 }
+
+// Auto-register this step type using parameter-based filter system
+add_filter('dm_get_steps', function($step_config, $step_type) {
+    if ($step_type === 'ai') {
+        return [
+            'label' => __('AI Processing', 'data-machine'),
+            'has_handlers' => false,
+            'description' => __('Process content using AI models', 'data-machine'),
+            'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep'
+        ];
+    }
+    return $step_config;
+}, 10, 2);

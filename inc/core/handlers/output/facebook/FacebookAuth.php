@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\Facebook;
 
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -50,6 +49,15 @@ class FacebookAuth {
      */
     private function get_logger() {
         return apply_filters('dm_get_logger', null);
+    }
+
+    /**
+     * Get encryption helper service via filter
+     *
+     * @return object|null EncryptionHelper instance or null if not available
+     */
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_encryption_helper', null);
     }
 
     /**
@@ -95,7 +103,11 @@ class FacebookAuth {
         }
 
         // Decrypt page token
-        $decrypted_token = EncryptionHelper::decrypt($account['page_access_token']);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            return null;
+        }
+        $decrypted_token = $encryption_helper->decrypt($account['page_access_token']);
         if($decrypted_token === false) {
             return null;
         }
@@ -207,7 +219,12 @@ class FacebookAuth {
         $page_name = $page_credentials['name'];
 
         // Encrypt the page access token before storing
-        $encrypted_page_token = EncryptionHelper::encrypt($page_access_token);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
+            return new \WP_Error('facebook_oauth_service_unavailable', __('Encryption service unavailable for storing Facebook access token.', 'data-machine'));
+        }
+        $encrypted_page_token = $encryption_helper->encrypt($page_access_token);
         if ($encrypted_page_token === false) {
              $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Failed to encrypt page access token.', ['user_id' => $user_id]);
              return new \WP_Error('facebook_oauth_page_encryption_failed', __('Failed to securely store the Facebook page access token.', 'data-machine'));
@@ -230,7 +247,12 @@ class FacebookAuth {
         }
 
         // Encrypt the user access token before storing
-        $encrypted_user_token = EncryptionHelper::encrypt($access_token);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Encryption helper service unavailable for user token.', ['user_id' => $user_id]);
+            return new \WP_Error('facebook_oauth_service_unavailable', __('Encryption service unavailable for storing Facebook user token.', 'data-machine'));
+        }
+        $encrypted_user_token = $encryption_helper->encrypt($access_token);
         if ($encrypted_user_token === false) {
              $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Failed to encrypt user access token.', ['user_id' => $user_id]);
              return new \WP_Error('facebook_oauth_user_encryption_failed', __('Failed to securely store the Facebook user access token.', 'data-machine'));
@@ -472,7 +494,10 @@ class FacebookAuth {
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['user_access_token'])) {
-            $token = EncryptionHelper::decrypt($account['user_access_token']);
+            $encryption_helper = apply_filters('dm_get_encryption_helper', null);
+            if ($encryption_helper) {
+                $token = $encryption_helper->decrypt($account['user_access_token']);
+            }
         }
 
         if ($token) {
@@ -567,3 +592,11 @@ class FacebookAuth {
         exit;
     }
 }
+
+// Self-register via parameter-based auth system
+add_filter('dm_get_auth', function($auth, $handler_slug) {
+    if ($handler_slug === 'facebook') {
+        return new \DataMachine\Core\Handlers\Output\Facebook\FacebookAuth();
+    }
+    return $auth;
+}, 10, 2);

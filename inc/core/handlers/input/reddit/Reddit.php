@@ -563,10 +563,7 @@ class Reddit {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
 	if ($type === 'input') {
-		$handlers['reddit'] = [
-			'has_auth' => true,
-			'label' => __('Reddit Subreddit', 'data-machine')
-		];
+		$handlers['reddit'] = new \DataMachine\Core\Handlers\Input\Reddit\Reddit();
 	}
 	return $handlers;
 }, 10, 2);

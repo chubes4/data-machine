@@ -33,35 +33,35 @@ class ProcessedItemsQueries {
     }
 
     /**
-     * Checks if any item has been processed for a given module ID.
+     * Checks if any item has been processed for a given flow ID.
      * Efficiently checks for at least one record.
      *
-     * @param int $module_id The ID of the module.
+     * @param int $flow_id The ID of the flow.
      * @return bool True if any item has been processed, false otherwise.
      */
-    public function has_any_processed_items_for_module(int $module_id): bool {
+    public function has_any_processed_items_for_flow(int $flow_id): bool {
         global $wpdb;
 
         $count = $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} WHERE module_id = %d LIMIT 1",
-            $module_id
+            "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_id = %d LIMIT 1",
+            $flow_id
         ) );
 
         return $count > 0;
     }
 
     /**
-     * Get count of processed items for a specific module.
+     * Get count of processed items for a specific flow.
      *
-     * @param int $module_id The ID of the module.
+     * @param int $flow_id The ID of the flow.
      * @return int Number of processed items.
      */
-    public function get_processed_items_count_for_module(int $module_id): int {
+    public function get_processed_items_count_for_flow(int $flow_id): int {
         global $wpdb;
 
         $count = $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} WHERE module_id = %d",
-            $module_id
+            "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_id = %d",
+            $flow_id
         ) );
 
         return (int) $count;
@@ -85,22 +85,22 @@ class ProcessedItemsQueries {
     }
 
     /**
-     * Get processed items for a specific module with pagination.
+     * Get processed items for a specific flow with pagination.
      *
-     * @param int $module_id The ID of the module.
+     * @param int $flow_id The ID of the flow.
      * @param int $limit Number of items to retrieve.
      * @param int $offset Offset for pagination.
      * @return array Array of processed item objects.
      */
-    public function get_processed_items_for_module(int $module_id, int $limit = 50, int $offset = 0): array {
+    public function get_processed_items_for_flow(int $flow_id, int $limit = 50, int $offset = 0): array {
         global $wpdb;
 
         $results = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$this->table_name} 
-             WHERE module_id = %d 
+             WHERE flow_id = %d 
              ORDER BY processed_timestamp DESC 
              LIMIT %d OFFSET %d",
-            $module_id,
+            $flow_id,
             $limit,
             $offset
         ) );
@@ -109,7 +109,7 @@ class ProcessedItemsQueries {
     }
 
     /**
-     * Get recent processed items across all modules.
+     * Get recent processed items across all flows.
      *
      * @param int $limit Number of items to retrieve.
      * @return array Array of processed item objects.

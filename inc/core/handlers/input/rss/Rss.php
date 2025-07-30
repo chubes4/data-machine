@@ -522,10 +522,7 @@ class Rss {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input') {
-        $handlers['rss'] = [
-            'has_auth' => false,
-            'label' => __('RSS/Atom Feed', 'data-machine')
-        ];
+        $handlers['rss'] = new \DataMachine\Core\Handlers\Input\Rss\Rss();
     }
     return $handlers;
 }, 10, 2);

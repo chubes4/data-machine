@@ -52,15 +52,15 @@ class ProcessedItems {
     /**
      * Adds a record indicating an item has been processed.
      */
-    public function add_processed_item( int $module_id, string $source_type, string $item_identifier ): bool {
-        return $this->operations->add_processed_item($module_id, $source_type, $item_identifier);
+    public function add_processed_item( int $flow_id, string $source_type, string $item_identifier ): bool {
+        return $this->operations->add_processed_item($flow_id, $source_type, $item_identifier);
     }
 
     /**
      * Checks if a specific item has already been processed.
      */
-    public function has_item_been_processed( int $module_id, string $source_type, string $item_identifier ): bool {
-        return $this->operations->has_item_been_processed($module_id, $source_type, $item_identifier);
+    public function has_item_been_processed( int $flow_id, string $source_type, string $item_identifier ): bool {
+        return $this->operations->has_item_been_processed($flow_id, $source_type, $item_identifier);
     }
 
     // ========================================
@@ -68,10 +68,10 @@ class ProcessedItems {
     // ========================================
 
     /**
-     * Checks if any item has been processed for a given module ID.
+     * Checks if any item has been processed for a given flow ID.
      */
-    public function has_any_processed_items_for_module(int $module_id): bool {
-        return $this->queries->has_any_processed_items_for_module($module_id);
+    public function has_any_processed_items_for_flow(int $flow_id): bool {
+        return $this->queries->has_any_processed_items_for_flow($flow_id);
     }
 
     // ========================================
@@ -89,13 +89,13 @@ class ProcessedItems {
         // Use dbDelta for proper table creation/updates
         $sql = "CREATE TABLE {$this->table_name} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            module_id BIGINT(20) UNSIGNED NOT NULL,
+            flow_id BIGINT(20) UNSIGNED NOT NULL,
             source_type VARCHAR(50) NOT NULL,
             item_identifier VARCHAR(255) NOT NULL,
             processed_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
-            UNIQUE KEY `module_source_item` (module_id, source_type, item_identifier(191)),
-            KEY `module_id` (module_id),
+            UNIQUE KEY `flow_source_item` (flow_id, source_type, item_identifier(191)),
+            KEY `flow_id` (flow_id),
             KEY `source_type` (source_type)
         ) $charset_collate;";
 

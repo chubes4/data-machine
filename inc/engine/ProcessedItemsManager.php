@@ -32,16 +32,16 @@ class ProcessedItemsManager {
 	/**
 	 * Check if an item has already been processed.
 	 *
-	 * @param int    $project_id Project ID.
+	 * @param int    $flow_id Flow ID.
 	 * @param string $source_type Source type (e.g. 'airdrop_rest_api', 'rss').
 	 * @param string $identifier Unique item identifier.
 	 * @return bool True if already processed, false if new.
 	 */
-	public function is_item_processed( int $project_id, string $source_type, string $identifier ): bool {
-		if ( empty( $project_id ) || empty( $source_type ) || empty( $identifier ) ) {
+	public function is_item_processed( int $flow_id, string $source_type, string $identifier ): bool {
+		if ( empty( $flow_id ) || empty( $source_type ) || empty( $identifier ) ) {
 			$logger = apply_filters('dm_get_logger', null);
 			$logger?->warning( 'ProcessedItemsManager: Invalid parameters for duplicate check', [
-				'project_id' => $project_id,
+				'flow_id' => $flow_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
@@ -49,12 +49,12 @@ class ProcessedItemsManager {
 		}
 
 		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
-		$is_processed = $db_processed_items->has_item_been_processed( $project_id, $source_type, $identifier );
+		$is_processed = $db_processed_items->has_item_been_processed( $flow_id, $source_type, $identifier );
 		
 		if ( $is_processed ) {
 			$logger = apply_filters('dm_get_logger', null);
 			$logger?->debug( 'ProcessedItemsManager: Item already processed, skipping', [
-				'project_id' => $project_id,
+				'flow_id' => $flow_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
@@ -66,23 +66,23 @@ class ProcessedItemsManager {
 	/**
 	 * Mark an item as processed after successful output.
 	 *
-	 * @param int    $project_id Project ID.
+	 * @param int    $flow_id Flow ID.
 	 * @param string $source_type Source type (e.g. 'airdrop_rest_api', 'rss').
 	 * @param string $identifier Unique item identifier.
 	 * @param int|null $job_id Optional job ID for logging context.
 	 * @return bool True on success, false on failure.
 	 */
-	public function mark_item_processed( int $project_id, string $source_type, string $identifier, ?int $job_id = null ): bool {
-		if ( empty( $project_id ) || empty( $source_type ) || empty( $identifier ) ) {
+	public function mark_item_processed( int $flow_id, string $source_type, string $identifier, ?int $job_id = null ): bool {
+		if ( empty( $flow_id ) || empty( $source_type ) || empty( $identifier ) ) {
 			$missing_fields = [];
-			if ( empty( $project_id ) ) $missing_fields[] = 'project_id';
+			if ( empty( $flow_id ) ) $missing_fields[] = 'flow_id';
 			if ( empty( $source_type ) ) $missing_fields[] = 'source_type';
 			if ( empty( $identifier ) ) $missing_fields[] = 'identifier';
 			
 			$logger = apply_filters('dm_get_logger', null);
 			$logger?->error( 'ProcessedItemsManager: Cannot mark item as processed - missing required data', [
 				'job_id' => $job_id,
-				'project_id' => $project_id,
+				'flow_id' => $flow_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier,
 				'missing_fields' => $missing_fields
@@ -91,20 +91,20 @@ class ProcessedItemsManager {
 		}
 
 		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
-		$success = $db_processed_items->add_processed_item( $project_id, $source_type, $identifier );
+		$success = $db_processed_items->add_processed_item( $flow_id, $source_type, $identifier );
 		
 		$logger = apply_filters('dm_get_logger', null);
 		if ( $success ) {
 			$logger?->info( 'ProcessedItemsManager: Item marked as processed successfully', [
 				'job_id' => $job_id,
-				'project_id' => $project_id,
+				'flow_id' => $flow_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
 		} else {
 			$logger?->error( 'ProcessedItemsManager: Failed to mark item as processed', [
 				'job_id' => $job_id,
-				'project_id' => $project_id,
+				'flow_id' => $flow_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );

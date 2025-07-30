@@ -345,10 +345,7 @@ class Threads {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'output') {
-        $handlers['threads'] = [
-            'has_auth' => true,
-            'label' => __('Threads', 'data-machine')
-        ];
+        $handlers['threads'] = new \DataMachine\Core\Handlers\Output\Threads\Threads();
     }
     return $handlers;
 }, 10, 2);

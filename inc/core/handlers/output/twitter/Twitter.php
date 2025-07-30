@@ -442,10 +442,7 @@ class Twitter {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'output') {
-        $handlers['twitter'] = [
-            'has_auth' => true,
-            'label' => __('Twitter', 'data-machine')
-        ];
+        $handlers['twitter'] = new \DataMachine\Core\Handlers\Output\Twitter\Twitter();
     }
     return $handlers;
 }, 10, 2);

@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\Threads;
 
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -52,6 +51,15 @@ class ThreadsAuth {
      */
     private function get_logger() {
         return apply_filters('dm_get_logger', null);
+    }
+
+    /**
+     * Get encryption helper service via filter
+     *
+     * @return object|null EncryptionHelper instance or null if not available
+     */
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_encryption_helper', null);
     }
 
     /**
@@ -106,7 +114,11 @@ class ThreadsAuth {
         }
 
         // Decrypt the current token first
-        $current_token = EncryptionHelper::decrypt($account['access_token']);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            return null;
+        }
+        $current_token = $encryption_helper->decrypt($account['access_token']);
         if ($current_token === false) {
             return null;
         }
@@ -115,7 +127,11 @@ class ThreadsAuth {
             $refreshed_data = $this->refresh_access_token($current_token, $user_id);
             if (!is_wp_error($refreshed_data)) {
                 // Update stored account details with refreshed token and expiry
-                $account['access_token'] = EncryptionHelper::encrypt($refreshed_data['access_token']);
+                $encryption_helper = $this->get_encryption_helper();
+                if (!$encryption_helper) {
+                    return null;
+                }
+                $account['access_token'] = $encryption_helper->encrypt($refreshed_data['access_token']);
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
                 // Update the user meta immediately
                 update_user_meta($user_id, self::USER_META_KEY, $account);
@@ -296,7 +312,12 @@ class ThreadsAuth {
         }
 
         // Encrypt tokens before storing
-        $account_details['access_token'] = EncryptionHelper::encrypt($account_details['access_token']);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
+            return new \WP_Error('threads_oauth_service_unavailable', __('Encryption service unavailable for storing Threads access token.', 'data-machine'));
+        }
+        $account_details['access_token'] = $encryption_helper->encrypt($account_details['access_token']);
         if ($account_details['access_token'] === false) {
              $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Failed to encrypt access token.', ['user_id' => $user_id]);
              return new \WP_Error('threads_oauth_encryption_failed', __('Failed to securely store the Threads access token.', 'data-machine'));
@@ -427,7 +448,10 @@ class ThreadsAuth {
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {
-            $token = EncryptionHelper::decrypt($account['access_token']);
+            $encryption_helper = apply_filters('dm_get_encryption_helper', null);
+            if ($encryption_helper) {
+                $token = $encryption_helper->decrypt($account['access_token']);
+            }
         }
 
         if ($token) {
@@ -529,3 +553,11 @@ class ThreadsAuth {
         exit;
     }
 }
+
+// Self-register via parameter-based auth system
+add_filter('dm_get_auth', function($auth, $handler_slug) {
+    if ($handler_slug === 'threads') {
+        return new \DataMachine\Core\Handlers\Output\Threads\ThreadsAuth();
+    }
+    return $auth;
+}, 10, 2);

@@ -651,10 +651,7 @@ class Files {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input') {
-        $handlers['files'] = [
-            'has_auth' => false,
-            'label' => __('File Upload', 'data-machine')
-        ];
+        $handlers['files'] = new \DataMachine\Core\Handlers\Input\Files\Files();
     }
     return $handlers;
 }, 10, 2);

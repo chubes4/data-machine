@@ -1,6 +1,6 @@
 <?php
 
-namespace DataMachine\Core\Database;
+namespace DataMachine\Core\Database\Flows;
 
 /**
  * Flows Database Class

@@ -10,7 +10,7 @@
  * @since      0.15.0
  */
 
-namespace DataMachine\Core\Database;
+namespace DataMachine\Core\Database\Pipelines;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.

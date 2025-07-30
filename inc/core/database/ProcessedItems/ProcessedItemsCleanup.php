@@ -60,24 +60,24 @@ class ProcessedItemsCleanup {
     }
 
     /**
-     * Clean up processed items for a specific module.
+     * Clean up processed items for a specific flow.
      *
-     * @param int $module_id The ID of the module.
+     * @param int $flow_id The ID of the flow.
      * @return int Number of items deleted.
      */
-    public function cleanup_processed_items_for_module(int $module_id): int {
+    public function cleanup_processed_items_for_flow(int $flow_id): int {
         global $wpdb;
 
         $deleted = $wpdb->delete(
             $this->table_name,
-            array('module_id' => $module_id),
+            array('flow_id' => $flow_id),
             array('%d')
         );
 
         $logger = apply_filters('dm_get_logger', null);
         if ($logger && $deleted > 0) {
-            $logger->info('Cleaned up processed items for module', [
-                'module_id' => $module_id,
+            $logger->info('Cleaned up processed items for flow', [
+                'flow_id' => $flow_id,
                 'deleted_count' => $deleted,
                 'table' => $this->table_name
             ]);

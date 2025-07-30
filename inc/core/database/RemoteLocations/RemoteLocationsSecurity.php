@@ -12,7 +12,6 @@
 
 namespace DataMachine\Core\Database\RemoteLocations;
 
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -25,6 +24,15 @@ class RemoteLocationsSecurity {
      */
     public function __construct() {
         // No initialization needed currently
+    }
+
+    /**
+     * Get encryption helper service via filter
+     *
+     * @return object|null EncryptionHelper instance or null if not available
+     */
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_encryption_helper', null);
     }
 
     /**
@@ -65,7 +73,11 @@ class RemoteLocationsSecurity {
      * @return string|false Encrypted password on success, false on failure.
      */
     public function encrypt_password(string $password) {
-        return EncryptionHelper::encrypt($password);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            return false;
+        }
+        return $encryption_helper->encrypt($password);
     }
 
     /**
@@ -75,7 +87,11 @@ class RemoteLocationsSecurity {
      * @return string|false Decrypted password on success, false on failure.
      */
     public function decrypt_password(string $encrypted_password) {
-        return EncryptionHelper::decrypt($encrypted_password);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            return false;
+        }
+        return $encryption_helper->decrypt($encrypted_password);
     }
 
     /**

@@ -69,53 +69,78 @@ class AdminMenuAssets {
     }
 
     /**
-     * Register admin pages via filter system.
+     * Register admin pages via pure self-registration auto-discovery.
      * 
-     * Uses dm_register_admin_pages filter to allow direct registration
-     * from each admin page component and external plugin extensibility.
+     * Uses the same pattern as WordPress core admin pages with zero hardcoded lists.
+     * Pages register themselves via dm_register_admin_pages filter.
+     * First registered page becomes top-level menu automatically.
      *
      * @since    NEXT_VERSION
      */
     public function add_admin_menu() {
-        // Get all registered admin pages via filter
-        $admin_pages = apply_filters('dm_register_admin_pages', []);
+        // Pure discovery - get ALL self-registered admin pages (zero hardcoded lists)
+        $registered_pages = apply_filters('dm_register_admin_pages', []);
         
-        // Register each page with WordPress
-        foreach ($admin_pages as $page) {
-            // Use the callback from the page registration directly
-            $callback = $page['callback'] ?? null;
+        // Only create Data Machine menu if pages are available
+        if (empty($registered_pages)) {
+            return;
+        }
+        
+        // Use first registered page as top-level menu (no hardcoded dashboard)
+        $first_page = reset($registered_pages);
+        $first_slug = key($registered_pages);
+        
+        $main_menu_hook = add_menu_page(
+            $first_page['page_title'] ?? __('Data Machine', 'data-machine'),
+            __('Data Machine', 'data-machine'),
+            $first_page['capability'] ?? 'manage_options',
+            'dm-' . $first_slug,
+            $first_page['callback'],
+            'dashicons-database-view',
+            30
+        );
+        
+        // Store hook suffix for first page
+        $this->store_hook_suffix($first_slug, $main_menu_hook);
+        
+        // Add remaining pages as submenus
+        $remaining_pages = array_slice($registered_pages, 1, null, true);
+        foreach ($remaining_pages as $slug => $page_config) {
+            $callback = $page_config['callback'] ?? null;
             
             if (!$callback || !is_callable($callback)) {
-                error_log('Data Machine: Invalid callback for admin page: ' . $page['menu_slug']);
+                error_log('Data Machine: Invalid callback for admin page: ' . $slug);
                 continue;
             }
             
-            if ($page['type'] === 'menu') {
-                $hook_suffix = add_menu_page(
-                    $page['page_title'],
-                    $page['menu_title'],
-                    $page['capability'],
-                    $page['menu_slug'],
-                    $callback,
-                    $page['icon_url'] ?? '',
-                    $page['position'] ?? null
-                );
-            } else {
-                $hook_suffix = add_submenu_page(
-                    $page['parent_slug'],
-                    $page['page_title'],
-                    $page['menu_title'],
-                    $page['capability'],
-                    $page['menu_slug'],
-                    $callback
-                );
-            }
+            $hook_suffix = add_submenu_page(
+                'dm-' . $first_slug,
+                $page_config['page_title'] ?? $page_config['menu_title'] ?? ucfirst($slug),
+                $page_config['menu_title'] ?? ucfirst($slug),
+                $page_config['capability'] ?? 'manage_options',
+                'dm-' . $slug,
+                $callback
+            );
             
-            // Store hook suffixes for specific pages we need for asset loading
-            if ($page['menu_slug'] === 'dm-remote-locations') {
+            // Store hook suffixes for asset loading
+            $this->store_hook_suffix($slug, $hook_suffix);
+        }
+    }
+    
+    
+    /**
+     * Store hook suffix for asset loading.
+     *
+     * @param string $page_slug Page slug
+     * @param string $hook_suffix WordPress hook suffix
+     */
+    private function store_hook_suffix($page_slug, $hook_suffix) {
+        // Store hook suffixes for asset loading
+        switch ($page_slug) {
+            case 'remote-locations':
                 $this->remote_locations_hook_suffix = $hook_suffix;
-            // API Keys page removed - replaced with handler-level configuration via universal modal system
-            }
+                break;
+            // Add other page hook suffixes as needed
         }
     }
 

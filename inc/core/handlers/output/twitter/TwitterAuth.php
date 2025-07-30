@@ -14,7 +14,6 @@
 namespace DataMachine\Core\Handlers\Output\Twitter;
 
 use Abraham\TwitterOAuth\TwitterOAuth;
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -40,6 +39,15 @@ class TwitterAuth {
      */
     private function get_logger() {
         return apply_filters('dm_get_logger', null);
+    }
+
+    /**
+     * Get encryption helper service via filter
+     *
+     * @return object|null EncryptionHelper instance or null if not available
+     */
+    private function get_encryption_helper() {
+        return apply_filters('dm_get_encryption_helper', null);
     }
 
     /**
@@ -72,8 +80,13 @@ class TwitterAuth {
         }
 
         // Decrypt the stored tokens
-        $decrypted_access_token = EncryptionHelper::decrypt($credentials['access_token']);
-        $decrypted_access_token_secret = EncryptionHelper::decrypt($credentials['access_token_secret']);
+        $encryption_helper = $this->get_encryption_helper();
+        if (!$encryption_helper) {
+            $this->get_logger() && $this->get_logger()->error('Encryption helper service unavailable for Twitter connection.', ['user_id' => $user_id]);
+            return new \WP_Error('twitter_service_unavailable', __('Encryption service unavailable for Twitter authentication.', 'data-machine'));
+        }
+        $decrypted_access_token = $encryption_helper->decrypt($credentials['access_token']);
+        $decrypted_access_token_secret = $encryption_helper->decrypt($credentials['access_token_secret']);
         
         if ($decrypted_access_token === false || $decrypted_access_token_secret === false) {
             $this->get_logger() && $this->get_logger()->error('Failed to decrypt Twitter credentials.', ['user_id' => $user_id]);
@@ -241,8 +254,14 @@ class TwitterAuth {
 
             // --- 4. Store Permanent Credentials (Encrypted) --- 
             // Encrypt the access tokens before storing
-            $encrypted_access_token = EncryptionHelper::encrypt($access_token_data['oauth_token']);
-            $encrypted_access_token_secret = EncryptionHelper::encrypt($access_token_data['oauth_token_secret']);
+            $encryption_helper = apply_filters('dm_get_encryption_helper', null);
+            if (!$encryption_helper) {
+                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
+                wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_service_unavailable'));
+                exit;
+            }
+            $encrypted_access_token = $encryption_helper->encrypt($access_token_data['oauth_token']);
+            $encrypted_access_token_secret = $encryption_helper->encrypt($access_token_data['oauth_token_secret']);
             
             if ($encrypted_access_token === false || $encrypted_access_token_secret === false) {
                 $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to encrypt access tokens.', ['user_id' => $user_id]);
@@ -296,3 +315,11 @@ class TwitterAuth {
         return delete_user_meta($user_id, self::USER_META_KEY);
     }
 }
+
+// Self-register via parameter-based auth system
+add_filter('dm_get_auth', function($auth, $handler_slug) {
+    if ($handler_slug === 'twitter') {
+        return new \DataMachine\Core\Handlers\Output\Twitter\TwitterAuth();
+    }
+    return $auth;
+}, 10, 2);

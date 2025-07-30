@@ -216,59 +216,17 @@ class InputStep {
     }
 
     /**
-     * Auto-discover handler class from registration context
+     * Auto-discover handler class using centralized utility filter.
      * 
-     * This method examines the handler registration information to auto-discover
-     * which class registered itself, eliminating the need for explicit class parameters.
+     * Uses the enhanced auto-discovery system from DataMachineFilters.php
+     * for consistent handler class resolution across all components.
      * 
      * @param string $handler_name Handler name/key
      * @param string $handler_type Handler type (input/output)
      * @return string|null Handler class name or null if not found
      */
     private function auto_discover_handler_class(string $handler_name, string $handler_type): ?string {
-        // Get handler registration information
-        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
-        
-        if (!isset($handlers[$handler_name])) {
-            return null;
-        }
-        
-        $handler_info = $handlers[$handler_name];
-        
-        // Primary: Use explicit class if provided (backward compatibility)
-        if (!empty($handler_info['class']) && class_exists($handler_info['class'])) {
-            return $handler_info['class'];
-        }
-        
-        // Auto-discovery: Use naming conventions to discover handler class
-        // This enables minimal registrations without explicit class parameters
-        
-        // Build expected class name using naming convention:
-        // Handler name: 'reddit' -> Class: 'DataMachine\Core\Handlers\Input\Reddit\Reddit'
-        $expected_class = sprintf(
-            'DataMachine\\Core\\Handlers\\Input\\%s\\%s',
-            ucfirst($handler_name),
-            ucfirst($handler_name)
-        );
-        
-        if (class_exists($expected_class)) {
-            return $expected_class;
-        }
-        
-        // Fallback: Try alternate naming patterns for external plugins
-        $alternate_patterns = [
-            sprintf('DataMachine\\Handlers\\Input\\%s', ucfirst($handler_name)),
-            sprintf('DataMachine\\Input\\%s', ucfirst($handler_name)),
-            ucfirst($handler_name) // Simple class name
-        ];
-        
-        foreach ($alternate_patterns as $pattern) {
-            if (class_exists($pattern)) {
-                return $pattern;
-            }
-        }
-        
-        return null;
+        return apply_filters('dm_auto_discover_handler_class', null, $handler_name, $handler_type);
     }
 
     /**
@@ -351,3 +309,16 @@ class InputStep {
         return false;
     }
 }
+
+// Auto-register this step type using parameter-based filter system
+add_filter('dm_get_steps', function($step_config, $step_type) {
+    if ($step_type === 'input') {
+        return [
+            'label' => __('Input', 'data-machine'),
+            'has_handlers' => true,
+            'description' => __('Collect data from external sources', 'data-machine'),
+            'class' => 'DataMachine\\Core\\Steps\\Input\\InputStep'
+        ];
+    }
+    return $step_config;
+}, 10, 2);

@@ -59,6 +59,9 @@ function run_data_machine() {
     // Register utility filters for external handlers
     dm_register_utility_filters();
     
+    // Register parameter-based step auto-discovery system
+    dm_register_step_auto_discovery_system();
+    
     // Admin setup
     if (is_admin()) {
         // API auth page removed - replaced with handler-level configuration via universal modal system
@@ -71,33 +74,11 @@ function run_data_machine() {
     
     // Auto-load all core admin pages so they can self-register (following handler pattern)
     dm_autoload_core_admin_pages();
+    
+    // Auto-load all core steps so they can self-register (following same pattern)
+    dm_autoload_core_steps();
 
-    // Register core steps with explicit configuration
-    add_filter('dm_get_steps', function($steps) {
-        $steps['input'] = [
-            'label' => __('Input', 'data-machine'),
-            'has_handlers' => true,
-            'description' => __('Collect data from external sources', 'data-machine'),
-            'class' => 'DataMachine\\Core\\Steps\\Input\\InputStep'
-        ];
-        
-        $steps['ai'] = [
-            'label' => __('AI Processing', 'data-machine'),
-            'has_handlers' => false,
-            'description' => __('Process content using AI models', 'data-machine'),
-            'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep'
-        ];
-        
-        $steps['output'] = [
-            'label' => __('Output', 'data-machine'),
-            'has_handlers' => true,
-            'description' => __('Publish to external platforms', 'data-machine'),
-            'class' => 'DataMachine\\Core\\Steps\\Output\\OutputStep'
-        ];
-        
-        return $steps;
-    }, 5);
-
+    // Core steps now self-register via parameter-based filter system
     // External plugins use dm_get_steps filter for extensibility
 
 
@@ -118,9 +99,13 @@ function run_data_machine() {
 
     // Register single Action Scheduler hook for direct pipeline execution
     // Eliminates 100 WordPress hook registrations in favor of direct Action Scheduler callbacks
-    // Use closure to ensure class loading in async execution contexts
+    // Use filter-based orchestrator access for consistency with pure architecture
     add_action( 'dm_execute_step', function( $job_id, $step_position ) {
-        return \DataMachine\Engine\ProcessingOrchestrator::execute_step_callback( $job_id, $step_position );
+        $orchestrator = apply_filters('dm_get_orchestrator', null);
+        if ($orchestrator && method_exists($orchestrator, 'execute_step_callback')) {
+            return $orchestrator->execute_step_callback( $job_id, $step_position );
+        }
+        return false; // Fail gracefully if orchestrator unavailable
     }, 10, 2 );
 
     // Initialize scheduler hooks
@@ -167,34 +152,71 @@ function dm_autoload_core_handlers(): void {
  * Auto-load core admin pages for self-registration.
  * 
  * Follows the established handler pattern - admin pages self-register
- * via dm_register_admin_pages filter just like handlers do.
+ * via dm_register_admin_pages collection filter using pure self-registration.
  * 
  * @since NEXT_VERSION
  */
 function dm_autoload_core_admin_pages(): void {
-    $admin_page_directories = [
-        DATA_MACHINE_PATH . 'inc/core/admin/pages/projects/',
-        DATA_MACHINE_PATH . 'inc/core/admin/pages/jobs/',
-        DATA_MACHINE_PATH . 'inc/core/admin/pages/remote-locations/'
+    $admin_pages_root = DATA_MACHINE_PATH . 'inc/core/admin/pages/';
+    
+    // Also load the modal system
+    $modal_file = DATA_MACHINE_PATH . 'inc/core/admin/modal/Modal.php';
+    if (file_exists($modal_file)) {
+        require_once $modal_file;
+    }
+    
+    if (!is_dir($admin_pages_root)) {
+        return;
+    }
+    
+    // Get all subdirectories (each admin page type) - same pattern as handlers
+    $page_directories = glob($admin_pages_root . '*', GLOB_ONLYDIR);
+    
+    foreach ($page_directories as $page_dir) {
+        // Load ALL PHP files in the page directory - same as handlers
+        $php_files = glob($page_dir . '/*.php');
+        
+        foreach ($php_files as $php_file) {
+            require_once $php_file;
+        }
+        
+        // Instantiate the main page class for self-registration (same pattern as handlers)
+        $directory_name = basename($page_dir);
+        $class_name = "\\DataMachine\\Core\\Admin\\Pages\\" . ucfirst($directory_name) . "\\" . ucfirst($directory_name);
+        
+        if (class_exists($class_name)) {
+            new $class_name();
+        }
+    }
+}
+
+/**
+ * Auto-load core pipeline steps for self-registration.
+ * 
+ * Follows the established handler pattern - steps self-register
+ * via dm_get_steps parameter-based filter system.
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_autoload_core_steps(): void {
+    $step_directories = [
+        DATA_MACHINE_PATH . 'inc/core/steps/input/',
+        DATA_MACHINE_PATH . 'inc/core/steps/ai/',
+        DATA_MACHINE_PATH . 'inc/core/steps/output/'
     ];
     
-    foreach ($admin_page_directories as $directory) {
+    foreach ($step_directories as $directory) {
         if (!is_dir($directory)) {
             continue;
         }
         
-        // Load the main page file (follows naming convention: DirectoryNamePage.php)
-        $directory_name = basename(rtrim($directory, '/'));
-        $page_class_map = [
-            'projects' => 'ProjectsPage.php',
-            'jobs' => 'JobsPage.php', 
-            'remote-locations' => 'RemoteLocationsPage.php'
-        ];
+        // Load the main step file directly (follows same pattern as admin pages)
+        // Step files are named like InputStep.php, AIStep.php, OutputStep.php
+        $step_files = glob($directory . '*Step.php');
         
-        if (isset($page_class_map[$directory_name])) {
-            $page_file = $directory . $page_class_map[$directory_name];
-            if (file_exists($page_file)) {
-                require_once $page_file;
+        foreach ($step_files as $step_file) {
+            if (file_exists($step_file)) {
+                require_once $step_file;
             }
         }
     }
@@ -236,16 +258,33 @@ function activate_data_machine() {
 	// Initialize database service system for activation process
 	dm_register_database_service_system();
 
-	// Create/Update all database tables using \DataMachine\Core\Database\ namespace
-	// All references use fully qualified namespaces for maximum consistency
-	\DataMachine\Core\Database\Pipelines::create_table();
-	\DataMachine\Core\Database\Flows::create_table();
-	\DataMachine\Core\Database\Jobs\Jobs::create_table();
-	\DataMachine\Core\Database\RemoteLocations\RemoteLocations::create_table();
+	// Create/Update all database tables using filter-based database service access
+	// Consistent with the plugin's pure filter-based architecture
+	$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+	if ($db_pipelines) {
+		$db_pipelines->create_table();
+	}
+
+	$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+	if ($db_flows) {
+		$db_flows->create_table();
+	}
+
+	$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+	if ($db_jobs) {
+		$db_jobs->create_table();
+	}
+
+	$db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+	if ($db_remote_locations) {
+		$db_remote_locations->create_table();
+	}
 
 	// ProcessedItems table creation via filter-based database service access
 	$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
-	$db_processed_items->create_table();
+	if ($db_processed_items) {
+		$db_processed_items->create_table();
+	}
 
 	// Set a transient flag for first-time admin notice or setup wizard (optional)
 	set_transient( 'dm_activation_notice', true, 5 * MINUTE_IN_SECONDS );
