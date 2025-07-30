@@ -44,7 +44,6 @@ class WordPressSettings {
                     'local' => __('Local WordPress', 'data-machine'),
                     'remote' => __('Remote WordPress (Airdrop)', 'data-machine'),
                 ],
-                'default' => 'local',
             ],
         ];
 
@@ -113,7 +112,6 @@ class WordPressSettings {
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type for published content.', 'data-machine'),
                 'options' => $post_type_options,
-                'default' => 'post',
             ],
             'post_status' => [
                 'type' => 'select',
@@ -125,21 +123,18 @@ class WordPressSettings {
                     'pending' => __('Pending Review', 'data-machine'),
                     'private' => __('Private', 'data-machine'),
                 ],
-                'default' => 'draft',
             ],
             'selected_local_category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
                 'options' => $category_options,
-                'default' => 'instruct_model',
             ],
             'selected_local_tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
                 'options' => $tag_options,
-                'default' => 'instruct_model',
             ],
         ];
     }
@@ -152,7 +147,7 @@ class WordPressSettings {
      */
     private static function get_remote_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_db_remote_locations', null);
+        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
         $locations = $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : [];
 
         $options = [0 => __('Select a Remote Location', 'data-machine')];
@@ -166,14 +161,12 @@ class WordPressSettings {
                 'label' => __('Remote Location', 'data-machine'),
                 'description' => __('Select the pre-configured remote WordPress site to publish to.', 'data-machine'),
                 'options' => $options,
-                'default' => 0,
             ],
             'selected_remote_post_type' => [
                 'type' => 'select',
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type for the remote site.', 'data-machine'),
                 'options' => ['post' => 'Posts', 'page' => 'Pages'],
-                'default' => 'post',
             ],
             'remote_post_status' => [
                 'type' => 'select',
@@ -185,21 +178,18 @@ class WordPressSettings {
                     'pending' => __('Pending Review', 'data-machine'),
                     'private' => __('Private', 'data-machine'),
                 ],
-                'default' => 'draft',
             ],
             'selected_remote_category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Select a category or let the AI choose based on your prompt.', 'data-machine'),
                 'options' => ['instruct_model' => '-- Instruct Model --'],
-                'default' => 'instruct_model',
             ],
             'selected_remote_tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Select a tag or let the AI choose based on your prompt.', 'data-machine'),
                 'options' => ['instruct_model' => '-- Instruct Model --'],
-                'default' => 'instruct_model',
             ],
         ];
     }
@@ -219,7 +209,6 @@ class WordPressSettings {
                     '1' => __('Gutenberg Block Editor (Recommended)', 'data-machine'),
                     '0' => __('Classic Editor', 'data-machine'),
                 ],
-                'default' => '1',
             ],
             'post_date_source' => [
                 'type' => 'select',
@@ -229,7 +218,6 @@ class WordPressSettings {
                     'current_date' => __('Use Current Date', 'data-machine'),
                     'source_date' => __('Use Source Date (if available)', 'data-machine'),
                 ],
-                'default' => 'current_date',
             ],
         ];
     }
@@ -261,10 +249,17 @@ class WordPressSettings {
         }
 
         // Sanitize common fields
-        $sanitized['use_gutenberg_blocks'] = in_array($raw_settings['use_gutenberg_blocks'] ?? '1', ['0', '1']) ? $raw_settings['use_gutenberg_blocks'] : '1';
+        $gutenberg_blocks = $raw_settings['use_gutenberg_blocks'] ?? '1';
+        if (!in_array($gutenberg_blocks, ['0', '1'])) {
+            throw new Exception(esc_html__('Invalid Gutenberg blocks parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['use_gutenberg_blocks'] = $gutenberg_blocks;
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
-        $sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
+        if (!in_array($date_source, $valid_date_sources)) {
+            throw new Exception(esc_html__('Invalid post date source parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['post_date_source'] = $date_source;
 
         return $sanitized;
     }

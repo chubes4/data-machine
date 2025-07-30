@@ -11,7 +11,7 @@
 
 namespace DataMachine\Core\Handlers\Output\Threads;
 
-use DataMachine\Engine\Filters\AiResponseParser;
+use DataMachine\Core\Steps\AI\AiResponseParser;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -21,10 +21,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Threads {
 
     /**
-     * Constructor - parameter-less for pure filter-based architecture.
+     * @var ThreadsAuth Authentication handler instance
+     */
+    private $auth;
+
+    /**
+     * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
+        // Initialize auth directly - auth is internal implementation detail
+        $this->auth = new ThreadsAuth();
     }
 
     /**
@@ -50,19 +56,6 @@ class Threads {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
-    }
-
-    /**
-     * Legacy method for handling Threads output (kept for backward compatibility).
-     *
-     * @param string $ai_output_string The finalized string from the AI.
-     * @param array $module_job_config Configuration specific to this output job.
-     * @param int|null $user_id The ID of the user context.
-     * @param array $input_metadata Metadata from the original input source.
-     * @return array Result array on success or failure.
-     */
-    public function handle(string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata): array {
         $logger = apply_filters('dm_get_logger', null);
         $logger?->info('Threads Output: Starting Threads publication.', ['user_id' => $user_id]);
 
@@ -81,7 +74,14 @@ class Threads {
         $threads_config = $config['threads'] ?? [];
 
         // Parse AI output
-        $parser = new AiResponseParser();
+        $parser = apply_filters('dm_get_ai_response_parser', null);
+        if (!$parser) {
+            $logger?->error('Threads Output: AI Response Parser service not available.');
+            return [
+                'success' => false,
+                'error' => __('AI Response Parser service not available.', 'data-machine')
+            ];
+        }
         $parser->set_raw_output($ai_output_string);
         $parser->parse();
         
@@ -100,14 +100,8 @@ class Threads {
             $post_content = substr($post_content, 0, $max_length - 3) . '...';
         }
 
-        // Get Threads auth service
-        $threads_auth = apply_filters('dm_get_threads_auth', null);
-        if (!$threads_auth) {
-            return [
-                'success' => false,
-                'error' => __('Threads auth service not available.', 'data-machine')
-            ];
-        }
+        // Use internal Threads auth service
+        $threads_auth = $this->auth;
 
         // Get user's Threads account
         $threads_account = get_user_meta($user_id, 'data_machine_threads_account', true);
@@ -227,6 +221,7 @@ class Threads {
         }
     }
 
+
     /**
      * Create a media container for Threads.
      *
@@ -325,18 +320,6 @@ class Threads {
         ];
     }
 
-    /**
-     * Get settings fields for the Threads output handler.
-     *
-     * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_output_handlers filter.
-     * @return array Associative array of field definitions.
-     */
-    public static function get_settings_fields(): array {
-        return [
-            // Threads currently has minimal configuration options
-            // Most settings are handled through the OAuth connection
-        ];
-    }
 
     /**
      * Sanitize settings for the Threads output handler.
@@ -359,12 +342,13 @@ class Threads {
     }
 }
 
-// Self-register the Threads output handler with integrated settings
-add_filter('dm_register_output_handlers', function($handlers) {
-    $handlers['threads'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Output\\Threads\\Threads',
-        'label' => __('Threads', 'data-machine'),
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Output\\Threads\\ThreadsSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'output') {
+        $handlers['threads'] = [
+            'has_auth' => true,
+            'label' => __('Threads', 'data-machine')
+        ];
+    }
     return $handlers;
-});
+}, 10, 2);

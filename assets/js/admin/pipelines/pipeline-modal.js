@@ -189,7 +189,7 @@
         initializeFormHandlers: function() {
             const $modal = $('#dm-config-modal');
             
-            // Handle provider/model changes in fallback form
+            // Handle provider/model changes in modal form
             $modal.find('select[name="provider"]').on('change', function() {
                 const provider = $(this).val();
                 PipelineModal.updateModelOptions(provider);
@@ -205,8 +205,8 @@
         // Update model options based on provider selection
         updateModelOptions: function(provider) {
             // This would typically fetch models for the provider
-            // For now, we'll handle it in the fallback form
-            console.log('Provider changed to:', provider);
+            // Handler for modal-based AI configuration
+            // Provider changed - model options would be updated here
         },
 
         // Show modal loading state

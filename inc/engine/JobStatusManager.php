@@ -12,8 +12,8 @@
 
 namespace DataMachine\Engine;
 
-use DataMachine\Database\{Jobs, Projects};
-use DataMachine\Helpers\Logger;
+use DataMachine\Core\Database\{Jobs, Projects};
+use DataMachine\Admin\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -58,13 +58,13 @@ class JobStatusManager {
 	 *
 	 * @param int $job_id The job ID to complete.
 	 * @param string $status Final status: 'completed' or 'completed_with_errors'.
-	 * @param array|null $result_data Optional result data to store.
+	 * @param string|null $error_details Optional error details for logging.
 	 * @param string|null $message Optional completion message.
 	 * @return bool True on success, false on failure.
 	 */
-	public function complete(int $job_id, string $status = 'completed', ?array $result_data = null, ?string $message = null): bool {
+	public function complete(int $job_id, string $status = 'completed', ?string $error_details = null, ?string $message = null): bool {
 		$logger = apply_filters('dm_get_logger', null);
-		$db_jobs = apply_filters('dm_get_db_jobs', null);
+		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 		
 		// Validate it's a valid completion status
 		if (!in_array($status, ['completed', 'completed_with_errors'], true)) {
@@ -72,25 +72,16 @@ class JobStatusManager {
 			return false;
 		}
 
-		$json_data = null;
-		if ($result_data !== null) {
-			$json_data = wp_json_encode($result_data);
-			if ($json_data === false) {
-				$logger?->error('Failed to encode result data for job completion', ['job_id' => $job_id]);
-				$json_data = wp_json_encode(['error' => 'Failed to encode result data']);
-			}
-		}
-
 		$completion_message = $message ?: "Job completed with status: {$status}";
 		
 		// Use the existing complete_job method which handles timestamps and project updates
-		$success = $db_jobs->complete_job($job_id, $status, $json_data);
+		$success = $db_jobs->complete_job($job_id, $status, $error_details);
 		
 		if ($success) {
 			$logger?->info($completion_message, [
 				'job_id' => $job_id,
 				'final_status' => $status,
-				'has_result_data' => $result_data !== null
+				'has_error_details' => $error_details !== null
 			]);
 		} else {
 			$logger?->error("Failed to complete job", [
@@ -111,7 +102,7 @@ class JobStatusManager {
 	 */
 	public function fail(int $job_id, string $error_message): bool {
 		$logger = apply_filters('dm_get_logger', null);
-		$db_jobs = apply_filters('dm_get_db_jobs', null);
+		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 		
 		$error_data = wp_json_encode([
 			'error' => $error_message,
@@ -144,7 +135,7 @@ class JobStatusManager {
 	 * @return string|null The current status, or null if job not found.
 	 */
 	public function get_status(int $job_id): ?string {
-		$db_jobs = apply_filters('dm_get_db_jobs', null);
+		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 		$job = $db_jobs->get_job($job_id);
 		return $job ? $job->status : null;
 	}
@@ -182,7 +173,7 @@ class JobStatusManager {
 	 */
 	private function transition_status(int $job_id, string $new_status, string $log_message): bool {
 		$logger = apply_filters('dm_get_logger', null);
-		$db_jobs = apply_filters('dm_get_db_jobs', null);
+		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 		
 		// Get current status
 		$current_status = $this->get_status($job_id);

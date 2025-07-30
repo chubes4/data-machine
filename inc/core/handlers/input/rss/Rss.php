@@ -475,50 +475,6 @@ class Rss {
         return $mime_map[$extension] ?? 'application/octet-stream';
     }
 
-    /**
-     * Get settings fields for the RSS input handler.
-     *
-     * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_input_handlers filter.
-     * @return array Associative array of field definitions.
-     */
-    public static function get_settings_fields(): array {
-        return [
-            'feed_url' => [
-                'type' => 'url',
-                'label' => __('RSS Feed URL', 'data-machine'),
-                'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'data-machine'),
-                'required' => true,
-                'default' => '',
-            ],
-            'item_count' => [
-                'type' => 'number',
-                'label' => __('Items to Process', 'data-machine'),
-                'description' => __('Maximum number of *new* RSS items to process per run.', 'data-machine'),
-                'default' => 1,
-                'min' => 1,
-                'max' => 50,
-            ],
-            'timeframe_limit' => [
-                'type' => 'select',
-                'label' => __('Process Items Within', 'data-machine'),
-                'description' => __('Only consider RSS items published within this timeframe.', 'data-machine'),
-                'options' => [
-                    'all_time' => __('All Time', 'data-machine'),
-                    '24_hours' => __('Last 24 Hours', 'data-machine'),
-                    '72_hours' => __('Last 72 Hours', 'data-machine'),
-                    '7_days'   => __('Last 7 Days', 'data-machine'),
-                    '30_days'  => __('Last 30 Days', 'data-machine'),
-                ],
-                'default' => 'all_time',
-            ],
-            'search' => [
-                'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Optional: Filter RSS items by keywords (comma-separated). Only items containing at least one keyword in their title or content will be processed.', 'data-machine'),
-                'default' => '',
-            ],
-        ];
-    }
 
     /**
      * Sanitize settings for the RSS input handler.
@@ -542,7 +498,10 @@ class Rss {
         // Timeframe limit
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
         $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        $sanitized['timeframe_limit'] = in_array($timeframe, $valid_timeframes) ? $timeframe : 'all_time';
+        if (!in_array($timeframe, $valid_timeframes)) {
+            throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['timeframe_limit'] = $timeframe;
         
         // Search terms
         $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
@@ -560,12 +519,13 @@ class Rss {
     }
 }
 
-// Self-register via filter with integrated settings
-add_filter('dm_register_input_handlers', function($handlers) {
-    $handlers['rss'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Input\\Rss\\Rss',
-        'label' => __('RSS/Atom Feed', 'data-machine'),
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Input\\Rss\\RssSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'input') {
+        $handlers['rss'] = [
+            'has_auth' => false,
+            'label' => __('RSS/Atom Feed', 'data-machine')
+        ];
+    }
     return $handlers;
-});
+}, 10, 2);

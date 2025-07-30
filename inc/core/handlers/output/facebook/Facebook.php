@@ -13,7 +13,7 @@
 
 namespace DataMachine\Core\Handlers\Output\Facebook;
 
-use DataMachine\Engine\Filters\AiResponseParser;
+use DataMachine\Core\Steps\AI\AiResponseParser;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -29,24 +29,20 @@ class Facebook {
     private $auth;
 
     /**
-     * Constructor - parameter-less for pure filter-based architecture
+     * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // No dependencies initialized in constructor for pure filter-based architecture
+        // Initialize auth directly - auth is internal implementation detail
+        $this->auth = new FacebookAuth();
     }
 
     /**
-     * Get Facebook auth handler via filter system.
+     * Get Facebook auth handler - internal implementation.
      * 
      * @return FacebookAuth
-     * @throws \Exception If auth service not available
      */
     private function get_auth() {
-        $auth = apply_filters('dm_get_facebook_auth', null);
-        if (!$auth) {
-            throw new \Exception(esc_html__('Facebook auth service not available. This indicates a core filter registration issue.', 'data-machine'));
-        }
-        return $auth;
+        return $this->auth;
     }
 
     /**
@@ -72,19 +68,6 @@ class Facebook {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
-    }
-
-    /**
-     * Legacy method for handling Facebook output (kept for backward compatibility).
-     *
-     * @param string $ai_output_string The finalized string from the AI.
-     * @param array $module_job_config Configuration specific to this output job (e.g., target page ID).
-     * @param int|null $user_id The ID of the user whose Facebook account/token should be used.
-     * @param array $input_metadata Metadata from the original input source (e.g., original URL, timestamp).
-     * @return array Result array on success or failure.
-     */
-    public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array {
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->info('Starting Facebook output handling.', ['user_id' => $user_id]);
@@ -108,10 +91,9 @@ class Facebook {
             ];
         }
 
-        // 3. Get authenticated Page credentials using FacebookAuth
-        $auth = $this->get_auth();
-        $page_id = $auth->get_page_id($user_id);
-        $page_access_token = $auth->get_page_access_token($user_id);
+        // 3. Get authenticated Page credentials using internal FacebookAuth
+        $page_id = $this->auth->get_page_id($user_id);
+        $page_access_token = $this->auth->get_page_access_token($user_id);
 
         if (empty($page_id) || empty($page_access_token)) {
             $logger && $logger->error('Facebook Output: Failed to get Page ID or Page Access Token.', [
@@ -128,7 +110,14 @@ class Facebook {
         $logger && $logger->debug('Facebook Output: Retrieved Page credentials.', ['user_id' => $user_id, 'page_id' => $page_id]);
 
         // 4. Parse AI output
-        $parser = new AiResponseParser();
+        $parser = apply_filters('dm_get_ai_response_parser', null);
+        if (!$parser) {
+            $logger && $logger->error('Facebook Output: AI Response Parser service not available.');
+            return [
+                'success' => false,
+                'error' => __('AI Response Parser service not available.', 'data-machine')
+            ];
+        }
         $parser->set_raw_output($ai_output_string);
         $parser->parse();
         $content = $parser->get_content();
@@ -329,47 +318,7 @@ class Facebook {
         }
     }
 
-    /**
-     * Defines the settings fields for this output handler.
-     *
-     * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_output_handlers filter.
-     * @param array $current_config Current configuration values for this handler (optional).
-     * @return array An associative array defining the settings fields.
-     */
-    public static function get_settings_fields(array $current_config = []): array {
-        // Authentication is handled separately on the API Keys page.
-        return [
-            'facebook_target_id' => [
-                'type' => 'text',
-                'label' => __('Target Page/Group/User ID', 'data-machine'),
-                'description' => __('Enter the Facebook Page ID, Group ID, or leave empty/use "me" to post to the authenticated user\'s feed.', 'data-machine'),
-                'default' => 'me',
-            ],
-            'include_images' => [
-                'type' => 'checkbox',
-                'label' => __('Include Images', 'data-machine'),
-                'description' => __('Attach images from the original content when available.', 'data-machine'),
-                'default' => false
-            ],
-            'include_videos' => [
-                'type' => 'checkbox',
-                'label' => __('Include Video Links', 'data-machine'),
-                'description' => __('Include video links in the post content.', 'data-machine'),
-                'default' => false
-            ],
-            'link_handling' => [
-                'type' => 'select',
-                'label' => __('Link Handling', 'data-machine'),
-                'description' => __('How to handle links in posts.', 'data-machine'),
-                'options' => [
-                    'append' => __('Append to content', 'data-machine'),
-                    'replace' => __('Replace content', 'data-machine'),
-                    'none' => __('No links', 'data-machine')
-                ],
-                'default' => 'append'
-            ]
-        ];
-    }
+
 
     /**
      * Returns the user-friendly label for this output handler.
@@ -391,8 +340,11 @@ class Facebook {
         $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
         $sanitized['include_images'] = !empty($raw_settings['include_images']);
         $sanitized['include_videos'] = !empty($raw_settings['include_videos']);
-        $sanitized['link_handling'] = in_array($raw_settings['link_handling'] ?? 'append', ['append', 'replace', 'none']) 
-            ? $raw_settings['link_handling'] : 'append';
+        $link_handling = $raw_settings['link_handling'] ?? 'append';
+        if (!in_array($link_handling, ['append', 'replace', 'none'])) {
+            throw new Exception(esc_html__('Invalid link handling parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['link_handling'] = $link_handling;
         return $sanitized;
     }
 
@@ -451,14 +403,14 @@ class Facebook {
     }
 }
 
-// Self-register the Facebook output handler with integrated auth and settings
-add_filter('dm_register_output_handlers', function($handlers) {
-    $handlers['facebook'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Output\\Facebook\\Facebook',
-        'label' => __('Facebook', 'data-machine'),
-        'auth_class' => 'DataMachine\\Core\\Handlers\\Output\\Facebook\\FacebookAuth',
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Output\\Facebook\\FacebookSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'output') {
+        $handlers['facebook'] = [
+            'has_auth' => true,
+            'label' => __('Facebook', 'data-machine')
+        ];
+    }
     return $handlers;
-}, 10);
+}, 10, 2);
 

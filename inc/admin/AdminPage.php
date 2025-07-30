@@ -11,9 +11,6 @@
 
 namespace DataMachine\Admin;
 
-use DataMachine\Database\{Modules, Projects};
-use DataMachine\Core\Constants;
-use DataMachine\Helpers\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -24,49 +21,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class AdminPage {
 
-    /**
-     * The plugin version.
-     *
-     * @since    0.1.0
-     * @access   private
-     * @var      string    $version    The current plugin version.
-     */
-    private $version;
-
-    /**
-     * Database Modules class instance.
-     *
-     * @since    0.2.0
-     * @access   private
-     * @var      Modules    $db_modules    Database Modules class instance.
-     */
-    private $db_modules;
-
-    /**
-     * Database Projects class instance.
-     *
-     * @since    0.13.0
-     * @access   private
-     * @var      Projects   $db_projects   Database Projects class instance.
-     */
-    private $db_projects;
-
-    /**
-     * Logger instance.
-     * @var Logger
-     * @since NEXT_VERSION
-     */
-    private $logger;
+    // All services now accessed via method-level filter calls
+    // Zero constructor dependencies for pure filter-based architecture
 
 
 
 
-    /**
-     * Remote Locations Form Handler instance.
-     * @var \DataMachine\Admin\RemoteLocations\FormHandler
-     * @since NEXT_VERSION
-     */
-    private $remote_locations_admin;
+    // Remote locations functionality now handled directly by template
 
 
     /**
@@ -74,20 +35,17 @@ class AdminPage {
      *
      * @since    0.1.0
      */
+    /**
+     * Initialize the class with zero constructor dependencies.
+     * 
+     * All services accessed via method-level filter calls for pure
+     * filter-based architecture alignment.
+     *
+     * @since    0.1.0
+     */
     public function __construct() {
-        $this->version = apply_filters('dm_get_version', null);
-        $this->db_modules = apply_filters('dm_get_db_modules', null);
-        $this->db_projects = apply_filters('dm_get_db_projects', null);
-        $this->logger = apply_filters('dm_get_logger', null);
-        $this->remote_locations_admin = apply_filters('dm_get_remote_locations_admin', null);
-        // Hook for project management page (if any form processing is needed in future)
-        add_action( 'load-data-machine_page_dm-project-management', array( $this, 'process_project_management_page' ) );
-        // Hook for API keys page (if any form processing is needed in future)
-        add_action( 'load-data-machine_page_dm-api-keys', array( $this, 'process_api_keys_page' ) );
-        // Hook for remote locations page (if any form processing is needed in future)
-        add_action( 'load-data-machine_page_dm-remote-locations', array( $this, 'process_remote_locations_page' ) );
-        // Hook for jobs page (if any form processing is needed in future)
-        add_action( 'load-data-machine_page_dm-jobs', array( $this, 'process_jobs_page' ) );
+        // All page processing is now handled through form actions or AJAX
+        // No need for individual page load hooks with unified display_page() method
         
         // Admin post handlers for log management
         add_action( 'admin_post_dm_update_log_level', array( $this, 'handle_update_log_level' ) );
@@ -98,81 +56,85 @@ class AdminPage {
     }
 
 
+
     /**
-     * Module configuration is now handled through the project management interface.
+     * Universal admin page display method.
      * 
-     * @deprecated Removed in favor of project-based pipeline configuration
+     * Uses registered admin pages and their content renderers for clean architecture.
+     * All admin pages use this single method with different content renderers.
      */
-    // Method removed - module config page template no longer exists
-
-    /**
-     * Display the project management page content.
-     */
-    public function display_project_management_page() {
-        // Make DB instances available to the included template file
-        $db_projects = $this->db_projects;
-        $db_modules = $this->db_modules;
-        // Load the template file
-        include_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/page-templates/project-management-page.php';
-    }
-
-    /**
-     * Display the API Keys settings page.
-     *
-     * @since NEXT_VERSION
-     */
-    public function display_api_keys_page() {
-        // Security check: Ensure user has capabilities
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'data-machine'));
-        }
-
-
-
-        // Display the settings page content
-        $logger = $this->logger;
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/page-templates/api-keys-page.php';
-    }
-
-    /**
-     * Renders the Remote Locations admin page content by loading templates.
-     */
-    public function display_remote_locations_page() {
-        // Ensure the capability is checked before displaying the page
-        if (!current_user_can('manage_options')) { // Adjust capability as needed
-            wp_die(esc_html__( 'Sorry, you are not allowed to access this page.', 'data-machine' ));
-        }
-        $remote_locations_handler = $this->remote_locations_admin; // Use injected property
-
-        // Call the method from the injected handler to display the page content
-        $remote_locations_handler->display_page();
-    }
-
-    /**
-     * Renders the Jobs List page.
-     *
-     * @since NEXT_VERSION
-     */
-    public function display_jobs_page() {
+    public function display_page() {
         // Security check
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Permission denied.', 'data-machine'));
         }
-
-        // Make logger instance available to the template
-        $logger = $this->logger;
         
-        // Load the template file
-        include_once plugin_dir_path(dirname(__FILE__)) . 'admin/page-templates/jobs.php';
+        // Get current page slug
+        $current_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        
+        // Get all registered admin pages
+        $registered_pages = apply_filters('dm_register_admin_pages', []);
+        
+        // Find the matching page configuration
+        $page_config = null;
+        foreach ($registered_pages as $page) {
+            if (isset($page['menu_slug']) && $page['menu_slug'] === $current_page) {
+                $page_config = $page;
+                break;
+            }
+        }
+        
+        // If no page config found, show error
+        if (!$page_config || !isset($page_config['content_renderer'])) {
+            echo '<div class="notice notice-error"><p>' . esc_html__('Page configuration not found.', 'data-machine') . '</p></div>';
+            return;
+        }
+        
+        // Prepare context data for templates
+        $context = $this->prepare_page_context($current_page);
+        
+        // Call the content renderer
+        $content_renderer = $page_config['content_renderer'];
+        if (is_callable($content_renderer)) {
+            echo call_user_func($content_renderer, $context);
+        } else {
+            echo '<div class="notice notice-error"><p>' . esc_html__('Content renderer not callable.', 'data-machine') . '</p></div>';
+        }
+    }
+    
+    /**
+     * Prepare context data for page templates.
+     * 
+     * Uses filter-based service access for pure filter-based architecture.
+     *
+     * @param string $page_slug The current page slug
+     * @return array Context data for the template
+     */
+    private function prepare_page_context($page_slug) {
+        $context = [];
+        
+        // Add common context data via filter-based service access
+        $context['db_projects'] = apply_filters('dm_get_database_service', null, 'projects');
+        $context['db_modules'] = apply_filters('dm_get_database_service', null, 'modules');
+        $context['logger'] = apply_filters('dm_get_logger', null);
+        
+        // Add page-specific context data
+        switch ($page_slug) {
+            case 'dm-project-management':
+                // Projects page specific context
+                break;
+            case 'dm-jobs':
+                // Jobs page specific context
+                break;
+            case 'dm-remote-locations':
+                // Remote locations page specific context
+                break;
+        }
+        
+        return $context;
     }
 
 
-
-    // Stub methods for future form processing on other admin pages
-    public function process_project_management_page() {}
-    public function process_api_keys_page() {}
-    public function process_remote_locations_page() {}
-    public function process_jobs_page() {}
 
     /**
      * Handle log level update form submission.
@@ -188,13 +150,15 @@ class AdminPage {
         }
 
         $new_log_level = sanitize_key($_POST['dm_log_level'] ?? 'info');
-        $available_levels = Logger::get_available_log_levels();
-
+        
+        $logger = apply_filters('dm_get_logger', null);
+        $available_levels = $logger ? $logger->get_available_log_levels() : [];
+        
         if (!array_key_exists($new_log_level, $available_levels)) {
-            $this->logger->add_admin_error('Invalid log level selected.');
+            $logger->add_admin_error('Invalid log level selected.');
         } else {
             update_option('dm_log_level', $new_log_level);
-            $this->logger->add_admin_success('Log level updated successfully to: ' . $available_levels[$new_log_level]);
+            $logger->add_admin_success('Log level updated successfully to: ' . $available_levels[$new_log_level]);
         }
 
         // Redirect back to logs tab
@@ -215,10 +179,12 @@ class AdminPage {
             wp_die(esc_html__('Security check failed.', 'data-machine'));
         }
 
-        if ($this->logger->clear_logs()) {
-            $this->logger->add_admin_success('Log files cleared successfully.');
+        $logger = apply_filters('dm_get_logger', null);
+        
+        if ($logger->clear_logs()) {
+            $logger->add_admin_success('Log files cleared successfully.');
         } else {
-            $this->logger->add_admin_error('Failed to clear some log files.');
+            $logger->add_admin_error('Failed to clear some log files.');
         }
 
         // Redirect back to logs tab
@@ -238,10 +204,19 @@ class AdminPage {
             wp_send_json_error(['message' => __('Permission denied.', 'data-machine')]);
         }
 
+        $logger = apply_filters('dm_get_logger', null);
+        
         try {
-            $recent_logs = $this->logger->get_recent_logs(100);
+            $recent_logs = $logger->get_recent_logs(100);
             wp_send_json_success(['logs' => $recent_logs]);
         } catch (Exception $e) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger && $logger->error('Exception caught in handle_refresh_logs_ajax', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'method' => __METHOD__,
+                'user_id' => get_current_user_id()
+            ]);
             wp_send_json_error(['message' => 'Failed to retrieve logs: ' . $e->getMessage()]);
         }
     }

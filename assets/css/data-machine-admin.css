@@ -656,27 +656,27 @@ body.modal-open {
     margin-bottom: 20px;
 }
 
-.dm-ai-config-fallback {
+.dm-ai-config-modal {
     border: 1px solid #e2e4e7;
     border-radius: 6px;
     padding: 20px;
     background: #f8f9fa;
 }
 
-.dm-ai-config-fallback .notice {
+.dm-ai-config-modal .notice {
     margin: 0 0 20px 0;
 }
 
-.dm-ai-config-fallback .form-table {
+.dm-ai-config-modal .form-table {
     margin: 0;
 }
 
-.dm-ai-config-fallback .form-table th {
+.dm-ai-config-modal .form-table th {
     padding-left: 0;
     width: 150px;
 }
 
-.dm-ai-config-fallback .form-table td {
+.dm-ai-config-modal .form-table td {
     padding-right: 0;
 }
 

@@ -39,13 +39,11 @@ class RssSettings {
                 'label' => __('RSS Feed URL', 'data-machine'),
                 'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'data-machine'),
                 'required' => true,
-                'default' => '',
             ],
             'item_count' => [
                 'type' => 'number',
                 'label' => __('Items to Process', 'data-machine'),
                 'description' => __('Maximum number of *new* RSS items to process per run.', 'data-machine'),
-                'default' => 1,
                 'min' => 1,
                 'max' => 50,
             ],
@@ -60,13 +58,11 @@ class RssSettings {
                     '7_days'   => __('Last 7 Days', 'data-machine'),
                     '30_days'  => __('Last 30 Days', 'data-machine'),
                 ],
-                'default' => 'all_time',
             ],
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
                 'description' => __('Optional: Filter RSS items by keywords (comma-separated). Only items containing at least one keyword in their title or content will be processed.', 'data-machine'),
-                'default' => '',
             ],
             'rss_refresh_interval' => [
                 'type' => 'select',
@@ -80,7 +76,6 @@ class RssSettings {
                     '12_hours' => __('Every 12 Hours', 'data-machine'),
                     '24_hours' => __('Daily', 'data-machine'),
                 ],
-                'default' => '1_hour',
             ],
         ];
     }
@@ -107,7 +102,10 @@ class RssSettings {
         // Timeframe limit
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
         $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        $sanitized['timeframe_limit'] = in_array($timeframe, $valid_timeframes) ? $timeframe : 'all_time';
+        if (!in_array($timeframe, $valid_timeframes)) {
+            throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['timeframe_limit'] = $timeframe;
         
         // Search terms
         $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
@@ -115,7 +113,10 @@ class RssSettings {
         // Refresh interval
         $valid_intervals = ['15_minutes', '30_minutes', '1_hour', '6_hours', '12_hours', '24_hours'];
         $interval = sanitize_text_field($raw_settings['rss_refresh_interval'] ?? '1_hour');
-        $sanitized['rss_refresh_interval'] = in_array($interval, $valid_intervals) ? $interval : '1_hour';
+        if (!in_array($interval, $valid_intervals)) {
+            throw new Exception(esc_html__('Invalid refresh interval parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['rss_refresh_interval'] = $interval;
         
         return $sanitized;
     }

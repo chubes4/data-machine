@@ -14,7 +14,7 @@
 
 namespace DataMachine\Core\Handlers\Input\WordPress;
 
-use DataMachine\Database\RemoteLocations;
+use DataMachine\Core\Database\RemoteLocations;
 use Exception;
 use InvalidArgumentException;
 use WP_Query;
@@ -48,7 +48,7 @@ class WordPress {
      * @return RemoteLocations The remote locations database service.
      */
     protected function get_db_remote_locations() {
-        return apply_filters('dm_get_db_remote_locations', null);
+        return apply_filters('dm_get_database_service', null, 'remote_locations');
     }
 
     /**
@@ -797,50 +797,6 @@ class WordPress {
         return [];
     }
 
-    /**
-     * Get settings fields specific to the unified WordPress handler.
-     *
-     * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_input_handlers filter.
-     * @param array $current_config The current configuration values for the module.
-     * @return array An array defining the settings fields for this input handler.
-     */
-    public static function get_settings_fields(array $current_config = []): array {
-        $source_type = $current_config['source_type'] ?? 'local';
-
-        $fields = [
-            'source_type' => [
-                'type' => 'select',
-                'label' => __('WordPress Source Type', 'data-machine'),
-                'description' => __('Select the type of WordPress source to fetch content from.', 'data-machine'),
-                'options' => [
-                    'local' => __('Local WordPress', 'data-machine'),
-                    'remote_rest' => __('Remote WordPress (REST API)', 'data-machine'),
-                    'remote_airdrop' => __('Remote WordPress (Airdrop)', 'data-machine'),
-                ],
-                'default' => 'local',
-            ],
-        ];
-
-        // Add conditional fields based on source type
-        switch ($source_type) {
-            case 'local':
-                $fields = array_merge($fields, self::get_local_fields());
-                break;
-            
-            case 'remote_rest':
-                $fields = array_merge($fields, self::get_remote_rest_fields());
-                break;
-            
-            case 'remote_airdrop':
-                $fields = array_merge($fields, self::get_remote_airdrop_fields($current_config));
-                break;
-        }
-
-        // Add common fields for all source types
-        $fields = array_merge($fields, self::get_common_fields());
-
-        return $fields;
-    }
 
     /**
      * Get settings fields specific to local WordPress.
@@ -875,7 +831,6 @@ class WordPress {
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type to fetch from the local site.', 'data-machine'),
                 'options' => $post_type_options,
-                'default' => 'post',
             ],
             'post_status' => [
                 'type' => 'select',
@@ -888,21 +843,18 @@ class WordPress {
                     'private' => __('Private', 'data-machine'),
                     'any' => __('Any', 'data-machine'),
                 ],
-                'default' => 'publish',
             ],
             'category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Optional: Filter by a specific category.', 'data-machine'),
                 'options' => $category_options,
-                'default' => 0,
             ],
             'tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Optional: Filter by a specific tag.', 'data-machine'),
                 'options' => $tag_options,
-                'default' => 0,
             ],
             'orderby' => [
                 'type' => 'select',
@@ -914,7 +866,6 @@ class WordPress {
                     'title' => __('Title', 'data-machine'),
                     'ID' => __('ID', 'data-machine'),
                 ],
-                'default' => 'date',
             ],
             'order' => [
                 'type' => 'select',
@@ -924,7 +875,6 @@ class WordPress {
                     'DESC' => __('Descending', 'data-machine'),
                     'ASC' => __('Ascending', 'data-machine'),
                 ],
-                'default' => 'DESC',
             ],
         ];
     }
@@ -941,13 +891,11 @@ class WordPress {
                 'label' => __('API Endpoint URL', 'data-machine'),
                 'description' => __('Enter the full URL of the WordPress REST API endpoint (e.g., https://example.com/wp-json/wp/v2/posts).', 'data-machine'),
                 'required' => true,
-                'default' => '',
             ],
             'data_path' => [
                 'type' => 'text',
                 'label' => __('Data Path (Optional)', 'data-machine'),
                 'description' => __('If the items are nested within the JSON response, specify the path using dot notation (e.g., `data.items`). Leave empty to auto-detect the first array of objects.', 'data-machine'),
-                'default' => '',
             ],
         ];
     }
@@ -960,7 +908,7 @@ class WordPress {
      */
     private static function get_remote_airdrop_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_db_remote_locations', null);
+        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
         if (!$db_remote_locations) {
             throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
         }
@@ -984,7 +932,6 @@ class WordPress {
                 'label' => __('Remote Location', 'data-machine'),
                 'description' => __('Select the pre-configured remote WordPress site (using the Data Machine Airdrop helper plugin) to fetch data from.', 'data-machine'),
                 'options' => $options,
-                'default' => 0,
             ],
             'sync_details' => [
                 'type' => 'button',
@@ -1001,7 +948,6 @@ class WordPress {
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type to fetch from the remote site.', 'data-machine'),
                 'options' => $remote_post_types,
-                'default' => 'post',
             ],
             'rest_post_status' => [
                 'type' => 'select',
@@ -1014,7 +960,6 @@ class WordPress {
                     'private' => __('Private', 'data-machine'),
                     'any' => __('Any', 'data-machine'),
                 ],
-                'default' => 'publish',
             ],
             'rest_category' => [
                 'type' => 'select',
@@ -1022,7 +967,6 @@ class WordPress {
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Optional: Filter by a specific category ID from the remote site.', 'data-machine'),
                 'options' => $remote_categories,
-                'default' => 0,
             ],
             'rest_tag' => [
                 'type' => 'select',
@@ -1030,7 +974,6 @@ class WordPress {
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Optional: Filter by a specific tag ID from the remote site.', 'data-machine'),
                 'options' => $remote_tags,
-                'default' => 0,
             ],
             'rest_orderby' => [
                 'type' => 'select',
@@ -1042,7 +985,6 @@ class WordPress {
                     'title' => __('Title', 'data-machine'),
                     'ID' => __('ID', 'data-machine'),
                 ],
-                'default' => 'date',
             ],
             'rest_order' => [
                 'type' => 'select',
@@ -1052,7 +994,6 @@ class WordPress {
                     'DESC' => __('Descending', 'data-machine'),
                     'ASC' => __('Ascending', 'data-machine'),
                 ],
-                'default' => 'DESC',
             ],
         ];
     }
@@ -1068,7 +1009,6 @@ class WordPress {
                 'type' => 'number',
                 'label' => __('Items to Process', 'data-machine'),
                 'description' => __('Maximum number of *new* items to process per run.', 'data-machine'),
-                'default' => 1,
                 'min' => 1,
                 'max' => 100,
             ],
@@ -1083,13 +1023,11 @@ class WordPress {
                     '7_days'   => __('Last 7 Days', 'data-machine'),
                     '30_days'  => __('Last 30 Days', 'data-machine'),
                 ],
-                'default' => 'all_time',
             ],
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
                 'description' => __('Optional: Filter items using a search term.', 'data-machine'),
-                'default' => '',
             ],
         ];
     }
@@ -1239,13 +1177,13 @@ class WordPress {
     }
 }
 
-// Self-register via filter with integrated settings
-add_filter('dm_register_input_handlers', function($handlers) {
-    $handlers['wordpress'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Input\\WordPress\\WordPress',
-        'label' => __('WordPress', 'data-machine'),
-        'auth_class' => 'DataMachine\\Core\\Handlers\\Input\\WordPress\\WordPressAuth',
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Input\\WordPress\\WordPressSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'input') {
+        $handlers['wordpress'] = [
+            'has_auth' => true,
+            'label' => __('WordPress', 'data-machine')
+        ];
+    }
     return $handlers;
-});
+}, 10, 2);

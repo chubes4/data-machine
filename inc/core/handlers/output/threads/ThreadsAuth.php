@@ -13,7 +13,7 @@
 
 namespace DataMachine\Core\Handlers\Output\Threads;
 
-use DataMachine\Helpers\EncryptionHelper;
+use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -199,20 +199,24 @@ class ThreadsAuth {
             'code'          => $code,
         ];
 
-        $response = wp_remote_post(self::TOKEN_URL, [
-            'method' => 'POST',
-            'body'   => $token_params,
-            'timeout'=> 15,
-        ]);
+        // Use HttpService for external override capability
+        $http_service = apply_filters('dm_get_http_service', null);
+        if (!$http_service) {
+            return new \WP_Error('threads_service_unavailable', __('HTTP service unavailable for Threads token exchange.', 'data-machine'));
+        }
+
+        $response = $http_service->post(self::TOKEN_URL, $token_params, [
+            'timeout' => 15,
+        ], 'Threads Token Exchange');
 
         if (is_wp_error($response)) {
             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
             return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $response);
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $response['body'];
         $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $http_code = $response['status_code'];
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error_description'] ?? $data['error'] ?? 'Failed to retrieve access token from Threads.';
@@ -329,7 +333,7 @@ class ThreadsAuth {
      * @return string
      */
     private function get_redirect_uri() {
-        return admin_url('admin.php?page=dm-api-keys&dm_oauth_callback=threads');
+        return admin_url('admin.php?page=dm-project-management&dm_oauth_callback=threads');
     }
 
     /**
@@ -465,7 +469,7 @@ class ThreadsAuth {
      */
     public function handle_oauth_callback_check() {
         // Check if this is our callback
-        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-api-keys' || !isset($_GET['dm_oauth_callback']) || $_GET['dm_oauth_callback'] !== 'threads') {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-project-management' || !isset($_GET['dm_oauth_callback']) || $_GET['dm_oauth_callback'] !== 'threads') {
             return;
         }
 
@@ -477,21 +481,21 @@ class ThreadsAuth {
             // Add an admin notice by storing in transient and display on API keys page
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_description), 60);
             // Redirect back to the API keys page cleanly, removing error params
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&dm_oauth_status=error'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&dm_oauth_status=error'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
-            wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-project-management')));
             exit;
         }
 
         // Check user permissions (should be logged in to WP admin)
         if (!current_user_can('manage_options')) {
              $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
-             wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-api-keys')));
+             wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-project-management')));
              exit;
         }
 
@@ -504,7 +508,7 @@ class ThreadsAuth {
         $app_secret = get_option('threads_app_secret');
         if (empty($app_id) || empty($app_secret)) {
             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
-            wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-project-management')));
             exit;
         }
 
@@ -516,11 +520,11 @@ class ThreadsAuth {
             $error_message = $result->get_error_message();
             $this->get_logger() && $this->get_logger()->error('Threads OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_message), 60);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&dm_oauth_status=error_token'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&dm_oauth_status=error_token'));
         } else {
             $this->get_logger() && $this->get_logger()->info('Threads OAuth Callback Successful.', ['user_id' => $user_id]);
             set_transient('dm_oauth_success_threads', 'Threads account connected successfully!', 60);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&dm_oauth_status=success'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&dm_oauth_status=success'));
         }
         exit;
     }

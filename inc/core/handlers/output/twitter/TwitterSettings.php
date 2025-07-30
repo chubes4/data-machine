@@ -37,8 +37,7 @@ class TwitterSettings {
             'twitter_char_limit' => [
                 'type' => 'number',
                 'label' => __('Character Limit Override', 'data-machine'),
-                'description' => __('Set a custom character limit for tweets (default: 280). Text will be truncated if necessary.', 'data-machine'),
-                'default' => 280,
+                'description' => __('Set a custom character limit for tweets. Text will be truncated if necessary.', 'data-machine'),
                 'min' => 50,
                 'max' => 280, // Twitter's standard limit
             ],
@@ -46,13 +45,11 @@ class TwitterSettings {
                 'type' => 'checkbox',
                 'label' => __('Include Source Link', 'data-machine'),
                 'description' => __('Append the original source URL to the tweet (if available and fits within character limits).', 'data-machine'),
-                'default' => true,
             ],
             'twitter_enable_images' => [
                 'type' => 'checkbox',
                 'label' => __('Enable Image Posting', 'data-machine'),
                 'description' => __('Attempt to find and upload an image from the source data (if available).', 'data-machine'),
-                'default' => true,
             ],
         ];
     }

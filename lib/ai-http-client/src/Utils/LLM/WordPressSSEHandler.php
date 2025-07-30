@@ -79,7 +79,10 @@ class AI_HTTP_WordPressSSEHandler {
      * Handle SSE streaming request
      */
     public function handle_sse_request($request) {
-        error_log('AI HTTP Client DEBUG: WordPress SSE endpoint called');
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI HTTP Client DEBUG: WordPress SSE endpoint called');
+        }
 
         // Set SSE headers
         $this->set_sse_headers();
@@ -222,7 +225,10 @@ class AI_HTTP_WordPressSSEHandler {
         // Ensure streaming is enabled
         $request['stream'] = true;
 
-        error_log('AI HTTP Client DEBUG: Streaming to ' . $url . ' with request: ' . wp_json_encode($request));
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI HTTP Client DEBUG: Streaming to ' . $url . ' with request: ' . wp_json_encode($request));
+        }
 
         // Initialize CURL for streaming (internal to WordPress SSE endpoint)
         $ch = curl_init();
@@ -372,7 +378,10 @@ class AI_HTTP_WordPressSSEHandler {
             $parsed = json_decode($json_data, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
-                error_log('AI HTTP Client DEBUG: Failed to parse JSON chunk: ' . $line);
+                // Debug logging in development mode
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('AI HTTP Client DEBUG: Failed to parse JSON chunk: ' . $line);
+                }
                 return null;
             }
 

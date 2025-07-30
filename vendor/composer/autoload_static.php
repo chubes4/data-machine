@@ -7,7 +7,7 @@ namespace Composer\Autoload;
 class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
 {
     public static $files = array (
-        'd4b0aeb1d29b9930e8349cb218fc74e6' => __DIR__ . '/../..' . '/inc/core/Constants.php',
+        '60825814c5e8f02ab57b4dd2b1948a5e' => __DIR__ . '/../..' . '/inc/engine/Constants.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -24,7 +24,6 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
             'DataMachine\\Services\\' => 21,
             'DataMachine\\Helpers\\' => 20,
             'DataMachine\\Engine\\' => 19,
-            'DataMachine\\Database\\' => 21,
             'DataMachine\\Core\\' => 17,
             'DataMachine\\Admin\\' => 18,
         ),
@@ -59,10 +58,6 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         array (
             0 => __DIR__ . '/../..' . '/inc/engine',
         ),
-        'DataMachine\\Database\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/inc/database',
-        ),
         'DataMachine\\Core\\' => 
         array (
             0 => __DIR__ . '/../..' . '/inc/core',
@@ -81,16 +76,6 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         ),
     );
 
-    public static $prefixesPsr0 = array (
-        'P' => 
-        array (
-            'Parsedown' => 
-            array (
-                0 => __DIR__ . '/..' . '/erusev/parsedown',
-            ),
-        ),
-    );
-
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
@@ -100,7 +85,6 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         return \Closure::bind(function () use ($loader) {
             $loader->prefixLengthsPsr4 = ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9::$prefixLengthsPsr4;
             $loader->prefixDirsPsr4 = ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9::$prefixesPsr0;
             $loader->classMap = ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9::$classMap;
 
         }, null, ClassLoader::class);

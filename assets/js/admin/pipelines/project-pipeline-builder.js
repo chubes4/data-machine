@@ -333,7 +333,7 @@
     /**
      * Populate step dropdown with step types from the universal filter system.
      * @param {jQuery} $dropdown - The dropdown element
-     * @param {Array} stepTypes - Array of step type configurations from dm_register_pipeline_steps
+     * @param {Array} stepTypes - Array of step type configurations from dm_get_steps
      */
     function populateStepDropdownFromFilter($dropdown, stepTypes) {
         let dropdownHTML = '';
@@ -368,24 +368,6 @@
         $dropdown.html(dropdownHTML);
     }
     
-    /**
-     * Legacy function for backward compatibility.
-     * @param {jQuery} $dropdown - The dropdown element
-     * @param {Array} availableSteps - Array of available step options
-     */
-    function populateStepDropdown($dropdown, availableSteps) {
-        // Convert legacy format to new format if needed
-        const stepTypes = availableSteps.map(step => ({
-            name: step.name || step.type,
-            type: step.type,
-            label: step.label,
-            description: step.description || '',
-            icon: step.icon,
-            supports: step.has_handlers ? ['handlers'] : []
-        }));
-        
-        populateStepDropdownFromFilter($dropdown, stepTypes);
-    }
     
     /**
      * Show flexible step options for unlimited pipeline construction.
@@ -412,13 +394,6 @@
         $dropdown.html(flexibleHTML);
     }
     
-    /**
-     * Legacy alias for backward compatibility.
-     * @param {jQuery} $dropdown - The dropdown element
-     */
-    function showStaticStepOptions($dropdown) {
-        showFlexibleStepOptions($dropdown);
-    }
     
     /**
      * Get step type icon.
@@ -687,7 +662,7 @@
             if (window.dmModalHandler && window.dmModalHandler.openStepConfigurationModal) {
                 window.dmModalHandler.openStepConfigurationModal(projectId, stepId, stepType);
             } else {
-                console.log('Modal handler not available. Configure step:', stepId, stepType);
+                // Modal handler not available - step configuration not accessible
             }
         });
 
@@ -707,8 +682,12 @@
             const handlerInstanceId = $(this).data('handler-instance-id');
             const handlerType = $(this).data('handler-type');
             
-            console.log('Configure handler:', handlerInstanceId, handlerType);
-            // TODO: Implement handler configuration modal
+            // Open handler configuration modal
+            if (window.dmModalHandler && window.dmModalHandler.openHandlerConfigurationModal) {
+                window.dmModalHandler.openHandlerConfigurationModal(handlerInstanceId, handlerType);
+            } else {
+                alert('Handler configuration is not yet available. Please update the handler through the module settings.');
+            }
         });
 
         // Remove Handler button click
@@ -755,11 +734,7 @@
             },
             success: function(response) {
                 if (response.success) {
-                    console.log('Pipeline step added successfully:', {
-                        projectId: projectId,
-                        stepType: stepType,
-                        stepOptions: stepOptions
-                    });
+                    // Pipeline step added successfully
                     
                     // Reload pipeline steps to reflect changes
                     loadHorizontalPipelineSteps($card, projectId);
@@ -858,21 +833,17 @@
         // Find the module builder for this project
         const moduleBuilder = window.DataMachine && window.DataMachine.StepFlowBuilder;
         if (!moduleBuilder) {
-            console.log('Module builder not available - step card creation skipped');
+            // Module builder not available - step card creation skipped
             return;
         }
         
-        console.log('Triggering module step creation for step with handlers:', {
-            projectId: projectId,
-            stepType: stepType,
-            stepData: stepData
-        });
+        // Triggering module step creation for step with handlers
         
         // Create mirrored module step card
         if (typeof moduleBuilder.createModuleStepCard === 'function') {
             moduleBuilder.createModuleStepCard(projectId, stepType, stepData);
         } else {
-            console.log('Module step card creation method not available');
+            // Module step card creation method not available
         }
     }
     
@@ -1026,11 +997,7 @@
             },
             success: function(response) {
                 if (response.success) {
-                    console.log('Handler added successfully:', {
-                        stepId: stepId,
-                        handlerId: handlerId,
-                        instanceId: response.data.handler_instance_id
-                    });
+                    // Handler added successfully
                     
                     // Reload pipeline steps to reflect changes
                     loadHorizontalPipelineSteps($card, projectId);
@@ -1054,9 +1021,33 @@
      * @param {jQuery} $card - The project card element
      */
     function removeHandlerFromStep(projectId, stepId, handlerInstanceId, $card) {
-        // TODO: Implement handler removal AJAX call
-        console.log('Remove handler:', handlerInstanceId);
-        alert('Handler removal functionality coming soon!');
+        if (!dmPipelineBuilder || !dmPipelineBuilder.ajax_url) {
+            alert('Configuration error - cannot remove handler');
+            return;
+        }
+        
+        $.ajax({
+            url: dmPipelineBuilder.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'dm_remove_handler_from_step',
+                nonce: dmPipelineBuilder.get_pipeline_steps_nonce,
+                project_id: projectId,
+                step_id: stepId,
+                handler_instance_id: handlerInstanceId
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Reload pipeline steps to reflect changes
+                    loadHorizontalPipelineSteps($card, projectId);
+                } else {
+                    alert('Error removing handler: ' + (response.data || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Error removing handler.');
+            }
+        });
     }
 
     // Expose functions for external use if needed

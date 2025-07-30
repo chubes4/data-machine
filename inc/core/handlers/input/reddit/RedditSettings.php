@@ -39,7 +39,6 @@ class RedditSettings {
                 'label' => __('Subreddit Name', 'data-machine'),
                 'description' => __('Enter the name of the subreddit (e.g., news, programming) without "r/".', 'data-machine'),
                 'placeholder' => 'news',
-                'default' => '',
             ],
             'sort_by' => [
                 'type' => 'select',
@@ -51,13 +50,11 @@ class RedditSettings {
                     'top' => 'Top (All Time)',
                     'rising' => 'Rising',
                 ],
-                'default' => 'hot',
             ],
             'item_count' => [
                 'type' => 'number',
                 'label' => __('Posts to Fetch', 'data-machine'),
                 'description' => __('Number of recent posts to check per run. The system will process the first new post found. Max 100.', 'data-machine'),
-                'default' => 1,
                 'min' => 1,
                 'max' => 100,
             ],
@@ -72,13 +69,11 @@ class RedditSettings {
                     '7_days'   => __('Last 7 Days', 'data-machine'),
                     '30_days'  => __('Last 30 Days', 'data-machine'),
                 ],
-                'default' => 'all_time',
             ],
             'min_upvotes' => [
                 'type' => 'number',
                 'label' => __('Minimum Upvotes', 'data-machine'),
                 'description' => __('Only process posts with at least this many upvotes (score). Set to 0 to disable filtering.', 'data-machine'),
-                'default' => 0,
                 'min' => 0,
                 'max' => 100000,
             ],
@@ -86,7 +81,6 @@ class RedditSettings {
                 'type' => 'number',
                 'label' => __('Minimum Comment Count', 'data-machine'),
                 'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'data-machine'),
-                'default' => 0,
                 'min' => 0,
                 'max' => 100000,
             ],
@@ -94,7 +88,6 @@ class RedditSettings {
                 'type' => 'number',
                 'label' => __('Top Comments to Fetch', 'data-machine'),
                 'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'data-machine'),
-                'default' => 0,
                 'min' => 0,
                 'max' => 100,
             ],
@@ -102,7 +95,6 @@ class RedditSettings {
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
                 'description' => __('Optional: Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'data-machine'),
-                'default' => '',
             ],
         ];
     }
@@ -119,11 +111,17 @@ class RedditSettings {
         $sanitized['subreddit'] = (preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) ? $subreddit : '';
         $valid_sorts = ['hot', 'new', 'top', 'rising'];
         $sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
-        $sanitized['sort_by'] = in_array($sort_by, $valid_sorts) ? $sort_by : 'hot';
+        if (!in_array($sort_by, $valid_sorts)) {
+            throw new Exception(esc_html__('Invalid sort parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['sort_by'] = $sort_by;
         $sanitized['item_count'] = min(100, max(1, absint($raw_settings['item_count'] ?? 1)));
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
         $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        $sanitized['timeframe_limit'] = in_array($timeframe, $valid_timeframes) ? $timeframe : 'all_time';
+        if (!in_array($timeframe, $valid_timeframes)) {
+            throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['timeframe_limit'] = $timeframe;
         $min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
         $sanitized['min_upvotes'] = max(0, $min_upvotes);
         $min_comment_count = isset($raw_settings['min_comment_count']) ? absint($raw_settings['min_comment_count']) : 0;

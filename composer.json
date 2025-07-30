@@ -4,7 +4,6 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.0",
-        "erusev/parsedown": "^1.7",
         "monolog/monolog": "^3.9",
         "abraham/twitteroauth": "^7.0",
         "woocommerce/action-scheduler": "^3.9"
@@ -14,12 +13,11 @@
             "DataMachine\\Core\\": "inc/core/",
             "DataMachine\\Admin\\": "inc/admin/",
             "DataMachine\\Engine\\": "inc/engine/",
-            "DataMachine\\Database\\": "inc/database/",
             "DataMachine\\Services\\": "inc/services/",
             "DataMachine\\Helpers\\": "inc/helpers/"
         },
         "files": [
-            "inc/core/Constants.php"
+            "inc/engine/Constants.php"
         ]
     }
 }

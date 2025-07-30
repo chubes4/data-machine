@@ -11,7 +11,6 @@ return array(
     'DataMachine\\Services\\' => array($baseDir . '/inc/services'),
     'DataMachine\\Helpers\\' => array($baseDir . '/inc/helpers'),
     'DataMachine\\Engine\\' => array($baseDir . '/inc/engine'),
-    'DataMachine\\Database\\' => array($baseDir . '/inc/database'),
     'DataMachine\\Core\\' => array($baseDir . '/inc/core'),
     'DataMachine\\Admin\\' => array($baseDir . '/inc/admin'),
     'Composer\\CaBundle\\' => array($vendorDir . '/composer/ca-bundle/src'),

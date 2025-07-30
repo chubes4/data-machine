@@ -54,7 +54,10 @@ class AI_HTTP_Tool_Executor {
             
         } catch (Exception $e) {
             $execution_time = microtime(true) - $start_time;
-            error_log("AI HTTP Client DEBUG: Tool execution failed for '{$tool_name}': " . $e->getMessage());
+            // Debug logging in development mode
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("AI HTTP Client DEBUG: Tool execution failed for '{$tool_name}': " . $e->getMessage());
+            }
             
             return array(
                 'success' => false,
@@ -228,7 +231,10 @@ class AI_HTTP_Tool_Executor {
             
             // Stop executing if this tool failed and continue_on_failure is false
             if (!$continue_on_failure && isset($result['success']) && !$result['success']) {
-                error_log("AI HTTP Client DEBUG: Stopping tool execution after failure in '{$tool_name}'");
+                // Debug logging in development mode
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("AI HTTP Client DEBUG: Stopping tool execution after failure in '{$tool_name}'");
+                }
                 break;
             }
         }
@@ -256,7 +262,10 @@ class AI_HTTP_Tool_Executor {
                 // If successful, return immediately
                 if (isset($result['success']) && $result['success']) {
                     if ($attempt > 0) {
-                        error_log("AI HTTP Client DEBUG: Tool '{$tool_name}' succeeded on attempt " . ($attempt + 1));
+                        // Debug logging in development mode
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("AI HTTP Client DEBUG: Tool '{$tool_name}' succeeded on attempt " . ($attempt + 1));
+                        }
                     }
                     return $result;
                 }
@@ -270,7 +279,10 @@ class AI_HTTP_Tool_Executor {
                 
             } catch (Exception $e) {
                 $last_error = $e->getMessage();
-                error_log("AI HTTP Client DEBUG: Tool '{$tool_name}' attempt " . ($attempt + 1) . " failed: " . $last_error);
+                // Debug logging in development mode
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("AI HTTP Client DEBUG: Tool '{$tool_name}' attempt " . ($attempt + 1) . " failed: " . $last_error);
+                }
             }
             
             // Wait before retry (exponential backoff)

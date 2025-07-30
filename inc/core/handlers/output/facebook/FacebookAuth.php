@@ -13,7 +13,7 @@
 
 namespace DataMachine\Core\Handlers\Output\Facebook;
 
-use DataMachine\Helpers\EncryptionHelper;
+use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -145,19 +145,25 @@ class FacebookAuth {
         ];
         $token_url = self::TOKEN_URL . '?' . http_build_query($token_params);
 
-        // Facebook requires GET for token exchange
-        $response = wp_remote_get($token_url, [
-            'timeout'=> 15,
-        ]);
+        // Facebook requires GET for token exchange - use HttpService for external override capability
+        $http_service = apply_filters('dm_get_http_service', null);
+        if (!$http_service) {
+            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: HttpService not available.', ['user_id' => $user_id]);
+            return new \WP_Error('facebook_oauth_service_unavailable', __('HTTP service unavailable for Facebook token exchange.', 'data-machine'));
+        }
+
+        $response = $http_service->get($token_url, [
+            'timeout' => 15,
+        ], 'Facebook Token Exchange');
 
         if (is_wp_error($response)) {
             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
             return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'data-machine'), $response);
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $response['body'];
         $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $http_code = $response['status_code'];
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve access token from Facebook.';
@@ -302,7 +308,7 @@ class FacebookAuth {
      * @return string
      */
     private function get_redirect_uri() {
-        return admin_url('admin.php?page=dm-api-keys&dm_oauth_callback=facebook');
+        return admin_url('admin.php?page=dm-project-management&dm_oauth_callback=facebook');
     }
 
     /**
@@ -313,18 +319,25 @@ class FacebookAuth {
      */
     private function get_user_profile(string $access_token): array|\WP_Error {
         $url = self::GRAPH_API_URL . '/me?fields=id,name';
-        $response = wp_remote_get($url, [
+        
+        // Use HttpService for external override capability
+        $http_service = apply_filters('dm_get_http_service', null);
+        if (!$http_service) {
+            return new \WP_Error('facebook_service_unavailable', __('HTTP service unavailable for Facebook profile fetch.', 'data-machine'));
+        }
+
+        $response = $http_service->get($url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
             'timeout' => 10,
-        ]);
+        ], 'Facebook Profile API');
 
         if (is_wp_error($response)) {
             return $response;
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $response['body'];
         $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $http_code = $response['status_code'];
 
         if ($http_code !== 200 || isset($data['error'])) {
              $error_message = $data['error']['message'] ?? 'Failed to fetch Facebook profile.';
@@ -350,16 +363,22 @@ class FacebookAuth {
         ];
         $url = self::TOKEN_URL . '?' . http_build_query($params);
 
-        $response = wp_remote_get($url, ['timeout' => 15]);
+        // Use HttpService for external override capability
+        $http_service = apply_filters('dm_get_http_service', null);
+        if (!$http_service) {
+            return new \WP_Error('facebook_service_unavailable', __('HTTP service unavailable for Facebook long-lived token exchange.', 'data-machine'));
+        }
+
+        $response = $http_service->get($url, ['timeout' => 15], 'Facebook Long-lived Token Exchange');
 
         if (is_wp_error($response)) {
             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Long-lived token request failed.', ['error' => $response->get_error_message()]);
             return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $response);
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $response['body'];
         $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $http_code = $response['status_code'];
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve long-lived access token from Facebook.';
@@ -390,21 +409,27 @@ class FacebookAuth {
         $this->get_logger() && $this->get_logger()->info('Fetching Facebook page credentials.', ['user_id' => $user_id]);
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
 
-        $response = wp_remote_get($url, [
+        // Use HttpService for external override capability
+        $http_service = apply_filters('dm_get_http_service', null);
+        if (!$http_service) {
+            return new \WP_Error('facebook_service_unavailable', __('HTTP service unavailable for Facebook pages fetch.', 'data-machine'));
+        }
+
+        $response = $http_service->get($url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $user_access_token,
             ],
             'timeout' => 15,
-        ]);
+        ], 'Facebook Pages API');
 
         if (is_wp_error($response)) {
             $this->get_logger() && $this->get_logger()->error('Facebook Page Fetch Error: Request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
             return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $response);
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $response['body'];
         $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $http_code = $response['status_code'];
 
         if ($http_code !== 200 || !isset($data['data'])) {
             $error_message = $data['error']['message'] ?? 'Failed to retrieve pages from Facebook.';
@@ -451,14 +476,16 @@ class FacebookAuth {
         }
 
         if ($token) {
-            // Attempt deauthorization with Facebook
-            $url = self::GRAPH_API_URL . '/me/permissions';
-            $response = wp_remote_request($url, [
-                'method' => 'DELETE',
-                'body' => ['access_token' => $token],
-                'timeout' => 10,
-            ]);
-            // Log success or failure of deauthorization, but don't stop deletion
+            // Attempt deauthorization with Facebook - use HttpService for external override capability
+            $http_service = apply_filters('dm_get_http_service', null);
+            if ($http_service) {
+                $url = self::GRAPH_API_URL . '/me/permissions';
+                $response = $http_service->delete($url, [
+                    'body' => ['access_token' => $token],
+                    'timeout' => 10,
+                ], 'Facebook Deauthorization');
+                // Log success or failure of deauthorization, but don't stop deletion
+            }
         }
 
         // Always attempt to delete the local user meta regardless of deauth success
@@ -484,7 +511,7 @@ class FacebookAuth {
      */
     public function handle_oauth_callback_check() {
         // Check if this is our callback
-        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-api-keys' || !isset($_GET['dm_oauth_callback']) || $_GET['dm_oauth_callback'] !== 'facebook') {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-project-management' || !isset($_GET['dm_oauth_callback']) || $_GET['dm_oauth_callback'] !== 'facebook') {
             return;
         }
 
@@ -493,21 +520,21 @@ class FacebookAuth {
             $error = sanitize_text_field($_GET['error']);
             $error_description = isset($_GET['error_description']) ? sanitize_text_field($_GET['error_description']) : 'User denied access or an error occurred.';
             $this->get_logger() && $this->get_logger()->warning('Facebook OAuth Error in callback:', ['error' => $error, 'description' => $error_description]);
-            wp_redirect(add_query_arg('auth_error', $error, admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_error', $error, admin_url('admin.php?page=dm-project-management')));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
-            wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-project-management')));
             exit;
         }
 
         // Check user permissions (should be logged in to WP admin)
         if (!current_user_can('manage_options')) {
              $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
-             wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-api-keys')));
+             wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-project-management')));
              exit;
         }
 
@@ -520,7 +547,7 @@ class FacebookAuth {
         $app_secret = get_option('facebook_app_secret');
         if (empty($app_id) || empty($app_secret)) {
             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
-            wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-project-management')));
             exit;
         }
 
@@ -532,10 +559,10 @@ class FacebookAuth {
             $error_message = $result->get_error_message();
             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
             // Redirect with a generic or specific error code
-            wp_redirect(add_query_arg('auth_error', $error_code, admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_error', $error_code, admin_url('admin.php?page=dm-project-management')));
         } else {
             $this->get_logger() && $this->get_logger()->info('Facebook OAuth Callback Successful.', ['user_id' => $user_id]);
-            wp_redirect(add_query_arg('auth_success', 'facebook', admin_url('admin.php?page=dm-api-keys')));
+            wp_redirect(add_query_arg('auth_success', 'facebook', admin_url('admin.php?page=dm-project-management')));
         }
         exit;
     }

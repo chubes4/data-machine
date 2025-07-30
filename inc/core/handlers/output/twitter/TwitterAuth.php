@@ -14,7 +14,7 @@
 namespace DataMachine\Core\Handlers\Output\Twitter;
 
 use Abraham\TwitterOAuth\TwitterOAuth;
-use DataMachine\Helpers\EncryptionHelper;
+use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -123,7 +123,7 @@ class TwitterAuth {
         $apiKey = get_option('twitter_api_key');
         $apiSecret = get_option('twitter_api_secret');
         if (empty($apiKey) || empty($apiSecret)) {
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_missing_app_keys'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_missing_app_keys'));
             exit;
         }
 
@@ -146,7 +146,7 @@ class TwitterAuth {
                     'response' => $connection->getLastBody(), // Log response body if available
                     'headers' => $response_info
                 ]);
-                wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_request_token_failed'));
+                wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_request_token_failed'));
                 exit;
             }
 
@@ -164,7 +164,7 @@ class TwitterAuth {
 
         } catch (\Exception $e) {
             $this->get_logger() && $this->get_logger()->error('Twitter OAuth Exception during init: ' . $e->getMessage());
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_init_exception'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_init_exception'));
             exit;
         }
     }
@@ -176,7 +176,7 @@ class TwitterAuth {
     public function handle_oauth_callback() {
         // --- 1. Initial Checks --- 
         if ( !is_user_logged_in() ) {
-             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_not_logged_in'));
+             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_not_logged_in'));
              exit;
         }
         $user_id = get_current_user_id();
@@ -187,14 +187,14 @@ class TwitterAuth {
             // Clean up transient if we can identify it (optional)
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
             $this->get_logger() && $this->get_logger()->warning('Twitter OAuth Warning: User denied access.', ['user_id' => $user_id, 'denied_token' => $denied_token]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_access_denied'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_access_denied'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['oauth_token']) || !isset($_GET['oauth_verifier'])) {
             $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['user_id' => $user_id, 'query_params' => $_GET]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_missing_callback_params'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_missing_callback_params'));
             exit;
         }
 
@@ -208,7 +208,7 @@ class TwitterAuth {
 
         if (empty($oauth_token_secret)) {
             $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Request token secret missing or expired in transient.', ['user_id' => $user_id, 'oauth_token' => $oauth_token]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_token_secret_expired'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_token_secret_expired'));
             exit;
         }
 
@@ -216,7 +216,7 @@ class TwitterAuth {
         $apiSecret = get_option('twitter_api_secret');
         if (empty($apiKey) || empty($apiSecret)) {
             $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: API Key/Secret missing during callback.', ['user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_missing_app_keys'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_missing_app_keys'));
             exit;
         }
 
@@ -235,7 +235,7 @@ class TwitterAuth {
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
                 ]);
-                wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_access_token_failed'));
+                wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_access_token_failed'));
                 exit;
             }
 
@@ -246,7 +246,7 @@ class TwitterAuth {
             
             if ($encrypted_access_token === false || $encrypted_access_token_secret === false) {
                 $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to encrypt access tokens.', ['user_id' => $user_id]);
-                wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_encryption_failed'));
+                wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_encryption_failed'));
                 exit;
             }
             
@@ -262,12 +262,12 @@ class TwitterAuth {
             update_user_meta($user_id, self::USER_META_KEY, $account_data);
 
             // --- 5. Redirect on Success --- 
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_success=twitter'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_success=twitter'));
             exit;
 
         } catch (\Exception $e) {
             $this->get_logger() && $this->get_logger()->error('Twitter OAuth Exception during callback: ' . $e->getMessage(), ['user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=twitter_callback_exception'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_callback_exception'));
             exit;
         }
     }

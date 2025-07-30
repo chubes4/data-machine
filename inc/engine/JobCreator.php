@@ -1,19 +1,17 @@
 <?php
 /**
- * Unified job creation class that handles all job creation entry points.
+ * Pipeline+flow-based job creation class for execution orchestration.
  *
- * Consolidates job creation logic from multiple sources into a single,
- * consistent implementation that always uses the async pipeline.
+ * Creates and schedules jobs using pipeline+flow architecture with position-based
+ * execution. Validates pipeline steps against universal handler system and dm_get_steps
+ * filter registry. Fully integrated with ProcessingOrchestrator for seamless execution.
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/includes/engine
- * @since      0.6.0
+ * @since      0.15.0
  */
 
 namespace DataMachine\Engine;
-
-use DataMachine\Database\{Jobs, Modules, Projects};
-use DataMachine\Helpers\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -30,39 +28,41 @@ class JobCreator {
     }
 
     /**
-     * Create and schedule a job for the async pipeline.
+     * Create and schedule a job for the async pipeline+flow architecture.
      *
-     * This is the single entry point for all job creation, regardless of source.
-     * Always schedules dm_step_position_0_job_event to start the async pipeline.
+     * This is the single entry point for all job creation using pipeline+flow-based architecture.
+     * Always schedules dm_execute_step with position 0 to start the async pipeline.
      *
-     * @param array       $module Module configuration array.
+     * @param int         $pipeline_id Pipeline ID defining the workflow steps.
+     * @param int         $flow_id Flow ID with configured handlers and scheduling.
      * @param int         $user_id User ID creating the job.
      * @param string      $context Context describing job source ('run_now', 'file_upload', 'single_module', 'scheduled').
      * @param array|null  $optional_data Optional input data for file-based jobs.
      * @return array Result array with 'success' boolean and 'message' string.
      */
-    public function create_and_schedule_job( array $module, int $user_id, string $context, ?array $optional_data = null ): array {
+    public function create_and_schedule_job( int $pipeline_id, int $flow_id, int $user_id, string $context, ?array $optional_data = null ): array {
         try {
             // Validate required parameters
-            if ( empty( $module ) || empty( $user_id ) ) {
+            if ( empty( $pipeline_id ) || empty( $flow_id ) || empty( $user_id ) ) {
                 return [
                     'success' => false,
-                    'message' => 'Invalid module or user ID'
+                    'message' => 'Invalid pipeline ID, flow ID, or user ID'
                 ];
             }
 
-            $module_id = absint( $module['module_id'] ?? 0 );
-            if ( empty( $module_id ) ) {
+            // Validate pipeline and flow configuration
+            $validation_result = $this->validate_pipeline_and_flow( $pipeline_id, $flow_id );
+            if ( is_wp_error( $validation_result ) ) {
                 return [
                     'success' => false,
-                    'message' => 'Invalid module ID'
+                    'message' => $validation_result->get_error_message()
                 ];
             }
 
             // Action Scheduler handles global concurrency control (MAX_CONCURRENT_JOBS = 2)
 
             // Build job config for database storage
-            $job_config = $this->build_job_config( $module, $user_id, $context );
+            $job_config = $this->build_pipeline_flow_job_config( $pipeline_id, $flow_id, $user_id, $context, $optional_data );
             if ( is_wp_error( $job_config ) ) {
                 return [
                     'success' => false,
@@ -70,20 +70,21 @@ class JobCreator {
                 ];
             }
 
-            // Create job record in database using standardized format
+            // Create job record in database using pipeline+flow-based format
             $job_data = [
-                'module_id' => $module_id,
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id,
                 'user_id' => $user_id,
-                'module_config' => wp_json_encode( $job_config ),
-                'input_data' => $optional_data ? wp_json_encode( $optional_data ) : null
+                'flow_config' => wp_json_encode( $job_config )
             ];
-            $db_jobs = apply_filters('dm_get_db_jobs', null);
+            $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
             $job_id = $db_jobs->create_job( $job_data );
 
             if ( ! $job_id ) {
                 $logger = apply_filters('dm_get_logger', null);
                 $logger->error( 'Failed to create job record', [
-                    'module_id' => $module_id,
+                    'pipeline_id' => $pipeline_id,
+                    'flow_id' => $flow_id,
                     'user_id' => $user_id,
                     'context' => $context
                 ] );
@@ -93,26 +94,27 @@ class JobCreator {
                 ];
             }
 
-            // Schedule Step 1: Input Processing (starts async pipeline at position 0)
+            // Schedule Step 1: Pipeline Processing (starts async pipeline at position 0)
             $action_id = as_schedule_single_action(
                 time() + 1, // Start immediately
-                'dm_step_position_0_job_event',
-                ['job_id' => $job_id],
-                \DataMachine\Core\Constants::ACTION_GROUP
+                'dm_execute_step',
+                ['job_id' => $job_id, 'step_position' => 0],
+                \DataMachine\Engine\Constants::ACTION_GROUP
             );
 
             if ( $action_id === false || $action_id === 0 ) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger->error( 'Failed to schedule input job', [
+                $logger->error( 'Failed to schedule pipeline+flow job', [
                     'job_id' => $job_id,
-                    'module_id' => $module_id,
+                    'pipeline_id' => $pipeline_id,
+                    'flow_id' => $flow_id,
                     'action_id' => $action_id
                 ] );
                 
                 // Mark job as failed since scheduling failed
-                $db_jobs = apply_filters('dm_get_db_jobs', null);
+                $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
                 $db_jobs->complete_job( $job_id, 'failed', wp_json_encode( [
-                    'error' => 'Failed to schedule input processing step'
+                    'error' => 'Failed to schedule pipeline processing step'
                 ] ) );
                 
                 return [
@@ -124,7 +126,8 @@ class JobCreator {
             $logger = apply_filters('dm_get_logger', null);
             $logger->info( 'Job created and scheduled successfully', [
                 'job_id' => $job_id,
-                'module_id' => $module_id,
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id,
                 'user_id' => $user_id,
                 'context' => $context,
                 'action_id' => $action_id
@@ -140,7 +143,8 @@ class JobCreator {
         } catch ( Exception $e ) {
             $logger = apply_filters('dm_get_logger', null);
             $logger->error( 'Exception in job creation', [
-                'module_id' => $module['module_id'] ?? 'unknown',
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id,
                 'user_id' => $user_id,
                 'context' => $context,
                 'error' => $e->getMessage()
@@ -154,79 +158,139 @@ class JobCreator {
     }
 
     /**
-     * Build job configuration from module data.
+     * Validate pipeline and flow configuration against universal handler system.
      *
-     * @param array  $module Module configuration.
-     * @param int    $user_id User ID.
-     * @param string $context Job context.
-     * @return array|WP_Error Job config array or error.
+     * @param int $pipeline_id Pipeline ID to validate.
+     * @param int $flow_id Flow ID to validate.
+     * @return true|WP_Error True if valid, WP_Error if validation fails.
      */
-    private function build_job_config( array $module, int $user_id, string $context ) {
-        $module_id = absint( $module['module_id'] ?? 0 );
-        
-        // Get full module data from database
-        $db_modules = apply_filters('dm_get_db_modules', null);
-        $full_module = $db_modules->get_module( $module_id );
-        if ( ! $full_module ) {
-            return new WP_Error( 'module_not_found', 'Module not found in database' );
+    private function validate_pipeline_and_flow( int $pipeline_id, int $flow_id ) {
+        // Get pipeline data
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $pipeline = $db_pipelines->get_pipeline( $pipeline_id );
+        if ( ! $pipeline ) {
+            return new \WP_Error( 'pipeline_not_found', 'Pipeline not found in database' );
         }
 
-        // Get project data
-        $db_projects = apply_filters('dm_get_db_projects', null);
-        $project = $db_projects->get_project( $full_module->project_id );
-        if ( ! $project ) {
-            return new WP_Error( 'project_not_found', 'Project not found for module' );
+        // Get flow data
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $flow = $db_flows->get_flow( $flow_id );
+        if ( ! $flow ) {
+            return new \WP_Error( 'flow_not_found', 'Flow not found in database' );
         }
 
-        // Build module configuration from database fields
-        $module_config = [
-            'data_source_type' => $full_module->data_source_type ?? '',
-            'data_source_config' => json_decode( $full_module->data_source_config ?? '{}', true ),
-            'output_type' => $full_module->output_type ?? '',
-            'output_config' => json_decode( $full_module->output_config ?? '{}', true ),
-            'process_data_prompt' => $full_module->process_data_prompt ?? '',
-            'fact_check_prompt' => $full_module->fact_check_prompt ?? '',
-            'finalize_response_prompt' => $full_module->finalize_response_prompt ?? '',
-            'skip_fact_check' => (bool)( $full_module->skip_fact_check ?? false )
-        ];
-        
-        if ( ! is_array( $module_config['data_source_config'] ) ) {
-            $module_config['data_source_config'] = [];
-        }
-        if ( ! is_array( $module_config['output_config'] ) ) {
-            $module_config['output_config'] = [];
+        // Validate flow belongs to pipeline
+        if ( $flow['pipeline_id'] !== $pipeline_id ) {
+            return new \WP_Error( 'flow_pipeline_mismatch', 'Flow does not belong to the specified pipeline' );
         }
 
-        // Build simplified job configuration
-        $job_config = [
-            'module_id' => $module_id,
-            'project_id' => $full_module->project_id,
-            'user_id' => $user_id,
-            'context' => $context,
-            'data_source_type' => $module_config['data_source_type'] ?? '',
-            'output_type' => $module_config['output_type'] ?? '',
-            'output_config' => $module_config['output_config'] ?? [],
-            'process_data_prompt' => $module_config['process_data_prompt'] ?? '',
-            'fact_check_prompt' => $module_config['fact_check_prompt'] ?? '',
-            'finalize_response_prompt' => $module_config['finalize_response_prompt'] ?? '',
-            'skip_fact_check' => $module_config['skip_fact_check'] ?? false,
-            'module_name' => $full_module->module_name ?? 'Unknown Module',
-            'project_name' => $project->project_name ?? 'Unknown Project'
-        ];
+        // Parse pipeline configuration
+        $pipeline_config = json_decode( $pipeline->step_configuration ?? '[]', true );
+        if ( ! is_array( $pipeline_config ) || empty( $pipeline_config ) ) {
+            return new \WP_Error( 'invalid_pipeline', 'Pipeline has no configured steps' );
+        }
 
-        // Add input-specific configuration
-        $input_config_keys = [
-            'rss_url', 'reddit_subreddit', 'reddit_sort', 'reddit_time_filter',
-            'file_upload_path', 'api_endpoint', 'remote_location_id'
-        ];
-        
-        foreach ( $input_config_keys as $key ) {
-            if ( isset( $module_config[$key] ) ) {
-                $job_config[$key] = $module_config[$key];
+        // Get available handlers and steps for validation
+        $input_handlers = apply_filters( 'dm_get_handlers', [], 'input' );
+        $output_handlers = apply_filters( 'dm_get_handlers', [], 'output' );
+        $available_steps = apply_filters( 'dm_get_steps', [] );
+
+        // Validate each pipeline step
+        foreach ( $pipeline_config as $step ) {
+            $step_type = $step['type'] ?? '';
+            $step_subtype = $step['subtype'] ?? '';
+
+            // Validate step type exists in registry
+            if ( ! isset( $available_steps[ $step_type ] ) ) {
+                return new \WP_Error( 'invalid_step_type', sprintf( 'Invalid step type: %s', $step_type ) );
+            }
+
+            // Validate handler-based steps against universal handler system
+            if ( $step_type === 'input' ) {
+                if ( ! isset( $input_handlers[ $step_subtype ] ) ) {
+                    return new \WP_Error( 'invalid_input_handler', sprintf( 'Invalid input handler: %s', $step_subtype ) );
+                }
+            } elseif ( $step_type === 'output' ) {
+                if ( ! isset( $output_handlers[ $step_subtype ] ) ) {
+                    return new \WP_Error( 'invalid_output_handler', sprintf( 'Invalid output handler: %s', $step_subtype ) );
+                }
+            }
+
+            // Validate step position is numeric
+            if ( ! isset( $step['position'] ) || ! is_numeric( $step['position'] ) ) {
+                return new \WP_Error( 'invalid_step_position', 'All pipeline steps must have numeric positions' );
             }
         }
 
-        // Output configuration is already included in output_config field above
+        return true;
+    }
+
+    /**
+     * Build pipeline+flow-based job configuration for execution.
+     *
+     * @param int    $pipeline_id Pipeline ID defining the workflow steps.
+     * @param int    $flow_id Flow ID with configured handlers and settings.
+     * @param int    $user_id User ID creating the job.
+     * @param string $context Job context.
+     * @param array|null $optional_data Optional input data for file-based jobs.
+     * @return array|WP_Error Job config array or error.
+     */
+    private function build_pipeline_flow_job_config( int $pipeline_id, int $flow_id, int $user_id, string $context, ?array $optional_data = null ) {
+        // Get pipeline data
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $pipeline = $db_pipelines->get_pipeline( $pipeline_id );
+        if ( ! $pipeline ) {
+            return new \WP_Error( 'pipeline_not_found', 'Pipeline not found in database' );
+        }
+
+        // Get flow data
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $flow = $db_flows->get_flow( $flow_id );
+        if ( ! $flow ) {
+            return new \WP_Error( 'flow_not_found', 'Flow not found in database' );
+        }
+
+        // Parse pipeline step configuration
+        $pipeline_step_config = json_decode( $pipeline->step_configuration ?? '[]', true );
+        if ( ! is_array( $pipeline_step_config ) ) {
+            $pipeline_step_config = [];
+        }
+
+        // Sort pipeline steps by position for position-based execution
+        usort( $pipeline_step_config, function( $a, $b ) {
+            return ( $a['position'] ?? 0 ) <=> ( $b['position'] ?? 0 );
+        });
+
+        // Build pipeline+flow-based job configuration
+        $job_config = [
+            'pipeline_id' => $pipeline_id,
+            'flow_id' => $flow_id,
+            'user_id' => $user_id,
+            'context' => $context,
+            'pipeline_name' => $pipeline->pipeline_name ?? 'Unknown Pipeline',
+            'flow_name' => $flow['flow_name'] ?? 'Unknown Flow',
+            'pipeline_step_config' => $pipeline_step_config,
+            'flow_config' => $flow['flow_config'] ?? [],
+            'created_at' => current_time( 'mysql' )
+        ];
+
+        // Add optional data if provided (for file uploads, etc.)
+        if ( $optional_data ) {
+            $job_config['optional_data'] = $optional_data;
+        }
+
+        // Log pipeline+flow configuration for debugging
+        $logger = apply_filters('dm_get_logger', null);
+        if ( $logger ) {
+            $logger->info( 'Built pipeline+flow job configuration', [
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id,
+                'user_id' => $user_id,
+                'context' => $context,
+                'pipeline_steps_count' => count( $pipeline_step_config ),
+                'has_optional_data' => ! empty( $optional_data )
+            ] );
+        }
 
         return $job_config;
     }

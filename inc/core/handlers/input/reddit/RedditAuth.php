@@ -9,8 +9,8 @@
 
 namespace DataMachine\Core\Handlers\Input\Reddit;
 
-use DataMachine\Helpers\Logger;
-use DataMachine\Helpers\EncryptionHelper;
+use DataMachine\Admin\Logger;
+use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -62,7 +62,7 @@ class RedditAuth {
         $client_id = get_option('reddit_oauth_client_id');
         if (empty($client_id)) {
             // Redirect back with error
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_missing_client_id'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_missing_client_id'));
             exit;
         }
 
@@ -102,7 +102,7 @@ class RedditAuth {
         $state_received = sanitize_key($_GET['state'] ?? '');
         
         if ( !is_user_logged_in() ) {
-             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_not_logged_in'));
+             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_not_logged_in'));
              exit;
         }
         $user_id = get_current_user_id();
@@ -112,7 +112,7 @@ class RedditAuth {
         // Verify State
         if ( empty($state_received) || empty($stored_state) || !hash_equals($stored_state, $state_received) ) {
             $this->get_logger()->error('Reddit OAuth Error: State mismatch or missing.', ['received' => $state_received, 'user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_state_mismatch'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_state_mismatch'));
             exit;
         }
 
@@ -120,24 +120,25 @@ class RedditAuth {
         if (isset($_GET['error'])) {
             $error_code = sanitize_key($_GET['error']);
             $this->get_logger()->error('Reddit OAuth Error: Received error from Reddit.', ['error' => $error_code, 'user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_' . $error_code));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_' . $error_code));
             exit;
         }
 
         // Check for authorization code
         if (!isset($_GET['code'])) {
             $this->get_logger()->error('Reddit OAuth Error: Authorization code missing in callback.', ['user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_missing_code'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_missing_code'));
             exit;
         }
-        $code = sanitize_text_field($_GET['code']);
+        // Security: Use sanitize_key() for OAuth authorization codes (tokens should be treated as keys)
+        $code = sanitize_key($_GET['code']);
 
         // --- 2. Exchange Code for Tokens --- 
         $client_id = get_option('reddit_oauth_client_id');
         $client_secret = get_option('reddit_oauth_client_secret');
         if (empty($client_id) || empty($client_secret)) {
              $this->get_logger()->error('Reddit OAuth Error: Client ID or Secret not configured for token exchange.', ['user_id' => $user_id]);
-             wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_missing_credentials'));
+             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_missing_credentials'));
              exit;
         }
 
@@ -169,7 +170,7 @@ class RedditAuth {
         if (is_wp_error($response)) {
             $error_message = $response->get_error_message();
             $this->get_logger()->error('Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $error_message, 'user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_token_request_failed'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_token_request_failed'));
             exit;
         }
 
@@ -185,7 +186,7 @@ class RedditAuth {
                 'response_body' => $body, // Log full body for debugging
                 'user_id'       => $user_id
             ]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_token_retrieval_error'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_token_retrieval_error'));
             exit;
         }
 
@@ -228,7 +229,7 @@ class RedditAuth {
         
         if ($encrypted_access_token === false || ($refresh_token && $encrypted_refresh_token === false)) {
             $this->get_logger()?->error('Reddit OAuth Error: Failed to encrypt tokens.', ['user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_error=reddit_encryption_failed'));
+            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=reddit_encryption_failed'));
             exit;
         }
         
@@ -245,7 +246,7 @@ class RedditAuth {
         update_user_meta($user_id, 'data_machine_reddit_account', $account_data);
 
         // --- 6. Redirect on Success --- 
-        wp_redirect(admin_url('admin.php?page=dm-api-keys&auth_success=reddit'));
+        wp_redirect(admin_url('admin.php?page=dm-project-management&auth_success=reddit'));
         exit;
     }
 

@@ -12,9 +12,6 @@
 
 namespace DataMachine\Engine;
 
-use DataMachine\Database\ProcessedItems;
-use DataMachine\Helpers\Logger;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
@@ -35,29 +32,29 @@ class ProcessedItemsManager {
 	/**
 	 * Check if an item has already been processed.
 	 *
-	 * @param int    $module_id Module ID.
+	 * @param int    $project_id Project ID.
 	 * @param string $source_type Source type (e.g. 'airdrop_rest_api', 'rss').
 	 * @param string $identifier Unique item identifier.
 	 * @return bool True if already processed, false if new.
 	 */
-	public function is_item_processed( int $module_id, string $source_type, string $identifier ): bool {
-		if ( empty( $module_id ) || empty( $source_type ) || empty( $identifier ) ) {
+	public function is_item_processed( int $project_id, string $source_type, string $identifier ): bool {
+		if ( empty( $project_id ) || empty( $source_type ) || empty( $identifier ) ) {
 			$logger = apply_filters('dm_get_logger', null);
 			$logger?->warning( 'ProcessedItemsManager: Invalid parameters for duplicate check', [
-				'module_id' => $module_id,
+				'project_id' => $project_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
 			return false;
 		}
 
-		$db_processed_items = apply_filters('dm_get_db_processed_items', null);
-		$is_processed = $db_processed_items->has_item_been_processed( $module_id, $source_type, $identifier );
+		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+		$is_processed = $db_processed_items->has_item_been_processed( $project_id, $source_type, $identifier );
 		
 		if ( $is_processed ) {
 			$logger = apply_filters('dm_get_logger', null);
 			$logger?->debug( 'ProcessedItemsManager: Item already processed, skipping', [
-				'module_id' => $module_id,
+				'project_id' => $project_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
@@ -69,23 +66,23 @@ class ProcessedItemsManager {
 	/**
 	 * Mark an item as processed after successful output.
 	 *
-	 * @param int    $module_id Module ID.
+	 * @param int    $project_id Project ID.
 	 * @param string $source_type Source type (e.g. 'airdrop_rest_api', 'rss').
 	 * @param string $identifier Unique item identifier.
 	 * @param int|null $job_id Optional job ID for logging context.
 	 * @return bool True on success, false on failure.
 	 */
-	public function mark_item_processed( int $module_id, string $source_type, string $identifier, ?int $job_id = null ): bool {
-		if ( empty( $module_id ) || empty( $source_type ) || empty( $identifier ) ) {
+	public function mark_item_processed( int $project_id, string $source_type, string $identifier, ?int $job_id = null ): bool {
+		if ( empty( $project_id ) || empty( $source_type ) || empty( $identifier ) ) {
 			$missing_fields = [];
-			if ( empty( $module_id ) ) $missing_fields[] = 'module_id';
+			if ( empty( $project_id ) ) $missing_fields[] = 'project_id';
 			if ( empty( $source_type ) ) $missing_fields[] = 'source_type';
 			if ( empty( $identifier ) ) $missing_fields[] = 'identifier';
 			
 			$logger = apply_filters('dm_get_logger', null);
 			$logger?->error( 'ProcessedItemsManager: Cannot mark item as processed - missing required data', [
 				'job_id' => $job_id,
-				'module_id' => $module_id,
+				'project_id' => $project_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier,
 				'missing_fields' => $missing_fields
@@ -93,21 +90,21 @@ class ProcessedItemsManager {
 			return false;
 		}
 
-		$db_processed_items = apply_filters('dm_get_db_processed_items', null);
-		$success = $db_processed_items->add_processed_item( $module_id, $source_type, $identifier );
+		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+		$success = $db_processed_items->add_processed_item( $project_id, $source_type, $identifier );
 		
 		$logger = apply_filters('dm_get_logger', null);
 		if ( $success ) {
 			$logger?->info( 'ProcessedItemsManager: Item marked as processed successfully', [
 				'job_id' => $job_id,
-				'module_id' => $module_id,
+				'project_id' => $project_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
 		} else {
 			$logger?->error( 'ProcessedItemsManager: Failed to mark item as processed', [
 				'job_id' => $job_id,
-				'module_id' => $module_id,
+				'project_id' => $project_id,
 				'source_type' => $source_type,
 				'identifier' => $identifier
 			] );
@@ -146,7 +143,7 @@ class ProcessedItemsManager {
 					'source_type' => $source_type,
 					'available_keys' => array_keys( $raw_data )
 				] );
-				// Fallback: try common identifier fields
+				// Try common identifier fields for unknown source types
 				return $raw_data['id'] ?? $raw_data['ID'] ?? $raw_data['guid'] ?? null;
 		}
 	}

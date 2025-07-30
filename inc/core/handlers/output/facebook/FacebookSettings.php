@@ -38,19 +38,16 @@ class FacebookSettings {
                 'type' => 'text',
                 'label' => __('Target Page/Group/User ID', 'data-machine'),
                 'description' => __('Enter the Facebook Page ID, Group ID, or leave empty/use "me" to post to the authenticated user\'s feed.', 'data-machine'),
-                'default' => 'me',
             ],
             'include_images' => [
                 'type' => 'checkbox',
                 'label' => __('Include Images', 'data-machine'),
                 'description' => __('Attach images from the original content when available.', 'data-machine'),
-                'default' => false
             ],
             'include_videos' => [
                 'type' => 'checkbox',
                 'label' => __('Include Video Links', 'data-machine'),
                 'description' => __('Include video links in the post content.', 'data-machine'),
-                'default' => false
             ],
             'link_handling' => [
                 'type' => 'select',
@@ -61,7 +58,6 @@ class FacebookSettings {
                     'replace' => __('Replace content', 'data-machine'),
                     'none' => __('No links', 'data-machine')
                 ],
-                'default' => 'append'
             ]
         ];
     }
@@ -77,8 +73,11 @@ class FacebookSettings {
         $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
         $sanitized['include_images'] = isset($raw_settings['include_images']) && $raw_settings['include_images'] == '1';
         $sanitized['include_videos'] = isset($raw_settings['include_videos']) && $raw_settings['include_videos'] == '1';
-        $sanitized['link_handling'] = in_array($raw_settings['link_handling'] ?? 'append', ['append', 'replace', 'none']) 
-            ? $raw_settings['link_handling'] : 'append';
+        $link_handling = $raw_settings['link_handling'] ?? 'append';
+        if (!in_array($link_handling, ['append', 'replace', 'none'])) {
+            throw new Exception(esc_html__('Invalid link handling parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['link_handling'] = $link_handling;
         return $sanitized;
     }
 

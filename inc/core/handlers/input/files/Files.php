@@ -129,7 +129,7 @@ class Files {
         }
 
         // Get processed items service
-        $db_processed_items = apply_filters('dm_get_db_processed_items', null);
+        $db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
         
         // If we don't have processed items service, return the first file
         if (!$db_processed_items) {
@@ -155,7 +155,7 @@ class Files {
      * @return array Array of uploaded files.
      */
     private function get_uploaded_files(int $module_id): array {
-        $db_modules = apply_filters('dm_get_db_modules', null);
+        $db_modules = apply_filters('dm_get_database_service', null, 'modules');
         if (!$db_modules) {
             return [];
         }
@@ -188,7 +188,7 @@ class Files {
         $uploaded_files = array_values($uploaded_files);
 
         // Update module config
-        $db_modules = apply_filters('dm_get_db_modules', null);
+        $db_modules = apply_filters('dm_get_database_service', null, 'modules');
         if (!$db_modules) {
             return;
         }
@@ -375,16 +375,6 @@ class Files {
         return null;
     }
 
-	/**
-	 * Get settings fields for the Files input handler.
-	 *
-	 * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_input_handlers filter.
-	 * @return array Associative array of field definitions (empty for this handler).
-	 */
-	public static function get_settings_fields(): array {
-		// This handler currently has no specific settings.
-		return [];
-	}
     
     /**
      * Sanitize settings for the Files input handler.
@@ -658,12 +648,13 @@ class Files {
     }
 }
 
-// Self-register via filter with integrated settings
-add_filter('dm_register_input_handlers', function($handlers) {
-    $handlers['files'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Input\\Files\\Files',
-        'label' => __('File Upload', 'data-machine'),
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Input\\Files\\FilesSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'input') {
+        $handlers['files'] = [
+            'has_auth' => false,
+            'label' => __('File Upload', 'data-machine')
+        ];
+    }
     return $handlers;
-});
+}, 10, 2);

@@ -113,17 +113,6 @@
         const $moduleListDiv = $('#dm-modal-module-list'); // Div for module rows
 
         // Define schedule options for module dropdowns
-        /* // OLD Hardcoded options
-        const scheduleOptions = {
-            'project_schedule': 'Project Schedule',
-            'every_5_minutes': 'Every 5 Minutes',
-            'hourly': 'Hourly',
-            'qtrdaily': 'Every 6 Hours',
-            'twicedaily': 'Twice Daily',
-            'daily': 'Daily',
-            'weekly': 'Weekly'
-        };
-        */
         // Use localized options from PHP + add module-specific ones
         const scheduleOptions = {
             'project_schedule': 'Project Schedule', // Add this one manually
@@ -140,7 +129,7 @@
             // Reset project fields
             $modalProjectId.val('');
             $modalProjectName.text('');
-            $modalInterval.val('manual');
+            $modalInterval.val('project_schedule');
             $modalStatus.val('paused');
 
             if (!projectId) {
@@ -178,8 +167,7 @@
 
                         if (modules.length > 0) {
                             modules.forEach(module => {
-                                // Treat legacy 'manual' interval as 'project_schedule' for selection
-                                let currentModuleInterval = module.schedule_interval === 'manual' ? 'project_schedule' : module.schedule_interval;
+                                let currentModuleInterval = module.schedule_interval;
                                 // Default status is 'active' unless explicitly 'paused'
                                 const currentModuleStatus = module.schedule_status ?? 'active';
                                 // Check if module input type is 'files'

@@ -13,7 +13,7 @@
 
 namespace DataMachine\Core\Handlers\Output\Twitter;
 
-use DataMachine\Engine\Filters\AiResponseParser;
+use DataMachine\Core\Steps\AI\AiResponseParser;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -27,24 +27,20 @@ class Twitter {
     private $auth;
 
     /**
-     * Constructor - parameter-less for pure filter-based architecture
+     * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // No dependencies initialized in constructor for pure filter-based architecture
+        // Initialize auth directly - auth is internal implementation detail
+        $this->auth = new TwitterAuth();
     }
 
     /**
-     * Get Twitter auth handler via filter system.
+     * Get Twitter auth handler - internal implementation.
      * 
      * @return TwitterAuth
-     * @throws \Exception If auth service not available
      */
     private function get_auth() {
-        $auth = apply_filters('dm_get_twitter_auth', null);
-        if (!$auth) {
-            throw new \Exception(esc_html__('Twitter auth service not available. This indicates a core filter registration issue.', 'data-machine'));
-        }
-        return $auth;
+        return $this->auth;
     }
 
     /**
@@ -70,19 +66,6 @@ class Twitter {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
-    }
-
-    /**
-     * Legacy method for handling Twitter output (kept for backward compatibility).
-     *
-     * @param string $ai_output_string The finalized string from the AI.
-     * @param array $module_job_config Configuration specific to this output job.
-     * @param int|null $user_id The ID of the user whose Twitter account should be used.
-     * @param array $input_metadata Metadata from the original input source (e.g., original URL, timestamp).
-     * @return array Result array on success or failure.
-     */
-    public function handle( string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata ): array {
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->info('Starting Twitter output handling.', ['user_id' => $user_id]);
@@ -102,9 +85,8 @@ class Twitter {
             ];
         }
 
-        // 3. Get authenticated connection using TwitterAuth
-        $auth = $this->get_auth();
-        $connection = $auth->get_connection($user_id);
+        // 3. Get authenticated connection using internal TwitterAuth
+        $connection = $this->auth->get_connection($user_id);
 
         // 4. Handle connection errors
         if (is_wp_error($connection)) {
@@ -120,7 +102,14 @@ class Twitter {
         }
 
         // 5. Parse AI output
-        $parser = new AiResponseParser();
+        $parser = apply_filters('dm_get_ai_response_parser', null);
+        if (!$parser) {
+            $logger && $logger->error('Twitter Output: AI Response Parser service not available.');
+            return [
+                'success' => false,
+                'error' => __('AI Response Parser service not available.', 'data-machine')
+            ];
+        }
         $parser->set_raw_output($ai_output_string);
         $parser->parse();
         $title = $parser->get_title();
@@ -170,7 +159,7 @@ class Twitter {
 
             // --- Image Upload Logic ---
             $image_source_url = $input_metadata['image_source_url'] ?? null;
-            $image_alt_text = $parser->get_title() ?: $parser->get_content_summary(50); // Use title or summary as alt text
+            $image_alt_text = $parser ? ($parser->get_title() ?: $parser->get_content_summary(50)) : ''; // Use title or summary as alt text
 
             if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_source_url, $logger)) {
                 $logger && $logger->info('Attempting to upload image to Twitter.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
@@ -244,7 +233,7 @@ class Twitter {
                             
                              // --- Add Alt Text (v1.1) --- 
                              if (!empty($media_id) && !empty($image_alt_text)) {
-                                 $alt_text_params = ['media_id' => $media_id, 'alt_text' => ['text' => mb_substr($image_alt_text, 0, 1000)]]; // Limit alt text
+                                 $alt_text_params = ['media_id' => $media_id, 'alt_text' => ['text' => mb_substr($image_alt_text, 0, 1000)]];
                                  $alt_response = $connection->post('media/metadata/create', wp_json_encode($alt_text_params), true); // Use JSON payload
                                  if ($connection->getLastHttpCode() !== 200) {
                                      $logger && $logger->warning('Failed to add alt text to Twitter image.', [
@@ -376,39 +365,7 @@ class Twitter {
         }
     }
 
-    /**
-     * Defines the settings fields for this output handler.
-     *
-     * @deprecated Settings are now integrated into handler registration. Use 'settings' key in dm_register_output_handlers filter.
-     * @param array $current_config Current configuration values for this handler (optional).
-     * @return array An associative array defining the settings fields.
-     */
-    public static function get_settings_fields(array $current_config = []): array {
-        // DEPRECATED: Settings now integrated into handler registration
-        // This method kept for backward compatibility only
-        return [
-            'twitter_char_limit' => [
-                'type' => 'number',
-                'label' => __('Character Limit Override', 'data-machine'),
-                'description' => __('Set a custom character limit for tweets (default: 280). Text will be truncated if necessary.', 'data-machine'),
-                'default' => 280,
-                'min' => 50,
-                'max' => 280, // Twitter's standard limit
-            ],
-            'twitter_include_source' => [
-                'type' => 'checkbox',
-                'label' => __('Include Source Link', 'data-machine'),
-                'description' => __('Append the original source URL to the tweet (if available and fits within character limits).', 'data-machine'),
-                'default' => true,
-            ],
-             'twitter_enable_images' => [
-                 'type' => 'checkbox',
-                 'label' => __('Enable Image Posting', 'data-machine'),
-                 'description' => __('Attempt to find and upload an image from the source data (if available).', 'data-machine'),
-                 'default' => true,
-             ],
-        ];
-    }
+
 
     /**
      * Returns the user-friendly label for this output handler.
@@ -482,13 +439,14 @@ class Twitter {
     }
 }
 
-// Self-register the Twitter output handler with auth and settings module reference
-add_filter('dm_register_output_handlers', function($handlers) {
-    $handlers['twitter'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Output\\Twitter\\Twitter',
-        'label' => __('Twitter', 'data-machine'),
-        'auth_class' => 'DataMachine\\Core\\Handlers\\Output\\Twitter\\TwitterAuth',
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Output\\Twitter\\TwitterSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'output') {
+        $handlers['twitter'] = [
+            'has_auth' => true,
+            'label' => __('Twitter', 'data-machine')
+        ];
+    }
     return $handlers;
-}, 10);
+}, 10, 2);
+

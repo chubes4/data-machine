@@ -37,8 +37,7 @@ class ThreadsSettings {
             'threads_char_limit' => [
                 'type' => 'number',
                 'label' => __('Character Limit Override', 'data-machine'),
-                'description' => __('Set a custom character limit for Threads posts (default: 500). Text will be truncated if necessary.', 'data-machine'),
-                'default' => 500,
+                'description' => __('Set a custom character limit for Threads posts. Text will be truncated if necessary.', 'data-machine'),
                 'min' => 50,
                 'max' => 500, // Threads standard limit
             ],
@@ -46,13 +45,11 @@ class ThreadsSettings {
                 'type' => 'checkbox',
                 'label' => __('Include Images', 'data-machine'),
                 'description' => __('Attempt to find and include an image from the source data (if available).', 'data-machine'),
-                'default' => true,
             ],
             'threads_include_title' => [
                 'type' => 'checkbox',
                 'label' => __('Include Title in Content', 'data-machine'),
                 'description' => __('Prepend the parsed title to the content if it\'s not already included.', 'data-machine'),
-                'default' => true,
             ],
         ];
     }

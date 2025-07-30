@@ -13,8 +13,8 @@
 
 namespace DataMachine\Core\Handlers\Output\WordPress;
 
-use DataMachine\Engine\Filters\{AiResponseParser, MarkdownConverter};
-use DataMachine\Database\RemoteLocations;
+use DataMachine\Core\Steps\AI\AiResponseParser;
+use DataMachine\Core\Database\RemoteLocations;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -54,19 +54,6 @@ class WordPress {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
 
-        return $this->handle($ai_output_string, $module_job_config, $user_id, $input_metadata);
-    }
-
-    /**
-     * Legacy method for handling WordPress publishing (kept for backward compatibility).
-     *
-     * @param string $ai_output_string The finalized string from the AI.
-     * @param array $module_job_config Configuration specific to this output job.
-     * @param int|null $user_id The ID of the user context.
-     * @param array $input_metadata Metadata from the original input source.
-     * @return array Result array on success or failure.
-     */
-    public function handle(string $ai_output_string, array $module_job_config, ?int $user_id, array $input_metadata): array {
         // Get output config directly from the job config array
         $config = $module_job_config['output_config'] ?? [];
         if (!is_array($config)) $config = array();
@@ -92,6 +79,7 @@ class WordPress {
         }
     }
 
+
     /**
      * Publish content to local WordPress installation.
      *
@@ -109,7 +97,13 @@ class WordPress {
         $tag_id = $config['selected_local_tag_id'] ?? -1;
 
         // Parse AI output string
-        $parser = new AiResponseParser();
+        $parser = apply_filters('dm_get_ai_response_parser', null);
+        if (!$parser) {
+            return [
+                'success' => false,
+                'error' => __('AI Response Parser service not available.', 'data-machine')
+            ];
+        }
         $parser->set_raw_output($ai_output_string);
         $parser->parse();
         $parsed_data = [
@@ -127,9 +121,9 @@ class WordPress {
         $final_content = $this->prepend_image_if_available($parsed_data['content'], $input_metadata);
         $final_content = $this->append_source_if_available($final_content, $input_metadata);
 
-        // Convert Markdown content to HTML
+        // Use content directly as HTML (AI should output HTML format)
         $use_gutenberg = ($config['use_gutenberg_blocks'] ?? '1') === '1';
-        $html_content = MarkdownConverter::convert_to_html($final_content, $use_gutenberg);
+        $html_content = $this->prepare_html_content($final_content, $use_gutenberg);
 
         // Determine Post Date
         $post_date_source = $config['post_date_source'] ?? 'current_date';
@@ -348,7 +342,7 @@ class WordPress {
         }
 
         // Get remote locations database service
-        $db_locations = apply_filters('dm_get_db_remote_locations', null);
+        $db_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
         if (!$db_locations) {
             return [
                 'success' => false,
@@ -397,7 +391,13 @@ class WordPress {
         $tag_id = $config['selected_remote_tag_id'] ?? '';
 
         // Parse AI output string
-        $parser = new AiResponseParser();
+        $parser = apply_filters('dm_get_ai_response_parser', null);
+        if (!$parser) {
+            return [
+                'success' => false,
+                'error' => __('AI Response Parser service not available.', 'data-machine')
+            ];
+        }
         $parser->set_raw_output($ai_output_string);
         $parser->parse();
         $parsed_data = [
@@ -412,9 +412,9 @@ class WordPress {
         $final_content = $this->prepend_image_if_available($parsed_data['content'], $input_metadata);
         $final_content = $this->append_source_if_available($final_content, $input_metadata);
 
-        // Convert Markdown content to HTML
+        // Use content directly as HTML (AI should output HTML format)
         $use_gutenberg = ($config['use_gutenberg_blocks'] ?? '1') === '1';
-        $html_content = MarkdownConverter::convert_to_html($final_content, $use_gutenberg);
+        $html_content = $this->prepare_html_content($final_content, $use_gutenberg);
 
         // Determine Post Date
         $post_date_source = $config['post_date_source'] ?? 'current_date';
@@ -644,45 +644,6 @@ class WordPress {
         );
     }
 
-    /**
-     * Get settings fields for the unified WordPress output handler.
-     *
-     * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_output_handlers filter.
-     * @param array $current_config Current configuration for this handler.
-     * @return array Associative array of field definitions.
-     */
-    public static function get_settings_fields(array $current_config = []): array {
-        $destination_type = $current_config['destination_type'] ?? 'local';
-
-        $fields = [
-            'destination_type' => [
-                'type' => 'select',
-                'label' => __('WordPress Destination Type', 'data-machine'),
-                'description' => __('Select where to publish the processed content.', 'data-machine'),
-                'options' => [
-                    'local' => __('Local WordPress', 'data-machine'),
-                    'remote' => __('Remote WordPress (Airdrop)', 'data-machine'),
-                ],
-                'default' => 'local',
-            ],
-        ];
-
-        // Add conditional fields based on destination type
-        switch ($destination_type) {
-            case 'local':
-                $fields = array_merge($fields, self::get_local_fields());
-                break;
-
-            case 'remote':
-                $fields = array_merge($fields, self::get_remote_fields($current_config));
-                break;
-        }
-
-        // Add common fields for all destination types
-        $fields = array_merge($fields, self::get_common_fields());
-
-        return $fields;
-    }
 
     /**
      * Get settings fields specific to local WordPress publishing.
@@ -732,7 +693,6 @@ class WordPress {
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type for published content.', 'data-machine'),
                 'options' => $post_type_options,
-                'default' => 'post',
             ],
             'post_status' => [
                 'type' => 'select',
@@ -744,21 +704,18 @@ class WordPress {
                     'pending' => __('Pending Review', 'data-machine'),
                     'private' => __('Private', 'data-machine'),
                 ],
-                'default' => 'draft',
             ],
             'selected_local_category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
                 'options' => $category_options,
-                'default' => 'model_decides',
             ],
             'selected_local_tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
                 'options' => $tag_options,
-                'default' => 'model_decides',
             ],
         ];
     }
@@ -771,7 +728,7 @@ class WordPress {
      */
     private static function get_remote_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_db_remote_locations', null);
+        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
         if (!$db_remote_locations) {
             throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
         }
@@ -792,14 +749,12 @@ class WordPress {
                 'label' => __('Remote Location', 'data-machine'),
                 'description' => __('Select the pre-configured remote WordPress site to publish to.', 'data-machine'),
                 'options' => $options,
-                'default' => 0,
             ],
             'selected_remote_post_type' => [
                 'type' => 'select',
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type for the remote site.', 'data-machine'),
                 'options' => $remote_post_types,
-                'default' => 'post',
             ],
             'remote_post_status' => [
                 'type' => 'select',
@@ -811,21 +766,18 @@ class WordPress {
                     'pending' => __('Pending Review', 'data-machine'),
                     'private' => __('Private', 'data-machine'),
                 ],
-                'default' => 'draft',
             ],
             'selected_remote_category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Select a category or let the AI choose based on your prompt.', 'data-machine'),
                 'options' => $remote_categories,
-                'default' => 'instruct_model',
             ],
             'selected_remote_tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Select a tag or let the AI choose based on your prompt.', 'data-machine'),
                 'options' => $remote_tags,
-                'default' => 'instruct_model',
             ],
         ];
     }
@@ -845,7 +797,6 @@ class WordPress {
                     '1' => __('Gutenberg Block Editor (Recommended)', 'data-machine'),
                     '0' => __('Classic Editor', 'data-machine'),
                 ],
-                'default' => '1',
             ],
             'post_date_source' => [
                 'type' => 'select',
@@ -855,7 +806,6 @@ class WordPress {
                     'current_date' => __('Use Current Date', 'data-machine'),
                     'source_date' => __('Use Source Date (if available)', 'data-machine'),
                 ],
-                'default' => 'current_date',
             ],
         ];
     }
@@ -887,10 +837,17 @@ class WordPress {
         }
 
         // Sanitize common fields
-        $sanitized['use_gutenberg_blocks'] = in_array($raw_settings['use_gutenberg_blocks'] ?? '1', ['0', '1']) ? $raw_settings['use_gutenberg_blocks'] : '1';
+        $gutenberg_blocks = $raw_settings['use_gutenberg_blocks'] ?? '1';
+        if (!in_array($gutenberg_blocks, ['0', '1'])) {
+            throw new Exception(esc_html__('Invalid Gutenberg blocks parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['use_gutenberg_blocks'] = $gutenberg_blocks;
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
-        $sanitized['post_date_source'] = in_array($date_source, $valid_date_sources) ? $date_source : 'current_date';
+        if (!in_array($date_source, $valid_date_sources)) {
+            throw new Exception(esc_html__('Invalid post date source parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['post_date_source'] = $date_source;
 
         return $sanitized;
     }
@@ -1033,16 +990,64 @@ class WordPress {
     public static function get_label(): string {
         return __('WordPress', 'data-machine');
     }
+
+    /**
+     * Prepare HTML content for WordPress publishing.
+     * 
+     * Simple replacement for MarkdownConverter that assumes AI outputs HTML.
+     * WordPress expects HTML content for both wp_insert_post and REST API.
+     *
+     * @param string $content The content to prepare.
+     * @param bool $use_gutenberg Whether to format for Gutenberg blocks.
+     * @return string Sanitized HTML content ready for WordPress.
+     */
+    private function prepare_html_content(string $content, bool $use_gutenberg = true): string {
+        if (empty($content)) {
+            return '';
+        }
+
+        // Sanitize HTML content using WordPress KSES
+        $sanitized_html = wp_kses_post($content);
+
+        // If Gutenberg blocks are requested and content doesn't already contain blocks
+        if ($use_gutenberg && strpos($sanitized_html, '<!-- wp:') === false) {
+            // Simple conversion to paragraph blocks for basic HTML
+            $paragraphs = preg_split('/\n\s*\n/', trim($sanitized_html));
+            $blocks = [];
+            
+            foreach ($paragraphs as $paragraph) {
+                $paragraph = trim($paragraph);
+                if (!empty($paragraph)) {
+                    // Check for heading tags
+                    if (preg_match('/^<h([1-6])[^>]*>(.*?)<\/h[1-6]>$/is', $paragraph, $matches)) {
+                        $level = $matches[1];
+                        $content_text = $matches[2];
+                        $blocks[] = "<!-- wp:heading {\"level\":$level} -->\n<h$level>$content_text</h$level>\n<!-- /wp:heading -->";
+                    } elseif (preg_match('/^<p[^>]*>(.*?)<\/p>$/is', $paragraph, $matches)) {
+                        $content_text = $matches[1];
+                        $blocks[] = "<!-- wp:paragraph -->\n<p>$content_text</p>\n<!-- /wp:paragraph -->";
+                    } else {
+                        // Wrap other content in paragraph blocks
+                        $blocks[] = "<!-- wp:paragraph -->\n<p>$paragraph</p>\n<!-- /wp:paragraph -->";
+                    }
+                }
+            }
+            
+            return implode("\n\n", $blocks);
+        }
+
+        return $sanitized_html;
+    }
 }
 
-// Self-register the WordPress output handler with integrated settings
-add_filter('dm_register_output_handlers', function($handlers) {
-    $handlers['wordpress'] = [
-        'class' => 'DataMachine\\Core\\Handlers\\Output\\WordPress\\WordPress',
-        'label' => __('WordPress', 'data-machine'),
-        'auth_class' => 'DataMachine\\Core\\Handlers\\Output\\WordPress\\WordPressAuth',
-        'settings_class' => 'DataMachine\\Core\\Handlers\\Output\\WordPress\\WordPressSettings'
-    ];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+    if ($type === 'output') {
+        $handlers['wordpress'] = [
+            'has_auth' => true,
+            'label' => __('WordPress', 'data-machine')
+        ];
+    }
     return $handlers;
-}, 10);
+}, 10, 2);
 

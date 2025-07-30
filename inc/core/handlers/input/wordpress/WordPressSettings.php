@@ -45,7 +45,6 @@ class WordPressSettings {
                     'remote_rest' => __('Remote WordPress (REST API)', 'data-machine'),
                     'remote_airdrop' => __('Remote WordPress (Airdrop)', 'data-machine'),
                 ],
-                'default' => 'local',
             ],
         ];
 
@@ -103,7 +102,6 @@ class WordPressSettings {
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type to fetch from the local site.', 'data-machine'),
                 'options' => $post_type_options,
-                'default' => 'post',
             ],
             'post_status' => [
                 'type' => 'select',
@@ -116,21 +114,18 @@ class WordPressSettings {
                     'private' => __('Private', 'data-machine'),
                     'any' => __('Any', 'data-machine'),
                 ],
-                'default' => 'publish',
             ],
             'category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
                 'description' => __('Optional: Filter by a specific category.', 'data-machine'),
                 'options' => $category_options,
-                'default' => 0,
             ],
             'tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
                 'description' => __('Optional: Filter by a specific tag.', 'data-machine'),
                 'options' => $tag_options,
-                'default' => 0,
             ],
             'orderby' => [
                 'type' => 'select',
@@ -142,7 +137,6 @@ class WordPressSettings {
                     'title' => __('Title', 'data-machine'),
                     'ID' => __('ID', 'data-machine'),
                 ],
-                'default' => 'date',
             ],
             'order' => [
                 'type' => 'select',
@@ -152,7 +146,6 @@ class WordPressSettings {
                     'DESC' => __('Descending', 'data-machine'),
                     'ASC' => __('Ascending', 'data-machine'),
                 ],
-                'default' => 'DESC',
             ],
         ];
     }
@@ -169,13 +162,11 @@ class WordPressSettings {
                 'label' => __('API Endpoint URL', 'data-machine'),
                 'description' => __('Enter the full URL of the WordPress REST API endpoint (e.g., https://example.com/wp-json/wp/v2/posts).', 'data-machine'),
                 'required' => true,
-                'default' => '',
             ],
             'data_path' => [
                 'type' => 'text',
                 'label' => __('Data Path (Optional)', 'data-machine'),
                 'description' => __('If the items are nested within the JSON response, specify the path using dot notation (e.g., `data.items`). Leave empty to auto-detect the first array of objects.', 'data-machine'),
-                'default' => '',
             ],
         ];
     }
@@ -188,7 +179,7 @@ class WordPressSettings {
      */
     private static function get_remote_airdrop_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_db_remote_locations', null);
+        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
         $locations = $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : [];
 
         $options = [0 => __('Select a Remote Location', 'data-machine')];
@@ -202,14 +193,12 @@ class WordPressSettings {
                 'label' => __('Remote Location', 'data-machine'),
                 'description' => __('Select the pre-configured remote WordPress site to fetch data from.', 'data-machine'),
                 'options' => $options,
-                'default' => 0,
             ],
             'rest_post_type' => [
                 'type' => 'select',
                 'label' => __('Post Type', 'data-machine'),
                 'description' => __('Select the post type to fetch from the remote site.', 'data-machine'),
                 'options' => ['post' => 'Posts', 'page' => 'Pages'],
-                'default' => 'post',
             ],
             'rest_post_status' => [
                 'type' => 'select',
@@ -222,7 +211,6 @@ class WordPressSettings {
                     'private' => __('Private', 'data-machine'),
                     'any' => __('Any', 'data-machine'),
                 ],
-                'default' => 'publish',
             ],
             'rest_orderby' => [
                 'type' => 'select',
@@ -234,7 +222,6 @@ class WordPressSettings {
                     'title' => __('Title', 'data-machine'),
                     'ID' => __('ID', 'data-machine'),
                 ],
-                'default' => 'date',
             ],
             'rest_order' => [
                 'type' => 'select',
@@ -244,7 +231,6 @@ class WordPressSettings {
                     'DESC' => __('Descending', 'data-machine'),
                     'ASC' => __('Ascending', 'data-machine'),
                 ],
-                'default' => 'DESC',
             ],
         ];
     }
@@ -260,7 +246,6 @@ class WordPressSettings {
                 'type' => 'number',
                 'label' => __('Items to Process', 'data-machine'),
                 'description' => __('Maximum number of *new* items to process per run.', 'data-machine'),
-                'default' => 1,
                 'min' => 1,
                 'max' => 100,
             ],
@@ -275,13 +260,11 @@ class WordPressSettings {
                     '7_days'   => __('Last 7 Days', 'data-machine'),
                     '30_days'  => __('Last 30 Days', 'data-machine'),
                 ],
-                'default' => 'all_time',
             ],
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
                 'description' => __('Optional: Filter items using a search term.', 'data-machine'),
-                'default' => '',
             ],
         ];
     }

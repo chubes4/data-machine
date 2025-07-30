@@ -837,10 +837,62 @@
         }
     };
 
+        // Handle Add Handler button clicks
+        handleAddHandler: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const stepCardId = $button.data('step-card-id');
+            const stepType = $button.data('step-type');
+            
+            this.log('Add Handler clicked', { stepCardId, stepType });
+            
+            // For now, show a simple alert - this will be enhanced later
+            // Add Handler functionality would be implemented here
+            // This would show available handlers for the step type
+            alert(`Add Handler functionality for ${stepType} steps is handled through the main pipeline interface. Please use the pipeline builder to configure handlers.`);
+        },
+        
+        // Handle Configure Step button clicks
+        handleConfigureStepCard: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const stepCardId = $button.data('step-card-id');
+            const stepType = $button.data('step-type');
+            
+            this.log('Configure Step clicked', { stepCardId, stepType });
+            
+            // For now, show a simple alert - this will be enhanced later
+            // Configure Step functionality would be implemented here
+            // This would show step-specific configuration options
+            alert(`Step configuration for ${stepType} steps is handled through the main pipeline interface. Please use the pipeline builder to configure steps.`);
+        },
+        
+        // Handle Remove Step Card button clicks
+        handleRemoveStepCard: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const stepCardId = $button.data('step-card-id');
+            
+            if (!confirm('Are you sure you want to remove this step card?')) {
+                return;
+            }
+            
+            this.log('Removing step card', stepCardId);
+            
+            // Remove the step card from the DOM
+            $(`.dm-module-step-card[data-step-card-id="${stepCardId}"]`).fadeOut(300, function() {
+                $(this).remove();
+            });
+        }
+    };
+
     // Initialize when DOM is ready
     $(document).ready(function() {
         if (typeof window.dmProjectData !== 'undefined') {
-            window.DataMachine.ModuleBuilder.init();
+            window.DataMachine.StepFlowBuilder.init();
         }
     });
 

@@ -18,12 +18,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Reddit {
 
 	/**
-	 * Get the OAuth Reddit service.
+	 * @var RedditAuth OAuth Reddit authentication handler instance
+	 */
+	private $oauth_reddit;
+
+	/**
+	 * Constructor - direct auth initialization for security
+	 */
+	public function __construct() {
+		// Initialize auth directly - auth is internal implementation detail
+		$this->oauth_reddit = new RedditAuth();
+	}
+
+	/**
+	 * Get the OAuth Reddit service - internal implementation.
 	 *
 	 * @return \DataMachine\Core\Handlers\Input\Reddit\RedditAuth The OAuth Reddit service.
 	 */
 	private function get_oauth_reddit() {
-		return apply_filters('dm_get_oauth_reddit', null);
+		return $this->oauth_reddit;
 	}
 
 	/**
@@ -47,17 +60,16 @@ class Reddit {
 			throw new Exception(esc_html__( 'Missing module ID or user ID provided to Reddit handler.', 'data-machine' ));
 		}
 
-		// Get services via filter-based access
-		$oauth_reddit = $this->get_oauth_reddit();
+		// Get services via filter-based access (non-auth services)
+		$oauth_reddit = $this->oauth_reddit; // Internal auth instance
 		$processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-		$db_modules = apply_filters('dm_get_db_modules', null);
-		$db_projects = apply_filters('dm_get_db_projects', null);
+		$db_modules = apply_filters('dm_get_database_service', null, 'modules');
+		$db_projects = apply_filters('dm_get_database_service', null, 'projects');
 
 		// Check if essential dependencies are available
-		if (!$oauth_reddit || !$processed_items_manager || !$db_modules || !$db_projects) {
+		if (!$processed_items_manager || !$db_modules || !$db_projects) {
 			$logger?->error('Reddit Input: Required service dependency missing.', [
 				'module_id' => $module_id,
-				'oauth_missing' => !$oauth_reddit,
 				'processed_items_manager_missing' => !$processed_items_manager,
 				'db_modules_missing' => !$db_modules,
 				'db_projects_missing' => !$db_projects
@@ -160,8 +172,8 @@ class Reddit {
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		if (!in_array($sort, $valid_sorts)) {
-			$logger?->warning('Reddit Input: Invalid sort parameter, defaulting to hot.', ['module_id' => $module_id, 'invalid_sort' => $sort]);
-			$sort = 'hot'; // Default to hot if invalid
+			$logger?->error('Reddit Input: Invalid sort parameter.', ['module_id' => $module_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
+			throw new Exception(esc_html__('Invalid sort parameter provided. Please check configuration.', 'data-machine'));
 		}
 
 		// Calculate cutoff timestamp if a timeframe limit is set
@@ -503,87 +515,6 @@ class Reddit {
 		];
 	}
 
-	/**
-	 * Get settings fields for the Reddit input handler.
-	 *
-	 * @deprecated Settings are now integrated into handler registration. Use 'settings_class' key in dm_register_input_handlers filter.
-	 * @return array Associative array of field definitions.
-	 */
-	public static function get_settings_fields() {
-		return [
-			'subreddit' => [
-				'type' => 'text',
-				'label' => __('Subreddit Name', 'data-machine'),
-				'description' => __('Enter the name of the subreddit (e.g., news, programming) without "r/".', 'data-machine'),
-				'placeholder' => 'news',
-				'default' => '',
-			],
-			'sort_by' => [
-				'type' => 'select',
-				'label' => __('Sort By', 'data-machine'),
-				'description' => __('Select how to sort the subreddit posts.', 'data-machine'),
-				'options' => [
-					'hot' => 'Hot',
-					'new' => 'New',
-					'top' => 'Top (All Time)', // Time range options could be added for 'top'
-					'rising' => 'Rising',
-				],
-				'default' => 'hot',
-			],
-			'item_count' => [
-				'type' => 'number',
-				'label' => __('Posts to Fetch', 'data-machine'),
-				'description' => __('Number of recent posts to check per run. The system will process the first new post found. Max 100.', 'data-machine'),
-				'default' => 1,
-				'min' => 1,
-				'max' => 100,
-			],
-			'timeframe_limit' => [
-				'type' => 'select',
-				'label' => __('Process Posts Within', 'data-machine'),
-				'description' => __('Only consider posts created within this timeframe.', 'data-machine'),
-				'options' => [
-					'all_time' => __('All Time', 'data-machine'),
-					'24_hours' => __('Last 24 Hours', 'data-machine'),
-					'72_hours' => __('Last 72 Hours', 'data-machine'),
-					'7_days'   => __('Last 7 Days', 'data-machine'),
-					'30_days'  => __('Last 30 Days', 'data-machine'),
-				],
-				'default' => 'all_time',
-			],
-			'min_upvotes' => [
-				'type' => 'number',
-				'label' => __('Minimum Upvotes', 'data-machine'),
-				'description' => __('Only process posts with at least this many upvotes (score). Set to 0 to disable filtering.', 'data-machine'),
-				'default' => 0,
-				'min' => 0,
-				'max' => 100000,
-			],
-			'min_comment_count' => [
-				'type' => 'number',
-				'label' => __('Minimum Comment Count', 'data-machine'),
-				'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'data-machine'),
-				'default' => 0,
-				'min' => 0,
-				'max' => 100000,
-			],
-			'comment_count' => [
-				'type' => 'number',
-				'label' => __('Top Comments to Fetch', 'data-machine'),
-				'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'data-machine'),
-				'default' => 0,
-				'min' => 0,
-				'max' => 100,
-			],
-			'search' => [
-				'type' => 'text',
-				'label' => __('Search Term Filter', 'data-machine'),
-				'description' => __('Optional: Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'data-machine'),
-				'default' => '',
-			],
-			// Note: No API key needed for basic public access. Add later if needed.
-		];
-	}
 
 	/**
 	 * Sanitize settings for the Reddit input handler.
@@ -597,11 +528,17 @@ class Reddit {
 		$sanitized['subreddit'] = (preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) ? $subreddit : '';
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		$sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
-		$sanitized['sort_by'] = in_array($sort_by, $valid_sorts) ? $sort_by : 'hot';
+		if (!in_array($sort_by, $valid_sorts)) {
+			throw new Exception(esc_html__('Invalid sort parameter provided in settings.', 'data-machine'));
+		}
+		$sanitized['sort_by'] = $sort_by;
 		$sanitized['item_count'] = min(100, max(1, absint($raw_settings['item_count'] ?? 1)));
 		$valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
 		$timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-		$sanitized['timeframe_limit'] = in_array($timeframe, $valid_timeframes) ? $timeframe : 'all_time';
+		if (!in_array($timeframe, $valid_timeframes)) {
+			throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+		}
+		$sanitized['timeframe_limit'] = $timeframe;
 		$min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
 		$sanitized['min_upvotes'] = max(0, $min_upvotes);
 		$min_comment_count = isset($raw_settings['min_comment_count']) ? absint($raw_settings['min_comment_count']) : 0;
@@ -623,13 +560,13 @@ class Reddit {
 
 } // End class \DataMachine\Core\Handlers\Input\Reddit\Reddit
 
-// Self-register this input handler with settings_class reference
-add_filter('dm_register_input_handlers', function($handlers) {
-	$handlers['reddit'] = [
-		'class' => 'DataMachine\\Core\\Handlers\\Input\\Reddit\\Reddit',
-		'label' => 'Reddit Subreddit',
-		'auth_class' => 'DataMachine\\Core\\Handlers\\Input\\Reddit\\RedditAuth',
-		'settings_class' => 'DataMachine\\Core\\Handlers\\Input\\Reddit\\RedditSettings'
-	];
+// Self-register via universal parameter-based handler system
+add_filter('dm_get_handlers', function($handlers, $type) {
+	if ($type === 'input') {
+		$handlers['reddit'] = [
+			'has_auth' => true,
+			'label' => __('Reddit Subreddit', 'data-machine')
+		];
+	}
 	return $handlers;
-});
+}, 10, 2);

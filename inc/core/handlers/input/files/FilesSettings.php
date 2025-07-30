@@ -44,7 +44,6 @@ class FilesSettings {
                     '10485760' => __('10 MB', 'data-machine'), // 10 * 1024 * 1024
                     '20971520' => __('20 MB', 'data-machine'), // 20 * 1024 * 1024
                 ],
-                'default' => '10485760', // 10MB
             ],
             'allowed_file_types' => [
                 'type' => 'multiselect',
@@ -58,19 +57,16 @@ class FilesSettings {
                     'doc' => __('Word Documents (.doc)', 'data-machine'),
                     'docx' => __('Word Documents (.docx)', 'data-machine'),
                 ],
-                'default' => ['txt', 'csv', 'json', 'pdf', 'docx'],
             ],
             'enable_content_scanning' => [
                 'type' => 'checkbox',
                 'label' => __('Enable Content Scanning', 'data-machine'),
                 'description' => __('Scan uploaded files for suspicious content patterns.', 'data-machine'),
-                'default' => true,
             ],
             'auto_process_files' => [
                 'type' => 'checkbox',
                 'label' => __('Auto-Process Files', 'data-machine'),
                 'description' => __('Automatically process uploaded files in order they were uploaded.', 'data-machine'),
-                'default' => true,
             ],
         ];
     }
@@ -87,7 +83,10 @@ class FilesSettings {
         // Max file size
         $valid_sizes = ['1048576', '5242880', '10485760', '20971520'];
         $max_size = sanitize_text_field($raw_settings['max_file_size'] ?? '10485760');
-        $sanitized['max_file_size'] = in_array($max_size, $valid_sizes) ? $max_size : '10485760';
+        if (!in_array($max_size, $valid_sizes)) {
+            throw new Exception(esc_html__('Invalid max file size parameter provided in settings.', 'data-machine'));
+        }
+        $sanitized['max_file_size'] = $max_size;
         
         // Allowed file types
         $valid_types = ['txt', 'csv', 'json', 'pdf', 'doc', 'docx'];

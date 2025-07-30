@@ -75,7 +75,10 @@ class AI_HTTP_OpenAI_Provider extends Base_LLM_Provider {
         }
 
         $url = $this->base_url . '/responses';
-        error_log('AI HTTP Client DEBUG: OpenAI request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI HTTP Client DEBUG: OpenAI request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
+        }
         
         return $this->execute_post_request($url, $provider_request);
     }
@@ -94,7 +97,10 @@ class AI_HTTP_OpenAI_Provider extends Base_LLM_Provider {
         }
 
         $url = $this->base_url . '/responses';
-        error_log('AI HTTP Client DEBUG: OpenAI streaming request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AI HTTP Client DEBUG: OpenAI streaming request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
+        }
 
         return $this->execute_streaming_curl($url, $provider_request, $callback);
     }
