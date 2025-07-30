@@ -207,6 +207,8 @@ Monitor jobs:
 ### Plugin Integration
 Data Machine uses WordPress filter patterns - external plugins can extend functionality through standard WordPress hooks without modifying core code.
 
+**Architecture Note**: The system uses a hybrid approach where internal core handlers register as instantiated objects for optimal performance, while external plugins use configuration arrays for maximum flexibility and compatibility. Both patterns support the same auto-discovery and parameter matching capabilities.
+
 ### Adding Custom Pipeline Steps
 
 ```php
@@ -248,36 +250,23 @@ class SentimentAnalysisStep extends BasePipelineStep {
 ### Adding Custom Input Handlers
 
 ```php
-// Revolutionary pure object-based handler registration
+// Configuration array-based handler registration for external plugins
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input') {
-        $handlers['shopify_orders'] = new \MyPlugin\ShopifyOrdersHandler();
+        $handlers['google_sheets'] = [
+            'class' => 'MyPlugin\\Handlers\\GoogleSheets\\GoogleSheetsInput',
+            'label' => __('Google Sheets', 'my-plugin'),
+            'has_auth' => true,
+            'settings_class' => 'MyPlugin\\Handlers\\GoogleSheets\\GoogleSheetsSettings'
+        ];
     }
     return $handlers;
 }, 10, 2);
 
-// Authentication auto-links via parameter matching
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'shopify_orders') {
-        return new \MyPlugin\ShopifyAuth();
-    }
-    return $auth;
-}, 10, 2);
+// Implement the Google Sheets input handler
+namespace MyPlugin\Handlers\GoogleSheets;
 
-// Settings auto-link via parameter matching
-add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-    if ($handler_slug === 'shopify_orders') {
-        return new \MyPlugin\ShopifySettings();
-    }
-    return $settings;
-}, 10, 2);
-
-// Implement the handler
-namespace MyPlugin;
-
-// Note: There is no BaseInputHandler - handlers implement their own patterns
-
-class ShopifyOrdersHandler {
+class GoogleSheetsInput {
     // Services accessed via filters (following 100% filter-based pattern)
     
     public function get_input_data(object $module, array $source_config, int $user_id): array {
@@ -286,26 +275,26 @@ class ShopifyOrdersHandler {
         $http_service = apply_filters('dm_get_http_service', null);
         $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
         
-        // Fetch orders from Shopify API
-        $orders = $this->fetch_shopify_orders($source_config['api_key'], $source_config['store_url']);
+        // Fetch data from Google Sheets API
+        $sheets_data = $this->fetch_sheets_data($source_config['sheet_id'], $source_config['range']);
         
         // Filter out already processed items
-        $filtered_orders = $processed_items_manager->filter_processed_items($orders, $module->id);
+        $filtered_data = $processed_items_manager->filter_processed_items($sheets_data, $module->id);
         
-        return ['processed_items' => $filtered_orders];
+        return ['processed_items' => $filtered_data];
     }
     
     // CRITICAL: Settings fields method must be static
     public static function get_settings_fields(array $current_config = []): array {
         return [
-            'api_key' => [
+            'sheet_id' => [
                 'type' => 'text',
-                'label' => 'Shopify API Key',
+                'label' => 'Google Sheet ID',
                 'required' => true
             ],
-            'store_url' => [
-                'type' => 'url',
-                'label' => 'Store URL', 
+            'range' => [
+                'type' => 'text',
+                'label' => 'Range (e.g., A1:D10)', 
                 'required' => true
             ]
         ];
@@ -316,36 +305,38 @@ class ShopifyOrdersHandler {
 ### Adding Custom Output Handlers
 
 ```php
-// Revolutionary pure object-based handler registration
+// Configuration array-based handler registration for external plugins
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'output') {
-        $handlers['discord'] = new \MyPlugin\DiscordHandler();
+        $handlers['aws_ses'] = [
+            'class' => 'MyPlugin\\Handlers\\Email\\AWSSESHandler',
+            'label' => __('AWS SES Email', 'my-plugin'),
+            'has_auth' => true,
+            'settings_class' => 'MyPlugin\\Handlers\\Email\\AWSSESSettings'
+        ];
     }
     return $handlers;
 }, 10, 2);
 
-// Settings auto-link via parameter matching
-add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-    if ($handler_slug === 'discord') {
-        return new \MyPlugin\DiscordSettings();
-    }
-    return $settings;
-}, 10, 2);
-
-// Implement handler with filter-based service access
-namespace MyPlugin;
+// Implement AWS SES email handler with filter-based service access
+namespace MyPlugin\Handlers\Email;
 
 use DataMachine\Core\Handlers\Output\BaseOutputHandler;
 
-class DiscordHandler extends BaseOutputHandler {
+class AWSSESHandler extends BaseOutputHandler {
     public function handle_output(array $finalized_data, object $module, int $user_id): array {
         // Access services via filters (100% coverage across platform)
         $logger = apply_filters('dm_get_logger', null);
         $http_service = apply_filters('dm_get_http_service', null);
         
-        // Send to Discord webhook
-        $response = $http_service->post($module->output_config['webhook_url'], [
-            'content' => $finalized_data['content']
+        // Send email via AWS SES
+        $response = $this->send_ses_email([
+            'to' => $module->output_config['recipient_email'],
+            'subject' => $finalized_data['title'] ?? 'Data Machine Content',
+            'body' => $finalized_data['content'],
+            'aws_key' => $module->output_config['aws_access_key'],
+            'aws_secret' => $module->output_config['aws_secret_key'],
+            'region' => $module->output_config['aws_region']
         ]);
         
         return [
@@ -356,9 +347,29 @@ class DiscordHandler extends BaseOutputHandler {
     
     public static function get_settings_fields(array $current_config = []): array {
         return [
-            'webhook_url' => [
-                'type' => 'url',
-                'label' => 'Discord Webhook URL',
+            'recipient_email' => [
+                'type' => 'email',
+                'label' => 'Recipient Email Address',
+                'required' => true
+            ],
+            'aws_access_key' => [
+                'type' => 'text',
+                'label' => 'AWS Access Key',
+                'required' => true
+            ],
+            'aws_secret_key' => [
+                'type' => 'password',
+                'label' => 'AWS Secret Key',
+                'required' => true
+            ],
+            'aws_region' => [
+                'type' => 'select',
+                'label' => 'AWS Region',
+                'options' => [
+                    'us-east-1' => 'US East (N. Virginia)',
+                    'us-west-2' => 'US West (Oregon)',
+                    'eu-west-1' => 'Europe (Ireland)'
+                ],
                 'required' => true
             ]
         ];
@@ -416,11 +427,14 @@ add_filter('dm_get_logger', function($service) {
 }, 15); // Higher priority overrides core services
 ```
 
-**AI Provider Configuration**:
-- **Multi-Provider Support**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter
+**Built-in Agentic AI Capabilities**:
+- **Comprehensive AI HTTP Client Library**: Ships with multi-provider AI support via separate AI HTTP Client library
+- **Multi-Provider Support**: OpenAI, Anthropic, Google Gemini, Grok, OpenRouter with unified interface
+- **Advanced Features**: Streaming responses, tool/function calling, plugin-scoped configuration
 - **Step-Aware Configuration**: Different providers/models per pipeline step
 - **Filter-Based Access**: AI client accessed via `dm_get_ai_http_client` filter
 - **Plugin Extensibility**: Third-party plugins can add new AI providers
+- **Agentic Workflows**: Built-in support for complex multi-step AI reasoning and tool usage
 
 **Dynamic Configuration** via `DataMachine\Constants`:
 - Handler registration and discovery
