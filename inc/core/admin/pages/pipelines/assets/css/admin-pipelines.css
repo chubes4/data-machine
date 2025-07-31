@@ -1,639 +1,550 @@
 /**
- * Data Machine Admin Pipeline Management Styles
+ * Data Machine Pipeline+Flow Interface Styles
  * 
- * Styles for the visual pipeline builder and drag-and-drop interface.
- * Used by: inc/core/admin/pages/pipelines/Pipelines.php
+ * Clean slate styles for the Pipeline+Flow two-layer architecture.
+ * Component-based design with proper namespace isolation.
  *
  * @since NEXT_VERSION
  */
 
-/* Project creation controls */
-.dm-project-creation-controls {
-    margin-bottom: 20px;
-}
-
-.dm-project-creation-controls .spinner {
-    float: none;
-    vertical-align: middle;
-}
-
-/* Projects list container */
-.dm-projects-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-/* Project cards */
-.dm-project-card {
-    border: 1px solid #ccd0d4;
-    border-radius: 4px;
-    background: #fff;
+/* Base page container */
+.dm-pipelines-page {
     padding: 20px;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
 }
 
-/* Project header */
-.dm-project-header {
-    border-bottom: 1px solid #eee;
-    padding-bottom: 15px;
+/* Pipeline cards */
+.dm-pipeline-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
     margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.dm-project-header h3 {
-    margin: 0 0 10px 0;
+.dm-placeholder-pipeline {
+    border: 2px dashed #ddd;
+    background: #fafafa;
+}
+
+/* Pipeline header */
+.dm-pipeline-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dm-pipeline-title-section {
+    flex: 1;
+}
+
+.dm-pipeline-title-input {
     font-size: 18px;
-    line-height: 1.3;
+    font-weight: 600;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 400px;
 }
 
-.dm-project-header .dm-project-meta {
+.dm-pipeline-title-input:focus {
+    border-color: #0073aa;
+    background: #fff;
+    outline: none;
+}
+
+.dm-pipeline-meta {
     display: flex;
     gap: 15px;
+    margin-top: 5px;
+    color: #666;
     font-size: 13px;
-    color: #666;
 }
 
-/* Pipeline prompts section */
-.dm-pipeline-prompts {
-    margin-bottom: 20px;
-}
-
-.dm-pipeline-prompts h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #23282d;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.dm-pipeline-prompts h4 .dashicons {
-    font-size: 16px;
-    color: #0073aa;
-}
-
-.dm-horizontal-pipeline-container {
-    background: #f8f9fa;
-    border: 1px solid #e2e4e7;
-    border-radius: 6px;
-    padding: 15px;
-}
-
-.dm-pipeline-loading {
-    text-align: center;
+/* Pipeline sections */
+.dm-pipeline-steps-section,
+.dm-pipeline-flows {
     padding: 20px;
+}
+
+.dm-section-header h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.dm-section-description {
+    margin: 0 0 15px 0;
     color: #666;
-    font-style: italic;
+    font-size: 13px;
 }
 
-/* Step flow configuration */
-.dm-step-flow-configuration {
-    margin-bottom: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
+/* Pipeline steps - horizontal flexbox layout */
+.dm-pipeline-steps {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
-.dm-step-flow-configuration h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #23282d;
+/* Step cards */
+.dm-step-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    flex: 0 0 auto;
+    min-width: 200px;
+    max-width: 250px;
+}
+
+.dm-placeholder-step {
+    border: 2px dashed #ccc;
+    background: #f9f9f9;
+    text-align: center;
+    padding: 30px 20px;
+    flex: 0 0 300px;
+}
+
+.dm-step-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    margin-bottom: 8px;
 }
 
-.dm-step-flow-configuration h4 .dashicons {
-    font-size: 16px;
-    color: #a7aaad;
+.dm-step-number {
+    background: #0073aa;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
 }
 
-.dm-flow-steps-count {
-    background: #f0f0f1;
-    color: #50575e;
+.dm-step-title {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Step type badges */
+.dm-step-type-badge {
+    display: inline-block;
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 11px;
-    font-weight: 500;
-    margin-left: auto;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: white;
+    margin-bottom: 8px;
 }
 
-.dm-step-flow-builder {
-    background: #f8f9fa;
-    border: 1px solid #e2e4e7;
-    border-radius: 6px;
-    padding: 15px;
+.dm-step-type-badge.dm-step-input {
+    background: #28a745;
 }
 
-.dm-dynamic-steps-container {
-    min-height: 80px;
-    margin-bottom: 20px;
+.dm-step-type-badge.dm-step-ai {
+    background: #6f42c1;
 }
 
-.dm-steps-loading {
+.dm-step-type-badge.dm-step-output {
+    background: #fd7e14;
+}
+
+
+/* Placeholder step content */
+.dm-placeholder-step-content {
     text-align: center;
-    padding: 20px;
+}
+
+.dm-add-first-step-btn {
+    margin-bottom: 10px;
+}
+
+.dm-placeholder-description {
     color: #666;
-    font-size: 12px;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Flow section */
+.dm-flows-header h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.dm-placeholder-message {
+    text-align: center;
+    padding: 30px;
+    color: #666;
     font-style: italic;
 }
 
-.dm-add-step-controls {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 15px;
+.dm-placeholder-message p {
+    margin: 0;
 }
 
-.dm-add-step-btn {
-    font-size: 12px;
-    padding: 6px 12px;
-    height: auto;
-}
-
-.dm-add-step-controls .description {
-    font-size: 11px;
-    color: #666;
-    font-style: italic;
-}
-
-.dm-flow-help {
-    padding: 8px 12px;
+/* Flow instance cards */
+.dm-flow-instance-card {
     background: #fff;
     border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 11px;
-    color: #666;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Project actions */
-.dm-project-actions {
+.dm-placeholder-flow {
+    border: 2px dashed #bbb;
+    background: #f5f5f5;
+}
+
+/* Flow header */
+.dm-flow-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-start;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
 }
 
-.dm-project-actions .button {
+.dm-flow-title-section {
+    flex: 1;
+}
+
+.dm-flow-title-input {
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.dm-flow-title-input:focus {
+    border-color: #0073aa;
+    background: #fff;
+    outline: none;
+}
+
+.dm-flow-status {
+    margin-top: 4px;
+}
+
+.dm-schedule-status {
     font-size: 12px;
-    padding: 4px 12px;
-    height: auto;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
 }
 
-.dm-project-actions .delete-project-button {
-    text-decoration: none;
-    color: #d63638;
-}
-
-.dm-project-actions .export-project-button {
-    text-decoration: none;
-}
-
-/* Empty state */
-.dm-projects-empty {
-    text-align: center;
-    padding: 40px;
+.dm-status-inactive {
+    background: #f1f1f1;
     color: #666;
-    font-style: italic;
 }
 
-/* Import form */
-.dm-import-form {
-    border: 1px solid #ccc;
-    padding: 20px;
-    margin-top: 15px;
+.dm-status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Flow steps section */
+.dm-flow-steps-section {
+    padding: 16px;
+}
+
+.dm-flow-steps-header {
+    margin-bottom: 12px;
+}
+
+.dm-flow-steps-header h5 {
+    margin: 0;
+    color: #555;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dm-flow-steps {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Flow step cards (nested, smaller) */
+.dm-flow-step {
+    min-width: 180px;
+    max-width: 220px;
+    border-color: #ccc;
     background: #f9f9f9;
 }
 
-/* Schedule modal */
-#dm-schedule-modal {
-    display: none;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 1000;
+.dm-placeholder-flow-step {
+    border: 2px dashed #ccc;
+    background: #f0f0f0;
+    text-align: center;
+    padding: 20px 15px;
 }
 
-.dm-schedule-modal-dialog {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    background-color: white;
-    padding: 30px;
-    border: 1px solid #ccc;
-    width: 500px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.dm-flow-meta {
+    padding: 8px 16px;
+    border-top: 1px solid #eee;
+    background: #f9f9f9;
 }
 
-.dm-schedule-modal fieldset {
-    margin-bottom: 20px;
-    border: 1px solid #ddd;
-    padding: 10px;
+.dm-placeholder-text {
+    color: #999;
+    font-style: italic;
 }
 
-.dm-schedule-modal legend {
-    padding: 0 5px;
+/* Responsive design */
+@media (max-width: 768px) {
+    .dm-pipelines-page {
+        padding: 10px;
+    }
+    
+    .dm-pipeline-steps,
+    .dm-flow-steps {
+        flex-direction: column;
+    }
+    
+    .dm-step-card,
+    .dm-placeholder-step {
+        min-width: auto;
+        max-width: none;
+        flex: 1;
+    }
+    
+    .dm-pipeline-header,
+    .dm-flow-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .dm-flow-instance-card {
+        margin-bottom: 20px;
+    }
+    
+    .dm-pipeline-title-input,
+    .dm-flow-title-input {
+        max-width: none;
+        width: 100%;
+    }
 }
 
-#dm-modal-module-list {
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-/* Configuration modal */
+/* Modal styles */
 .dm-modal {
     display: none;
     position: fixed;
-    left: 0;
     top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 1000;
+    z-index: 9999;
 }
 
-.dm-modal-dialog {
+.dm-modal.dm-modal-open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dm-modal-overlay {
     position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    background-color: white;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.dm-modal-container {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
     width: 90%;
-    max-width: 600px;
     max-height: 80vh;
     overflow: hidden;
 }
 
 .dm-modal-header {
     padding: 20px;
-    border-bottom: 1px solid #e2e4e7;
+    border-bottom: 1px solid #eee;
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
 }
 
-#dm-modal-title {
+.dm-modal-title {
     margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #1e1e1e;
+    font-size: 20px;
+    color: #333;
 }
 
 .dm-modal-close {
     background: none;
     border: none;
-    font-size: 18px;
+    font-size: 24px;
     cursor: pointer;
-    color: #646970;
-    padding: 4px;
-    line-height: 1;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.dm-modal-content {
+.dm-modal-close:hover {
+    color: #333;
+}
+
+.dm-modal-body {
     padding: 20px;
+    max-height: 60vh;
     overflow-y: auto;
-    max-height: calc(80vh - 140px);
 }
 
-#dm-modal-loading {
-    text-align: center;
-    padding: 40px;
+/* Step selection modal content */
+.dm-step-selection-container {
+    padding: 0;
 }
 
-#dm-modal-loading .spinner {
-    display: inline-block;
-    float: none;
+.dm-step-selection-header p {
+    margin: 0 0 20px 0;
+    color: #666;
 }
 
-#dm-modal-loading p {
-    margin-top: 16px;
-    color: #646970;
-    font-style: italic;
+
+.dm-step-cards {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    flex-direction: column;
 }
 
-#dm-modal-body {
-    display: none;
+.dm-step-selection-card {
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 0 1 auto;
 }
 
-#dm-modal-error {
-    display: none;
-    text-align: center;
-    padding: 40px;
+.dm-step-selection-card:hover {
+    border-color: #0073aa;
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
 }
 
-#dm-modal-error .dashicons {
-    font-size: 32px;
-    color: #d63638;
-    opacity: 0.7;
+.dm-step-selection-card.selected {
+    border-color: #0073aa;
+    background: #f0f8ff;
 }
 
-#dm-modal-error p:first-of-type {
-    margin-top: 12px;
-    color: #d63638;
-    font-weight: 500;
+.dm-step-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
-#dm-modal-error p:last-of-type {
-    margin-top: 8px;
-    color: #646970;
+.dm-step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+}
+
+.dm-step-icon-input {
+    background: #28a745;
+}
+
+.dm-step-icon-ai {
+    background: #6f42c1;
+}
+
+.dm-step-icon-output {
+    background: #fd7e14;
+}
+
+.dm-step-card-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.dm-step-card-description {
+    margin: 0 0 10px 0;
+    color: #666;
     font-size: 14px;
 }
 
-.dm-modal-footer {
-    padding: 16px 20px;
-    border-top: 1px solid #e2e4e7;
-    background: #f9f9f9;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-.dm-modal-save {
-    display: none;
-}
-
-/* Additional pipeline-specific styles moved from shared admin CSS */
-
-/* Pipeline Builder Styles */
-.dm-pipeline-step-card {
-    position: relative;
-    transition: box-shadow 0.2s ease;
-}
-
-.dm-pipeline-step-card:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.dm-step-drag-handle:hover {
-    color: #0073aa !important;
-}
-
-.dm-pipeline-steps-list.ui-sortable .dm-pipeline-step-card {
-    cursor: move;
-}
-
-.dm-step-placeholder {
-    border: 2px dashed #0073aa;
-    background: #f0f8ff;
-    height: 80px;
-    margin: 5px 0;
-    border-radius: 4px;
-}
-
-.dm-remove-step-btn:hover {
-    background-color: #f0f0f0 !important;
-    border-radius: 2px;
-}
-
-.dm-add-step-controls {
-    background: #f9f9f9;
-    border-radius: 4px;
-    padding: 12px;
+.dm-step-card-meta {
     margin-top: 10px;
 }
 
-.dm-step-header {
-    align-items: center;
+.dm-step-class {
+    color: #999;
+    font-size: 12px;
 }
 
-.dm-step-config select,
-.dm-step-config input {
-    border: 1px solid #ddd;
-    border-radius: 2px;
+/* Step handlers in modal cards */
+.dm-step-handlers {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
 }
 
-.dm-step-config select:focus,
-.dm-step-config input:focus {
-    border-color: #0073aa;
-    box-shadow: 0 0 0 1px #0073aa;
-    outline: none;
-}
-
-/* Loading and empty states */
-.dm-pipeline-loading,
-.dm-no-steps {
-    text-align: center;
-    padding: 20px;
-    color: #666;
-    font-style: italic;
-    border: 1px dashed #ddd;
-    border-radius: 4px;
-    background: #fafafa;
-}
-
-/* Step type icons */
-.dm-step-header .dashicons {
-    vertical-align: middle;
-}
-
-/* Horizontal Pipeline Builder Styles */
-.dm-horizontal-pipeline-container {
-    position: relative;
-    overflow: visible;
-}
-
-.dm-horizontal-pipeline-flow {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 8px 0;
-    min-height: 80px;
-}
-
-.dm-horizontal-step-card {
-    flex-shrink: 0;
-    min-width: 160px;
-    max-width: 200px;
-    background: #fff;
-    border: 2px solid #e2e4e7;
-    border-radius: 8px;
-    padding: 12px;
-    position: relative;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.dm-horizontal-step-card:hover {
-    border-color: #0073aa;
-    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.15);
-    transform: translateY(-1px);
-}
-
-.dm-horizontal-step-card.dm-step-input {
-    border-color: #00a32a;
-}
-
-.dm-horizontal-step-card.dm-step-ai {
-    border-color: #8b5cf6;
-}
-
-.dm-horizontal-step-card.dm-step-output {
-    border-color: #f59e0b;
-}
-
-.dm-horizontal-step-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.dm-horizontal-step-icon {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.dm-handlers-label {
     font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.dm-horizontal-step-icon .dashicons {
-    font-size: 16px;
-}
-
-.dm-step-input .dm-horizontal-step-icon {
-    color: #00a32a;
-}
-
-.dm-step-ai .dm-horizontal-step-icon {
-    color: #8b5cf6;
-}
-
-.dm-step-output .dm-horizontal-step-icon {
-    color: #f59e0b;
-}
-
-.dm-horizontal-step-number {
-    background: #f0f0f1;
-    color: #646970;
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 16px;
-    text-align: center;
-}
-
-.dm-horizontal-step-content {
-    font-size: 11px;
-    color: #646970;
-    line-height: 1.3;
-    min-height: 24px;
-}
-
-.dm-horizontal-step-handler {
-    font-weight: 500;
-    color: #1e1e1e;
-    margin-bottom: 2px;
-}
-
-.dm-horizontal-step-config {
-    font-style: italic;
-    opacity: 0.8;
-}
-
-.dm-horizontal-step-remove {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 18px;
-    height: 18px;
-    background: #d63638;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 10px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.dm-horizontal-step-card:hover .dm-horizontal-step-remove,
-.dm-horizontal-step-card:hover .dm-step-configure {
-    opacity: 1;
-}
-
-.dm-horizontal-step-card:hover .dm-horizontal-step-remove {
-    display: flex;
-}
-
-.dm-horizontal-step-remove:hover {
-    background: #b32d2e;
-    transform: scale(1.1);
-}
-
-.dm-horizontal-pipeline-arrow {
-    flex-shrink: 0;
-    color: #8c8f94;
-    font-size: 14px;
-    opacity: 0.7;
-}
-
-.dm-horizontal-add-step {
-    flex-shrink: 0;
-    min-width: 140px;
-    height: 80px;
-    background: transparent;
-    border: 2px dashed #c3c4c7;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: #646970;
-    font-size: 11px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.dm-horizontal-add-step:hover {
-    border-color: #0073aa;
-    background: rgba(0, 115, 170, 0.05);
-    color: #0073aa;
-}
-
-.dm-horizontal-add-step .dashicons {
-    font-size: 20px;
+    color: #666;
+    display: block;
     margin-bottom: 4px;
 }
 
-/* Drag and drop styles */
-.dm-horizontal-step-card.dm-dragging {
-    opacity: 0.5;
-    transform: rotate(2deg);
+.dm-handlers-list {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
 }
 
-.dm-horizontal-pipeline-flow.dm-drag-over {
-    background: rgba(0, 115, 170, 0.1);
-    border-radius: 4px;
-}
-
-.dm-horizontal-drop-indicator {
-    width: 3px;
+/* Notifications */
+.dm-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
     background: #0073aa;
-    border-radius: 2px;
-    margin: 0 4px;
-    transition: all 0.2s ease;
-    opacity: 0;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
 }
 
-.dm-horizontal-drop-indicator.active {
-    opacity: 1;
-    height: 60px;
+.dm-notification-success {
+    background: #28a745;
+}
+
+.dm-notification-error {
+    background: #dc3545;
 }

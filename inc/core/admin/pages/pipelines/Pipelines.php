@@ -1,15 +1,10 @@
 <?php
 /**
- * Pipelines Admin Page
+ * Pipelines Admin Page - Clean Slate Implementation
  *
- * Main admin interface for Data Machine pipeline management featuring:
- * - Drag-and-drop pipeline builder with two-section interface
- * - Step configuration with auto-discovery via filter system
- * - Handler management with authentication and settings tabs
- * - Multiple pipeline support with scheduling capabilities
- *
- * Follows the plugin's filter-based architecture with self-registration
- * and universal modal system integration.
+ * Simple two-column interface for Pipeline+Flow architecture:
+ * - Left: Pipeline Templates (reusable workflow definitions)
+ * - Right: Flow Instances (configured executions)
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines
  * @since 1.0.0
@@ -22,46 +17,19 @@ if (!defined('WPINC')) {
     die;
 }
 
-/**
- * Pipelines admin page implementation.
- *
- * Implements the most complex admin interface in Data Machine with:
- * - Visual pipeline builder with horizontal step flow
- * - Two-section design: Pipeline Steps (top) and Pipeline Data Flow (bottom)
- * - Universal modal integration for step and handler configuration
- * - Filter-based auto-discovery of steps and handlers
- * - Multiple pipeline management with per-pipeline scheduling
- *
- * Architecture follows plugin's Gutenberg-inspired modular design where
- * each pipeline step is a self-contained component with its own configuration.
- */
 class Pipelines
 {
     /**
-     * Constructor - Registers the admin page via filter system.
-     *
-     * Uses the plugin's self-registration pattern to integrate with
-     * the existing AdminPage and AdminMenuAssets infrastructure.
+     * Constructor - Clean slate implementation.
      */
     public function __construct()
     {
-        // Admin page registration now handled by PipelinesFilters.php
+        // Clean slate - only essential asset registration
         $this->register_page_assets();
-        add_action('wp_ajax_dm_get_pipeline_steps', [$this, 'ajax_get_pipeline_steps']);
-        add_action('wp_ajax_dm_add_pipeline_step', [$this, 'ajax_add_pipeline_step']);
-        add_action('wp_ajax_dm_remove_pipeline_step', [$this, 'ajax_remove_pipeline_step']);
-        add_action('wp_ajax_dm_reorder_pipeline_steps', [$this, 'ajax_reorder_pipeline_steps']);
-        add_action('wp_ajax_dm_get_dynamic_step_types', [$this, 'ajax_get_dynamic_step_types']);
-        add_action('wp_ajax_dm_get_available_handlers', [$this, 'ajax_get_available_handlers']);
-        add_action('wp_ajax_dm_add_step_handler', [$this, 'ajax_add_step_handler']);
-        add_action('wp_ajax_dm_remove_step_handler', [$this, 'ajax_remove_step_handler']);
     }
 
-
     /**
-     * Register pipeline-specific assets for this page.
-     * 
-     * Pages self-register their assets to maintain full self-sufficiency.
+     * Register clean slate assets.
      */
     public function register_page_assets()
     {
@@ -73,747 +41,443 @@ class Pipelines
             return [
                 'css' => [
                     'dm-admin-pipelines' => [
-                        'file' => 'assets/css/admin-pipelines.css',
+                        'file' => 'inc/core/admin/pages/pipelines/assets/css/admin-pipelines.css',
                         'deps' => [],
                         'media' => 'all'
                     ]
-                ],
-                'js' => [
-                    'dm-pipeline-builder' => [
-                        'file' => 'assets/js/admin/pipelines/pipeline-builder.js',
-                        'deps' => ['jquery', 'jquery-ui-sortable'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmPipelineBuilder',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'get_pipeline_steps_nonce' => wp_create_nonce('dm_get_pipeline_steps'),
-                                'add_pipeline_step_nonce' => wp_create_nonce('dm_add_pipeline_step'),
-                                'remove_pipeline_step_nonce' => wp_create_nonce('dm_remove_pipeline_step'),
-                                'reorder_pipeline_steps_nonce' => wp_create_nonce('dm_reorder_pipeline_steps'),
-                                'get_dynamic_step_types_nonce' => wp_create_nonce('dm_get_dynamic_step_types'),
-                                'get_available_handlers_nonce' => wp_create_nonce('dm_get_available_handlers'),
-                                'strings' => [
-                                    'pipelineSteps' => __('Pipeline Steps', 'data-machine'),
-                                    'addStep' => __('Add Step', 'data-machine'),
-                                    'selectStepType' => __('Select step type...', 'data-machine'),
-                                    'confirmRemoveStep' => __('Are you sure you want to remove this step?', 'data-machine'),
-                                    'errorAddingStep' => __('Error adding pipeline step', 'data-machine'),
-                                    'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
-                                ]
-                            ]
-                        ]
-                    ],
-                    'dm-pipeline-modal' => [
-                        'file' => 'assets/js/admin/pipelines/pipeline-modal.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmPipelineModal',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
-                                'save_modal_config_nonce' => wp_create_nonce('dm_save_modal_config'),
-                                'strings' => [
-                                    'configureStep' => __('Configure Step', 'data-machine'),
-                                    'saving' => __('Saving...', 'data-machine'),
-                                    'save' => __('Save Configuration', 'data-machine'),
-                                    'cancel' => __('Cancel', 'data-machine'),
-                                ]
-                            ]
-                        ]
-                    ]
                 ]
+                // No JavaScript yet - clean slate
             ];
         }, 10, 2);
     }
 
     /**
-     * Render the main pipelines page content.
-     *
-     * Creates the dual-section pipeline builder interface:
-     * - Top section: Pipeline Steps with drag-and-drop reordering
-     * - Bottom section: Pipeline Data Flow with handler configuration
-     * - Pipeline switcher for multiple pipeline management
-     * - Universal modal integration for configuration
+     * Clean slate Pipeline+Flow interface.
      */
     public function render_content()
     {
-        // Get services via filter system
+        // Get database services
         $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
         
-        if (!$db_pipelines) {
+        if (!$db_pipelines || !$db_flows) {
             echo '<div class="dm-admin-error">' . esc_html__('Database services unavailable.', 'data-machine') . '</div>';
             return;
         }
 
-        // Get current pipeline or default to first available
-        $current_pipeline_id = $this->get_current_pipeline_id();
-        $current_pipeline = null;
-        $pipeline_steps = [];
-
-        if ($current_pipeline_id) {
-            $current_pipeline = $db_pipelines->get_pipeline($current_pipeline_id);
-            $pipeline_steps = $this->get_pipeline_steps($current_pipeline_id);
-        }
-
-        // Get all pipelines for switcher
+        // Get data
         $all_pipelines = $db_pipelines->get_all_pipelines();
 
         ?>
         <div class="dm-admin-wrap dm-pipelines-page">
+            <!-- Page Header -->
             <div class="dm-admin-header">
                 <h1 class="dm-admin-title">
-                    <?php esc_html_e('Pipeline Management', 'data-machine'); ?>
+                    <?php esc_html_e('Pipeline + Flow Management', 'data-machine'); ?>
                 </h1>
                 <p class="dm-admin-subtitle">
-                    <?php esc_html_e('Build and configure your data processing pipelines with drag-and-drop components.', 'data-machine'); ?>
+                    <?php esc_html_e('Create pipeline templates and configure flow instances for automated data processing.', 'data-machine'); ?>
                 </p>
             </div>
 
-            <!-- Pipeline Switcher -->
-            <div class="dm-pipeline-switcher">
-                <div class="dm-switcher-controls">
-                    <label for="dm-pipeline-select"><?php esc_html_e('Current Pipeline:', 'data-machine'); ?></label>
-                    <select id="dm-pipeline-select" class="dm-pipeline-selector">
-                        <option value=""><?php esc_html_e('Select Pipeline...', 'data-machine'); ?></option>
+            <!-- Card-Based Layout -->
+            <div class="dm-pipeline-cards-container">
+                <div class="dm-pipelines-list">
+                    <?php if (empty($all_pipelines)): ?>
+                        <?php $this->render_placeholder_pipeline_card(); ?>
+                    <?php else: ?>
                         <?php foreach ($all_pipelines as $pipeline): ?>
-                            <option value="<?php echo esc_attr($pipeline->id); ?>" 
-                                    <?php selected($current_pipeline_id, $pipeline->id); ?>>
-                                <?php echo esc_html($pipeline->name ?: __('Unnamed Pipeline', 'data-machine')); ?>
-                            </option>
+                            <?php $this->render_pipeline_with_flows($pipeline); ?>
                         <?php endforeach; ?>
-                    </select>
-                    <button type="button" class="button dm-add-pipeline-btn">
-                        <?php esc_html_e('Add Pipeline', 'data-machine'); ?>
-                    </button>
-                    <?php if ($current_pipeline_id): ?>
-                        <button type="button" class="button dm-delete-pipeline-btn" 
-                                data-pipeline-id="<?php echo esc_attr($current_pipeline_id); ?>">
-                            <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
-                        </button>
                     <?php endif; ?>
                 </div>
             </div>
-
-            <!-- Always show both sections -->
-            <div class="dm-pipeline-builder-container">
-                
-                <!-- TOP SECTION: Pipeline Steps -->
-                <div class="dm-pipeline-section dm-pipeline-steps-section">
-                    <div class="dm-section-header">
-                        <h2><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h2>
-                        <p class="dm-section-description">
-                            <?php esc_html_e('Define your pipeline structure by adding steps', 'data-machine'); ?>
-                        </p>
-                        <?php if ($current_pipeline_id): ?>
-                            <button type="button" class="button button-primary dm-add-step-btn">
-                                <?php esc_html_e('Add Step', 'data-machine'); ?>
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="dm-pipeline-steps-container" id="dm-pipeline-steps">
-                        <?php if ($current_pipeline_id): ?>
-                            <?php $this->render_pipeline_steps($pipeline_steps); ?>
-                        <?php else: ?>
-                            <div class="dm-empty-steps">
-                                <p><?php esc_html_e('Select or create a pipeline to define steps.', 'data-machine'); ?></p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <!-- BOTTOM SECTION: Handler Configuration (Mirrored) -->
-                <div class="dm-pipeline-section dm-pipeline-handlers-section">
-                    <div class="dm-section-header">
-                        <h2><?php esc_html_e('Handler Configuration', 'data-machine'); ?></h2>
-                        <p class="dm-section-description">
-                            <?php esc_html_e('Add handlers to each step defined above', 'data-machine'); ?>
-                        </p>
-                    </div>
-                    
-                    <div class="dm-pipeline-handlers-container" id="dm-pipeline-handlers">
-                        <?php if ($current_pipeline_id): ?>
-                            <?php $this->render_pipeline_handlers($pipeline_steps); ?>
-                        <?php else: ?>
-                            <div class="dm-empty-handlers">
-                                <p><?php esc_html_e('Pipeline steps will appear here for handler configuration.', 'data-machine'); ?></p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-            </div>
-
-            <?php if (!$current_pipeline_id): ?>
-                
-                <!-- Empty State Overlay -->
-                <div class="dm-empty-state">
-                    <div class="dm-empty-state-content">
-                        <h3><?php esc_html_e('No Pipeline Selected', 'data-machine'); ?></h3>
-                        <p><?php esc_html_e('Create or select a pipeline to start building your data processing workflow.', 'data-machine'); ?></p>
-                        <button type="button" class="button button-primary dm-add-pipeline-btn">
-                            <?php esc_html_e('Create First Pipeline', 'data-machine'); ?>
-                        </button>
-                    </div>
-                </div>
-
-            <?php endif; ?>
-
-            <!-- Loading Overlay -->
-            <div class="dm-loading-overlay" id="dm-loading-overlay" style="display: none;">
-                <div class="dm-loading-spinner"></div>
-                <p><?php esc_html_e('Processing...', 'data-machine'); ?></p>
-            </div>
         </div>
-
-        <!-- Hidden Templates for JavaScript -->
-        <script type="text/template" id="dm-step-card-template">
-            <div class="dm-step-card" data-step-id="{{step_id}}" data-position="{{position}}">
-                <div class="dm-step-card-header">
-                    <div class="dm-step-drag-handle">��</div>
-                    <h4 class="dm-step-title">{{title}}</h4>
-                    <div class="dm-step-actions">
-                        <button type="button" class="dm-step-config-btn" title="<?php esc_attr_e('Configure Step', 'data-machine'); ?>">
-                            �
-                        </button>
-                        <button type="button" class="dm-step-remove-btn" title="<?php esc_attr_e('Remove Step', 'data-machine'); ?>">
-                            L
-                        </button>
-                    </div>
-                </div>
-                <div class="dm-step-card-body">
-                    <p class="dm-step-description">{{description}}</p>
-                    {{#if has_config}}
-                    <div class="dm-step-config-indicator">
-                        <span class="dm-config-status">{{config_status}}</span>
-                    </div>
-                    {{/if}}
-                </div>
-            </div>
-        </script>
-
-        <script type="text/template" id="dm-flow-card-template">
-            <div class="dm-flow-card" data-flow-id="{{flow_id}}">
-                <div class="dm-flow-card-header">
-                    <h4 class="dm-flow-title">{{title}}</h4>
-                    <div class="dm-flow-actions">
-                        <button type="button" class="dm-flow-schedule-btn" title="<?php esc_attr_e('Configure Schedule', 'data-machine'); ?>">
-                            �
-                        </button>
-                        <button type="button" class="dm-flow-remove-btn" title="<?php esc_attr_e('Remove Flow', 'data-machine'); ?>">
-                            L
-                        </button>
-                    </div>
-                </div>
-                <div class="dm-flow-card-body">
-                    <div class="dm-flow-steps">
-                        {{#each steps}}
-                        <div class="dm-flow-step" data-step-position="{{position}}">
-                            <div class="dm-flow-step-header">
-                                <span class="dm-flow-step-title">{{title}}</span>
-                                {{#if has_handlers}}
-                                <button type="button" class="dm-add-handler-btn">
-                                    <?php esc_html_e('Add Handler', 'data-machine'); ?>
-                                </button>
-                                {{/if}}
-                            </div>
-                            <div class="dm-flow-step-handlers">
-                                {{#each handlers}}
-                                <div class="dm-handler-card" data-handler-key="{{key}}">
-                                    <span class="dm-handler-name">{{name}}</span>
-                                    <div class="dm-handler-actions">
-                                        <button type="button" class="dm-handler-config-btn" title="<?php esc_attr_e('Configure Handler', 'data-machine'); ?>">
-                                            �
-                                        </button>
-                                        <button type="button" class="dm-handler-remove-btn" title="<?php esc_attr_e('Remove Handler', 'data-machine'); ?>">
-                                            L
-                                        </button>
-                                    </div>
-                                </div>
-                                {{/each}}
-                            </div>
-                        </div>
-                        {{/each}}
-                    </div>
-                </div>
-            </div>
-        </script>
         <?php
     }
 
     /**
-     * Render pipeline steps section.
-     *
-     * Displays the current pipeline steps with drag-and-drop capabilities
-     * and configuration status indicators.
-     *
-     * @param array $steps Pipeline steps data
+     * Render pipeline card with its associated flows.
      */
-    private function render_pipeline_steps($steps)
+    private function render_pipeline_with_flows($pipeline)
     {
-        if (empty($steps)) {
-            echo '<div class="dm-empty-steps">';
-            echo '<p>' . esc_html__('No steps configured. Click "Add Step" to get started.', 'data-machine') . '</p>';
-            echo '</div>';
-            return;
-        }
-
-        echo '<div class="dm-steps-list">';
-        foreach ($steps as $step) {
-            $this->render_step_card($step);
-        }
-        echo '</div>';
-    }
-
-    /**
-     * Render individual step card.
-     *
-     * @param object $step Step data object
-     */
-    private function render_step_card($step)
-    {
-        $has_config = !empty($step->has_config);
-        $config_status = $has_config ? 
-            (!empty($step->configuration) ? __('Configured', 'data-machine') : __('Needs Configuration', 'data-machine')) :
-            __('No Configuration Required', 'data-machine');
-
+        $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : $pipeline['pipeline_id'];
+        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        $created_at = is_object($pipeline) ? $pipeline->created_at : $pipeline['created_at'];
+        
+        // Get pipeline steps using proper filter pattern
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $pipeline_steps = $db_pipelines ? $db_pipelines->get_pipeline_step_configuration($pipeline_id) : [];
+        $step_count = count($pipeline_steps);
+        
+        // Get flows for this pipeline using proper filter pattern
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $pipeline_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
+        
         ?>
-        <div class="dm-step-card" data-step-id="<?php echo esc_attr($step->id); ?>" 
-             data-position="<?php echo esc_attr($step->position); ?>">
-            <div class="dm-step-card-header">
-                <div class="dm-step-drag-handle">��</div>
-                <h4 class="dm-step-title"><?php echo esc_html($step->title ?: $step->type); ?></h4>
-                <div class="dm-step-actions">
-                    <?php if ($has_config): ?>
-                        <button type="button" class="dm-step-config-btn" 
-                                title="<?php esc_attr_e('Configure Step', 'data-machine'); ?>">
-                            �
-                        </button>
-                    <?php endif; ?>
-                    <button type="button" class="dm-step-remove-btn" 
-                            title="<?php esc_attr_e('Remove Step', 'data-machine'); ?>">
-                        L
+        <div class="dm-pipeline-card" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+            <!-- Pipeline Header -->
+            <div class="dm-pipeline-header">
+                <div class="dm-pipeline-title-section">
+                    <h3 class="dm-pipeline-title"><?php echo esc_html($pipeline_name ?: __('Unnamed Pipeline', 'data-machine')); ?></h3>
+                    <div class="dm-pipeline-meta">
+                        <span class="dm-step-count"><?php echo esc_html(sprintf(__('%d steps', 'data-machine'), $step_count)); ?></span>
+                        <span class="dm-flow-count"><?php echo esc_html(sprintf(__('%d flows', 'data-machine'), count($pipeline_flows))); ?></span>
+                        <span class="dm-created-date"><?php echo esc_html(sprintf(__('Created %s', 'data-machine'), date('M j, Y', strtotime($created_at)))); ?></span>
+                    </div>
+                </div>
+                <div class="dm-pipeline-actions">
+                    <button type="button" class="button dm-edit-pipeline-btn" 
+                            data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+                        <?php esc_html_e('Edit Steps', 'data-machine'); ?>
+                    </button>
+                    <button type="button" class="button dm-add-flow-btn" 
+                            data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+                        <?php esc_html_e('Add Flow', 'data-machine'); ?>
+                    </button>
+                    <button type="button" class="button button-link-delete dm-delete-pipeline-btn" 
+                            data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+                        <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
                     </button>
                 </div>
             </div>
-            <div class="dm-step-card-body">
-                <p class="dm-step-description">
-                    <?php echo esc_html($step->description ?: __('No description available.', 'data-machine')); ?>
-                </p>
-                <?php if ($has_config): ?>
-                    <div class="dm-step-config-indicator">
-                        <span class="dm-config-status <?php echo empty($step->configuration) ? 'dm-needs-config' : 'dm-configured'; ?>">
-                            <?php echo esc_html($config_status); ?>
+            
+            <!-- Pipeline Steps Section (Template Level) -->
+            <div class="dm-pipeline-steps-section">
+                <div class="dm-section-header">
+                    <h4><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h4>
+                    <p class="dm-section-description"><?php esc_html_e('Step sequence for this pipeline', 'data-machine'); ?></p>
+                </div>
+                <div class="dm-pipeline-steps">
+                    <?php if ($step_count > 0): ?>
+                        <?php foreach ($pipeline_steps as $i => $step): ?>
+                            <?php $this->render_pipeline_step_card($step, $i + 1); ?>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="dm-no-steps">
+                            <p><?php esc_html_e('No steps configured yet', 'data-machine'); ?></p>
+                            <button type="button" class="button button-small dm-edit-pipeline-btn" 
+                                    data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+                                <?php esc_html_e('Add Steps', 'data-machine'); ?>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            
+            <!-- Associated Flows -->
+            <div class="dm-pipeline-flows">
+                <div class="dm-flows-header">
+                    <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
+                </div>
+                <div class="dm-flows-list">
+                    <?php if (empty($pipeline_flows)): ?>
+                        <div class="dm-no-flows">
+                            <p><?php esc_html_e('No flows configured for this pipeline', 'data-machine'); ?></p>
+                            <button type="button" class="button button-small dm-add-flow-btn" 
+                                    data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+                                <?php esc_html_e('Create First Flow', 'data-machine'); ?>
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($pipeline_flows as $flow): ?>
+                            <?php $this->render_flow_card($flow, $pipeline_steps); ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render pipeline step card (template level, no handlers).
+     */
+    private function render_pipeline_step_card($step, $step_number)
+    {
+        $step_type = $step['step_type'] ?? 'unknown';
+        $step_config = $step['step_config'] ?? [];
+        
+        ?>
+        <div class="dm-step-card dm-pipeline-step" data-step-number="<?php echo esc_attr($step_number); ?>">
+            <div class="dm-step-header">
+                <div class="dm-step-number"><?php echo esc_html($step_number); ?></div>
+                <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
+                <div class="dm-step-actions">
+                    <button type="button" class="button button-small dm-edit-step-btn" 
+                            data-step-number="<?php echo esc_attr($step_number); ?>">
+                        <?php esc_html_e('Edit', 'data-machine'); ?>
+                    </button>
+                </div>
+            </div>
+            <div class="dm-step-body">
+                <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
+                    <?php echo esc_html(ucfirst($step_type)); ?>
+                </div>
+                <?php if (!empty($step_config)): ?>
+                    <div class="dm-step-config-status">
+                        <span class="dm-config-indicator dm-configured"><?php esc_html_e('Configured', 'data-machine'); ?></span>
+                    </div>
+                <?php else: ?>
+                    <div class="dm-step-config-status">
+                        <span class="dm-config-indicator dm-needs-config"><?php esc_html_e('Needs Configuration', 'data-machine'); ?></span>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render individual flow card with its configured steps.
+     */
+    private function render_flow_card($flow, $pipeline_steps = [])
+    {
+        $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+        $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
+        $created_at = is_object($flow) ? $flow->created_at : $flow['created_at'];
+        
+        // Get scheduling info
+        $scheduling_config = is_object($flow) ? json_decode($flow->scheduling_config, true) : json_decode($flow['scheduling_config'], true);
+        $schedule_status = $scheduling_config['status'] ?? 'inactive';
+        $schedule_interval = $scheduling_config['interval'] ?? 'manual';
+        
+        // Get flow configuration (handler settings)
+        $flow_config = is_object($flow) ? json_decode($flow->flow_config, true) : json_decode($flow['flow_config'], true);
+        
+        ?>
+        <div class="dm-flow-instance-card" data-flow-id="<?php echo esc_attr($flow_id); ?>">
+            <div class="dm-flow-header">
+                <div class="dm-flow-title-section">
+                    <h5 class="dm-flow-title"><?php echo esc_html($flow_name ?: __('Unnamed Flow', 'data-machine')); ?></h5>
+                    <div class="dm-flow-status">
+                        <span class="dm-schedule-status dm-status-<?php echo esc_attr($schedule_status); ?>">
+                            <?php echo esc_html(ucfirst($schedule_status)); ?>
+                            <?php if ($schedule_status === 'active' && $schedule_interval !== 'manual'): ?>
+                                <span class="dm-schedule-interval">(<?php echo esc_html($schedule_interval); ?>)</span>
+                            <?php endif; ?>
                         </span>
                     </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render pipeline flows section.
-     *
-     * @param array $flows Pipeline flows data
-     * @param array $steps Available pipeline steps
-     */
-    private function render_pipeline_flows($flows, $steps)
-    {
-        if (empty($flows)) {
-            echo '<div class="dm-empty-flows">';
-            echo '<p>' . esc_html__('No data flows configured. Click "Add Data Flow" to create your first flow.', 'data-machine') . '</p>';
-            echo '</div>';
-            return;
-        }
-
-        echo '<div class="dm-flows-list">';
-        foreach ($flows as $flow) {
-            $this->render_flow_card($flow, $steps);
-        }
-        echo '</div>';
-    }
-
-    /**
-     * Render individual flow card.
-     *
-     * @param object $flow Flow data object
-     * @param array $steps Available pipeline steps
-     */
-    private function render_flow_card($flow, $steps)
-    {
-        ?>
-        <div class="dm-flow-card" data-flow-id="<?php echo esc_attr($flow->id); ?>">
-            <div class="dm-flow-card-header">
-                <h4 class="dm-flow-title">
-                    <?php echo esc_html($flow->name ?: __('Unnamed Flow', 'data-machine')); ?>
-                </h4>
+                </div>
                 <div class="dm-flow-actions">
-                    <button type="button" class="dm-flow-schedule-btn" 
-                            title="<?php esc_attr_e('Configure Schedule', 'data-machine'); ?>">
-                        �
+                    <button type="button" class="button button-small dm-edit-flow-btn" 
+                            data-flow-id="<?php echo esc_attr($flow_id); ?>">
+                        <?php esc_html_e('Configure', 'data-machine'); ?>
                     </button>
-                    <button type="button" class="dm-flow-remove-btn" 
-                            title="<?php esc_attr_e('Remove Flow', 'data-machine'); ?>">
-                        L
+                    <button type="button" class="button button-small button-primary dm-run-flow-btn" 
+                            data-flow-id="<?php echo esc_attr($flow_id); ?>">
+                        <?php esc_html_e('Run Now', 'data-machine'); ?>
+                    </button>
+                    <button type="button" class="button button-small button-link-delete dm-delete-flow-btn" 
+                            data-flow-id="<?php echo esc_attr($flow_id); ?>">
+                        <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>
                 </div>
             </div>
-            <div class="dm-flow-card-body">
+            
+            <!-- Flow Steps (same as pipeline steps but with handler configuration) -->
+            <div class="dm-flow-steps-section">
+                <div class="dm-flow-steps-header">
+                    <h5><?php esc_html_e('Configured Steps for this Flow', 'data-machine'); ?></h5>
+                </div>
                 <div class="dm-flow-steps">
-                    <?php foreach ($steps as $step): ?>
-                        <?php $this->render_flow_step($flow, $step); ?>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render flow step with handlers.
-     *
-     * @param object $flow Flow data object
-     * @param object $step Step data object
-     */
-    private function render_flow_step($flow, $step)
-    {
-        $has_handlers = $this->step_has_handlers($step->type);
-        $step_handlers = $this->get_flow_step_handlers($flow->id, $step->position);
-
-        ?>
-        <div class="dm-flow-step" data-step-position="<?php echo esc_attr($step->position); ?>">
-            <div class="dm-flow-step-header">
-                <span class="dm-flow-step-title"><?php echo esc_html($step->title ?: $step->type); ?></span>
-                <?php if ($has_handlers): ?>
-                    <button type="button" class="dm-add-handler-btn" 
-                            data-flow-id="<?php echo esc_attr($flow->id); ?>"
-                            data-step-position="<?php echo esc_attr($step->position); ?>">
-                        <?php esc_html_e('Add Handler', 'data-machine'); ?>
-                    </button>
-                <?php endif; ?>
-            </div>
-            <?php if ($has_handlers): ?>
-                <div class="dm-flow-step-handlers">
-                    <?php if (empty($step_handlers)): ?>
-                        <p class="dm-no-handlers"><?php esc_html_e('No handlers configured for this step.', 'data-machine'); ?></p>
-                    <?php else: ?>
-                        <?php foreach ($step_handlers as $handler): ?>
-                            <div class="dm-handler-card" data-handler-key="<?php echo esc_attr($handler->handler_key); ?>">
-                                <span class="dm-handler-name"><?php echo esc_html($handler->handler_name); ?></span>
-                                <div class="dm-handler-actions">
-                                    <button type="button" class="dm-handler-config-btn" 
-                                            data-flow-id="<?php echo esc_attr($flow->id); ?>"
-                                            data-step-position="<?php echo esc_attr($step->position); ?>"
-                                            data-handler-key="<?php echo esc_attr($handler->handler_key); ?>"
-                                            title="<?php esc_attr_e('Configure Handler', 'data-machine'); ?>">
-                                        �
-                                    </button>
-                                    <button type="button" class="dm-handler-remove-btn"
-                                            data-flow-id="<?php echo esc_attr($flow->id); ?>"
-                                            data-step-position="<?php echo esc_attr($step->position); ?>"
-                                            data-handler-key="<?php echo esc_attr($handler->handler_key); ?>"
-                                            title="<?php esc_attr_e('Remove Handler', 'data-machine'); ?>">
-                                        L
-                                    </button>
-                                </div>
-                            </div>
+                    <?php if (!empty($pipeline_steps)): ?>
+                        <?php foreach ($pipeline_steps as $i => $step): ?>
+                            <?php $this->render_flow_step_card($step, $i + 1, $flow_config, $flow_id); ?>
                         <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="dm-no-flow-steps">
+                            <p><?php esc_html_e('No steps in pipeline template', 'data-machine'); ?></p>
+                        </div>
                     <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            </div>
+            
+            <div class="dm-flow-meta">
+                <small><?php echo esc_html(sprintf(__('Created %s', 'data-machine'), date('M j, Y', strtotime($created_at)))); ?></small>
+            </div>
         </div>
         <?php
     }
 
     /**
-     * Get current pipeline ID from request or session.
-     *
-     * @return int|null Current pipeline ID
+     * Render flow step card (with handler configuration).
      */
-    private function get_current_pipeline_id()
+    private function render_flow_step_card($step, $step_number, $flow_config, $flow_id)
     {
-        // Check URL parameter first
-        if (isset($_GET['pipeline_id']) && is_numeric($_GET['pipeline_id'])) {
-            $pipeline_id = absint(wp_unslash($_GET['pipeline_id']));
-            // Store in user meta for persistence
-            update_user_meta(get_current_user_id(), 'dm_current_pipeline_id', $pipeline_id);
-            return $pipeline_id;
-        }
-
-        // Check user meta
-        $stored_pipeline_id = get_user_meta(get_current_user_id(), 'dm_current_pipeline_id', true);
-        if ($stored_pipeline_id && is_numeric($stored_pipeline_id)) {
-            return absint($stored_pipeline_id);
-        }
-
-        // Get first available pipeline
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if ($db_pipelines) {
-            $all_pipelines = $db_pipelines->get_all_pipelines();
-            if (!empty($all_pipelines)) {
-                $first_pipeline = $all_pipelines[0];
-                // Check if it's an object or array and get the ID appropriately
-                $pipeline_id = is_object($first_pipeline) ? $first_pipeline->pipeline_id : $first_pipeline['pipeline_id'];
-                update_user_meta(get_current_user_id(), 'dm_current_pipeline_id', $pipeline_id);
-                return $pipeline_id;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Get pipeline steps for given pipeline ID.
-     *
-     * @param int $pipeline_id Pipeline ID
-     * @return array Pipeline steps data
-     */
-    private function get_pipeline_steps($pipeline_id)
-    {
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if (!$db_pipelines) {
-            return [];
-        }
-
-        return $db_pipelines->get_pipeline_steps($pipeline_id);
-    }
-
-    /**
-     * Get handlers for specific flow step.
-     *
-     * @param int $flow_id Flow ID
-     * @param int $step_position Step position
-     * @return array Step handlers data
-     */
-    private function get_flow_step_handlers($flow_id, $step_position)
-    {
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
-        if (!$db_flows) {
-            return [];
-        }
-
-        return $db_flows->get_flow_step_handlers($flow_id, $step_position);
-    }
-
-    /**
-     * Check if a step type has handlers available via parameter-based discovery.
-     *
-     * @param string $step_type Step type to check (any step type)
-     * @return bool True if handlers exist for this step type
-     */
-    private function step_has_handlers($step_type)
-    {
-        // Dynamic handler discovery - check if any handlers exist for this step type
-        // This works for any step type: input, output, receiver, or future step types
-        $handlers = apply_filters('dm_get_handlers', null, $step_type);
-        return !empty($handlers);
-    }
-
-    /**
-     * AJAX: Get pipeline steps.
-     */
-    public function ajax_get_pipeline_steps()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_pipeline_steps')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $pipeline_id = absint($_POST['pipeline_id'] ?? 0);
-        if (!$pipeline_id) {
-            wp_send_json_error(__('Invalid pipeline ID.', 'data-machine'));
-        }
-
-        $steps = $this->get_pipeline_steps($pipeline_id);
-        wp_send_json_success($steps);
-    }
-
-    /**
-     * AJAX: Add pipeline step.
-     */
-    public function ajax_add_pipeline_step()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_add_pipeline_step')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $pipeline_id = absint($_POST['pipeline_id'] ?? 0);
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-
-        if (!$pipeline_id || !$step_type) {
-            wp_send_json_error(__('Missing required parameters.', 'data-machine'));
-        }
-
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if (!$db_pipelines) {
-            wp_send_json_error(__('Database service unavailable.', 'data-machine'));
-        }
-
-        $step_id = $db_pipelines->add_pipeline_step($pipeline_id, $step_type);
-        if ($step_id) {
-            wp_send_json_success(['step_id' => $step_id]);
-        } else {
-            wp_send_json_error(__('Failed to add pipeline step.', 'data-machine'));
-        }
-    }
-
-    /**
-     * AJAX: Remove pipeline step.
-     */
-    public function ajax_remove_pipeline_step()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_remove_pipeline_step')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $step_id = absint($_POST['step_id'] ?? 0);
-        if (!$step_id) {
-            wp_send_json_error(__('Invalid step ID.', 'data-machine'));
-        }
-
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if (!$db_pipelines) {
-            wp_send_json_error(__('Database service unavailable.', 'data-machine'));
-        }
-
-        $result = $db_pipelines->remove_pipeline_step($step_id);
-        if ($result) {
-            wp_send_json_success();
-        } else {
-            wp_send_json_error(__('Failed to remove pipeline step.', 'data-machine'));
-        }
-    }
-
-    /**
-     * AJAX: Reorder pipeline steps.
-     */
-    public function ajax_reorder_pipeline_steps()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_reorder_pipeline_steps')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $step_orders = wp_unslash($_POST['step_orders'] ?? []);
-        if (!is_array($step_orders)) {
-            wp_send_json_error(__('Invalid step order data.', 'data-machine'));
-        }
-
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if (!$db_pipelines) {
-            wp_send_json_error(__('Database service unavailable.', 'data-machine'));
-        }
-
-        $result = $db_pipelines->reorder_pipeline_steps($step_orders);
-        if ($result) {
-            wp_send_json_success();
-        } else {
-            wp_send_json_error(__('Failed to reorder pipeline steps.', 'data-machine'));
-        }
-    }
-
-    /**
-     * AJAX: Get dynamic step types based on context.
-     */
-    public function ajax_get_dynamic_step_types()
-    {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_dynamic_step_types')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        // Get available step types via filter system
-        $step_types = apply_filters('dm_get_step_types', []);
+        $step_type = $step['step_type'] ?? 'unknown';
+        $step_handlers = $flow_config['steps'][$step_number] ?? [];
         
-        wp_send_json_success($step_types);
+        ?>
+        <div class="dm-step-card dm-flow-step" data-step-number="<?php echo esc_attr($step_number); ?>" data-flow-id="<?php echo esc_attr($flow_id); ?>">
+            <div class="dm-step-header">
+                <div class="dm-step-number"><?php echo esc_html($step_number); ?></div>
+                <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
+                <div class="dm-step-actions">
+                    <button type="button" class="button button-small dm-add-handler-btn" 
+                            data-step-number="<?php echo esc_attr($step_number); ?>" 
+                            data-flow-id="<?php echo esc_attr($flow_id); ?>">
+                        <?php esc_html_e('Add Handler', 'data-machine'); ?>
+                    </button>
+                </div>
+            </div>
+            <div class="dm-step-body">
+                <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
+                    <?php echo esc_html(ucfirst($step_type)); ?>
+                </div>
+                
+                <!-- Configured Handlers for this step -->
+                <div class="dm-step-handlers">
+                    <?php if (!empty($step_handlers)): ?>
+                        <?php foreach ($step_handlers as $handler_key => $handler_config): ?>
+                            <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($handler_key); ?>">
+                                <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
+                                <button type="button" class="dm-handler-remove" 
+                                        data-handler-key="<?php echo esc_attr($handler_key); ?>" 
+                                        data-step-number="<?php echo esc_attr($step_number); ?>" 
+                                        data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="dm-no-handlers">
+                            <span><?php esc_html_e('No handlers configured', 'data-machine'); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     /**
-     * AJAX: Get available handlers for step type.
+     * Render placeholder pipeline card for when no pipelines exist.
      */
-    public function ajax_get_available_handlers()
+    private function render_placeholder_pipeline_card()
     {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_available_handlers')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $handler_type = sanitize_text_field(wp_unslash($_POST['handler_type'] ?? ''));
-        if (!$handler_type) {
-            wp_send_json_error(__('Handler type required.', 'data-machine'));
-        }
-
-        // Get handlers via filter system
-        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
-        
-        wp_send_json_success($handlers ?: []);
+        ?>
+        <div class="dm-pipeline-card dm-placeholder-pipeline" data-pipeline-id="new">
+            <!-- Pipeline Header with Editable Title -->
+            <div class="dm-pipeline-header">
+                <div class="dm-pipeline-title-section">
+                    <input type="text" class="dm-pipeline-title-input" placeholder="<?php esc_attr_e('Enter pipeline name...', 'data-machine'); ?>" />
+                    <div class="dm-pipeline-meta">
+                        <span class="dm-step-count"><?php esc_html_e('0 steps', 'data-machine'); ?></span>
+                        <span class="dm-flow-count"><?php esc_html_e('0 flows', 'data-machine'); ?></span>
+                    </div>
+                </div>
+                <div class="dm-pipeline-actions">
+                    <button type="button" class="button button-primary dm-save-pipeline-btn" disabled>
+                        <?php esc_html_e('Save Pipeline', 'data-machine'); ?>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Pipeline Steps Section (Template Level) -->
+            <div class="dm-pipeline-steps-section">
+                <div class="dm-section-header">
+                    <h4><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h4>
+                    <p class="dm-section-description"><?php esc_html_e('Define the step sequence for this pipeline', 'data-machine'); ?></p>
+                </div>
+                <div class="dm-pipeline-steps">
+                    <?php $this->render_placeholder_step_card(); ?>
+                </div>
+            </div>
+            
+            <!-- Associated Flows -->
+            <div class="dm-pipeline-flows">
+                <div class="dm-flows-header">
+                    <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
+                    <p class="dm-section-description"><?php esc_html_e('Each flow is a configured instance of the pipeline above', 'data-machine'); ?></p>
+                </div>
+                <div class="dm-flows-list">
+                    <?php $this->render_placeholder_flow_card(); ?>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     /**
-     * AJAX: Add step handler.
+     * Render placeholder step card with Add Step button.
      */
-    public function ajax_add_step_handler()
+    private function render_placeholder_step_card()
     {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_add_step_handler')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $flow_id = absint($_POST['flow_id'] ?? 0);
-        $step_position = absint($_POST['step_position'] ?? 0);
-        $handler_key = sanitize_text_field(wp_unslash($_POST['handler_key'] ?? ''));
-
-        if (!$flow_id || !$step_position || !$handler_key) {
-            wp_send_json_error(__('Missing required parameters.', 'data-machine'));
-        }
-
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
-        if (!$db_flows) {
-            wp_send_json_error(__('Database service unavailable.', 'data-machine'));
-        }
-
-        $result = $db_flows->add_flow_step_handler($flow_id, $step_position, $handler_key);
-        if ($result) {
-            wp_send_json_success();
-        } else {
-            wp_send_json_error(__('Failed to add step handler.', 'data-machine'));
-        }
+        ?>
+        <div class="dm-step-card dm-placeholder-step" data-step-number="1">
+            <div class="dm-step-header">
+                <div class="dm-step-number">1</div>
+                <div class="dm-step-title"><?php esc_html_e('First Step', 'data-machine'); ?></div>
+            </div>
+            <div class="dm-step-body">
+                <div class="dm-placeholder-step-content">
+                    <button type="button" class="button button-primary dm-add-first-step-btn">
+                        <?php esc_html_e('Add Step', 'data-machine'); ?>
+                    </button>
+                    <p class="dm-placeholder-description"><?php esc_html_e('Choose your first step type to begin building your pipeline', 'data-machine'); ?></p>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     /**
-     * AJAX: Remove step handler.
+     * Render placeholder flow card with nested step structure.
      */
-    public function ajax_remove_step_handler()
+    private function render_placeholder_flow_card()
     {
-        // Verify nonce
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_remove_step_handler')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
+        ?>
+        <div class="dm-flow-instance-card dm-placeholder-flow" data-flow-id="new">
+            <div class="dm-flow-header">
+                <div class="dm-flow-title-section">
+                    <input type="text" class="dm-flow-title-input" placeholder="<?php esc_attr_e('Enter flow name...', 'data-machine'); ?>" />
+                    <div class="dm-flow-status">
+                        <span class="dm-schedule-status dm-status-inactive">
+                            <?php esc_html_e('Inactive', 'data-machine'); ?>
+                        </span>
+                    </div>
+                </div>
+                <div class="dm-flow-actions">
+                    <button type="button" class="button button-primary dm-save-flow-btn" disabled>
+                        <?php esc_html_e('Save Flow', 'data-machine'); ?>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Flow Steps (mirrors all pipeline steps) -->
+            <div class="dm-flow-steps-section">
+                <div class="dm-flow-steps-header">
+                    <h5><?php esc_html_e('Configured Steps for this Flow', 'data-machine'); ?></h5>
+                </div>
+                <div class="dm-flow-steps">
+                    <?php $this->render_placeholder_flow_step_card(); ?>
+                </div>
+            </div>
+            
+            <div class="dm-flow-meta">
+                <small class="dm-placeholder-text"><?php esc_html_e('Add steps to the pipeline above to configure handlers for this flow', 'data-machine'); ?></small>
+            </div>
+        </div>
+        <?php
+    }
 
-        $flow_id = absint($_POST['flow_id'] ?? 0);
-        $step_position = absint($_POST['step_position'] ?? 0);
-        $handler_key = sanitize_text_field(wp_unslash($_POST['handler_key'] ?? ''));
-
-        if (!$flow_id || !$step_position || !$handler_key) {
-            wp_send_json_error(__('Missing required parameters.', 'data-machine'));
-        }
-
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
-        if (!$db_flows) {
-            wp_send_json_error(__('Database service unavailable.', 'data-machine'));
-        }
-
-        $result = $db_flows->remove_flow_step_handler($flow_id, $step_position, $handler_key);
-        if ($result) {
-            wp_send_json_success();
-        } else {
-            wp_send_json_error(__('Failed to remove step handler.', 'data-machine'));
-        }
+    /**
+     * Render placeholder flow step card (nested within flow).
+     */
+    private function render_placeholder_flow_step_card()
+    {
+        ?>
+        <div class="dm-step-card dm-flow-step dm-placeholder-flow-step" data-step-number="1">
+            <div class="dm-step-header">
+                <div class="dm-step-number">1</div>
+                <div class="dm-step-title"><?php esc_html_e('First Step', 'data-machine'); ?></div>
+            </div>
+            <div class="dm-step-body">
+                <div class="dm-placeholder-step-content">
+                    <p class="dm-placeholder-description"><?php esc_html_e('This will mirror the pipeline steps with handler configuration', 'data-machine'); ?></p>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 }
 

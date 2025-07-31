@@ -74,12 +74,7 @@ function dm_register_pipelines_admin_page_filters() {
                             'object' => 'dmPipelineBuilder',
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
-                                'get_pipeline_steps_nonce' => wp_create_nonce('dm_get_pipeline_steps'),
-                                'add_pipeline_step_nonce' => wp_create_nonce('dm_add_pipeline_step'),
-                                'remove_pipeline_step_nonce' => wp_create_nonce('dm_remove_pipeline_step'),
-                                'reorder_pipeline_steps_nonce' => wp_create_nonce('dm_reorder_pipeline_steps'),
-                                'get_dynamic_step_types_nonce' => wp_create_nonce('dm_get_dynamic_step_types'),
-                                'get_available_handlers_nonce' => wp_create_nonce('dm_get_available_handlers'),
+                                'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
                                 'strings' => [
                                     'pipelineSteps' => __('Pipeline Steps', 'data-machine'),
                                     'addStep' => __('Add Step', 'data-machine'),
@@ -115,6 +110,12 @@ function dm_register_pipelines_admin_page_filters() {
         }
         return $assets;
     }, 10, 2);
+    
+    // AJAX handler registration - Pipelines manages its own AJAX operations
+    add_action('wp_ajax_dm_pipeline_ajax', function() {
+        $ajax_handler = new PipelineAjax();
+        $ajax_handler->handle_pipeline_ajax();
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

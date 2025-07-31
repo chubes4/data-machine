@@ -60,19 +60,15 @@ class Reddit {
 			throw new Exception(esc_html__( 'Missing module ID or user ID provided to Reddit handler.', 'data-machine' ));
 		}
 
-		// Get services via filter-based access (non-auth services)
+		// Get services via filter-based access (current architecture)
 		$oauth_reddit = $this->oauth_reddit; // Internal auth instance
-		$processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-		$db_modules = apply_filters('dm_get_database_service', null, 'modules');
-		$db_projects = apply_filters('dm_get_database_service', null, 'projects');
+		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
 
 		// Check if essential dependencies are available
-		if (!$processed_items_manager || !$db_modules || !$db_projects) {
+		if (!$db_processed_items) {
 			$logger?->error('Reddit Input: Required service dependency missing.', [
 				'module_id' => $module_id,
-				'processed_items_manager_missing' => !$processed_items_manager,
-				'db_modules_missing' => !$db_modules,
-				'db_projects_missing' => !$db_projects
+				'processed_items_missing' => !$db_processed_items
 			]);
 			throw new Exception(esc_html__( 'Required service not available in Reddit handler.', 'data-machine' ));
 		}
@@ -137,13 +133,9 @@ class Reddit {
 			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
 		]);
 
-		// --- Verify Module Ownership ---
-		// Get project and verify ownership
-		$project = $db_projects->get_by_id($module->project_id ?? 0);
-		if (!$project || $project->user_id !== $user_id) {
-			$logger?->error('Reddit Input: Permission denied for module.', ['module_id' => $module_id, 'user_id' => $user_id]);
-			throw new Exception(esc_html__( 'Permission denied for this module (Reddit handler).', 'data-machine' ));
-		}
+		// --- Legacy ownership verification removed ---
+		// Note: Ownership verification now handled at the flow/job level
+		// Individual handlers no longer need to verify permissions
 
 		// --- Configuration (from nested config structure) ---
 		$config = $source_config['reddit'] ?? [];
@@ -284,7 +276,7 @@ class Reddit {
 				}
 
 				// 3. Check if already processed
-				if ($processed_items_manager->is_processed($module_id, $current_item_id, 'reddit')) {
+				if ($db_processed_items->is_processed($module_id, 'reddit', $current_item_id)) {
 					$logger?->debug('Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'module_id' => $module_id]);
 					continue; // Skip if already processed
 				}

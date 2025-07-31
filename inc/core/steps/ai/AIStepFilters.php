@@ -37,8 +37,9 @@ if (!defined('ABSPATH')) {
  * This maintains the self-registration pattern and keeps AI functionality self-contained.
  * 
  * Registered Filters:
- * - dm_get_pipeline_prompt: Retrieve pipeline-level prompts for AI steps
- * - dm_save_pipeline_prompt: Save pipeline-level prompts (future)
+ * - dm_get_steps: Register AI step for pipeline discovery
+ * - dm_create_datapacket: AI-specific DataPacket creation
+ * - Service filters: FluidContextBridge, AiResponseParser, PromptBuilder
  * 
  * @since 1.0.0
  */
@@ -58,7 +59,7 @@ function dm_register_ai_step_filters() {
         if ($step_type === 'ai') {
             return [
                 'label' => __('AI Processing', 'data-machine'),
-                'description' => __('Process content using AI models', 'data-machine'),
+                'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
                 'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
                 'consume_all_packets' => true
             ];
@@ -66,99 +67,6 @@ function dm_register_ai_step_filters() {
         return $step_config;
     }, 10, 2);
     
-    /**
-     * Pipeline Prompt System - AI Step Exclusive
-     * 
-     * Provides pipeline-level prompts that apply to all AI steps in a pipeline.
-     * This was the valuable "project prompt" concept adapted for modern pipeline architecture.
-     * 
-     * Usage: $prompts = apply_filters('dm_get_pipeline_prompt', null, $pipeline_id);
-     * 
-     * Expected Return Format:
-     * [
-     *     'ai' => 'Pipeline-level prompt for AI steps',
-     *     // Future: additional step names can be supported
-     * ]
-     * 
-     * @param mixed $prompts Existing prompts (null if none)
-     * @param int $pipeline_id Pipeline ID
-     * @return array|null Pipeline prompts or null if not found
-     */
-    add_filter('dm_get_pipeline_prompt', function($prompts, $pipeline_id) {
-        if ($prompts !== null) {
-            return $prompts; // External override provided
-        }
-        
-        if (empty($pipeline_id)) {
-            return null;
-        }
-        
-        // Use existing pipelines database service
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if (!$db_pipelines) {
-            return null;
-        }
-        
-        // Get pipeline configuration
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
-        if (!$pipeline) {
-            return null;
-        }
-        
-        // Extract pipeline prompt from configuration
-        // For now, use a simple option-based storage
-        // Future: integrate with pipeline configuration JSON
-        $pipeline_prompt_key = "dm_pipeline_prompt_{$pipeline_id}";
-        $pipeline_prompt = get_option($pipeline_prompt_key, '');
-        
-        if (empty($pipeline_prompt)) {
-            return null;
-        }
-        
-        // Return in format expected by existing AI step code
-        // AIStep calls: get_step_configuration($job_id, 'ai')
-        // So it expects: $step_prompts['ai'] = $prompt_text
-        // FluidContextBridge expects: array_keys($pipeline_prompts) for logging
-        
-        return [
-            'ai' => $pipeline_prompt // Matches AIStep expectation
-        ];
-        
-    }, 10, 2);
-    
-    /**
-     * Save Pipeline Prompt Filter
-     * 
-     * Allows saving pipeline-level prompts. Currently uses WordPress options
-     * but can be enhanced to integrate with pipeline configuration storage.
-     * 
-     * Usage: $result = apply_filters('dm_save_pipeline_prompt', null, $pipeline_id, $prompt);
-     * 
-     * @param mixed $result Current save result (null if not handled)
-     * @param int $pipeline_id Pipeline ID
-     * @param string $prompt Prompt text to save
-     * @return bool Save success status
-     */
-    add_filter('dm_save_pipeline_prompt', function($result, $pipeline_id, $prompt) {
-        if ($result !== null) {
-            return $result; // External override provided
-        }
-        
-        if (empty($pipeline_id)) {
-            return false;
-        }
-        
-        // Validate pipeline exists
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        if (!$db_pipelines || !$db_pipelines->get_pipeline($pipeline_id)) {
-            return false;
-        }
-        
-        // Save pipeline prompt
-        $pipeline_prompt_key = "dm_pipeline_prompt_{$pipeline_id}";
-        return update_option($pipeline_prompt_key, sanitize_textarea_field($prompt));
-        
-    }, 10, 3);
     
     // DataPacket conversion registration - AI step uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {

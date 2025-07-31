@@ -238,16 +238,8 @@ class AIStep {
             return null;
         }
 
-        // Try to get step configuration from pipeline
-        $pipeline_id = $this->get_pipeline_id_from_job($job);
-        if ($pipeline_id) {
-            $step_prompts = apply_filters('dm_get_pipeline_prompt', null, $pipeline_id);
-            if (!empty($step_prompts) && isset($step_prompts[$step_name])) {
-                return $step_prompts[$step_name];
-            }
-        }
-
-        // No fallback - pipeline configuration is required
+        // TODO: Implement step-level prompt configuration
+        // For now, return null until step-level prompt system is implemented
         return null;
     }
 

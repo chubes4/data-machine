@@ -17,21 +17,43 @@ WordPress plugin for AI content processing workflows. Built with WordPress-nativ
 - **🔌 Filter Architecture**: Extensible system using WordPress filters
 - **🚀 Modular Design**: Clean separation of concerns
 
-## Real-World Example: Core Content Workflow
+## Real-World Example: Pipeline+Flow Architecture
 
-**Linear Step-by-Step Processing:**
+**Pipeline Template** (Reusable Workflow Definition):
 ```
-Step 1: Input (RSS Feed Handler)     → Fetches latest RSS content
+Pipeline: "Multi-Source Content Processing"
+Step 1: Input (RSS Feed Handler)     → Fetches RSS content
 Step 2: Input (Reddit Handler)       → Adds Reddit posts to context  
-Step 3: Input (WordPress Handler)    → Includes existing blog posts
-Step 4: AI (GPT-4 Analysis)          → Analyzes ALL previous inputs
-Step 5: AI (Claude Summary)          → Creates summary with full context
-Step 6: Output (Twitter Handler)     → Posts enhanced content
-Step 7: Output (Facebook Handler)    → Publishes to Facebook
-Step 8: Output (WordPress Handler)   → Creates new blog post
+Step 3: AI (Analysis)                → Analyzes ALL previous inputs
+Step 4: AI (Summary)                 → Creates summary with full context
+Step 5: Output (Social Media)        → Publishes enhanced content
 ```
 
-**Context Accumulation**: Each step receives ALL previous step data, enabling cross-referencing and analysis across multiple data sources in sequential processing.
+**Flow Instances** (Configured Executions of Pipeline):
+```
+Flow A: Tech News Processing (Daily)
+├── RSS: TechCrunch feed
+├── Reddit: r/technology posts
+├── AI: GPT-4 analysis
+├── AI: Claude creative writing
+└── Output: Twitter @tech_account
+
+Flow B: Gaming Content (Weekly)
+├── RSS: Gaming news feeds
+├── Reddit: r/gaming posts
+├── AI: Gemini analysis
+├── AI: GPT-4 summary
+└── Output: Facebook gaming page
+
+Flow C: Manual Content (On-demand)
+├── RSS: Custom feed URLs
+├── Reddit: User-selected subreddits
+├── AI: User-selected models
+├── AI: Custom prompts
+└── Output: Multiple platforms
+```
+
+**Two-Layer Architecture**: Pipelines define step sequences, Flows configure specific handlers and scheduling for each pipeline instance.
 
 ## Quick Start
 
@@ -41,39 +63,52 @@ Step 8: Output (WordPress Handler)   → Creates new blog post
 3. Activate plugin in WordPress admin
 4. Configure AI provider in Data Machine → Settings
 
-### Your First Pipeline
-1. **Data Machine → Pipelines → Create New**
-2. **Add Input Step**: Choose RSS Feed
-3. **Add AI Step**: Configure GPT-4 for content analysis  
-4. **Add Output Step**: Select WordPress post creation
-5. **Save & Run**: Watch automated content processing
+### Your First Pipeline+Flow
+1. **Create Pipeline Template**: Data Machine → Pipelines → Create New
+   - Add Input Step: RSS Feed handler
+   - Add AI Step: Content analysis
+   - Add Output Step: WordPress publishing
+2. **Create Flow Instance**: Configure specific settings
+   - RSS Feed URL: Choose your source
+   - AI Model: Select GPT-4, Claude, etc.
+   - WordPress: Select target blog/site
+   - Schedule: Set timing (daily, weekly, manual)
+3. **Test & Deploy**: Run flow and monitor results
 
-## Pipeline Architecture: Linear Sequential Processing
+## Architecture: Pipeline+Flow System
 
-**CRITICAL UNDERSTANDING**: Data Machine pipelines execute **step-by-step in linear sequence**, not in parallel.
+**Two-Layer Architecture**: Pipelines are reusable templates, Flows are configured instances.
 
-### How Multi-Input Works
+### Pipeline Layer (Templates)
+- **Reusable Workflows**: Define step sequences once, use many times
+- **Step Definitions**: Specify step types and positions (0-99)
+- **No Configuration**: Pure workflow structure without handler specifics
+- **Template Library**: Build library of common workflow patterns
 
-**CORRECT Pattern** (Sequential Steps):
-```
-Step 1: Input (RSS Feed Handler)    → Position 0
-Step 2: Input (Reddit Handler)      → Position 1  
-Step 3: Input (WordPress Handler)   → Position 2
-Step 4: AI (GPT-4 Analysis)         → Position 3
-Step 5: Output (Twitter Handler)    → Position 4
-```
+### Flow Layer (Instances)
+- **Pipeline Implementation**: Each flow uses a specific pipeline template
+- **Handler Configuration**: Configure specific handlers for each step
+- **Independent Scheduling**: Each flow has its own timing and triggers
+- **User Settings**: Per-flow customization of AI models, accounts, etc.
 
-**INCORRECT Understanding** (This does NOT happen):
-```
-❌ RSS + Reddit + WordPress → AI → Output  (Parallel - NOT how it works)
-```
-
-### Key Linear Processing Features
-- **Position-Based Execution**: Steps run in order 0-99
+### Linear Processing Within Each Flow
+- **Position-Based Execution**: Steps run in order 0-99 within each flow
 - **Context Accumulation**: Each step receives ALL previous step data
 - **Sequential Flow**: Step N+1 can access data from steps 0 through N
 - **Multi-Input Pattern**: Add multiple input steps in sequence, not parallel
 - **No Parallel Processing**: Steps execute one after another, never simultaneously
+
+### Multiple Workflow Example
+```
+Pipeline: "Social Media Content"
+├── Flow A: r/technology → GPT-4 → Twitter (Daily)
+├── Flow B: RSS feeds → Claude → Facebook (Weekly)  
+└── Flow C: Manual content → Gemini → Multiple platforms (On-demand)
+
+Pipeline: "Blog Publishing"
+├── Flow D: Research sources → AI analysis → WordPress (Weekly)
+└── Flow E: RSS aggregation → AI summary → WordPress (Daily)
+```
 
 ### Uniform Array Processing Example
 ```php
@@ -130,8 +165,15 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ## Key Features
 
+### Pipeline+Flow Architecture
+Two-layer system enabling template reuse and independent workflow execution:
+- **Pipeline Templates**: Reusable workflow definitions with step sequences
+- **Flow Instances**: Configured executions with specific handlers and scheduling
+- **Template Library**: Build once, deploy multiple times with different configurations
+- **Independent Scheduling**: Each flow runs on its own timing and triggers
+
 ### Multi-Source Context Collection
-Collect data from multiple sources sequentially - each step receives ALL previous step data:
+Collect data from multiple sources sequentially within each flow:
 - **Sequential Input Steps**: RSS feeds → Reddit posts → WordPress content → Local files
 - **Cumulative Context**: Each step builds on previous data for rich analysis
 - **Cross-reference capabilities** across different data sources through context accumulation
@@ -182,18 +224,30 @@ The filter-based architecture makes adding custom handlers straightforward. Comm
 
 ## Practical Examples
 
-### Example 1: Core Content Processing Pipeline
+### Example 1: Pipeline+Flow Content Processing
 
-**Sequential Linear Workflow**: Step 1 → Step 2 → Step 3
-
+**Pipeline Template**: "RSS to Social Media"
 ```php
-// Linear step-by-step processing using core handlers
-// Pipeline Configuration:
-// Step 1: RSS Input Handler (position 0) - fetches latest posts
-// Step 2: AI Step Handler (position 1) - GPT-4 content enhancement  
-// Step 3: Twitter Output Handler (position 2) - publishes enhanced content
+// Pipeline Definition (reusable template):
+// Step 1: Input Handler (position 0) - data collection
+// Step 2: AI Handler (position 1) - content enhancement  
+// Step 3: Output Handler (position 2) - content publishing
+```
 
-// Step execution order: 0 → 1 → 2 (position-based sequential processing)
+**Flow Implementations**:
+```php
+// Flow A: Tech News to Twitter (Daily)
+// - RSS: TechCrunch feed
+// - AI: GPT-4 analysis
+// - Output: @tech_twitter
+
+// Flow B: Gaming News to Facebook (Weekly)
+// - RSS: Gaming feeds
+// - AI: Claude creative writing
+// - Output: Gaming Facebook page
+
+// Step execution within each flow:
+// Position-based sequential processing (0 → 1 → 2)
 // Context accumulation at each step:
 
 // At Step 2 (AI processing) - uses entire array for context:
@@ -204,7 +258,7 @@ public function execute(int $job_id, array $data_packets = []): bool {
     }
 }
 
-// At Step 3 (Twitter output) - uses latest packet only:
+// At Step 3 (Output) - uses latest packet:
 public function execute(int $job_id, array $data_packets = []): bool {
     // Output steps use latest packet (data_packets[0])
     $latest_packet = $data_packets[0] ?? null;
@@ -212,21 +266,36 @@ public function execute(int $job_id, array $data_packets = []): bool {
 }
 ```
 
-### Example 2: Multi-Source Social Media Publishing
+### Example 2: Multi-Source Content Pipeline+Flows
 
-**Sequential Multi-Input Workflow**: Multiple Input Steps → AI Processing → Multiple Output Steps
-
+**Pipeline Template**: "Multi-Source Analysis and Publishing"
 ```php
-// Linear sequential processing with multiple inputs and outputs
-// Sequential Step Configuration (position-based execution 0-99):
-// Step 1: Reddit Input Handler (position 0) - fetch r/technology posts
-// Step 2: WordPress Input Handler (position 1) - gather existing blog posts  
-// Step 3: AI Step Handler (position 2) - Claude content correlation and summary
-// Step 4: Facebook Output Handler (position 3) - publish summary to Facebook
-// Step 5: Threads Output Handler (position 4) - post alternative summary
-// Step 6: Twitter Output Handler (position 5) - publish condensed version
+// Pipeline Structure (reusable across flows):
+// Step 1: Input Handler (position 0) - source data collection
+// Step 2: Input Handler (position 1) - additional context  
+// Step 3: AI Handler (position 2) - cross-source analysis
+// Step 4: Output Handler (position 3) - content distribution
+// Step 5: Output Handler (position 4) - secondary distribution
+```
 
-// Context accumulation through sequential execution:
+**Flow Configurations**:
+```php
+// Flow A: Tech Analysis (Daily)
+// - Input 1: Reddit r/technology
+// - Input 2: WordPress tech blog posts
+// - AI: Claude correlation analysis
+// - Output 1: Facebook tech page
+// - Output 2: Twitter @tech_updates
+
+// Flow B: News Aggregation (Hourly)
+// - Input 1: RSS news feeds
+// - Input 2: Reddit r/worldnews
+// - AI: GPT-4 summarization
+// - Output 1: Threads news account
+// - Output 2: WordPress news blog
+
+// Sequential execution within each flow:
+// Context accumulation through position-based processing:
 
 // At Step 3 (AI processing) - uses entire array for multi-source analysis:
 public function execute(int $job_id, array $data_packets = []): bool {
@@ -237,8 +306,8 @@ public function execute(int $job_id, array $data_packets = []): bool {
     }
 }
 
-// At Step 6 (final output) - uses latest packet:
-// Note: Most output handlers use latest packet (data_packets[0]) by default
+// At Steps 4-5 (outputs) - use latest processed packet:
+// Most output handlers use latest packet (data_packets[0]) by default
 ```
 
 ### Example 3: Extension - Email Campaign Automation

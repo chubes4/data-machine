@@ -1,9 +1,12 @@
 <?php
 /**
- * Pipeline+flow-based job creation class for execution orchestration.
+ * Pipeline+Flow job creation class for execution orchestration.
  *
- * Creates and schedules jobs using pipeline+flow architecture with position-based
- * execution. Validates pipeline steps against universal handler system and dm_get_steps
+ * Creates and schedules jobs using the two-layer Pipeline+Flow architecture:
+ * - Pipelines: Reusable workflow templates with step sequences
+ * - Flows: Configured instances with handler settings and scheduling
+ *
+ * Validates pipeline steps against universal handler system and dm_get_steps
  * filter registry. Fully integrated with ProcessingOrchestrator for seamless execution.
  *
  * @package    Data_Machine

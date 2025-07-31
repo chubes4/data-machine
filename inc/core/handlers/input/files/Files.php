@@ -149,61 +149,33 @@ class Files {
     }
 
     /**
-     * Get uploaded files from module configuration.
+     * This method appears to be unused legacy code.
+     * Configuration is now passed directly via source_config parameter.
      *
-     * @param int $module_id Module ID.
-     * @return array Array of uploaded files.
+     * @param int $legacy_id Legacy ID (unused).
+     * @return array Empty array - configuration comes from source_config.
      */
-    private function get_uploaded_files(int $module_id): array {
-        $db_modules = apply_filters('dm_get_database_service', null, 'modules');
-        if (!$db_modules) {
-            return [];
-        }
-        
-        $module = $db_modules->get_module($module_id);
-        if (!$module) {
-            return [];
-        }
-
-        $data_source_config = json_decode($module->data_source_config ?? '{}', true);
-        $files_config = $data_source_config['files'] ?? [];
-        return $files_config['uploaded_files'] ?? [];
+    private function get_uploaded_files(int $legacy_id): array {
+        // This method is no longer needed as configuration is passed directly
+        // via the source_config parameter in get_input_data()
+        return [];
     }
 
     /**
-     * Remove invalid file from module configuration.
+     * Remove invalid file (legacy method - no longer needed).
+     * File management is now handled at the flow configuration level.
      *
-     * @param int $module_id Module ID.
-     * @param string $file_path File path to remove.
+     * @param int $legacy_id Legacy ID (unused).
+     * @param string $file_path File path (unused).
      */
-    private function remove_invalid_file(int $module_id, string $file_path): void {
-        $uploaded_files = $this->get_uploaded_files($module_id);
-        
-        // Filter out the invalid file
-        $uploaded_files = array_filter($uploaded_files, function($file) use ($file_path) {
-            return ($file['persistent_path'] ?? '') !== $file_path;
-        });
-
-        // Reindex array
-        $uploaded_files = array_values($uploaded_files);
-
-        // Update module config
-        $db_modules = apply_filters('dm_get_database_service', null, 'modules');
-        if (!$db_modules) {
-            return;
-        }
-        
-        $module = $db_modules->get_module($module_id);
-        if ($module) {
-            $data_source_config = json_decode($module->data_source_config ?? '{}', true);
-            $files_config = $data_source_config['files'] ?? [];
-            $files_config['uploaded_files'] = $uploaded_files;
-            $data_source_config['files'] = $files_config;
-            
-            $db_modules->update_module($module_id, [
-                'data_source_config' => json_encode($data_source_config)
-            ]);
-        }
+    private function remove_invalid_file(int $legacy_id, string $file_path): void {
+        // File management is now handled at the configuration level
+        // This method is kept for backward compatibility but does nothing
+        $logger = apply_filters('dm_get_logger', null);
+        $logger?->info('Files Input: Legacy remove_invalid_file called but ignored.', [
+            'legacy_id' => $legacy_id,
+            'file_path' => $file_path
+        ]);
     }
 
     /**

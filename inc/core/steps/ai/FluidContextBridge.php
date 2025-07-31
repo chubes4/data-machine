@@ -111,17 +111,8 @@ class FluidContextBridge {
         // Build enhanced context for ai-http-client
         $context_data = $this->prepare_context_data($aggregated_context);
         
-        // Include pipeline prompts if pipeline_id is provided
-        if ($pipeline_id) {
-            $pipeline_prompts = apply_filters('dm_get_pipeline_prompt', null, $pipeline_id);
-            if (!empty($pipeline_prompts)) {
-                $context_data['pipeline_prompts'] = $pipeline_prompts;
-                $logger->debug('FluidContextBridge: Included pipeline prompts in context', [
-                    'pipeline_id' => $pipeline_id,
-                    'prompt_steps' => array_keys($pipeline_prompts)
-                ]);
-            }
-        }
+        // TODO: Implement step-level prompt context
+        // Pipeline-level prompts have been removed in favor of step-level configuration
 
         // Use ai-http-client's PromptManager for enhanced prompt building if available
         if (class_exists('AI_HTTP_Prompt_Manager')) {
