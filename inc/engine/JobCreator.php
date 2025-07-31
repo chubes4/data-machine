@@ -190,29 +190,22 @@ class JobCreator {
             return new \WP_Error( 'invalid_pipeline', 'Pipeline has no configured steps' );
         }
 
-        // Get available handlers and steps for validation
-        $input_handlers = apply_filters( 'dm_get_handlers', [], 'input' );
-        $output_handlers = apply_filters( 'dm_get_handlers', [], 'output' );
-        $available_steps = apply_filters( 'dm_get_steps', [] );
-
-        // Validate each pipeline step
+        // Validate each pipeline step using dynamic parameter-based discovery
         foreach ( $pipeline_config as $step ) {
             $step_type = $step['type'] ?? '';
             $step_subtype = $step['subtype'] ?? '';
 
-            // Validate step type exists in registry
-            if ( ! isset( $available_steps[ $step_type ] ) ) {
+            // Validate step type exists via parameter-based discovery (engine agnostic)
+            $step_config = apply_filters( 'dm_get_steps', null, $step_type );
+            if ( ! $step_config ) {
                 return new \WP_Error( 'invalid_step_type', sprintf( 'Invalid step type: %s', $step_type ) );
             }
 
-            // Validate handler-based steps against universal handler system
-            if ( $step_type === 'input' ) {
-                if ( ! isset( $input_handlers[ $step_subtype ] ) ) {
-                    return new \WP_Error( 'invalid_input_handler', sprintf( 'Invalid input handler: %s', $step_subtype ) );
-                }
-            } elseif ( $step_type === 'output' ) {
-                if ( ! isset( $output_handlers[ $step_subtype ] ) ) {
-                    return new \WP_Error( 'invalid_output_handler', sprintf( 'Invalid output handler: %s', $step_subtype ) );
+            // Validate handlers dynamically if step has subtype (engine agnostic)
+            if ( ! empty( $step_subtype ) ) {
+                $handlers = apply_filters( 'dm_get_handlers', null, $step_type );
+                if ( $handlers && ! isset( $handlers[ $step_subtype ] ) ) {
+                    return new \WP_Error( 'invalid_handler', sprintf( 'Invalid %s handler: %s', $step_type, $step_subtype ) );
                 }
             }
 

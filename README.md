@@ -1,32 +1,37 @@
 # Data Machine
 
-Transform WordPress into a **Universal Content Processing Platform** with AI-powered workflows and visual pipeline construction. Built with pure WordPress filter architecture for maximum extensibility.
+Transform any WordPress site into a **Universal AI Content Processing Platform**. The first comprehensive AI workflow system built entirely on WordPress-native patterns, enabling sophisticated multi-provider AI processing through familiar WordPress interfaces.
 
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-## Core Capabilities
+## AI-First Capabilities
 
-- **🎨 Visual Pipeline Builder**: Drag-and-drop workflow construction with real-time configuration
-- **🔄 Multi-Source Context Collection**: Gather data from RSS, Reddit, Files, WordPress simultaneously
-- **🤖 Multi-AI Model Workflows**: Chain different AI providers (GPT-4 → Claude → Gemini) in single pipelines
-- **📤 Multi-Platform Publishing**: Post to Facebook, Twitter, Threads, WordPress automatically
-- **🌐 Bidirectional WordPress**: WordPress as both input source and output destination
-- **🔌 100% Filter-Based**: Pure WordPress architecture with zero constructor dependencies
-- **🚀 Infinitely Extensible**: Add any handler type - everything auto-integrates via filter system
+- **🤖 Universal AI Integration**: Seamless switching between OpenAI, Anthropic, Google, Grok, OpenRouter
+- **🎨 Visual AI Pipeline Builder**: Gutenberg-inspired drag-and-drop AI workflow construction
+- **🧠 Intelligent Context Processing**: Multi-source data collection with AI-aware context management
+- **🔄 Sophisticated AI Workflows**: Chain different AI models and providers in complex processing pipelines
+- **📤 AI-Powered Publishing**: Intelligent content distribution to Facebook, Twitter, Threads, WordPress
+- **🌐 WordPress-Native Design**: Built entirely on familiar WordPress patterns and interfaces
+- **🔌 Comprehensive Architecture**: Filter-based system enabling unlimited extensibility
+- **🚀 Professional Implementation**: Clean separation of concerns with modular component design
 
 ## Real-World Example: Core Content Workflow
 
+**Linear Step-by-Step Processing:**
 ```
-RSS Feed Input        →  AI Analysis (GPT-4)     →  Content Enhancement  →  Twitter Post
-     ↓                        ↓                         ↓                      ↓
-Reddit Posts          →  AI Summary (Claude)     →  Custom Validation   →  Facebook Post
-     ↓                        ↓                         ↓                      ↓
-WordPress Content     →  Context Collection      →  Final Processing    →  WordPress Post
+Step 1: Input (RSS Feed Handler)     → Fetches latest RSS content
+Step 2: Input (Reddit Handler)       → Adds Reddit posts to context  
+Step 3: Input (WordPress Handler)    → Includes existing blog posts
+Step 4: AI (GPT-4 Analysis)          → Analyzes ALL previous inputs
+Step 5: AI (Claude Summary)          → Creates summary with full context
+Step 6: Output (Twitter Handler)     → Posts enhanced content
+Step 7: Output (Facebook Handler)    → Publishes to Facebook
+Step 8: Output (WordPress Handler)   → Creates new blog post
 ```
 
-**Context Collection Power**: Each AI step receives ALL previous inputs and processing results, enabling sophisticated cross-referencing and analysis across multiple data sources.
+**Context Accumulation Power**: Each step receives ALL previous step data, enabling sophisticated cross-referencing and analysis across multiple data sources in sequential processing.
 
 ## Quick Start
 
@@ -43,38 +48,100 @@ WordPress Content     →  Context Collection      →  Final Processing    → 
 4. **Add Output Step**: Select WordPress post creation
 5. **Save & Run**: Watch automated content processing
 
-## Architecture: Pure WordPress Filter System
+## Pipeline Architecture: Linear Sequential Processing
 
-Data Machine uses 100% WordPress filters for service access and extensibility:
+**CRITICAL UNDERSTANDING**: Data Machine pipelines execute **step-by-step in linear sequence**, not in parallel.
+
+### How Multi-Input Works
+
+**CORRECT Pattern** (Sequential Steps):
+```
+Step 1: Input (RSS Feed Handler)    → Position 0
+Step 2: Input (Reddit Handler)      → Position 1  
+Step 3: Input (WordPress Handler)   → Position 2
+Step 4: AI (GPT-4 Analysis)         → Position 3
+Step 5: Output (Twitter Handler)    → Position 4
+```
+
+**INCORRECT Understanding** (This does NOT happen):
+```
+❌ RSS + Reddit + WordPress → AI → Output  (Parallel - NOT how it works)
+```
+
+### Key Linear Processing Features
+- **Position-Based Execution**: Steps run in order 0-99
+- **Context Accumulation**: Each step receives ALL previous step data
+- **Sequential Flow**: Step N+1 can access data from steps 0 through N
+- **Multi-Input Pattern**: Add multiple input steps in sequence, not parallel
+- **No Parallel Processing**: Steps execute one after another, never simultaneously
+
+### Uniform Array Processing Example
+```php
+// ALL steps receive array of DataPackets (most recent first)
+public function execute(int $job_id, array $data_packets = []): bool {
+    // AI steps (consume_all_packets: true) - use entire array
+    foreach ($data_packets as $packet) {
+        $content = $packet->content['body'];
+        // Process all packets for complete context
+    }
+    
+    // Most other steps (consume_all_packets: false) - use latest only
+    $latest_packet = $data_packets[0] ?? null;
+    if ($latest_packet) {
+        $content = $latest_packet->content['body'];
+        // Process only most recent data
+    }
+    
+    return true;
+}
+```
+
+## Architecture: Comprehensive Filter-Based System
+
+Data Machine implements a **comprehensive filter-based architecture** enabling the sophisticated AI workflows through WordPress-native patterns. Every component is replaceable, extensible, and systematically organized:
 
 ```php
-// Core service access
+// Core services - completely replaceable
 $logger = apply_filters('dm_get_logger', null);
 $ai_client = apply_filters('dm_get_ai_http_client', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
 
-// Database services with parameters
+// Database services - pure filter discovery (no switch statements)
 $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+$db_analytics = apply_filters('dm_get_database_service', null, 'analytics'); // External
 
-// Handler system returns instantiated objects
+// Handler system - object-based with auto-linking
 $input_handlers = apply_filters('dm_get_handlers', null, 'input');
 $output_handlers = apply_filters('dm_get_handlers', null, 'output');
+$custom_handlers = apply_filters('dm_get_handlers', null, 'my_custom_type');
+
+// Step system - configuration arrays with implicit behavior
+$steps = apply_filters('dm_get_steps', [], '');
+$ai_config = apply_filters('dm_get_steps', null, 'ai');
 ```
+
+### The Power: Complete Frontend/Backend Separation
+
+- **Frontend**: 100% replaceable via filter overrides
+- **Backend**: Engine accepts any components following filter contracts
+- **Extensions**: Add unlimited services, handlers, steps via filters
+- **No Lock-in**: Replace core functionality without touching engine code
 
 ## Key Features
 
 ### Multi-Source Context Collection
-Collect data from multiple sources simultaneously - each AI step receives ALL previous inputs:
-- **RSS feeds** + **Reddit posts** + **WordPress content** + **Local files** = Rich context for analysis
-- **Cross-reference capabilities** across different data sources
-- **Intelligent deduplication** and content correlation
+Collect data from multiple sources sequentially - each step receives ALL previous step data:
+- **Sequential Input Steps**: RSS feeds → Reddit posts → WordPress content → Local files
+- **Cumulative Context**: Each step builds on previous data for rich analysis
+- **Cross-reference capabilities** across different data sources through context accumulation
+- **Intelligent deduplication** and content correlation via step-by-step processing
 
 ### Multi-AI Model Workflows
-Chain different AI providers in single pipelines:
-- **GPT-4** for initial analysis → **Claude** for summary → **Custom AI** for final polish
-- **Step-specific models**: Use the best AI for each task
-- **Context preservation**: Each step builds on previous AI analysis
+Chain different AI providers in sequential pipeline steps:
+- **Sequential AI Steps**: Step 1 (GPT-4 analysis) → Step 2 (Claude summary) → Step 3 (Custom AI polish)
+- **Step-specific models**: Use the best AI for each sequential processing task
+- **Context preservation**: Each AI step receives data from ALL previous steps (input + AI)
 
 ### Core Handlers Included
 
@@ -117,39 +184,61 @@ The filter-based architecture makes adding custom handlers trivial. Common exten
 
 ### Example 1: Core Content Processing Pipeline
 
-**Workflow**: RSS Feed → AI Analysis → Twitter Post
+**Sequential Linear Workflow**: Step 1 → Step 2 → Step 3
 
 ```php
-// Using core handlers - RSS input, AI processing, Twitter output
+// Linear step-by-step processing using core handlers
 // Pipeline Configuration:
-// Step 1: RSS Input (fetch latest posts)
-// Step 2: AI Analysis (GPT-4 content enhancement)
-// Step 3: Twitter Output (publish enhanced content)
+// Step 1: RSS Input Handler (position 0) - fetches latest posts
+// Step 2: AI Step Handler (position 1) - GPT-4 content enhancement  
+// Step 3: Twitter Output Handler (position 2) - publishes enhanced content
 
-// Each step receives complete context automatically:
-$context = apply_filters('dm_get_context', null);
-$rss_content = $context['all_previous_packets'][0];    // Original RSS data
-$ai_analysis = $context['all_previous_packets'][1];    // AI-enhanced content
+// Step execution order: 0 → 1 → 2 (position-based sequential processing)
+// Context accumulation at each step:
+
+// At Step 2 (AI processing) - uses entire array for context:
+public function execute(int $job_id, array $data_packets = []): bool {
+    // AI steps consume all packets (most recent first)
+    foreach ($data_packets as $packet) {
+        // Process all previous data for complete context
+    }
+}
+
+// At Step 3 (Twitter output) - uses latest packet only:
+public function execute(int $job_id, array $data_packets = []): bool {
+    // Output steps use latest packet (data_packets[0])
+    $latest_packet = $data_packets[0] ?? null;
+    // Publish AI-enhanced content from Step 2
+}
 ```
 
 ### Example 2: Multi-Source Social Media Publishing
 
-**Workflow**: Reddit + WordPress → AI Summary → Multi-Platform Publishing
+**Sequential Multi-Input Workflow**: Multiple Input Steps → AI Processing → Multiple Output Steps
 
 ```php
-// Using core handlers for comprehensive workflow
-// Step 1: Reddit Input (r/technology posts)
-// Step 2: WordPress Input (existing blog posts)
-// Step 3: AI Analysis (Claude content correlation)
-// Step 4: Facebook Output (publish summary)
-// Step 5: Threads Output (alternative summary)
-// Step 6: Twitter Output (condensed version)
+// Linear sequential processing with multiple inputs and outputs
+// Sequential Step Configuration (position-based execution 0-99):
+// Step 1: Reddit Input Handler (position 0) - fetch r/technology posts
+// Step 2: WordPress Input Handler (position 1) - gather existing blog posts  
+// Step 3: AI Step Handler (position 2) - Claude content correlation and summary
+// Step 4: Facebook Output Handler (position 3) - publish summary to Facebook
+// Step 5: Threads Output Handler (position 4) - post alternative summary
+// Step 6: Twitter Output Handler (position 5) - publish condensed version
 
-// All outputs receive enriched context from multiple sources
-$context = apply_filters('dm_get_context', null);
-$reddit_posts = $context['all_previous_packets'][0];
-$wp_content = $context['all_previous_packets'][1];
-$ai_summary = $context['all_previous_packets'][2];
+// Context accumulation through sequential execution:
+
+// At Step 3 (AI processing) - uses entire array for multi-source analysis:
+public function execute(int $job_id, array $data_packets = []): bool {
+    // AI steps consume all packets (most recent first)
+    foreach ($data_packets as $packet) {
+        $source_type = $packet->metadata['source_type'];
+        // Analyze all input sources together
+    }
+}
+
+// At Step 6 (final output) - uses latest packet:
+// Note: Most output handlers use latest packet (data_packets[0]) by default
 ```
 
 ### Example 3: Extension - Email Campaign Automation
@@ -166,14 +255,12 @@ add_filter('dm_get_handlers', function($handlers, $type) {
 }, 10, 2);
 
 class AWSEmailHandler {
-    public function execute(int $job_id, ?\DataMachine\Engine\DataPacket $data_packet = null): bool {
-        // Access all previous context for personalization
-        $context = apply_filters('dm_get_context', null);
-        $contact_data = $context['all_previous_packets'][0] ?? null;
-        $ai_personalization = $context['all_previous_packets'][1] ?? null;
+    public function execute(int $job_id, array $data_packets = []): bool {
+        // Output handlers use latest packet (data_packets[0])
+        $latest_packet = $data_packets[0] ?? null;
         
-        // Send personalized email using AWS SES
-        return $this->send_personalized_email($data_packet, $contact_data, $ai_personalization);
+        // Send personalized email using latest processed data
+        return $this->send_personalized_email($latest_packet);
     }
 }
 ```
@@ -202,14 +289,15 @@ class GoogleSheetsHandler {
     }
     
     // OUTPUT: Write processed results back
-    public function execute(int $job_id, ?\DataMachine\Engine\DataPacket $data_packet = null): bool {
-        $context = apply_filters('dm_get_context', null);
-        $ai_analysis = $context['all_previous_packets'] ?? [];
+    public function execute(int $job_id, array $data_packets = []): bool {
+        // Output handlers use latest packet (data_packets[0])
+        $latest_packet = $data_packets[0] ?? null;
+        if (!$latest_packet) return false;
         
         return $this->update_sheets_data(
-            $data_packet->metadata['sheet_id'],
-            $data_packet->metadata['output_range'], 
-            $ai_analysis
+            $latest_packet->metadata['sheet_id'] ?? '',
+            $latest_packet->metadata['output_range'] ?? '', 
+            $latest_packet->content
         );
     }
 }
@@ -250,21 +338,35 @@ add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
 ### Adding Custom Steps
 
 ```php
-// Register custom pipeline step
-add_filter('dm_get_steps', function($steps) {
-    $steps['custom_processing'] = new \MyPlugin\Steps\CustomProcessingStep();
-    return $steps;
-});
+// Register custom pipeline step - returns configuration arrays
+add_filter('dm_get_steps', function($step_config, $step_type) {
+    if ($step_type === 'custom_processing') {
+        return [
+            'label' => __('Custom Processing', 'my-plugin'),
+            'has_handlers' => false,
+            'description' => __('Custom data processing step', 'my-plugin'),
+            'class' => '\MyPlugin\Steps\CustomProcessingStep'
+        ];
+    }
+    return $step_config;
+}, 10, 2);
 
 class CustomProcessingStep {
-    public function execute(int $job_id, ?\DataMachine\Engine\DataPacket $data_packet = null): bool {
+    public function execute(int $job_id, array $data_packets = []): bool {
         // Access all services via filters
         $logger = apply_filters('dm_get_logger', null);
         $ai_client = apply_filters('dm_get_ai_http_client', null);
         
-        // Access complete pipeline context
-        $context = apply_filters('dm_get_context', null);
-        $all_previous_data = $context['all_previous_packets'] ?? [];
+        // ALL steps receive uniform array of DataPackets (most recent first)
+        // Steps self-select based on their consume_all_packets flag:
+        // - false (default): use data_packets[0] only
+        // - true: use entire data_packets array
+        
+        $latest_packet = $data_packets[0] ?? null;
+        if ($latest_packet) {
+            $content = $latest_packet->content['body'];
+            // Process latest data for most steps
+        }
         
         // Your custom processing logic here
         return true;
@@ -283,14 +385,21 @@ class CustomProcessingStep {
 
 ### Step-Specific AI Configuration
 ```php
-// Different AI models per pipeline step
-// Step 1: GPT-4 for complex analysis
-// Step 2: Claude for creative writing  
-// Step 3: Gemini for multilingual content
+// Sequential AI processing with different models per step
+// Step 1: Input (RSS Handler) - position 0
+// Step 2: AI (GPT-4 Analysis) - position 1 - complex analysis of RSS data
+// Step 3: AI (Claude Writing) - position 2 - creative writing using GPT-4 + RSS data
+// Step 4: AI (Gemini Translation) - position 3 - multilingual using all previous data
+// Step 5: Output (WordPress Handler) - position 4 - publish using complete context
 
-// Each AI step receives complete context:
-$context = apply_filters('dm_get_context', null);
-$previous_ai_responses = $context['all_previous_packets'];
+// At Step 4 (Gemini AI) - uses entire array for multi-model context:
+public function execute(int $job_id, array $data_packets = []): bool {
+    // AI steps consume all packets (most recent first)
+    foreach ($data_packets as $index => $packet) {
+        $step_name = $packet->metadata['step_name'] ?? "Step $index";
+        // Process all previous AI outputs for comprehensive analysis
+    }
+}
 ```
 
 ### Service Override System

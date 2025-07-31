@@ -1,9 +1,25 @@
 <?php
 /**
- * Data Machine Service Filters Registration
+ * Data Machine Engine - Pure Orchestration Layer
  *
- * Centralizes filter-based service registration with lazy loading and static caching.
- * External plugins can override any service via filter priority.
+ * TRUE ENGINE AGNOSTICISM: Pure orchestration services with zero business logic.
+ * Business logic components self-register via their own *Filters.php files.
+ * 
+ * Engine Bootstrap Functions (Pure Orchestration Only):
+ * - dm_register_direct_service_filters(): Core orchestration services
+ * - dm_register_database_service_system(): Parameter-based database filter hooks  
+ * - dm_register_wpdb_service_filter(): WordPress database access
+ * - dm_register_context_retrieval_service(): DataPacket context orchestration
+ * - dm_register_universal_handler_system(): Handler registration filter hooks
+ * - dm_register_utility_filters(): Utility and modal filter hooks  
+ * - dm_register_step_auto_discovery_system(): Step registration filter hooks
+ * - dm_register_datapacket_creation_system(): DataPacket creation filter hooks
+ * 
+ * Business Logic Separation:
+ * - Jobs/ProcessedItems logic → Core database components
+ * - AI processing logic → AI step components
+ * - Admin logic → Admin components
+ * - Handler logic → Handler components
  *
  * @package DataMachine
  * @since 0.1.0
@@ -15,21 +31,24 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Register direct service filters for core Data Machine services.
+ * Register pure engine orchestration services.
  * 
- * Provides filter-based service access with lazy loading and static caching.
- * External plugins can override any service using filter priority.
+ * PURE ENGINE LAYER: These services are core orchestration utilities that belong
+ * in the engine layer. Business logic services are registered in core components.
  * 
- * Key services:
- * - dm_get_logger: Logging throughout the codebase  
- * - dm_get_ai_http_client: AI integration and processing
- * - dm_get_orchestrator: Core pipeline processing
- * - dm_get_fluid_context_bridge: Enhanced AI context management
- * - dm_get_pipeline_context: Pipeline flow context and step management
- * - dm_get_context: Access to all DataPackets from pipeline jobs
+ * Engine services registered:
+ * - dm_get_ai_http_client: External AI library integration
+ * - dm_get_orchestrator: Core pipeline processing orchestration
+ * - dm_get_constants: System constants and configuration
+ * - dm_get_http_service: Generic HTTP utility service
+ * - dm_get_pipeline_context: Pipeline sequence management
  * 
- * Database services use parameter-based system: apply_filters('dm_get_database_service', null, 'type')
- * Handler auth classes are instantiated directly by handlers (internal implementation details)
+ * Business logic services (moved to core components):
+ * - Logger → Admin component
+ * - JobStatusManager → Jobs component  
+ * - JobCreator → Jobs component
+ * - ProcessedItemsManager → ProcessedItems component
+ * - AI services → AI step component
  * 
  * Usage: $service = apply_filters('dm_get_{service_name}', null);
  * Override: add_filter('dm_get_{service_name}', function($service) { return new CustomService(); }, 20);
@@ -37,69 +56,50 @@ if ( ! defined( 'WPINC' ) ) {
  * @since 0.1.0
  */
 function dm_register_direct_service_filters() {
-    // Static cache for lazy-loaded services
-    static $service_cache = [];
+    // PURE ENGINE SERVICES - Direct registration for simple orchestration utilities
+    // These are core engine components that belong in the orchestration layer
     
-    add_filter('dm_get_logger', function($service) use (&$service_cache) {
+    add_filter('dm_get_ai_http_client', function($service) {
         if ($service !== null) {
             return $service;
         }
-        
-        if (!isset($service_cache['logger'])) {
-            $service_cache['logger'] = new \DataMachine\Admin\Logger();
-        }
-        
-        return $service_cache['logger'];
+        return new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
     }, 10);
     
-    
-    add_filter('dm_get_ai_http_client', function($service) use (&$service_cache) {
+    add_filter('dm_get_orchestrator', function($service) {
         if ($service !== null) {
             return $service;
         }
-        
-        if (!isset($service_cache['ai_http_client'])) {
-            $service_cache['ai_http_client'] = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-        }
-        
-        return $service_cache['ai_http_client'];
+        return new \DataMachine\Engine\ProcessingOrchestrator();
     }, 10);
     
-    add_filter('dm_get_fluid_context_bridge', function($service) use (&$service_cache) {
+    add_filter('dm_get_constants', function($service) {
         if ($service !== null) {
             return $service;
         }
-        
-        if (!isset($service_cache['fluid_context_bridge'])) {
-            $service_cache['fluid_context_bridge'] = new \DataMachine\Core\Steps\AI\FluidContextBridge();
-        }
-        
-        return $service_cache['fluid_context_bridge'];
+        return new \DataMachine\Engine\Constants();
     }, 10);
     
-    add_filter('dm_get_orchestrator', function($service) use (&$service_cache) {
+    add_filter('dm_get_http_service', function($service) {
         if ($service !== null) {
             return $service;
         }
-        
-        if (!isset($service_cache['orchestrator'])) {
-            $service_cache['orchestrator'] = new \DataMachine\Engine\ProcessingOrchestrator();
-        }
-        
-        return $service_cache['orchestrator'];
+        return new \DataMachine\Engine\HttpService();
     }, 10);
     
-    add_filter('dm_get_constants', function($service) use (&$service_cache) {
+    add_filter('dm_get_pipeline_context', function($service) {
         if ($service !== null) {
             return $service;
         }
-        
-        if (!isset($service_cache['constants'])) {
-            $service_cache['constants'] = new \DataMachine\Engine\Constants();
-        }
-        
-        return $service_cache['constants'];
+        return new \DataMachine\Engine\PipelineContext();
     }, 10);
+    
+    // Note: Business logic services moved to appropriate core component *Filters.php files:
+    // - Logger → Admin component
+    // - FluidContextBridge → AI step component  
+    // - JobStatusManager → Jobs component
+    // - JobCreator → Jobs component
+    // - ProcessedItemsManager → ProcessedItems component
 }
 
 /**
@@ -134,327 +134,79 @@ function dm_register_direct_service_filters() {
  * @since NEXT_VERSION
  */
 function dm_register_database_service_system() {
-    add_filter('dm_get_database_service', function($service, $type) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        // Direct instantiation - no caching complexity
-        switch ($type) {
-            case 'jobs':
-                return new \DataMachine\Core\Database\Jobs\Jobs();
-            case 'pipelines':
-                return new \DataMachine\Core\Database\Pipelines\Pipelines();
-            case 'flows':
-                return new \DataMachine\Core\Database\Flows\Flows();
-            case 'processed_items':
-                return new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
-            case 'remote_locations':
-                // TODO: Fix RemoteLocations class loading issue
-                return new \DataMachine\Core\Database\RemoteLocations\RemoteLocations();
-                // throw new Exception("RemoteLocations database service temporarily disabled due to class loading issue");
-            default:
-                throw new Exception("Unknown database service type: {$type}");
-        }
-    }, 10, 2);
+    // Pure filter-based discovery - no hardcoded services
+    // Core database services self-register via individual filters
+    dm_register_core_database_services();
 }
 
+/**
+ * Register core database services via pure filter-based self-registration.
+ * 
+ * ARCHITECTURAL COMPLIANCE: Each service registers individually via filters,
+ * following the "plugins within plugins" architecture. External plugins can
+ * override or extend services using standard WordPress filter patterns.
+ * 
+ * Usage Examples:
+ * - Add custom service: add_filter('dm_get_database_service', function($service, $type) {...}, 10, 2);
+ * - Override core service: add_filter('dm_get_database_service', function($service, $type) {...}, 20, 2);
+ * - Wrap existing service: add_filter('dm_get_database_service', function($service, $type) {...}, 30, 2);
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_register_core_database_services() {
+    // ARCHITECTURAL COMPLIANCE COMPLETE - Database services self-register via *Filters.php files
+    // Bootstrap provides pure filter hook - components add their own registration logic
+    // Required component *Filters.php files:
+    // - JobsFilters.php
+    // - PipelinesFilters.php  
+    // - FlowsFilters.php
+    // - ProcessedItemsFilters.php
+    // - RemoteLocationsFilters.php
+    
+    // Pure filter hook - components self-register
+    add_filter('dm_get_database_service', function($service, $type) {
+        // Components self-register via this same filter with higher priority
+        return $service;
+    }, 5, 2);
+}
 
 /**
- * Continue registering remaining core services.
+ * Register WPDB service filter for WordPress database access.
  * 
- * Registers business logic services, admin components, and utility services:
- * - Pipeline Context: Step sequence and position management
- * - Context Retrieval: Access to all DataPackets from pipeline jobs
- * - Job Status Manager: Job state transitions and tracking  
- * - AI Response Parser: AI content processing and formatting
- * - Import/Export Handler: Project configuration management
- * - Admin interfaces: Modal system, list tables, AJAX handlers
+ * Provides filter-based access to WordPress global $wpdb object,
+ * maintaining architectural consistency across all database components.
+ * Enables external plugins to override database connection if needed.
  * 
- * All services follow filter-based access with lazy loading and static caching.
- * External plugins can override any service via filter priority.
+ * Usage: $wpdb = apply_filters('dm_get_wpdb_service', null);
+ * Override: add_filter('dm_get_wpdb_service', function($wpdb) { return $custom_wpdb; }, 20);
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_register_wpdb_service_filter() {
+    add_filter('dm_get_wpdb_service', function($wpdb_service) {
+        if ($wpdb_service !== null) {
+            return $wpdb_service; // External override provided
+        }
+        
+        global $wpdb;
+        return $wpdb;
+    }, 10);
+}
+
+/**
+ * Register context retrieval service for pipeline DataPackets.
+ * 
+ * PURE ENGINE SERVICE: Context retrieval is a core orchestration function
+ * that belongs in the engine layer as it deals with DataPacket orchestration.
+ * 
+ * Usage: $context = apply_filters('dm_get_context', null, $job_id);
+ * Advanced: apply_filters('dm_get_context', null, $job_id, 'input_only');
  * 
  * @since 0.1.0
  */
-function dm_register_remaining_core_services() {
-    // Static cache for lazy-loaded services
-    static $service_cache = [];
-    
-    
-    add_filter('dm_get_http_service', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['http_service'])) {
-            $service_cache['http_service'] = new \DataMachine\Engine\HttpService();
-        }
-        
-        return $service_cache['http_service'];
-    }, 10);
-    
-    add_filter('dm_get_encryption_helper', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['encryption_helper'])) {
-            $service_cache['encryption_helper'] = new \DataMachine\Admin\EncryptionHelper();
-        }
-        
-        return $service_cache['encryption_helper'];
-    }, 10);
-    
-    add_filter('dm_get_prompt_builder', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['prompt_builder'])) {
-            $service_cache['prompt_builder'] = new \DataMachine\Core\Steps\AI\PromptBuilder();
-            $service_cache['prompt_builder']->register_all_sections();
-        }
-        
-        return $service_cache['prompt_builder'];
-    }, 10);
-    
-    // Scheduler functionality migrated to Action Scheduler integration
-    
-    // Project prompts filter - WordPress-native filter system
-    // Returns project prompts for given project_id
-    // Usage: $prompts = apply_filters('dm_get_project_prompt', null, $project_id);
-    add_filter('dm_get_project_prompt', function($prompts, $project_id) {
-        if ($prompts !== null) {
-            return $prompts; // External override provided
-        }
-        
-        $db_projects = apply_filters('dm_get_database_service', null, 'projects');
-        if (!$db_projects) {
-            return [];
-        }
-        
-        $project = $db_projects->get_project($project_id);
-        if (!$project || empty($project->pipeline_configuration)) {
-            return [];
-        }
-        
-        // Parse pipeline configuration to extract prompts from AI steps
-        $pipeline_config = json_decode($project->pipeline_configuration, true);
-        if (!is_array($pipeline_config)) {
-            return [];
-        }
-        
-        $step_prompts = [];
-        foreach ($pipeline_config as $position => $step_config) {
-            if (isset($step_config['type']) && $step_config['type'] === 'ai' && !empty($step_config['prompt'])) {
-                $step_prompts[$position] = $step_config['prompt'];
-            }
-        }
-        
-        return $step_prompts;
-    }, 10, 2);
-    
-    add_filter('dm_get_admin_page', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['admin_page'])) {
-            $service_cache['admin_page'] = new \DataMachine\Admin\AdminPage();
-        }
-        
-        return $service_cache['admin_page'];
-    }, 10);
-    
-    add_filter('dm_get_job_status_manager', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['job_status_manager'])) {
-            $service_cache['job_status_manager'] = new \DataMachine\Engine\JobStatusManager();
-        }
-        
-        return $service_cache['job_status_manager'];
-    }, 10);
-    
-    add_filter('dm_get_job_creator', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['job_creator'])) {
-            $service_cache['job_creator'] = new \DataMachine\Engine\JobCreator();
-        }
-        
-        return $service_cache['job_creator'];
-    }, 10);
-    
-    add_filter('dm_get_processed_items_manager', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['processed_items_manager'])) {
-            $service_cache['processed_items_manager'] = new \DataMachine\Engine\ProcessedItemsManager();
-        }
-        
-        return $service_cache['processed_items_manager'];
-    }, 10);
-    
-    // ImportExport handler removed - functionality migrated to other handlers
-    
-    // Universal AJAX handler system - parameter-based access
-    add_filter('dm_get_ajax_handler', function($service, $type) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        $cache_key = "ajax_handler_{$type}";
-        if (!isset($service_cache[$cache_key])) {
-            $service_cache[$cache_key] = null;
-            
-            switch ($type) {
-                case 'remote_locations':
-                    // RemoteLocations functionality migrated - no longer needed
-                    break;
-                case 'pipeline_management':
-                    // PipelineManagement AJAX functionality migrated - no longer needed
-                    break;
-                case 'project_management':
-                    // ProjectManagement AJAX functionality migrated - no longer needed  
-                    break;
-                default:
-                    // For future extensibility - external plugins can override via this same filter
-                    $service_cache[$cache_key] = null;
-                    break;
-            }
-        }
-        
-        return $service_cache[$cache_key];
-    }, 10, 2);
-    
-    
-    // admin menu assets access filter
-    add_filter('dm_get_admin_menu_assets', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['admin_menu_assets'])) {
-            $service_cache['admin_menu_assets'] = new \DataMachine\Admin\AdminMenuAssets();
-        }
-        
-        return $service_cache['admin_menu_assets'];
-    }, 10);
-    
-    
-    // remote location service access filter
-    add_filter('dm_get_remote_location_service', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['remote_location_service'])) {
-            $service_cache['remote_location_service'] = new \DataMachine\Core\Admin\Pages\RemoteLocations\RemoteLocationService();
-        }
-        
-        return $service_cache['remote_location_service'];
-    }, 10);
-    
-    // Add AI Response Parser service filter
-    add_filter('dm_get_ai_response_parser', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['ai_response_parser'])) {
-            $service_cache['ai_response_parser'] = new \DataMachine\Core\Steps\AI\AiResponseParser();
-        }
-        
-        return $service_cache['ai_response_parser'];
-    }, 10);
-    
-    // Add AI step configuration filter
-    // Returns AI configuration for specific project/step position
-    // Usage: $config = apply_filters('dm_get_ai_step_config', null, $project_id, $step_position);
-    add_filter('dm_get_ai_step_config', function($config, $project_id, $step_position) {
-        if ($config !== null) {
-            return $config; // External override provided
-        }
-        
-        // Modern WordPress options storage with standardized key pattern
-        $ai_option_key = "dm_ai_step_config_{$project_id}_{$step_position}";
-        $step_ai_config = get_option($ai_option_key, [
-            'provider' => '',
-            'model' => '',
-            'temperature' => 0.7,
-            'max_tokens' => 2000,
-            'enabled' => true
-        ]);
-        
-        return $step_ai_config;
-    }, 10, 3);
-    
-    // Add AI step configuration save filter
-    // Allows external plugins to override AI configuration storage
-    // Usage: $result = apply_filters('dm_save_ai_step_config', null, $project_id, $step_position, $config);
-    add_filter('dm_save_ai_step_config', function($result, $project_id, $step_position, $config) {
-        if ($result !== null) {
-            return $result; // External override provided
-        }
-        
-        // Modern WordPress options storage with direct save
-        $ai_option_key = "dm_ai_step_config_{$project_id}_{$step_position}";
-        return update_option($ai_option_key, $config);
-    }, 10, 4);
-    
-    // Handler auth classes are now instantiated directly by handlers
-    // This simplifies the architecture since auth is tightly coupled to handlers
-    
-    // Add List Table service filter for admin interfaces
-    add_filter('dm_get_remote_locations_list_table', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['remote_locations_list_table'])) {
-            $service_cache['remote_locations_list_table'] = new \DataMachine\Core\Admin\Pages\RemoteLocations\ListTable();
-        }
-        
-        return $service_cache['remote_locations_list_table'];
-    }, 10);
-    
-    // Add Modal service filter for universal modal system
-    add_filter('dm_get_modal_service', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['modal_service'])) {
-            $service_cache['modal_service'] = new \DataMachine\Core\Admin\Modal\Modal();
-        }
-        
-        return $service_cache['modal_service'];
-    }, 10);
-    
-    // Add Pipeline Context service filter
-    add_filter('dm_get_pipeline_context', function($service) use (&$service_cache) {
-        if ($service !== null) {
-            return $service;
-        }
-        
-        if (!isset($service_cache['pipeline_context'])) {
-            $service_cache['pipeline_context'] = new \DataMachine\Engine\PipelineContext();
-        }
-        
-        return $service_cache['pipeline_context'];
-    }, 10);
-    
+function dm_register_context_retrieval_service() {
     // Add context retrieval filter for pipeline DataPackets
     // Returns all DataPackets from the current pipeline job as an array
-    // Usage: $context = apply_filters('dm_get_context', null, $job_id);
-    // Future: Support parameter-based access: apply_filters('dm_get_context', null, $job_id, 'input_only');
     add_filter('dm_get_context', function($context, $job_id, $filter_type = 'all') {
         if ($context !== null) {
             return $context; // External override provided
@@ -490,15 +242,20 @@ function dm_register_remaining_core_services() {
                     try {
                         $data_packet = \DataMachine\Engine\DataPacket::fromArray($packet_data);
                         
-                        // Apply filter type for future granular control
+                        // Apply filter type using packet metadata (completely engine agnostic)
                         if ($filter_type === 'all') {
                             $context_packets[] = $data_packet;
-                        } elseif ($filter_type === 'input_only' && strpos($step_name, 'input') !== false) {
-                            $context_packets[] = $data_packet;
-                        } elseif ($filter_type === 'ai_only' && strpos($step_name, 'ai') !== false) {
-                            $context_packets[] = $data_packet;
+                        } else {
+                            // Use source_type from packet metadata for dynamic filtering
+                            $source_type = $data_packet->metadata['source_type'] ?? 'unknown';
+                            
+                            // Dynamic pattern matching - no hardcoded step types
+                            $filter_matches = apply_filters('dm_context_filter_matches', false, $filter_type, $source_type, $data_packet);
+                            
+                            if ($filter_matches) {
+                                $context_packets[] = $data_packet;
+                            }
                         }
-                        // Additional filter types can be added here as needed
                         
                     } catch (\Exception $e) {
                         // Log conversion error but continue processing other packets
@@ -537,167 +294,85 @@ function dm_register_remaining_core_services() {
 /**
  * Register universal handler system via dm_get_handlers filter.
  * 
- * Provides a clean, single filter for all handler registration with type parameters.
- * Pure parameter-based system with no backward compatibility layers.
+ * Provides pure filter-based handler registration with parameter-based discovery.
+ * Components self-register via *Filters.php files following "plugins within plugins" architecture.
  * 
- * Usage: $handlers = apply_filters('dm_get_handlers', null, 'input');
- * Usage: $handlers = apply_filters('dm_get_handlers', null, 'output');
+ * Core Usage:
+ * $handlers = apply_filters('dm_get_handlers', null, 'input');
+ * $handlers = apply_filters('dm_get_handlers', null, 'output');
  * 
- * External Plugin Registration (Minimal Pattern):
+ * Component Self-Registration Pattern (via *Filters.php files):
  * add_filter('dm_get_handlers', function($handlers, $type) {
  *     if ($type === 'input') {
  *         $handlers['my_handler'] = [
- *             'has_auth' => true,
- *             'label' => __('My Handler', 'textdomain')
- *             // Class auto-discovered from registration context
- *             // Settings class auto-discovered: HandlerClass → HandlerClassSettings
- *         ];
- *     }
- *     return $handlers;
- * }, 10, 2);
- * 
- * External Plugin Registration (Legacy Pattern - Still Supported):
- * add_filter('dm_get_handlers', function($handlers, $type) {
- *     if ($type === 'input') {
- *         $handlers['my_handler'] = [
- *             'class' => 'MyPlugin\\Handler\\Class',  // Optional - auto-discovered if not provided
+ *             'class' => \MyPlugin\Handlers\MyHandler::class,
  *             'label' => __('My Handler', 'textdomain'),
- *             'settings_class' => 'MyPlugin\\Handler\\Settings'  // Optional - auto-discovered if not provided
+ *             'description' => __('My custom handler description', 'textdomain')
  *         ];
  *     }
  *     return $handlers;
  * }, 10, 2);
  * 
- * Handler Settings System with Auto-Discovery:
- * $settings = apply_filters('dm_get_handler_settings', null, 'output', 'twitter');
+ * Handler Settings System (pure filter-based, 2-parameter pattern):
+ * $settings = apply_filters('dm_get_handler_settings', null, 'twitter');
  * 
- * Settings Resolution Order:
- * 1. Explicit 'settings_class' parameter (backward compatibility)
- * 2. Auto-discovery: HandlerClass → HandlerClassSettings
- * 3. Return null if neither found
- * 
- * Examples:
- * - 'MyPlugin\\TwitterHandler' → 'MyPlugin\\TwitterHandlerSettings'
- * - 'DataMachine\\Core\\Handlers\\Output\\Twitter\\Twitter' → 'DataMachine\\Core\\Handlers\\Output\\Twitter\\TwitterSettings'
- * 
- * External Plugin Settings Override:
- * add_filter('dm_get_handler_settings', function($service, $type, $key) {
- *     if ($type === 'output' && $key === 'twitter') {
- *         return new MyPlugin\EnhancedTwitterSettings();
+ * Settings Self-Registration Pattern (via *Filters.php files):
+ * add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
+ *     if ($handler_slug === 'twitter') {
+ *         return new TwitterSettings();
  *     }
- *     return $service;
- * }, 20, 3);
+ *     return $settings;
+ * }, 10, 2);
+ * 
+ * Authentication Self-Registration Pattern (via *Filters.php files):
+ * add_filter('dm_get_auth', function($auth, $handler_slug) {
+ *     if ($handler_slug === 'twitter') {
+ *         return new TwitterAuth();
+ *     }
+ *     return $auth;
+ * }, 10, 2);
  * 
  * @since NEXT_VERSION
  */
 function dm_register_universal_handler_system() {
-    // Static cache for lazy-loaded handlers by type
-    static $handler_cache = [];
-    
-    add_filter('dm_get_handlers', function($handlers, $type) use (&$handler_cache) {
+    add_filter('dm_get_handlers', function($handlers, $type) {
         if ($handlers !== null) {
             return $handlers; // External override provided
         }
         
-        if (!isset($handler_cache[$type])) {
-            $handler_cache[$type] = [];
-            
-            // Pure parameter-based system - handlers self-register via this same filter
-            // No legacy filter calls - complete architectural purity
-            
-            // Debug logging in development mode
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Universal handlers initialized for type', [
-                    'type' => $type,
-                    'handler_count' => count($handler_cache[$type]),
-                    'context' => 'handler_registration'
-                ]);
-            }
+        $handlers = [];
+        
+        // Pure parameter-based system - handlers self-register via this same filter
+        // No legacy filter calls - complete architectural purity
+        
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger && $logger->debug('Universal handlers initialized for type', [
+                'type' => $type,
+                'handler_count' => count($handlers),
+                'context' => 'handler_registration'
+            ]);
         }
         
-        return $handler_cache[$type];
+        return $handlers;
     }, 10, 2);
     
-    // Parameter-based handler settings system with auto-discovery
-    add_filter('dm_get_handler_settings', function($service, $handler_type, $handler_key) {
+    // Parameter-based handler settings system (2-parameter pattern for consistency)
+    // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files
+    // Bootstrap provides pure filter hook - components add their own registration logic
+    add_filter('dm_get_handler_settings', function($service, $handler_key) {
         if ($service !== null) {
-            return $service; // External override provided
+            return $service; // Component self-registration provided
         }
         
-        // Get handler configuration
-        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
-        $handler_config = $handlers[$handler_key] ?? null;
+        // ARCHITECTURAL COMPLIANCE COMPLETE - Pure filter hook only
+        // Components self-register via *Filters.php files following established patterns
+        //
+        // Bootstrap provides only pure filter hook - components add their own logic
         
-        if (!$handler_config) {
-            return null; // Handler not found
-        }
-        
-        // Primary: Use explicit settings_class if provided (backward compatibility)
-        if (!empty($handler_config['settings_class'])) {
-            $settings_class = $handler_config['settings_class'];
-            if (class_exists($settings_class)) {
-                return new $settings_class();
-            }
-        }
-        
-        // Auto-discovery: Settings class using naming conventions
-        // This works with minimal registrations without explicit class parameters
-        
-        // Method 1: If handler class is explicitly provided, derive settings from it
-        if (!empty($handler_config['class'])) {
-            $handler_class = $handler_config['class'];
-            
-            // Extract base class name from full class path
-            $class_parts = explode('\\', $handler_class);
-            $base_class_name = end($class_parts);
-            
-            // Construct auto-discovered settings class name
-            $auto_settings_class = str_replace($base_class_name, $base_class_name . 'Settings', $handler_class);
-            
-            if (class_exists($auto_settings_class)) {
-                // Debug logging for successful auto-discovery
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    $logger = apply_filters('dm_get_logger', null);
-                    $logger && $logger->debug('Auto-discovered settings class from explicit class', [
-                        'handler_type' => $handler_type,
-                        'handler_key' => $handler_key,
-                        'handler_class' => $handler_class,
-                        'auto_settings_class' => $auto_settings_class,
-                        'context' => 'settings_auto_discovery'
-                    ]);
-                }
-                
-                return new $auto_settings_class();
-            }
-        }
-        
-        // Method 2: For minimal registrations, use naming convention auto-discovery
-        // Handler name: 'twitter' -> Settings: 'DataMachine\\Core\\Handlers\\Output\\Twitter\\TwitterSettings'
-        $expected_settings_class = sprintf(
-            'DataMachine\\Core\\Handlers\\%s\\%s\\%sSettings',
-            ucfirst($handler_type),
-            ucfirst($handler_key),
-            ucfirst($handler_key)
-        );
-        
-        if (class_exists($expected_settings_class)) {
-            // Debug logging for successful naming convention auto-discovery
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Auto-discovered settings class via naming convention', [
-                    'handler_type' => $handler_type,
-                    'handler_key' => $handler_key,
-                    'expected_settings_class' => $expected_settings_class,
-                    'context' => 'settings_auto_discovery'
-                ]);
-            }
-            
-            return new $expected_settings_class();
-        }
-        
-        return null; // No settings available
-    }, 10, 3);
+        return null; // Components self-register via filters
+    }, 10, 2);
     
     // Parameter-based authentication system - auto-links to handlers via matching parameters
     // Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
@@ -723,14 +398,9 @@ function dm_register_universal_handler_system() {
 /**
  * Register utility filters for external handlers.
  * 
- * Provides configuration parsing and item filtering utilities
- * to eliminate the need for external handlers to handle complex logic.
- * 
- * Key filters:
- * - dm_parse_common_config: Parse standard configuration fields
- * - dm_check_if_processed: Check for duplicate items
- * - dm_filter_by_search_terms: Content filtering by keywords
- * - dm_filter_by_timeframe: Time-based content filtering
+ * Provides pure parameter-based filter hooks for modal content, field rendering,
+ * item identification, and context filtering. These filters support external
+ * plugin integration and maintain architectural consistency.
  * 
  * @since 0.1.0
  */
@@ -806,213 +476,154 @@ function dm_register_utility_filters() {
         return null;
     }, 10, 2);
     
-    /**
-     * Parse common configuration fields.
-     * 
-     * @param array|null $config Existing parsed config
-     * @param array $source_config Raw handler configuration
-     * @return array Parsed common configuration values
-     */
-    add_filter('dm_parse_common_config', function($config, $source_config) {
-        if ($config !== null) {
-            return $config; // External override provided
-        }
-        
-        $parsed_config = [
-            'process_limit' => max(1, absint($source_config['item_count'] ?? 1)),
-            'timeframe_limit' => $source_config['timeframe_limit'] ?? 'all_time',
-            'search_term' => trim($source_config['search'] ?? '')
-        ];
-        
-        // Parse search keywords if search term provided
-        $parsed_config['search_keywords'] = [];
-        if (!empty($parsed_config['search_term'])) {
-            $keywords = array_map('trim', explode(',', $parsed_config['search_term']));
-            $parsed_config['search_keywords'] = array_filter($keywords, function($k) { 
-                return !empty($k); 
-            });
-        }
-        
-        // Calculate timeframe cutoff timestamp
-        $parsed_config['cutoff_timestamp'] = null;
-        if ($parsed_config['timeframe_limit'] !== 'all_time') {
-            $interval_map = [
-                '24_hours' => '-24 hours',
-                '72_hours' => '-72 hours',
-                '7_days'   => '-7 days',
-                '30_days'  => '-30 days'
-            ];
-            
-            if (isset($interval_map[$parsed_config['timeframe_limit']])) {
-                $parsed_config['cutoff_timestamp'] = strtotime(
-                    $interval_map[$parsed_config['timeframe_limit']], 
-                    current_time('timestamp', true)
-                );
-            }
-        }
-        
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->info('Filter: Parsed common configuration.', [
-            'process_limit' => $parsed_config['process_limit'],
-            'timeframe_limit' => $parsed_config['timeframe_limit'],
-            'search_keywords_count' => count($parsed_config['search_keywords']),
-            'cutoff_timestamp' => $parsed_config['cutoff_timestamp']
-        ]);
-        
-        return $parsed_config;
-        
-    }, 10, 2);
+    // Common configuration parsing removed - handlers manage their own config parsing
+    // This maintains proper separation of concerns and handler autonomy
     
-    /**
-     * Check if an item has already been processed.
-     * 
-     * @param bool $is_processed Current processing status
-     * @param int $project_id Project ID (updated from module_id)
-     * @param string $source_type Handler source type
-     * @param string $item_identifier Unique item identifier
-     * @return bool True if already processed
-     */
-    add_filter('dm_check_if_processed', function($is_processed, $project_id, $source_type, $item_identifier) {
-        if ($is_processed !== false) {
-            return $is_processed;
-        }
-        
-        $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-        if (!$processed_items_manager) {
-            return false;
-        }
-        
-        return $processed_items_manager->is_item_processed($project_id, $source_type, $item_identifier);
-        
-    }, 10, 4);
+    // Duplicate checking removed - handlers should directly use ProcessedItemsManager service
+    // Usage: $manager = apply_filters('dm_get_processed_items_manager', null);
     
     
-    /**
-     * Perform content filtering by search terms.
-     * 
-     * @param bool|null $matches Current match status
-     * @param string $content Content to search (title + body text)
-     * @param array $keywords Array of keywords to search for
-     * @return bool True if content matches search criteria (or no keywords)
-     */
-    add_filter('dm_filter_by_search_terms', function($matches, $content, $keywords) {
-        if ($matches !== null) {
-            return $matches;
-        }
-        
-        if (empty($keywords)) {
-            return true;
-        }
-        
-        foreach ($keywords as $keyword) {
-            if (mb_stripos($content, $keyword) !== false) {
-                return true;
-            }
-        }
-        
-        return false;
-        
-    }, 10, 3);
+    // Search term filtering removed - handlers should implement their own filtering logic
+    // This maintains handler autonomy and avoids over-engineered abstractions
+    
+    // Timeframe filtering removed - handlers should implement their own time-based logic
+    // This avoids over-engineered abstractions and maintains handler control
     
     /**
-     * Filter to perform timeframe filtering.
+     * Register pure parameter-based identifier generation system.
      * 
-     * Eliminates need for external handlers to implement time-based filtering.
-     * Compares item timestamps against cutoff values.
+     * Eliminates hardcoded switches in ProcessedItemsManager by allowing handlers
+     * to register their identifier extraction logic via filters.
      * 
-     * @param bool|null $passes Current filter status
-     * @param int|null $cutoff_timestamp Cutoff timestamp or null for no limit
-     * @param int $item_timestamp Item's timestamp
-     * @return bool True if item should be included
+     * Core Usage (handlers self-register):
+     * add_filter('dm_get_item_identifier', function($identifier, $source_type, $raw_data) {
+     *     if ($source_type === 'twitter' && $identifier === null) {
+     *         return $raw_data['id_str'] ?? $raw_data['id'] ?? null;
+     *     }
+     *     return $identifier;
+     * }, 10, 3);
+     * 
+     * Engine Usage: $identifier = apply_filters('dm_get_item_identifier', null, $source_type, $raw_data);
      */
-    add_filter('dm_filter_by_timeframe', function($passes, $cutoff_timestamp, $item_timestamp) {
-        if ($passes !== null) {
-            return $passes; // External override provided
-        }
-        
-        if ($cutoff_timestamp === null) {
-            return true; // No time limit
-        }
-        
-        if ($item_timestamp === false || $item_timestamp < $cutoff_timestamp) {
-            return false; // Item is too old
-        }
-        
-        return true; // Item passes time filter
-        
-    }, 10, 3);
+    add_filter('dm_get_item_identifier', function($identifier, $source_type, $raw_data) {
+        // Pure parameter-based system - handlers register their extraction logic
+        // Core returns null to allow fallback detection in ProcessedItemsManager
+        return $identifier;
+    }, 5, 3);
     
     /**
-     * Enhanced handler class auto-discovery utility.
+     * Register pure parameter-based modal content system.
      * 
-     * Automatically discovers handler class names based on naming conventions,
-     * reducing registration boilerplate. Supports multiple fallback patterns
-     * for maximum compatibility with external plugins.
+     * Eliminates hardcoded modal type switches by allowing components to register
+     * their modal content generation via filters.
      * 
-     * @param string|null $class_name Existing class name (null if not found)
-     * @param string $handler_name Handler name/key (e.g., 'twitter', 'reddit')
-     * @param string $handler_type Handler type ('input' or 'output')
-     * @return string|null Discovered class name or null if not found
+     * Core Usage (components self-register):
+     * add_filter('dm_get_modal_content', function($content, $modal_type, $context) {
+     *     if ($modal_type === 'custom_config' && $content === null) {
+     *         return $this->generate_custom_modal_content($context);
+     *     }
+     *     return $content;
+     * }, 10, 3);
+     * 
+     * Engine Usage: $content = apply_filters('dm_get_modal_content', null, $modal_type, $context);
      */
-    add_filter('dm_auto_discover_handler_class', function($class_name, $handler_name, $handler_type) {
-        // External override provided - respect it
-        if ($class_name !== null) {
-            return $class_name;
-        }
-        
-        // Get handler registration information for explicit class
-        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
-        if (isset($handlers[$handler_name]['class']) && class_exists($handlers[$handler_name]['class'])) {
-            return $handlers[$handler_name]['class'];
-        }
-        
-        // Auto-discovery: Primary naming convention
-        // Handler: 'twitter' -> 'DataMachine\Core\Handlers\Output\Twitter\Twitter'
-        $primary_class = sprintf(
-            'DataMachine\\Core\\Handlers\\%s\\%s\\%s',
-            ucfirst($handler_type),
-            ucfirst($handler_name),
-            ucfirst($handler_name)
-        );
-        
-        if (class_exists($primary_class)) {
-            return $primary_class;
-        }
-        
-        // Fallback patterns for external plugins and alternate structures
-        $fallback_patterns = [
-            sprintf('DataMachine\\Handlers\\%s\\%s', ucfirst($handler_type), ucfirst($handler_name)),
-            sprintf('DataMachine\\%s\\%s', ucfirst($handler_type), ucfirst($handler_name)),
-            sprintf('%s\\%s', ucfirst($handler_type), ucfirst($handler_name)),
-            ucfirst($handler_name), // Simple class name
-            sprintf('%sHandler', ucfirst($handler_name)), // Common pattern
-            sprintf('%s%s', ucfirst($handler_name), ucfirst($handler_type)) // TwitterOutput, etc.
-        ];
-        
-        foreach ($fallback_patterns as $pattern) {
-            if (class_exists($pattern)) {
-                return $pattern;
-            }
-        }
-        
-        return null;
-    }, 10, 3);
+    add_filter('dm_get_modal_content', function($content, $modal_type, $context) {
+        // Pure parameter-based system - modal types register their content generation logic
+        // Core returns null to allow legacy fallback in Modal.php
+        return $content;
+    }, 5, 3);
+    
+    /**
+     * Register pure parameter-based modal save system.
+     * 
+     * Eliminates hardcoded modal save switches by allowing components to register
+     * their configuration save logic via filters.
+     * 
+     * Core Usage (components self-register):
+     * add_filter('dm_save_modal_config', function($result, $modal_type, $context, $config_data) {
+     *     if ($modal_type === 'custom_config' && $result === null) {
+     *         return $this->save_custom_configuration($context, $config_data);
+     *     }
+     *     return $result;
+     * }, 10, 4);
+     * 
+     * Engine Usage: $result = apply_filters('dm_save_modal_config', null, $modal_type, $context, $config_data);
+     */
+    add_filter('dm_save_modal_config', function($result, $modal_type, $context, $config_data) {
+        // Pure parameter-based system - modal types register their save logic
+        // Core returns null to allow legacy fallback in Modal.php
+        return $result;
+    }, 5, 4);
+    
+    /**
+     * Register pure parameter-based field rendering system.
+     * 
+     * Eliminates hardcoded field type switches by allowing custom field renderers
+     * to register their HTML generation via filters.
+     * 
+     * Core Usage (field types self-register):
+     * add_filter('dm_render_field', function($html, $field_type, $field_config, $field_value, $field_key) {
+     *     if ($field_type === 'color_picker' && $html === null) {
+     *         return $this->render_color_picker_field($field_config, $field_value, $field_key);
+     *     }
+     *     return $html;
+     * }, 10, 5);
+     * 
+     * Engine Usage: $html = apply_filters('dm_render_field', null, $field_type, $field_config, $field_value, $field_key);
+     */
+    add_filter('dm_render_field', function($html, $field_type, $field_config, $field_value, $field_key) {
+        // Pure parameter-based system - field types register their rendering logic
+        // Core returns null to allow legacy fallback in Modal.php
+        return $html;
+    }, 5, 5);
+    
+    /**
+     * Register context filter matching for completely dynamic context filtering.
+     * 
+     * Engine provides pure filter hook with no hardcoded assumptions.
+     * Components register their own filtering logic as needed.
+     * 
+     * Usage: add_filter('dm_context_filter_matches', function($matches, $filter_type, $source_type, $data_packet) {
+     *     if ($filter_type === 'my_custom_filter' && $source_type === 'my_source') {
+     *         return true;
+     *     }
+     *     return $matches;
+     * }, 10, 4);
+     */
+    add_filter('dm_context_filter_matches', function($matches, $filter_type, $source_type, $data_packet) {
+        // Pure filter hook - no core implementation, completely external
+        // Components define their own filter logic with zero engine assumptions
+        return $matches;
+    }, 5, 4);
+    
 }
 
 /**
- * Register parameter-based step auto-discovery system.
+ * Register parameter-based step self-registration system.
  * 
- * Enables pipeline steps to be auto-discovered and registered through
- * the same pure filter-based pattern as handlers (parameter-based) and admin pages (collection-based).
+ * ARCHITECTURAL COMPLIANCE: Provides pure filter hook for step self-registration.
+ * Steps MUST register in their own class files via *Filters.php following the
+ * modular "plugins within plugins" architecture pattern.
  * 
- * External plugins can register custom step types via:
+ * Core Steps Self-Registration Pattern (via InputStepFilters.php, etc.):
  * add_filter('dm_get_steps', function($step_config, $step_type) {
- *     if ($step_type === 'custom_step') {
+ *     if ($step_type === 'input') {
  *         return [
- *             'label' => __('Custom Step', 'my-plugin'),
- *             'has_handlers' => true,
- *             'description' => __('Custom processing step', 'my-plugin'),
- *             'class' => 'MyPlugin\\Steps\\CustomStep'
+ *             'label' => __('Input', 'data-machine'),
+ *             'description' => __('Collect data from external sources', 'data-machine'),
+ *             'class' => 'DataMachine\\Core\\Steps\\Input\\InputStep'
+ *         ];
+ *     }
+ *     return $step_config;
+ * }, 10, 2);
+ * 
+ * External Plugin Step Registration:
+ * add_filter('dm_get_steps', function($step_config, $step_type) {
+ *     if ($step_type === 'custom_transform') {
+ *         return [
+ *             'label' => __('Custom Transform', 'my-plugin'),
+ *             'description' => __('Custom data transformation', 'my-plugin'),
+ *             'class' => 'MyPlugin\\Steps\\CustomTransform'
  *         ];
  *     }
  *     return $step_config;
@@ -1025,20 +636,72 @@ function dm_register_step_auto_discovery_system() {
     /**
      * Parameter-based step registration filter.
      * 
-     * Enables auto-discovery of pipeline step types through parameter-based
-     * filter system for maximum extensibility.
+     * Pure filter hook with no core implementation. Steps self-register 
+     * in their own class files following modular architecture.
      * 
      * @param mixed $step_config Existing step configuration (null if not found)
      * @param string $step_type Step type to register ('input', 'ai', 'output', etc.)
      * @return array|null Step configuration array or null if not found
      */
     add_filter('dm_get_steps', function($step_config, $step_type) {
-        // External override provided - respect it
-        if ($step_config !== null) {
-            return $step_config;
-        }
-        
-        // No configuration found - allow external plugins to provide it
-        return null;
+        // Pure filter hook - steps self-register in their own class files
+        // No centralized registration - follows modular architecture
+        return $step_config;
     }, 5, 2);
+}
+
+/**
+ * Register universal DataPacket creation system.
+ * 
+ * UNIVERSAL SYSTEM: Pure parameter-based DataPacket conversion system
+ * with zero engine hardcoding. Components self-register conversion logic via 
+ * parameter matching, enabling universal extensibility.
+ * 
+ * Engine Usage:
+ * $datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
+ * 
+ * Component Self-Registration Pattern (via *Filters.php files):
+ * add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
+ *     if ($source_type === 'files') {
+ *         return DataPacket::fromFiles($source_data, $context);
+ *     }
+ *     return $datapacket;
+ * }, 10, 4);
+ * 
+ * External Plugin Integration:
+ * add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
+ *     if ($source_type === 'shopify_orders') {
+ *         return DataPacket::fromShopifyOrders($source_data, $context);
+ *     }
+ *     return $datapacket;
+ * }, 10, 4);
+ * 
+ * Key Benefits:
+ * - Universal: ANY component can create DataPackets using same filter
+ * - Engine-Agnostic: Zero hardcoded source types in engine
+ * - Component Responsibility: Each component registers its own conversion
+ * - External Extensibility: Plugins add new source types automatically
+ * - Graceful Failure: Unknown source types return null
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_register_datapacket_creation_system() {
+    
+    /**
+     * Universal DataPacket creation filter - Pure parameter-based discovery.
+     * 
+     * Engine provides filter hook only - components self-register conversion logic.
+     * No hardcoded source types, no switch statements, maximum extensibility.
+     * 
+     * @param DataPacket|null $datapacket Current DataPacket (null if none created)
+     * @param array $source_data Raw data from component (handler output, AI response, etc.)
+     * @param string $source_type Component identifier (files, rss, reddit, ai, custom_api, etc.)
+     * @param array $context Additional context for conversion (job_id, step info, etc.)
+     * @return DataPacket|null DataPacket instance or null if no converter available
+     */
+    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
+        // Pure filter hook - no core implementation
+        // Components self-register via parameter matching in their *Filters.php files
+        return $datapacket;
+    }, 5, 4);
 }

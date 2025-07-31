@@ -506,7 +506,7 @@ class Pipelines
      */
     private function render_flow_step($flow, $step)
     {
-        $has_handlers = !empty($step->has_handlers);
+        $has_handlers = $this->step_has_handlers($step->type);
         $step_handlers = $this->get_flow_step_handlers($flow->id, $step->position);
 
         ?>
@@ -622,6 +622,20 @@ class Pipelines
         }
 
         return $db_flows->get_flow_step_handlers($flow_id, $step_position);
+    }
+
+    /**
+     * Check if a step type has handlers available via parameter-based discovery.
+     *
+     * @param string $step_type Step type to check (any step type)
+     * @return bool True if handlers exist for this step type
+     */
+    private function step_has_handlers($step_type)
+    {
+        // Dynamic handler discovery - check if any handlers exist for this step type
+        // This works for any step type: input, output, receiver, or future step types
+        $handlers = apply_filters('dm_get_handlers', null, $step_type);
+        return !empty($handlers);
     }
 
     /**

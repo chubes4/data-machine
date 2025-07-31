@@ -28,7 +28,7 @@ class RemoteLocationsSync {
      * Initialize the sync component.
      */
     public function __construct() {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
         $this->table_name = $wpdb->prefix . 'dm_remote_locations';
     }
 
@@ -40,7 +40,7 @@ class RemoteLocationsSync {
      * @return bool True on success, false on failure.
      */
     public function update_synced_info(int $location_id, ?string $site_info_json): bool {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
 
         $update_data = array(
             'synced_site_info' => $site_info_json, // Store JSON as string

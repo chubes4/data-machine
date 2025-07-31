@@ -406,7 +406,11 @@ class Facebook {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'output') {
-        $handlers['facebook'] = new \DataMachine\Core\Handlers\Output\Facebook\Facebook();
+        $handlers['facebook'] = [
+            'class' => \DataMachine\Core\Handlers\Output\Facebook\Facebook::class,
+            'label' => __('Facebook', 'data-machine'),
+            'description' => __('Post content to Facebook pages and profiles', 'data-machine')
+        ];
     }
     return $handlers;
 }, 10, 2);

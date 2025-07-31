@@ -171,25 +171,17 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Natural data flow: Get latest DataPacket to pass directly to step
-			$latest_data_packet = $this->get_latest_data_packet( $job_id, $step_position, $logger );
+			// Always pass full array of DataPackets (most recent first)
+			// Steps self-select what they need based on their consume_all_packets flag
+			$all_data_packets = $this->get_all_previous_data_packets( $job_id, $step_position, $logger );
+			$result = $step_instance->execute( $job_id, $all_data_packets );
 			
-			// Set up context filter before step execution for full pipeline context access
-			$this->setup_context_filter( $job_id, $step_position, $logger );
-			
-			try {
-				// Execute step with natural data flow
-				$result = $step_instance->execute( $job_id, $latest_data_packet );
-				$logger->info( 'Step executed with natural data flow', [
-					'job_id' => $job_id,
-					'step_position' => $step_position,
-					'class' => $step_class,
-					'data_packet_available' => $latest_data_packet !== null
-				] );
-			} finally {
-				// Always clean up context filter after step execution
-				$this->cleanup_context_filter();
-			}
+			$logger->info( 'Step executed with data packets array', [
+				'job_id' => $job_id,
+				'step_position' => $step_position,
+				'class' => $step_class,
+				'packets_count' => count( $all_data_packets )
+			] );
 
 			// Schedule next step using direct Action Scheduler execution
 			if ( $result ) {
@@ -364,13 +356,10 @@ class ProcessingOrchestrator {
 	 * @return array|null Step configuration or null if not found.
 	 */
 	private function find_step_config_by_position( int $step_position, array $pipeline_steps, object $logger ): ?array {
-		// Get global registry for class mapping
-		$pipeline_step_types = apply_filters( 'dm_get_steps', [] );
-		
 		foreach ( $pipeline_steps as $step ) {
 			if ( isset( $step['position'] ) && (int) $step['position'] === $step_position ) {
-				// Map pipeline step config to expected format
-				return $this->map_pipeline_step_to_execution_format( $step, $pipeline_step_types, $logger );
+				// Map pipeline step config to expected format using parameter-based discovery
+				return $this->map_pipeline_step_to_execution_format( $step, $logger );
 			}
 		}
 		
@@ -378,20 +367,31 @@ class ProcessingOrchestrator {
 	}
 
 	/**
+	 * Get step configuration by type using parameter-based discovery.
+	 *
+	 * @param string $step_type The step type to discover ('input', 'output', 'ai', etc.)
+	 * @return array|null Step configuration array or null if not found.
+	 */
+	private function get_step_config_by_type( string $step_type ): ?array {
+		return apply_filters('dm_get_steps', null, $step_type);
+	}
+
+	/**
 	 * Map pipeline step configuration to execution format expected by orchestrator.
 	 *
 	 * @param array $pipeline_step Pipeline-specific step configuration.
-	 * @param array $pipeline_step_types Global step registry from dm_get_steps filter for class mapping.
 	 * @param object $logger The logger instance.
 	 * @return array|null Mapped step configuration or null if mapping fails.
 	 */
-	private function map_pipeline_step_to_execution_format( array $pipeline_step, array $pipeline_step_types, object $logger ): ?array {
+	private function map_pipeline_step_to_execution_format( array $pipeline_step, object $logger ): ?array {
 		$step_type = $pipeline_step['type'] ?? '';
 		
-		// Get the class from global registry based on step type
-		if ( isset( $pipeline_step_types[ $step_type ] ) ) {
+		// Get step config via parameter-based discovery
+		$step_config = $this->get_step_config_by_type( $step_type );
+		
+		if ( $step_config ) {
 			return [
-				'class' => $pipeline_step_types[ $step_type ]['class'],
+				'class' => $step_config['class'],
 				'type' => $step_type,
 				'handler' => $pipeline_step['slug'] ?? '',
 				'config' => $pipeline_step['config'] ?? [],
@@ -399,10 +399,9 @@ class ProcessingOrchestrator {
 			];
 		}
 		
-		$logger->warning( 'Unable to map pipeline step to execution format - step type not found in global registry', [
+		$logger->warning( 'Unable to map pipeline step to execution format - step type not found via parameter-based discovery', [
 			'step_type' => $step_type,
-			'pipeline_step' => $pipeline_step,
-			'available_types' => array_keys( $pipeline_step_types )
+			'pipeline_step' => $pipeline_step
 		] );
 		
 		return null;
@@ -428,150 +427,41 @@ class ProcessingOrchestrator {
 		return null; // No next step - pipeline complete
 	}
 
+
+
 	/**
-	 * Get latest DataPacket from previous step for natural data flow.
+	 * Get all previous DataPackets for steps that consume all packets.
 	 *
 	 * @param int $job_id The job ID.
 	 * @param int $step_position The current step position.
 	 * @param object $logger The logger instance.
-	 * @return \DataMachine\Engine\DataPacket|null Latest DataPacket or null if not found.
+	 * @return array Array of DataPacket objects from all previous steps.
 	 */
-	private function get_latest_data_packet( int $job_id, int $step_position, object $logger ): ?\DataMachine\Engine\DataPacket {
-		// First step gets null DataPacket (input steps create their own)
+	private function get_all_previous_data_packets( int $job_id, int $step_position, object $logger ): array {
+		// First step gets empty array (input steps generate their own data)
 		if ( $step_position === 0 ) {
-			$logger->info( 'First step - no previous DataPacket available', [
+			$logger->info( 'First step - no previous DataPackets available', [
 				'job_id' => $job_id,
 				'step_position' => $step_position
 			] );
-			return null;
+			return [];
 		}
 
-		// Get pipeline context service
-		$pipeline_context = apply_filters( 'dm_get_pipeline_context', null );
-		if ( ! $pipeline_context ) {
-			$logger->warning( 'Pipeline context service unavailable for DataPacket retrieval', [
-				'job_id' => $job_id,
-				'step_position' => $step_position
-			] );
-			return null;
-		}
-
-		// Get previous step name
-		$previous_step_name = $pipeline_context->get_previous_step_name( $job_id );
-		if ( ! $previous_step_name ) {
-			$logger->warning( 'No previous step name found for DataPacket retrieval', [
-				'job_id' => $job_id,
-				'step_position' => $step_position
-			] );
-			return null;
-		}
-
-		// Get database jobs service
-		$db_jobs = apply_filters( 'dm_get_database_service', null, 'jobs' );
-		if ( ! $db_jobs ) {
-			$logger->error( 'Database jobs service unavailable for DataPacket retrieval', [
-				'job_id' => $job_id,
-				'step_position' => $step_position
-			] );
-			return null;
-		}
-
-		// Retrieve DataPacket JSON from database
-		$json_data = $db_jobs->get_step_data_by_name( $job_id, $previous_step_name );
-		if ( ! $json_data ) {
-			$logger->warning( 'No DataPacket found from previous step', [
-				'job_id' => $job_id,
-				'step_position' => $step_position,
-				'previous_step' => $previous_step_name
-			] );
-			return null;
-		}
-
-		// Parse DataPacket from JSON
-		try {
-			$data_packet = \DataMachine\Engine\DataPacket::fromJson( $json_data );
-			$logger->info( 'Successfully retrieved latest DataPacket for natural flow', [
-				'job_id' => $job_id,
-				'step_position' => $step_position,
-				'previous_step' => $previous_step_name,
-				'content_length' => $data_packet->getContentLength(),
-				'source_type' => $data_packet->metadata['source_type'] ?? 'unknown'
-			] );
-			return $data_packet;
-		} catch ( \Exception $e ) {
-			$logger->error( 'Failed to parse DataPacket from previous step', [
-				'job_id' => $job_id,
-				'step_position' => $step_position,
-				'previous_step' => $previous_step_name,
-				'error' => $e->getMessage(),
-				'trace' => $e->getTraceAsString()
-			] );
-			return null;
-		}
-	}
-
-
-	/**
-	 * Set up context filter before step execution for full pipeline context access.
-	 *
-	 * @param int $job_id The job ID.
-	 * @param int $step_position The current step position.
-	 * @param object $logger The logger instance.
-	 */
-	private function setup_context_filter( int $job_id, int $step_position, object $logger ): void {
-		// Get all required services
+		// Get required services
 		$pipeline_context = apply_filters( 'dm_get_pipeline_context', null );
 		$db_jobs = apply_filters( 'dm_get_database_service', null, 'jobs' );
 
 		if ( ! $pipeline_context || ! $db_jobs ) {
-			$logger->warning( 'Required services unavailable for context filter setup', [
+			$logger->warning( 'Required services unavailable for all DataPackets retrieval', [
 				'job_id' => $job_id,
 				'step_position' => $step_position,
 				'pipeline_context_available' => $pipeline_context !== null,
 				'db_jobs_available' => $db_jobs !== null
 			] );
-			return;
+			return [];
 		}
 
-		// Build comprehensive context
-		$context = [
-			'job_id' => $job_id,
-			'current_step_position' => $step_position,
-			'pipeline_summary' => $pipeline_context->get_pipeline_context_summary( $job_id ),
-			'all_previous_packets' => $this->get_all_previous_data_packets_for_context( $job_id, $pipeline_context, $db_jobs, $logger )
-		];
-
-		// Register context filter with high priority to ensure availability
-		add_filter( 'dm_get_context', function( $existing_context ) use ( $context ) {
-			return $context;
-		}, 10 );
-
-		$logger->info( 'Context filter established for step execution', [
-			'job_id' => $job_id,
-			'step_position' => $step_position,
-			'previous_packets_count' => count( $context['all_previous_packets'] ),
-			'context_keys' => array_keys( $context )
-		] );
-	}
-
-	/**
-	 * Clean up context filter after step execution.
-	 */
-	private function cleanup_context_filter(): void {
-		// Remove the context filter to prevent leakage to subsequent operations
-		remove_all_filters( 'dm_get_context' );
-	}
-
-	/**
-	 * Get all previous DataPackets for context filter.
-	 *
-	 * @param int $job_id The job ID.
-	 * @param object $pipeline_context The pipeline context service.
-	 * @param object $db_jobs The database jobs service.
-	 * @param object $logger The logger instance.
-	 * @return array Array of DataPacket objects from all previous steps.
-	 */
-	private function get_all_previous_data_packets_for_context( int $job_id, object $pipeline_context, object $db_jobs, object $logger ): array {
+		// Get previous step names and retrieve DataPackets
 		$previous_step_names = $pipeline_context->get_all_previous_step_names( $job_id );
 		if ( empty( $previous_step_names ) ) {
 			return []; // No previous steps
@@ -596,7 +486,7 @@ class ProcessingOrchestrator {
 					$data_packets[] = $packet;
 				}
 			} catch ( \Exception $e ) {
-				$logger->warning( 'Skipping malformed DataPacket in context', [
+				$logger->warning( 'Skipping malformed DataPacket', [
 					'job_id' => $job_id,
 					'step_name' => $step_name,
 					'error' => $e->getMessage()
@@ -606,7 +496,8 @@ class ProcessingOrchestrator {
 			}
 		}
 
-		return $data_packets;
+		// Reverse array to ensure most recent packets are first
+		return array_reverse( $data_packets );
 	}
 
 

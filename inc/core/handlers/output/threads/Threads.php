@@ -29,8 +29,8 @@ class Threads {
      * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // Initialize auth directly - auth is internal implementation detail
-        $this->auth = new ThreadsAuth();
+        // Use filter-based auth access following architectural standards
+        $this->auth = apply_filters('dm_get_auth', null, 'threads');
     }
 
     /**
@@ -345,7 +345,11 @@ class Threads {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'output') {
-        $handlers['threads'] = new \DataMachine\Core\Handlers\Output\Threads\Threads();
+        $handlers['threads'] = [
+            'class' => \DataMachine\Core\Handlers\Output\Threads\Threads::class,
+            'label' => __('Threads', 'data-machine'),
+            'description' => __('Post content to Threads (Meta\'s Twitter alternative)', 'data-machine')
+        ];
     }
     return $handlers;
 }, 10, 2);

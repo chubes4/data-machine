@@ -2,11 +2,13 @@
 
 namespace DataMachine\Core\Steps\Output;
 
+use DataMachine\Engine\DataPacket;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-use DataMachine\Core\DataPacket;
+// DataPacket is engine-only - steps work with simple arrays provided by engine
 
 /**
  * Universal Output Step - Executes any output handler
@@ -22,16 +24,18 @@ use DataMachine\Core\DataPacket;
 class OutputStep {
 
     /**
-     * Execute output publishing with configurable handler (Closed-Door Philosophy)
+     * Execute output publishing with uniform array approach
      * 
-     * Publishes DataPacket from previous step only.
-     * No backward looking - only forward data consumption.
+     * UNIFORM ARRAY APPROACH:
+     * - Engine provides array of DataPackets (most recent first)
+     * - Output steps use latest packet by default (data_packets[0])
+     * - Self-selects most recent packet for publishing
      * 
      * @param int $job_id The job ID to process
-     * @param DataPacket|null $data_packet Latest DataPacket from previous step
+     * @param array $data_packets Array of DataPackets (uses first/latest by default)
      * @return bool True on success, false on failure
      */
-    public function execute(int $job_id, ?DataPacket $data_packet = null): bool {
+    public function execute(int $job_id, array $data_packets = []): bool {
         $logger = apply_filters('dm_get_logger', null);
         $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 
@@ -53,10 +57,8 @@ class OutputStep {
             $handler_name = $step_config['handler'];
             $handler_config = $step_config['config'] ?? [];
 
-            // Use provided DataPacket from natural flow or get from previous step
-            if (!$data_packet) {
-                $data_packet = $this->get_previous_step_data_packet($job_id);
-            }
+            // Output steps use latest DataPacket (first in array)
+            $data_packet = $data_packets[0] ?? null;
             if (!$data_packet) {
                 return $this->fail_job($job_id, 'No DataPacket available from previous step');
             }
@@ -72,14 +74,30 @@ class OutputStep {
                 return $this->fail_job($job_id, $error_message);
             }
 
-            // Create result DataPacket for final storage
-            $result_packet = new DataPacket(
-                'Output Complete',
-                json_encode($output_result, JSON_PRETTY_PRINT),
-                'output_handler'
-            );
-            $result_packet->metadata['handler_used'] = $handler_name;
-            $result_packet->metadata['output_success'] = $output_result['success'] ?? true;
+            // Create result DataPacket using universal filter system
+            $output_data = [
+                'content' => json_encode($output_result, JSON_PRETTY_PRINT),
+                'metadata' => [
+                    'handler_used' => $handler_name,
+                    'output_success' => $output_result['success'] ?? true,
+                    'processing_time' => time()
+                ]
+            ];
+            $context = [
+                'job_id' => $job_id,
+                'handler_name' => $handler_name
+            ];
+            
+            $result_packet = apply_filters('dm_create_datapacket', null, $output_data, 'output_result', $context);
+
+            if (!$result_packet instanceof DataPacket) {
+                $logger->error('Output Step: Failed to create result DataPacket', [
+                    'job_id' => $job_id,
+                    'handler' => $handler_name,
+                    'conversion_failed' => true
+                ]);
+                return $this->fail_job($job_id, 'Failed to create output result DataPacket');
+            }
             
             // Store result DataPacket
             $success = $this->store_step_data_packet($job_id, $result_packet);
@@ -147,17 +165,17 @@ class OutputStep {
      * Execute output handler directly using pure auto-discovery
      * 
      * @param string $handler_name Output handler name
-     * @param DataPacket $data_packet DataPacket to publish
+     * @param object $data_packet DataPacket object to publish
      * @param object $job Job object
      * @param array $handler_config Handler configuration
      * @return array|null Output result or null on failure
      */
-    private function execute_output_handler_direct(string $handler_name, DataPacket $data_packet, object $job, array $handler_config): ?array {
+    private function execute_output_handler_direct(string $handler_name, object $data_packet, object $job, array $handler_config): ?array {
         $logger = apply_filters('dm_get_logger', null);
 
-        // Auto-discover handler class using pure filter-based registration
-        $handler_class = $this->auto_discover_handler_class($handler_name, 'output');
-        if (!$handler_class) {
+        // Get handler object directly from handler system
+        $handler = $this->get_handler_object($handler_name, 'output');
+        if (!$handler) {
             $logger->error('Output Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'job_id' => $job->job_id
@@ -166,8 +184,7 @@ class OutputStep {
         }
 
         try {
-            // Instantiate handler with parameter-less constructor
-            $handler = new $handler_class();
+            // Handler is already instantiated from the registry
 
             // Get pipeline ID for handler
             $pipeline_id = $this->get_pipeline_id_from_job($job);
@@ -216,22 +233,19 @@ class OutputStep {
      * This method examines the handler registration information to auto-discover
      * which class registered itself, eliminating the need for explicit class parameters.
      * 
-     * @param string $handler_name Handler name/key
-     * @param string $handler_type Handler type (input/output)
-     * @return string|null Handler class name or null if not found
-     */
     /**
-     * Auto-discover handler class using centralized utility filter.
+     * Get handler object directly from the handler system.
      * 
-     * Uses the enhanced auto-discovery system from DataMachineFilters.php
-     * for consistent handler class resolution across all components.
+     * Uses the revolutionary object-based handler registration to get
+     * instantiated handler objects directly, eliminating class discovery.
      * 
      * @param string $handler_name Handler name/key
      * @param string $handler_type Handler type (input/output)
-     * @return string|null Handler class name or null if not found
+     * @return object|null Handler object or null if not found
      */
-    private function auto_discover_handler_class(string $handler_name, string $handler_type): ?string {
-        return apply_filters('dm_auto_discover_handler_class', null, $handler_name, $handler_type);
+    private function get_handler_object(string $handler_name, string $handler_type): ?object {
+        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
+        return $handlers[$handler_name] ?? null;
     }
 
     /**
@@ -271,53 +285,16 @@ class OutputStep {
         ];
     }
 
-    /**
-     * Get data packet from previous step.
-     *
-     * @param int $job_id The job ID.
-     * @return \DataMachine\Core\DataPacket|null The previous step's data packet or null if not found.
-     */
-    private function get_previous_step_data_packet(int $job_id): ?\DataMachine\Core\DataPacket {
-        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-        if (!$pipeline_context) {
-            return null;
-        }
-        
-        $previous_step_name = $pipeline_context->get_previous_step_name($job_id);
-        if (!$previous_step_name) {
-            return null;
-        }
-        
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-        $json_data = $db_jobs->get_step_data_by_name($job_id, $previous_step_name);
-        
-        if (!$json_data) {
-            return null;
-        }
-        
-        try {
-            return \DataMachine\Core\DataPacket::fromJson($json_data);
-        } catch (\Exception $e) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error('Exception caught in get_previous_step_data_packet', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'method' => __METHOD__,
-                'job_id' => $job_id,
-                'previous_step_name' => $previous_step_name
-            ]);
-            return null;
-        }
-    }
+    // Legacy method removed - OutputStep receives DataPackets from engine via $data_packets parameter
 
     /**
      * Store data packet for current step.
      *
      * @param int $job_id The job ID.
-     * @param \DataMachine\Core\DataPacket $data_packet The data packet to store.
+     * @param object $data_packet The data packet object to store.
      * @return bool True on success, false on failure.
      */
-    private function store_step_data_packet(int $job_id, \DataMachine\Core\DataPacket $data_packet): bool {
+    private function store_step_data_packet(int $job_id, object $data_packet): bool {
         $pipeline_context = apply_filters('dm_get_pipeline_context', null);
         if (!$pipeline_context) {
             return false;
@@ -354,15 +331,15 @@ class OutputStep {
     }
 }
 
-// Auto-register this step type using parameter-based filter system
+// Self-register this step type using parameter-based filter system
 add_filter('dm_get_steps', function($step_config, $step_type) {
     if ($step_type === 'output') {
         return [
             'label' => __('Output', 'data-machine'),
-            'has_handlers' => true,
             'description' => __('Publish to external platforms', 'data-machine'),
             'class' => 'DataMachine\\Core\\Steps\\Output\\OutputStep'
         ];
     }
     return $step_config;
 }, 10, 2);
+

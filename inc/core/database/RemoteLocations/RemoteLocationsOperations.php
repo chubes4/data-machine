@@ -29,7 +29,7 @@ class RemoteLocationsOperations {
      * Initialize the operations component.
      */
     public function __construct() {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
         $this->table_name = $wpdb->prefix . 'dm_remote_locations';
     }
 
@@ -49,7 +49,7 @@ class RemoteLocationsOperations {
      * @return int|false The new location ID on success, false on failure.
      */
     public function add_location(array $data) {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
 
         if (empty($data['location_name']) || empty($data['target_site_url']) || empty($data['target_username']) || !isset($data['password'])) {
             return false; // Basic validation
@@ -93,7 +93,7 @@ class RemoteLocationsOperations {
      * @return bool True on success, false on failure.
      */
     public function update_location(int $location_id, array $data) {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
 
         $update_data = array();
         $update_formats = array();
@@ -163,7 +163,7 @@ class RemoteLocationsOperations {
      * @return bool True on success, false on failure.
      */
     public function delete_location(int $location_id) {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
 
         $result = $wpdb->delete(
             $this->table_name,
@@ -183,7 +183,7 @@ class RemoteLocationsOperations {
      * @return object|null Location object on success, null if not found.
      */
     public function get_location(int $location_id, bool $decrypt_password = false): ?object {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
 
         $location = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$this->table_name} WHERE location_id = %d",
@@ -221,7 +221,7 @@ class RemoteLocationsOperations {
      * @return array Array of location objects.
      */
     public function get_all_locations(): array {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
 
         $results = $wpdb->get_results(
             "SELECT location_id, location_name, target_site_url, target_username, last_sync_time, created_at, updated_at

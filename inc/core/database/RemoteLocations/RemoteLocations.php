@@ -101,7 +101,7 @@ class RemoteLocations {
      * Creates or updates the database table.
      */
     public static function create_table() {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
         $table_name = $wpdb->prefix . 'dm_remote_locations';
         
         $charset_collate = $wpdb->get_charset_collate();

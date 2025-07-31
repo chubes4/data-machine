@@ -16,7 +16,7 @@
 
 namespace DataMachine\Core\Handlers\WordPress;
 
-use DataMachine\Core\DataPacket;
+// DataPacket is engine-only - handlers work with simple arrays
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
@@ -37,9 +37,9 @@ class WordPress {
      * @param int $pipeline_id Pipeline ID
      * @param array $handler_config Handler configuration
      * @param int $user_id User ID
-     * @return DataPacket DataPacket with collected content
+     * @return object DataPacket object with collected content
      */
-    public function get_input_data(int $pipeline_id, array $handler_config, int $user_id): DataPacket {
+    public function get_input_data(int $pipeline_id, array $handler_config, int $user_id): object {
         // Delegate to input-specific logic
         $input_handler = $this->get_input_handler();
         return $input_handler->get_input_data($pipeline_id, $handler_config, $user_id);
@@ -97,7 +97,11 @@ class WordPress {
 // Self-register via universal parameter-based handler system for both types
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input' || $type === 'output') {
-        $handlers['wordpress'] = new \DataMachine\Core\Handlers\WordPress\WordPress();
+        $handlers['wordpress'] = [
+            'class' => \DataMachine\Core\Handlers\WordPress\WordPress::class,
+            'label' => __('WordPress', 'data-machine'),
+            'description' => __('Universal WordPress content handler for input and output', 'data-machine')
+        ];
     }
     return $handlers;
 }, 10, 2);

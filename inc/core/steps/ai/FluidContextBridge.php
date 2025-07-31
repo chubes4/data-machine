@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use DataMachine\Core\DataPacket;
+// DataPacket is engine-only - core components work with simple arrays
 
 /**
  * Fluid Context Bridge - Convert Data Machine DataPackets to ai-http-client context format
@@ -50,10 +50,13 @@ class FluidContextBridge {
         ];
 
         foreach ($data_packets as $index => $packet) {
-            if (!($packet instanceof DataPacket)) {
-                $logger->warning('FluidContextBridge: Non-DataPacket object found in aggregation', [
+            // Duck typing: Check for required DataPacket properties instead of class instance
+            if (!is_object($packet) || !isset($packet->content) || !isset($packet->metadata)) {
+                $logger->warning('FluidContextBridge: Invalid data packet structure found in aggregation', [
                     'index' => $index,
-                    'type' => gettype($packet)
+                    'type' => gettype($packet),
+                    'has_content' => is_object($packet) && isset($packet->content),
+                    'has_metadata' => is_object($packet) && isset($packet->metadata)
                 ]);
                 continue;
             }
@@ -200,10 +203,10 @@ class FluidContextBridge {
      * Transforms DataPacket structure into format optimized for AI understanding
      * while preserving all relevant information and relationships.
      * 
-     * @param DataPacket $data_packet DataPacket to format
+     * @param object $data_packet DataPacket object to format
      * @return array Formatted context data for single packet
      */
-    public function format_datapacket_content(DataPacket $data_packet): array {
+    public function format_datapacket_content(object $data_packet): array {
         $formatted = [
             'content' => [
                 'title' => $data_packet->content['title'] ?? '',
@@ -308,10 +311,10 @@ class FluidContextBridge {
     /**
      * Aggregate metadata from individual packet into summary context
      * 
-     * @param DataPacket $packet Source DataPacket
+     * @param object $packet Source DataPacket object
      * @param array &$aggregated_context Context array to update (by reference)
      */
-    private function aggregate_packet_metadata(DataPacket $packet, array &$aggregated_context): void {
+    private function aggregate_packet_metadata(object $packet, array &$aggregated_context): void {
         // Track content sources
         if (!empty($packet->metadata['source_url'])) {
             $aggregated_context['content_sources'][] = $packet->metadata['source_url'];

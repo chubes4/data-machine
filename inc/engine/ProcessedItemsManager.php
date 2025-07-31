@@ -114,38 +114,32 @@ class ProcessedItemsManager {
 	}
 
 	/**
-	 * Generate consistent item identifier from source data.
+	 * Generate consistent item identifier from source data using pure parameter-based system.
+	 *
+	 * Uses filter-based architecture where handlers register their identifier extraction logic.
+	 * This eliminates hardcoded switches and enables unlimited extensibility.
 	 *
 	 * @param string $source_type Source type (e.g. 'airdrop_rest_api', 'rss').
 	 * @param array  $raw_data Raw data from input handler.
 	 * @return string|null Generated identifier or null if cannot be determined.
 	 */
 	public function generate_item_identifier( string $source_type, array $raw_data ): ?string {
-		switch ( $source_type ) {
-			case 'airdrop_rest_api':
-				return $raw_data['ID'] ?? null;
-				
-			case 'rss':
-				return $raw_data['guid'] ?? $raw_data['link'] ?? null;
-				
-			case 'reddit':
-				return $raw_data['name'] ?? $raw_data['id'] ?? null;
-				
-			case 'files':
-				return $raw_data['file_path'] ?? $raw_data['filename'] ?? null;
-				
-			case 'public_rest_api':
-				return $raw_data['id'] ?? $raw_data['ID'] ?? null;
-				
-			default:
-				$logger = apply_filters('dm_get_logger', null);
-				$logger?->warning( 'ProcessedItemsManager: Unknown source type for identifier generation', [
-					'source_type' => $source_type,
-					'available_keys' => array_keys( $raw_data )
-				] );
-				// Try common identifier fields for unknown source types
-				return $raw_data['id'] ?? $raw_data['ID'] ?? $raw_data['guid'] ?? null;
+		// Use parameter-based filter system for identifier generation
+		$identifier = apply_filters( 'dm_get_item_identifier', null, $source_type, $raw_data );
+		
+		// If no handler registered for this source type, use fallback logic
+		if ( $identifier === null ) {
+			$logger = apply_filters('dm_get_logger', null);
+			$logger?->debug( 'ProcessedItemsManager: No handler registered for source type, using fallback detection', [
+				'source_type' => $source_type,
+				'available_keys' => array_keys( $raw_data )
+			] );
+			
+			// Intelligent fallback: try common identifier patterns
+			$identifier = $raw_data['id'] ?? $raw_data['ID'] ?? $raw_data['guid'] ?? $raw_data['name'] ?? $raw_data['link'] ?? $raw_data['file_path'] ?? $raw_data['filename'] ?? null;
 		}
+		
+		return $identifier;
 	}
 
 

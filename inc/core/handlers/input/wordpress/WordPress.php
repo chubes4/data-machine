@@ -1180,7 +1180,11 @@ class WordPress {
 // Self-register via universal parameter-based handler system
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input') {
-        $handlers['wordpress'] = new \DataMachine\Core\Handlers\Input\WordPress\WordPress();
+        $handlers['wordpress'] = [
+            'class' => \DataMachine\Core\Handlers\Input\WordPress\WordPress::class,
+            'label' => __('WordPress', 'data-machine'),
+            'description' => __('Source content from WordPress posts and pages', 'data-machine')
+        ];
     }
     return $handlers;
 }, 10, 2);

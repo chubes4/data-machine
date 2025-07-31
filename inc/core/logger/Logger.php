@@ -9,7 +9,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Admin;
+namespace DataMachine\Core\Logger;
 
 // Declare upfront to ensure they are available
 use Monolog\Logger as MonologLogger;

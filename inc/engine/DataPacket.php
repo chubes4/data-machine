@@ -359,4 +359,207 @@ class DataPacket implements \JsonSerializable {
     public function getContentLength(): int {
         return strlen($this->content['title']) + strlen($this->content['body']);
     }
+    
+    // ==========================================
+    // HANDLER-SPECIFIC FACTORY METHODS
+    // ==========================================
+    
+    /**
+     * Create DataPacket from Files handler output
+     * 
+     * @param array $files_data Files handler output containing processed_items array
+     * @param array $context Additional context (job_id, step info, etc.)
+     * @return self
+     */
+    public static function fromFiles(array $files_data, array $context = []): self {
+        // Files handler returns ['processed_items' => [items]] structure
+        $items = $files_data['processed_items'] ?? [];
+        
+        if (empty($items)) {
+            throw new \InvalidArgumentException('Files data must contain processed_items array');
+        }
+        
+        // Use first item as primary content
+        $first_item = $items[0];
+        
+        $packet = new self(
+            $first_item['title'] ?? 'File Content',
+            $first_item['body'] ?? $first_item['content'] ?? '',
+            'files'
+        );
+        
+        // Add file-specific metadata
+        if (isset($first_item['file_path'])) {
+            $packet->metadata['source_url'] = $first_item['file_path'];
+        }
+        if (isset($first_item['file_type'])) {
+            $packet->metadata['format'] = $first_item['file_type'];
+        }
+        if (isset($first_item['file_size'])) {
+            $packet->metadata['file_size'] = $first_item['file_size'];
+        }
+        
+        // Add multiple files as attachments if present
+        foreach ($items as $item) {
+            if (isset($item['file_path'])) {
+                $packet->addFile($item['file_path'], $item['title'] ?? basename($item['file_path']));
+            }
+        }
+        
+        $packet->processing['steps_completed'][] = 'input';
+        
+        return $packet;
+    }
+    
+    /**
+     * Create DataPacket from RSS handler output
+     * 
+     * @param array $rss_data RSS handler output containing processed_items array
+     * @param array $context Additional context (job_id, step info, etc.)
+     * @return self
+     */
+    public static function fromRSS(array $rss_data, array $context = []): self {
+        // RSS handler returns ['processed_items' => [items]] structure
+        $items = $rss_data['processed_items'] ?? [];
+        
+        if (empty($items)) {
+            throw new \InvalidArgumentException('RSS data must contain processed_items array');
+        }
+        
+        // Use first item as primary content
+        $first_item = $items[0];
+        
+        $packet = new self(
+            $first_item['title'] ?? 'RSS Item',
+            $first_item['description'] ?? $first_item['content'] ?? '',
+            'rss'
+        );
+        
+        // Add RSS-specific metadata
+        if (isset($first_item['link'])) {
+            $packet->metadata['source_url'] = $first_item['link'];
+        }
+        if (isset($first_item['pub_date'])) {
+            $packet->metadata['date_created'] = $first_item['pub_date'];
+        }
+        if (isset($first_item['author'])) {
+            $packet->metadata['author'] = $first_item['author'];
+        }
+        
+        // Add tags from categories
+        if (isset($first_item['categories']) && is_array($first_item['categories'])) {
+            $packet->content['tags'] = $first_item['categories'];
+        }
+        
+        $packet->processing['steps_completed'][] = 'input';
+        
+        return $packet;
+    }
+    
+    /**
+     * Create DataPacket from Reddit handler output
+     * 
+     * @param array $reddit_data Reddit handler output containing processed_items array
+     * @param array $context Additional context (job_id, step info, etc.)
+     * @return self
+     */
+    public static function fromReddit(array $reddit_data, array $context = []): self {
+        // Reddit handler returns ['processed_items' => [items]] structure
+        $items = $reddit_data['processed_items'] ?? [];
+        
+        if (empty($items)) {
+            throw new \InvalidArgumentException('Reddit data must contain processed_items array');
+        }
+        
+        // Use first item as primary content
+        $first_item = $items[0];
+        
+        $packet = new self(
+            $first_item['title'] ?? 'Reddit Post',
+            $first_item['selftext'] ?? $first_item['body'] ?? '',
+            'reddit'
+        );
+        
+        // Add Reddit-specific metadata
+        if (isset($first_item['url'])) {
+            $packet->metadata['source_url'] = $first_item['url'];
+        }
+        if (isset($first_item['created_utc'])) {
+            $packet->metadata['date_created'] = date('c', $first_item['created_utc']);
+        }
+        if (isset($first_item['author'])) {
+            $packet->metadata['author'] = $first_item['author'];
+        }
+        if (isset($first_item['subreddit'])) {
+            $packet->metadata['subreddit'] = $first_item['subreddit'];
+        }
+        
+        // Add Reddit-specific fields
+        if (isset($first_item['score'])) {
+            $packet->metadata['score'] = $first_item['score'];
+        }
+        if (isset($first_item['num_comments'])) {
+            $packet->metadata['num_comments'] = $first_item['num_comments'];
+        }
+        
+        $packet->processing['steps_completed'][] = 'input';
+        
+        return $packet;
+    }
+    
+    /**
+     * Create DataPacket from WordPress handler output
+     * 
+     * @param array $wp_data WordPress handler output containing processed_items array
+     * @param array $context Additional context (job_id, step info, etc.)
+     * @return self
+     */
+    public static function fromWordPress(array $wp_data, array $context = []): self {
+        // WordPress handler returns ['processed_items' => [items]] structure
+        $items = $wp_data['processed_items'] ?? [];
+        
+        if (empty($items)) {
+            throw new \InvalidArgumentException('WordPress data must contain processed_items array');
+        }
+        
+        // Use first item as primary content
+        $first_item = $items[0];
+        
+        $packet = new self(
+            $first_item['post_title'] ?? $first_item['title'] ?? 'WordPress Post',
+            $first_item['post_content'] ?? $first_item['content'] ?? '',
+            'wordpress'
+        );
+        
+        // Add WordPress-specific metadata
+        if (isset($first_item['guid'])) {
+            $packet->metadata['source_url'] = $first_item['guid'];
+        }
+        if (isset($first_item['post_date'])) {
+            $packet->metadata['date_created'] = $first_item['post_date'];
+        }
+        if (isset($first_item['post_author'])) {
+            $packet->metadata['author'] = $first_item['post_author'];
+        }
+        if (isset($first_item['post_type'])) {
+            $packet->metadata['post_type'] = $first_item['post_type'];
+        }
+        if (isset($first_item['post_status'])) {
+            $packet->metadata['post_status'] = $first_item['post_status'];
+        }
+        
+        // Add excerpt as summary
+        if (isset($first_item['post_excerpt'])) {
+            $packet->content['summary'] = $first_item['post_excerpt'];
+        }
+        
+        // Add categories as tags
+        if (isset($first_item['categories']) && is_array($first_item['categories'])) {
+            $packet->content['tags'] = $first_item['categories'];
+        }
+        
+        $packet->processing['steps_completed'][] = 'input';
+        
+        return $packet;
+    }
 }

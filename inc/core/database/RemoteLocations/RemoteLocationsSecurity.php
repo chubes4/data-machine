@@ -139,7 +139,7 @@ class RemoteLocationsSecurity {
      * @return bool True if name exists, false otherwise.
      */
     public function location_name_exists(string $location_name, ?int $exclude_id = null): bool {
-        global $wpdb;
+        $wpdb = apply_filters('dm_get_wpdb_service', null);
         $table_name = $wpdb->prefix . 'dm_remote_locations';
 
         if ($exclude_id) {

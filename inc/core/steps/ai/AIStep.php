@@ -2,11 +2,13 @@
 
 namespace DataMachine\Core\Steps\AI;
 
+use DataMachine\Engine\DataPacket;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-use DataMachine\Core\DataPacket;
+// DataPacket is engine-only - steps work with simple arrays provided by engine
 
 /**
  * Universal AI Step - Fluid-by-default AI processing with full pipeline context
@@ -36,17 +38,18 @@ use DataMachine\Core\DataPacket;
 class AIStep {
 
     /**
-     * Execute AI processing with natural data flow and fluid context system
+     * Execute AI processing with uniform array of data packets
      * 
-     * NATURAL FLOW SIGNATURE:
-     * - Receives latest DataPacket directly (no database queries needed)
-     * - Full pipeline context available via dm_get_context filter
+     * UNIFORM ARRAY APPROACH:
+     * - Engine always provides array of DataPackets (most recent first)
+     * - AI steps consume all packets due to consume_all_packets: true flag
+     * - Self-selects all packets from array for complete pipeline context
      * 
      * @param int $job_id The job ID to process
-     * @param DataPacket|null $data_packet Latest DataPacket from previous step
+     * @param array $data_packets Array of DataPackets from pipeline (newest first)
      * @return bool True on success, false on failure
      */
-    public function execute(int $job_id, ?DataPacket $data_packet = null): bool {
+    public function execute(int $job_id, array $data_packets = []): bool {
         $logger = apply_filters('dm_get_logger', null);
         $ai_http_client = apply_filters('dm_get_ai_http_client', null);
 
@@ -78,23 +81,19 @@ class AIStep {
                 return $this->fail_job($job_id, 'AI step requires prompt configuration');
             }
 
-            // Use provided DataPacket and context filter
-            if ($data_packet !== null) {
-                $logger->info('AI Step: Using natural data flow with provided DataPacket', [
+            // AI steps consume all packets from the provided array
+            $all_packets = $data_packets;
+            
+            if (!empty($all_packets)) {
+                $logger->info('AI Step: Processing with all data packets', [
                     'job_id' => $job_id,
-                    'data_packet_source' => $data_packet->metadata['source_type'] ?? 'unknown'
+                    'packets_count' => count($all_packets)
                 ]);
-                
-                // Get all previous packets from context filter
-                $context = apply_filters('dm_get_context', null);
-                $all_packets = $context['all_previous_packets'] ?? [];
-                
-                // Add current DataPacket as the latest
-                $all_packets[] = $data_packet;
-                
             } else {
-                // First step in pipeline - no previous DataPacket
-                $all_packets = [];
+                // First step in pipeline - no previous DataPackets
+                $logger->info('AI Step: First step - no previous data packets available', [
+                    'job_id' => $job_id
+                ]);
             }
 
 
@@ -129,61 +128,14 @@ class AIStep {
             // Use the most recent packet as the primary input for output processing
             $input_packet = end($all_packets);
 
-            // Get step-specific AI configuration using filter-based access
-            $step_ai_config = null;
-            if ($pipeline_id) {
-                // Get step position using pipeline context service
-                $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-                $step_position = $pipeline_context ? $pipeline_context->get_current_step_position($job_id) : null;
-                if ($step_position !== null) {
-                    // Filter-based AI step configuration access
-                    $step_ai_config = apply_filters('dm_get_ai_step_config', null, $pipeline_id, $step_position);
-                    
-                    // Check if AI processing is disabled for this step
-                    if (isset($step_ai_config['enabled']) && !$step_ai_config['enabled']) {
-                        $logger->info('AI Step: Processing disabled for this step, passing data through', [
-                            'job_id' => $job_id,
-                            'pipeline_id' => $pipeline_id,
-                            'step_position' => $step_position
-                        ]);
-                        
-                        // Pass through the most recent DataPacket unchanged
-                        $success = $this->store_step_data_packet($job_id, $input_packet);
-                        if (!$success) {
-                            $logger->error('AI Step: Failed to store passthrough DataPacket', ['job_id' => $job_id]);
-                            return $this->fail_job($job_id, 'Failed to store passthrough data');
-                        }
-                        return true;
-                    }
-                    
-                    $logger->info('AI Step: Using step-specific AI configuration', [
-                        'job_id' => $job_id,
-                        'pipeline_id' => $pipeline_id,
-                        'step_position' => $step_position,
-                        'provider' => $step_ai_config['provider'] ?? 'default',
-                        'model' => $step_ai_config['model'] ?? 'default'
-                    ]);
-                }
-            }
+            // AI configuration handled by AI HTTP Client library's plugin-scoped system
+            // Library manages provider/model/parameters automatically via 'data-machine' plugin_context
 
-            // Prepare AI request parameters with step-specific configuration
+            // Prepare AI request with messages - library handles all provider/model configuration
             $ai_request = ['messages' => $messages];
             
-            // Add step-specific AI parameters if available
-            if ($step_ai_config && !empty($step_ai_config['provider'])) {
-                $ai_request['provider'] = $step_ai_config['provider'];
-            }
-            if ($step_ai_config && !empty($step_ai_config['model'])) {
-                $ai_request['model'] = $step_ai_config['model'];
-            }
-            if ($step_ai_config && isset($step_ai_config['temperature'])) {
-                $ai_request['temperature'] = $step_ai_config['temperature'];
-            }
-            if ($step_ai_config && isset($step_ai_config['max_tokens'])) {
-                $ai_request['max_tokens'] = $step_ai_config['max_tokens'];
-            }
-
-            // Execute AI request using ai-http-client with step-specific configuration
+            // Execute AI request using AI HTTP Client library
+            // Library automatically uses plugin-scoped configuration for provider/model/parameters
             $ai_response = $ai_http_client->send_step_request('ai', $ai_request);
 
             if (!$ai_response['success']) {
@@ -196,9 +148,9 @@ class AIStep {
                 return $this->fail_job($job_id, $error_message);
             }
 
-            // Create output DataPacket from AI response (pure transformation)
+            // Create output DataPacket from AI response using universal filter system
             $ai_content = $ai_response['data']['content'] ?? '';
-            $ai_output_packet = DataPacket::fromAIOutput([
+            $ai_data = [
                 'content' => $ai_content,
                 'metadata' => [
                     'model' => $ai_response['data']['model'] ?? 'unknown',
@@ -208,8 +160,23 @@ class AIStep {
                     'step_title' => $title,
                     'processing_time' => time()
                 ]
-            ], $input_packet);
+            ];
+            
+            $context = [
+                'original_packet' => $input_packet,
+                'job_id' => $job_id
+            ];
+            
+            $ai_output_packet = apply_filters('dm_create_datapacket', null, $ai_data, 'ai', $context);
 
+            if (!$ai_output_packet instanceof DataPacket) {
+                $logger->error('AI Step: Failed to create DataPacket from AI output', [
+                    'job_id' => $job_id,
+                    'ai_content_length' => strlen($ai_content),
+                    'conversion_failed' => true
+                ]);
+                return $this->fail_job($job_id, 'Failed to create DataPacket from AI processing results');
+            }
 
             // Store transformed DataPacket for next step (maintains fluid context chain)
             $success = $this->store_step_data_packet($job_id, $ai_output_packet);
@@ -330,10 +297,10 @@ class AIStep {
      * Store data packet for current step.
      *
      * @param int $job_id The job ID.
-     * @param \DataMachine\Core\DataPacket $data_packet The data packet to store.
+     * @param object $data_packet The data packet object to store.
      * @return bool True on success, false on failure.
      */
-    private function store_step_data_packet(int $job_id, \DataMachine\Core\DataPacket $data_packet): bool {
+    private function store_step_data_packet(int $job_id, object $data_packet): bool {
         $pipeline_context = apply_filters('dm_get_pipeline_context', null);
         if (!$pipeline_context) {
             return false;
@@ -370,15 +337,16 @@ class AIStep {
     }
 }
 
-// Auto-register this step type using parameter-based filter system
+// Self-register this step type using parameter-based filter system
 add_filter('dm_get_steps', function($step_config, $step_type) {
     if ($step_type === 'ai') {
         return [
             'label' => __('AI Processing', 'data-machine'),
-            'has_handlers' => false,
             'description' => __('Process content using AI models', 'data-machine'),
-            'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep'
+            'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
+            'consume_all_packets' => true
         ];
     }
     return $step_config;
 }, 10, 2);
+

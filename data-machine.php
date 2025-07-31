@@ -50,8 +50,11 @@ function run_data_machine() {
     // Register parameter-based database service system
     dm_register_database_service_system();
     
-    // Register remaining core services 
-    dm_register_remaining_core_services();
+    // Register WPDB service filter for architectural consistency
+    dm_register_wpdb_service_filter();
+    
+    // Register context retrieval service for pipeline DataPackets
+    dm_register_context_retrieval_service();
     
     // Register universal handler system with clean parameter-based architecture
     dm_register_universal_handler_system();
@@ -62,21 +65,17 @@ function run_data_machine() {
     // Register parameter-based step auto-discovery system
     dm_register_step_auto_discovery_system();
     
-    // Admin setup
-    if (is_admin()) {
-        // API auth page removed - replaced with handler-level configuration via universal modal system
-        $logger = apply_filters('dm_get_logger', null);
-        add_action('admin_notices', array($logger, 'display_admin_notices'));
-    }
+    // Register universal DataPacket creation system
+    dm_register_datapacket_creation_system();
+    
+    // Admin setup moved to component self-registration
+    // Logger component manages its own admin_notices hook via LoggerFilters.php
 
-    // Auto-load all core handlers so they can self-register
-    dm_autoload_core_handlers();
-    
-    // Auto-load all core admin pages so they can self-register (following handler pattern)
-    dm_autoload_core_admin_pages();
-    
-    // Auto-load all core steps so they can self-register (following same pattern)
-    dm_autoload_core_steps();
+    // Auto-load all core components using uniform "plugins within plugins" architecture
+    dm_autoload_core_handlers();   // Load inc/core/handlers/ components
+    dm_autoload_core_admin();      // Load inc/core/admin/ components  
+    dm_autoload_core_steps();      // Load inc/core/steps/ components
+    dm_autoload_core_database();   // Load inc/core/database/ components
 
     // Core steps now self-register via parameter-based filter system
     // External plugins use dm_get_steps filter for extensibility
@@ -117,109 +116,92 @@ function run_data_machine() {
 }
 
 /**
- * Auto-load all core handlers so they can self-register via filters.
+ * Unified core component autoloader for \"plugins within plugins\" architecture.
  * 
- * This function implements the "plugins within plugins" architecture by ensuring
- * all handler files are loaded, allowing their self-registration code to execute.
+ * Loads ALL PHP files in all subdirectories of the specified component directory.
+ * This enables complete self-registration via *Filters.php files and ensures
+ * all component files are available for the bootstrap system.
+ * 
+ * @param string $relative_path Relative path from plugin root (e.g., 'inc/core/handlers/')
+ * @since 0.1.0
  */
-function dm_autoload_core_handlers(): void {
-    $handler_directories = [
-        DATA_MACHINE_PATH . 'inc/core/handlers/input/',
-        DATA_MACHINE_PATH . 'inc/core/handlers/output/'
-    ];
+function dm_autoload_core_component_directory(string $relative_path): void {
+    $component_root = DATA_MACHINE_PATH . $relative_path;
     
-    foreach ($handler_directories as $directory) {
-        if (!is_dir($directory)) {
-            continue;
-        }
+    if (!is_dir($component_root)) {
+        return;
+    }
+    
+    // Get all subdirectories (each component type)
+    $component_directories = glob($component_root . '*', GLOB_ONLYDIR);
+    
+    foreach ($component_directories as $component_dir) {
+        // Load ALL PHP files in the component directory
+        // This includes: Handler.php, Auth.php, Settings.php, *Filters.php, etc.
+        $php_files = glob($component_dir . '/*.php');
         
-        // Get all subdirectories (each handler type)
-        $handler_types = glob($directory . '*', GLOB_ONLYDIR);
-        
-        foreach ($handler_types as $handler_type_dir) {
-            // Load ALL PHP files in the handler directory
-            // This enables modular handler architecture with separate directive files
-            $php_files = glob($handler_type_dir . '/*.php');
-            
-            foreach ($php_files as $php_file) {
+        foreach ($php_files as $php_file) {
+            if (file_exists($php_file)) {
                 require_once $php_file;
             }
         }
     }
-}
-
-/**
- * Auto-load core admin pages for self-registration.
- * 
- * Follows the established handler pattern - admin pages self-register
- * via dm_register_admin_pages collection filter using pure self-registration.
- * 
- * @since NEXT_VERSION
- */
-function dm_autoload_core_admin_pages(): void {
-    $admin_pages_root = DATA_MACHINE_PATH . 'inc/core/admin/pages/';
     
-    // Also load the modal system
-    $modal_file = DATA_MACHINE_PATH . 'inc/core/admin/modal/Modal.php';
-    if (file_exists($modal_file)) {
-        require_once $modal_file;
-    }
-    
-    if (!is_dir($admin_pages_root)) {
-        return;
-    }
-    
-    // Get all subdirectories (each admin page type) - same pattern as handlers
-    $page_directories = glob($admin_pages_root . '*', GLOB_ONLYDIR);
-    
-    foreach ($page_directories as $page_dir) {
-        // Load ALL PHP files in the page directory - same as handlers
-        $php_files = glob($page_dir . '/*.php');
-        
-        foreach ($php_files as $php_file) {
+    // Also load direct PHP files in the root directory (e.g., Modal.php)
+    $root_php_files = glob($component_root . '*.php');
+    foreach ($root_php_files as $php_file) {
+        if (file_exists($php_file)) {
             require_once $php_file;
         }
-        
-        // Instantiate the main page class for self-registration (same pattern as handlers)
-        $directory_name = basename($page_dir);
-        $class_name = "\\DataMachine\\Core\\Admin\\Pages\\" . ucfirst($directory_name) . "\\" . ucfirst($directory_name);
-        
-        if (class_exists($class_name)) {
-            new $class_name();
-        }
     }
 }
 
 /**
- * Auto-load core pipeline steps for self-registration.
+ * Auto-load all core handlers for "plugins within plugins" architecture.
  * 
- * Follows the established handler pattern - steps self-register
- * via dm_get_steps parameter-based filter system.
+ * Uniform autoloader pattern: Load all PHP files in component subdirectories.
+ * Enables complete self-registration via *Filters.php files.
  * 
- * @since NEXT_VERSION
+ * @since 0.1.0
+ */
+function dm_autoload_core_handlers(): void {
+    dm_autoload_core_component_directory('inc/core/handlers/');
+}
+
+/**
+ * Auto-load all core admin components for "plugins within plugins" architecture.
+ * 
+ * Uniform autoloader pattern: Load all PHP files in component subdirectories.
+ * Enables complete self-registration via *Filters.php files.
+ * 
+ * @since 0.1.0
+ */
+function dm_autoload_core_admin(): void {
+    dm_autoload_core_component_directory('inc/core/admin/');
+}
+
+/**
+ * Auto-load all core steps for "plugins within plugins" architecture.
+ * 
+ * Uniform autoloader pattern: Load all PHP files in component subdirectories.
+ * Enables complete self-registration via *Filters.php files.
+ * 
+ * @since 0.1.0
  */
 function dm_autoload_core_steps(): void {
-    $step_directories = [
-        DATA_MACHINE_PATH . 'inc/core/steps/input/',
-        DATA_MACHINE_PATH . 'inc/core/steps/ai/',
-        DATA_MACHINE_PATH . 'inc/core/steps/output/'
-    ];
-    
-    foreach ($step_directories as $directory) {
-        if (!is_dir($directory)) {
-            continue;
-        }
-        
-        // Load the main step file directly (follows same pattern as admin pages)
-        // Step files are named like InputStep.php, AIStep.php, OutputStep.php
-        $step_files = glob($directory . '*Step.php');
-        
-        foreach ($step_files as $step_file) {
-            if (file_exists($step_file)) {
-                require_once $step_file;
-            }
-        }
-    }
+    dm_autoload_core_component_directory('inc/core/steps/');
+}
+
+/**
+ * Auto-load all core database components for "plugins within plugins" architecture.
+ * 
+ * Uniform autoloader pattern: Load all PHP files in component subdirectories.
+ * Enables complete self-registration via *Filters.php files.
+ * 
+ * @since 0.1.0
+ */
+function dm_autoload_core_database(): void {
+    dm_autoload_core_component_directory('inc/core/database/');
 }
 
 

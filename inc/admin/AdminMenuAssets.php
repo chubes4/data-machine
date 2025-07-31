@@ -98,8 +98,8 @@ class AdminMenuAssets {
         $first_slug = key($registered_pages);
         
         $main_menu_hook = add_menu_page(
-            $first_page['page_title'] ?? __('Data Machine', 'data-machine'),
-            $first_page['menu_title'] ?? $first_page['page_title'] ?? __('Data Machine', 'data-machine'),
+            __('Data Machine', 'data-machine'),
+            __('Data Machine', 'data-machine'),
             $first_page['capability'] ?? 'manage_options',
             'dm-' . $first_slug,
             $first_page['callback'],
@@ -109,6 +109,16 @@ class AdminMenuAssets {
         
         // Store hook suffix for first page
         $this->store_hook_suffix($first_slug, $main_menu_hook);
+        
+        // Add first page as submenu with its proper title
+        $first_submenu_hook = add_submenu_page(
+            'dm-' . $first_slug,
+            $first_page['page_title'] ?? $first_page['menu_title'] ?? ucfirst($first_slug),
+            $first_page['menu_title'] ?? ucfirst($first_slug),
+            $first_page['capability'] ?? 'manage_options',
+            'dm-' . $first_slug,
+            $first_page['callback']
+        );
         
         // Add remaining pages as submenus (already sorted)
         $remaining_pages = array_slice($registered_pages, 1, null, true);

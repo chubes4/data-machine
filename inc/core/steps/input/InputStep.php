@@ -2,11 +2,13 @@
 
 namespace DataMachine\Core\Steps\Input;
 
+use DataMachine\Engine\DataPacket;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-use DataMachine\Core\DataPacket;
+// DataPacket is engine-only - steps work with simple arrays provided by engine
 
 /**
  * Universal Input Step - Executes any input handler
@@ -22,19 +24,19 @@ use DataMachine\Core\DataPacket;
 class InputStep {
 
     /**
-     * Execute input data collection with configurable handler (Closed-Door Philosophy)
+     * Execute input data collection with uniform array approach
      * 
-     * NATURAL FLOW SUPPORT:
-     * - Uses execute(int $job_id, ?DataPacket $data_packet = null) signature
-     * - Input steps typically ignore the provided DataPacket (closed-door philosophy)
+     * UNIFORM ARRAY APPROACH:
+     * - Engine provides array of DataPackets (most recent first)
+     * - Input steps typically ignore array (closed-door philosophy)
      * - Collects data from external sources only, returns DataPacket format
-     * - Context available via dm_get_context filter for position awareness
+     * - Self-selects no packets (generates new data)
      * 
      * @param int $job_id The job ID to process
-     * @param DataPacket|null $data_packet Ignored by input steps (closed-door philosophy)
+     * @param array $data_packets Array of DataPackets (ignored by input steps)
      * @return bool True on success, false on failure
      */
-    public function execute(int $job_id, ?DataPacket $data_packet = null): bool {
+    public function execute(int $job_id, array $data_packets = []): bool {
         $logger = apply_filters('dm_get_logger', null);
         $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 
@@ -42,11 +44,11 @@ class InputStep {
             // Input steps ignore provided DataPacket (closed-door philosophy)
             $logger->info('Input Step: Starting data collection (closed-door)', [
                 'job_id' => $job_id,
-                'data_packet_ignored' => $data_packet !== null ? 'yes' : 'n/a'
+                'data_packet_ignored' => $data_packets !== null ? 'yes' : 'n/a'
             ]);
             
             // Context awareness: Get pipeline position if available
-            $context = apply_filters('dm_get_context', null);
+            $context = apply_filters('dm_get_context', null, $job_id);
             if ($context) {
                 $logger->info('Input Step: Pipeline context available', [
                     'job_id' => $job_id,
@@ -155,9 +157,9 @@ class InputStep {
     private function execute_input_handler_direct(string $handler_name, object $job, array $handler_config): ?DataPacket {
         $logger = apply_filters('dm_get_logger', null);
 
-        // Auto-discover handler class using pure filter-based registration
-        $handler_class = $this->auto_discover_handler_class($handler_name, 'input');
-        if (!$handler_class) {
+        // Get handler object directly from handler system
+        $handler = $this->get_handler_object($handler_name, 'input');
+        if (!$handler) {
             $logger->error('Input Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'job_id' => $job->job_id
@@ -166,8 +168,7 @@ class InputStep {
         }
 
         try {
-            // Instantiate handler with parameter-less constructor
-            $handler = new $handler_class();
+            // Handler is already instantiated from the registry
 
             // Get pipeline ID for handler
             $pipeline_id = $this->get_pipeline_id_from_job($job);
@@ -178,22 +179,30 @@ class InputStep {
                 return null;
             }
 
-            // Execute handler - must return DataPacket
+            // Execute handler - handlers return arrays, use universal conversion
             $user_id = $job->user_id ?? 0;
             $result = $handler->get_input_data($pipeline_id, $handler_config, $user_id);
 
-            // Ensure we have a DataPacket - no legacy conversion support
-            if ($result instanceof DataPacket) {
-                return $result;
+            // Convert handler output to DataPacket using universal filter system
+            $context = [
+                'job_id' => $job->job_id,
+                'pipeline_id' => $pipeline_id,
+                'user_id' => $user_id
+            ];
+            
+            $data_packet = apply_filters('dm_create_datapacket', null, $result, $handler_name, $context);
+
+            if (!$data_packet instanceof DataPacket) {
+                $logger->error('Input Step: Failed to create DataPacket from handler output', [
+                    'handler' => $handler_name,
+                    'job_id' => $job->job_id,
+                    'result_type' => gettype($result),
+                    'conversion_failed' => true
+                ]);
+                return null;
             }
 
-            $logger->error('Input Step: Handler must return DataPacket instance', [
-                'handler' => $handler_name,
-                'job_id' => $job->job_id,
-                'type' => gettype($result),
-                'class' => is_object($result) ? get_class($result) : 'N/A'
-            ]);
-            return null;
+            return $data_packet;
 
         } catch (\Exception $e) {
             $logger->error('Input Step: Handler execution failed', [
@@ -216,17 +225,18 @@ class InputStep {
     }
 
     /**
-     * Auto-discover handler class using centralized utility filter.
+     * Get handler object directly from the handler system.
      * 
-     * Uses the enhanced auto-discovery system from DataMachineFilters.php
-     * for consistent handler class resolution across all components.
+     * Uses the revolutionary object-based handler registration to get
+     * instantiated handler objects directly, eliminating class discovery.
      * 
      * @param string $handler_name Handler name/key
      * @param string $handler_type Handler type (input/output)
-     * @return string|null Handler class name or null if not found
+     * @return object|null Handler object or null if not found
      */
-    private function auto_discover_handler_class(string $handler_name, string $handler_type): ?string {
-        return apply_filters('dm_auto_discover_handler_class', null, $handler_name, $handler_type);
+    private function get_handler_object(string $handler_name, string $handler_type): ?object {
+        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
+        return $handlers[$handler_name] ?? null;
     }
 
     /**
@@ -270,10 +280,10 @@ class InputStep {
      * Store data packet for current step.
      *
      * @param int $job_id The job ID.
-     * @param \DataMachine\Core\DataPacket $data_packet The data packet to store.
+     * @param object $data_packet The data packet object to store.
      * @return bool True on success, false on failure.
      */
-    private function store_step_data_packet(int $job_id, \DataMachine\Core\DataPacket $data_packet): bool {
+    private function store_step_data_packet(int $job_id, object $data_packet): bool {
         $pipeline_context = apply_filters('dm_get_pipeline_context', null);
         if (!$pipeline_context) {
             return false;
@@ -310,15 +320,15 @@ class InputStep {
     }
 }
 
-// Auto-register this step type using parameter-based filter system
+// Self-register this step type using parameter-based filter system
 add_filter('dm_get_steps', function($step_config, $step_type) {
     if ($step_type === 'input') {
         return [
             'label' => __('Input', 'data-machine'),
-            'has_handlers' => true,
             'description' => __('Collect data from external sources', 'data-machine'),
             'class' => 'DataMachine\\Core\\Steps\\Input\\InputStep'
         ];
     }
     return $step_config;
 }, 10, 2);
+
