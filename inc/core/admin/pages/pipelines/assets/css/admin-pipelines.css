@@ -1,0 +1,639 @@
+/**
+ * Data Machine Admin Pipeline Management Styles
+ * 
+ * Styles for the visual pipeline builder and drag-and-drop interface.
+ * Used by: inc/core/admin/pages/pipelines/Pipelines.php
+ *
+ * @since NEXT_VERSION
+ */
+
+/* Project creation controls */
+.dm-project-creation-controls {
+    margin-bottom: 20px;
+}
+
+.dm-project-creation-controls .spinner {
+    float: none;
+    vertical-align: middle;
+}
+
+/* Projects list container */
+.dm-projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* Project cards */
+.dm-project-card {
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    background: #fff;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+}
+
+/* Project header */
+.dm-project-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.dm-project-header h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.dm-project-header .dm-project-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 13px;
+    color: #666;
+}
+
+/* Pipeline prompts section */
+.dm-pipeline-prompts {
+    margin-bottom: 20px;
+}
+
+.dm-pipeline-prompts h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #23282d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dm-pipeline-prompts h4 .dashicons {
+    font-size: 16px;
+    color: #0073aa;
+}
+
+.dm-horizontal-pipeline-container {
+    background: #f8f9fa;
+    border: 1px solid #e2e4e7;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.dm-pipeline-loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Step flow configuration */
+.dm-step-flow-configuration {
+    margin-bottom: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.dm-step-flow-configuration h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #23282d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dm-step-flow-configuration h4 .dashicons {
+    font-size: 16px;
+    color: #a7aaad;
+}
+
+.dm-flow-steps-count {
+    background: #f0f0f1;
+    color: #50575e;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: auto;
+}
+
+.dm-step-flow-builder {
+    background: #f8f9fa;
+    border: 1px solid #e2e4e7;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.dm-dynamic-steps-container {
+    min-height: 80px;
+    margin-bottom: 20px;
+}
+
+.dm-steps-loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.dm-add-step-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dm-add-step-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+    height: auto;
+}
+
+.dm-add-step-controls .description {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+}
+
+.dm-flow-help {
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #666;
+}
+
+/* Project actions */
+.dm-project-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+}
+
+.dm-project-actions .button {
+    font-size: 12px;
+    padding: 4px 12px;
+    height: auto;
+}
+
+.dm-project-actions .delete-project-button {
+    text-decoration: none;
+    color: #d63638;
+}
+
+.dm-project-actions .export-project-button {
+    text-decoration: none;
+}
+
+/* Empty state */
+.dm-projects-empty {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Import form */
+.dm-import-form {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin-top: 15px;
+    background: #f9f9f9;
+}
+
+/* Schedule modal */
+#dm-schedule-modal {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.dm-schedule-modal-dialog {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 30px;
+    border: 1px solid #ccc;
+    width: 500px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.dm-schedule-modal fieldset {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.dm-schedule-modal legend {
+    padding: 0 5px;
+}
+
+#dm-modal-module-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Configuration modal */
+.dm-modal {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.dm-modal-dialog {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.dm-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e2e4e7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#dm-modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e1e1e;
+}
+
+.dm-modal-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #646970;
+    padding: 4px;
+    line-height: 1;
+}
+
+.dm-modal-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 140px);
+}
+
+#dm-modal-loading {
+    text-align: center;
+    padding: 40px;
+}
+
+#dm-modal-loading .spinner {
+    display: inline-block;
+    float: none;
+}
+
+#dm-modal-loading p {
+    margin-top: 16px;
+    color: #646970;
+    font-style: italic;
+}
+
+#dm-modal-body {
+    display: none;
+}
+
+#dm-modal-error {
+    display: none;
+    text-align: center;
+    padding: 40px;
+}
+
+#dm-modal-error .dashicons {
+    font-size: 32px;
+    color: #d63638;
+    opacity: 0.7;
+}
+
+#dm-modal-error p:first-of-type {
+    margin-top: 12px;
+    color: #d63638;
+    font-weight: 500;
+}
+
+#dm-modal-error p:last-of-type {
+    margin-top: 8px;
+    color: #646970;
+    font-size: 14px;
+}
+
+.dm-modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e2e4e7;
+    background: #f9f9f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.dm-modal-save {
+    display: none;
+}
+
+/* Additional pipeline-specific styles moved from shared admin CSS */
+
+/* Pipeline Builder Styles */
+.dm-pipeline-step-card {
+    position: relative;
+    transition: box-shadow 0.2s ease;
+}
+
+.dm-pipeline-step-card:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dm-step-drag-handle:hover {
+    color: #0073aa !important;
+}
+
+.dm-pipeline-steps-list.ui-sortable .dm-pipeline-step-card {
+    cursor: move;
+}
+
+.dm-step-placeholder {
+    border: 2px dashed #0073aa;
+    background: #f0f8ff;
+    height: 80px;
+    margin: 5px 0;
+    border-radius: 4px;
+}
+
+.dm-remove-step-btn:hover {
+    background-color: #f0f0f0 !important;
+    border-radius: 2px;
+}
+
+.dm-add-step-controls {
+    background: #f9f9f9;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.dm-step-header {
+    align-items: center;
+}
+
+.dm-step-config select,
+.dm-step-config input {
+    border: 1px solid #ddd;
+    border-radius: 2px;
+}
+
+.dm-step-config select:focus,
+.dm-step-config input:focus {
+    border-color: #0073aa;
+    box-shadow: 0 0 0 1px #0073aa;
+    outline: none;
+}
+
+/* Loading and empty states */
+.dm-pipeline-loading,
+.dm-no-steps {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+}
+
+/* Step type icons */
+.dm-step-header .dashicons {
+    vertical-align: middle;
+}
+
+/* Horizontal Pipeline Builder Styles */
+.dm-horizontal-pipeline-container {
+    position: relative;
+    overflow: visible;
+}
+
+.dm-horizontal-pipeline-flow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 0;
+    min-height: 80px;
+}
+
+.dm-horizontal-step-card {
+    flex-shrink: 0;
+    min-width: 160px;
+    max-width: 200px;
+    background: #fff;
+    border: 2px solid #e2e4e7;
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.dm-horizontal-step-card:hover {
+    border-color: #0073aa;
+    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.15);
+    transform: translateY(-1px);
+}
+
+.dm-horizontal-step-card.dm-step-input {
+    border-color: #00a32a;
+}
+
+.dm-horizontal-step-card.dm-step-ai {
+    border-color: #8b5cf6;
+}
+
+.dm-horizontal-step-card.dm-step-output {
+    border-color: #f59e0b;
+}
+
+.dm-horizontal-step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.dm-horizontal-step-icon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dm-horizontal-step-icon .dashicons {
+    font-size: 16px;
+}
+
+.dm-step-input .dm-horizontal-step-icon {
+    color: #00a32a;
+}
+
+.dm-step-ai .dm-horizontal-step-icon {
+    color: #8b5cf6;
+}
+
+.dm-step-output .dm-horizontal-step-icon {
+    color: #f59e0b;
+}
+
+.dm-horizontal-step-number {
+    background: #f0f0f1;
+    color: #646970;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.dm-horizontal-step-content {
+    font-size: 11px;
+    color: #646970;
+    line-height: 1.3;
+    min-height: 24px;
+}
+
+.dm-horizontal-step-handler {
+    font-weight: 500;
+    color: #1e1e1e;
+    margin-bottom: 2px;
+}
+
+.dm-horizontal-step-config {
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.dm-horizontal-step-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    background: #d63638;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.dm-horizontal-step-card:hover .dm-horizontal-step-remove,
+.dm-horizontal-step-card:hover .dm-step-configure {
+    opacity: 1;
+}
+
+.dm-horizontal-step-card:hover .dm-horizontal-step-remove {
+    display: flex;
+}
+
+.dm-horizontal-step-remove:hover {
+    background: #b32d2e;
+    transform: scale(1.1);
+}
+
+.dm-horizontal-pipeline-arrow {
+    flex-shrink: 0;
+    color: #8c8f94;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.dm-horizontal-add-step {
+    flex-shrink: 0;
+    min-width: 140px;
+    height: 80px;
+    background: transparent;
+    border: 2px dashed #c3c4c7;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #646970;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dm-horizontal-add-step:hover {
+    border-color: #0073aa;
+    background: rgba(0, 115, 170, 0.05);
+    color: #0073aa;
+}
+
+.dm-horizontal-add-step .dashicons {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+/* Drag and drop styles */
+.dm-horizontal-step-card.dm-dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.dm-horizontal-pipeline-flow.dm-drag-over {
+    background: rgba(0, 115, 170, 0.1);
+    border-radius: 4px;
+}
+
+.dm-horizontal-drop-indicator {
+    width: 3px;
+    background: #0073aa;
+    border-radius: 2px;
+    margin: 0 4px;
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+.dm-horizontal-drop-indicator.active {
+    opacity: 1;
+    height: 60px;
+}
