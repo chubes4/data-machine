@@ -58,10 +58,10 @@ function dm_register_reddit_input_filters() {
         return $settings;
     }, 10, 2);
     
-    // DataPacket conversion registration - parameter-based self-registration
+    // DataPacket conversion registration - Reddit handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'reddit') {
-            return \DataMachine\Engine\DataPacket::fromReddit($source_data, $context);
+            return RedditDataPacket::create($source_data, $context);
         }
         return $datapacket;
     }, 10, 4);

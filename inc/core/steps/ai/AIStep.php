@@ -73,6 +73,12 @@ class AIStep {
                 return $this->fail_job($job_id, 'AI step configuration not found');
             }
 
+            // Support handlers array for architectural consistency (typically contains single 'ai' handler)
+            $handlers = $step_config['handlers'] ?? ['ai']; // Default to single AI handler
+            if (!is_array($handlers) || empty($handlers)) {
+                $handlers = ['ai']; // Fallback to default
+            }
+
             // Validate required configuration
             $prompt = $step_config['prompt'] ?? '';
             $title = $step_config['title'] ?? 'AI Processing';
@@ -87,12 +93,14 @@ class AIStep {
             if (!empty($all_packets)) {
                 $logger->info('AI Step: Processing with all data packets', [
                     'job_id' => $job_id,
-                    'packets_count' => count($all_packets)
+                    'packets_count' => count($all_packets),
+                    'handlers' => $handlers
                 ]);
             } else {
                 // First step in pipeline - no previous DataPackets
                 $logger->info('AI Step: First step - no previous data packets available', [
-                    'job_id' => $job_id
+                    'job_id' => $job_id,
+                    'handlers' => $handlers
                 ]);
             }
 
@@ -148,7 +156,7 @@ class AIStep {
                 return $this->fail_job($job_id, $error_message);
             }
 
-            // Create output DataPacket from AI response using universal filter system
+            // Create output DataPacket from AI response using filter system
             $ai_content = $ai_response['data']['content'] ?? '';
             $ai_data = [
                 'content' => $ai_content,
@@ -274,6 +282,11 @@ class AIStep {
      */
     public static function get_prompt_fields(): array {
         return [
+            'handlers' => [
+                'type' => 'hidden',
+                'default' => ['ai'],
+                'description' => 'AI processing handlers (defaults to ai handler for consistency)'
+            ],
             'title' => [
                 'type' => 'text',
                 'label' => 'Step Title',
@@ -337,16 +350,4 @@ class AIStep {
     }
 }
 
-// Self-register this step type using parameter-based filter system
-add_filter('dm_get_steps', function($step_config, $step_type) {
-    if ($step_type === 'ai') {
-        return [
-            'label' => __('AI Processing', 'data-machine'),
-            'description' => __('Process content using AI models', 'data-machine'),
-            'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
-            'consume_all_packets' => true
-        ];
-    }
-    return $step_config;
-}, 10, 2);
 

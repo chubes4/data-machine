@@ -94,14 +94,3 @@ class WordPress {
     }
 }
 
-// Self-register via universal parameter-based handler system for both types
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input' || $type === 'output') {
-        $handlers['wordpress'] = [
-            'class' => \DataMachine\Core\Handlers\WordPress\WordPress::class,
-            'label' => __('WordPress', 'data-machine'),
-            'description' => __('Universal WordPress content handler for input and output', 'data-machine')
-        ];
-    }
-    return $handlers;
-}, 10, 2);

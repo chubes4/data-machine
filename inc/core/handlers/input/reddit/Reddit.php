@@ -560,14 +560,3 @@ class Reddit {
 
 } // End class \DataMachine\Core\Handlers\Input\Reddit\Reddit
 
-// Self-register via universal parameter-based handler system
-add_filter('dm_get_handlers', function($handlers, $type) {
-	if ($type === 'input') {
-		$handlers['reddit'] = [
-			'class' => \DataMachine\Core\Handlers\Input\Reddit\Reddit::class,
-			'label' => __('Reddit', 'data-machine'),
-			'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
-		];
-	}
-	return $handlers;
-}, 10, 2);

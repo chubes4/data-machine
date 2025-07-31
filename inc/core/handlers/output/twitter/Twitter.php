@@ -265,7 +265,7 @@ class Twitter {
                         $temp_image_path = null; // Ensure path is null on error
                     } finally {
                         if ($temp_image_path && file_exists($temp_image_path)) {
-                            @unlink($temp_image_path);
+                            wp_delete_file($temp_image_path);
                             $logger && $logger->debug('Temporary image file cleaned up.', ['image_url' => $image_source_url]);
                         }
                     }

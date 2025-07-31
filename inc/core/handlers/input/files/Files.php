@@ -648,14 +648,3 @@ class Files {
     }
 }
 
-// Self-register via universal parameter-based handler system
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input') {
-        $handlers['files'] = [
-            'class' => \DataMachine\Core\Handlers\Input\Files\Files::class,
-            'label' => __('Files', 'data-machine'),
-            'description' => __('Process local files and uploads', 'data-machine')
-        ];
-    }
-    return $handlers;
-}, 10, 2);

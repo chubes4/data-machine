@@ -407,30 +407,79 @@ function dm_register_universal_handler_system() {
 function dm_register_utility_filters() {
     
     /**
-     * Initialize admin page registry for pure self-registration pattern.
+     * Parameter-based admin page system for architectural consistency.
      * 
-     * Admin pages register themselves using this filter, eliminating any hardcoded
-     * page lists and following the same pure parameter-based architecture as handlers.
+     * Follows same pattern as handlers, database services, auth, and all other services.
+     * Eliminates collection-based registration for pure parameter-based architecture.
      * 
-     * Core Usage: 
-     * - Pages: add_filter('dm_register_admin_pages', function($pages) { $pages['slug'] = $config; return $pages; });
-     * - Discovery: $all_pages = apply_filters('dm_register_admin_pages', []);
+     * Core Usage:
+     * - Page Discovery: $page_config = apply_filters('dm_get_admin_page', null, 'jobs');
+     * - Page Discovery: $page_config = apply_filters('dm_get_admin_page', null, 'pipelines');
+     * 
+     * Component Self-Registration Pattern (via *Filters.php files):
+     * add_filter('dm_get_admin_page', function($config, $page_slug) {
+     *     if ($page_slug === 'jobs') {
+     *         return [
+     *             'page_title' => __('Jobs', 'data-machine'),
+     *             'menu_title' => __('Jobs', 'data-machine'),
+     *             'capability' => 'manage_options',
+     *             'position' => 20
+     *         ];
+     *     }
+     *     return $config;
+     * }, 10, 2);
      * 
      * External Plugin Integration:
-     * add_filter('dm_register_admin_pages', function($pages) {
-     *     $pages['analytics'] = [
-     *         'page_title' => 'Analytics Dashboard',
-     *         'menu_title' => 'Analytics', 
-     *         'capability' => 'manage_options',
-     *         'callback' => [$this, 'render_analytics_page']
-     *     ];
-     *     return $pages;
-     * }, 10);
+     * add_filter('dm_get_admin_page', function($config, $page_slug) {
+     *     if ($page_slug === 'analytics') {
+     *         return [
+     *             'page_title' => 'Analytics Dashboard',
+     *             'menu_title' => 'Analytics',
+     *             'capability' => 'manage_options',
+     *             'position' => 35
+     *         ];
+     *     }
+     *     return $config;
+     * }, 10, 2);
      */
-    add_filter('dm_register_admin_pages', function($pages) {
-        // Initialize empty registry - pages add themselves to this
-        return is_array($pages) ? $pages : [];
-    }, 5);
+    add_filter('dm_get_admin_page', function($config, $page_slug) {
+        if ($config !== null) {
+            return $config; // Component self-registration provided
+        }
+        
+        // Pure parameter-based system - pages self-register via this same filter
+        // No hardcoded page lists - complete architectural consistency
+        return null;
+    }, 5, 2);
+    
+    /**
+     * Admin page discovery helper for AdminMenuAssets.
+     * 
+     * Returns all available admin pages by checking known page slugs.
+     * Maintains backward compatibility during transition period.
+     * 
+     * Core Usage: $all_pages = apply_filters('dm_discover_admin_pages', []);
+     */
+    add_filter('dm_discover_admin_pages', function($pages) {
+        // Known core admin page slugs
+        $known_slugs = ['jobs', 'pipelines', 'logs'];
+        
+        foreach ($known_slugs as $slug) {
+            $page_config = apply_filters('dm_get_admin_page', null, $slug);
+            if ($page_config !== null) {
+                $pages[$slug] = $page_config;
+            }
+        }
+        
+        // External plugins can add their page slugs via this same filter
+        // add_filter('dm_discover_admin_pages', function($pages) {
+        //     $custom_config = apply_filters('dm_get_admin_page', null, 'analytics');
+        //     if ($custom_config) $pages['analytics'] = $custom_config;
+        //     return $pages;
+        // }, 20);
+        
+        return $pages;
+    }, 10);
     
     /**
      * Parameter-based page asset discovery system.
@@ -596,6 +645,8 @@ function dm_register_utility_filters() {
         return $matches;
     }, 5, 4);
     
+    // Admin notices removed - components use WordPress add_action('admin_notices') directly
+    
 }
 
 /**
@@ -663,7 +714,7 @@ function dm_register_step_auto_discovery_system() {
  * Component Self-Registration Pattern (via *Filters.php files):
  * add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
  *     if ($source_type === 'files') {
- *         return DataPacket::fromFiles($source_data, $context);
+ *         return FilesDataPacket::create($source_data, $context);
  *     }
  *     return $datapacket;
  * }, 10, 4);

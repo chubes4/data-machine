@@ -61,17 +61,17 @@ class AdminMenuAssets {
     }
 
     /**
-     * Register admin pages via pure self-registration auto-discovery.
+     * Register admin pages via parameter-based discovery system.
      * 
-     * Uses the same pattern as WordPress core admin pages with zero hardcoded lists.
-     * Pages register themselves via dm_register_admin_pages filter.
+     * Uses consistent parameter-based pattern matching handlers, database services, 
+     * and all other architectural components. Eliminates collection-based patterns.
      * Pages are ordered by position parameter with alphabetical fallback.
      *
      * @since    NEXT_VERSION
      */
     public function add_admin_menu() {
-        // Pure discovery - get ALL self-registered admin pages (zero hardcoded lists)
-        $registered_pages = apply_filters('dm_register_admin_pages', []);
+        // Parameter-based discovery - consistent with all other services
+        $registered_pages = apply_filters('dm_discover_admin_pages', []);
         
         // Only create Data Machine menu if pages are available
         if (empty($registered_pages)) {
@@ -102,7 +102,7 @@ class AdminMenuAssets {
             __('Data Machine', 'data-machine'),
             $first_page['capability'] ?? 'manage_options',
             'dm-' . $first_slug,
-            $first_page['callback'],
+            'DataMachine\\Admin\\dm_admin_page_callback', // Simple callback function
             'dashicons-database-view',
             30
         );
@@ -117,26 +117,19 @@ class AdminMenuAssets {
             $first_page['menu_title'] ?? ucfirst($first_slug),
             $first_page['capability'] ?? 'manage_options',
             'dm-' . $first_slug,
-            $first_page['callback']
+            'DataMachine\\Admin\\dm_admin_page_callback' // Simple callback function
         );
         
         // Add remaining pages as submenus (already sorted)
         $remaining_pages = array_slice($registered_pages, 1, null, true);
         foreach ($remaining_pages as $slug => $page_config) {
-            $callback = $page_config['callback'] ?? null;
-            
-            if (!$callback || !is_callable($callback)) {
-                error_log('Data Machine: Invalid callback for admin page: ' . $slug);
-                continue;
-            }
-            
             $hook_suffix = add_submenu_page(
                 'dm-' . $first_slug,
                 $page_config['page_title'] ?? $page_config['menu_title'] ?? ucfirst($slug),
                 $page_config['menu_title'] ?? ucfirst($slug),
                 $page_config['capability'] ?? 'manage_options',
                 'dm-' . $slug,
-                $callback
+                'DataMachine\\Admin\\dm_admin_page_callback' // Simple callback function
             );
             
             // Store hook suffixes for asset loading

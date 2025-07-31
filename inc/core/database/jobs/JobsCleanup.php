@@ -151,7 +151,7 @@ class JobsCleanup {
         }
         
         $cleanup_time = current_time( 'mysql', 1 );
-        $cleanup_time = date( 'Y-m-d H:i:s', strtotime( $cleanup_time . " +{$cleanup_delay_hours} hours" ) );
+        $cleanup_time = gmdate( 'Y-m-d H:i:s', strtotime( $cleanup_time . " +{$cleanup_delay_hours} hours" ) );
         
         $updated = $wpdb->update(
             $this->table_name,

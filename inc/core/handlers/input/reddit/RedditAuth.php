@@ -374,16 +374,9 @@ class RedditAuth {
         ];
 
         update_user_meta($user_id, 'data_machine_reddit_account', $updated_account_data);
-        $this->get_logger()->info('Reddit token refreshed successfully.', ['user_id' => $user_id, 'new_expiry' => date('Y-m-d H:i:s', $new_token_expires_at)]);
+        $this->get_logger()->info('Reddit token refreshed successfully.', ['user_id' => $user_id, 'new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
         return true;
     }
 
 } // End class
 
-// Self-register via parameter-based auth system
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'reddit') {
-        return new \DataMachine\Core\Handlers\Input\Reddit\RedditAuth();
-    }
-    return $auth;
-}, 10, 2);

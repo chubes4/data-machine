@@ -45,8 +45,7 @@ class Pipelines
      */
     public function __construct()
     {
-        // Register immediately for admin menu discovery (not on init hook)
-        $this->register_admin_page();
+        // Admin page registration now handled by PipelinesFilters.php
         $this->register_page_assets();
         add_action('wp_ajax_dm_get_pipeline_steps', [$this, 'ajax_get_pipeline_steps']);
         add_action('wp_ajax_dm_add_pipeline_step', [$this, 'ajax_add_pipeline_step']);
@@ -58,26 +57,6 @@ class Pipelines
         add_action('wp_ajax_dm_remove_step_handler', [$this, 'ajax_remove_step_handler']);
     }
 
-    /**
-     * Register this admin page with the plugin's admin system.
-     *
-     * Uses pure self-registration pattern matching handler architecture.
-     * No parameter checking needed - page adds itself directly to registry.
-     */
-    public function register_admin_page()
-    {
-        add_filter('dm_register_admin_pages', function($pages) {
-            $pages['pipelines'] = [
-                'page_title' => __('Pipeline Management', 'data-machine'),
-                'menu_title' => __('Pipelines', 'data-machine'),
-                'capability' => 'manage_options',
-                'callback' => [$this, 'render_content'],
-                'description' => __('Build and configure your data processing pipelines with drag-and-drop components.', 'data-machine'),
-                'position' => 10
-            ];
-            return $pages;
-        }, 10);
-    }
 
     /**
      * Register pipeline-specific assets for this page.
@@ -93,14 +72,9 @@ class Pipelines
             
             return [
                 'css' => [
-                    'dm-admin-core' => [
-                        'file' => 'assets/css/data-machine-admin.css',
-                        'deps' => [],
-                        'media' => 'all'
-                    ],
                     'dm-admin-pipelines' => [
                         'file' => 'assets/css/admin-pipelines.css',
-                        'deps' => ['dm-admin-core'],
+                        'deps' => [],
                         'media' => 'all'
                     ]
                 ],
@@ -563,7 +537,7 @@ class Pipelines
     {
         // Check URL parameter first
         if (isset($_GET['pipeline_id']) && is_numeric($_GET['pipeline_id'])) {
-            $pipeline_id = absint($_GET['pipeline_id']);
+            $pipeline_id = absint(wp_unslash($_GET['pipeline_id']));
             // Store in user meta for persistence
             update_user_meta(get_current_user_id(), 'dm_current_pipeline_id', $pipeline_id);
             return $pipeline_id;
@@ -644,8 +618,8 @@ class Pipelines
     public function ajax_get_pipeline_steps()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_get_pipeline_steps')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_pipeline_steps')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $pipeline_id = absint($_POST['pipeline_id'] ?? 0);
@@ -663,8 +637,8 @@ class Pipelines
     public function ajax_add_pipeline_step()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_add_pipeline_step')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_add_pipeline_step')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $pipeline_id = absint($_POST['pipeline_id'] ?? 0);
@@ -693,8 +667,8 @@ class Pipelines
     public function ajax_remove_pipeline_step()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_remove_pipeline_step')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_remove_pipeline_step')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $step_id = absint($_POST['step_id'] ?? 0);
@@ -721,11 +695,11 @@ class Pipelines
     public function ajax_reorder_pipeline_steps()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_reorder_pipeline_steps')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_reorder_pipeline_steps')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
-        $step_orders = $_POST['step_orders'] ?? [];
+        $step_orders = wp_unslash($_POST['step_orders'] ?? []);
         if (!is_array($step_orders)) {
             wp_send_json_error(__('Invalid step order data.', 'data-machine'));
         }
@@ -749,8 +723,8 @@ class Pipelines
     public function ajax_get_dynamic_step_types()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_get_dynamic_step_types')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_dynamic_step_types')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         // Get available step types via filter system
@@ -765,8 +739,8 @@ class Pipelines
     public function ajax_get_available_handlers()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_get_available_handlers')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_available_handlers')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $handler_type = sanitize_text_field(wp_unslash($_POST['handler_type'] ?? ''));
@@ -786,8 +760,8 @@ class Pipelines
     public function ajax_add_step_handler()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_add_step_handler')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_add_step_handler')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $flow_id = absint($_POST['flow_id'] ?? 0);
@@ -817,8 +791,8 @@ class Pipelines
     public function ajax_remove_step_handler()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_remove_step_handler')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_remove_step_handler')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $flow_id = absint($_POST['flow_id'] ?? 0);

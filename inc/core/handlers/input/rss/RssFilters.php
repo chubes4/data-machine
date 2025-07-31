@@ -50,10 +50,10 @@ function dm_register_rss_input_filters() {
         return $settings;
     }, 10, 2);
     
-    // DataPacket conversion registration - parameter-based self-registration
+    // DataPacket conversion registration - RSS handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'rss') {
-            return \DataMachine\Engine\DataPacket::fromRSS($source_data, $context);
+            return RssDataPacket::create($source_data, $context);
         }
         return $datapacket;
     }, 10, 4);

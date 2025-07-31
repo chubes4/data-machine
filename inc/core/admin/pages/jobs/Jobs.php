@@ -31,81 +31,14 @@ if (!defined('WPINC')) {
 class Jobs
 {
     /**
-     * Constructor - Registers the admin page via filter system.
+     * Constructor - Admin page registration now handled by JobsFilters.php.
      */
     public function __construct()
     {
-        // Register immediately for admin menu discovery (not on init hook)
-        $this->register_admin_page();
-        $this->register_page_assets();
+        // Admin page registration and asset registration now handled by JobsFilters.php
     }
 
-    /**
-     * Register this admin page with the plugin's admin system.
-     *
-     * Uses pure self-registration pattern matching handler architecture.
-     * No parameter checking needed - page adds itself directly to registry.
-     */
-    public function register_admin_page()
-    {
-        add_filter('dm_register_admin_pages', function($pages) {
-            $pages['jobs'] = [
-                'page_title' => __('Job Management', 'data-machine'),
-                'menu_title' => __('Jobs', 'data-machine'),
-                'capability' => 'manage_options',
-                'callback' => [$this, 'render_content'],
-                'description' => __('Monitor and manage your pipeline processing jobs with real-time status updates.', 'data-machine'),
-                'position' => 20
-            ];
-            return $pages;
-        }, 10);
-    }
 
-    /**
-     * Register job-specific assets for this page.
-     * 
-     * Pages self-register their assets to maintain full self-sufficiency.
-     */
-    public function register_page_assets()
-    {
-        add_filter('dm_get_page_assets', function($assets, $page_slug) {
-            if ($page_slug !== 'jobs') {
-                return $assets;
-            }
-            
-            return [
-                'css' => [
-                    'dm-admin-core' => [
-                        'file' => 'assets/css/data-machine-admin.css',
-                        'deps' => [],
-                        'media' => 'all'
-                    ],
-                    'dm-admin-jobs' => [
-                        'file' => 'assets/css/admin-jobs.css',
-                        'deps' => ['dm-admin-core'],
-                        'media' => 'all'
-                    ]
-                ],
-                'js' => [
-                    'dm-jobs-admin' => [
-                        'file' => 'assets/js/admin/core/data-machine-jobs.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmJobsAdmin',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'strings' => [
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'error' => __('An error occurred', 'data-machine'),
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ];
-        }, 10, 2);
-    }
 
     /**
      * Render the main jobs page content.
@@ -198,9 +131,9 @@ class Jobs
         $status_display = ucfirst(str_replace('_', ' ', $status));
         
         // Format dates
-        $created_display = $created_at ? date('M j, Y g:i a', strtotime($created_at)) : '';
-        $started_display = $started_at ? date('M j, Y g:i a', strtotime($started_at)) : '';
-        $completed_display = $completed_at ? date('M j, Y g:i a', strtotime($completed_at)) : '';
+        $created_display = $created_at ? gmdate('M j, Y g:i a', strtotime($created_at)) : '';
+        $started_display = $started_at ? gmdate('M j, Y g:i a', strtotime($started_at)) : '';
+        $completed_display = $completed_at ? gmdate('M j, Y g:i a', strtotime($completed_at)) : '';
         
         // Determine result/error display
         $result_display = '';

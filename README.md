@@ -1,21 +1,21 @@
 # Data Machine
 
-Transform any WordPress site into a **Universal AI Content Processing Platform**. The first comprehensive AI workflow system built entirely on WordPress-native patterns, enabling sophisticated multi-provider AI processing through familiar WordPress interfaces.
+WordPress plugin for AI content processing workflows. Built with WordPress-native patterns, supports multiple AI providers through visual pipeline builder.
 
 [![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-## AI-First Capabilities
+## Features
 
-- **🤖 Universal AI Integration**: Seamless switching between OpenAI, Anthropic, Google, Grok, OpenRouter
-- **🎨 Visual AI Pipeline Builder**: Gutenberg-inspired drag-and-drop AI workflow construction
-- **🧠 Intelligent Context Processing**: Multi-source data collection with AI-aware context management
-- **🔄 Sophisticated AI Workflows**: Chain different AI models and providers in complex processing pipelines
-- **📤 AI-Powered Publishing**: Intelligent content distribution to Facebook, Twitter, Threads, WordPress
-- **🌐 WordPress-Native Design**: Built entirely on familiar WordPress patterns and interfaces
-- **🔌 Comprehensive Architecture**: Filter-based system enabling unlimited extensibility
-- **🚀 Professional Implementation**: Clean separation of concerns with modular component design
+- **🤖 Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter support
+- **🎨 Visual Pipeline Builder**: Drag-and-drop workflow construction
+- **🧠 Context Processing**: Multi-source data collection and processing
+- **🔄 Sequential Workflows**: Chain different AI models and providers
+- **📤 Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress
+- **🌐 WordPress Integration**: Uses familiar WordPress patterns and interfaces
+- **🔌 Filter Architecture**: Extensible system using WordPress filters
+- **🚀 Modular Design**: Clean separation of concerns
 
 ## Real-World Example: Core Content Workflow
 
@@ -31,7 +31,7 @@ Step 7: Output (Facebook Handler)    → Publishes to Facebook
 Step 8: Output (WordPress Handler)   → Creates new blog post
 ```
 
-**Context Accumulation Power**: Each step receives ALL previous step data, enabling sophisticated cross-referencing and analysis across multiple data sources in sequential processing.
+**Context Accumulation**: Each step receives ALL previous step data, enabling cross-referencing and analysis across multiple data sources in sequential processing.
 
 ## Quick Start
 
@@ -96,9 +96,9 @@ public function execute(int $job_id, array $data_packets = []): bool {
 }
 ```
 
-## Architecture: Comprehensive Filter-Based System
+## Architecture: Filter-Based System
 
-Data Machine implements a **comprehensive filter-based architecture** enabling the sophisticated AI workflows through WordPress-native patterns. Every component is replaceable, extensible, and systematically organized:
+Data Machine implements a filter-based architecture enabling AI workflows through WordPress-native patterns. Every component is replaceable, extensible, and organized:
 
 ```php
 // Core services - completely replaceable
@@ -121,12 +121,12 @@ $steps = apply_filters('dm_get_steps', [], '');
 $ai_config = apply_filters('dm_get_steps', null, 'ai');
 ```
 
-### The Power: Complete Frontend/Backend Separation
+### Frontend/Backend Separation
 
-- **Frontend**: 100% replaceable via filter overrides
+- **Frontend**: Replaceable via filter overrides
 - **Backend**: Engine accepts any components following filter contracts
-- **Extensions**: Add unlimited services, handlers, steps via filters
-- **No Lock-in**: Replace core functionality without touching engine code
+- **Extensions**: Add services, handlers, steps via filters
+- **Modularity**: Replace core functionality without touching engine code
 
 ## Key Features
 
@@ -135,7 +135,7 @@ Collect data from multiple sources sequentially - each step receives ALL previou
 - **Sequential Input Steps**: RSS feeds → Reddit posts → WordPress content → Local files
 - **Cumulative Context**: Each step builds on previous data for rich analysis
 - **Cross-reference capabilities** across different data sources through context accumulation
-- **Intelligent deduplication** and content correlation via step-by-step processing
+- **Content correlation** via step-by-step processing
 
 ### Multi-AI Model Workflows
 Chain different AI providers in sequential pipeline steps:
@@ -159,11 +159,11 @@ Chain different AI providers in sequential pipeline steps:
 
 **AI Integration**:
 - **Multi-Provider AI HTTP Client**: OpenAI, Anthropic, Google, Grok, OpenRouter
-- **Built-in Agentic Features**: Streaming, tool calling, function execution
+- **Features**: Streaming, tool calling, function execution
 
 ### Extension Examples (Not Included)
 
-The filter-based architecture makes adding custom handlers trivial. Common extensions:
+The filter-based architecture makes adding custom handlers straightforward. Common extensions:
 
 **Database & Sheets**:
 - **Google Sheets**: Read/write spreadsheet data
@@ -397,7 +397,7 @@ public function execute(int $job_id, array $data_packets = []): bool {
     // AI steps consume all packets (most recent first)
     foreach ($data_packets as $index => $packet) {
         $step_name = $packet->metadata['step_name'] ?? "Step $index";
-        // Process all previous AI outputs for comprehensive analysis
+        // Process all previous AI outputs for analysis
     }
 }
 ```
@@ -457,4 +457,4 @@ window.dmDebugMode = true;
 
 ---
 
-*Data Machine: Transforming WordPress into a Universal Content Processing Platform with AI-powered workflows and visual pipeline construction.*
+*Data Machine: WordPress plugin for AI content processing workflows with visual pipeline construction.*

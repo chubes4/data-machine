@@ -82,10 +82,3 @@ class TwitterSettings {
     }
 }
 
-// Self-register via parameter-based settings system
-add_filter('dm_get_handler_settings', function($settings, $handler_key) {
-    if ($handler_key === 'twitter') {
-        return new \DataMachine\Core\Handlers\Output\Twitter\TwitterSettings();
-    }
-    return $settings;
-}, 10, 2);

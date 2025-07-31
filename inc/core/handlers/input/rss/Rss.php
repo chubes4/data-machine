@@ -203,7 +203,7 @@ class Rss {
                     $logger?->debug('RSS Input: Skipping item outside timeframe.', [
                         'guid' => $guid,
                         'pub_date' => $pub_date,
-                        'cutoff' => date('Y-m-d H:i:s', $cutoff_timestamp),
+                        'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp),
                         'module_id' => $module_id
                     ]);
                     continue;
@@ -519,14 +519,3 @@ class Rss {
     }
 }
 
-// Self-register via universal parameter-based handler system
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input') {
-        $handlers['rss'] = [
-            'class' => \DataMachine\Core\Handlers\Input\Rss\Rss::class,
-            'label' => __('RSS', 'data-machine'),
-            'description' => __('Monitor and process RSS feeds', 'data-machine')
-        ];
-    }
-    return $handlers;
-}, 10, 2);

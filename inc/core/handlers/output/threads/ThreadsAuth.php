@@ -554,10 +554,3 @@ class ThreadsAuth {
     }
 }
 
-// Self-register via parameter-based auth system
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'threads') {
-        return new \DataMachine\Core\Handlers\Output\Threads\ThreadsAuth();
-    }
-    return $auth;
-}, 10, 2);

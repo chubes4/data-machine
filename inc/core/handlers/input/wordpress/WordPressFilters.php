@@ -58,10 +58,10 @@ function dm_register_wordpress_input_filters() {
         return $settings;
     }, 10, 2);
     
-    // DataPacket conversion registration - parameter-based self-registration
+    // DataPacket conversion registration - WordPress handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'wordpress') {
-            return \DataMachine\Engine\DataPacket::fromWordPress($source_data, $context);
+            return WordPressDataPacket::create($source_data, $context);
         }
         return $datapacket;
     }, 10, 4);

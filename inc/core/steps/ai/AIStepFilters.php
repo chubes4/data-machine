@@ -45,6 +45,28 @@ if (!defined('ABSPATH')) {
 function dm_register_ai_step_filters() {
     
     /**
+     * AI Step Registration
+     * 
+     * Register the AI step type for pipeline discovery via parameter-based filter system.
+     * This enables the AI step to be discovered and used in pipelines.
+     * 
+     * @param mixed $step_config Current step configuration (null if none)
+     * @param string $step_type Step type being requested
+     * @return array|mixed Step configuration or original value
+     */
+    add_filter('dm_get_steps', function($step_config, $step_type) {
+        if ($step_type === 'ai') {
+            return [
+                'label' => __('AI Processing', 'data-machine'),
+                'description' => __('Process content using AI models', 'data-machine'),
+                'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
+                'consume_all_packets' => true
+            ];
+        }
+        return $step_config;
+    }, 10, 2);
+    
+    /**
      * Pipeline Prompt System - AI Step Exclusive
      * 
      * Provides pipeline-level prompts that apply to all AI steps in a pipeline.
@@ -138,23 +160,10 @@ function dm_register_ai_step_filters() {
         
     }, 10, 3);
     
-    // DataPacket conversion registration - parameter-based self-registration
+    // DataPacket conversion registration - AI step uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'ai') {
-            // AI data should contain the original packet for context preservation
-            $original_packet = $context['original_packet'] ?? null;
-            if ($original_packet instanceof \DataMachine\Engine\DataPacket) {
-                return \DataMachine\Engine\DataPacket::fromAIOutput($source_data, $original_packet);
-            } else {
-                // Fallback: create basic AI DataPacket if no original packet available
-                $packet = new \DataMachine\Engine\DataPacket('', '', 'ai');
-                $packet->content['body'] = $source_data['content'] ?? '';
-                if (isset($source_data['metadata'])) {
-                    $packet->processing['ai_model_used'] = $source_data['metadata']['model'] ?? null;
-                    $packet->processing['prompt_applied'] = $source_data['metadata']['prompt_used'] ?? null;
-                }
-                return $packet;
-            }
+            return AIStepDataPacket::create($source_data, $context);
         }
         return $datapacket;
     }, 10, 4);

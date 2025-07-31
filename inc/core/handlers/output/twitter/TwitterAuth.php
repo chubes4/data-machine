@@ -316,10 +316,3 @@ class TwitterAuth {
     }
 }
 
-// Self-register via parameter-based auth system
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'twitter') {
-        return new \DataMachine\Core\Handlers\Output\Twitter\TwitterAuth();
-    }
-    return $auth;
-}, 10, 2);

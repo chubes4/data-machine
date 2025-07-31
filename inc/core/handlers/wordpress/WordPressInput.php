@@ -126,7 +126,7 @@ class WordPressInput {
         if ($cutoff_timestamp !== null) {
             $date_query = [
                 [
-                    'after' => date('Y-m-d H:i:s', $cutoff_timestamp),
+                    'after' => gmdate('Y-m-d H:i:s', $cutoff_timestamp),
                     'inclusive' => true,
                 ]
             ];
@@ -447,6 +447,7 @@ class WordPressInput {
         }
         $location = $db_remote_locations->get_location($location_id, $user_id, true);
         if (!$location) {
+            /* translators: %d: Remote Location ID number */
             throw new Exception(sprintf(esc_html__('Could not retrieve details for Remote Location ID: %d.', 'data-machine'), esc_html($location_id)));
         }
 
@@ -461,9 +462,11 @@ class WordPressInput {
         $fetch_batch_size = min(100, max(10, $process_limit * 2));
 
         if (empty($endpoint_url_base) || !filter_var($endpoint_url_base, FILTER_VALIDATE_URL)) {
+            /* translators: %s: Remote Location name */
             throw new Exception(sprintf(esc_html__('Invalid Target Site URL configured for Remote Location: %s.', 'data-machine'), esc_html($location->location_name ?? $location_id)));
         }
         if (empty($remote_user) || empty($remote_password)) {
+            /* translators: %s: Remote Location name */
             throw new Exception(sprintf(esc_html__('Missing username or application password for Remote Location: %s.', 'data-machine'), esc_html($location->location_name ?? $location_id)));
         }
 

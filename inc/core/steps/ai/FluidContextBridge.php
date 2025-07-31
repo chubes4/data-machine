@@ -409,7 +409,7 @@ class FluidContextBridge {
      * @return string System prompt
      */
     private function build_fallback_system_prompt(array $ai_step_config): string {
-        $system_prompt = "Current date and time: " . date('Y-m-d H:i:s T') . "\n\n";
+        $system_prompt = "Current date and time: " . gmdate('Y-m-d H:i:s T') . "\n\n";
         
         // Add output directives if configured
         if (!empty($ai_step_config['output_type'])) {

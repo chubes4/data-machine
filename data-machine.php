@@ -73,6 +73,7 @@ function run_data_machine() {
 
     // Auto-load all core components using uniform "plugins within plugins" architecture
     dm_autoload_core_handlers();   // Load inc/core/handlers/ components
+    dm_autoload_admin_services();  // Load inc/admin/ service filters - MOVED UP FOR PROPER LOADING ORDER
     dm_autoload_core_admin();      // Load inc/core/admin/ components  
     dm_autoload_core_steps();      // Load inc/core/steps/ components
     dm_autoload_core_database();   // Load inc/core/database/ components
@@ -81,8 +82,7 @@ function run_data_machine() {
     // External plugins use dm_get_steps filter for extensibility
 
 
-    // Admin initialization - use filter-based service access
-    $admin_page = apply_filters('dm_get_admin_page', null);
+    // Admin initialization handled by AdminFilters.php callback function
 
     // Import/export functionality migrated to other handlers
 
@@ -145,6 +145,21 @@ function dm_autoload_core_component_directory(string $relative_path): void {
                 require_once $php_file;
             }
         }
+        
+        // SPECIAL CASE: For admin pages, check one level deeper for nested page components
+        if (basename($component_dir) === 'pages') {
+            $page_subdirectories = glob($component_dir . '/*', GLOB_ONLYDIR);
+            
+            foreach ($page_subdirectories as $page_dir) {
+                $page_php_files = glob($page_dir . '/*.php');
+                
+                foreach ($page_php_files as $page_php_file) {
+                    if (file_exists($page_php_file)) {
+                        require_once $page_php_file;
+                    }
+                }
+            }
+        }
     }
     
     // Also load direct PHP files in the root directory (e.g., Modal.php)
@@ -203,6 +218,16 @@ function dm_autoload_core_steps(): void {
 function dm_autoload_core_database(): void {
     dm_autoload_core_component_directory('inc/core/database/');
 }
+
+/**
+ * Load admin service filters for WordPress admin interface.
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_autoload_admin_services(): void {
+    require_once __DIR__ . '/inc/admin/AdminFilters.php';
+}
+
 
 
 // Initialize after plugins_loaded to ensure Action Scheduler is available

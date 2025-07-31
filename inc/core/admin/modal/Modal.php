@@ -43,8 +43,8 @@ class Modal
     public function ajax_get_modal_content()
     {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_get_modal_content')) {
-            wp_die(__('Security check failed.', 'data-machine'), 403);
+        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_get_modal_content')) {
+            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
         $component_id = sanitize_text_field(wp_unslash($_POST['component_id'] ?? ''));

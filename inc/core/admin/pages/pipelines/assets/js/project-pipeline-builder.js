@@ -1,8 +1,8 @@
 /**
  * Horizontal Pipeline Builder Script
  *
- * Revolutionary horizontal step display for intuitive pipeline building.
- * Features drag-and-drop, visual step cards, and fluid user experience.
+ * Horizontal step display for pipeline building.
+ * Features drag-and-drop, visual step cards, and user interface.
  *
  * @since NEXT_VERSION
  */
@@ -294,7 +294,7 @@
     }
     
     /**
-     * Load available step types from the universal filter system.
+     * Load available step types from the filter system.
      * @param {number} projectId - The project ID
      * @param {number} currentPosition - Current position in pipeline
      * @param {jQuery} $dropdown - The dropdown element to populate
@@ -331,7 +331,7 @@
     }
     
     /**
-     * Populate step dropdown with step types from the universal filter system.
+     * Populate step dropdown with step types from the filter system.
      * @param {jQuery} $dropdown - The dropdown element
      * @param {Array} stepTypes - Array of step type configurations from dm_get_steps
      */

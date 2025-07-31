@@ -170,10 +170,3 @@ class WordPressAuth {
     }
 }
 
-// Self-register via parameter-based auth system
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'wordpress') {
-        return new \DataMachine\Core\Handlers\WordPress\WordPressAuth();
-    }
-    return $auth;
-}, 10, 2);

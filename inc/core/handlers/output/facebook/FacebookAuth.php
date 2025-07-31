@@ -593,10 +593,3 @@ class FacebookAuth {
     }
 }
 
-// Self-register via parameter-based auth system
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'facebook') {
-        return new \DataMachine\Core\Handlers\Output\Facebook\FacebookAuth();
-    }
-    return $auth;
-}, 10, 2);

@@ -65,34 +65,35 @@ class InputStep {
 
             // Get step configuration
             $step_config = $this->get_step_configuration($job_id, 'input');
-            if (!$step_config || empty($step_config['handler'])) {
-                return $this->fail_job($job_id, 'Input step requires handler configuration');
+            if (!$step_config || empty($step_config['handlers']) || !is_array($step_config['handlers'])) {
+                return $this->fail_job($job_id, 'Input step requires handlers array configuration');
             }
 
-            $handler_name = $step_config['handler'];
+            $handlers = $step_config['handlers'];
             $handler_config = $step_config['config'] ?? [];
 
-            // Execute input handler and ensure DataPacket return
-            $data_packet = $this->execute_input_handler_direct($handler_name, $job, $handler_config);
+            // Execute multiple input handlers and merge results
+            $merged_data_packet = $this->execute_multiple_input_handlers($handlers, $job, $handler_config);
 
-            if (!$data_packet instanceof DataPacket) {
-                return $this->fail_job($job_id, 'Input handler must return DataPacket: ' . $handler_name);
+            if (!$merged_data_packet instanceof DataPacket) {
+                return $this->fail_job($job_id, 'Failed to create merged DataPacket from input handlers');
             }
 
-            if (!$data_packet->hasContent()) {
-                return $this->fail_job($job_id, 'Input handler returned empty DataPacket: ' . $handler_name);
+            if (!$merged_data_packet->hasContent()) {
+                return $this->fail_job($job_id, 'All input handlers returned empty content');
             }
 
 
             // Store DataPacket for next step (closed-door: only forward data flow)
-            $success = $this->store_step_data_packet($job_id, $data_packet);
+            $success = $this->store_step_data_packet($job_id, $merged_data_packet);
 
             if ($success) {
-                $logger->info('Input Step: Data collection completed', [
+                $logger->info('Input Step: Multi-handler data collection completed', [
                     'job_id' => $job_id,
-                    'handler' => $handler_name,
-                    'content_length' => $data_packet->getContentLength(),
-                    'source_type' => $data_packet->metadata['source_type'] ?? 'unknown'
+                    'handlers' => $handlers,
+                    'handler_count' => count($handlers),
+                    'content_length' => $merged_data_packet->getContentLength(),
+                    'source_types' => $merged_data_packet->metadata['source_types'] ?? []
                 ]);
             }
 
@@ -183,7 +184,7 @@ class InputStep {
             $user_id = $job->user_id ?? 0;
             $result = $handler->get_input_data($pipeline_id, $handler_config, $user_id);
 
-            // Convert handler output to DataPacket using universal filter system
+            // Convert handler output to DataPacket using filter system
             $context = [
                 'job_id' => $job->job_id,
                 'pipeline_id' => $pipeline_id,
@@ -240,6 +241,137 @@ class InputStep {
     }
 
     /**
+     * Execute multiple input handlers and merge their results
+     * 
+     * @param array $handlers Array of handler names to execute
+     * @param object $job Job object
+     * @param array $handler_config Handler configuration
+     * @return DataPacket|null Merged DataPacket or null on failure
+     */
+    private function execute_multiple_input_handlers(array $handlers, object $job, array $handler_config): ?DataPacket {
+        $logger = apply_filters('dm_get_logger', null);
+        $successful_results = [];
+        $successful_handlers = [];
+        
+        $logger->info('Input Step: Starting multi-handler execution', [
+            'job_id' => $job->job_id,
+            'handlers' => $handlers,
+            'handler_count' => count($handlers)
+        ]);
+        
+        // Execute each handler individually
+        foreach ($handlers as $handler_name) {
+            try {
+                $result = $this->execute_input_handler_direct($handler_name, $job, $handler_config);
+                
+                if ($result instanceof DataPacket && $result->hasContent()) {
+                    $successful_results[] = $result;
+                    $successful_handlers[] = $handler_name;
+                    
+                    $logger->info('Input Step: Handler executed successfully', [
+                        'job_id' => $job->job_id,
+                        'handler' => $handler_name,
+                        'content_length' => $result->getContentLength()
+                    ]);
+                } else {
+                    $logger->warning('Input Step: Handler returned empty or invalid result', [
+                        'job_id' => $job->job_id,
+                        'handler' => $handler_name,
+                        'result_type' => is_object($result) ? get_class($result) : gettype($result)
+                    ]);
+                }
+                
+            } catch (\Exception $e) {
+                $logger->error('Input Step: Handler execution failed', [
+                    'job_id' => $job->job_id,
+                    'handler' => $handler_name,
+                    'exception' => $e->getMessage()
+                ]);
+            }
+        }
+        
+        // Check if we have any successful results
+        if (empty($successful_results)) {
+            $logger->error('Input Step: All handlers failed or returned empty content', [
+                'job_id' => $job->job_id,
+                'attempted_handlers' => $handlers
+            ]);
+            return null;
+        }
+        
+        // Merge results into single DataPacket
+        return $this->merge_input_datapackets($successful_results, $successful_handlers, $job->job_id);
+    }
+
+    /**
+     * Merge multiple input DataPackets into a single comprehensive DataPacket
+     * 
+     * @param array $datapackets Array of DataPacket objects to merge
+     * @param array $handler_names Array of handler names that created the packets
+     * @param int $job_id Job ID for logging
+     * @return DataPacket Merged DataPacket
+     */
+    private function merge_input_datapackets(array $datapackets, array $handler_names, int $job_id): DataPacket {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        if (empty($datapackets)) {
+            throw new \InvalidArgumentException('Cannot merge empty datapackets array');
+        }
+        
+        // Use first packet as base
+        $base_packet = $datapackets[0];
+        $merged_packet = clone $base_packet;
+        
+        // Merge content from all packets
+        $all_content = [];
+        $all_titles = [];
+        $all_source_types = [];
+        
+        foreach ($datapackets as $index => $packet) {
+            $handler_name = $handler_names[$index] ?? "handler_$index";
+            $source_type = $packet->metadata['source_type'] ?? $handler_name;
+            
+            // Collect titles
+            if (!empty($packet->content['title'])) {
+                $all_titles[] = "[$source_type] " . $packet->content['title'];
+            }
+            
+            // Collect content with source attribution
+            if (!empty($packet->content['body'])) {
+                $all_content[] = "=== $source_type Content ===\n" . $packet->content['body'];
+            }
+            
+            // Collect source types
+            $all_source_types[] = $source_type;
+        }
+        
+        // Set merged content
+        $merged_packet->content['title'] = !empty($all_titles) ? implode(' | ', $all_titles) : 'Multi-Source Content';
+        $merged_packet->content['body'] = implode("\n\n", $all_content);
+        
+        // Update metadata to reflect multi-source nature
+        $merged_packet->metadata['source_type'] = 'multi_input';
+        $merged_packet->metadata['source_types'] = $all_source_types;
+        $merged_packet->metadata['handler_count'] = count($datapackets);
+        $merged_packet->metadata['merge_timestamp'] = current_time('c');
+        
+        // Update processing information
+        $merged_packet->processing['steps_completed'] = array_merge(
+            $merged_packet->processing['steps_completed'] ?? [],
+            ['multi_input']
+        );
+        
+        $logger->info('Input Step: DataPackets merged successfully', [
+            'job_id' => $job_id,
+            'source_packets' => count($datapackets),
+            'merged_content_length' => strlen($merged_packet->content['body']),
+            'source_types' => $all_source_types
+        ]);
+        
+        return $merged_packet;
+    }
+
+    /**
      * Define configuration fields for input step
      * 
      * PURE CAPABILITY-BASED: External input step classes only need:
@@ -260,17 +392,17 @@ class InputStep {
         }
 
         return [
-            'handler' => [
-                'type' => 'select',
-                'label' => 'Input Source',
-                'description' => 'Choose the input handler to collect data',
+            'handlers' => [
+                'type' => 'multiselect',
+                'label' => 'Input Sources',
+                'description' => 'Choose one or more input handlers to collect data (executed in batch)',
                 'options' => $handler_options,
                 'required' => true
             ],
             'config' => [
                 'type' => 'json',
                 'label' => 'Handler Configuration',
-                'description' => 'JSON configuration for the selected input handler',
+                'description' => 'JSON configuration applied to all selected input handlers',
                 'placeholder' => '{"feed_url": "https://example.com/feed.xml"}'
             ]
         ];
@@ -320,15 +452,4 @@ class InputStep {
     }
 }
 
-// Self-register this step type using parameter-based filter system
-add_filter('dm_get_steps', function($step_config, $step_type) {
-    if ($step_type === 'input') {
-        return [
-            'label' => __('Input', 'data-machine'),
-            'description' => __('Collect data from external sources', 'data-machine'),
-            'class' => 'DataMachine\\Core\\Steps\\Input\\InputStep'
-        ];
-    }
-    return $step_config;
-}, 10, 2);
 

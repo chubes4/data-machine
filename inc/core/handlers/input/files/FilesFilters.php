@@ -50,10 +50,10 @@ function dm_register_files_input_filters() {
         return $settings;
     }, 10, 2);
     
-    // DataPacket conversion registration - parameter-based self-registration
+    // DataPacket conversion registration - Files handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'files') {
-            return \DataMachine\Engine\DataPacket::fromFiles($source_data, $context);
+            return FilesDataPacket::create($source_data, $context);
         }
         return $datapacket;
     }, 10, 4);
