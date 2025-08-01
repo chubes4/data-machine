@@ -1,0 +1,77 @@
+<?php
+/**
+ * Google Sheets Input Handler Component Filter Registration
+ * 
+ * Revolutionary "Plugins Within Plugins" Architecture Implementation
+ * 
+ * This file serves as Google Sheets Input Handler's complete interface contract with the engine,
+ * demonstrating complete self-containment and zero bootstrap dependencies.
+ * Each handler component manages its own filter registration.
+ * 
+ * Reuses existing Google Sheets OAuth infrastructure from output handler for
+ * seamless bi-directional integration.
+ * 
+ * @package DataMachine
+ * @subpackage Core\Handlers\Input\GoogleSheets
+ * @since NEXT_VERSION
+ */
+
+namespace DataMachine\Core\Handlers\Input\GoogleSheets;
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Register all Google Sheets Input Handler component filters
+ * 
+ * Complete self-registration pattern following "plugins within plugins" architecture.
+ * Engine discovers Google Sheets Input Handler capabilities purely through filter-based discovery.
+ * 
+ * @since NEXT_VERSION
+ */
+function dm_register_googlesheets_input_filters() {
+    
+    // Handler registration - Google Sheets Input declares itself as input handler
+    add_filter('dm_get_handlers', function($handlers, $type) {
+        if ($type === 'input') {
+            $handlers['googlesheets_input'] = [
+                'class' => GoogleSheetsInput::class,
+                'label' => __('Google Sheets', 'data-machine'),
+                'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
+            ];
+        }
+        return $handlers;
+    }, 10, 2);
+    
+    // Settings registration - parameter-matched to 'googlesheets_input' handler
+    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
+        if ($handler_slug === 'googlesheets_input') {
+            return new GoogleSheetsInputSettings();
+        }
+        return $settings;
+    }, 10, 2);
+    
+    // Authentication registration - reuse existing Google Sheets OAuth infrastructure
+    // This creates bi-directional Google Sheets integration by sharing auth with output handler
+    add_filter('dm_get_auth', function($auth, $handler_slug) {
+        if ($handler_slug === 'googlesheets_input') {
+            // Reuse the existing Google Sheets auth class from output handler
+            // This enables seamless bi-directional integration with shared OAuth credentials
+            return apply_filters('dm_get_auth', null, 'googlesheets');
+        }
+        return $auth;
+    }, 10, 2);
+    
+    // DataPacket conversion registration - Google Sheets Input handler uses dedicated DataPacket class
+    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
+        if ($source_type === 'googlesheets_input') {
+            return GoogleSheetsInputDataPacket::create($source_data, $context);
+        }
+        return $datapacket;
+    }, 10, 4);
+}
+
+// Auto-register when file loads - achieving complete self-containment
+dm_register_googlesheets_input_filters();

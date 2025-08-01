@@ -65,7 +65,7 @@ Flow C: Custom Content (Manual)
 - ✅ **Handler Architecture Reorganization**: All handlers moved to step-specific directories (`/inc/core/steps/{input|output}/handlers/`)
 - ✅ **Receiver Step Framework**: Stub implementation and architectural pattern for future webhook integrations
 - ✅ **Bluesky Handler Restoration**: Complete AT Protocol integration restored with modern architecture
-- ✅ **Google Sheets Integration**: Business intelligence output handler with OAuth 2.0 and structured data mapping
+- ✅ **Bi-directional Google Sheets Integration**: Complete INPUT and OUTPUT handlers with shared OAuth 2.0 infrastructure for seamless spreadsheet workflows
 - ✅ **Advanced Pipeline Builder UI**: Complete AJAX-driven interface with dynamic step management and professional modal system
 - ✅ **Template Architecture Reorganization**: Clean separation of modal and page templates with organized directory structure
 - ✅ **Dynamic Step Type Discovery**: Real-time step selection with filter-based handler discovery and configuration
@@ -129,7 +129,7 @@ git subtree push --prefix=lib/ai-http-client origin main  # Push changes back
 ## Architecture Overview
 
 ### Core Components
-- **Input Handlers**: Files, Reddit, RSS, WordPress (located in `/inc/core/steps/input/handlers/`)
+- **Input Handlers**: Files, Reddit, RSS, WordPress, Google Sheets (located in `/inc/core/steps/input/handlers/`)
 - **Output Handlers**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (located in `/inc/core/steps/output/handlers/`)
 - **Receiver Step**: Stub framework for future webhook integrations - demonstrates step registration pattern (located in `/inc/core/steps/receiver/`)
 - **AI Integration**: Multi-provider client (OpenAI, Anthropic, Google, Grok, OpenRouter) with streaming and tool calling
@@ -458,7 +458,7 @@ $handlers = apply_filters('dm_get_handlers', null, $step_type);
 ### External Plugin Integration
 
 **Core Handlers**: 
-- **Input**: Files, Reddit, RSS, WordPress (in `/inc/core/steps/input/handlers/`)
+- **Input**: Files, Reddit, RSS, WordPress, Google Sheets (in `/inc/core/steps/input/handlers/`)
 - **Output**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (in `/inc/core/steps/output/handlers/`)
 - **Receiver**: Stub framework for future webhook integrations - demonstrates extension pattern (in `/inc/core/steps/receiver/`)
 - **AI Integration**: Multi-provider client (OpenAI, Anthropic, Google, Grok, OpenRouter)

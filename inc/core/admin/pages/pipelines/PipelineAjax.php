@@ -70,6 +70,10 @@ class PipelineAjax
                 $this->save_pipeline();
                 break;
             
+            case 'delete_step':
+                $this->delete_step_from_pipeline();
+                break;
+            
             default:
                 wp_send_json_error(['message' => __('Invalid action', 'data-machine')]);
         }
@@ -488,5 +492,92 @@ class PipelineAjax
                 'step_count' => count($step_configuration)
             ]);
         }
+    }
+
+    /**
+     * Delete step from pipeline with cascade handling
+     */
+    private function delete_step_from_pipeline()
+    {
+        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+        $pipeline_id = sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        
+        if (empty($step_type) || empty($pipeline_id)) {
+            wp_send_json_error(['message' => __('Step type and pipeline ID are required', 'data-machine')]);
+        }
+
+        // Get database services using filter-based discovery
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        
+        if (!$db_pipelines || !$db_flows) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger && $logger->error('Database services unavailable in delete_step_from_pipeline');
+            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
+        }
+
+        // Get current pipeline configuration
+        $pipeline = $db_pipelines->get_pipeline_by_id($pipeline_id);
+        if (!$pipeline) {
+            wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
+        }
+
+        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        
+        if (empty($current_steps)) {
+            wp_send_json_error(['message' => __('No steps found in pipeline', 'data-machine')]);
+        }
+
+        // Find and remove the step
+        $updated_steps = [];
+        $step_found = false;
+        
+        foreach ($current_steps as $step) {
+            if (($step['step_type'] ?? '') !== $step_type) {
+                $updated_steps[] = $step;
+            } else {
+                $step_found = true;
+            }
+        }
+        
+        if (!$step_found) {
+            wp_send_json_error(['message' => __('Step not found in pipeline', 'data-machine')]);
+        }
+
+        // Update pipeline with remaining steps
+        $pipeline_data = [
+            'pipeline_name' => $pipeline_name,
+            'step_configuration' => $updated_steps
+        ];
+        
+        $success = $db_pipelines->update_pipeline((int)$pipeline_id, $pipeline_data);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to update pipeline', 'data-machine')]);
+        }
+
+        // Get affected flows for reporting
+        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $flow_count = count($affected_flows);
+        
+        // Log the deletion
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->info("Deleted step '{$step_type}' from pipeline '{$pipeline_name}' (ID: {$pipeline_id}). Affected {$flow_count} flows.");
+        }
+
+        wp_send_json_success([
+            'message' => sprintf(
+                __('Step "%s" deleted successfully from pipeline "%s". %d flows were affected.', 'data-machine'),
+                ucfirst(str_replace('_', ' ', $step_type)),
+                $pipeline_name,
+                $flow_count
+            ),
+            'pipeline_id' => (int)$pipeline_id,
+            'step_type' => $step_type,
+            'affected_flows' => $flow_count,
+            'remaining_steps' => count($updated_steps)
+        ]);
     }
 }

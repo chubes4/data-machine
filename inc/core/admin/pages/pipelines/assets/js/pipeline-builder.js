@@ -53,6 +53,9 @@
             
             // Add New Pipeline button click handler
             $(document).on('click', '.dm-add-new-pipeline-btn', this.handleAddNewPipelineClick.bind(this));
+            
+            // Universal Modal trigger handler - parameter-based discovery
+            $(document).on('click', '.dm-modal-trigger', this.handleModalTriggerClick.bind(this));
         },
 
         /**
@@ -1039,6 +1042,124 @@
             
             // Disable save button
             $form.find('.dm-save-pipeline-btn').prop('disabled', true);
+        },
+
+        /**
+         * Universal Modal Trigger Handler - parameter-based discovery like database services
+         */
+        handleModalTriggerClick: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const component = $button.data('component');
+            const context = $button.data('context') || {};
+            
+            if (!component) {
+                console.error('No component parameter found on modal trigger button');
+                return;
+            }
+
+            // Show loading state
+            const originalText = $button.text();
+            $button.text(dmPipelineBuilder.strings.loading || 'Loading...').prop('disabled', true);
+
+            // Use existing dm_get_modal_content AJAX system with parameter-based discovery
+            $.ajax({
+                url: dmPipelineModal.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_get_modal_content',
+                    component: component,
+                    context: JSON.stringify(context),
+                    nonce: dmPipelineModal.get_modal_content_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        this.openUniversalModal(response.data.title || 'Modal', response.data.content, component, context);
+                    } else {
+                        alert(response.data.message || 'Error loading modal content');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX Error:', error);
+                    alert('Error connecting to server');
+                },
+                complete: () => {
+                    // Restore button state
+                    $button.text(originalText).prop('disabled', false);
+                }
+            });
+        },
+
+        /**
+         * Universal Modal Handler - works with any component via parameter-based discovery
+         */
+        openUniversalModal: function(title, content, component, context) {
+            const $modal = $('#dm-modal');
+            const $modalTitle = $modal.find('.dm-modal-title');
+            const $modalBody = $modal.find('.dm-modal-body');
+
+            // Set modal content
+            $modalTitle.text(title);
+            $modalBody.html(content);
+
+            // Show modal
+            $modal.addClass('dm-modal-open');
+            $('body').addClass('dm-modal-active');
+
+            // Bind component-specific action handlers via parameter-based discovery
+            if (component === 'pipeline-step-delete') {
+                $modal.find('.dm-confirm-delete').off('click').on('click', (e) => {
+                    this.handleConfirmDeleteStep(e, context);
+                });
+            }
+            // Future components can add their own handlers here via the same pattern
+
+            // Focus management
+            $modal.focus();
+        },
+
+        /**
+         * Handle confirmed delete step action
+         */
+        handleConfirmDeleteStep: function(e, context) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const originalText = $button.text();
+            $button.text(dmPipelineBuilder.strings.loading || 'Deleting...').prop('disabled', true);
+
+            // Add delete step action via existing AJAX system (will be implemented next)
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_pipeline_ajax',
+                    pipeline_action: 'delete_step',
+                    step_type: context.step_type,
+                    pipeline_id: context.pipeline_id,
+                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        this.closeModal();
+                        this.showSuccessMessage(response.data.message || 'Step deleted successfully');
+                        // Refresh the page to show updated state
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alert(response.data.message || 'Error deleting step');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX Error:', error);
+                    alert('Error deleting step');
+                },
+                complete: () => {
+                    $button.text(originalText).prop('disabled', false);
+                }
+            });
         },
 
         /**

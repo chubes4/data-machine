@@ -202,6 +202,7 @@ Chain different AI providers in sequential pipeline steps:
 - **Reddit**: Fetch posts from subreddits via Reddit API with OAuth authentication
 - **RSS**: Monitor and process RSS feeds with automatic feed validation
 - **WordPress**: Source content from WordPress posts/pages with query builder interface
+- **Google Sheets**: Read data from Google Sheets spreadsheets with OAuth 2.0 and range selection
 
 **Output Handlers (Publish Content)** - Located in `/inc/core/steps/output/handlers/`:
 - **Facebook**: Post to Facebook pages/profiles with media attachment support
@@ -225,10 +226,10 @@ Chain different AI providers in sequential pipeline steps:
 
 The filter-based architecture makes adding custom handlers straightforward. Common extensions:
 
-**Database & Sheets**:
-- **Google Sheets**: Read/write spreadsheet data
-- **Airtable**: Database operations
-- **MySQL/PostgreSQL**: Custom database handlers
+**Database & Business Intelligence**:
+- **Airtable**: Database operations with flexible schema
+- **MySQL/PostgreSQL**: Custom database handlers for enterprise data
+- **CSV/Excel Import**: Advanced spreadsheet processing beyond Google Sheets
 
 **Communication**:
 - **AWS SES**: Email automation and campaigns

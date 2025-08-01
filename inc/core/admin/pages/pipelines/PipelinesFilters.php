@@ -120,6 +120,67 @@ function dm_register_pipelines_admin_page_filters() {
         $ajax_handler = new PipelineAjax();
         $ajax_handler->handle_pipeline_ajax();
     });
+    
+    // Modal content AJAX handler - Using existing dm_get_modal_content filter system
+    add_action('wp_ajax_dm_get_modal_content', function() {
+        // Verify nonce
+        if (!check_ajax_referer('dm_get_modal_content', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
+        }
+
+        // Verify user capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+
+        // Get component and context from POST data - using parameter-based discovery
+        $component = sanitize_text_field(wp_unslash($_POST['component'] ?? ''));
+        $context_raw = wp_unslash($_POST['context'] ?? '{}');
+        $context = json_decode($context_raw, true);
+        
+        if (empty($component)) {
+            wp_send_json_error(['message' => __('Component parameter is required', 'data-machine')]);
+        }
+
+        // Use existing dm_get_modal_content filter with parameter-based discovery (like database services)
+        $content = apply_filters('dm_get_modal_content', null, $component, $context);
+        
+        if ($content === null) {
+            wp_send_json_error(['message' => __('Modal content not found', 'data-machine')]);
+        }
+
+        wp_send_json_success([
+            'content' => $content,
+            'title' => $context['title'] ?? ucfirst(str_replace(['_', '-'], ' ', $component))
+        ]);
+    });
+    
+    // Modal content filter registration - Parameter-based discovery (like database services)
+    add_filter('dm_get_modal_content', function($content, $component, $context) {
+        if ($component === 'pipeline-step-delete') {
+            // Get affected flows data for the warning
+            $pipeline_id = $context['pipeline_id'] ?? null;
+            $step_type = $context['step_type'] ?? 'unknown';
+            
+            $affected_flows = [];
+            if ($pipeline_id) {
+                $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+                if ($db_flows) {
+                    $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+                }
+            }
+            
+            // Enhance context with affected flows data
+            $enhanced_context = array_merge($context, [
+                'step_label' => ucfirst(str_replace('_', ' ', $step_type)),
+                'affected_flows' => $affected_flows
+            ]);
+            
+            $pipelines_instance = new Pipelines();
+            return $pipelines_instance->render_template('modal/delete-step-warning', $enhanced_context);
+        }
+        return $content;
+    }, 10, 3);
 }
 
 // Auto-register when file loads - achieving complete self-containment

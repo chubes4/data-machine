@@ -162,7 +162,7 @@ class Pipelines
                 <div class="dm-pipeline-steps">
                     <?php if ($step_count > 0): ?>
                         <?php foreach ($pipeline_steps as $step): ?>
-                            <?php $this->render_pipeline_step_card($step); ?>
+                            <?php $this->render_pipeline_step_card($step, $pipeline_id); ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div class="dm-no-steps">
@@ -204,7 +204,7 @@ class Pipelines
     /**
      * Render pipeline step card (template level, no handlers).
      */
-    private function render_pipeline_step_card($step)
+    private function render_pipeline_step_card($step, $pipeline_id = null)
     {
         $step_type = $step['step_type'] ?? 'unknown';
         $step_config = $step['step_config'] ?? [];
@@ -214,8 +214,9 @@ class Pipelines
             <div class="dm-step-header">
                 <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
                 <div class="dm-step-actions">
-                    <button type="button" class="button button-small button-link-delete dm-delete-step-btn" 
-                            data-step-type="<?php echo esc_attr($step_type); ?>">
+                    <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
+                            data-component="pipeline-step-delete"
+                            data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","title":"<?php echo esc_attr(sprintf(__('Delete %s Step?', 'data-machine'), ucfirst(str_replace('_', ' ', $step_type)))); ?>"}'>
                         <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>
                 </div>
