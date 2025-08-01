@@ -215,7 +215,7 @@ class Pipelines
                 <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
                 <div class="dm-step-actions">
                     <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
-                            data-component="pipeline-step-delete"
+                            data-template="delete-step"
                             data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","title":"<?php echo esc_attr(sprintf(__('Delete %s Step?', 'data-machine'), ucfirst(str_replace('_', ' ', $step_type)))); ?>"}'>
                         <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>

@@ -38,7 +38,11 @@ if (!defined('WPINC')) {
                 $handlers_list = implode(', ', $handler_labels);
             }
             ?>
-            <div class="dm-step-selection-card" data-step-type="<?php echo esc_attr($step_type); ?>">
+            <div class="dm-step-selection-card" 
+                 data-step-type="<?php echo esc_attr($step_type); ?>"
+                 role="button" 
+                 tabindex="0"
+                 style="cursor: pointer;">
                 <div class="dm-step-card-header">
                     <h5 class="dm-step-card-title"><?php echo esc_html($label); ?></h5>
                 </div>

@@ -36,6 +36,41 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_modal_system_filters() {
     
+    // Register core modal assets globally for any page that needs modals
+    add_filter('dm_get_page_assets', function($assets, $page_slug) {
+        // Pages that use the universal modal system
+        $modal_pages = ['pipelines', 'jobs', 'logs', 'settings'];
+        
+        if (in_array($page_slug, $modal_pages)) {
+            // Add core modal assets with high priority (load before page-specific assets)
+            $assets['css']['dm-core-modal'] = [
+                'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
+                'deps' => [],
+                'media' => 'all'
+            ];
+            
+            $assets['js']['dm-core-modal'] = [
+                'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
+                'deps' => ['jquery'],
+                'in_footer' => true,
+                'localize' => [
+                    'object' => 'dmCoreModal',
+                    'data' => [
+                        'ajax_url' => admin_url('admin-ajax.php'),
+                        'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
+                        'strings' => [
+                            'loading' => __('Loading...', 'data-machine'),
+                            'error' => __('Error', 'data-machine'),
+                            'close' => __('Close', 'data-machine')
+                        ]
+                    ]
+                ]
+            ];
+        }
+        
+        return $assets;
+    }, 5, 2); // Priority 5 = loads before page-specific assets (priority 10)
+    
     // Pure infrastructure - NO component-specific logic
     // Individual components will register their own modal content generators
     // in their own *Filters.php files using the dm_get_modal_content filter
@@ -43,23 +78,20 @@ function dm_register_modal_system_filters() {
     // Examples of how components will register themselves:
     //
     // TwitterFilters.php:
-    // add_filter('dm_get_modal_content', function($content, $component_id) {
-    //     if ($component_id === 'twitter_handler_' . $this->get_instance_id()) {
-    //         return $this->generate_my_modal_content();
+    // add_filter('dm_get_modal_content', function($content, $template) {
+    //     if ($template === 'twitter_handler_config') {
+    //         return $this->generate_twitter_modal_content();
     //     }
     //     return $content;
     // }, 10, 2);
     //
     // AIStepFilters.php:
-    // add_filter('dm_get_modal_content', function($content, $component_id) {
-    //     if ($component_id === 'ai_step_' . $this->get_step_id()) {
-    //         return $this->generate_my_modal_content();
+    // add_filter('dm_get_modal_content', function($content, $template) {
+    //     if ($template === 'ai_step_config') {
+    //         return $this->generate_ai_modal_content();
     //     }
     //     return $content;
     // }, 10, 2);
-    
-    // This file contains NO actual filter registrations - it's pure documentation
-    // and infrastructure setup. Components handle their own modal registrations.
 }
 
 // Auto-register when file loads - achieving complete self-containment

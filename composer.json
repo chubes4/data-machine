@@ -8,6 +8,10 @@
         "abraham/twitteroauth": "^7.0",
         "woocommerce/action-scheduler": "^3.9"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "yoast/phpunit-polyfills": "^2.0"
+    },
     "autoload": {
         "psr-4": {
             "DataMachine\\Core\\": "inc/core/",
@@ -19,5 +23,32 @@
         "files": [
             "inc/engine/Constants.php"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DataMachine\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": [
+            "phpunit"
+        ],
+        "test:unit": [
+            "phpunit tests/Unit"
+        ],
+        "test:integration": [
+            "phpunit tests/Integration"
+        ],
+        "test:coverage": [
+            "phpunit --coverage-html coverage"
+        ],
+        "test:verbose": [
+            "phpunit --verbose"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "yoast/phpunit-polyfills": true
+        }
     }
 }

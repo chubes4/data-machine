@@ -1,8 +1,9 @@
 /**
  * Pipeline Builder JavaScript
  *
- * Handles modal interactions and AJAX calls for the pipeline builder interface.
- * Works with the pure UI modal component and PipelineAjax backend handler.
+ * Handles pipeline building interface and integrates with the universal core modal system.
+ * No longer contains hardcoded modal HTML or CSS - uses dmCoreModal for all modal interactions.
+ * All modal content is rendered server-side via dm_get_modal_content filter system.
  *
  * @since 1.0.0
  */
@@ -27,23 +28,15 @@
          * Bind event handlers
          */
         bindEvents: function() {
-            // Add Step button click handler
-            $(document).on('click', '.dm-add-first-step-btn', this.handleAddStepClick.bind(this));
+            // Add Step button now uses dm-modal-trigger - handler removed
             
             // Step selection card click handler
             $(document).on('click', '.dm-step-selection-card', this.handleStepSelection.bind(this));
             
-            // Add Handler button click handler
-            $(document).on('click', '.dm-add-handler-btn', this.handleAddHandlerClick.bind(this));
-            
-            // Handler button click handler (updated for grid layout)
-            $(document).on('click', '.dm-handler-button', this.handleHandlerSelection.bind(this));
+            // Add Handler button now uses dm-modal-trigger - handler removed
             
             // Add Flow button click handler
             $(document).on('click', '.dm-add-flow-btn', this.handleAddFlowClick.bind(this));
-            
-            // Configure Step button click handler
-            $(document).on('click', '.dm-configure-step-btn', this.handleStepConfigClick.bind(this));
             
             // Save Pipeline button click handler
             $(document).on('click', '.dm-save-pipeline-btn', this.handleSavePipelineClick.bind(this));
@@ -56,55 +49,20 @@
             
             // Universal Modal trigger handler - parameter-based discovery
             $(document).on('click', '.dm-modal-trigger', this.handleModalTriggerClick.bind(this));
+            
+            // Simple delete confirmation handler
+            $(document).on('click', '.dm-confirm-delete-ajax', this.handleConfirmDelete.bind(this));
         },
 
         /**
-         * Initialize modal functionality
+         * Initialize modal functionality - now handled by core modal system
          */
         initModal: function() {
-            // Create modal if it doesn't exist
-            if ($('#dm-modal').length === 0) {
-                $('body').append(this.createModalHTML());
-            }
+            // Modal initialization now handled by core modal system
+            // Components just need to trigger dmCoreModal.open(template, context)
         },
 
-        /**
-         * Handle Add Step button click
-         */
-        handleAddStepClick: function(e) {
-            e.preventDefault();
-            
-            // Show loading state
-            const $button = $(e.currentTarget);
-            const originalText = $button.text();
-            $button.text(dmPipelineBuilder.strings.loading || 'Loading...').prop('disabled', true);
-
-            // Make AJAX call to get step selection content
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'get_step_selection',
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.openStepSelectionModal(response.data.title, response.data.content);
-                    } else {
-                        alert(response.data.message || 'Error loading step selection');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
-                },
-                complete: () => {
-                    // Restore button state
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
-        },
+        // handleAddStepClick method removed - functionality replaced by universal modal trigger system
 
         /**
          * Handle step selection card click
@@ -143,8 +101,8 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Close modal
-                        this.closeModal();
+                        // Close modal using core modal system
+                        dmCoreModal.close();
                         
                         // Update interface with new step
                         this.updatePipelineInterface(response.data);
@@ -336,34 +294,8 @@
             this.addFlowStepToInterface({html: flowStep});
         },
 
-        /**
-         * Open step selection modal
-         */
-        openStepSelectionModal: function(title, content) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
 
-            // Set modal content
-            $modalTitle.text(title);
-            $modalBody.html(content);
-
-            // Show modal
-            $modal.addClass('dm-modal-open');
-            $('body').addClass('dm-modal-active');
-
-            // Focus management
-            $modal.focus();
-        },
-
-        /**
-         * Close modal
-         */
-        closeModal: function() {
-            const $modal = $('#dm-modal');
-            $modal.removeClass('dm-modal-open');
-            $('body').removeClass('dm-modal-active');
-        },
+        // closeModal method removed - functionality handled by core modal system
 
         /**
          * Show success message
@@ -380,241 +312,14 @@
             }, 3000);
         },
 
-        /**
-         * Handle Add Handler button click  
-         */
-        handleAddHandlerClick: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const stepType = $button.data('step-type');
-            
-            if (!stepType) {
-                console.error('No step type found on Add Handler button');
-                return;
-            }
+        // handleAddHandlerClick method removed - functionality replaced by universal modal trigger system
 
-            // Show loading state
-            const originalText = $button.text();
-            $button.text(dmPipelineBuilder.strings.loading || 'Loading...').prop('disabled', true);
 
-            // Make AJAX call to get handler selection content
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'get_handler_selection',
-                    step_type: stepType,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.openHandlerSelectionModal(response.data.title, response.data.content, stepType);
-                    } else {
-                        alert(response.data.message || 'Error loading handler selection');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
-                },
-                complete: () => {
-                    // Restore button state
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
-        },
 
-        /**
-         * Handle handler button click - now opens settings modal
-         */
-        handleHandlerSelection: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const handlerSlug = $button.data('handler-slug');
-            const stepType = $button.data('step-type');
-            
-            if (!handlerSlug || !stepType) {
-                console.error('No handler slug or step type found');
-                return;
-            }
 
-            // Visual feedback - highlight selected button
-            $('.dm-handler-button').removeClass('selected');
-            $button.addClass('selected');
 
-            // Show loading state
-            const originalText = $button.text();
-            $button.text(dmPipelineBuilder.strings.loading || 'Loading...').prop('disabled', true);
 
-            // Get handler settings instead of directly adding
-            this.showHandlerSettings(handlerSlug, stepType);
-            
-            // Restore button state
-            setTimeout(() => {
-                $button.text(originalText).prop('disabled', false);
-            }, 500);
-        },
 
-        /**
-         * Show handler settings modal
-         */
-        showHandlerSettings: function(handlerSlug, stepType) {
-            // Make AJAX call to get handler settings form
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'get_handler_settings',
-                    handler_slug: handlerSlug,
-                    step_type: stepType,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.openHandlerSettingsModal(response.data.title, response.data.html, handlerSlug, stepType);
-                    } else {
-                        alert(response.data.message || 'Error loading handler settings');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
-                }
-            });
-        },
-
-        /**
-         * Add selected handler to flow step (after settings configured)
-         */
-        addHandlerToStep: function(handlerSlug, stepType, settings = {}) {
-            // Close modal
-            this.closeModal();
-            
-            // Find the step card and add handler tag with settings
-            this.updateStepWithHandler(handlerSlug, stepType, settings);
-        },
-
-        /**
-         * Update step UI with new handler
-         */
-        updateStepWithHandler: function(handlerSlug, stepType, settings = {}) {
-            // Find the flow step card for this step type
-            const $stepCard = $(`.dm-flow-step[data-step-type="${stepType}"]`);
-            if (!$stepCard.length) {
-                console.error('Could not find step card for step type:', stepType);
-                return;
-            }
-
-            // Find or create handlers section
-            let $handlersSection = $stepCard.find('.dm-step-handlers');
-            if (!$handlersSection.length) {
-                console.error('Could not find handlers section in step card');
-                return;
-            }
-
-            // Remove "no handlers" message
-            $handlersSection.find('.dm-no-handlers').remove();
-
-            // Use handler name from settings or default to slug
-            const handlerName = settings.handler_name || handlerSlug;
-
-            // Add handler tag with configured name
-            const handlerTag = `
-                <div class="dm-handler-tag" data-handler-slug="${handlerSlug}">
-                    <span class="dm-handler-name">${handlerName}</span>
-                    <button type="button" class="dm-handler-remove" data-handler-slug="${handlerSlug}">×</button>
-                </div>
-            `;
-            
-            $handlersSection.append(handlerTag);
-        },
-
-        /**
-         * Open handler selection modal
-         */
-        openHandlerSelectionModal: function(title, content, stepType) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
-
-            // Set modal content
-            $modalTitle.text(title);
-            $modalBody.html(content);
-
-            // Show modal
-            $modal.addClass('dm-modal-open');
-            $('body').addClass('dm-modal-active');
-
-            // Focus management
-            $modal.focus();
-        },
-
-        /**
-         * Open handler settings modal
-         */
-        openHandlerSettingsModal: function(title, content, handlerSlug, stepType) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
-
-            // Set modal content
-            $modalTitle.text(title);
-            $modalBody.html(content);
-
-            // Show modal
-            $modal.addClass('dm-modal-open');
-            $('body').addClass('dm-modal-active');
-
-            // Store handler info for form submission
-            $modal.data('handler-slug', handlerSlug);
-            $modal.data('step-type', stepType);
-
-            // Bind form submission
-            this.bindHandlerSettingsForm();
-
-            // Focus management
-            $modal.focus();
-        },
-
-        /**
-         * Bind handler settings form submission
-         */
-        bindHandlerSettingsForm: function() {
-            const $modal = $('#dm-modal');
-            const $form = $modal.find('.dm-handler-settings-form');
-            
-            // Handle form submission
-            $form.off('submit').on('submit', (e) => {
-                e.preventDefault();
-                
-                const handlerSlug = $modal.data('handler-slug');
-                const stepType = $modal.data('step-type');
-                
-                // Get form data
-                const formData = new FormData($form[0]);
-                const settings = {};
-                
-                // Convert FormData to object
-                for (let [key, value] of formData.entries()) {
-                    settings[key] = value;
-                }
-                
-                // Add handler to step with settings
-                this.addHandlerToStep(handlerSlug, stepType, settings);
-                
-                // Show success message
-                this.showSuccessMessage('Handler added successfully');
-            });
-            
-            // Handle cancel button
-            $modal.find('.dm-cancel-settings').off('click').on('click', () => {
-                this.closeModal();
-            });
-        },
 
         /**
          * Handle Add Flow button click
@@ -732,91 +437,8 @@
             $pipelineCard.find('.dm-flow-count').text(flowCount + ' flow' + (flowCount > 1 ? 's' : ''));
         },
 
-        /**
-         * Handle Configure Step button click (AI Configuration)
-         */
-        handleStepConfigClick: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const stepType = $button.data('step-type');
-            const modalType = $button.data('modal-type');
-            const configType = $button.data('config-type');
-            
-            if (!stepType || !modalType) {
-                console.error('Missing step type or modal type data');
-                return;
-            }
 
-            // Show loading state
-            const originalText = $button.text();
-            $button.text(dmPipelineBuilder.strings.loading || 'Loading...').prop('disabled', true);
 
-            // Generate step key for configuration scoping (pipeline-level)
-            const stepKey = 'pipeline_' + stepType + '_' + Date.now();
-
-            // Open modal with AI HTTP Client components
-            this.openStepConfigModal(modalType, {
-                step_type: stepType,
-                step_key: stepKey,
-                config_type: configType,
-                context: 'pipeline'
-            });
-
-            // Restore button state
-            setTimeout(() => {
-                $button.text(originalText).prop('disabled', false);
-            }, 500);
-        },
-
-        /**
-         * Open step configuration modal with AI HTTP Client components
-         */
-        openStepConfigModal: function(modalType, context) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
-
-            // Set modal title
-            const title = context.config_type === 'ai_configuration' ? 
-                          dmPipelineBuilder.strings.configureAI || 'Configure AI Step' :
-                          dmPipelineBuilder.strings.configureStep || 'Configure Step';
-            $modalTitle.text(title);
-
-            // Get modal content via existing filter system (links to our AI step modal registration)
-            // This will trigger the dm_get_modal_content filter we registered in AIStepFilters.php
-            const modalContent = this.getModalContent(modalType, context);
-            $modalBody.html(modalContent);
-
-            // Show modal
-            $modal.addClass('dm-modal-open');
-            $('body').addClass('dm-modal-active');
-
-            // Focus management
-            $modal.focus();
-        },
-
-        /**
-         * Get modal content (placeholder - would be replaced with AJAX call in full implementation)
-         */
-        getModalContent: function(modalType, context) {
-            // In a full implementation, this would make an AJAX call to get the modal content
-            // For now, return a placeholder that indicates the system is working
-            return `
-                <div class="dm-step-config-placeholder">
-                    <h3>Step Configuration</h3>
-                    <p><strong>Modal Type:</strong> ${modalType}</p>
-                    <p><strong>Step Type:</strong> ${context.step_type}</p>
-                    <p><strong>Step Key:</strong> ${context.step_key}</p>
-                    <p><strong>Config Type:</strong> ${context.config_type}</p>
-                    <p class="description">AI HTTP Client components would load here via the dm_get_modal_content filter.</p>
-                    <div class="dm-modal-actions">
-                        <button type="button" class="button button-primary">Save Configuration</button>
-                        <button type="button" class="button dm-modal-close">Cancel</button>
-                    </div>
-                </div>
-            `;
-        },
 
         /**
          * Handle Save Pipeline button click
@@ -1045,159 +667,102 @@
         },
 
         /**
-         * Universal Modal Trigger Handler - parameter-based discovery like database services
+         * Universal Modal Trigger Handler - now uses core modal system
          */
         handleModalTriggerClick: function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
-            const component = $button.data('component');
+            const template = $button.data('template');
             const context = $button.data('context') || {};
             
-            if (!component) {
-                console.error('No component parameter found on modal trigger button');
+            if (!template) {
+                console.error('No template parameter found on modal trigger button');
                 return;
             }
 
-            // Show loading state
+            // Show loading state on button
             const originalText = $button.text();
             $button.text(dmPipelineBuilder.strings.loading || 'Loading...').prop('disabled', true);
 
-            // Use existing dm_get_modal_content AJAX system with parameter-based discovery
-            $.ajax({
-                url: dmPipelineModal.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_get_modal_content',
-                    component: component,
-                    context: JSON.stringify(context),
-                    nonce: dmPipelineModal.get_modal_content_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.openUniversalModal(response.data.title || 'Modal', response.data.content, component, context);
-                    } else {
-                        alert(response.data.message || 'Error loading modal content');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
-                },
-                complete: () => {
-                    // Restore button state
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
+            // Use core modal system to open modal with template and context
+            dmCoreModal.open(template, context);
+
+            // Restore button state after a delay (modal will be loading by then)
+            setTimeout(() => {
+                $button.text(originalText).prop('disabled', false);
+            }, 1000);
         },
 
         /**
-         * Universal Modal Handler - works with any component via parameter-based discovery
+         * Handle confirm delete button click
          */
-        openUniversalModal: function(title, content, component, context) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
-
-            // Set modal content
-            $modalTitle.text(title);
-            $modalBody.html(content);
-
-            // Show modal
-            $modal.addClass('dm-modal-open');
-            $('body').addClass('dm-modal-active');
-
-            // Bind component-specific action handlers via parameter-based discovery
-            if (component === 'pipeline-step-delete') {
-                $modal.find('.dm-confirm-delete').off('click').on('click', (e) => {
-                    this.handleConfirmDeleteStep(e, context);
-                });
-            }
-            // Future components can add their own handlers here via the same pattern
-
-            // Focus management
-            $modal.focus();
-        },
-
-        /**
-         * Handle confirmed delete step action
-         */
-        handleConfirmDeleteStep: function(e, context) {
+        handleConfirmDelete: function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
+            const stepType = $button.data('step-type');
+            const pipelineId = $button.data('pipeline-id');
+            
+            if (!stepType || !pipelineId) {
+                console.error('Missing step type or pipeline ID');
+                return;
+            }
+            
+            // Show loading state
             const originalText = $button.text();
-            $button.text(dmPipelineBuilder.strings.loading || 'Deleting...').prop('disabled', true);
-
-            // Add delete step action via existing AJAX system (will be implemented next)
+            $button.text('Deleting...').prop('disabled', true);
+            
+            // Simple AJAX call to existing endpoint
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'dm_pipeline_ajax',
                     pipeline_action: 'delete_step',
-                    step_type: context.step_type,
-                    pipeline_id: context.pipeline_id,
+                    step_type: stepType,
+                    pipeline_id: pipelineId,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.closeModal();
+                        // Close modal using core modal system
+                        dmCoreModal.close();
+                        
+                        // Remove step from DOM (reverse of how it was added)
+                        $(`.dm-pipeline-step[data-step-type="${stepType}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                            // Update step count
+                            const stepCount = $('.dm-pipeline-step:not(.dm-placeholder-step)').length;
+                            $('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
+                        });
+                        
+                        // Show success message
                         this.showSuccessMessage(response.data.message || 'Step deleted successfully');
-                        // Refresh the page to show updated state
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
                     } else {
                         alert(response.data.message || 'Error deleting step');
+                        $button.text(originalText).prop('disabled', false);
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('AJAX Error:', error);
                     alert('Error deleting step');
-                },
-                complete: () => {
                     $button.text(originalText).prop('disabled', false);
                 }
             });
         },
 
-        /**
-         * Create modal HTML structure
-         */
-        createModalHTML: function() {
-            return `
-                <div id="dm-modal" class="dm-modal" role="dialog" aria-modal="true" tabindex="-1">
-                    <div class="dm-modal-overlay"></div>
-                    <div class="dm-modal-container">
-                        <div class="dm-modal-header">
-                            <h2 class="dm-modal-title"></h2>
-                            <button type="button" class="dm-modal-close" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="dm-modal-body"></div>
-                    </div>
-                </div>
-            `;
-        }
+        // openUniversalModal method removed - functionality handled by core modal system
+
+        // createModalHTML method removed - functionality handled by core modal system
     };
 
     // Initialize when document is ready
     $(document).ready(function() {
         PipelineBuilder.init();
         
-        // Modal close handlers
-        $(document).on('click', '.dm-modal-close, .dm-modal-overlay', function() {
-            PipelineBuilder.closeModal();
-        });
-
-        // Escape key to close modal
-        $(document).on('keydown', function(e) {
-            if (e.keyCode === 27 && $('#dm-modal').hasClass('dm-modal-open')) {
-                PipelineBuilder.closeModal();
-            }
-        });
+        // Modal event handlers now managed by core modal system
+        // Core modal system handles close button, overlay clicks, and escape key
     });
 
 })(jQuery);

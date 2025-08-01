@@ -328,80 +328,7 @@
     }
 }
 
-/* Modal styles */
-.dm-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999;
-}
-
-.dm-modal.dm-modal-open {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.dm-modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-}
-
-.dm-modal-container {
-    position: relative;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    max-width: 800px;
-    width: 90%;
-    max-height: 80vh;
-    overflow: hidden;
-}
-
-.dm-modal-header {
-    padding: 20px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.dm-modal-title {
-    margin: 0;
-    font-size: 20px;
-    color: #333;
-}
-
-.dm-modal-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.dm-modal-close:hover {
-    color: #333;
-}
-
-.dm-modal-body {
-    padding: 20px;
-    max-height: 60vh;
-    overflow-y: auto;
-}
+/* NOTE: Universal modal styles moved to /inc/core/admin/modal/assets/css/core-modal.css */
 
 /* Step selection modal content */
 .dm-step-selection-container {
@@ -513,4 +440,118 @@
 
 .dm-notification-error {
     background: #dc3545;
+}
+
+/* Delete Step Warning Modal Styles */
+.dm-delete-warning-modal {
+    padding: 20px;
+    max-width: 500px;
+}
+
+.dm-warning-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.dm-warning-icon {
+    margin-right: 15px;
+}
+
+.dm-warning-icon .dashicons {
+    color: #d63638;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.dm-warning-title h3 {
+    margin: 0;
+    color: #d63638;
+}
+
+.dm-warning-content {
+    margin-bottom: 25px;
+}
+
+.dm-warning-description {
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.dm-affected-flows {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.dm-affected-flows h4 {
+    margin: 0 0 10px 0;
+    color: #856404;
+}
+
+.dm-flows-list {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.dm-flow-item {
+    margin-bottom: 5px;
+}
+
+.dm-flow-name {
+    font-weight: 600;
+}
+
+.dm-flow-info {
+    color: #666;
+    font-size: 12px;
+}
+
+.dm-cascade-warning {
+    margin-top: 15px;
+    color: #856404;
+    font-size: 14px;
+}
+
+.dm-no-flows {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.dm-no-flows .dm-info {
+    margin: 0;
+    color: #0c5460;
+}
+
+.dm-warning-notice {
+    background: #f8d7da;
+    border: 1px solid #f1aeb5;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 15px;
+}
+
+.dm-warning-notice p {
+    margin: 0;
+    color: #721c24;
+}
+
+.dm-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.dm-modal-actions .button {
+    min-width: 100px;
 }

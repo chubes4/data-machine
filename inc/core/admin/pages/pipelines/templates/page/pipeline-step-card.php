@@ -28,15 +28,15 @@ $has_step_config = !empty($step_config_info);
     <div class="dm-step-header">
         <div class="dm-step-title"><?php echo esc_html($label); ?></div>
         <div class="dm-step-actions">
-            <button type="button" class="button button-small button-link-delete dm-delete-step-btn" 
-                    data-step-type="<?php echo esc_attr($step_type); ?>">
+            <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
+                    data-template="delete-step"
+                    data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? 'current'); ?>"}'>
                 <?php esc_html_e('Delete', 'data-machine'); ?>
             </button>
             <?php if ($has_step_config): ?>
-                <button type="button" class="button button-small dm-configure-step-btn" 
-                        data-step-type="<?php echo esc_attr($step_type); ?>"
-                        data-modal-type="<?php echo esc_attr($step_config_info['modal_type']); ?>"
-                        data-config-type="<?php echo esc_attr($step_config_info['config_type']); ?>">
+                <button type="button" class="button button-small dm-modal-trigger" 
+                        data-template="configure-step"
+                        data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
                     <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>
                 </button>
             <?php endif; ?>

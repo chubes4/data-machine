@@ -7,7 +7,10 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Psr\\Log\\' => array($vendorDir . '/psr/log/src'),
+    'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
     'Monolog\\' => array($vendorDir . '/monolog/monolog/src/Monolog'),
+    'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
+    'DataMachine\\Tests\\' => array($baseDir . '/tests'),
     'DataMachine\\Services\\' => array($baseDir . '/inc/services'),
     'DataMachine\\Helpers\\' => array($baseDir . '/inc/helpers'),
     'DataMachine\\Engine\\' => array($baseDir . '/inc/engine'),

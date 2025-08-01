@@ -19,9 +19,7 @@ if (!defined('WPINC')) {
     <!-- Pipeline Header with Editable Title -->
     <div class="dm-pipeline-header">
         <div class="dm-pipeline-title-section">
-            <!-- DEBUG: Template is being rendered -->
             <?php echo '<input type="text" class="dm-pipeline-title-input" placeholder="' . esc_attr__('Enter pipeline name...', 'data-machine') . '" />'; ?>
-            <!-- DEBUG: Input field should be above -->
             <div class="dm-pipeline-meta">
                 <span class="dm-step-count"><?php esc_html_e('0 steps', 'data-machine'); ?></span>
                 <span class="dm-flow-count"><?php esc_html_e('0 flows', 'data-machine'); ?></span>
@@ -43,7 +41,9 @@ if (!defined('WPINC')) {
         <div class="dm-pipeline-steps">
             <div class="dm-step-card dm-placeholder-step">
                 <div class="dm-placeholder-step-content">
-                    <button type="button" class="button button-primary dm-add-first-step-btn">
+                    <button type="button" class="button button-primary dm-modal-trigger"
+                            data-template="step-selection"
+                            data-context='{"context":"pipeline_builder"}'>
                         <?php esc_html_e('Add Step', 'data-machine'); ?>
                     </button>
                     <p class="dm-placeholder-description"><?php esc_html_e('Choose a step type to begin building your pipeline', 'data-machine'); ?></p>
@@ -62,9 +62,7 @@ if (!defined('WPINC')) {
             <div class="dm-flow-instance-card dm-placeholder-flow" data-flow-id="new">
                 <div class="dm-flow-header">
                     <div class="dm-flow-title-section">
-                        <!-- DEBUG: Flow title section -->
                         <?php echo '<input type="text" class="dm-flow-title-input" placeholder="' . esc_attr__('Enter flow name...', 'data-machine') . '" />'; ?>
-                        <!-- DEBUG: Flow input field should be above -->
                         <div class="dm-flow-status">
                             <span class="dm-schedule-status dm-status-inactive">
                                 <?php esc_html_e('Inactive', 'data-machine'); ?>

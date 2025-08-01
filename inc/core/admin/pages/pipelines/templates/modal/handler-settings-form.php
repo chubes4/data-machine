@@ -32,7 +32,7 @@ $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
                     $handler_settings->render_settings_form();
                 } else {
                     // Fallback: basic settings form
-                    $this->render_basic_settings_form($handler_slug, $handler_config);
+                    render_basic_settings_form($handler_slug, $handler_config);
                 }
                 ?>
             </div>

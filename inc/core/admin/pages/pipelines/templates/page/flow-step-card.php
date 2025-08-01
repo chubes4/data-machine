@@ -31,9 +31,9 @@ $step_uses_handlers = ($step_type !== 'ai');
         <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
         <div class="dm-step-actions">
             <?php if ($has_handlers && $step_uses_handlers): ?>
-                <button type="button" class="button button-small dm-add-handler-btn" 
-                        data-flow-id="<?php echo esc_attr($flow_id); ?>"
-                        data-step-type="<?php echo esc_attr($step_type); ?>">
+                <button type="button" class="button button-small dm-modal-trigger" 
+                        data-template="handler-selection"
+                        data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>"}'>
                     <?php esc_html_e('Add Handler', 'data-machine'); ?>
                 </button>
             <?php endif; ?>
