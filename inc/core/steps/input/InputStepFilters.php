@@ -36,7 +36,6 @@ function dm_register_input_step_filters() {
             return [
                 'label' => __('Input', 'data-machine'),
                 'description' => __('Collect data from external sources', 'data-machine'),
-                'has_handlers' => true,
                 'class' => InputStep::class
             ];
         }

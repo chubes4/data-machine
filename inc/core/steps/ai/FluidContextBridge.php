@@ -111,14 +111,26 @@ class FluidContextBridge {
         // Build enhanced context for ai-http-client
         $context_data = $this->prepare_context_data($aggregated_context);
         
-        // TODO: Implement step-level prompt context
-        // Pipeline-level prompts have been removed in favor of step-level configuration
+        // Get step-level prompt configuration from AI step
+        $step_prompt_config = null;
+        if (class_exists('DataMachine\\Core\\Steps\\AI\\AIStep')) {
+            $ai_step = new \DataMachine\Core\Steps\AI\AIStep();
+            $step_prompt_config = $ai_step->get_step_configuration($job_id, 'ai');
+        }
+        
+        // Use step-level system prompt if configured, otherwise use base prompt
+        $system_prompt = '';
+        if ($step_prompt_config && !empty($step_prompt_config['system_prompt'])) {
+            $system_prompt = $step_prompt_config['system_prompt'];
+        } else {
+            $system_prompt = $base_prompt; // Fallback to base prompt
+        }
 
         // Use ai-http-client's PromptManager for enhanced prompt building if available
         if (class_exists('AI_HTTP_Prompt_Manager')) {
             
-            // Apply variable replacement to base prompt
-            $enhanced_prompt = str_replace(array_keys($prompt_variables), array_values($prompt_variables), $base_prompt);
+            // Apply variable replacement to step-level system prompt
+            $enhanced_prompt = str_replace(array_keys($prompt_variables), array_values($prompt_variables), $system_prompt);
             
             // Build modular system prompt with critical directives
             $system_sections = ['datetime'];

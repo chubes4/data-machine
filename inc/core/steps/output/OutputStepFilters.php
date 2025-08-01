@@ -36,7 +36,6 @@ function dm_register_output_step_filters() {
             return [
                 'label' => __('Output', 'data-machine'),
                 'description' => __('Publish to target destinations', 'data-machine'),
-                'has_handlers' => true,
                 'class' => OutputStep::class
             ];
         }

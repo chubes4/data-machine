@@ -223,7 +223,7 @@ class AIStep {
      * @param string $step_name Step name
      * @return array|null Step configuration or null if not found
      */
-    private function get_step_configuration(int $job_id, string $step_name): ?array {
+    public function get_step_configuration(int $job_id, string $step_name): ?array {
         // Get configuration from direct database access
         $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 
@@ -238,9 +238,36 @@ class AIStep {
             return null;
         }
 
-        // TODO: Implement step-level prompt configuration
-        // For now, return null until step-level prompt system is implemented
-        return null;
+        // Get step-level AI configuration using AI HTTP Client's OptionsManager
+        if (class_exists('AI_HTTP_Options_Manager')) {
+            
+            // Generate step-specific key for configuration scoping
+            $step_key = $job_id . '_ai_' . $step_name;
+            
+            // Retrieve step-level AI configuration
+            $step_config = AI_HTTP_Options_Manager::get_step_config([
+                'plugin_context' => 'data-machine',
+                'ai_type' => 'llm',
+                'step_key' => $step_key,
+                'config_keys' => ['system_prompt', 'temperature', 'selected_provider', 'selected_model']
+            ]);
+            
+            // Return configuration if found, otherwise return empty config for defaults
+            return $step_config ?: [
+                'system_prompt' => '',
+                'temperature' => 0.7,
+                'selected_provider' => '',
+                'selected_model' => ''
+            ];
+        }
+        
+        // Fallback if AI HTTP Client not available - return empty config
+        return [
+            'system_prompt' => '',
+            'temperature' => 0.7,
+            'selected_provider' => '',
+            'selected_model' => ''
+        ];
     }
 
     /**

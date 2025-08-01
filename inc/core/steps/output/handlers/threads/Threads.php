@@ -5,7 +5,7 @@
  * Handles publishing content to Meta's Threads platform.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/inc/core/handlers/output
+ * @subpackage Data_Machine/inc/core/steps/output/handlers
  * @since      1.0.0
  */
 

@@ -118,9 +118,76 @@ function dm_register_ai_step_filters() {
         return $builder_instance;
     }, 10);
     
+    /**
+     * AI Step Modal Content Registration
+     * 
+     * Register modal content for AI step configuration using AI HTTP Client components.
+     * This enables step-level prompt configuration, model selection, and AI parameters.
+     * 
+     * @param mixed $content Current modal content (null if none)
+     * @param string $modal_type Modal type identifier
+     * @param array $context Modal context data
+     * @return string|mixed Modal HTML content or original value
+     */
+    add_filter('dm_get_modal_content', function($content, $modal_type, $context = []) {
+        // Handle AI step configuration modals
+        if ($modal_type === 'ai_step_config' && $content === null) {
+            
+            // Extract step key from context for scoped configuration
+            $step_key = $context['step_key'] ?? $context['job_id'] . '_ai_' . time(); 
+            
+            // Check if AI HTTP Client components are available
+            if (class_exists('AI_HTTP_ProviderManager_Component')) {
+                
+                // Render AI HTTP Client configuration interface
+                return AI_HTTP_ProviderManager_Component::render([
+                    'plugin_context' => 'data-machine',
+                    'ai_type' => 'llm',
+                    'step_key' => $step_key,
+                    'components' => [
+                        'core' => ['provider_selector', 'api_key_input', 'model_selector'],
+                        'extended' => ['system_prompt_field', 'temperature_slider']
+                    ],
+                    'show_test_connection' => true,
+                    'compact_mode' => true // Optimized for modal display
+                ]);
+            }
+            
+            // Fallback if AI HTTP Client components unavailable
+            return '<div class="dm-ai-config-fallback">' .
+                   '<p>' . __('AI HTTP Client components not available. Please ensure the AI HTTP Client library is properly loaded.', 'data-machine') . '</p>' .
+                   '</div>';
+        }
+        
+        return $content;
+    }, 10, 3);
+    
+    /**
+     * AI Step Configuration Registration
+     * 
+     * Register AI step configuration capability using admin-defined dm_get_step_config filter.
+     * This enables "Configure AI" button to appear in pipeline step cards and links to 
+     * the existing ai_step_config modal content we already implemented.
+     * 
+     * @param mixed $config Current step configuration (null if none)
+     * @param string $step_type Step type being requested
+     * @param array $context Step context data
+     * @return array|mixed Step configuration or original value
+     */
+    add_filter('dm_get_step_config', function($config, $step_type, $context) {
+        if ($step_type === 'ai') {
+            return [
+                'config_type' => 'ai_configuration',
+                'modal_type' => 'ai_step_config', // Links to existing modal content registration
+                'button_text' => __('Configure AI', 'data-machine'),
+                'label' => __('AI Configuration', 'data-machine')
+            ];
+        }
+        return $config;
+    }, 10, 3);
+    
     // Future AI-specific filters can be added here following the same pattern
     // Examples:
-    // - dm_get_ai_step_config (if we need step-specific AI configuration)
     // - dm_validate_ai_output (for AI response validation)
     // - dm_process_ai_context (for context preprocessing)
 }

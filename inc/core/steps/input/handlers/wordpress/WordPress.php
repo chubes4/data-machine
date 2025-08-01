@@ -8,11 +8,11 @@
  * - Remote WordPress (Airdrop Helper Plugin)
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/inc/core/handlers/input
+ * @subpackage Data_Machine/inc/core/steps/input/handlers
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\WordPress;
+namespace DataMachine\Core\Handlers\Input\WordPress;
 
 use DataMachine\Core\Database\RemoteLocations;
 use Exception;
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class WordPressInput {
+class WordPress {
 
     /**
      * Parameter-less constructor for pure filter-based architecture.
@@ -1180,4 +1180,3 @@ class WordPressInput {
     }
 }
 
-// Note: Registration handled by main WordPress handler class

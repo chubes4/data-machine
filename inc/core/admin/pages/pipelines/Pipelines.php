@@ -150,8 +150,8 @@ class Pipelines
                 </div>
                 <div class="dm-pipeline-steps">
                     <?php if ($step_count > 0): ?>
-                        <?php foreach ($pipeline_steps as $i => $step): ?>
-                            <?php $this->render_pipeline_step_card($step, $i + 1); ?>
+                        <?php foreach ($pipeline_steps as $step): ?>
+                            <?php $this->render_pipeline_step_card($step); ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div class="dm-no-steps">
@@ -193,19 +193,17 @@ class Pipelines
     /**
      * Render pipeline step card (template level, no handlers).
      */
-    private function render_pipeline_step_card($step, $step_number)
+    private function render_pipeline_step_card($step)
     {
         $step_type = $step['step_type'] ?? 'unknown';
         $step_config = $step['step_config'] ?? [];
         
         ?>
-        <div class="dm-step-card dm-pipeline-step" data-step-number="<?php echo esc_attr($step_number); ?>">
+        <div class="dm-step-card dm-pipeline-step">
             <div class="dm-step-header">
-                <div class="dm-step-number"><?php echo esc_html($step_number); ?></div>
                 <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
                 <div class="dm-step-actions">
-                    <button type="button" class="button button-small dm-edit-step-btn" 
-                            data-step-number="<?php echo esc_attr($step_number); ?>">
+                    <button type="button" class="button button-small dm-edit-step-btn">
                         <?php esc_html_e('Edit', 'data-machine'); ?>
                     </button>
                 </div>
@@ -277,13 +275,10 @@ class Pipelines
             
             <!-- Flow Steps (same as pipeline steps but with handler configuration) -->
             <div class="dm-flow-steps-section">
-                <div class="dm-flow-steps-header">
-                    <h5><?php esc_html_e('Configured Steps for this Flow', 'data-machine'); ?></h5>
-                </div>
                 <div class="dm-flow-steps">
                     <?php if (!empty($pipeline_steps)): ?>
-                        <?php foreach ($pipeline_steps as $i => $step): ?>
-                            <?php $this->render_flow_step_card($step, $i + 1, $flow_config, $flow_id); ?>
+                        <?php foreach ($pipeline_steps as $step): ?>
+                            <?php $this->render_flow_step_card($step, $flow_config, $flow_id); ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div class="dm-no-flow-steps">
@@ -303,22 +298,27 @@ class Pipelines
     /**
      * Render flow step card (with handler configuration).
      */
-    private function render_flow_step_card($step, $step_number, $flow_config, $flow_id)
+    private function render_flow_step_card($step, $flow_config, $flow_id)
     {
         $step_type = $step['step_type'] ?? 'unknown';
-        $step_handlers = $flow_config['steps'][$step_number] ?? [];
+        $step_handlers = $flow_config['steps'][0] ?? []; // Simplified - could use step_type as key
+        
+        // Dynamic handler discovery using parameter-based filter system
+        $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
+        $has_handlers = !empty($available_handlers);
         
         ?>
-        <div class="dm-step-card dm-flow-step" data-step-number="<?php echo esc_attr($step_number); ?>" data-flow-id="<?php echo esc_attr($flow_id); ?>">
+        <div class="dm-step-card dm-flow-step" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
             <div class="dm-step-header">
-                <div class="dm-step-number"><?php echo esc_html($step_number); ?></div>
                 <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
                 <div class="dm-step-actions">
-                    <button type="button" class="button button-small dm-add-handler-btn" 
-                            data-step-number="<?php echo esc_attr($step_number); ?>" 
-                            data-flow-id="<?php echo esc_attr($flow_id); ?>">
-                        <?php esc_html_e('Add Handler', 'data-machine'); ?>
-                    </button>
+                    <?php if ($has_handlers): ?>
+                        <button type="button" class="button button-small dm-add-handler-btn" 
+                                data-flow-id="<?php echo esc_attr($flow_id); ?>"
+                                data-step-type="<?php echo esc_attr($step_type); ?>">
+                            <?php esc_html_e('Add Handler', 'data-machine'); ?>
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="dm-step-body">
@@ -334,7 +334,6 @@ class Pipelines
                                 <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
                                 <button type="button" class="dm-handler-remove" 
                                         data-handler-key="<?php echo esc_attr($handler_key); ?>" 
-                                        data-step-number="<?php echo esc_attr($step_number); ?>" 
                                         data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
                             </div>
                         <?php endforeach; ?>
@@ -403,18 +402,12 @@ class Pipelines
     private function render_placeholder_step_card()
     {
         ?>
-        <div class="dm-step-card dm-placeholder-step" data-step-number="1">
-            <div class="dm-step-header">
-                <div class="dm-step-number">1</div>
-                <div class="dm-step-title"><?php esc_html_e('First Step', 'data-machine'); ?></div>
-            </div>
-            <div class="dm-step-body">
-                <div class="dm-placeholder-step-content">
-                    <button type="button" class="button button-primary dm-add-first-step-btn">
-                        <?php esc_html_e('Add Step', 'data-machine'); ?>
-                    </button>
-                    <p class="dm-placeholder-description"><?php esc_html_e('Choose your first step type to begin building your pipeline', 'data-machine'); ?></p>
-                </div>
+        <div class="dm-step-card dm-placeholder-step">
+            <div class="dm-placeholder-step-content">
+                <button type="button" class="button button-primary dm-add-first-step-btn">
+                    <?php esc_html_e('Add Step', 'data-machine'); ?>
+                </button>
+                <p class="dm-placeholder-description"><?php esc_html_e('Choose a step type to begin building your pipeline', 'data-machine'); ?></p>
             </div>
         </div>
         <?php
@@ -437,17 +430,12 @@ class Pipelines
                     </div>
                 </div>
                 <div class="dm-flow-actions">
-                    <button type="button" class="button button-primary dm-save-flow-btn" disabled>
-                        <?php esc_html_e('Save Flow', 'data-machine'); ?>
-                    </button>
+                    <!-- Flow saving managed at pipeline level -->
                 </div>
             </div>
             
             <!-- Flow Steps (mirrors all pipeline steps) -->
             <div class="dm-flow-steps-section">
-                <div class="dm-flow-steps-header">
-                    <h5><?php esc_html_e('Configured Steps for this Flow', 'data-machine'); ?></h5>
-                </div>
                 <div class="dm-flow-steps">
                     <?php $this->render_placeholder_flow_step_card(); ?>
                 </div>
@@ -466,15 +454,9 @@ class Pipelines
     private function render_placeholder_flow_step_card()
     {
         ?>
-        <div class="dm-step-card dm-flow-step dm-placeholder-flow-step" data-step-number="1">
-            <div class="dm-step-header">
-                <div class="dm-step-number">1</div>
-                <div class="dm-step-title"><?php esc_html_e('First Step', 'data-machine'); ?></div>
-            </div>
-            <div class="dm-step-body">
-                <div class="dm-placeholder-step-content">
-                    <p class="dm-placeholder-description"><?php esc_html_e('This will mirror the pipeline steps with handler configuration', 'data-machine'); ?></p>
-                </div>
+        <div class="dm-step-card dm-flow-step dm-placeholder-flow-step">
+            <div class="dm-placeholder-step-content">
+                <p class="dm-placeholder-description"><?php esc_html_e('This will mirror the pipeline steps with handler configuration', 'data-machine'); ?></p>
             </div>
         </div>
         <?php

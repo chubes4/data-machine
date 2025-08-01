@@ -82,6 +82,10 @@ function dm_register_pipelines_admin_page_filters() {
                                     'confirmRemoveStep' => __('Are you sure you want to remove this step?', 'data-machine'),
                                     'errorAddingStep' => __('Error adding pipeline step', 'data-machine'),
                                     'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
+                                    'saving' => __('Saving...', 'data-machine'),
+                                    'loading' => __('Loading...', 'data-machine'),
+                                    'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
+                                    'atLeastOneStep' => __('At least one step is required', 'data-machine')
                                 ]
                             ]
                         ]

@@ -187,17 +187,22 @@ Chain different AI providers in sequential pipeline steps:
 
 ### Core Handlers Included
 
-**Input Handlers (Gather Data)**:
+**Input Handlers (Gather Data)** - Located in `/inc/core/steps/input/handlers/`:
 - **Files**: Process local files and uploads
 - **Reddit**: Fetch posts from subreddits via Reddit API
 - **RSS**: Monitor and process RSS feeds
 - **WordPress**: Source content from WordPress posts/pages
 
-**Output Handlers (Publish Content)**:
+**Output Handlers (Publish Content)** - Located in `/inc/core/steps/output/handlers/`:
 - **Facebook**: Post to Facebook pages/profiles
-- **Threads**: Publish to Threads (Meta's Twitter alternative)
+- **Threads**: Publish to Threads (Meta's Twitter alternative)  
 - **Twitter**: Tweet content with media support
 - **WordPress**: Create/update WordPress posts/pages
+- **Bluesky**: Publish to Bluesky (AT Protocol)
+- **Google Sheets**: Export data to spreadsheets for business intelligence
+
+**Receiver Step Framework** - Located in `/inc/core/steps/receiver/`:
+- **Webhook Reception**: Framework for real-time external integrations (currently conceptual)
 
 **AI Integration**:
 - **Multi-Provider AI HTTP Client**: OpenAI, Anthropic, Google, Grok, OpenRouter
@@ -412,7 +417,6 @@ add_filter('dm_get_steps', function($step_config, $step_type) {
     if ($step_type === 'custom_processing') {
         return [
             'label' => __('Custom Processing', 'my-plugin'),
-            'has_handlers' => false,
             'description' => __('Custom data processing step', 'my-plugin'),
             'class' => '\MyPlugin\Steps\CustomProcessingStep'
         ];

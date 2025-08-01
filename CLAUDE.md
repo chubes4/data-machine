@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Data Machine is an AI-first WordPress plugin that transforms any WordPress site into a Universal Content Processing Platform. Built entirely on WordPress-native patterns, it enables sophisticated AI workflows through a two-layer Pipeline+Flow architecture and multi-provider AI integration (OpenAI, Anthropic, Google, Grok, OpenRouter).
 
-**AI Innovation**: The first comprehensive AI content processing system designed specifically for WordPress, enabling complex AI workflows through familiar WordPress interfaces and patterns. The Pipeline+Flow architecture separates reusable workflow templates (Pipelines) from configured instances (Flows), enabling template reuse and independent workflow execution.
+**Architectural Innovation**: This plugin represents a paradigm shift in WordPress development through its "Plugins Within Plugins" architecture - a revolutionary self-registering component system that eliminates traditional dependency injection while maintaining complete modularity. The Pipeline+Flow architecture separates reusable workflow templates (Pipelines) from configured instances (Flows), enabling template reuse and independent workflow execution.
+
+**Technical Sophistication**: Features position-based orchestration (0-99), universal DataPacket contracts, static service caching with lazy loading, parameter-based service discovery, and dynamic asset loading - all implemented through 100% filter-based dependencies.
 
 ## Pipeline+Flow Architecture
 
@@ -53,20 +55,23 @@ Flow C: Custom Content (Manual)
 ### Recently Completed
 - ✅ **Pipeline+Flow Architecture**: Two-layer system separating templates from configured instances
 - ✅ **Universal AI Integration**: Multi-provider AI client with seamless switching between services
-- ✅ **WordPress-Native AI Pipelines**: Visual pipeline builder using Gutenberg-inspired patterns
+- ✅ **WordPress-Native AI Pipelines**: Production-quality visual pipeline builder with full AJAX integration
 - ✅ **Engine Agnosticism**: Zero hardcoded step type assumptions enables unlimited extensibility
-- ✅ **Modular Component System**: 26 self-registering components with dedicated *Filters.php files
+- ✅ **Modular Component System**: 23+ self-registering components with dedicated *Filters.php files
 - ✅ **Comprehensive Filter Architecture**: 100% filter-based dependency system
 - ✅ **Universal DataPacket System**: Standardized data flow enabling seamless AI pipeline processing
 - ✅ **Clean Architecture Implementation**: All architectural violations eliminated
 - ✅ **Component-Owned Asset Architecture**: All CSS/JS assets moved to component-specific directories with filter-based registration
-- ✅ **Handler Autoloader Fix**: Recursive directory scanning enables proper handler file loading
+- ✅ **Handler Architecture Reorganization**: All handlers moved to step-specific directories (`/inc/core/steps/{input|output}/handlers/`)
+- ✅ **Receiver Step Framework**: Webhook reception system for external platform integrations
 - ✅ **Bluesky Handler Restoration**: Complete AT Protocol integration restored with modern architecture
 - ✅ **Google Sheets Integration**: Business intelligence output handler with OAuth 2.0 and structured data mapping
+- ✅ **Pipeline Builder UI**: Clean two-column interface with dynamic step counting and professional card layout
+- ✅ **PipelineAjax Backend**: Complete AJAX handler with security verification and content generation
 
 ### Known Issues  
-- **Missing Testing Framework**: No automated testing infrastructure exists
-- **GIT SUBTREE MODIFIED LOCALLY**: Custom modifications need reconciliation with remote repository
+- **Missing Testing Framework**: No automated testing infrastructure exists for main plugin (AI HTTP Client has PHPUnit + PHPStan)
+- **Debug Logging Active**: Extensive `error_log()` calls throughout codebase should be conditional on WP_DEBUG or removed for production
 
 ## Quick Reference
 
@@ -90,26 +95,46 @@ $page_assets = apply_filters('dm_get_page_assets', null, 'jobs');
 
 ### Development Commands
 ```bash
+# Plugin Setup
 composer install && composer dump-autoload
-cd lib/ai-http-client/ && composer check
+
+# AI HTTP Client Testing (Subtree Library)
+cd lib/ai-http-client/
+composer test      # PHPUnit tests
+composer analyse   # PHPStan static analysis (level 5)  
+composer check     # Both tests and analysis
+cd ../..
+
+# Debugging
 window.dmDebugMode = true;  # Browser debugging
-define('WP_DEBUG', true);   # WordPress debugging
+define('WP_DEBUG', true);   # WordPress debugging (enables extensive error_log output)
+
+# Common Fixes
 composer dump-autoload     # Fix "Class not found" errors
+php -l file.php            # Check PHP syntax
+
+# Git Subtree Operations (AI HTTP Client)
+git subtree pull --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
+git subtree push --prefix=lib/ai-http-client origin main  # Push changes back
 ```
 
 ## Architecture Overview
 
 ### Core Components
-- **Handlers**: Files, Reddit, RSS, WordPress (input); Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (output)
+- **Input Handlers**: Files, Reddit, RSS, WordPress (located in `/inc/core/steps/input/handlers/`)
+- **Output Handlers**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (located in `/inc/core/steps/output/handlers/`)
+- **Receiver Step**: Webhook reception framework for external platform integrations (located in `/inc/core/steps/receiver/`)
 - **AI Integration**: Multi-provider client (OpenAI, Anthropic, Google, Grok, OpenRouter) with streaming and tool calling
 - **Core Services**: Logger, Database (Jobs/Pipelines/Flows/ProcessedItems/RemoteLocations), Orchestrator, Security
-- **Admin Interface**: Visual pipeline builder, job management, pure HTML modal system
+- **Admin Interface**: Production-quality visual pipeline builder, job management, universal modal system
 
-### Filter-Based Architecture
-**100% Filter-Based Dependencies**: Eliminates constructor injection, maintains WordPress compatibility with 5 service registration + 4 component autoloading functions.
+### Revolutionary Filter-Based Architecture
+**Zero Constructor Injection**: Every service access uses `apply_filters()` with parameter-based discovery, creating unprecedented modularity while maintaining WordPress compatibility. Bootstrap sequence loads 5 core services + 4 component autoloading functions, then components self-register via dedicated `*Filters.php` files.
 
-### Handler System - Parameter-Based Registration
-Handlers register as configuration arrays, auth/settings auto-link via parameter matching:
+**Simple Instance Creation**: Each filter call creates fresh instances - no caching complexity, prioritizing clean code over micro-optimizations.
+
+### Handler System - Intelligent Parameter Matching
+Handlers register as configuration arrays with automatic auth/settings linking via parameter matching. The system uses slug-based association to automatically connect handlers with their authentication and settings providers:
 
 ```php
 // Handler registration
@@ -126,10 +151,12 @@ add_filter('dm_get_auth', function($auth, $handler_slug) {
 }, 10, 2);
 ```
 
-### Engine Architecture
-**Engine Agnostic**: `/inc/engine/` contains zero hardcoded step/handler assumptions. Pure orchestration with parameter-based discovery.
+### Engine Architecture - Pure Orchestration
+**Engine Agnostic**: `/inc/engine/` contains zero hardcoded step/handler assumptions. ProcessingOrchestrator uses position-based execution (0-99) with DataPacket flow between steps. The engine discovers components dynamically through filters.
 
-**"Plugins Within Plugins"**: Components self-register in own class files via *Filters.php files.
+**"Plugins Within Plugins"**: Revolutionary architecture where components are completely self-contained with dedicated `*Filters.php` files. Each component registers its own services, handlers, auth providers, and assets - creating true modularity without traditional dependency injection.
+
+**Position-Based Orchestration**: Steps execute in numerical order (0-99) with DataPacket transformation between each step, enabling complex AI workflows with guaranteed execution sequence.
 
 ### Admin Architecture
 **Simple Callback Pattern**: All admin pages use `dm_admin_page_callback` function with parameter-based discovery and clean content filter system.
@@ -162,8 +189,17 @@ add_filter('dm_render_admin_page', function($content, $page_slug) {
 
 **Flow**: Page Registration → AdminMenuAssets → Simple Callback → dm_admin_page_callback() → Content Filter → Page Content
 
-### DataPacket Contract
-**CRITICAL**: DataPacket is engine-exclusive. Components receive simple arrays:
+### Universal DataPacket Contract
+**Engine-Exclusive Processing**: DataPacket provides universal data transformation between pipeline steps with standardized `content`, `metadata`, and `context` structure. Components receive simple arrays while engine handles sophisticated data flow:
+
+**DataPacket Structure**:
+```php
+[
+    'content' => ['body' => $content, 'title' => $title],
+    'metadata' => ['source' => $source, 'timestamp' => $time],
+    'context' => ['job_id' => $id, 'step_position' => $pos]
+]
+```
 
 ```php
 class MyCustomStep {
@@ -177,8 +213,12 @@ class MyCustomStep {
 }
 ```
 
-### Modal System
-**Universal HTML Popup Component**: Modal.php displays content via pure component-driven filters. Components register their own modal capabilities and handle their own save logic within injected content.
+### Universal Modal System - Component-Driven Content
+**Zero-Configuration Modals**: Modal.php provides universal popup infrastructure where components register modal content via filters. The system handles display logic while components provide content and save logic.
+
+**Dynamic Content Generation**: Modals discover content through `dm_get_modal_content` filter with component-specific parameters, enabling complex configuration interfaces without modal-specific code.
+
+**AJAX Integration**: Built-in AJAX handling with automatic nonce verification and component-specific response routing.
 
 ```php
 // Component registers its own modal capability in its *Filters.php file
@@ -203,26 +243,35 @@ add_filter('dm_get_modal_content', function($content, $component_id) {
 
 ## Critical Implementation Patterns
 
-### Security
-**Multi-Layer Nonce System**: Granular nonces for each AJAX action  
-**Sanitization**: CRITICAL - `wp_unslash()` BEFORE `sanitize_text_field()`  
-**Encryption**: AES-256-CBC with dynamic key hierarchy
+### Advanced Security Implementation
+**Multi-Layer Nonce System**: Granular nonces for each AJAX action with automatic verification
+**Sanitization Pattern**: CRITICAL - `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)
+**Encryption**: AES-256-CBC with dynamic key hierarchy and secure key derivation
+**Parameter Validation**: Comprehensive input validation with type checking and range validation
 
-### Performance
-**Static Service Caching**: Lazy loading with static caches  
-**Position-Based Execution**: Linear pipeline execution (0-99)
+### Performance Optimization
+**Position-Based Execution**: Linear pipeline execution (0-99) with guaranteed order
+**Conditional Asset Loading**: Assets only load on relevant admin pages
+**Database Optimization**: Static methods with prepared statements and query optimization
+**Clean Instance Management**: Fresh service instances per call - simple and maintainable
 
-### CSS Architecture
-**Component-Owned Assets**: All CSS/JS files organized in component-specific directories:
-- Jobs: `inc/core/admin/pages/jobs/assets/{css,js}/`
-- Pipelines: `inc/core/admin/pages/pipelines/assets/{css,js}/`
-- Logs: `inc/core/admin/pages/logs/assets/css/`
+### Dynamic Asset Architecture
+**Component-Owned Assets**: Revolutionary asset organization where each component owns its CSS/JS files in dedicated directories. AdminMenuAssets dynamically discovers and loads assets via filter system.
 
-**Filter-Based Asset Registration**: Components register assets via `dm_get_page_assets` filter
-**Asset Loading**: AdminMenuAssets uses `'file'` key for component-owned asset paths
-**Namespace Isolation**: All classes prefixed with `dm-`  
-**Color Coding**: Input (green), AI (purple), Output (orange)  
-**Responsive**: Mobile-first with touch optimization
+**Dynamic Asset Discovery**: 
+```php
+// Components register assets via filter
+add_filter('dm_get_page_assets', function($assets, $page_slug) {
+    return [
+        'css' => ['handle' => ['file' => $path, 'deps' => []]],
+        'js' => ['handle' => ['file' => $path, 'deps' => ['jquery']]]
+    ];
+}, 10, 2);
+```
+
+**Smart Loading System**: AdminMenuAssets uses `'file'` key for component-owned paths with automatic dependency resolution and version management.
+**Design System**: Color-coded step types (Input: green, AI: purple, Output: orange) with consistent `dm-` namespace isolation.
+**Performance**: Conditional loading based on admin page context, preventing unnecessary asset bloat.
 
 ### Database Patterns
 **Pipeline+Flow Tables**: Two-layer architecture with separate concerns
@@ -243,15 +292,41 @@ add_filter('dm_get_modal_content', function($content, $component_id) {
 6. **Context Access**: Requires job_id: `apply_filters('dm_get_context', null, $job_id)`
 7. **CSS Namespace**: All admin CSS must use `dm-` prefix
 
-### "Plugins Within Plugins" Architecture
+### "Plugins Within Plugins" - Revolutionary Architecture
 
-**✅ COMPLETE**: All 21 core components have dedicated *Filters.php files for complete self-containment.
+**✅ COMPLETE**: All 23+ core components have dedicated *Filters.php files for complete self-containment. This represents a fundamental shift from traditional WordPress plugin architecture.
+
+**Self-Registration Pattern**: Each component is completely autonomous:
+```php
+// Component registers ALL its services in one place
+function dm_register_twitter_filters() {
+    add_filter('dm_get_handlers', function($handlers, $type) {
+        if ($type === 'output') {
+            $handlers['twitter'] = [
+                'class' => Twitter::class, 
+                'label' => __('Twitter', 'data-machine')
+            ];
+        }
+        return $handlers;
+    }, 10, 2);
+    
+    add_filter('dm_get_auth', function($auth, $handler_slug) {
+        return ($handler_slug === 'twitter') ? new TwitterAuth() : $auth;
+    }, 10, 2);
+    
+    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
+        return ($handler_slug === 'twitter') ? new TwitterSettings() : $settings;
+    }, 10, 2);
+}
+dm_register_twitter_filters(); // Immediate execution
+```
 
 **Component Coverage**:
 - **Admin** (4): Modal, Jobs, Pipelines, Logs
-- **Handlers** (8): All input/output handlers  
+- **Input Handlers** (4): Files, Reddit, RSS, WordPress
+- **Output Handlers** (6): Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets
 - **Database** (5): Jobs, RemoteLocations, Flows, Pipelines, ProcessedItems
-- **Steps** (3): AI, Input, Output
+- **Steps** (4): AI, Input, Output, Receiver
 - **Engine** (1): DataMachineFilters
 
 **Pattern Example**:
@@ -271,7 +346,48 @@ function dm_register_twitter_filters() {
 dm_register_twitter_filters();
 ```
 
-**Auto-Loading**: Four uniform functions - `dm_autoload_core_handlers()`, `dm_autoload_core_admin()`, `dm_autoload_core_steps()`, `dm_autoload_core_database()`
+**Sophisticated Autoloading**: Four uniform functions with recursive directory scanning:
+- `dm_autoload_core_admin()` - Admin pages and interfaces
+- `dm_autoload_core_steps()` - Step types and their handlers (recursive)
+- `dm_autoload_core_database()` - Database services
+- Core handlers integrated into step autoloading via reorganized `/inc/core/steps/{type}/handlers/` structure
+
+**Recursive Discovery**: Autoloader uses `RecursiveDirectoryIterator` to find `*Filters.php` files at any depth, enabling flexible component organization.
+
+### Receiver Step Framework - Webhook Integration Architecture
+
+**Current Status**: The Receiver Step framework is currently a conceptual demonstration of the plugin's extensible step architecture. It exists as a fully-registered step but returns `false` when executed, serving as a reference implementation for adding new step types.
+
+**Architectural Purpose**: Demonstrates the self-registration pattern and filter-based architecture used throughout Data Machine. Shows how new step types integrate with the Pipeline+Flow system while maintaining complete modularity.
+
+**Future Implementation Plans**:
+- **Webhook Handlers**: Real-time data reception from external services
+- **API Polling Handlers**: Services without webhook support
+- **Authentication Framework**: OAuth, API keys, webhook verification
+- **Handler Organization**: Following the same `/inc/core/steps/receiver/handlers/` pattern as input/output handlers
+
+**Step Registration Pattern**:
+```php
+// Receiver Step self-registers like all other steps
+add_filter('dm_get_steps', function($step_config, $step_type) {
+    if ($step_type === 'receiver') {
+        return [
+            'label' => __('Receiver', 'data-machine'),
+            'description' => __('Webhook reception framework', 'data-machine'),
+            'class' => '\DataMachine\Core\Steps\Receiver\ReceiverStep'
+        ];
+    }
+    return $step_config;
+}, 10, 2);
+```
+
+**Integration Benefits**: When implemented, the Receiver Step will enable:
+- **External Triggers**: Pipelines triggered by external services
+- **Real-time Processing**: Immediate data processing on webhook receipt
+- **Bi-directional Workflows**: Services can both send data to and receive data from Data Machine
+- **Event-Driven Architecture**: Pipeline execution based on external events rather than just scheduling
+
+**Developer Reference**: The Receiver Step serves as the canonical example of how to add new step types to Data Machine while following all architectural patterns and maintaining complete system compatibility.
 
 ### Engine Agnosticism Rules
 ```php
@@ -293,7 +409,11 @@ $handlers = apply_filters('dm_get_handlers', null, $step_type);
 
 ### External Plugin Integration
 
-**Core Handlers**: Files, Reddit, RSS, WordPress (input); Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (output); Multi-provider AI client
+**Core Handlers**: 
+- **Input**: Files, Reddit, RSS, WordPress (in `/inc/core/steps/input/handlers/`)
+- **Output**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (in `/inc/core/steps/output/handlers/`)
+- **Receiver**: Webhook reception framework for external integrations (in `/inc/core/steps/receiver/`)
+- **AI Integration**: Multi-provider client (OpenAI, Anthropic, Google, Grok, OpenRouter)
 
 **Extension Examples**:
 

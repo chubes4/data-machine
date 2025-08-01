@@ -41,8 +41,6 @@ require_once __DIR__ . '/inc/engine/DataMachineFilters.php';
  * @since    0.1.0
  */
 function run_data_machine() {
-    // DEBUG: Log that plugin initialization is starting
-    error_log('DEBUG: run_data_machine() called');
     
     // Initialize pure filter-based service registry
     // All services use ultra-direct filter-based access
@@ -75,9 +73,6 @@ function run_data_machine() {
     // Logger component manages its own admin_notices hook via LoggerFilters.php
 
     // Auto-load all core components using uniform "plugins within plugins" architecture
-    error_log('DEBUG: About to autoload handlers');
-    dm_autoload_core_component_directory('inc/core/handlers/');   // Load inc/core/handlers/ components
-    error_log('DEBUG: Handlers autoload completed');
     require_once __DIR__ . '/inc/admin/AdminFilters.php';        // Load inc/admin/ service filters - MOVED UP FOR PROPER LOADING ORDER
     dm_autoload_core_component_directory('inc/core/admin/');      // Load inc/core/admin/ components  
     dm_autoload_core_component_directory('inc/core/steps/');      // Load inc/core/steps/ components
@@ -127,62 +122,56 @@ function run_data_machine() {
  * This enables complete self-registration via *Filters.php files and ensures
  * all component files are available for the bootstrap system.
  * 
- * @param string $relative_path Relative path from plugin root (e.g., 'inc/core/handlers/')
+ * @param string $relative_path Relative path from plugin root (e.g., 'inc/core/steps/')
  * @since 0.1.0
  */
 function dm_autoload_core_component_directory(string $relative_path): void {
-    // DEBUG: Log what directory we're trying to autoload
-    error_log("DEBUG: Autoloading directory: {$relative_path}");
-    
     $component_root = DATA_MACHINE_PATH . $relative_path;
-    error_log("DEBUG: Full path: {$component_root}");
     
     if (!is_dir($component_root)) {
-        error_log("DEBUG: Directory does not exist: {$component_root}");
         return;
     }
     
-    error_log("DEBUG: Directory exists, proceeding with autoload");
-    
     // Get all subdirectories (each component type)
     $component_directories = glob($component_root . '*', GLOB_ONLYDIR);
-    error_log("DEBUG: Found " . count($component_directories) . " component directories: " . print_r($component_directories, true));
     
     foreach ($component_directories as $component_dir) {
-        error_log("DEBUG: Processing component directory: {$component_dir}");
-        
         // Load ALL PHP files in the component directory
         // This includes: Handler.php, Auth.php, Settings.php, *Filters.php, etc.
         $php_files = glob($component_dir . '/*.php');
-        error_log("DEBUG: Found " . count($php_files) . " PHP files in {$component_dir}: " . print_r($php_files, true));
         
         foreach ($php_files as $php_file) {
             if (file_exists($php_file)) {
-                error_log("DEBUG: Loading file: {$php_file}");
                 require_once $php_file;
-                error_log("DEBUG: File loaded successfully: {$php_file}");
-            } else {
-                error_log("DEBUG: File not found: {$php_file}");
             }
         }
         
-        // SPECIAL CASE: For handlers, also scan subdirectories (e.g., /input/files/*.php)
-        if (strpos($relative_path, 'handlers/') !== false) {
-            error_log("DEBUG: Handler directory detected, scanning subdirectories");
+        // SPECIAL CASE: For steps or handlers, also scan subdirectories (e.g., /input/handlers/files/*.php)
+        if (strpos($relative_path, 'handlers/') !== false || strpos($relative_path, 'steps/') !== false) {
             $handler_subdirs = glob($component_dir . '/*', GLOB_ONLYDIR);
-            error_log("DEBUG: Found " . count($handler_subdirs) . " handler subdirectories: " . print_r($handler_subdirs, true));
             
             foreach ($handler_subdirs as $handler_subdir) {
+                // First, load any PHP files directly in this subdirectory
                 $handler_php_files = glob($handler_subdir . '/*.php');
-                error_log("DEBUG: Found " . count($handler_php_files) . " PHP files in {$handler_subdir}: " . print_r($handler_php_files, true));
                 
                 foreach ($handler_php_files as $handler_php_file) {
                     if (file_exists($handler_php_file)) {
-                        error_log("DEBUG: Loading handler file: {$handler_php_file}");
                         require_once $handler_php_file;
-                        error_log("DEBUG: Handler file loaded successfully: {$handler_php_file}");
-                    } else {
-                        error_log("DEBUG: Handler file not found: {$handler_php_file}");
+                    }
+                }
+                
+                // ADDITIONAL RECURSION: For handler subdirs like /input/handlers/, scan one more level for specific handlers
+                if (basename($handler_subdir) === 'handlers') {
+                    $individual_handlers = glob($handler_subdir . '/*', GLOB_ONLYDIR);
+                    
+                    foreach ($individual_handlers as $individual_handler_dir) {
+                        $handler_files = glob($individual_handler_dir . '/*.php');
+                        
+                        foreach ($handler_files as $handler_file) {
+                            if (file_exists($handler_file)) {
+                                require_once $handler_file;
+                            }
+                        }
                     }
                 }
             }
