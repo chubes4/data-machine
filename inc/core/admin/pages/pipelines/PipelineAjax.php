@@ -80,12 +80,22 @@ class PipelineAjax
      */
     private function get_step_selection_content()
     {
-        // Get all registered steps using proper filter-based discovery
+        // Get all registered steps using comprehensive filter-based discovery
         $all_steps = [];
         
-        // Let steps self-register through the filter system
-        // Try common step types but don't hardcode - let filter system decide
-        $possible_types = ['input', 'ai', 'output']; // Just for discovery, not hardcoded requirement
+        // Dynamic step type discovery - tries known and potential step types
+        // Steps self-register through the filter system, so we probe for all possible types
+        // TODO: Future enhancement - modify dm_get_steps filter to support discovery mode without type parameter
+        $possible_types = [
+            'input',        // Data collection steps
+            'ai',          // AI processing steps  
+            'output',      // Data publishing steps
+            'receiver',    // Webhook reception steps
+            'transform',   // Data transformation steps (potential future)
+            'filter',      // Data filtering steps (potential future)
+            'validation',  // Data validation steps (potential future)
+            'notification' // Notification steps (potential future)
+        ];
         
         foreach ($possible_types as $type) {
             $step_config = apply_filters('dm_get_steps', null, $type);
@@ -99,7 +109,7 @@ class PipelineAjax
         }
 
         // Render template
-        $content = $this->render_template('step-selection-cards', ['all_steps' => $all_steps]);
+        $content = $this->render_template('modal/step-selection-cards', ['all_steps' => $all_steps]);
 
         wp_send_json_success([
             'content' => $content,
@@ -128,7 +138,7 @@ class PipelineAjax
         }
 
         // Render template
-        $content = $this->render_template('handler-selection-cards', [
+        $content = $this->render_template('modal/handler-selection-cards', [
             'handlers' => $available_handlers,
             'step_type' => $step_type
         ]);
@@ -282,7 +292,7 @@ class PipelineAjax
         ];
 
         // Render template
-        $html = $this->render_template('flow-step-card', $template_data);
+        $html = $this->render_template('page/flow-step-card', $template_data);
 
         wp_send_json_success([
             'html' => $html,
@@ -296,10 +306,18 @@ class PipelineAjax
      */
     private function render_template($template_name, $data = [])
     {
+        // Support subdirectories: 'modal/delete-warning' or 'page/step-card' or 'step-card' (legacy)
         $template_path = __DIR__ . '/templates/' . $template_name . '.php';
         
+        // Check if file exists at specified path
         if (!file_exists($template_path)) {
-            return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
+            // Try legacy path (direct in templates/) for backward compatibility
+            $legacy_path = __DIR__ . '/templates/' . basename($template_name) . '.php';
+            if (file_exists($legacy_path)) {
+                $template_path = $legacy_path;
+            } else {
+                return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
+            }
         }
 
         // Extract data variables for template use
@@ -337,7 +355,7 @@ class PipelineAjax
         ];
 
         // Render template
-        $html = $this->render_template('pipeline-step-card', $template_data);
+        $html = $this->render_template('page/pipeline-step-card', $template_data);
 
         wp_send_json_success([
             'html' => $html,
@@ -377,7 +395,7 @@ class PipelineAjax
         ];
 
         // Render template
-        $html = $this->render_template('handler-settings-form', $template_data);
+        $html = $this->render_template('modal/handler-settings-form', $template_data);
 
         wp_send_json_success([
             'html' => $html,

@@ -28,8 +28,9 @@ $has_step_config = !empty($step_config_info);
     <div class="dm-step-header">
         <div class="dm-step-title"><?php echo esc_html($label); ?></div>
         <div class="dm-step-actions">
-            <button type="button" class="button button-small dm-edit-step-btn">
-                <?php esc_html_e('Edit', 'data-machine'); ?>
+            <button type="button" class="button button-small button-link-delete dm-delete-step-btn" 
+                    data-step-type="<?php echo esc_attr($step_type); ?>">
+                <?php esc_html_e('Delete', 'data-machine'); ?>
             </button>
             <?php if ($has_step_config): ?>
                 <button type="button" class="button button-small dm-configure-step-btn" 
@@ -45,14 +46,5 @@ $has_step_config = !empty($step_config_info);
         <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
             <?php echo esc_html(ucfirst($step_type)); ?>
         </div>
-        <?php if (!empty($step_config)): ?>
-            <div class="dm-step-config-status">
-                <span class="dm-config-indicator dm-configured"><?php esc_html_e('Configured', 'data-machine'); ?></span>
-            </div>
-        <?php else: ?>
-            <div class="dm-step-config-status">
-                <span class="dm-config-indicator dm-needs-config"><?php esc_html_e('Needs Configuration', 'data-machine'); ?></span>
-            </div>
-        <?php endif; ?>
     </div>
 </div>

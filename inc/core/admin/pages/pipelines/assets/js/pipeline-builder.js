@@ -50,6 +50,9 @@
             
             // Pipeline name input change handler for validation
             $(document).on('input', '.dm-pipeline-title-input', this.handlePipelineNameChange.bind(this));
+            
+            // Add New Pipeline button click handler
+            $(document).on('click', '.dm-add-new-pipeline-btn', this.handleAddNewPipelineClick.bind(this));
         },
 
         /**
@@ -922,7 +925,8 @@
             this.showSuccessMessage(data.message);
             
             if (data.is_new) {
-                // For new pipelines, refresh the page to show the saved state
+                // For new pipelines, hide the form and refresh the page to show the saved state
+                this.hideNewPipelineForm();
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
@@ -967,6 +971,74 @@
                 const isValid = pipelineName.length > 0 && stepCount > 0;
                 $saveButton.prop('disabled', !isValid);
             });
+        },
+
+        /**
+         * Handle Add New Pipeline button click
+         */
+        handleAddNewPipelineClick: function(e) {
+            e.preventDefault();
+            
+            // Show new pipeline form
+            $('#dm-new-pipeline-section').slideDown();
+            
+            // Hide the "Add New Pipeline" button while form is active
+            $('.dm-add-new-pipeline-btn').hide();
+            
+            // Clear any existing data in the form (in case it was used before)
+            this.clearNewPipelineForm();
+            
+            // Focus on the pipeline name input
+            setTimeout(() => {
+                $('#dm-new-pipeline-section .dm-pipeline-title-input').focus();
+            }, 300);
+        },
+
+        /**
+         * Hide new pipeline form and restore add button
+         */
+        hideNewPipelineForm: function() {
+            $('#dm-new-pipeline-section').slideUp();
+            $('.dm-add-new-pipeline-btn').show();
+        },
+
+        /**
+         * Clear new pipeline form data
+         */
+        clearNewPipelineForm: function() {
+            const $form = $('#dm-new-pipeline-section');
+            
+            // Clear pipeline name
+            $form.find('.dm-pipeline-title-input').val('');
+            
+            // Reset step count
+            $form.find('.dm-step-count').text('0 steps');
+            
+            // Remove any added steps, keep only the placeholder
+            const $stepsContainer = $form.find('.dm-pipeline-steps');
+            $stepsContainer.empty().append(`
+                <div class="dm-step-card dm-placeholder-step">
+                    <div class="dm-placeholder-step-content">
+                        <button type="button" class="button button-primary dm-add-first-step-btn">
+                            ${dmPipelineBuilder.strings.addStep || 'Add Step'}
+                        </button>
+                        <p class="dm-placeholder-description">Choose a step type to begin building your pipeline</p>
+                    </div>
+                </div>
+            `);
+            
+            // Reset flow steps  
+            const $flowStepsContainer = $form.find('.dm-flow-steps');
+            $flowStepsContainer.empty().append(`
+                <div class="dm-step-card dm-flow-step dm-placeholder-flow-step">
+                    <div class="dm-placeholder-step-content">
+                        <p class="dm-placeholder-description">This will mirror the pipeline steps with handler configuration</p>
+                    </div>
+                </div>
+            `);
+            
+            // Disable save button
+            $form.find('.dm-save-pipeline-btn').prop('disabled', true);
         },
 
         /**

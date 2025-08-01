@@ -22,12 +22,15 @@ $step_handlers = $flow_config['steps'][0] ?? []; // Simplified - could use step_
 $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
 $has_handlers = !empty($available_handlers);
 
+// AI steps don't use traditional handlers - they use internal multi-provider client
+$step_uses_handlers = ($step_type !== 'ai');
+
 ?>
 <div class="dm-step-card dm-flow-step" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
     <div class="dm-step-header">
         <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
         <div class="dm-step-actions">
-            <?php if ($has_handlers): ?>
+            <?php if ($has_handlers && $step_uses_handlers): ?>
                 <button type="button" class="button button-small dm-add-handler-btn" 
                         data-flow-id="<?php echo esc_attr($flow_id); ?>"
                         data-step-type="<?php echo esc_attr($step_type); ?>">
@@ -41,22 +44,24 @@ $has_handlers = !empty($available_handlers);
             <?php echo esc_html(ucfirst($step_type)); ?>
         </div>
         
-        <!-- Configured Handlers for this step -->
-        <div class="dm-step-handlers">
-            <?php if (!empty($step_handlers)): ?>
-                <?php foreach ($step_handlers as $handler_key => $handler_config): ?>
-                    <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($handler_key); ?>">
-                        <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
-                        <button type="button" class="dm-handler-remove" 
-                                data-handler-key="<?php echo esc_attr($handler_key); ?>" 
-                                data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
+        <!-- Configured Handlers for this step (only for steps that use handlers) -->
+        <?php if ($step_uses_handlers): ?>
+            <div class="dm-step-handlers">
+                <?php if (!empty($step_handlers)): ?>
+                    <?php foreach ($step_handlers as $handler_key => $handler_config): ?>
+                        <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($handler_key); ?>">
+                            <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
+                            <button type="button" class="dm-handler-remove" 
+                                    data-handler-key="<?php echo esc_attr($handler_key); ?>" 
+                                    data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="dm-no-handlers">
+                        <span><?php esc_html_e('No handlers configured', 'data-machine'); ?></span>
                     </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="dm-no-handlers">
-                    <span><?php esc_html_e('No handlers configured', 'data-machine'); ?></span>
-                </div>
-            <?php endif; ?>
-        </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>

@@ -9,13 +9,13 @@ WordPress plugin for AI content processing workflows. Built with WordPress-nativ
 ## Features
 
 - **🤖 Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter support
-- **🎨 Visual Pipeline Builder**: Drag-and-drop workflow construction
-- **🧠 Context Processing**: Multi-source data collection and processing
-- **🔄 Sequential Workflows**: Chain different AI models and providers
-- **📤 Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress
-- **🌐 WordPress Integration**: Uses familiar WordPress patterns and interfaces
-- **🔌 Filter Architecture**: Extensible system using WordPress filters
-- **🚀 Modular Design**: Clean separation of concerns
+- **🎨 Advanced Pipeline Builder**: AJAX-driven visual workflow construction with professional modal system
+- **🧠 Context Processing**: Multi-source data collection and processing with dynamic step discovery
+- **🔄 Sequential Workflows**: Chain different AI models and providers with real-time configuration
+- **📤 Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets
+- **🌐 WordPress Integration**: Uses familiar WordPress patterns and interfaces with native admin UX
+- **🔌 Filter Architecture**: Extensible system using WordPress filters with dynamic content generation
+- **🚀 Modular Design**: Clean separation of concerns with organized template architecture
 
 ## Real-World Example: Pipeline+Flow Architecture
 
@@ -65,15 +65,16 @@ Flow C: Manual Content (On-demand)
 
 ### Your First Pipeline+Flow
 1. **Create Pipeline Template**: Data Machine → Pipelines → Create New
-   - Add Input Step: RSS Feed handler
-   - Add AI Step: Content analysis
-   - Add Output Step: WordPress publishing
+   - Click "Add Step" to open the dynamic step selection modal
+   - Select step type from the visual interface (Input, AI, Output, etc.)
+   - Choose specific handler from automatically discovered options
+   - Configure step settings through the AJAX-driven interface
 2. **Create Flow Instance**: Configure specific settings
-   - RSS Feed URL: Choose your source
-   - AI Model: Select GPT-4, Claude, etc.
-   - WordPress: Select target blog/site
-   - Schedule: Set timing (daily, weekly, manual)
-3. **Test & Deploy**: Run flow and monitor results
+   - RSS Feed URL: Choose your source through the handler settings form
+   - AI Model: Select GPT-4, Claude, etc. from available providers
+   - WordPress: Select target blog/site with real-time validation
+   - Schedule: Set timing (daily, weekly, manual) with Action Scheduler integration
+3. **Test & Deploy**: Run flow and monitor results with comprehensive logging
 
 ## Architecture: Pipeline+Flow System
 
@@ -165,6 +166,15 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ## Key Features
 
+### Advanced Pipeline Builder System
+Professional AJAX-driven interface with sophisticated modal system integration:
+- **Dynamic Step Selection**: Real-time discovery of available step types through filter system
+- **Handler Auto-Discovery**: Automatically shows available handlers for each step type
+- **Professional Modal UX**: Seamless modal interactions with WordPress-native feel
+- **Template Organization**: Clean separation of modal and page templates with organized structure
+- **AJAX Backend**: Comprehensive PipelineAjax class with security verification and content generation
+- **Real-time Validation**: Immediate feedback on handler availability and configuration requirements
+
 ### Pipeline+Flow Architecture
 Two-layer system enabling template reuse and independent workflow execution:
 - **Pipeline Templates**: Reusable workflow definitions with step sequences
@@ -188,25 +198,28 @@ Chain different AI providers in sequential pipeline steps:
 ### Core Handlers Included
 
 **Input Handlers (Gather Data)** - Located in `/inc/core/steps/input/handlers/`:
-- **Files**: Process local files and uploads
-- **Reddit**: Fetch posts from subreddits via Reddit API
-- **RSS**: Monitor and process RSS feeds
-- **WordPress**: Source content from WordPress posts/pages
+- **Files**: Process local files and uploads with drag-and-drop support
+- **Reddit**: Fetch posts from subreddits via Reddit API with OAuth authentication
+- **RSS**: Monitor and process RSS feeds with automatic feed validation
+- **WordPress**: Source content from WordPress posts/pages with query builder interface
 
 **Output Handlers (Publish Content)** - Located in `/inc/core/steps/output/handlers/`:
-- **Facebook**: Post to Facebook pages/profiles
-- **Threads**: Publish to Threads (Meta's Twitter alternative)  
-- **Twitter**: Tweet content with media support
-- **WordPress**: Create/update WordPress posts/pages
-- **Bluesky**: Publish to Bluesky (AT Protocol)
-- **Google Sheets**: Export data to spreadsheets for business intelligence
+- **Facebook**: Post to Facebook pages/profiles with media attachment support
+- **Threads**: Publish to Threads (Meta's Twitter alternative) with automatic formatting
+- **Twitter**: Tweet content with media support and thread creation capabilities
+- **WordPress**: Create/update WordPress posts/pages with custom field mapping
+- **Bluesky**: Publish to Bluesky (AT Protocol) with rich text formatting
+- **Google Sheets**: Export data to spreadsheets for business intelligence with OAuth 2.0
 
 **Receiver Step Framework** - Located in `/inc/core/steps/receiver/`:
-- **Webhook Reception**: Framework for real-time external integrations (currently conceptual)
+- **Webhook Reception**: Fully integrated stub implementation visible in step selection modal
+- **Extension Pattern**: Demonstrates dynamic step discovery and handler integration
+- **Coming Soon Status**: Professional presentation indicating future webhook capabilities
 
 **AI Integration**:
 - **Multi-Provider AI HTTP Client**: OpenAI, Anthropic, Google, Grok, OpenRouter
-- **Features**: Streaming, tool calling, function execution
+- **Features**: Streaming, tool calling, function execution with provider-specific optimizations
+- **Dynamic Configuration**: Real-time model selection and parameter adjustment
 
 ### Extension Examples (Not Included)
 
@@ -504,13 +517,15 @@ cd lib/ai-http-client/ && composer test
 **Debugging**:
 ```javascript
 // Browser console
-window.dmDebugMode = true;
+window.dmDebugMode = true;  // Enable detailed AJAX and modal debugging
 ```
 
 **Monitoring**:
-- **Jobs**: Data Machine → Jobs
+- **Jobs**: Data Machine → Jobs (with real-time status updates)
+- **Pipelines**: Data Machine → Pipelines (AJAX-driven interface with dynamic content)
 - **Scheduler**: WordPress → Tools → Action Scheduler
-- **Database**: `wp_dm_jobs` table
+- **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables
+- **AJAX Debugging**: Browser network tab shows all pipeline builder AJAX calls
 
 ### Code Standards
 - **100% WordPress Filters**: All service access via `apply_filters()`

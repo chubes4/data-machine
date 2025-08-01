@@ -63,11 +63,14 @@ Flow C: Custom Content (Manual)
 - ✅ **Clean Architecture Implementation**: All architectural violations eliminated
 - ✅ **Component-Owned Asset Architecture**: All CSS/JS assets moved to component-specific directories with filter-based registration
 - ✅ **Handler Architecture Reorganization**: All handlers moved to step-specific directories (`/inc/core/steps/{input|output}/handlers/`)
-- ✅ **Receiver Step Framework**: Webhook reception system for external platform integrations
+- ✅ **Receiver Step Framework**: Stub implementation and architectural pattern for future webhook integrations
 - ✅ **Bluesky Handler Restoration**: Complete AT Protocol integration restored with modern architecture
 - ✅ **Google Sheets Integration**: Business intelligence output handler with OAuth 2.0 and structured data mapping
-- ✅ **Pipeline Builder UI**: Clean two-column interface with dynamic step counting and professional card layout
-- ✅ **PipelineAjax Backend**: Complete AJAX handler with security verification and content generation
+- ✅ **Advanced Pipeline Builder UI**: Complete AJAX-driven interface with dynamic step management and professional modal system
+- ✅ **Template Architecture Reorganization**: Clean separation of modal and page templates with organized directory structure
+- ✅ **Dynamic Step Type Discovery**: Real-time step selection with filter-based handler discovery and configuration
+- ✅ **PipelineAjax Backend**: Complete AJAX handler with security verification, nonce protection, and dynamic content generation
+- ✅ **Professional Modal System**: Universal modal infrastructure with component-driven content and seamless UX
 
 ### Known Issues  
 - **Missing Testing Framework**: No automated testing infrastructure exists for main plugin (AI HTTP Client has PHPUnit + PHPStan)
@@ -106,8 +109,13 @@ composer check     # Both tests and analysis
 cd ../..
 
 # Debugging
-window.dmDebugMode = true;  # Browser debugging
+window.dmDebugMode = true;  # Browser debugging (enables AJAX and modal debugging)
 define('WP_DEBUG', true);   # WordPress debugging (enables extensive error_log output)
+
+# Pipeline Builder Development
+# Template structure: /templates/modal/ and /templates/page/
+# AJAX endpoint: wp_ajax_dm_pipeline_ajax
+# Nonce verification: dm_pipeline_ajax
 
 # Common Fixes
 composer dump-autoload     # Fix "Class not found" errors
@@ -123,10 +131,10 @@ git subtree push --prefix=lib/ai-http-client origin main  # Push changes back
 ### Core Components
 - **Input Handlers**: Files, Reddit, RSS, WordPress (located in `/inc/core/steps/input/handlers/`)
 - **Output Handlers**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (located in `/inc/core/steps/output/handlers/`)
-- **Receiver Step**: Webhook reception framework for external platform integrations (located in `/inc/core/steps/receiver/`)
+- **Receiver Step**: Stub framework for future webhook integrations - demonstrates step registration pattern (located in `/inc/core/steps/receiver/`)
 - **AI Integration**: Multi-provider client (OpenAI, Anthropic, Google, Grok, OpenRouter) with streaming and tool calling
 - **Core Services**: Logger, Database (Jobs/Pipelines/Flows/ProcessedItems/RemoteLocations), Orchestrator, Security
-- **Admin Interface**: Production-quality visual pipeline builder, job management, universal modal system
+- **Admin Interface**: Production-quality AJAX-driven pipeline builder, job management, universal modal system with organized template architecture
 
 ### Revolutionary Filter-Based Architecture
 **Zero Constructor Injection**: Every service access uses `apply_filters()` with parameter-based discovery, creating unprecedented modularity while maintaining WordPress compatibility. Bootstrap sequence loads 5 core services + 4 component autoloading functions, then components self-register via dedicated `*Filters.php` files.
@@ -354,11 +362,45 @@ dm_register_twitter_filters();
 
 **Recursive Discovery**: Autoloader uses `RecursiveDirectoryIterator` to find `*Filters.php` files at any depth, enabling flexible component organization.
 
+### Advanced Pipeline Builder System
+
+**Current Status**: The Pipeline Builder has evolved into a sophisticated AJAX-driven interface with complete template reorganization and professional modal system integration.
+
+**Template Architecture Reorganization**: Clean separation of concerns with organized directory structure:
+- **Modal Templates** (`/templates/modal/`): Step selection cards, handler selection cards, handler settings form, delete step warning
+- **Page Templates** (`/templates/page/`): Pipeline step cards, flow step cards, new pipeline creation card
+- **Legacy Template Removal**: Old mixed-purpose templates consolidated into purpose-specific organized structure
+- **Pure Rendering Focus**: Templates are purely presentational with no business logic embedded
+
+**Dynamic AJAX Integration**: Complete backend system handling all pipeline operations:
+- **PipelineAjax Class**: Comprehensive AJAX handler with nonce verification and user capability checks
+- **Real-time Content Generation**: Dynamic modal content based on step types and handler availability
+- **Security-First Approach**: Multi-layer nonce system with parameter validation and sanitization
+- **Action-Based Routing**: Clean switch-based action handling for all pipeline operations
+
+**Professional Modal System**: Universal modal infrastructure integrated with pipeline operations:
+- **Component-Driven Content**: Modal content dynamically generated via filter system
+- **Seamless UX**: Modal interactions feel native to WordPress admin interface
+- **Context-Aware Rendering**: Modal content adapts based on pipeline state and step configuration
+- **AJAX-Native Design**: All interactions happen without page refreshes
+
+**Dynamic Step Type Discovery**: Real-time step and handler discovery system:
+- **Filter-Based Discovery**: Uses `dm_get_steps` and `dm_get_handlers` filters for dynamic content
+- **Handler Availability**: Shows available handlers per step type in real-time
+- **Configuration Awareness**: Detects which handlers have authentication or settings requirements
+- **Extension-Ready**: New step types and handlers appear automatically in the interface
+
+**JavaScript Architecture**: Clean separation of concerns in frontend code:
+- **Event-Driven Design**: Modern event handling with proper delegation
+- **AJAX Integration**: Seamless communication with PipelineAjax backend
+- **Modal Integration**: Works harmoniously with universal modal system
+- **Error Handling**: Comprehensive error handling with user-friendly messaging
+
 ### Receiver Step Framework - Webhook Integration Architecture
 
-**Current Status**: The Receiver Step framework is currently a conceptual demonstration of the plugin's extensible step architecture. It exists as a fully-registered step but returns `false` when executed, serving as a reference implementation for adding new step types.
+**Current Status**: The Receiver Step framework is a fully integrated stub implementation demonstrating the plugin's extensible step architecture. It registers via the filter system and appears in the step selection modal as "Framework for webhook integration (coming soon)", but returns `false` when executed since no handlers are implemented yet.
 
-**Architectural Purpose**: Demonstrates the self-registration pattern and filter-based architecture used throughout Data Machine. Shows how new step types integrate with the Pipeline+Flow system while maintaining complete modularity.
+**Architectural Purpose**: Demonstrates the self-registration pattern and filter-based architecture used throughout Data Machine. Shows how new step types integrate with the Pipeline+Flow system while maintaining complete modularity. The step appears in the dynamic step selection interface with appropriate messaging.
 
 **Future Implementation Plans**:
 - **Webhook Handlers**: Real-time data reception from external services
@@ -373,13 +415,19 @@ add_filter('dm_get_steps', function($step_config, $step_type) {
     if ($step_type === 'receiver') {
         return [
             'label' => __('Receiver', 'data-machine'),
-            'description' => __('Webhook reception framework', 'data-machine'),
+            'description' => __('Framework for webhook integration (coming soon)', 'data-machine'),
             'class' => '\DataMachine\Core\Steps\Receiver\ReceiverStep'
         ];
     }
     return $step_config;
 }, 10, 2);
 ```
+
+**UI Integration**: The Receiver Step integrates seamlessly with the advanced pipeline builder:
+- **Step Selection Modal**: Appears in the dynamic step selection interface
+- **Handler Discovery**: Shows "(no handlers available yet)" in the interface
+- **Coming Soon Messaging**: Professional presentation indicating future implementation
+- **Filter-Based Display**: Uses the same discovery patterns as all other steps
 
 **Integration Benefits**: When implemented, the Receiver Step will enable:
 - **External Triggers**: Pipelines triggered by external services
@@ -412,7 +460,7 @@ $handlers = apply_filters('dm_get_handlers', null, $step_type);
 **Core Handlers**: 
 - **Input**: Files, Reddit, RSS, WordPress (in `/inc/core/steps/input/handlers/`)
 - **Output**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (in `/inc/core/steps/output/handlers/`)
-- **Receiver**: Webhook reception framework for external integrations (in `/inc/core/steps/receiver/`)
+- **Receiver**: Stub framework for future webhook integrations - demonstrates extension pattern (in `/inc/core/steps/receiver/`)
 - **AI Integration**: Multi-provider client (OpenAI, Anthropic, Google, Grok, OpenRouter)
 
 **Extension Examples**:

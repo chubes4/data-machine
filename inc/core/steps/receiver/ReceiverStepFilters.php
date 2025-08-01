@@ -35,7 +35,7 @@ function dm_register_receiver_step_filters() {
         if ($step_type === 'receiver') {
             return [
                 'label' => __('Receiver', 'data-machine'),
-                'description' => __('Accept webhooks from external platforms', 'data-machine'),
+                'description' => __('Accept webhooks from external platforms (framework implementation - coming soon)', 'data-machine'),
                 'class' => ReceiverStep::class
             ];
         }

@@ -83,13 +83,24 @@ class Pipelines
             <!-- Card-Based Layout -->
             <div class="dm-pipeline-cards-container">
                 <div class="dm-pipelines-list">
-                    <?php if (empty($all_pipelines)): ?>
-                        <?php $this->render_placeholder_pipeline_card(); ?>
-                    <?php else: ?>
-                        <?php foreach ($all_pipelines as $pipeline): ?>
-                            <?php $this->render_pipeline_with_flows($pipeline); ?>
-                        <?php endforeach; ?>
+                    <!-- New Pipeline Section (always at top when needed) -->
+                    <div id="dm-new-pipeline-section" style="<?php echo empty($all_pipelines) ? '' : 'display: none;'; ?>">
+                        <?php echo $this->render_template('page/new-pipeline-card'); ?>
+                    </div>
+
+                    <!-- Add New Pipeline Button (only show when pipelines exist) -->
+                    <?php if (!empty($all_pipelines)): ?>
+                        <div class="dm-add-pipeline-section">
+                            <button type="button" class="button button-secondary dm-add-new-pipeline-btn">
+                                <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
+                            </button>
+                        </div>
                     <?php endif; ?>
+
+                    <!-- Existing Pipelines -->
+                    <?php foreach ($all_pipelines as $pipeline): ?>
+                        <?php $this->render_pipeline_with_flows($pipeline); ?>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -203,8 +214,9 @@ class Pipelines
             <div class="dm-step-header">
                 <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
                 <div class="dm-step-actions">
-                    <button type="button" class="button button-small dm-edit-step-btn">
-                        <?php esc_html_e('Edit', 'data-machine'); ?>
+                    <button type="button" class="button button-small button-link-delete dm-delete-step-btn" 
+                            data-step-type="<?php echo esc_attr($step_type); ?>">
+                        <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>
                 </div>
             </div>
@@ -212,15 +224,6 @@ class Pipelines
                 <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
                     <?php echo esc_html(ucfirst($step_type)); ?>
                 </div>
-                <?php if (!empty($step_config)): ?>
-                    <div class="dm-step-config-status">
-                        <span class="dm-config-indicator dm-configured"><?php esc_html_e('Configured', 'data-machine'); ?></span>
-                    </div>
-                <?php else: ?>
-                    <div class="dm-step-config-status">
-                        <span class="dm-config-indicator dm-needs-config"><?php esc_html_e('Needs Configuration', 'data-machine'); ?></span>
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
         <?php
@@ -307,12 +310,15 @@ class Pipelines
         $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
         $has_handlers = !empty($available_handlers);
         
+        // AI steps don't use traditional handlers - they use internal multi-provider client
+        $step_uses_handlers = ($step_type !== 'ai');
+        
         ?>
         <div class="dm-step-card dm-flow-step" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
             <div class="dm-step-header">
                 <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
                 <div class="dm-step-actions">
-                    <?php if ($has_handlers): ?>
+                    <?php if ($has_handlers && $step_uses_handlers): ?>
                         <button type="button" class="button button-small dm-add-handler-btn" 
                                 data-flow-id="<?php echo esc_attr($flow_id); ?>"
                                 data-step-type="<?php echo esc_attr($step_type); ?>">
@@ -326,75 +332,30 @@ class Pipelines
                     <?php echo esc_html(ucfirst($step_type)); ?>
                 </div>
                 
-                <!-- Configured Handlers for this step -->
-                <div class="dm-step-handlers">
-                    <?php if (!empty($step_handlers)): ?>
-                        <?php foreach ($step_handlers as $handler_key => $handler_config): ?>
-                            <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($handler_key); ?>">
-                                <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
-                                <button type="button" class="dm-handler-remove" 
-                                        data-handler-key="<?php echo esc_attr($handler_key); ?>" 
-                                        data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
+                <!-- Configured Handlers for this step (only for steps that use handlers) -->
+                <?php if ($step_uses_handlers): ?>
+                    <div class="dm-step-handlers">
+                        <?php if (!empty($step_handlers)): ?>
+                            <?php foreach ($step_handlers as $handler_key => $handler_config): ?>
+                                <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($handler_key); ?>">
+                                    <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
+                                    <button type="button" class="dm-handler-remove" 
+                                            data-handler-key="<?php echo esc_attr($handler_key); ?>" 
+                                            data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="dm-no-handlers">
+                                <span><?php esc_html_e('No handlers configured', 'data-machine'); ?></span>
                             </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="dm-no-handlers">
-                            <span><?php esc_html_e('No handlers configured', 'data-machine'); ?></span>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php
     }
 
-    /**
-     * Render placeholder pipeline card for when no pipelines exist.
-     */
-    private function render_placeholder_pipeline_card()
-    {
-        ?>
-        <div class="dm-pipeline-card dm-placeholder-pipeline" data-pipeline-id="new">
-            <!-- Pipeline Header with Editable Title -->
-            <div class="dm-pipeline-header">
-                <div class="dm-pipeline-title-section">
-                    <input type="text" class="dm-pipeline-title-input" placeholder="<?php esc_attr_e('Enter pipeline name...', 'data-machine'); ?>" />
-                    <div class="dm-pipeline-meta">
-                        <span class="dm-step-count"><?php esc_html_e('0 steps', 'data-machine'); ?></span>
-                        <span class="dm-flow-count"><?php esc_html_e('0 flows', 'data-machine'); ?></span>
-                    </div>
-                </div>
-                <div class="dm-pipeline-actions">
-                    <button type="button" class="button button-primary dm-save-pipeline-btn" disabled>
-                        <?php esc_html_e('Save Pipeline', 'data-machine'); ?>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Pipeline Steps Section (Template Level) -->
-            <div class="dm-pipeline-steps-section">
-                <div class="dm-section-header">
-                    <h4><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h4>
-                    <p class="dm-section-description"><?php esc_html_e('Define the step sequence for this pipeline', 'data-machine'); ?></p>
-                </div>
-                <div class="dm-pipeline-steps">
-                    <?php $this->render_placeholder_step_card(); ?>
-                </div>
-            </div>
-            
-            <!-- Associated Flows -->
-            <div class="dm-pipeline-flows">
-                <div class="dm-flows-header">
-                    <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
-                    <p class="dm-section-description"><?php esc_html_e('Each flow is a configured instance of the pipeline above', 'data-machine'); ?></p>
-                </div>
-                <div class="dm-flows-list">
-                    <?php $this->render_placeholder_flow_card(); ?>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
 
     /**
      * Render placeholder step card with Add Step button.
@@ -460,6 +421,34 @@ class Pipelines
             </div>
         </div>
         <?php
+    }
+
+    /**
+     * Render template with data
+     */
+    private function render_template($template_name, $data = [])
+    {
+        // Support subdirectories: 'modal/delete-warning' or 'page/step-card' or 'step-card' (legacy)
+        $template_path = __DIR__ . '/templates/' . $template_name . '.php';
+        
+        // Check if file exists at specified path
+        if (!file_exists($template_path)) {
+            // Try legacy path (direct in templates/) for backward compatibility
+            $legacy_path = __DIR__ . '/templates/' . basename($template_name) . '.php';
+            if (file_exists($legacy_path)) {
+                $template_path = $legacy_path;
+            } else {
+                return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
+            }
+        }
+
+        // Extract data variables for template use
+        extract($data);
+
+        // Capture template output
+        ob_start();
+        include $template_path;
+        return ob_get_clean();
     }
 }
 
