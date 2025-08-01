@@ -512,7 +512,10 @@ add_filter('dm_get_database_service', function($service, $type) {
 **Setup**:
 ```bash
 composer install && composer dump-autoload
-cd lib/ai-http-client/ && composer test
+
+# Run tests
+composer test                # Main plugin PHPUnit tests
+cd lib/ai-http-client/ && composer test  # AI HTTP Client tests
 ```
 
 **Debugging**:

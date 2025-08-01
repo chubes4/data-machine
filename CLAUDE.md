@@ -73,7 +73,8 @@ Flow C: Custom Content (Manual)
 - ✅ **Professional Modal System**: Universal modal infrastructure with component-driven content and seamless UX
 
 ### Known Issues  
-- **Missing Testing Framework**: No automated testing infrastructure exists for main plugin (AI HTTP Client has PHPUnit + PHPStan)
+- **Limited Testing Coverage**: Initial PHPUnit infrastructure established with Unit and Integration test suites
+- **Ongoing Test Development**: Continuous expansion of test coverage for core components
 - **Debug Logging Active**: Extensive `error_log()` calls throughout codebase should be conditional on WP_DEBUG or removed for production
 
 ## Quick Reference
@@ -100,6 +101,13 @@ $page_assets = apply_filters('dm_get_page_assets', null, 'jobs');
 ```bash
 # Plugin Setup
 composer install && composer dump-autoload
+
+# Testing Commands (Main Plugin)
+composer test                # Run all PHPUnit tests
+composer test:unit           # Run only unit tests  
+composer test:integration    # Run only integration tests
+composer test:coverage       # Generate HTML test coverage report
+composer test:verbose        # Run tests with verbose output
 
 # AI HTTP Client Testing (Subtree Library)
 cd lib/ai-http-client/
@@ -196,6 +204,35 @@ add_filter('dm_render_admin_page', function($content, $page_slug) {
 ```
 
 **Flow**: Page Registration → AdminMenuAssets → Simple Callback → dm_admin_page_callback() → Content Filter → Page Content
+
+### Testing Architecture
+
+**PHPUnit Test Suite**: Comprehensive testing framework with two primary test types
+- **Unit Tests** (`tests/Unit/`): Test individual components and functions in isolation
+- **Integration Tests** (`tests/Integration/`): Test component interactions and WordPress environment integration
+
+**Key Testing Features**:
+- PSR-4 autoloading for test namespaces (`DataMachine\Tests\`)
+- Separate test suites for granular testing control
+- WordPress debug environment configuration
+- HTML coverage report generation (`composer test:coverage`)
+- Yoast PHPUnit Polyfills for WordPress compatibility
+
+**Test Directory Structure**:
+```
+tests/
+├── Unit/                  # Isolated component tests
+├── Integration/           # WordPress environment tests
+├── Mock/                  # Mock objects and test helpers
+└── bootstrap.php          # PHPUnit test environment setup
+```
+
+**Testing Best Practices**:
+- Focus on testing critical paths and business logic
+- Mock external dependencies (APIs, WordPress core functions)
+- Maintain test isolation and minimize side effects
+- Use WordPress-specific testing patterns for hooks and filters
+- Complement the AI HTTP Client's comprehensive test suite
 
 ### Universal DataPacket Contract
 **Engine-Exclusive Processing**: DataPacket provides universal data transformation between pipeline steps with standardized `content`, `metadata`, and `context` structure. Components receive simple arrays while engine handles sophisticated data flow:
