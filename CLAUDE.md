@@ -70,7 +70,7 @@ Flow C: Custom Content (Manual)
 - ✅ **Template Architecture Reorganization**: Clean separation of modal and page templates with organized directory structure
 - ✅ **Dynamic Step Type Discovery**: Real-time step selection with filter-based handler discovery and configuration
 - ✅ **PipelineAjax Backend**: Complete AJAX handler with security verification, nonce protection, and dynamic content generation
-- ✅ **Revolutionary Universal Modal System**: 100% filter-based modal architecture with zero hardcoded modal types, dual-mode step discovery, and complete component autonomy
+- ✅ **Universal Modal System**: 100% filter-based modal architecture with zero hardcoded modal types, dual-mode step discovery, and complete component autonomy
 
 ### Known Issues  
 - **Limited Testing Coverage**: Initial PHPUnit infrastructure established with Unit and Integration test suites
@@ -265,27 +265,27 @@ class MyCustomStep {
 }
 ```
 
-### Universal Modal System Architecture - Revolutionary Filter-Based Design
+### Universal Modal System Architecture - Filter-Based Design
 
-**Core Innovation**: 100% filter-based modal content generation with zero hardcoded modal types, creating unlimited extensibility through a pure WordPress filter architecture. Any component can register modal content via the `dm_get_modal_content` filter without modifying core modal code.
+**Core Innovation**: 100% filter-based modal content generation with zero hardcoded modal types, creating unlimited extensibility through WordPress filter patterns. Any component can register modal content via the `dm_get_modal_content` filter without modifying core modal code.
 
 **Architectural Principles**:
 - **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "delete-step", "handler-selection") rather than component IDs
 - **Pure Filter Discovery**: Zero hardcoding - all content generated via filter system with consistent 2-parameter pattern
-- **Universal AJAX Handler**: Single `ModalAjax.php` processes all modal requests with comprehensive WordPress security
+- **Standard WordPress AJAX**: Single `ModalAjax.php` processes all modal requests with standard WordPress security
 - **Component Autonomy**: Each component registers its own modal content generators independently via *Filters.php files
 - **Infrastructure-Only Core**: Modal system provides pure infrastructure with zero business logic
 
-**Revolutionary Dual-Mode Step Discovery**: The `dm_get_steps` filter operates in two distinct modes enabling both UI generation and configuration lookups:
+**Dual-Mode Step Discovery**: The `dm_get_steps` filter operates in two distinct modes enabling both UI generation and configuration lookups:
 - **Discovery Mode**: `apply_filters('dm_get_steps', [])` - Returns ALL registered step types for UI generation
 - **Specific Mode**: `apply_filters('dm_get_steps', null, 'input')` - Returns specific step type configuration
 
-**Multi-Layer Security Implementation**:
-- **Nonce Verification**: `check_ajax_referer('dm_get_modal_content', 'nonce', false)` with granular action-specific nonces
-- **Capability Checks**: `current_user_can('manage_options')` with role-based access control
-- **Input Sanitization**: `sanitize_text_field(wp_unslash($_POST['template']))` following WordPress sanitization patterns
-- **Context Parsing**: Secure JSON parsing with fallback to empty array on malformed data
-- **Parameter Validation**: Comprehensive validation before filter execution
+**WordPress Security Implementation**:
+- **Nonce Verification**: `check_ajax_referer('dm_get_modal_content', 'nonce', false)` - standard WordPress AJAX security
+- **Capability Checks**: `current_user_can('manage_options')` - standard WordPress capability check
+- **Input Sanitization**: `sanitize_text_field(wp_unslash($_POST['template']))` - standard WordPress sanitization
+- **Context Parsing**: JSON parsing with fallback to empty array on malformed data
+- **Parameter Validation**: Basic validation before filter execution
 
 **Filter-Based Content Generation Pattern**:
 ```php
@@ -293,7 +293,7 @@ class MyCustomStep {
 add_filter('dm_get_modal_content', function($content, $template) {
     switch ($template) {
         case 'step-selection':
-            // Revolutionary Discovery Mode - gets ALL registered step types
+            // Discovery Mode - gets ALL registered step types
             $all_steps = apply_filters('dm_get_steps', []);
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
             
@@ -338,9 +338,9 @@ add_filter('dm_get_modal_content', function($content, $template) {
   - `new-pipeline-card.php` - Pipeline creation interface
 - **Pure Rendering Focus**: Templates contain zero business logic - all data provided via filter context
 
-**Universal AJAX Integration**:
+**WordPress AJAX Integration**:
 - **Endpoint**: `wp_ajax_dm_get_modal_content` handled by `ModalAjax.php`
-- **Security Architecture**: Multi-layer verification with action-specific nonces and capability checks
+- **Security**: Standard WordPress nonce verification and capability checks
 - **Parameter Structure**: 
   - `template` (string) - Modal template identifier (required)
   - `context` (JSON string) - Component-specific parameters (optional, defaults to '{}')
@@ -628,7 +628,7 @@ dm_register_twitter_filters();
 **Dynamic AJAX Integration**: Complete backend system handling all pipeline operations:
 - **PipelineAjax Class**: Comprehensive AJAX handler with nonce verification and user capability checks
 - **Real-time Content Generation**: Dynamic modal content based on step types and handler availability
-- **Security-First Approach**: Multi-layer nonce system with parameter validation and sanitization
+- **WordPress Security**: Standard nonce verification with parameter validation and sanitization
 - **Action-Based Routing**: Clean switch-based action handling for all pipeline operations
 
 **Professional Modal System**: Universal modal infrastructure integrated with pipeline operations:

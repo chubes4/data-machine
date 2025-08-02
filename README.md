@@ -166,7 +166,7 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ## Key Features
 
-### Revolutionary Universal Modal System
+### Universal Modal System
 100% filter-based modal architecture with zero hardcoded modal types enabling unlimited extensibility:
 - **Pure Filter Discovery**: Any component can register modal content via `dm_get_modal_content` filter without touching core code
 - **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "handler-selection") rather than component IDs
@@ -180,14 +180,14 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ### Advanced Pipeline Builder System  
 Professional AJAX-driven interface with sophisticated modal system integration:
-- **Dynamic Step Selection**: Real-time discovery of available step types through revolutionary dual-mode filter system
+- **Dynamic Step Selection**: Real-time discovery of available step types through dual-mode filter system
 - **Handler Auto-Discovery**: Automatically shows available handlers for each step type with parameter-based filter discovery
 - **Professional Modal UX**: Seamless modal interactions with WordPress-native feel using universal modal infrastructure
 - **Template Architecture**: Clean separation of modal and page templates in organized directory structure
-- **AJAX Backend**: Comprehensive PipelineAjax class with multi-layer security verification and dynamic content generation
+- **AJAX Backend**: Comprehensive PipelineAjax class with WordPress security verification and dynamic content generation
 - **Real-time Validation**: Immediate feedback on handler availability and configuration requirements
 - **Filter-Based Content**: All modal content generated via filter system enabling unlimited extensibility without core modifications
-- **Security-First Design**: Multi-layer nonce verification, capability checks, and input sanitization
+- **WordPress Security**: Standard nonce verification, capability checks, and input sanitization
 
 ### Pipeline+Flow Architecture
 Two-layer system enabling template reuse and independent workflow execution:
@@ -257,7 +257,7 @@ The filter-based architecture makes adding custom handlers straightforward. Comm
 
 ### Universal Modal System Extension Example
 
-The revolutionary modal architecture allows any plugin to add custom modals without touching core code:
+The modal architecture allows any plugin to add custom modals without touching core code:
 
 ```php
 // Register custom modal content via consistent 2-parameter filter pattern
@@ -415,7 +415,7 @@ jQuery(document).ready(function($) {
 - **Extensible Configuration**: Step types can register sophisticated configuration interfaces via template names
 - **Template Flexibility**: Support for both universal templates (like 'configure-step') and custom templates
 - **Context Preservation**: Rich context passing between modals and JavaScript components
-- **Security Built-in**: Multi-layer nonce verification and input sanitization automatically applied
+- **WordPress Security**: Standard nonce verification and input sanitization automatically applied
 
 ## Practical Examples
 
@@ -744,7 +744,7 @@ dmCoreModal.open('step-selection', { pipeline_id: 1, debug: true });
 - **Universal Modal Debugging**: Console logs show modal content generation, filter discovery, and template matching
 - **Filter Discovery Monitoring**: `dm_get_steps`, `dm_get_modal_content`, `dm_get_handlers` filter calls visible in debug output
 - **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/` with organized structure
-- **Security Verification**: Multi-layer nonce verification and capability checks logged in WordPress debug mode
+- **Security Verification**: Standard WordPress nonce verification and capability checks logged in debug mode
 - **Performance Metrics**: Asset loading order, dependency resolution, and conditional loading visible in browser DevTools
 
 ### Code Standards
