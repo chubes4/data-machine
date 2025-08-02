@@ -77,6 +77,12 @@ function dm_register_pipelines_admin_page_filters() {
                 'media' => 'all'
             ];
             
+            $assets['css']['dm-pipeline-modal'] = [
+                'file' => 'inc/core/admin/pages/pipelines/assets/css/pipeline-modal.css',
+                'deps' => ['dm-core-modal'],
+                'media' => 'all'
+            ];
+            
             $assets['js']['dm-pipeline-builder'] = [ 
                 'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
                 'deps' => ['jquery', 'jquery-ui-sortable', 'dm-core-modal'],

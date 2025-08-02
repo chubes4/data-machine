@@ -330,44 +330,7 @@
 
 /* NOTE: Universal modal styles moved to /inc/core/admin/modal/assets/css/core-modal.css */
 
-/* Step selection modal content */
-.dm-step-selection-container {
-    padding: 0;
-}
-
-.dm-step-selection-header p {
-    margin: 0 0 20px 0;
-    color: #666;
-}
-
-
-.dm-step-cards {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    flex-direction: column;
-}
-
-.dm-step-selection-card {
-    background: #fff;
-    border: 2px solid #ddd;
-    border-radius: 6px;
-    padding: 15px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex: 0 1 auto;
-}
-
-.dm-step-selection-card:hover {
-    border-color: #0073aa;
-    box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
-}
-
-.dm-step-selection-card.selected {
-    border-color: #0073aa;
-    background: #f0f8ff;
-}
+/* Modal-specific styles moved to pipeline-modal.css */
 
 .dm-step-card-header {
     display: flex;
@@ -442,44 +405,7 @@
     background: #dc3545;
 }
 
-/* Delete Step Warning Modal Styles */
-.dm-delete-warning-modal {
-    padding: 20px;
-    max-width: 500px;
-}
 
-.dm-warning-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #ddd;
-}
-
-.dm-warning-icon {
-    margin-right: 15px;
-}
-
-.dm-warning-icon .dashicons {
-    color: #d63638;
-    font-size: 24px;
-    width: 24px;
-    height: 24px;
-}
-
-.dm-warning-title h3 {
-    margin: 0;
-    color: #d63638;
-}
-
-.dm-warning-content {
-    margin-bottom: 25px;
-}
-
-.dm-warning-description {
-    font-size: 14px;
-    margin-bottom: 15px;
-}
 
 .dm-affected-flows {
     background: #fff3cd;
@@ -530,27 +456,3 @@
     color: #0c5460;
 }
 
-.dm-warning-notice {
-    background: #f8d7da;
-    border: 1px solid #f1aeb5;
-    border-radius: 4px;
-    padding: 10px;
-    margin-top: 15px;
-}
-
-.dm-warning-notice p {
-    margin: 0;
-    color: #721c24;
-}
-
-.dm-modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    padding-top: 15px;
-    border-top: 1px solid #ddd;
-}
-
-.dm-modal-actions .button {
-    min-width: 100px;
-}

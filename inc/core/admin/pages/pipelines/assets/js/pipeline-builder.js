@@ -33,6 +33,9 @@
             // Step selection card click handler
             $(document).on('click', '.dm-step-selection-card', this.handleStepSelection.bind(this));
             
+            // Handler selection button click handler
+            $(document).on('click', '.dm-handler-button', this.handleHandlerSelection.bind(this));
+            
             // Add Handler button now uses dm-modal-trigger - handler removed
             
             // Add Flow button click handler
@@ -97,6 +100,52 @@
 
             // Add step to the specific pipeline
             this.addStepToPipeline(stepType, pipelineId);
+        },
+
+        /**
+         * Handle handler selection button click
+         */
+        handleHandlerSelection: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const handlerSlug = $button.data('handler-slug');
+            const stepType = $button.data('step-type');
+            
+            if (!handlerSlug || !stepType) {
+                console.error('Missing handler slug or step type');
+                return;
+            }
+
+            // Visual feedback - highlight selected handler
+            $('.dm-handler-button').removeClass('selected');
+            $button.addClass('selected');
+
+            // Get context from the current modal
+            const $modal = $('#dm-modal');
+            const $pipelineIdInput = $modal.find('input[name="pipeline_id"]');
+            const $stepTypeInput = $modal.find('input[name="step_type"]');
+            
+            const pipelineId = $pipelineIdInput.val();
+            const modalStepType = $stepTypeInput.val();
+            
+            if (!pipelineId) {
+                console.error('No pipeline ID found in modal context');
+                return;
+            }
+
+            // Prepare context for configuration modal
+            const configContext = {
+                handler_slug: handlerSlug,
+                step_type: stepType,
+                pipeline_id: pipelineId,
+                modal_type: 'handler_config'
+            };
+
+            // Transition to handler configuration modal without closing current modal
+            dmCoreModal.open('configure-step', configContext, {
+                title: `Configure ${handlerSlug} Handler`
+            });
         },
 
         /**
