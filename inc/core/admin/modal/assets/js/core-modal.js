@@ -34,7 +34,6 @@
          * Initialize the core modal system
          */
         init: function() {
-            this.createModalHTML();
             this.bindGlobalEvents();
         },
 
@@ -152,27 +151,6 @@
             $modal.removeClass('dm-modal-loading');
         },
 
-        /**
-         * Create modal HTML structure if it doesn't exist
-         */
-        createModalHTML: function() {
-            if ($('#dm-modal').length === 0) {
-                $('body').append(`
-                    <div id="dm-modal" class="dm-modal" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1">
-                        <div class="dm-modal-overlay"></div>
-                        <div class="dm-modal-container">
-                            <div class="dm-modal-header">
-                                <h2 class="dm-modal-title"></h2>
-                                <button type="button" class="dm-modal-close" aria-label="${dmCoreModal.strings?.close || 'Close'}">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <div class="dm-modal-body"></div>
-                        </div>
-                    </div>
-                `);
-            }
-        },
 
         /**
          * Bind global modal events

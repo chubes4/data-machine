@@ -263,9 +263,10 @@ class MyCustomStep {
 
 ### Universal Modal System Architecture - Filter-Based Design
 
-**Core Design**: 100% filter-based modal content generation with zero hardcoded modal types, providing extensibility through WordPress filter patterns. Any component can register modal content via the `dm_get_modal_content` filter without modifying core modal code.
+**Core Design**: 100% filter-based modal content generation with zero hardcoded modal types, providing extensibility through WordPress filter patterns. The system uses server-side PHP template rendering instead of client-side JavaScript HTML creation, ensuring better performance, security, and maintainability.
 
 **Architectural Principles**:
+- **Server-Side Template Rendering**: Modal HTML structure rendered via PHP `ModalTemplate.php` included in `admin_footer` on modal-enabled pages
 - **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "delete-step", "handler-selection") rather than component IDs
 - **Pure Filter Discovery**: Zero hardcoding - all content generated via filter system with consistent 2-parameter pattern
 - **Standard WordPress AJAX**: Single `ModalAjax.php` processes all modal requests with standard WordPress security
@@ -407,6 +408,19 @@ function dm_register_modal_system_filters() {
         return $assets;
     }, 5, 2); // Priority 5 loads before component assets
     
+    // Server-side modal template inclusion via admin_footer
+    add_action('admin_footer', function() {
+        $current_screen = get_current_screen();
+        if (!$current_screen) return;
+        
+        // Include PHP template on modal-enabled pages
+        $modal_pages = ['data-machine_page_dm-pipelines', 'data-machine_page_dm-jobs', 'data-machine_page_dm-logs', 'data-machine_page_dm-settings'];
+        
+        if (in_array($current_screen->id, $modal_pages)) {
+            include __DIR__ . '/ModalTemplate.php';
+        }
+    });
+    
     // Universal AJAX handler registration
     $modal_ajax_handler = new ModalAjax();
 }
@@ -415,10 +429,14 @@ function dm_register_modal_system_filters() {
 **Extension Pattern**: Use `dm_get_modal_content` filter to register custom modal content with template-based routing.
 
 **Implementation Notes**:
-- Method visibility: `render_template()` changed to public for filter access
-- Type safety: Explicit casting for database operations
-- Context access: Components access `$_POST['context']` during AJAX
-- Asset dependencies: Modal assets load with proper dependency chain
+- **Server-Side Template Rendering**: `ModalTemplate.php` provides the base HTML structure via `admin_footer` action, eliminating client-side DOM creation and ensuring consistent accessibility compliance
+- **Performance Benefits**: PHP template rendering reduces JavaScript payload and avoids DOM manipulation overhead
+- **Security Advantages**: Server-side rendering with WordPress escaping functions prevents XSS vulnerabilities that could occur with client-side HTML injection
+- **WordPress Integration**: Template inclusion via `admin_footer` follows WordPress patterns and integrates seamlessly with WordPress admin interface
+- **Method visibility**: `render_template()` changed to public for filter access
+- **Type safety**: Explicit casting for database operations
+- **Context access**: Components access `$_POST['context']` during AJAX
+- **Asset dependencies**: Modal assets load with proper dependency chain
 
 **Performance Features**:
 - Conditional asset loading based on page context
@@ -426,7 +444,9 @@ function dm_register_modal_system_filters() {
 - Single AJAX handler eliminates competing handlers
 - Template caching available at component level
 
-This architecture provides complete extensibility through pure filter patterns while maintaining WordPress compatibility. The system enables unlimited modal types without core modifications.
+**Architectural Evolution**: The modal system has evolved from client-side JavaScript DOM creation to server-side PHP template rendering, providing better performance, security, and WordPress integration while maintaining the same filter-based extensibility.
+
+This architecture provides complete extensibility through pure filter patterns while maintaining WordPress compatibility. The system enables unlimited modal types without core modifications through server-side template rendering and filter-based content generation.
 
 ## System Architecture
 - **Entry Point**: `data-machine.php` with bootstrap sequence

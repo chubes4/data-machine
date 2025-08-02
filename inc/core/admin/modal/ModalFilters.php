@@ -71,6 +71,19 @@ function dm_register_modal_system_filters() {
         return $assets;
     }, 5, 2); // Priority 5 = loads before page-specific assets (priority 10)
     
+    // Include modal template on pages that use the universal modal system
+    add_action('admin_footer', function() {
+        $current_screen = get_current_screen();
+        if (!$current_screen) return;
+        
+        // Only include modal template on Data Machine admin pages that use modals
+        $modal_pages = ['data-machine_page_dm-pipelines', 'data-machine_page_dm-jobs', 'data-machine_page_dm-logs', 'data-machine_page_dm-settings'];
+        
+        if (in_array($current_screen->id, $modal_pages)) {
+            include __DIR__ . '/ModalTemplate.php';
+        }
+    });
+    
     // Register universal AJAX handler for all modal content requests
     // Uses pure filter-based system with template parameter matching
     $modal_ajax_handler = new ModalAjax();
