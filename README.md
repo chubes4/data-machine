@@ -700,7 +700,8 @@ cd lib/ai-http-client/ && composer test  # AI HTTP Client tests
 window.dmDebugMode = true;  // Enable detailed AJAX and modal debugging
 
 // PHP debugging - WordPress constants  
-define('WP_DEBUG', true);   // Enable extensive error_log output
+define('WP_DEBUG', true);   // Enable conditional error_log output throughout codebase
+define('WP_DEBUG', false);  // Production mode - clean deployment with essential error handling
 ```
 
 **Universal Modal System Debugging**:
