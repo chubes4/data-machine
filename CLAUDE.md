@@ -93,7 +93,7 @@ $all_steps = apply_filters('dm_get_steps', []);           // Discovery mode - al
 $step_config = apply_filters('dm_get_steps', null, 'input'); // Specific mode - single step type
 
 // Universal Modal System
-$modal_content = apply_filters('dm_get_modal_content', null, 'step-selection');
+$modal_content = apply_filters('dm_get_modal', null, 'step-selection');
 $step_config_modal = apply_filters('dm_get_step_config_modal', null, 'input', $context);
 ```
 
@@ -287,7 +287,7 @@ class MyCustomStep {
 **Filter-Based Content Generation Pattern**:
 ```php
 // Component registers modal content via consistent 2-parameter filter pattern
-add_filter('dm_get_modal_content', function($content, $template) {
+add_filter('dm_get_modal', function($content, $template) {
     switch ($template) {
         case 'step-selection':
             // Discovery Mode - gets ALL registered step types
@@ -426,7 +426,7 @@ function dm_register_modal_system_filters() {
 }
 ```
 
-**Extension Pattern**: Use `dm_get_modal_content` filter to register custom modal content with template-based routing.
+**Extension Pattern**: Use `dm_get_modal` filter to register custom modal content with template-based routing.
 
 **Implementation Notes**:
 - **Server-Side Template Rendering**: `ModalTemplate.php` provides the base HTML structure via `admin_footer` action, eliminating client-side DOM creation and ensuring consistent accessibility compliance
@@ -756,7 +756,7 @@ add_filter('dm_get_page_assets', function($assets, $page_slug) {
 }, 10, 2);
 
 // Universal Modal System - Register custom modal content
-add_filter('dm_get_modal_content', function($content, $template) {
+add_filter('dm_get_modal', function($content, $template) {
     switch ($template) {
         case 'analytics-config':
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);

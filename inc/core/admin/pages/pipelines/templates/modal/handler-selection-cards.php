@@ -16,6 +16,10 @@ if (!defined('WPINC')) {
 
 ?>
 <div class="dm-handler-selection-container">
+    <!-- Hidden inputs for context -->
+    <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id ?? ''); ?>" />
+    <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
+    
     <div class="dm-handler-selection-header">
         <p><?php echo esc_html(sprintf(__('Select a %s handler to configure', 'data-machine'), $step_type)); ?></p>
     </div>

@@ -2,7 +2,7 @@
  * Pipeline Builder JavaScript
  *
  * Handles pipeline building interface and integrates with the universal core modal system.
- * No longer contains hardcoded modal HTML or CSS - uses dmCoreModal for all modal interactions.
+ * No longer contains hardcoded modal HTML or CSS - uses dmPipelineModal for all modal interactions.
  * All modal content is rendered server-side via dm_get_modal filter system.
  *
  * @since 1.0.0
@@ -134,18 +134,15 @@
                 return;
             }
 
-            // Prepare context for configuration modal
+            // Prepare context for handler settings modal
             const configContext = {
                 handler_slug: handlerSlug,
                 step_type: stepType,
-                pipeline_id: pipelineId,
-                modal_type: 'handler_config'
+                pipeline_id: pipelineId
             };
 
-            // Transition to handler configuration modal without closing current modal
-            dmCoreModal.open('configure-step', configContext, {
-                title: `Configure ${handlerSlug} Handler`
-            });
+            // Open handler settings modal using universal modal system
+            dmCoreModal.open('handler-settings', configContext);
         },
 
         /**
@@ -164,7 +161,7 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Close modal using core modal system
+                        // Close modal using pipeline modal system
                         dmCoreModal.close();
                         
                         // Update interface with new step for the specific pipeline
@@ -633,7 +630,7 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Close modal using core modal system
+                        // Close modal using pipeline modal system
                         dmCoreModal.close();
                         
                         // Find the specific pipeline card

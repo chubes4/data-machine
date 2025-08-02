@@ -36,7 +36,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_modal_system_filters() {
     
-    // Register core modal CSS globally for any page that needs modals
+    // Register core modal assets globally for any page that needs modals
     add_filter('dm_get_page_assets', function($assets, $page_slug) {
         // Pages that use the universal modal system
         $modal_pages = ['pipelines', 'jobs', 'logs'];
@@ -48,25 +48,42 @@ function dm_register_modal_system_filters() {
                 'deps' => [],
                 'media' => 'all'
             ];
+            
+            // Add core modal JavaScript with proper localization
+            $assets['js']['dm-core-modal'] = [
+                'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
+                'deps' => ['jquery'],
+                'in_footer' => true,
+                'localize' => [
+                    'object' => 'dmCoreModal',
+                    'data' => [
+                        'ajax_url' => admin_url('admin-ajax.php'),
+                        'modal_nonce' => wp_create_nonce('dm_get_modal_content'),
+                        'strings' => [
+                            'loading' => __('Loading...', 'data-machine'),
+                            'error' => __('Error', 'data-machine'),
+                            'close' => __('Close', 'data-machine')
+                        ]
+                    ]
+                ]
+            ];
         }
         
         return $assets;
     }, 5, 2); // Priority 5 = loads before page-specific assets (priority 10)
     
-    // Include modal template dynamically based on component JavaScript presence
+    // Include modal template dynamically when universal modal system is loaded
     add_action('admin_footer', function() {
-        // Check if any component-specific modal JavaScript is enqueued
-        $modal_scripts = ['dm-pipeline-modal', 'dm-jobs-modal', 'dm-logs-modal'];
-        
-        foreach ($modal_scripts as $script_handle) {
-            if (wp_script_is($script_handle, 'enqueued')) {
-                // Include template file (defines function) and call render function
-                require_once __DIR__ . '/ModalTemplate.php';
-                dm_render_modal_template();
-                break; // Only include template once
-            }
+        // Check if universal modal JavaScript is enqueued
+        if (wp_script_is('dm-core-modal', 'enqueued')) {
+            // Include template file (defines function) and call render function
+            require_once __DIR__ . '/ModalTemplate.php';
+            dm_render_modal_template();
         }
     });
+    
+    // Instantiate universal modal AJAX handler
+    new ModalAjax();
     
     // Pure infrastructure - NO component-specific logic
     // Individual components will register their own modal content generators

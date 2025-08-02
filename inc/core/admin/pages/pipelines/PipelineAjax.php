@@ -41,17 +41,13 @@ class PipelineAjax
             case 'get_modal':
                 $this->get_modal();
                 break;
-            case 'get_step_selection':
-                $this->get_step_selection_content();
-                break;
+            // get_step_selection removed - now handled by universal modal system
             
             case 'add_step':
                 $this->add_step_to_pipeline();
                 break;
             
-            case 'get_handler_selection':
-                $this->get_handler_selection_content();
-                break;
+            // get_handler_selection removed - now handled by universal modal system
             
             case 'add_flow':
                 $this->add_flow_to_pipeline();
@@ -61,9 +57,7 @@ class PipelineAjax
                 $this->get_flow_step_card();
                 break;
             
-            case 'get_handler_settings':
-                $this->get_handler_settings();
-                break;
+            // get_handler_settings removed - now handled by universal modal system
             
             case 'save_pipeline':
                 $this->save_pipeline();
@@ -91,143 +85,27 @@ class PipelineAjax
         $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true) ?: [];
 
-        switch ($template) {
-            case 'step-selection':
-                $this->get_step_selection_content();
-                break;
-                
-            case 'handler-selection':
-                $this->get_handler_selection_content();
-                break;
-                
-            case 'handler-settings':
-                $this->get_handler_settings();
-                break;
-                
-            case 'delete-step':
-                $this->get_delete_step_content($context);
-                break;
-                
-            default:
-                // Use dm_get_modal filter for extensibility
-                $content = apply_filters('dm_get_modal', null, $template, $context);
-                
-                if ($content) {
-                    wp_send_json_success([
-                        'content' => $content,
-                        'title' => ucfirst(str_replace('-', ' ', $template))
-                    ]);
-                } else {
-                    wp_send_json_error(['message' => __('Unknown modal template', 'data-machine')]);
-                }
+        // Pure filter-based routing - zero hardcoded templates
+        $content = apply_filters('dm_get_modal', null, $template);
+        
+        if ($content) {
+            wp_send_json_success([
+                'content' => $content,
+                'title' => ucfirst(str_replace('-', ' ', $template))
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => sprintf(__('Modal template "%s" not found', 'data-machine'), $template)
+            ]);
         }
     }
 
-    /**
-     * Generate delete step confirmation content
-     */
-    private function get_delete_step_content($context)
-    {
-        $pipeline_id = intval($context['pipeline_id'] ?? 0);
-        $step_position = intval($context['step_position'] ?? 0);
-        
-        ob_start();
-        ?>
-        <div class="dm-delete-step-warning">
-            <p><?php esc_html_e('Are you sure you want to delete this step?', 'data-machine'); ?></p>
-            <p><strong><?php esc_html_e('This action cannot be undone.', 'data-machine'); ?></strong></p>
-            
-            <div class="dm-modal-actions">
-                <button type="button" class="button button-primary" onclick="dmPipelineModal.confirmDeleteStep(<?php echo esc_attr($pipeline_id); ?>, <?php echo esc_attr($step_position); ?>)">
-                    <?php esc_html_e('Delete Step', 'data-machine'); ?>
-                </button>
-                <button type="button" class="button button-secondary dm-modal-close">
-                    <?php esc_html_e('Cancel', 'data-machine'); ?>
-                </button>
-            </div>
-        </div>
-        <?php
-        
-        wp_send_json_success([
-            'content' => ob_get_clean(),
-            'title' => __('Delete Step', 'data-machine')
-        ]);
-    }
+    // delete-step content removed - now handled by universal modal system via template in PipelinesFilters.php
 
-    /**
-     * Generate step selection modal content
-     */
-    private function get_step_selection_content()
-    {
-        // Get all registered steps using comprehensive filter-based discovery
-        $all_steps = [];
-        
-        // Dynamic step type discovery - tries known and potential step types
-        // Steps self-register through the filter system, so we probe for all possible types
-        // TODO: Future enhancement - modify dm_get_steps filter to support discovery mode without type parameter
-        $possible_types = [
-            'input',        // Data collection steps
-            'ai',          // AI processing steps  
-            'output',      // Data publishing steps
-            'receiver',    // Webhook reception steps
-            'transform',   // Data transformation steps (potential future)
-            'filter',      // Data filtering steps (potential future)
-            'validation',  // Data validation steps (potential future)
-            'notification' // Notification steps (potential future)
-        ];
-        
-        foreach ($possible_types as $type) {
-            $step_config = apply_filters('dm_get_steps', null, $type);
-            if ($step_config) {
-                $all_steps[$type] = $step_config;
-            }
-        }
-
-        if (empty($all_steps)) {
-            wp_send_json_error(['message' => __('No steps available', 'data-machine')]);
-        }
-
-        // Render template
-        $content = $this->render_template('modal/step-selection-cards', ['all_steps' => $all_steps]);
-
-        wp_send_json_success([
-            'content' => $content,
-            'title' => __('Choose Step Type', 'data-machine')
-        ]);
-    }
+    // step-selection content removed - now handled by universal modal system via PipelinesFilters.php
 
 
-    /**
-     * Generate handler selection modal content
-     */
-    private function get_handler_selection_content()
-    {
-        // Get step type from POST data
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-        
-        if (empty($step_type)) {
-            wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
-        }
-
-        // Get available handlers using parameter-based filter discovery
-        $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
-        
-        if (empty($available_handlers)) {
-            wp_send_json_error(['message' => sprintf(__('No handlers available for %s steps', 'data-machine'), $step_type)]);
-        }
-
-        // Render template
-        $content = $this->render_template('modal/handler-selection-cards', [
-            'handlers' => $available_handlers,
-            'step_type' => $step_type
-        ]);
-
-        wp_send_json_success([
-            'content' => $content,
-            'title' => sprintf(__('Choose %s Handler', 'data-machine'), ucfirst($step_type)),
-            'step_type' => $step_type
-        ]);
-    }
+    // handler-selection content removed - now handled by universal modal system via PipelinesFilters.php
 
 
     /**
@@ -463,46 +341,7 @@ class PipelineAjax
     }
 
 
-    /**
-     * Get handler settings form HTML using template system
-     */
-    private function get_handler_settings()
-    {
-        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-        
-        if (empty($handler_slug) || empty($step_type)) {
-            wp_send_json_error(['message' => __('Handler slug and step type are required', 'data-machine')]);
-        }
-
-        // Validate handler exists using filter system
-        $handlers = apply_filters('dm_get_handlers', null, $step_type);
-        if (empty($handlers[$handler_slug])) {
-            wp_send_json_error(['message' => __('Handler not found', 'data-machine')]);
-        }
-
-        // Get handler settings using existing filter system
-        $handler_settings = apply_filters('dm_get_handler_settings', null, $handler_slug);
-        
-        // Prepare data for template
-        $template_data = [
-            'handler_slug' => $handler_slug,
-            'step_type' => $step_type,
-            'handler_config' => $handlers[$handler_slug],
-            'handler_settings' => $handler_settings,
-            'settings_available' => !empty($handler_settings)
-        ];
-
-        // Render template
-        $html = $this->render_template('modal/handler-settings-form', $template_data);
-
-        wp_send_json_success([
-            'html' => $html,
-            'handler_slug' => $handler_slug,
-            'step_type' => $step_type,
-            'title' => sprintf(__('Configure %s Handler', 'data-machine'), $handlers[$handler_slug]['label'] ?? ucfirst($handler_slug))
-        ]);
-    }
+    // handler-settings content removed - now handled by universal modal system via PipelinesFilters.php
 
     /**
      * Save pipeline (create new or update existing)

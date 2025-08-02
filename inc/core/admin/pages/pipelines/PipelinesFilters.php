@@ -77,33 +77,11 @@ function dm_register_pipelines_admin_page_filters() {
                 'media' => 'all'
             ];
             
-            $assets['css']['dm-pipeline-modal'] = [
-                'file' => 'inc/core/admin/pages/pipelines/assets/css/pipeline-modal.css',
-                'deps' => [],
-                'media' => 'all'
-            ];
-            
-            $assets['js']['dm-pipeline-modal'] = [
-                'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-modal.js',
-                'deps' => ['jquery'],
-                'in_footer' => true,
-                'localize' => [
-                    'object' => 'dmPipelineAjax',
-                    'data' => [
-                        'ajax_url' => admin_url('admin-ajax.php'),
-                        'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
-                        'strings' => [
-                            'loading' => __('Loading...', 'data-machine'),
-                            'error' => __('Error', 'data-machine'),
-                            'close' => __('Close', 'data-machine')
-                        ]
-                    ]
-                ]
-            ];
+            // Pipeline modal assets removed - now using universal modal system
             
             $assets['js']['dm-pipeline-builder'] = [ 
                 'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
-                'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipeline-modal'],
+                'deps' => ['jquery', 'jquery-ui-sortable'],
                 'in_footer' => true,
                 'localize' => [
                     'object' => 'dmPipelineBuilder',

@@ -1,10 +1,13 @@
 /**
- * Pipeline Modal JavaScript
+ * Universal Modal JavaScript
  * 
- * Handles pipeline-specific modal interactions and AJAX calls.
- * Uses the universal modal template populated via component-specific AJAX.
+ * Provides universal modal functionality for all Data Machine admin pages.
+ * Handles modal lifecycle, AJAX content loading, and user interactions.
  * 
- * @package DataMachine\Core\Admin\Pages\Pipelines
+ * Replaces component-specific modal systems with a single, extensible
+ * modal infrastructure that works via the dm_get_modal filter system.
+ * 
+ * @package DataMachine\Core\Admin\Modal
  * @since 1.0.0
  */
 
@@ -12,51 +15,55 @@
     'use strict';
 
     /**
-     * Pipeline Modal System
-     * Component-specific modal handling for pipeline operations
+     * Universal Modal System
+     * 
+     * Provides the same API as dmPipelineModal for seamless migration
+     * while enabling universal modal functionality across all admin pages.
      */
-    window.dmPipelineModal = {
+    window.dmCoreModal = {
 
         /**
-         * Open modal with pipeline-specific content
+         * Open modal with universal content loading
+         * 
+         * @param {string} template - Modal template identifier
+         * @param {object} context - Context data for modal content
          */
         open: function(template, context = {}) {
             if (!template) {
-                console.error('DM Pipeline Modal: Template parameter is required');
+                console.error('DM Core Modal: Template parameter is required');
                 return;
             }
 
             const $modal = $('#dm-modal');
             if ($modal.length === 0) {
-                console.error('DM Pipeline Modal: Modal template not found on page');
+                console.error('DM Core Modal: Modal template not found on page');
                 return;
             }
             
             // Show loading state
             this.showLoading();
             
-            // Make AJAX call to get modal content via pipeline AJAX handler
+            // Make AJAX call to universal modal content handler
             $.ajax({
-                url: dmPipelineAjax.ajax_url,
+                url: dmCoreModal.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    operation: 'get_modal',
+                    action: 'dm_get_modal_content',
                     template: template,
                     context: JSON.stringify(context),
-                    nonce: dmPipelineAjax.pipeline_ajax_nonce
+                    nonce: dmCoreModal.modal_nonce
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.showContent(response.data.title || 'Modal', response.data.content);
+                        this.showContent(response.data.template || 'Modal', response.data.content);
                     } else {
                         const errorMessage = response.data?.message || response.data || 'Error loading modal content';
-                        console.error('DM Pipeline Modal Error:', errorMessage);
+                        console.error('DM Core Modal Error:', errorMessage);
                         this.showError(errorMessage);
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('DM Pipeline Modal AJAX Error:', error);
+                    console.error('DM Core Modal AJAX Error:', error);
                     this.showError('Error connecting to server');
                 }
             });
@@ -72,7 +79,7 @@
             $('body').removeClass('dm-modal-active');
             
             // Trigger close event for cleanup
-            $(document).trigger('dm-pipeline-modal-closed');
+            $(document).trigger('dm-core-modal-closed');
         },
 
         /**
@@ -83,7 +90,7 @@
             const $modalTitle = $modal.find('.dm-modal-title');
             const $modalBody = $modal.find('.dm-modal-body');
 
-            $modalTitle.text(dmPipelineAjax.strings?.loading || 'Loading...');
+            $modalTitle.text(dmCoreModal.strings?.loading || 'Loading...');
             $modalBody.html('');
             
             $modal.addClass('dm-modal-loading dm-modal-open');
@@ -96,6 +103,9 @@
 
         /**
          * Show modal content
+         * 
+         * @param {string} title - Modal title
+         * @param {string} content - Modal HTML content
          */
         showContent: function(title, content) {
             const $modal = $('#dm-modal');
@@ -110,23 +120,25 @@
             $modal.removeClass('dm-modal-loading');
             
             // Trigger content loaded event
-            $(document).trigger('dm-pipeline-modal-content-loaded', [title, content]);
+            $(document).trigger('dm-core-modal-content-loaded', [title, content]);
         },
 
         /**
          * Show error state
+         * 
+         * @param {string} message - Error message to display
          */
         showError: function(message) {
             const $modal = $('#dm-modal');
             const $modalTitle = $modal.find('.dm-modal-title');
             const $modalBody = $modal.find('.dm-modal-body');
 
-            $modalTitle.text(dmPipelineAjax.strings?.error || 'Error');
+            $modalTitle.text(dmCoreModal.strings?.error || 'Error');
             $modalBody.html(`
                 <div class="dm-modal-error">
                     <p style="color: #d63638; margin: 20px 0;">${message}</p>
-                    <button type="button" class="button" onclick="dmPipelineModal.close()">
-                        ${dmPipelineAjax.strings?.close || 'Close'}
+                    <button type="button" class="button" onclick="dmCoreModal.close()">
+                        ${dmCoreModal.strings?.close || 'Close'}
                     </button>
                 </div>
             `);
@@ -137,30 +149,31 @@
     };
 
     /**
-     * Initialize pipeline modal system
+     * Initialize universal modal system
      */
     $(document).ready(function() {
-        // Close button and overlay click
+        
+        // Close button and overlay click handlers
         $(document).on('click', '.dm-modal-close, .dm-modal-overlay', function(e) {
             e.preventDefault();
-            dmPipelineModal.close();
+            dmCoreModal.close();
         });
 
         // Escape key to close modal
         $(document).on('keydown', function(e) {
             if (e.keyCode === 27 && $('#dm-modal').hasClass('dm-modal-open')) {
-                dmPipelineModal.close();
+                dmCoreModal.close();
             }
         });
 
-        // Trap focus within modal when open
+        // Focus trap within modal for accessibility
         $(document).on('keydown', function(e) {
             if (e.keyCode === 9 && $('#dm-modal').hasClass('dm-modal-open')) {
                 trapFocus(e);
             }
         });
 
-        // Universal modal trigger handler for pipeline page
+        // Universal modal trigger handler - works on any page
         $(document).on('click', '.dm-modal-trigger', function(e) {
             e.preventDefault();
             
@@ -169,16 +182,16 @@
             const contextData = $button.data('context') || {};
             
             if (!template) {
-                console.error('DM Pipeline Modal: No template parameter found on modal trigger button');
+                console.error('DM Core Modal: No template parameter found on modal trigger button');
                 return;
             }
 
             // Show loading state on button
             const originalText = $button.text();
-            $button.text(dmPipelineAjax.strings?.loading || 'Loading...').prop('disabled', true);
+            $button.text(dmCoreModal.strings?.loading || 'Loading...').prop('disabled', true);
 
             // Open modal
-            dmPipelineModal.open(template, contextData);
+            dmCoreModal.open(template, contextData);
 
             // Restore button state after a delay
             setTimeout(() => {
@@ -188,7 +201,9 @@
     });
 
     /**
-     * Trap focus within modal for accessibility
+     * Trap focus within modal for accessibility compliance
+     * 
+     * @param {Event} e - Keyboard event
      */
     function trapFocus(e) {
         const $modal = $('#dm-modal');
