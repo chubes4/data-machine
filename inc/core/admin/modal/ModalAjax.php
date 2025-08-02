@@ -85,7 +85,7 @@ class ModalAjax {
             $context = []; // Fallback to empty array if JSON parsing fails
         }
         
-        // Revolutionary Filter-Based Content Generation
+        // Filter-Based Content Generation
         // 
         // This represents a paradigm shift in WordPress modal architecture:
         // - Zero hardcoded modal types - unlimited extensibility

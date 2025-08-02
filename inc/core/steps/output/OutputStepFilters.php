@@ -2,7 +2,7 @@
 /**
  * Output Step Component Filter Registration
  * 
- * Revolutionary "Plugins Within Plugins" Architecture Implementation
+ * "Plugins Within Plugins" Architecture Implementation
  * 
  * This file serves as Output Step's "main plugin file" - the complete interface
  * contract with the engine, demonstrating complete self-containment and

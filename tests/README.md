@@ -7,7 +7,7 @@ Comprehensive PHPUnit testing framework for the Data Machine engine core compone
 This testing framework validates the core engine functionality including:
 - **ProcessingOrchestrator**: Position-based pipeline execution
 - **DataPacket**: Universal data transformation contract
-- **Filter System**: Revolutionary service discovery architecture
+- **Filter System**: Service discovery architecture
 - **Integration**: End-to-end pipeline workflows
 
 ## Quick Start

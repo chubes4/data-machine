@@ -2,7 +2,7 @@
 /**
  * Pipelines Admin Page Component Filter Registration
  * 
- * Revolutionary "Plugins Within Plugins" Architecture Implementation
+ * "Plugins Within Plugins" Architecture Implementation
  * 
  * This file serves as the Pipelines Admin Page's "main plugin file" - the complete
  * interface contract with the engine, demonstrating complete self-containment
@@ -125,7 +125,7 @@ function dm_register_pipelines_admin_page_filters() {
         
         switch ($template) {
             case 'step-selection':
-                // Revolutionary Dual-Mode Step Discovery Pattern
+                // Dual-Mode Step Discovery Pattern
                 //
                 // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
                 // This enables the modal system to display all available step types without 

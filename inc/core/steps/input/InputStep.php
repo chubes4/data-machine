@@ -228,7 +228,7 @@ class InputStep {
     /**
      * Get handler object directly from the handler system.
      * 
-     * Uses the revolutionary object-based handler registration to get
+     * Uses the object-based handler registration to get
      * instantiated handler objects directly, eliminating class discovery.
      * 
      * @param string $handler_name Handler name/key

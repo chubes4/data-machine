@@ -2,7 +2,7 @@
 /**
  * Universal Modal System - Pure HTML Component
  *
- * Revolutionary modal system transformed into a pure HTML component that accepts
+ * Modal system transformed into a pure HTML component that accepts
  * any content via filters. Eliminates hardcoded modal types and enables unlimited
  * extensibility through filter-based content registration.
  *

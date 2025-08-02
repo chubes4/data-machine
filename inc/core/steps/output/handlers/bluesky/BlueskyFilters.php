@@ -2,7 +2,7 @@
 /**
  * Bluesky Component Filter Registration
  * 
- * Revolutionary "Plugins Within Plugins" Architecture Implementation
+ * "Plugins Within Plugins" Architecture Implementation
  * 
  * This file serves as Bluesky's complete interface contract with the engine,
  * demonstrating complete self-containment and zero bootstrap dependencies.

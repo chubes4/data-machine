@@ -2,7 +2,7 @@
 /**
  * Filter System Test
  *
- * Tests the revolutionary filter-based service discovery system that
+ * Tests the filter-based service discovery system that
  * enables the "Plugins Within Plugins" architecture.
  *
  * @package DataMachine

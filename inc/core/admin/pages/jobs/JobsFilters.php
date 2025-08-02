@@ -2,7 +2,7 @@
 /**
  * Jobs Admin Page Component Filter Registration
  * 
- * Revolutionary "Plugins Within Plugins" Architecture Implementation
+ * "Plugins Within Plugins" Architecture Implementation
  * 
  * This file serves as the Jobs Admin Page's "main plugin file" - the complete
  * interface contract with the engine, demonstrating complete self-containment
