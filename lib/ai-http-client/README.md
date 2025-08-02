@@ -209,6 +209,8 @@ All providers are **fully refactored** with unified architecture and support **d
 
 **WordPress-Native** - Uses WordPress HTTP API, options system, and admin patterns
 
+**Production-Ready** - Debug logging only enabled when `WP_DEBUG` is true, ensuring clean production logs
+
 **Modular Prompts** - Dynamic prompt building with tool registration, context injection, and granular control
 
 ### Multi-Plugin Benefits
@@ -377,6 +379,25 @@ WordPress plugins using this library:
 - **[Data Machine](https://github.com/chubes4/data-machine)** - Automated content pipeline with AI processing and multi-platform publishing
 - **[AI Bot for bbPress](https://github.com/chubes4/ai-bot-for-bbpress)** - Multi-provider AI bot for bbPress forums with context-aware responses
 - **[WordSurf](https://github.com/chubes4/wordsurf)** - Agentic WordPress content editor with AI assistant and tool integration
+
+## Troubleshooting
+
+### Debug Logging
+Enable detailed debug logging for development and troubleshooting:
+
+```php
+// In wp-config.php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+```
+
+When enabled, the library provides comprehensive logging for:
+- API request/response cycles
+- Tool execution and validation  
+- Streaming connection handling
+- System events and error conditions
+
+**Production Note**: Always set `WP_DEBUG` to `false` in production environments to prevent debug log generation.
 
 ## Contributing
 
