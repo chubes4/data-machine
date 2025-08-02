@@ -3,7 +3,7 @@
  *
  * Handles pipeline building interface and integrates with the universal core modal system.
  * No longer contains hardcoded modal HTML or CSS - uses dmCoreModal for all modal interactions.
- * All modal content is rendered server-side via dm_get_modal_content filter system.
+ * All modal content is rendered server-side via dm_get_modal filter system.
  *
  * @since 1.0.0
  */

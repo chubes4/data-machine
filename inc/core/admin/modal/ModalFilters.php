@@ -9,7 +9,7 @@
  * capabilities in their own *Filters.php files following true modular architecture.
  * 
  * The modal system is a Universal HTML Popup Component that serves any component's
- * self-generated content via the dm_get_modal_content filter.
+ * self-generated content via the dm_get_modal filter.
  * 
  * @package DataMachine
  * @subpackage Core\Admin\Modal
@@ -36,66 +36,46 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_modal_system_filters() {
     
-    // Register core modal assets globally for any page that needs modals
+    // Register core modal CSS globally for any page that needs modals
     add_filter('dm_get_page_assets', function($assets, $page_slug) {
         // Pages that use the universal modal system
-        $modal_pages = ['pipelines', 'jobs', 'logs', 'settings'];
+        $modal_pages = ['pipelines', 'jobs', 'logs'];
         
         if (in_array($page_slug, $modal_pages)) {
-            // Add core modal assets with high priority (load before page-specific assets)
+            // Add core modal CSS with high priority (load before page-specific assets)
             $assets['css']['dm-core-modal'] = [
                 'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
                 'deps' => [],
                 'media' => 'all'
-            ];
-            
-            $assets['js']['dm-core-modal'] = [
-                'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
-                'deps' => ['jquery'],
-                'in_footer' => true,
-                'localize' => [
-                    'object' => 'dmCoreModal',
-                    'data' => [
-                        'ajax_url' => admin_url('admin-ajax.php'),
-                        'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
-                        'strings' => [
-                            'loading' => __('Loading...', 'data-machine'),
-                            'error' => __('Error', 'data-machine'),
-                            'close' => __('Close', 'data-machine')
-                        ]
-                    ]
-                ]
             ];
         }
         
         return $assets;
     }, 5, 2); // Priority 5 = loads before page-specific assets (priority 10)
     
-    // Include modal template on pages that use the universal modal system
+    // Include modal template dynamically based on component JavaScript presence
     add_action('admin_footer', function() {
-        $current_screen = get_current_screen();
-        if (!$current_screen) return;
+        // Check if any component-specific modal JavaScript is enqueued
+        $modal_scripts = ['dm-pipeline-modal', 'dm-jobs-modal', 'dm-logs-modal'];
         
-        // Only include modal template on Data Machine admin pages that use modals
-        $modal_pages = ['data-machine_page_dm-pipelines', 'data-machine_page_dm-jobs', 'data-machine_page_dm-logs', 'data-machine_page_dm-settings'];
-        
-        if (in_array($current_screen->id, $modal_pages)) {
-            include __DIR__ . '/ModalTemplate.php';
+        foreach ($modal_scripts as $script_handle) {
+            if (wp_script_is($script_handle, 'enqueued')) {
+                // Include template file (defines function) and call render function
+                require_once __DIR__ . '/ModalTemplate.php';
+                dm_render_modal_template();
+                break; // Only include template once
+            }
         }
     });
     
-    // Register universal AJAX handler for all modal content requests
-    // Uses pure filter-based system with template parameter matching
-    $modal_ajax_handler = new ModalAjax();
-    
     // Pure infrastructure - NO component-specific logic
     // Individual components will register their own modal content generators
-    // in their own *Filters.php files using the dm_get_modal_content filter
+    // in their own *Filters.php files using the dm_get_modal filter
     
     // Examples of how components will register themselves:
     //
     // TwitterFilters.php:
-    // add_filter('dm_get_modal_content', function($content, $template) {
+    // add_filter('dm_get_modal', function($content, $template) {
     //     if ($template === 'twitter_handler_config') {
     //         return $this->generate_twitter_modal_content();
     //     }
@@ -103,7 +83,7 @@ function dm_register_modal_system_filters() {
     // }, 10, 2);
     //
     // AIStepFilters.php:
-    // add_filter('dm_get_modal_content', function($content, $template) {
+    // add_filter('dm_get_modal', function($content, $template) {
     //     if ($template === 'ai_step_config') {
     //         return $this->generate_ai_modal_content();
     //     }

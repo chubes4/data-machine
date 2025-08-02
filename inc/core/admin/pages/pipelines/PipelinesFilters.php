@@ -79,20 +79,37 @@ function dm_register_pipelines_admin_page_filters() {
             
             $assets['css']['dm-pipeline-modal'] = [
                 'file' => 'inc/core/admin/pages/pipelines/assets/css/pipeline-modal.css',
-                'deps' => ['dm-core-modal'],
+                'deps' => [],
                 'media' => 'all'
+            ];
+            
+            $assets['js']['dm-pipeline-modal'] = [
+                'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-modal.js',
+                'deps' => ['jquery'],
+                'in_footer' => true,
+                'localize' => [
+                    'object' => 'dmPipelineAjax',
+                    'data' => [
+                        'ajax_url' => admin_url('admin-ajax.php'),
+                        'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                        'strings' => [
+                            'loading' => __('Loading...', 'data-machine'),
+                            'error' => __('Error', 'data-machine'),
+                            'close' => __('Close', 'data-machine')
+                        ]
+                    ]
+                ]
             ];
             
             $assets['js']['dm-pipeline-builder'] = [ 
                 'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
-                'deps' => ['jquery', 'jquery-ui-sortable', 'dm-core-modal'],
+                'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipeline-modal'],
                 'in_footer' => true,
                 'localize' => [
                     'object' => 'dmPipelineBuilder',
                     'data' => [
                         'ajax_url' => admin_url('admin-ajax.php'),
                         'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
-                        'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
                         'strings' => [
                             'error' => __('An error occurred', 'data-machine'),
                             'success' => __('Success', 'data-machine'),
@@ -122,7 +139,7 @@ function dm_register_pipelines_admin_page_filters() {
     // This eliminates competing AJAX handlers and ensures single source of truth
     
     // Modal content filter registration - Pure 2-parameter pattern like all existing systems
-    add_filter('dm_get_modal_content', function($content, $template) {
+    add_filter('dm_get_modal', function($content, $template) {
         $pipelines_instance = new Pipelines();
         
         // Get context from $_POST directly (like templates access other data)
@@ -199,7 +216,7 @@ function dm_register_pipelines_admin_page_filters() {
                 // Extensible Step Configuration Modal Pattern
                 //
                 // This filter enables any step type to register custom configuration interfaces:
-                // add_filter('dm_get_modal_content', function($content, $template) {
+                // add_filter('dm_get_modal', function($content, $template) {
                 //     if ($template === 'configure-step' && $step_type === 'my_custom_step') {
                 //         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
                 //         return '<div>Custom step configuration form</div>';
@@ -226,7 +243,7 @@ function dm_register_pipelines_admin_page_filters() {
                         </div>
                     </div>
                     <div class="dm-placeholder-footer">
-                        <p><em>' . __('Developers: Register custom configuration via the dm_get_modal_content filter with appropriate template names.', 'data-machine') . '</em></p>
+                        <p><em>' . __('Developers: Register custom configuration via the dm_get_modal filter with appropriate template names.', 'data-machine') . '</em></p>
                     </div>
                 </div>';
         }

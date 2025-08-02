@@ -142,7 +142,7 @@ function dm_register_ai_step_filters() {
      * @param array $context Modal context data
      * @return string|mixed Modal HTML content or original value
      */
-    add_filter('dm_get_modal_content', function($content, $template) {
+    add_filter('dm_get_modal', function($content, $template) {
         // Handle AI step configuration modals
         if ($template === 'configure-step' && $content === null) {
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);

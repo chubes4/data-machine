@@ -567,7 +567,7 @@ function dm_register_utility_filters() {
      * their modal content generation via filters.
      * 
      * Core Usage (components self-register):
-     * add_filter('dm_get_modal_content', function($content, $template) {
+     * add_filter('dm_get_modal', function($content, $template) {
      *     if ($template === 'custom_config' && $content === null) {
      *         // Access context via $_POST during AJAX (consistent pattern)
      *         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
@@ -576,9 +576,9 @@ function dm_register_utility_filters() {
      *     return $content;
      * }, 10, 2);
      * 
-     * Engine Usage: $content = apply_filters('dm_get_modal_content', null, $template);
+     * Engine Usage: $content = apply_filters('dm_get_modal', null, $template);
      */
-    add_filter('dm_get_modal_content', function($content, $template) {
+    add_filter('dm_get_modal', function($content, $template) {
         // Pure parameter-based system - modal templates register their content generation logic
         // Core returns null to allow components to handle their own templates
         return $content;

@@ -34,10 +34,13 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
         }
 
-        // Get action from POST data
-        $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? ''));
+        // Get action from POST data - support both 'pipeline_action' and 'operation' for modal system
+        $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
 
         switch ($action) {
+            case 'get_modal':
+                $this->get_modal();
+                break;
             case 'get_step_selection':
                 $this->get_step_selection_content();
                 break;
@@ -77,6 +80,78 @@ class PipelineAjax
             default:
                 wp_send_json_error(['message' => __('Invalid action', 'data-machine')]);
         }
+    }
+
+    /**
+     * Get modal based on template and context
+     * Routes to appropriate content generation method
+     */
+    private function get_modal()
+    {
+        $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
+        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true) ?: [];
+
+        switch ($template) {
+            case 'step-selection':
+                $this->get_step_selection_content();
+                break;
+                
+            case 'handler-selection':
+                $this->get_handler_selection_content();
+                break;
+                
+            case 'handler-settings':
+                $this->get_handler_settings();
+                break;
+                
+            case 'delete-step':
+                $this->get_delete_step_content($context);
+                break;
+                
+            default:
+                // Use dm_get_modal filter for extensibility
+                $content = apply_filters('dm_get_modal', null, $template, $context);
+                
+                if ($content) {
+                    wp_send_json_success([
+                        'content' => $content,
+                        'title' => ucfirst(str_replace('-', ' ', $template))
+                    ]);
+                } else {
+                    wp_send_json_error(['message' => __('Unknown modal template', 'data-machine')]);
+                }
+        }
+    }
+
+    /**
+     * Generate delete step confirmation content
+     */
+    private function get_delete_step_content($context)
+    {
+        $pipeline_id = intval($context['pipeline_id'] ?? 0);
+        $step_position = intval($context['step_position'] ?? 0);
+        
+        ob_start();
+        ?>
+        <div class="dm-delete-step-warning">
+            <p><?php esc_html_e('Are you sure you want to delete this step?', 'data-machine'); ?></p>
+            <p><strong><?php esc_html_e('This action cannot be undone.', 'data-machine'); ?></strong></p>
+            
+            <div class="dm-modal-actions">
+                <button type="button" class="button button-primary" onclick="dmPipelineModal.confirmDeleteStep(<?php echo esc_attr($pipeline_id); ?>, <?php echo esc_attr($step_position); ?>)">
+                    <?php esc_html_e('Delete Step', 'data-machine'); ?>
+                </button>
+                <button type="button" class="button button-secondary dm-modal-close">
+                    <?php esc_html_e('Cancel', 'data-machine'); ?>
+                </button>
+            </div>
+        </div>
+        <?php
+        
+        wp_send_json_success([
+            'content' => ob_get_clean(),
+            'title' => __('Delete Step', 'data-machine')
+        ]);
     }
 
     /**

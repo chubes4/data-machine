@@ -168,7 +168,7 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ### Universal Modal System
 100% filter-based modal architecture with zero hardcoded modal types enabling unlimited extensibility:
-- **Pure Filter Discovery**: Any component can register modal content via `dm_get_modal_content` filter without touching core code
+- **Pure Filter Discovery**: Any component can register modal content via `dm_get_modal` filter without touching core code
 - **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "handler-selection") rather than component IDs
 - **Dual-Mode Step Discovery**: `apply_filters('dm_get_steps', [])` discovers all step types dynamically for UI generation
 - **Multi-Layer Security**: Nonce verification, capability checks, input sanitization following WordPress standards
@@ -261,7 +261,7 @@ The modal architecture allows any plugin to add custom modals without touching c
 
 ```php
 // Register custom modal content via consistent 2-parameter filter pattern
-add_filter('dm_get_modal_content', function($content, $template) {
+add_filter('dm_get_modal', function($content, $template) {
     switch ($template) {
         case 'analytics-dashboard':
             // Access context via WordPress AJAX standard pattern
@@ -743,7 +743,7 @@ dmCoreModal.open('step-selection', { pipeline_id: 1, debug: true });
 - **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables (two-layer Pipeline+Flow architecture)
 - **AJAX Debugging**: Browser network tab shows all pipeline builder and modal AJAX calls with security verification
 - **Universal Modal Debugging**: Console logs show modal content generation, filter discovery, and template matching
-- **Filter Discovery Monitoring**: `dm_get_steps`, `dm_get_modal_content`, `dm_get_handlers` filter calls visible in debug output
+- **Filter Discovery Monitoring**: `dm_get_steps`, `dm_get_modal`, `dm_get_handlers` filter calls visible in debug output
 - **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/` with organized structure
 - **Security Verification**: Standard WordPress nonce verification and capability checks logged in debug mode
 - **Performance Metrics**: Asset loading order, dependency resolution, and conditional loading visible in browser DevTools
