@@ -1,460 +1,415 @@
-# Data Machine
+# AI HTTP Client for WordPress
 
-WordPress plugin for AI content processing workflows. Built with WordPress-native patterns, supports multiple AI providers through visual pipeline builder.
+A professional WordPress library for **multi-type AI provider communication** with plugin-scoped configuration. Supports LLM, Upscaling, and Generative AI in a single unified library.
 
-[![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
-[![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
-[![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
+## Why This Library?
 
-## Features
+This is for WordPress plugin developers who want to ship AI features fast across multiple AI types.
 
-- **🤖 Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter support
-- **🎨 Visual Pipeline Builder**: Drag-and-drop workflow construction
-- **🧠 Context Processing**: Multi-source data collection and processing
-- **🔄 Sequential Workflows**: Chain different AI models and providers
-- **📤 Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress
-- **🌐 WordPress Integration**: Uses familiar WordPress patterns and interfaces
-- **🔌 Filter Architecture**: Extensible system using WordPress filters
-- **🚀 Modular Design**: Clean separation of concerns
+**Complete Multi-Type Solution:**
+- ✅ **Multi-Type AI Support** - LLM, Upscaling, Generative AI via `ai_type` parameter
+- ✅ **Multi-Plugin Support** - Multiple plugins can use different AI providers simultaneously
+- ✅ **Shared API Keys** - Efficient key management across plugins and AI types
+- ✅ **No Hardcoded Defaults** - Library fails fast with clear errors when not configured
+- ✅ **Type-Specific Features** - Streaming for LLM, async processing for upscaling
+- ✅ **Unified Interface** - Same client class for all AI types
+- ✅ **WordPress-Native** - Uses `wp_remote_post`, plugin-scoped options
+- ✅ **Zero Styling** - You control the design
 
-## Real-World Example: Core Content Workflow
+## Installation
 
-**Linear Step-by-Step Processing:**
-```
-Step 1: Input (RSS Feed Handler)     → Fetches latest RSS content
-Step 2: Input (Reddit Handler)       → Adds Reddit posts to context  
-Step 3: Input (WordPress Handler)    → Includes existing blog posts
-Step 4: AI (GPT-4 Analysis)          → Analyzes ALL previous inputs
-Step 5: AI (Claude Summary)          → Creates summary with full context
-Step 6: Output (Twitter Handler)     → Posts enhanced content
-Step 7: Output (Facebook Handler)    → Publishes to Facebook
-Step 8: Output (WordPress Handler)   → Creates new blog post
+### Method 1: Composer (New)
+```bash
+composer require chubes4/ai-http-client
 ```
 
-**Context Accumulation**: Each step receives ALL previous step data, enabling cross-referencing and analysis across multiple data sources in sequential processing.
+Then in your code:
+```php
+require_once __DIR__ . '/vendor/autoload.php';
+// Library automatically loads via Composer autoloader
+```
+
+### Method 2: Git Subtree (Recommended for WordPress)
+Install as a subtree in your plugin for automatic updates:
+
+```bash
+# From your plugin root directory
+git subtree add --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
+
+# To update later
+git subtree pull --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
+```
+
+### Method 3: Direct Download
+Download and place in your plugin's `/lib/ai-http-client/` directory.
 
 ## Quick Start
 
-### Installation
-1. Clone repository to `/wp-content/plugins/data-machine/`
-2. Run `composer install`
-3. Activate plugin in WordPress admin
-4. Configure AI provider in Data Machine → Settings
+### 1. Include the Library
 
-### Your First Pipeline
-1. **Data Machine → Pipelines → Create New**
-2. **Add Input Step**: Choose RSS Feed
-3. **Add AI Step**: Configure GPT-4 for content analysis  
-4. **Add Output Step**: Select WordPress post creation
-5. **Save & Run**: Watch automated content processing
-
-## Pipeline Architecture: Linear Sequential Processing
-
-**CRITICAL UNDERSTANDING**: Data Machine pipelines execute **step-by-step in linear sequence**, not in parallel.
-
-### How Multi-Input Works
-
-**CORRECT Pattern** (Sequential Steps):
-```
-Step 1: Input (RSS Feed Handler)    → Position 0
-Step 2: Input (Reddit Handler)      → Position 1  
-Step 3: Input (WordPress Handler)   → Position 2
-Step 4: AI (GPT-4 Analysis)         → Position 3
-Step 5: Output (Twitter Handler)    → Position 4
-```
-
-**INCORRECT Understanding** (This does NOT happen):
-```
-❌ RSS + Reddit + WordPress → AI → Output  (Parallel - NOT how it works)
-```
-
-### Key Linear Processing Features
-- **Position-Based Execution**: Steps run in order 0-99
-- **Context Accumulation**: Each step receives ALL previous step data
-- **Sequential Flow**: Step N+1 can access data from steps 0 through N
-- **Multi-Input Pattern**: Add multiple input steps in sequence, not parallel
-- **No Parallel Processing**: Steps execute one after another, never simultaneously
-
-### Uniform Array Processing Example
+**With Composer:**
 ```php
-// ALL steps receive array of DataPackets (most recent first)
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps (consume_all_packets: true) - use entire array
-    foreach ($data_packets as $packet) {
-        $content = $packet->content['body'];
-        // Process all packets for complete context
-    }
-    
-    // Most other steps (consume_all_packets: false) - use latest only
-    $latest_packet = $data_packets[0] ?? null;
-    if ($latest_packet) {
-        $content = $latest_packet->content['body'];
-        // Process only most recent data
-    }
-    
-    return true;
+require_once __DIR__ . '/vendor/autoload.php';
+// No additional includes needed
+```
+
+**Without Composer (Git Subtree/Manual):**
+```php
+// In your plugin
+require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
+```
+
+### 2. Add Admin UI Component (Multi-Type AI System)
+```php
+// LLM Admin UI - REQUIRES both plugin_context AND ai_type
+echo AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug',  // REQUIRED
+    'ai_type' => 'llm'  // REQUIRED: 'llm', 'upscaling', 'generative'
+]);
+
+// Upscaling Admin UI 
+echo AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug',  // REQUIRED
+    'ai_type' => 'upscaling'  // REQUIRED
+]);
+
+// Customized LLM component
+echo AI_HTTP_ProviderManager_Component::render([
+    'plugin_context' => 'my-plugin-slug',  // REQUIRED
+    'ai_type' => 'llm',  // REQUIRED
+    'components' => [
+        'core' => ['provider_selector', 'api_key_input', 'model_selector'],
+        'extended' => ['temperature_slider', 'system_prompt_field']
+    ]
+]);
+```
+
+### 3. Send AI Requests (Multi-Type AI System)
+
+#### LLM Requests
+```php
+// REQUIRES both plugin_context AND ai_type
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm'  // REQUIRED
+]);
+$response = $client->send_request([
+    'messages' => [
+        ['role' => 'user', 'content' => 'Hello AI!']
+    ],
+    'max_tokens' => 100
+]);
+
+if ($response['success']) {
+    echo $response['data']['content'];
 }
 ```
 
-## Architecture: Filter-Based System
-
-Data Machine implements a filter-based architecture enabling AI workflows through WordPress-native patterns. Every component is replaceable, extensible, and organized:
-
+#### Upscaling Requests
 ```php
-// Core services - completely replaceable
-$logger = apply_filters('dm_get_logger', null);
-$ai_client = apply_filters('dm_get_ai_http_client', null);
-$orchestrator = apply_filters('dm_get_orchestrator', null);
+// Upscaling client
+$client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'upscaling'  // REQUIRED
+]);
+$response = $client->send_request([
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x',
+    'quality_settings' => [
+        'creativity' => 7,
+        'detail' => 8
+    ]
+]);
 
-// Database services - pure filter discovery (no switch statements)
-$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-$db_analytics = apply_filters('dm_get_database_service', null, 'analytics'); // External
-
-// Handler system - object-based with auto-linking
-$input_handlers = apply_filters('dm_get_handlers', null, 'input');
-$output_handlers = apply_filters('dm_get_handlers', null, 'output');
-$custom_handlers = apply_filters('dm_get_handlers', null, 'my_custom_type');
-
-// Step system - configuration arrays with implicit behavior
-$steps = apply_filters('dm_get_steps', [], '');
-$ai_config = apply_filters('dm_get_steps', null, 'ai');
-```
-
-### Frontend/Backend Separation
-
-- **Frontend**: Replaceable via filter overrides
-- **Backend**: Engine accepts any components following filter contracts
-- **Extensions**: Add services, handlers, steps via filters
-- **Modularity**: Replace core functionality without touching engine code
-
-## Key Features
-
-### Multi-Source Context Collection
-Collect data from multiple sources sequentially - each step receives ALL previous step data:
-- **Sequential Input Steps**: RSS feeds → Reddit posts → WordPress content → Local files
-- **Cumulative Context**: Each step builds on previous data for rich analysis
-- **Cross-reference capabilities** across different data sources through context accumulation
-- **Content correlation** via step-by-step processing
-
-### Multi-AI Model Workflows
-Chain different AI providers in sequential pipeline steps:
-- **Sequential AI Steps**: Step 1 (GPT-4 analysis) → Step 2 (Claude summary) → Step 3 (Custom AI polish)
-- **Step-specific models**: Use the best AI for each sequential processing task
-- **Context preservation**: Each AI step receives data from ALL previous steps (input + AI)
-
-### Core Handlers Included
-
-**Input Handlers (Gather Data)**:
-- **Files**: Process local files and uploads
-- **Reddit**: Fetch posts from subreddits via Reddit API
-- **RSS**: Monitor and process RSS feeds
-- **WordPress**: Source content from WordPress posts/pages
-
-**Output Handlers (Publish Content)**:
-- **Facebook**: Post to Facebook pages/profiles
-- **Threads**: Publish to Threads (Meta's Twitter alternative)
-- **Twitter**: Tweet content with media support
-- **WordPress**: Create/update WordPress posts/pages
-
-**AI Integration**:
-- **Multi-Provider AI HTTP Client**: OpenAI, Anthropic, Google, Grok, OpenRouter
-- **Features**: Streaming, tool calling, function execution
-
-### Extension Examples (Not Included)
-
-The filter-based architecture makes adding custom handlers straightforward. Common extensions:
-
-**Database & Sheets**:
-- **Google Sheets**: Read/write spreadsheet data
-- **Airtable**: Database operations
-- **MySQL/PostgreSQL**: Custom database handlers
-
-**Communication**:
-- **AWS SES**: Email automation and campaigns
-- **Slack/Discord**: Team notifications
-- **SMS/WhatsApp**: Mobile messaging
-
-**Advanced Processing**:
-- **Contact List Management**: CRM integration
-- **Image Processing**: Visual content workflows
-- **Custom APIs**: Any REST/GraphQL endpoint
-
-## Practical Examples
-
-### Example 1: Core Content Processing Pipeline
-
-**Sequential Linear Workflow**: Step 1 → Step 2 → Step 3
-
-```php
-// Linear step-by-step processing using core handlers
-// Pipeline Configuration:
-// Step 1: RSS Input Handler (position 0) - fetches latest posts
-// Step 2: AI Step Handler (position 1) - GPT-4 content enhancement  
-// Step 3: Twitter Output Handler (position 2) - publishes enhanced content
-
-// Step execution order: 0 → 1 → 2 (position-based sequential processing)
-// Context accumulation at each step:
-
-// At Step 2 (AI processing) - uses entire array for context:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps consume all packets (most recent first)
-    foreach ($data_packets as $packet) {
-        // Process all previous data for complete context
-    }
-}
-
-// At Step 3 (Twitter output) - uses latest packet only:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // Output steps use latest packet (data_packets[0])
-    $latest_packet = $data_packets[0] ?? null;
-    // Publish AI-enhanced content from Step 2
+if ($response['success']) {
+    $job_id = $response['data']['job_id'];
+    // Handle async processing
 }
 ```
 
-### Example 2: Multi-Source Social Media Publishing
+#### Multi-Type Plugin Usage
+```php
+// Single plugin using multiple AI types
+$llm_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'llm'
+]);
 
-**Sequential Multi-Input Workflow**: Multiple Input Steps → AI Processing → Multiple Output Steps
+$upscaling_client = new AI_HTTP_Client([
+    'plugin_context' => 'my-plugin-slug',
+    'ai_type' => 'upscaling'
+]);
+
+// Use text AI to analyze image
+$analysis = $llm_client->send_request([
+    'messages' => [['role' => 'user', 'content' => 'Describe this image for enhancement']]
+]);
+
+// Use upscaling AI to enhance image
+$enhanced = $upscaling_client->send_request([
+    'image_url' => 'https://example.com/image.jpg',
+    'scale_factor' => '4x'
+]);
+```
+
+### 4. Modular Prompt System
+```php
+// Register tool definitions for your AI agent
+AI_HTTP_Prompt_Manager::register_tool_definition(
+    'edit_content',
+    "Use this tool to edit content with specific instructions...",
+    ['priority' => 1, 'category' => 'content']
+);
+
+// Build dynamic system prompts with context
+$prompt = AI_HTTP_Prompt_Manager::build_modular_system_prompt(
+    $base_prompt,
+    ['post_id' => 123, 'user_role' => 'editor'],
+    [
+        'include_tools' => true,
+        'tool_context' => 'my_plugin',
+        'enabled_tools' => ['edit_content', 'read_content']
+    ]
+);
+```
+
+### 5. Continuation Support (For Agentic Systems)
+```php
+// Send initial request with tools
+$response = $client->send_request([
+    'messages' => [['role' => 'user', 'content' => 'What is the weather?']],
+    'tools' => $tool_schemas
+]);
+
+// Continue with tool results (OpenAI - use response ID)
+$response_id = $client->get_last_response_id();
+$continuation = $client->continue_with_tool_results($response_id, $tool_results);
+
+// Continue with tool results (Anthropic - use conversation history)
+$continuation = $client->continue_with_tool_results($conversation_history, $tool_results, 'anthropic');
+```
+
+## Supported Providers
+
+All providers are **fully refactored** with unified architecture and support **dynamic model fetching** - no hardcoded model lists. Models are fetched live from each provider's API.
+
+- **OpenAI** - GPT models via Responses API, streaming, function calling, vision
+- **Anthropic** - Claude models, streaming, function calling, vision
+- **Google Gemini** - Gemini models via 2025 API, streaming, function calling, multi-modal
+- **Grok/X.AI** - Grok models with reasoning_effort parameter, streaming
+- **OpenRouter** - 100+ models via unified API with provider routing
+
+## Architecture
+
+**"Round Plug" Design** - Standardized input → Black box processing → Standardized output
+
+**Multi-Plugin Architecture** - Complete plugin isolation with shared API key efficiency
+
+**Unified Architecture** - Shared normalizers handle all provider differences, simple providers handle pure API communication
+
+**WordPress-Native** - Uses WordPress HTTP API, options system, and admin patterns
+
+**Production-Ready** - Debug logging only enabled when `WP_DEBUG` is true, ensuring clean production logs
+
+**Modular Prompts** - Dynamic prompt building with tool registration, context injection, and granular control
+
+### Multi-Plugin Benefits
+
+- **Plugin Isolation**: Each plugin maintains separate provider/model configurations
+- **Shared API Keys**: Efficient key storage across all plugins (no duplication)
+- **No Conflicts**: Plugin A can use GPT-4, Plugin B can use Claude simultaneously
+- **Independent Updates**: Each plugin's AI settings are completely isolated
+- **Backwards Migration**: Existing configurations automatically become plugin-scoped
+
+### Key Components
+
+- **AI_HTTP_Client** - Main orchestrator using unified normalizers
+- **Unified Normalizers** - Shared logic for request/response conversion, streaming, tools, and connection testing
+- **Simple Providers** - Pure API communication classes (one per provider)
+- **Admin UI** - Complete WordPress admin interface with zero styling
+
+## Component Configuration
+
+The admin UI component is fully configurable:
 
 ```php
-// Linear sequential processing with multiple inputs and outputs
-// Sequential Step Configuration (position-based execution 0-99):
-// Step 1: Reddit Input Handler (position 0) - fetch r/technology posts
-// Step 2: WordPress Input Handler (position 1) - gather existing blog posts  
-// Step 3: AI Step Handler (position 2) - Claude content correlation and summary
-// Step 4: Facebook Output Handler (position 3) - publish summary to Facebook
-// Step 5: Threads Output Handler (position 4) - post alternative summary
-// Step 6: Twitter Output Handler (position 5) - publish condensed version
+// Available core components
+'core' => [
+    'provider_selector',  // Dropdown to select provider
+    'api_key_input',     // Secure API key input
+    'model_selector'     // Dynamic model dropdown
+]
 
-// Context accumulation through sequential execution:
+// Available extended components  
+'extended' => [
+    'temperature_slider',    // Temperature control (0-1)
+    'system_prompt_field',   // System prompt textarea
+    'max_tokens_input',      // Max tokens input
+    'top_p_slider'          // Top P control
+]
 
-// At Step 3 (AI processing) - uses entire array for multi-source analysis:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps consume all packets (most recent first)
-    foreach ($data_packets as $packet) {
-        $source_type = $packet->metadata['source_type'];
-        // Analyze all input sources together
-    }
-}
-
-// At Step 6 (final output) - uses latest packet:
-// Note: Most output handlers use latest packet (data_packets[0]) by default
+// Component-specific configs
+'component_configs' => [
+    'temperature_slider' => [
+        'min' => 0,
+        'max' => 1, 
+        'step' => 0.1,
+        'default_value' => 0.7
+    ]
+]
 ```
 
-### Example 3: Extension - Email Campaign Automation
+## Modular Prompt System
 
-**Extension Workflow**: Contact List → Content Analysis → Personalized Email
+Build dynamic AI prompts with context awareness and tool management:
 
 ```php
-// Extension example - AWS SES Email Handler (not included in core)
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'output') {
-        $handlers['aws_ses'] = new \MyPlugin\Handlers\AWSEmailHandler();
-    }
-    return $handlers;
-}, 10, 2);
+// Register tool definitions that can be dynamically included
+AI_HTTP_Prompt_Manager::register_tool_definition(
+    'tool_name',
+    'Tool description and usage instructions...',
+    ['priority' => 1, 'category' => 'content_editing']
+);
 
-class AWSEmailHandler {
-    public function execute(int $job_id, array $data_packets = []): bool {
-        // Output handlers use latest packet (data_packets[0])
-        $latest_packet = $data_packets[0] ?? null;
-        
-        // Send personalized email using latest processed data
-        return $this->send_personalized_email($latest_packet);
-    }
-}
+// Set which tools are enabled for different contexts
+AI_HTTP_Prompt_Manager::set_enabled_tools(['tool1', 'tool2'], 'my_plugin_context');
+
+// Build complete system prompts with context and tools
+$prompt = AI_HTTP_Prompt_Manager::build_modular_system_prompt(
+    $base_prompt,
+    $context_data,
+    [
+        'include_tools' => true,
+        'tool_context' => 'my_plugin_context',
+        'enabled_tools' => ['specific_tool'],
+        'sections' => ['custom_section' => 'Additional content...']
+    ]
+);
 ```
 
-### Example 4: Extension - Google Sheets Integration
+**Features:**
+- **Tool Registration** - Register tool descriptions that can be dynamically included
+- **Context Awareness** - Inject dynamic context data into prompts
+- **Granular Control** - Enable/disable tools per plugin or use case
+- **Filter Integration** - WordPress filters for prompt customization
+- **Variable Replacement** - Template variable substitution
 
-**Extension Workflow**: Google Sheets Input → AI Processing → Google Sheets Output
+## Multi-Plugin Configuration
+
+### How It Works
 
 ```php
-// Extension example - Google Sheets Handler (not included in core)
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input' || $type === 'output') {
-        $handlers['google_sheets'] = new \MyPlugin\Handlers\GoogleSheetsHandler();
-    }
-    return $handlers;
-}, 10, 2);
+// Plugin-specific configuration (isolated per plugin)
+ai_http_client_providers_myplugin = [
+    'openai' => ['model' => 'gpt-4', 'temperature' => 0.7],
+    'anthropic' => ['model' => 'claude-3-sonnet']
+];
 
-class GoogleSheetsHandler {
-    // INPUT: Read data from sheets
-    public function get_input_data(object $module, array $source_config, int $user_id): array {
-        $customer_data = $this->fetch_sheets_data(
-            $source_config['sheet_id'], 
-            $source_config['input_range']
-        );
-        return ['processed_items' => $customer_data];
-    }
-    
-    // OUTPUT: Write processed results back
-    public function execute(int $job_id, array $data_packets = []): bool {
-        // Output handlers use latest packet (data_packets[0])
-        $latest_packet = $data_packets[0] ?? null;
-        if (!$latest_packet) return false;
-        
-        return $this->update_sheets_data(
-            $latest_packet->metadata['sheet_id'] ?? '',
-            $latest_packet->metadata['output_range'] ?? '', 
-            $latest_packet->content
-        );
-    }
-}
+// Plugin-specific provider selection  
+ai_http_client_selected_provider_myplugin = 'openai';
+
+// Shared API keys (efficient, no duplication)
+ai_http_client_shared_api_keys = [
+    'openai' => 'sk-...',
+    'anthropic' => 'sk-...'
+];
 ```
 
-## Extension Development
-
-### Adding Custom Handlers
-
-**Object-Based Registration** (matches core handler pattern):
+### Real-World Example
 
 ```php
-// Register handler as instantiated object
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input') {
-        $handlers['my_handler'] = new \MyPlugin\Handlers\MyHandler();
-    }
-    return $handlers;
-}, 10, 2);
+// Plugin A: Content Editor using GPT-4
+$client_a = new AI_HTTP_Client(['plugin_context' => 'content-editor']);
+// Uses OpenAI GPT-4 with temperature 0.3
 
-// Authentication component (optional)
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    if ($handler_slug === 'my_handler') {
-        return new \MyPlugin\Handlers\MyHandlerAuth();
-    }
-    return $auth;
-}, 10, 2);
+// Plugin B: Chat Bot using Claude  
+$client_b = new AI_HTTP_Client(['plugin_context' => 'chat-bot']);
+// Uses Anthropic Claude with temperature 0.8
 
-// Settings component (optional)
-add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-    if ($handler_slug === 'my_handler') {
-        return new \MyPlugin\Handlers\MyHandlerSettings();
-    }
-    return $settings;
-}, 10, 2);
+// Both share the same API keys but have completely different configurations
 ```
 
-### Adding Custom Steps
+## Distribution Model
+
+Designed for **flexible distribution**:
+- **Composer**: Standard package manager installation
+- **Git Subtree**: Like Action Scheduler for WordPress plugins
+- No external dependencies
+- Version conflict resolution
+- Multiple plugins can include different versions safely
+- Automatic updates via `git subtree pull` or `composer update`
+
+### Adding New Providers
+
+1. Create simple provider class in `src/Providers/` (e.g., `newprovider.php`)
+2. Add normalization logic to `UnifiedRequestNormalizer` and `UnifiedResponseNormalizer`
+3. Add provider case to `AI_HTTP_Client::get_provider()`
+4. Add provider loading to `ai-http-client.php`
+
+Each provider needs only 4 methods:
+- `send_raw_request()` - Send API request
+- `send_raw_streaming_request()` - Send streaming request
+- `get_raw_models()` - Fetch available models
+- `is_configured()` - Check if provider is configured
+
+## Breaking Changes
+
+### v2.x.x - AI Type Scoping (Current)
+
+**OptionsManager Constructor Change:**
+```php
+// OLD (no longer works)
+$options_manager = new AI_HTTP_Options_Manager('my-plugin-slug');
+
+// NEW (required)
+$options_manager = new AI_HTTP_Options_Manager('my-plugin-slug', 'llm');
+```
+
+**Impact:** All plugins using `AI_HTTP_Options_Manager` directly must update their constructor calls to include the `ai_type` parameter.
+
+**Migration:**
+- Add `'llm'` as second parameter for existing LLM functionality
+- Use `'upscaling'` or `'generative'` for new AI types
+- Settings will be automatically scoped by AI type (no data loss)
+
+## Examples
+
+WordPress plugins using this library:
+
+- **[Data Machine](https://github.com/chubes4/data-machine)** - Automated content pipeline with AI processing and multi-platform publishing
+- **[AI Bot for bbPress](https://github.com/chubes4/ai-bot-for-bbpress)** - Multi-provider AI bot for bbPress forums with context-aware responses
+- **[WordSurf](https://github.com/chubes4/wordsurf)** - Agentic WordPress content editor with AI assistant and tool integration
+
+## Troubleshooting
+
+### Debug Logging
+Enable detailed debug logging for development and troubleshooting:
 
 ```php
-// Register custom pipeline step - returns configuration arrays
-add_filter('dm_get_steps', function($step_config, $step_type) {
-    if ($step_type === 'custom_processing') {
-        return [
-            'label' => __('Custom Processing', 'my-plugin'),
-            'has_handlers' => false,
-            'description' => __('Custom data processing step', 'my-plugin'),
-            'class' => '\MyPlugin\Steps\CustomProcessingStep'
-        ];
-    }
-    return $step_config;
-}, 10, 2);
-
-class CustomProcessingStep {
-    public function execute(int $job_id, array $data_packets = []): bool {
-        // Access all services via filters
-        $logger = apply_filters('dm_get_logger', null);
-        $ai_client = apply_filters('dm_get_ai_http_client', null);
-        
-        // ALL steps receive uniform array of DataPackets (most recent first)
-        // Steps self-select based on their consume_all_packets flag:
-        // - false (default): use data_packets[0] only
-        // - true: use entire data_packets array
-        
-        $latest_packet = $data_packets[0] ?? null;
-        if ($latest_packet) {
-            $content = $latest_packet->content['body'];
-            // Process latest data for most steps
-        }
-        
-        // Your custom processing logic here
-        return true;
-    }
-}
+// In wp-config.php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
 ```
 
-## AI Integration
+When enabled, the library provides comprehensive logging for:
+- API request/response cycles
+- Tool execution and validation  
+- Streaming connection handling
+- System events and error conditions
 
-### Multi-Provider AI Support
-- **OpenAI**: GPT-4, GPT-3.5-turbo with function calling
-- **Anthropic**: Claude 3.5 Sonnet, Claude 3 Haiku
-- **Google**: Gemini Pro, Gemini Flash
-- **OpenRouter**: Access to 100+ AI models
-- **Custom Providers**: Easy integration via filter system
+**Production Note**: Always set `WP_DEBUG` to `false` in production environments to prevent debug log generation.
 
-### Step-Specific AI Configuration
-```php
-// Sequential AI processing with different models per step
-// Step 1: Input (RSS Handler) - position 0
-// Step 2: AI (GPT-4 Analysis) - position 1 - complex analysis of RSS data
-// Step 3: AI (Claude Writing) - position 2 - creative writing using GPT-4 + RSS data
-// Step 4: AI (Gemini Translation) - position 3 - multilingual using all previous data
-// Step 5: Output (WordPress Handler) - position 4 - publish using complete context
+## Contributing
 
-// At Step 4 (Gemini AI) - uses entire array for multi-model context:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps consume all packets (most recent first)
-    foreach ($data_packets as $index => $packet) {
-        $step_name = $packet->metadata['step_name'] ?? "Step $index";
-        // Process all previous AI outputs for analysis
-    }
-}
-```
+Built by developers, for developers. PRs welcome for:
+- New provider implementations
+- Performance improvements
+- WordPress compatibility fixes
 
-### Service Override System
-```php
-// Override any core service
-add_filter('dm_get_logger', function($service) {
-    return new MyCustomLogger();
-}, 20); // Higher priority = override
+## License
 
-// Add custom database service
-add_filter('dm_get_database_service', function($service, $type) {
-    if ($type === 'analytics') {
-        return new MyPlugin\Database\Analytics();
-    }
-    return $service;
-}, 10, 2);
-```
-
-## Development
-
-**Requirements**: WordPress 5.0+, PHP 8.0+, Composer
-
-**Setup**:
-```bash
-composer install && composer dump-autoload
-cd lib/ai-http-client/ && composer test
-```
-
-**Debugging**:
-```javascript
-// Browser console
-window.dmDebugMode = true;
-```
-
-**Monitoring**:
-- **Jobs**: Data Machine → Jobs
-- **Scheduler**: WordPress → Tools → Action Scheduler
-- **Database**: `wp_dm_jobs` table
-
-### Code Standards
-- **100% WordPress Filters**: All service access via `apply_filters()`
-- **Object Registration**: Handlers registered as instantiated objects
-- **PSR-4 Namespacing**: `DataMachine\Core\`, `DataMachine\Engine\`
-- **Zero Constructor Dependencies**: Services retrieved via filters
-- **WordPress Security**: Native escaping and sanitization
-
-## License & Links
-
-**License**: GPL v2+ - [View License](https://www.gnu.org/licenses/gpl-2.0.html)
-
-**Resources**:
-- **Documentation**: `CLAUDE.md` for detailed development guidance
-- **Issues**: [GitHub Issues](https://github.com/chubes4/data-machine/issues)
-- **Developer**: [Chris Huber](https://chubes.net)
+GPL v2 or later
 
 ---
 
-*Data Machine: WordPress plugin for AI content processing workflows with visual pipeline construction.*
+**[Chris Huber](https://chubes.net)**

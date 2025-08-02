@@ -1,63 +1,34 @@
-# WordPress Plugin Repository .gitignore
-
-# System files
+# macOS
 .DS_Store
-Thumbs.db
-desktop.ini
-
-# IDE files
-.claude/
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Development directories
-.roo/
-node_modules/
-vendor/
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-*.tmp
-*.temp
-*.cache
-
-# Backup files
-*.bak
-*.backup
-
-# OS generated files
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+Thumbs.db
 
-# WordPress specific
+# WordPress
 wp-config.php
 wp-content/uploads/
 wp-content/cache/
-wp-content/backup-db/
-wp-content/backups/
-wp-content/blogs.dir/
-wp-content/upgrade/
-wp-content/uploads/
-wp-content/mu-plugins/
-wp-content/wp-cache-config.php
-wp-content/plugins/hello.php
 
-# Plugin specific
-*.zip
-*.tar.gz
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# Development planning
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Composer
+/vendor/
+composer.lock
+
+# Claude AI
+.claude.md
 plan.md
-CLAUDE.md
-
-# System files (additional)
-.DS_Store 

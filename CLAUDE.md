@@ -21,6 +21,19 @@ composer check
 php -l src/Providers/LLM/openai.php
 ```
 
+### Debug Logging
+```bash
+# Enable debug logging in WordPress (wp-config.php)
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+
+# View debug logs (typical location)
+tail -f /wp-content/debug.log
+
+# Disable debug logging for production
+define('WP_DEBUG', false);
+```
+
 ### Git Subtree Operations (Primary Distribution Method)
 ```bash
 # Add as subtree to a WordPress plugin
@@ -129,6 +142,17 @@ AI_HTTP_Client
 AI_HTTP_Component_Registry::get_component('provider_selector')->render($args)
 ```
 
+### Debug Logging
+- **Conditional Logging**: Debug logs only appear when `WP_DEBUG` is `true` in WordPress configuration
+- **Production Safety**: Prevents unnecessary log generation in production environments
+- **Comprehensive Coverage**: Provides detailed information for:
+  - API request/response cycles in providers (OpenAI, Anthropic, etc.)
+  - Tool execution and validation in ToolExecutor
+  - Streaming SSE events and connection handling in WordPressSSEHandler
+  - System events during development and troubleshooting
+- **WordPress Native**: Uses WordPress native `error_log()` function for consistent logging
+- **Performance Optimized**: Debug checks use `defined('WP_DEBUG') && WP_DEBUG` pattern to minimize overhead
+
 ### Security Considerations
 - API keys stored in WordPress options with proper sanitization
 - No hardcoded credentials or defaults
@@ -180,6 +204,13 @@ $client = new AI_HTTP_Client([
 - Library manages its own versioning and conflicts
 - Multiple plugins can safely include different versions
 - No external dependencies beyond WordPress
+
+### Production Deployment
+**WordPress Configuration Requirements**:
+- **Set `WP_DEBUG` to `false`** in production environments to disable debug logging
+- Ensure proper WordPress security settings and API key protection
+- Verify all provider API keys are properly configured before deployment
+- Test provider connectivity using the built-in test connection component
 
 ## Breaking Changes History
 
