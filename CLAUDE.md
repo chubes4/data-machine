@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Data Machine is an AI-first WordPress plugin that transforms any WordPress site into a Universal Content Processing Platform. Built entirely on WordPress-native patterns, it enables sophisticated AI workflows through a two-layer Pipeline+Flow architecture and multi-provider AI integration (OpenAI, Anthropic, Google, Grok, OpenRouter).
 
-**Architectural Innovation**: This plugin represents a paradigm shift in WordPress development through its "Plugins Within Plugins" architecture - a revolutionary self-registering component system that eliminates traditional dependency injection while maintaining complete modularity. The Pipeline+Flow architecture separates reusable workflow templates (Pipelines) from configured instances (Flows), enabling template reuse and independent workflow execution.
+**Architecture**: The plugin implements a "Plugins Within Plugins" architecture - a self-registering component system that eliminates traditional dependency injection while maintaining complete modularity. The Pipeline+Flow architecture separates reusable workflow templates (Pipelines) from configured instances (Flows), enabling template reuse and independent workflow execution.
 
-**Technical Sophistication**: Features position-based orchestration (0-99), universal DataPacket contracts, static service caching with lazy loading, parameter-based service discovery, and dynamic asset loading - all implemented through 100% filter-based dependencies.
+**Technical Features**: Position-based orchestration (0-99), universal DataPacket contracts, static service caching with lazy loading, parameter-based service discovery, and dynamic asset loading - all implemented through 100% filter-based dependencies.
 
 ## Pipeline+Flow Architecture
 
@@ -53,29 +53,23 @@ Flow C: Custom Content (Manual)
 ## CURRENT STATUS & KNOWN ISSUES
 
 ### Recently Completed
-- ✅ **Pipeline+Flow Architecture**: Two-layer system separating templates from configured instances
-- ✅ **Universal AI Integration**: Multi-provider AI client with seamless switching between services
-- ✅ **WordPress-Native AI Pipelines**: Production-quality visual pipeline builder with full AJAX integration
-- ✅ **Engine Agnosticism**: Zero hardcoded step type assumptions enables unlimited extensibility
-- ✅ **Modular Component System**: 23+ self-registering components with dedicated *Filters.php files
-- ✅ **Comprehensive Filter Architecture**: 100% filter-based dependency system
-- ✅ **Universal DataPacket System**: Standardized data flow enabling seamless AI pipeline processing
-- ✅ **Clean Architecture Implementation**: All architectural violations eliminated
-- ✅ **Component-Owned Asset Architecture**: All CSS/JS assets moved to component-specific directories with filter-based registration
-- ✅ **Handler Architecture Reorganization**: All handlers moved to step-specific directories (`/inc/core/steps/{input|output}/handlers/`)
-- ✅ **Receiver Step Framework**: Stub implementation and architectural pattern for future webhook integrations
-- ✅ **Bluesky Handler Restoration**: Complete AT Protocol integration restored with modern architecture
-- ✅ **Bi-directional Google Sheets Integration**: Complete INPUT and OUTPUT handlers with shared OAuth 2.0 infrastructure for seamless spreadsheet workflows
-- ✅ **Advanced Pipeline Builder UI**: Complete AJAX-driven interface with dynamic step management and professional modal system
-- ✅ **Template Architecture Reorganization**: Clean separation of modal and page templates with organized directory structure
-- ✅ **Dynamic Step Type Discovery**: Real-time step selection with filter-based handler discovery and configuration
-- ✅ **PipelineAjax Backend**: Complete AJAX handler with security verification, nonce protection, and dynamic content generation
-- ✅ **Universal Modal System**: 100% filter-based modal architecture with zero hardcoded modal types, dual-mode step discovery, and complete component autonomy
+- ✅ **Core Architecture**: Pipeline+Flow system, universal AI integration, engine agnosticism, modular components (23+)
+- ✅ **Filter System**: 100% filter-based dependencies, universal DataPacket system, component-owned assets
+- ✅ **Handler Integration**: Reorganized step-specific directories, Bluesky AT Protocol, bi-directional Google Sheets
+- ✅ **Pipeline Builder**: AJAX-driven interface, dynamic step discovery, organized template structure
+- ✅ **Universal Modal System**: Filter-based modal architecture with zero hardcoded types and complete component autonomy
 
 ### Known Issues  
 - **Limited Testing Coverage**: Initial PHPUnit infrastructure established with Unit and Integration test suites
 - **Ongoing Test Development**: Continuous expansion of test coverage for core components
 - **Debug Logging Active**: Extensive `error_log()` calls throughout codebase should be conditional on WP_DEBUG or removed for production
+
+### Future Plans
+- **Webhook Integration**: Complete Receiver Step implementation with real-time data reception
+- **Enhanced Testing**: Expand PHPUnit coverage across all components
+- **Performance Optimization**: Conditional debug logging and additional caching strategies
+- **API Documentation**: Comprehensive developer API reference
+- **Third-Party Integrations**: Additional social media and content management platforms
 
 ## Quick Reference
 
@@ -151,8 +145,8 @@ git subtree push --prefix=lib/ai-http-client origin main  # Push changes back
 - **Core Services**: Logger, Database (Jobs/Pipelines/Flows/ProcessedItems/RemoteLocations), Orchestrator, Security
 - **Admin Interface**: Production-quality AJAX-driven pipeline builder, job management, universal modal system with organized template architecture
 
-### Revolutionary Filter-Based Architecture
-**Zero Constructor Injection**: Every service access uses `apply_filters()` with parameter-based discovery, creating unprecedented modularity while maintaining WordPress compatibility. Bootstrap sequence loads 5 core services + 4 component autoloading functions, then components self-register via dedicated `*Filters.php` files.
+### Filter-Based Architecture
+**Zero Constructor Injection**: Every service access uses `apply_filters()` with parameter-based discovery, providing modularity while maintaining WordPress compatibility. Bootstrap sequence loads 5 core services + 4 component autoloading functions, then components self-register via dedicated `*Filters.php` files.
 
 **Simple Instance Creation**: Each filter call creates fresh instances - no caching complexity, prioritizing clean code over micro-optimizations.
 
@@ -177,7 +171,7 @@ add_filter('dm_get_auth', function($auth, $handler_slug) {
 ### Engine Architecture - Pure Orchestration
 **Engine Agnostic**: `/inc/engine/` contains zero hardcoded step/handler assumptions. ProcessingOrchestrator uses position-based execution (0-99) with DataPacket flow between steps. The engine discovers components dynamically through filters.
 
-**"Plugins Within Plugins"**: Revolutionary architecture where components are completely self-contained with dedicated `*Filters.php` files. Each component registers its own services, handlers, auth providers, and assets - creating true modularity without traditional dependency injection.
+**"Plugins Within Plugins"**: Architecture where components are completely self-contained with dedicated `*Filters.php` files. Each component registers its own services, handlers, auth providers, and assets - creating true modularity without traditional dependency injection.
 
 **Position-Based Orchestration**: Steps execute in numerical order (0-99) with DataPacket transformation between each step, enabling complex AI workflows with guaranteed execution sequence.
 
@@ -267,7 +261,7 @@ class MyCustomStep {
 
 ### Universal Modal System Architecture - Filter-Based Design
 
-**Core Innovation**: 100% filter-based modal content generation with zero hardcoded modal types, creating unlimited extensibility through WordPress filter patterns. Any component can register modal content via the `dm_get_modal_content` filter without modifying core modal code.
+**Core Design**: 100% filter-based modal content generation with zero hardcoded modal types, providing extensibility through WordPress filter patterns. Any component can register modal content via the `dm_get_modal_content` filter without modifying core modal code.
 
 **Architectural Principles**:
 - **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "delete-step", "handler-selection") rather than component IDs
@@ -416,83 +410,21 @@ function dm_register_modal_system_filters() {
 }
 ```
 
-**Extension Examples for External Developers**:
-```php
-// Custom step type with modal configuration
-add_filter('dm_get_modal_content', function($content, $template) {
-    if ($template === 'configure-step') {
-        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-        $step_type = $context['step_type'] ?? 'unknown';
-        
-        if ($step_type === 'my_custom_step') {
-            return '<div class="dm-custom-step-config">
-                <h4>' . __('Custom Step Configuration', 'my-plugin') . '</h4>
-                <form class="dm-step-config-form">
-                    <label>' . __('API Endpoint:', 'my-plugin') . '
-                        <input type="url" name="api_endpoint" value="' . esc_attr($context['api_endpoint'] ?? '') . '" required>
-                    </label>
-                    <label>' . __('Timeout (seconds):', 'my-plugin') . '
-                        <input type="number" name="timeout" value="' . esc_attr($context['timeout'] ?? '30') . '" min="1" max="300">
-                    </label>
-                    <button type="submit">' . __('Save Configuration', 'my-plugin') . '</button>
-                </form>
-            </div>';
-        }
-    }
-    return $content;
-}, 10, 2);
+**Extension Pattern**: Use `dm_get_modal_content` filter to register custom modal content with template-based routing.
 
-// Custom analytics dashboard modal
-add_filter('dm_get_modal_content', function($content, $template) {
-    if ($template === 'analytics-dashboard') {
-        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-        $pipeline_id = $context['pipeline_id'] ?? null;
-        
-        $analytics_data = MyPlugin\Analytics::get_pipeline_metrics($pipeline_id);
-        
-        ob_start();
-        include MY_PLUGIN_PATH . 'templates/analytics-modal.php';
-        return ob_get_clean();
-    }
-    return $content;
-}, 10, 2);
+**Implementation Notes**:
+- Method visibility: `render_template()` changed to public for filter access
+- Type safety: Explicit casting for database operations
+- Context access: Components access `$_POST['context']` during AJAX
+- Asset dependencies: Modal assets load with proper dependency chain
 
-// Handler-specific configuration modal
-add_filter('dm_get_modal_content', function($content, $template) {
-    if ($template === 'handler-settings' && isset($_POST['context'])) {
-        $context = json_decode(wp_unslash($_POST['context']), true);
-        $handler_type = $context['handler_type'] ?? 'unknown';
-        
-        if ($handler_type === 'my_custom_handler') {
-            return MyPlugin\Handlers\CustomHandler::render_settings_modal($context);
-        }
-    }
-    return $content;
-}, 10, 2);
-```
+**Performance Features**:
+- Conditional asset loading based on page context
+- Priority-based loading (core assets first)
+- Single AJAX handler eliminates competing handlers
+- Template caching available at component level
 
-**Critical Implementation Details**:
-- **Method Visibility**: `render_template()` changed from private to public for filter system access
-- **Type Safety**: Explicit type casting for database operations: `(int)$pipeline_id`
-- **Context Access**: Components access `$_POST['context']` directly during AJAX (WordPress standard pattern)
-- **Default Title Generation**: Automatic title generation from template names: "delete-step" → "Delete Step"
-- **Fallback Handling**: Professional fallback content for steps without custom configuration
-- **Asset Dependencies**: Modal assets load with proper dependency chain: `dm-core-modal` → component assets
-
-**Performance Optimizations**:
-- **Conditional Asset Loading**: Modal assets only load on pages that require modal functionality
-- **Priority-Based Loading**: Core modal assets load before component-specific assets (priority 5 vs 10)
-- **Single AJAX Handler**: Universal `ModalAjax.php` eliminates competing AJAX handlers
-- **Template Caching**: Rendered templates can be cached at component level for performance
-
-**Debugging Solutions Implemented**:
-1. **WordPress Object Preservation**: Prevents overwriting of localized modal configuration data
-2. **Comprehensive Error Context**: Detailed error logging with template and context information
-3. **AJAX Response Handling**: Proper `wp_send_json_error()` structure handling in JavaScript
-4. **Template Validation**: Template existence verification before rendering
-5. **Context Debugging**: Development mode logging for modal context and template matching
-
-This architecture represents a paradigm shift in WordPress modal systems - achieving complete extensibility through pure filter patterns while maintaining WordPress compatibility and professional UX standards. The system enables unlimited modal types without core modifications, supporting the "Plugins Within Plugins" architecture philosophy.
+This architecture provides complete extensibility through pure filter patterns while maintaining WordPress compatibility. The system enables unlimited modal types without core modifications.
 
 ## System Architecture
 - **Entry Point**: `data-machine.php` with bootstrap sequence
@@ -517,7 +449,7 @@ This architecture represents a paradigm shift in WordPress modal systems - achie
 **Clean Instance Management**: Fresh service instances per call - simple and maintainable
 
 ### Dynamic Asset Architecture
-**Component-Owned Assets**: Revolutionary asset organization where each component owns its CSS/JS files in dedicated directories. AdminMenuAssets dynamically discovers and loads assets via filter system.
+**Component-Owned Assets**: Asset organization where each component owns its CSS/JS files in dedicated directories. AdminMenuAssets dynamically discovers and loads assets via filter system.
 
 **Dynamic Asset Discovery**: 
 ```php
@@ -553,9 +485,9 @@ add_filter('dm_get_page_assets', function($assets, $page_slug) {
 6. **Context Access**: Requires job_id: `apply_filters('dm_get_context', null, $job_id)`
 7. **CSS Namespace**: All admin CSS must use `dm-` prefix
 
-### "Plugins Within Plugins" - Revolutionary Architecture
+### "Plugins Within Plugins" Architecture
 
-**✅ COMPLETE**: All 23+ core components have dedicated *Filters.php files for complete self-containment. This represents a fundamental shift from traditional WordPress plugin architecture.
+**✅ COMPLETE**: All 23+ core components have dedicated *Filters.php files for complete self-containment. This provides a modular approach to WordPress plugin architecture.
 
 **Self-Registration Pattern**: Each component is completely autonomous:
 ```php
@@ -617,37 +549,14 @@ dm_register_twitter_filters();
 
 ### Advanced Pipeline Builder System
 
-**Current Status**: The Pipeline Builder has evolved into a sophisticated AJAX-driven interface with complete template reorganization and professional modal system integration.
+**Current Status**: AJAX-driven interface with organized template structure and modal system integration.
 
-**Template Architecture Reorganization**: Clean separation of concerns with organized directory structure:
-- **Modal Templates** (`/templates/modal/`): Step selection cards, handler selection cards, handler settings form, delete step warning
-- **Page Templates** (`/templates/page/`): Pipeline step cards, flow step cards, new pipeline creation card
-- **Legacy Template Removal**: Old mixed-purpose templates consolidated into purpose-specific organized structure
-- **Pure Rendering Focus**: Templates are purely presentational with no business logic embedded
-
-**Dynamic AJAX Integration**: Complete backend system handling all pipeline operations:
-- **PipelineAjax Class**: Comprehensive AJAX handler with nonce verification and user capability checks
-- **Real-time Content Generation**: Dynamic modal content based on step types and handler availability
-- **WordPress Security**: Standard nonce verification with parameter validation and sanitization
-- **Action-Based Routing**: Clean switch-based action handling for all pipeline operations
-
-**Professional Modal System**: Universal modal infrastructure integrated with pipeline operations:
-- **Component-Driven Content**: Modal content dynamically generated via filter system
-- **Seamless UX**: Modal interactions feel native to WordPress admin interface
-- **Context-Aware Rendering**: Modal content adapts based on pipeline state and step configuration
-- **AJAX-Native Design**: All interactions happen without page refreshes
-
-**Dynamic Step Type Discovery**: Real-time step and handler discovery system:
-- **Filter-Based Discovery**: Uses `dm_get_steps` and `dm_get_handlers` filters for dynamic content
-- **Handler Availability**: Shows available handlers per step type in real-time
-- **Configuration Awareness**: Detects which handlers have authentication or settings requirements
-- **Extension-Ready**: New step types and handlers appear automatically in the interface
-
-**JavaScript Architecture**: Clean separation of concerns in frontend code:
-- **Event-Driven Design**: Modern event handling with proper delegation
-- **AJAX Integration**: Seamless communication with PipelineAjax backend
-- **Modal Integration**: Works harmoniously with universal modal system
-- **Error Handling**: Comprehensive error handling with user-friendly messaging
+**Key Features**:
+- **AJAX Integration**: PipelineAjax class handles all operations with WordPress security
+- **Modal System**: Universal modal infrastructure integrated with pipeline operations
+- **Dynamic Discovery**: Real-time step and handler discovery through filter system
+- **Template Organization**: Separate modal and page templates with pure rendering focus
+- **JavaScript Architecture**: Event-driven design with proper error handling
 
 ### Receiver Step Framework - Webhook Integration Architecture
 
@@ -827,35 +736,14 @@ add_filter('dm_get_page_assets', function($assets, $page_slug) {
 add_filter('dm_get_modal_content', function($content, $template) {
     switch ($template) {
         case 'analytics-config':
-            // Access context via $_POST during AJAX (WordPress pattern)
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
             return MyPlugin\AnalyticsConfig::render($context);
-            
         case 'configure-step':
-            // Custom step configuration within universal configure-step template
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-            $step_type = $context['step_type'] ?? 'unknown';
-            
-            if ($step_type === 'my_custom_step') {
-                return '<div class="dm-custom-step-config">
-                    <h4>' . __('Custom Step Configuration', 'my-plugin') . '</h4>
-                    <form class="dm-step-config-form">
-                        <label>' . __('API Endpoint:', 'my-plugin') . '
-                            <input type="url" name="api_endpoint" value="' . esc_attr($context['api_endpoint'] ?? '') . '" required>
-                        </label>
-                        <label>' . __('Custom Setting:', 'my-plugin') . '
-                            <input type="text" name="custom_setting" value="' . esc_attr($context['custom_setting'] ?? '') . '">
-                        </label>
-                        <button type="submit">' . __('Save Configuration', 'my-plugin') . '</button>
-                    </form>
-                </div>';
+            if (($context['step_type'] ?? '') === 'my_custom_step') {
+                return MyPlugin\CustomStep::render_config($context);
             }
             break;
-            
-        case 'my-custom-dashboard':
-            // Completely custom modal template
-            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-            return MyPlugin\Dashboard::render_modal($context);
     }
     return $content;
 }, 10, 2);
@@ -873,16 +761,7 @@ add_filter('dm_get_logger', function($service) {
 }, 20);
 ```
 
-### AI-First Architecture Features
-1. **Pipeline+Flow Architecture**: Reusable templates with independent configured instances
-2. **Universal AI Integration**: Multi-provider client supporting OpenAI, Anthropic, Google, Grok, OpenRouter
-3. **WordPress-Native AI Workflows**: Visual pipeline builder using familiar WordPress patterns
-4. **Intelligent Content Processing**: Sophisticated AI workflows through standardized DataPacket flow
-5. **Engine Agnostic Design**: Zero hardcoded assumptions enabling unlimited AI step extensibility
-6. **Modular Component System**: Self-registering components with filter-based dependency management
-7. **Gutenberg-Inspired Admin**: Extends WordPress block concepts to AI pipeline interfaces
-8. **Parameter-Based Service Discovery**: Systematic service registration and discovery patterns
-9. **Universal Modal System**: Streamlined configuration interfaces throughout
-10. **Template Reuse System**: Build workflow templates once, deploy with multiple configurations
+### Architecture Summary
+**Core Features**: Pipeline+Flow architecture, universal AI integration (OpenAI, Anthropic, Google, Grok, OpenRouter), WordPress-native workflows, engine agnostic design, modular components, parameter-based service discovery, universal modal system, and template reuse.
 
-This represents a comprehensive AI content processing platform built entirely on WordPress architecture, enabling sophisticated AI workflows through a powerful Pipeline+Flow system while maintaining WordPress compatibility and familiar development patterns.
+**Platform**: Comprehensive AI content processing built on WordPress architecture with Pipeline+Flow system maintaining compatibility and familiar development patterns.
