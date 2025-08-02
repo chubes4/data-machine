@@ -166,14 +166,28 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ## Key Features
 
-### Advanced Pipeline Builder System
+### Revolutionary Universal Modal System
+100% filter-based modal architecture with zero hardcoded modal types enabling unlimited extensibility:
+- **Pure Filter Discovery**: Any component can register modal content via `dm_get_modal_content` filter without touching core code
+- **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "handler-selection") rather than component IDs
+- **Dual-Mode Step Discovery**: `apply_filters('dm_get_steps', [])` discovers all step types dynamically for UI generation
+- **Multi-Layer Security**: Nonce verification, capability checks, input sanitization following WordPress standards
+- **Component Autonomy**: Each component registers its own modal content generators independently via *Filters.php files
+- **Universal AJAX Handler**: Single `ModalAjax.php` processes all modal requests with comprehensive WordPress security
+- **Template Organization**: Clean separation of modal and page templates with organized directory structure
+- **Extension Pattern**: Custom step types can register configuration modals via appropriate template names
+- **Performance Optimized**: Conditional asset loading and priority-based dependency management
+
+### Advanced Pipeline Builder System  
 Professional AJAX-driven interface with sophisticated modal system integration:
-- **Dynamic Step Selection**: Real-time discovery of available step types through filter system
-- **Handler Auto-Discovery**: Automatically shows available handlers for each step type
-- **Professional Modal UX**: Seamless modal interactions with WordPress-native feel
-- **Template Organization**: Clean separation of modal and page templates with organized structure
-- **AJAX Backend**: Comprehensive PipelineAjax class with security verification and content generation
+- **Dynamic Step Selection**: Real-time discovery of available step types through revolutionary dual-mode filter system
+- **Handler Auto-Discovery**: Automatically shows available handlers for each step type with parameter-based filter discovery
+- **Professional Modal UX**: Seamless modal interactions with WordPress-native feel using universal modal infrastructure
+- **Template Architecture**: Clean separation of modal and page templates in organized directory structure
+- **AJAX Backend**: Comprehensive PipelineAjax class with multi-layer security verification and dynamic content generation
 - **Real-time Validation**: Immediate feedback on handler availability and configuration requirements
+- **Filter-Based Content**: All modal content generated via filter system enabling unlimited extensibility without core modifications
+- **Security-First Design**: Multi-layer nonce verification, capability checks, and input sanitization
 
 ### Pipeline+Flow Architecture
 Two-layer system enabling template reuse and independent workflow execution:
@@ -240,6 +254,168 @@ The filter-based architecture makes adding custom handlers straightforward. Comm
 - **Contact List Management**: CRM integration
 - **Image Processing**: Visual content workflows
 - **Custom APIs**: Any REST/GraphQL endpoint
+
+### Universal Modal System Extension Example
+
+The revolutionary modal architecture allows any plugin to add custom modals without touching core code:
+
+```php
+// Register custom modal content via consistent 2-parameter filter pattern
+add_filter('dm_get_modal_content', function($content, $template) {
+    switch ($template) {
+        case 'analytics-dashboard':
+            // Access context via WordPress AJAX standard pattern
+            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            
+            return '<div class="dm-analytics-modal">
+                <h3>' . __('Analytics Dashboard', 'my-plugin') . '</h3>
+                <div class="dm-metrics-grid">
+                    <div class="dm-metric">
+                        <strong>Total Pipelines:</strong> ' . esc_html($context['pipeline_count'] ?? 0) . '
+                    </div>
+                    <div class="dm-metric">
+                        <strong>Success Rate:</strong> ' . esc_html($context['success_rate'] ?? '0%') . '
+                    </div>
+                    <div class="dm-metric">
+                        <strong>Avg Processing Time:</strong> ' . esc_html($context['avg_time'] ?? '0s') . '
+                    </div>
+                </div>
+                <div class="dm-actions">
+                    <button class="button-primary" data-action="export">' . __('Export Data', 'my-plugin') . '</button>
+                    <button class="button-secondary" data-action="refresh">' . __('Refresh', 'my-plugin') . '</button>
+                </div>
+            </div>';
+            
+        case 'configure-step':
+            // Custom step configuration within universal configure-step template
+            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $step_type = $context['step_type'] ?? 'unknown';
+            
+            if ($step_type === 'analytics_processor') {
+                return '<div class="dm-step-config">
+                    <h4>' . __('Analytics Processor Configuration', 'my-plugin') . '</h4>
+                    <form class="dm-analytics-config-form">
+                        <div class="dm-form-row">
+                            <label>' . __('Data Source:', 'my-plugin') . '
+                                <select name="data_source" required>
+                                    <option value="">' . __('Select Source...', 'my-plugin') . '</option>
+                                    <option value="google_analytics">Google Analytics</option>
+                                    <option value="facebook_insights">Facebook Insights</option>
+                                    <option value="custom_api">Custom API</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dm-form-row">
+                            <label>' . __('Metrics to Track:', 'my-plugin') . '
+                                <select name="metrics[]" multiple size="4">
+                                    <option value="conversions">Conversions</option>
+                                    <option value="engagement">Engagement Rate</option>
+                                    <option value="retention">User Retention</option>
+                                    <option value="revenue">Revenue</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dm-form-row">
+                            <label>' . __('Report Frequency:', 'my-plugin') . '
+                                <select name="frequency">
+                                    <option value="hourly">Hourly</option>
+                                    <option value="daily" selected>Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="dm-form-actions">
+                            <button type="submit" class="button-primary">' . __('Save Configuration', 'my-plugin') . '</button>
+                            <button type="button" class="button-secondary dm-test-connection">' . __('Test Connection', 'my-plugin') . '</button>
+                        </div>
+                    </form>
+                </div>';
+            }
+            break;
+            
+        case 'export-results':
+            // Custom export modal with dynamic options
+            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $job_id = $context['job_id'] ?? null;
+            $pipeline_name = $context['pipeline_name'] ?? 'Unknown Pipeline';
+            
+            return '<div class="dm-export-modal">
+                <h4>' . sprintf(__('Export Results - %s', 'my-plugin'), esc_html($pipeline_name)) . '</h4>
+                <form class="dm-export-form">
+                    <input type="hidden" name="job_id" value="' . esc_attr($job_id) . '">
+                    <div class="dm-export-options">
+                        <label><input type="checkbox" name="include_metadata" checked> ' . __('Include Metadata', 'my-plugin') . '</label>
+                        <label><input type="checkbox" name="include_errors"> ' . __('Include Error Logs', 'my-plugin') . '</label>
+                        <label><input type="checkbox" name="compress_output" checked> ' . __('Compress Output', 'my-plugin') . '</label>
+                    </div>
+                    <div class="dm-format-selection">
+                        <label>' . __('Export Format:', 'my-plugin') . '
+                            <select name="format">
+                                <option value="json">JSON</option>
+                                <option value="csv">CSV</option>
+                                <option value="xml">XML</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button type="submit" class="button-primary">' . __('Export Now', 'my-plugin') . '</button>
+                </form>
+            </div>';
+    }
+    return $content;
+}, 10, 2);
+
+// JavaScript usage - any page can trigger modals with consistent interface
+jQuery(document).ready(function($) {
+    // Open analytics dashboard modal with comprehensive context
+    $('.analytics-button').on('click', function() {
+        dmCoreModal.open('analytics-dashboard', {
+            pipeline_count: 15,
+            success_rate: '94.2%',
+            avg_time: '2.3s',
+            title: 'Pipeline Analytics Dashboard'
+        });
+    });
+    
+    // Open step configuration modal for custom step types
+    $('.configure-analytics-step').on('click', function() {
+        dmCoreModal.open('configure-step', {
+            step_type: 'analytics_processor',
+            step_position: 2,
+            pipeline_id: $(this).data('pipeline-id'),
+            title: 'Configure Analytics Processor'
+        });
+    });
+    
+    // Open export modal with job context
+    $('.export-results').on('click', function() {
+        dmCoreModal.open('export-results', {
+            job_id: $(this).data('job-id'),
+            pipeline_name: $(this).data('pipeline-name'),
+            title: 'Export Pipeline Results'
+        });
+    });
+    
+    // Handle modal-specific actions
+    $(document).on('click', '[data-action="export"]', function() {
+        // Trigger secondary modal for export options
+        dmCoreModal.open('export-results', {
+            job_id: 'latest',
+            pipeline_name: 'Analytics Pipeline'
+        });
+    });
+});
+```
+
+**Key Benefits of Universal Modal Architecture**:
+- **Zero Core Modifications**: Add unlimited modal types without touching Data Machine code
+- **WordPress Standards**: Uses familiar WordPress AJAX and filter patterns with proper security
+- **Automatic Discovery**: New modal types appear immediately when registered via filter system
+- **Professional UX**: Seamless integration with WordPress admin interface and native styling
+- **Extensible Configuration**: Step types can register sophisticated configuration interfaces via template names
+- **Template Flexibility**: Support for both universal templates (like 'configure-step') and custom templates
+- **Context Preservation**: Rich context passing between modals and JavaScript components
+- **Security Built-in**: Multi-layer nonce verification and input sanitization automatically applied
 
 ## Practical Examples
 
@@ -520,16 +696,56 @@ cd lib/ai-http-client/ && composer test  # AI HTTP Client tests
 
 **Debugging**:
 ```javascript
-// Browser console
+// Browser console - Enable comprehensive debugging
 window.dmDebugMode = true;  // Enable detailed AJAX and modal debugging
+
+// PHP debugging - WordPress constants  
+define('WP_DEBUG', true);   // Enable extensive error_log output
+```
+
+**Universal Modal System Debugging**:
+```javascript
+// Monitor all modal AJAX calls and responses
+$(document).on('dm-modal-content-loaded', function(event, title, content) {
+    console.log('Modal loaded successfully:', title, content.length + ' characters');
+});
+
+// Debug modal failures with detailed error information
+$(document).on('dm-modal-error', function(event, error) {
+    console.error('Modal error occurred:', error);
+    console.log('Error details:', {
+        message: error.message,
+        template: error.template,
+        context: error.context
+    });
+});
+
+// Check modal system availability and configuration
+console.log('Modal system status:', {
+    available: typeof window.dmCoreModal !== 'undefined',
+    ajax_url: dmCoreModal?.ajax_url,
+    nonce: dmCoreModal?.get_modal_content_nonce,
+    strings: dmCoreModal?.strings
+});
+
+// Monitor filter discovery for step types
+console.log('Available step types:', apply_filters('dm_get_steps', []));
+
+// Test modal content generation for specific templates
+dmCoreModal.open('step-selection', { pipeline_id: 1, debug: true });
 ```
 
 **Monitoring**:
-- **Jobs**: Data Machine → Jobs (with real-time status updates)
-- **Pipelines**: Data Machine → Pipelines (AJAX-driven interface with dynamic content)
-- **Scheduler**: WordPress → Tools → Action Scheduler
-- **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables
-- **AJAX Debugging**: Browser network tab shows all pipeline builder AJAX calls
+- **Jobs**: Data Machine → Jobs (with real-time status updates and comprehensive logging)
+- **Pipelines**: Data Machine → Pipelines (AJAX-driven interface with universal modal system and dynamic step discovery)
+- **Scheduler**: WordPress → Tools → Action Scheduler (for automated pipeline execution)
+- **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables (two-layer Pipeline+Flow architecture)
+- **AJAX Debugging**: Browser network tab shows all pipeline builder and modal AJAX calls with security verification
+- **Universal Modal Debugging**: Console logs show modal content generation, filter discovery, and template matching
+- **Filter Discovery Monitoring**: `dm_get_steps`, `dm_get_modal_content`, `dm_get_handlers` filter calls visible in debug output
+- **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/` with organized structure
+- **Security Verification**: Multi-layer nonce verification and capability checks logged in WordPress debug mode
+- **Performance Metrics**: Asset loading order, dependency resolution, and conditional loading visible in browser DevTools
 
 ### Code Standards
 - **100% WordPress Filters**: All service access via `apply_filters()`

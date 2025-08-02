@@ -15,7 +15,10 @@ if (!defined('WPINC')) {
 }
 
 ?>
-<div class="dm-step-selection-container">
+<div class="dm-step-selection-container" data-pipeline-id="<?php echo esc_attr($pipeline_id ?? ''); ?>">
+    <!-- Hidden input to store pipeline ID for JavaScript access -->
+    <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id ?? ''); ?>" />
+    
     <div class="dm-step-selection-header">
         <p><?php esc_html_e('Select a step type to add to your pipeline', 'data-machine'); ?></p>
     </div>

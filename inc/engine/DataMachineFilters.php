@@ -106,7 +106,7 @@ function dm_register_direct_service_filters() {
  * Register parameter-based database service system.
  * 
  * Provides a unified filter for all database services using type parameters.
- * Pure parameter-based system with no legacy filter patterns.
+ * Pure parameter-based system enforcing architectural consistency.
  * 
  * Usage: $db_service = apply_filters('dm_get_database_service', null, 'jobs');
  * Usage: $db_service = apply_filters('dm_get_database_service', null, 'pipelines');
@@ -343,7 +343,7 @@ function dm_register_universal_handler_system() {
         $handlers = [];
         
         // Pure parameter-based system - handlers self-register via this same filter
-        // No legacy filter calls - complete architectural purity
+        // Complete architectural purity - single filter pattern throughout
         
         // Debug logging in development mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -456,7 +456,7 @@ function dm_register_utility_filters() {
      * Admin page discovery helper for AdminMenuAssets.
      * 
      * Returns all available admin pages by checking known page slugs.
-     * Maintains backward compatibility during transition period.
+     * Enforces consistent parameter-based page discovery.
      * 
      * Core Usage: $all_pages = apply_filters('dm_discover_admin_pages', []);
      */
@@ -556,7 +556,7 @@ function dm_register_utility_filters() {
      */
     add_filter('dm_get_item_identifier', function($identifier, $source_type, $raw_data) {
         // Pure parameter-based system - handlers register their extraction logic
-        // Core returns null to allow fallback detection in ProcessedItemsManager
+        // Core provides baseline - components extend functionality
         return $identifier;
     }, 5, 3);
     
@@ -567,20 +567,22 @@ function dm_register_utility_filters() {
      * their modal content generation via filters.
      * 
      * Core Usage (components self-register):
-     * add_filter('dm_get_modal_content', function($content, $modal_type, $context) {
-     *     if ($modal_type === 'custom_config' && $content === null) {
+     * add_filter('dm_get_modal_content', function($content, $template) {
+     *     if ($template === 'custom_config' && $content === null) {
+     *         // Access context via $_POST during AJAX (consistent pattern)
+     *         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
      *         return $this->generate_custom_modal_content($context);
      *     }
      *     return $content;
-     * }, 10, 3);
+     * }, 10, 2);
      * 
-     * Engine Usage: $content = apply_filters('dm_get_modal_content', null, $modal_type, $context);
+     * Engine Usage: $content = apply_filters('dm_get_modal_content', null, $template);
      */
-    add_filter('dm_get_modal_content', function($content, $modal_type, $context) {
-        // Pure parameter-based system - modal types register their content generation logic
-        // Core returns null to allow legacy fallback in Modal.php
+    add_filter('dm_get_modal_content', function($content, $template) {
+        // Pure parameter-based system - modal templates register their content generation logic
+        // Core returns null to allow components to handle their own templates
         return $content;
-    }, 5, 3);
+    }, 5, 2);
     
     /**
      * Register pure parameter-based modal save system.
@@ -600,7 +602,7 @@ function dm_register_utility_filters() {
      */
     add_filter('dm_save_modal_config', function($result, $modal_type, $context, $config_data) {
         // Pure parameter-based system - modal types register their save logic
-        // Core returns null to allow legacy fallback in Modal.php
+        // Core provides baseline - components implement specific save handlers
         return $result;
     }, 5, 4);
     
@@ -622,7 +624,7 @@ function dm_register_utility_filters() {
      */
     add_filter('dm_render_field', function($html, $field_type, $field_config, $field_value, $field_key) {
         // Pure parameter-based system - field types register their rendering logic
-        // Core returns null to allow legacy fallback in Modal.php
+        // Core provides baseline - components implement specific field renderers
         return $html;
     }, 5, 5);
     
@@ -694,7 +696,7 @@ function dm_register_step_auto_discovery_system() {
      * @param string $step_type Step type to register ('input', 'ai', 'output', etc.)
      * @return array|null Step configuration array or null if not found
      */
-    add_filter('dm_get_steps', function($step_config, $step_type) {
+    add_filter('dm_get_steps', function($step_config, $step_type = null) {
         // Pure filter hook - steps self-register in their own class files
         // No centralized registration - follows modular architecture
         return $step_config;

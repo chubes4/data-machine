@@ -30,7 +30,7 @@ $has_step_config = !empty($step_config_info);
         <div class="dm-step-actions">
             <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
                     data-template="delete-step"
-                    data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? 'current'); ?>"}'>
+                    data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
                 <?php esc_html_e('Delete', 'data-machine'); ?>
             </button>
             <?php if ($has_step_config): ?>

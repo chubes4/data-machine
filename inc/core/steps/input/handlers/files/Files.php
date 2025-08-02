@@ -68,15 +68,9 @@ class Files {
             return ['processed_items' => []];
         }
 
-        // Validate the file still exists
+        // No safety nets - configure your file paths correctly or fail
         if (!file_exists($next_file['persistent_path'])) {
-            $logger?->error('Files Input: File no longer exists on disk.', [
-                'module_id' => $module_id,
-                'file_path' => $next_file['persistent_path']
-            ]);
-            // Remove invalid file and try again
-            $this->remove_invalid_file($module_id, $next_file['persistent_path']);
-            return $this->get_input_data($module, $source_config, $user_id);
+            throw new Exception("File not found: {$next_file['persistent_path']}. Configure your file paths correctly.");
         }
 
         // Create input_data_packet using the file path as the identifier
@@ -148,35 +142,6 @@ class Files {
         return null; // All files have been processed
     }
 
-    /**
-     * This method appears to be unused legacy code.
-     * Configuration is now passed directly via source_config parameter.
-     *
-     * @param int $legacy_id Legacy ID (unused).
-     * @return array Empty array - configuration comes from source_config.
-     */
-    private function get_uploaded_files(int $legacy_id): array {
-        // This method is no longer needed as configuration is passed directly
-        // via the source_config parameter in get_input_data()
-        return [];
-    }
-
-    /**
-     * Remove invalid file (legacy method - no longer needed).
-     * File management is now handled at the flow configuration level.
-     *
-     * @param int $legacy_id Legacy ID (unused).
-     * @param string $file_path File path (unused).
-     */
-    private function remove_invalid_file(int $legacy_id, string $file_path): void {
-        // File management is now handled at the configuration level
-        // This method is kept for backward compatibility but does nothing
-        $logger = apply_filters('dm_get_logger', null);
-        $logger?->info('Files Input: Legacy remove_invalid_file called but ignored.', [
-            'legacy_id' => $legacy_id,
-            'file_path' => $file_path
-        ]);
-    }
 
     /**
      * Check if a MIME type represents a text file that should be read as content.

@@ -58,10 +58,6 @@ class PipelineAjax
                 $this->get_flow_step_card();
                 break;
             
-            case 'get_pipeline_step_card':
-                $this->get_pipeline_step_card();
-                break;
-            
             case 'get_handler_settings':
                 $this->get_handler_settings();
                 break;
@@ -72,6 +68,10 @@ class PipelineAjax
             
             case 'delete_step':
                 $this->delete_step_from_pipeline();
+                break;
+            
+            case 'create_draft_pipeline':
+                $this->create_draft_pipeline();
                 break;
             
             default:
@@ -185,14 +185,19 @@ class PipelineAjax
     }
 
     /**
-     * Add step to pipeline (placeholder for now)
+     * Add step to pipeline
      */
     private function add_step_to_pipeline()
     {
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
         if (empty($step_type)) {
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
+        }
+
+        if (empty($pipeline_id)) {
+            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
         }
 
         // Validate step type exists
@@ -201,11 +206,56 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
         }
 
-        // For now, just return success - database integration will come later
+        // Get database service
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        if (!$db_pipelines) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+
+        // Verify pipeline exists
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        if (!$pipeline) {
+            wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
+        }
+
+        // Get current step configuration
+        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        
+        // Find next available position
+        $next_position = 0;
+        if (!empty($current_steps)) {
+            $positions = array_column($current_steps, 'position');
+            $next_position = empty($positions) ? 0 : max($positions) + 10;
+        }
+
+        // Add the new step
+        $new_step = [
+            'step_type' => $step_type,
+            'position' => $next_position,
+            'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
+        ];
+
+        $current_steps[] = $new_step;
+
+        // Update pipeline with new step configuration (auto-save)
+        $success = $db_pipelines->update_pipeline($pipeline_id, [
+            'step_configuration' => $current_steps
+        ]);
+
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
+        }
+
         wp_send_json_success([
             'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
             'step_type' => $step_type,
-            'step_config' => $step_config
+            'step_config' => $step_config,
+            'pipeline_id' => $pipeline_id,
+            'position' => $next_position,
+            'step_html' => $this->render_template('page/pipeline-step-card', [
+                'step' => $new_step,
+                'pipeline_id' => $pipeline_id
+            ])
         ]);
     }
 
@@ -214,7 +264,7 @@ class PipelineAjax
      */
     private function add_flow_to_pipeline()
     {
-        $pipeline_id = sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
         if (empty($pipeline_id)) {
             wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
@@ -229,7 +279,7 @@ class PipelineAjax
         }
 
         // Verify pipeline exists
-        $pipeline = $db_pipelines->get_pipeline_by_id($pipeline_id);
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
         }
@@ -259,11 +309,21 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Failed to create flow', 'data-machine')]);
         }
 
+        // Get the created flow for template rendering
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Failed to retrieve created flow', 'data-machine')]);
+        }
+
+        // Render the flow instance card template
+        $flow_card_html = $this->render_template('page/flow-instance-card', ['flow' => $flow]);
+
         wp_send_json_success([
             'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
             'flow_id' => $flow_id,
             'flow_name' => $flow_name,
-            'pipeline_id' => $pipeline_id
+            'pipeline_id' => $pipeline_id,
+            'flow_card_html' => $flow_card_html
         ]);
     }
 
@@ -306,22 +366,16 @@ class PipelineAjax
     }
 
     /**
-     * Render template with data
+     * Render template with data (strict subdirectory structure only)
      */
     private function render_template($template_name, $data = [])
     {
-        // Support subdirectories: 'modal/delete-warning' or 'page/step-card' or 'step-card' (legacy)
+        // Enforce strict organized subdirectory structure: 'modal/template-name' or 'page/template-name'
         $template_path = __DIR__ . '/templates/' . $template_name . '.php';
         
-        // Check if file exists at specified path
+        // No fallbacks - template must exist in organized structure
         if (!file_exists($template_path)) {
-            // Try legacy path (direct in templates/) for backward compatibility
-            $legacy_path = __DIR__ . '/templates/' . basename($template_name) . '.php';
-            if (file_exists($legacy_path)) {
-                $template_path = $legacy_path;
-            } else {
-                return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
-            }
+            return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
         }
 
         // Extract data variables for template use
@@ -333,40 +387,6 @@ class PipelineAjax
         return ob_get_clean();
     }
 
-    /**
-     * Generate pipeline step card HTML using template system
-     */
-    private function get_pipeline_step_card()
-    {
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-        
-        if (empty($step_type)) {
-            wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
-        }
-
-        // Validate step type exists using filter system
-        $step_config = apply_filters('dm_get_steps', null, $step_type);
-        if (!$step_config) {
-            wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
-        }
-
-        // Prepare data for template
-        $template_data = [
-            'step' => [
-                'step_type' => $step_type,
-                'step_config' => $step_config  // Include step config for pipeline level
-            ]
-        ];
-
-        // Render template
-        $html = $this->render_template('page/pipeline-step-card', $template_data);
-
-        wp_send_json_success([
-            'html' => $html,
-            'step_type' => $step_type,
-            'step_config' => $step_config
-        ]);
-    }
 
     /**
      * Get handler settings form HTML using template system
@@ -414,7 +434,7 @@ class PipelineAjax
      */
     private function save_pipeline()
     {
-        $pipeline_id = sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         $pipeline_name = sanitize_text_field(wp_unslash($_POST['pipeline_name'] ?? ''));
         $step_configuration_raw = wp_unslash($_POST['step_configuration'] ?? '[]');
         
@@ -458,10 +478,9 @@ class PipelineAjax
             'step_configuration' => $step_configuration
         ];
         
-        $is_new_pipeline = ($pipeline_id === 'new' || empty($pipeline_id));
-        
-        if ($is_new_pipeline) {
-            // Create new pipeline
+        // Handle both create and update cases based on pipeline_id
+        if (empty($pipeline_id)) {
+            // Create new pipeline (when Add New Pipeline form is saved)
             $new_pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
             
             if (!$new_pipeline_id) {
@@ -478,7 +497,7 @@ class PipelineAjax
             
         } else {
             // Update existing pipeline
-            $success = $db_pipelines->update_pipeline((int)$pipeline_id, $pipeline_data);
+            $success = $db_pipelines->update_pipeline($pipeline_id, $pipeline_data);
             
             if (!$success) {
                 wp_send_json_error(['message' => __('Failed to update pipeline', 'data-machine')]);
@@ -486,7 +505,7 @@ class PipelineAjax
             
             wp_send_json_success([
                 'message' => sprintf(__('Pipeline "%s" updated successfully', 'data-machine'), $pipeline_name),
-                'pipeline_id' => (int)$pipeline_id,
+                'pipeline_id' => $pipeline_id,
                 'pipeline_name' => $pipeline_name,
                 'is_new' => false,
                 'step_count' => count($step_configuration)
@@ -500,7 +519,7 @@ class PipelineAjax
     private function delete_step_from_pipeline()
     {
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-        $pipeline_id = sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
         if (empty($step_type) || empty($pipeline_id)) {
             wp_send_json_error(['message' => __('Step type and pipeline ID are required', 'data-machine')]);
@@ -517,7 +536,7 @@ class PipelineAjax
         }
 
         // Get current pipeline configuration
-        $pipeline = $db_pipelines->get_pipeline_by_id($pipeline_id);
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
         }
@@ -578,6 +597,46 @@ class PipelineAjax
             'step_type' => $step_type,
             'affected_flows' => $flow_count,
             'remaining_steps' => count($updated_steps)
+        ]);
+    }
+
+    /**
+     * Create a new draft pipeline in the database
+     */
+    private function create_draft_pipeline()
+    {
+        // Get database service
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        if (!$db_pipelines) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+
+        // Create draft pipeline with default name
+        $pipeline_data = [
+            'pipeline_name' => __('Draft Pipeline', 'data-machine'),
+            'step_configuration' => []
+        ];
+
+        $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
+        
+        if (!$pipeline_id) {
+            wp_send_json_error(['message' => __('Failed to create draft pipeline', 'data-machine')]);
+        }
+
+        // Get the created pipeline for template rendering
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        if (!$pipeline) {
+            wp_send_json_error(['message' => __('Failed to retrieve created pipeline', 'data-machine')]);
+        }
+
+        // Render the pipeline card template
+        $pipeline_card_html = $this->render_template('page/new-pipeline-card', ['pipeline' => $pipeline]);
+
+        wp_send_json_success([
+            'message' => __('Draft pipeline created successfully', 'data-machine'),
+            'pipeline_id' => $pipeline_id,
+            'pipeline_name' => $pipeline_data['pipeline_name'],
+            'pipeline_card_html' => $pipeline_card_html
         ]);
     }
 }

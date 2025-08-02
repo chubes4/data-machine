@@ -65,7 +65,7 @@ class Flows {
             PRIMARY KEY (flow_id),
             KEY pipeline_id (pipeline_id),
             KEY user_id (user_id),
-            KEY scheduling_status (((json_extract(scheduling_config, '$.status'))))
+            KEY created_at (created_at)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');

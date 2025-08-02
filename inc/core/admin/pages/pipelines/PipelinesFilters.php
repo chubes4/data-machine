@@ -112,42 +112,8 @@ function dm_register_pipelines_admin_page_filters() {
         $ajax_handler->handle_pipeline_ajax();
     });
     
-    // Modal content AJAX handler - Using existing dm_get_modal_content filter system
-    add_action('wp_ajax_dm_get_modal_content', function() {
-        // Verify nonce
-        if (!check_ajax_referer('dm_get_modal_content', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
-        }
-
-        // Verify user capabilities
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-        }
-
-        // Get template from POST data - exact same pattern as handlers/steps (2 parameters only)
-        $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
-        
-        if (empty($template)) {
-            wp_send_json_error(['message' => __('Template parameter is required', 'data-machine')]);
-        }
-
-        // Pure 2-parameter pattern like all existing systems
-        $content = apply_filters('dm_get_modal_content', null, $template);
-        
-        if ($content === null) {
-            wp_send_json_error(['message' => __('Modal content not found', 'data-machine')]);
-        }
-
-        // Get title from context if available
-        $context_raw = wp_unslash($_POST['context'] ?? '{}');
-        $context = json_decode($context_raw, true);
-        $title = $context['title'] ?? ucfirst(str_replace(['_', '-'], ' ', $template));
-        
-        wp_send_json_success([
-            'content' => $content,
-            'title' => $title
-        ]);
-    });
+    // AJAX handler removed - now handled by universal ModalAjax.php
+    // This eliminates competing AJAX handlers and ensures single source of truth
     
     // Modal content filter registration - Pure 2-parameter pattern like all existing systems
     add_filter('dm_get_modal_content', function($content, $template) {
@@ -159,12 +125,38 @@ function dm_register_pipelines_admin_page_filters() {
         
         switch ($template) {
             case 'step-selection':
-                return $pipelines_instance->render_template('modal/step-selection-cards', $context);
+                // Revolutionary Dual-Mode Step Discovery Pattern
+                //
+                // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
+                // This enables the modal system to display all available step types without 
+                // hardcoding any step types. New step types automatically appear when registered.
+                //
+                // SPECIFIC MODE: apply_filters('dm_get_steps', null, 'input') - Returns single type
+                // Used elsewhere for getting specific step configurations.
+                //
+                // This dual-mode pattern enables both comprehensive discovery for UI generation
+                // and specific lookups for configuration, maintaining architectural consistency.
+                $all_steps = apply_filters('dm_get_steps', []);
+                
+                return $pipelines_instance->render_template('modal/step-selection-cards', array_merge($context, [
+                    'all_steps' => $all_steps
+                ]));
                 
             case 'handler-selection':
                 $step_type = $context['step_type'] ?? 'unknown';
+                
+                // Get available handlers using parameter-based filter discovery
+                $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
+                
+                if (empty($available_handlers)) {
+                    return '<div class="dm-no-handlers">
+                        <p>' . sprintf(__('No handlers available for %s steps', 'data-machine'), esc_html($step_type)) . '</p>
+                    </div>';
+                }
+                
                 return $pipelines_instance->render_template('modal/handler-selection-cards', [
-                    'step_type' => $step_type
+                    'step_type' => $step_type,
+                    'handlers' => $available_handlers
                 ]);
                 
             case 'delete-step':
@@ -172,10 +164,10 @@ function dm_register_pipelines_admin_page_filters() {
                 $step_type = $context['step_type'] ?? 'unknown';
                 
                 $affected_flows = [];
-                if ($pipeline_id) {
+                if ($pipeline_id && is_numeric($pipeline_id)) {
                     $db_flows = apply_filters('dm_get_database_service', null, 'flows');
                     if ($db_flows) {
-                        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+                        $affected_flows = $db_flows->get_flows_for_pipeline((int)$pipeline_id);
                     }
                 }
                 
@@ -198,12 +190,21 @@ function dm_register_pipelines_admin_page_filters() {
                 $modal_type = $context['modal_type'] ?? 'default';
                 $config_type = $context['config_type'] ?? 'default';
                 
-                // Allow components to register their own step configuration modals
-                $step_config_content = apply_filters('dm_get_step_config_modal', null, $step_type, $context);
-                
-                if ($step_config_content !== null) {
-                    return $step_config_content;
-                }
+                // Extensible Step Configuration Modal Pattern
+                //
+                // This filter enables any step type to register custom configuration interfaces:
+                // add_filter('dm_get_modal_content', function($content, $template) {
+                //     if ($template === 'configure-step' && $step_type === 'my_custom_step') {
+                //         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+                //         return '<div>Custom step configuration form</div>';
+                //     }
+                //     return $content;
+                // }, 10, 2);
+                //
+                // This maintains the architecture's extensibility - step types can provide
+                // sophisticated configuration interfaces without modifying core modal code.
+                // Step types register their own modal content for 'configure-step' template
+                // Note: Removed recursive filter call - step types handle their own content via this same filter
                 
                 // Professional fallback for steps without custom configuration
                 return '<div class="dm-step-config-placeholder">
@@ -219,7 +220,7 @@ function dm_register_pipelines_admin_page_filters() {
                         </div>
                     </div>
                     <div class="dm-placeholder-footer">
-                        <p><em>' . __('Developers: Register custom configuration via the dm_get_step_config_modal filter.', 'data-machine') . '</em></p>
+                        <p><em>' . __('Developers: Register custom configuration via the dm_get_modal_content filter with appropriate template names.', 'data-machine') . '</em></p>
                     </div>
                 </div>';
         }

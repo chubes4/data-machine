@@ -71,6 +71,10 @@ function dm_register_modal_system_filters() {
         return $assets;
     }, 5, 2); // Priority 5 = loads before page-specific assets (priority 10)
     
+    // Register universal AJAX handler for all modal content requests
+    // Uses pure filter-based system with template parameter matching
+    $modal_ajax_handler = new ModalAjax();
+    
     // Pure infrastructure - NO component-specific logic
     // Individual components will register their own modal content generators
     // in their own *Filters.php files using the dm_get_modal_content filter

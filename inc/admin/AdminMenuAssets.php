@@ -172,10 +172,17 @@ class AdminMenuAssets {
             return; // No registered page for this hook
         }
         
-        // Get page-specific assets via filter system
-        $page_assets = apply_filters('dm_get_page_assets', null, $current_page_slug);
+        // Get page-specific assets via filter system with proper merging
+        // Initialize with empty array to accumulate all filter responses
+        $accumulated_assets = [
+            'css' => [],
+            'js' => []
+        ];
         
-        if ($page_assets) {
+        // Apply filters to accumulate assets from all components
+        $page_assets = apply_filters('dm_get_page_assets', $accumulated_assets, $current_page_slug);
+        
+        if (!empty($page_assets['css']) || !empty($page_assets['js'])) {
             $this->enqueue_page_assets($page_assets, $current_page_slug);
         }
     }

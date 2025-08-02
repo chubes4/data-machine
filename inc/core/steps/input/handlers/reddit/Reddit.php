@@ -133,9 +133,8 @@ class Reddit {
 			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
 		]);
 
-		// --- Legacy ownership verification removed ---
-		// Note: Ownership verification now handled at the flow/job level
-		// Individual handlers no longer need to verify permissions
+		// Ownership verification handled at the flow/job level
+		// Individual handlers focus on data processing only
 
 		// --- Configuration (from nested config structure) ---
 		$config = $source_config['reddit'] ?? [];

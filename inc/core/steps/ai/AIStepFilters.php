@@ -55,7 +55,20 @@ function dm_register_ai_step_filters() {
      * @param string $step_type Step type being requested
      * @return array|mixed Step configuration or original value
      */
-    add_filter('dm_get_steps', function($step_config, $step_type) {
+    add_filter('dm_get_steps', function($step_config, $step_type = null) {
+        // Discovery mode: return all steps when no type specified
+        if (empty($step_type)) {
+            return array_merge($step_config ?: [], [
+                'ai' => [
+                    'label' => __('AI Processing', 'data-machine'),
+                    'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
+                    'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
+                    'consume_all_packets' => true
+                ]
+            ]);
+        }
+        
+        // Specific mode: return step config for matching type
         if ($step_type === 'ai') {
             return [
                 'label' => __('AI Processing', 'data-machine'),
@@ -129,9 +142,20 @@ function dm_register_ai_step_filters() {
      * @param array $context Modal context data
      * @return string|mixed Modal HTML content or original value
      */
-    add_filter('dm_get_modal_content', function($content, $modal_type, $context = []) {
+    add_filter('dm_get_modal_content', function($content, $template) {
         // Handle AI step configuration modals
-        if ($modal_type === 'ai_step_config' && $content === null) {
+        if ($template === 'configure-step' && $content === null) {
+            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $step_type = $context['step_type'] ?? '';
+            
+            // Only handle AI step configuration
+            if ($step_type !== 'ai') {
+                return $content;
+            }
+            
+            if (!is_array($context)) {
+                $context = [];
+            }
             
             // Extract step key from context for scoped configuration
             $step_key = $context['step_key'] ?? $context['job_id'] . '_ai_' . time(); 
@@ -160,7 +184,7 @@ function dm_register_ai_step_filters() {
         }
         
         return $content;
-    }, 10, 3);
+    }, 10, 2);
     
     /**
      * AI Step Configuration Registration

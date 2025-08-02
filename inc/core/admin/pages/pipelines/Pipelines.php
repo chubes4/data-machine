@@ -24,31 +24,8 @@ class Pipelines
      */
     public function __construct()
     {
-        // Clean slate - only essential asset registration
-        $this->register_page_assets();
-    }
-
-    /**
-     * Register clean slate assets.
-     */
-    public function register_page_assets()
-    {
-        add_filter('dm_get_page_assets', function($assets, $page_slug) {
-            if ($page_slug !== 'pipelines') {
-                return $assets;
-            }
-            
-            return [
-                'css' => [
-                    'dm-admin-pipelines' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/css/admin-pipelines.css',
-                        'deps' => [],
-                        'media' => 'all'
-                    ]
-                ]
-                // No JavaScript yet - clean slate
-            ];
-        }, 10, 2);
+        // Asset registration now handled by PipelinesFilters.php
+        // This eliminates competing filter registrations that overwrite modal assets
     }
 
     /**
@@ -80,126 +57,28 @@ class Pipelines
                 </p>
             </div>
 
-            <!-- Card-Based Layout -->
+            <!-- Universal Pipeline Cards Container -->
             <div class="dm-pipeline-cards-container">
                 <div class="dm-pipelines-list">
-                    <!-- New Pipeline Section (always at top when needed) -->
-                    <div id="dm-new-pipeline-section" style="<?php echo empty($all_pipelines) ? '' : 'display: none;'; ?>">
-                        <?php echo $this->render_template('page/new-pipeline-card'); ?>
-                    </div>
-
-                    <!-- Add New Pipeline Button (only show when pipelines exist) -->
+                    <!-- Show existing pipelines (latest first) -->
                     <?php if (!empty($all_pipelines)): ?>
-                        <div class="dm-add-pipeline-section">
-                            <button type="button" class="button button-secondary dm-add-new-pipeline-btn">
-                                <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
-                            </button>
-                        </div>
+                        <?php foreach (array_reverse($all_pipelines) as $pipeline): ?>
+                            <?php echo $this->render_template('page/new-pipeline-card', ['pipeline' => $pipeline]); ?>
+                        <?php endforeach; ?>
                     <?php endif; ?>
 
-                    <!-- Existing Pipelines -->
-                    <?php foreach ($all_pipelines as $pipeline): ?>
-                        <?php $this->render_pipeline_with_flows($pipeline); ?>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render pipeline card with its associated flows.
-     */
-    private function render_pipeline_with_flows($pipeline)
-    {
-        $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : $pipeline['pipeline_id'];
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $created_at = is_object($pipeline) ? $pipeline->created_at : $pipeline['created_at'];
-        
-        // Get pipeline steps using proper filter pattern
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-        $pipeline_steps = $db_pipelines ? $db_pipelines->get_pipeline_step_configuration($pipeline_id) : [];
-        $step_count = count($pipeline_steps);
-        
-        // Get flows for this pipeline using proper filter pattern
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
-        $pipeline_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
-        
-        ?>
-        <div class="dm-pipeline-card" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-            <!-- Pipeline Header -->
-            <div class="dm-pipeline-header">
-                <div class="dm-pipeline-title-section">
-                    <h3 class="dm-pipeline-title"><?php echo esc_html($pipeline_name ?: __('Unnamed Pipeline', 'data-machine')); ?></h3>
-                    <div class="dm-pipeline-meta">
-                        <span class="dm-step-count"><?php echo esc_html(sprintf(__('%d steps', 'data-machine'), $step_count)); ?></span>
-                        <span class="dm-flow-count"><?php echo esc_html(sprintf(__('%d flows', 'data-machine'), count($pipeline_flows))); ?></span>
-                        <span class="dm-created-date"><?php echo esc_html(sprintf(__('Created %s', 'data-machine'), date('M j, Y', strtotime($created_at)))); ?></span>
+                    <!-- Add New Pipeline Button (always visible) -->
+                    <div class="dm-add-pipeline-section">
+                        <button type="button" class="button button-secondary dm-add-new-pipeline-btn">
+                            <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
+                        </button>
                     </div>
                 </div>
-                <div class="dm-pipeline-actions">
-                    <button type="button" class="button dm-edit-pipeline-btn" 
-                            data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-                        <?php esc_html_e('Edit Steps', 'data-machine'); ?>
-                    </button>
-                    <button type="button" class="button dm-add-flow-btn" 
-                            data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-                        <?php esc_html_e('Add Flow', 'data-machine'); ?>
-                    </button>
-                    <button type="button" class="button button-link-delete dm-delete-pipeline-btn" 
-                            data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-                        <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Pipeline Steps Section (Template Level) -->
-            <div class="dm-pipeline-steps-section">
-                <div class="dm-section-header">
-                    <h4><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h4>
-                    <p class="dm-section-description"><?php esc_html_e('Step sequence for this pipeline', 'data-machine'); ?></p>
-                </div>
-                <div class="dm-pipeline-steps">
-                    <?php if ($step_count > 0): ?>
-                        <?php foreach ($pipeline_steps as $step): ?>
-                            <?php $this->render_pipeline_step_card($step, $pipeline_id); ?>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="dm-no-steps">
-                            <p><?php esc_html_e('No steps configured yet', 'data-machine'); ?></p>
-                            <button type="button" class="button button-small dm-edit-pipeline-btn" 
-                                    data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-                                <?php esc_html_e('Add Steps', 'data-machine'); ?>
-                            </button>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            
-            <!-- Associated Flows -->
-            <div class="dm-pipeline-flows">
-                <div class="dm-flows-header">
-                    <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
-                </div>
-                <div class="dm-flows-list">
-                    <?php if (empty($pipeline_flows)): ?>
-                        <div class="dm-no-flows">
-                            <p><?php esc_html_e('No flows configured for this pipeline', 'data-machine'); ?></p>
-                            <button type="button" class="button button-small dm-add-flow-btn" 
-                                    data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-                                <?php esc_html_e('Create First Flow', 'data-machine'); ?>
-                            </button>
-                        </div>
-                    <?php else: ?>
-                        <?php foreach ($pipeline_flows as $flow): ?>
-                            <?php $this->render_flow_card($flow, $pipeline_steps); ?>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
             </div>
         </div>
         <?php
     }
+
 
     /**
      * Render pipeline step card (template level, no handlers).
@@ -425,22 +304,16 @@ class Pipelines
     }
 
     /**
-     * Render template with data
+     * Render template with data (strict subdirectory structure only)
      */
-    private function render_template($template_name, $data = [])
+    public function render_template($template_name, $data = [])
     {
-        // Support subdirectories: 'modal/delete-warning' or 'page/step-card' or 'step-card' (legacy)
+        // Enforce strict organized subdirectory structure: 'modal/template-name' or 'page/template-name'
         $template_path = __DIR__ . '/templates/' . $template_name . '.php';
         
-        // Check if file exists at specified path
+        // No fallbacks - template must exist in organized structure
         if (!file_exists($template_path)) {
-            // Try legacy path (direct in templates/) for backward compatibility
-            $legacy_path = __DIR__ . '/templates/' . basename($template_name) . '.php';
-            if (file_exists($legacy_path)) {
-                $template_path = $legacy_path;
-            } else {
-                return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
-            }
+            return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
         }
 
         // Extract data variables for template use
@@ -453,5 +326,5 @@ class Pipelines
     }
 }
 
-// Auto-instantiate for self-registration
-new Pipelines();
+// Auto-instantiation removed - prevents repeated filter registration
+// Page registration now handled entirely by PipelinesFilters.php

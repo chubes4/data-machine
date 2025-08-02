@@ -237,11 +237,15 @@ function dm_deactivate_plugin() {
 function activate_data_machine() {
 	// Action Scheduler is now bundled as a library - no dependency check needed
 
-	// Initialize database service system for activation process
+	// Load database components first so services are available during activation
+	dm_autoload_core_component_directory('inc/core/database/');
+
+	// Initialize filter systems needed for activation
+	dm_register_wpdb_service_filter();
 	dm_register_database_service_system();
 
 	// Create/Update all database tables using filter-based database service access
-	// Consistent with the plugin's pure filter-based architecture
+	// Maintains architectural consistency with filter-based approach
 	$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
 	if ($db_pipelines) {
 		$db_pipelines->create_table();

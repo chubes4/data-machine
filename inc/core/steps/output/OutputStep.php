@@ -382,7 +382,7 @@ class OutputStep {
         ];
     }
 
-    // Legacy method removed - OutputStep receives DataPackets from engine via $data_packets parameter
+    // OutputStep receives DataPackets from engine via $data_packets parameter
 
     /**
      * Store data packet for current step.

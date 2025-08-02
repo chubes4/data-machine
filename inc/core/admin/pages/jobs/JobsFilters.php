@@ -57,28 +57,37 @@ function dm_register_jobs_admin_page_filters() {
     // Asset registration - Jobs provides its own CSS and JS assets
     add_filter('dm_get_page_assets', function($assets, $page_slug) {
         if ($page_slug === 'jobs') {
-            return [
-                'css' => [
-                    'dm-admin-jobs' => [
-                        'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
-                        'deps' => [],
-                        'media' => 'all'
-                    ]
-                ],
-                'js' => [
-                    'dm-jobs-admin' => [
-                        'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmJobsAdmin',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'strings' => [
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'error' => __('An error occurred', 'data-machine'),
-                                ]
-                            ]
+            // Initialize assets array if null
+            if (!is_array($assets)) {
+                $assets = [];
+            }
+            
+            // Ensure CSS and JS arrays exist
+            if (!isset($assets['css'])) {
+                $assets['css'] = [];
+            }
+            if (!isset($assets['js'])) {
+                $assets['js'] = [];
+            }
+            
+            // Add jobs-specific assets to existing array (instead of overwriting)
+            $assets['css']['dm-admin-jobs'] = [
+                'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
+                'deps' => [],
+                'media' => 'all'
+            ];
+            
+            $assets['js']['dm-jobs-admin'] = [
+                'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
+                'deps' => ['jquery', 'dm-core-modal'],  // Add dm-core-modal dependency for future modal support
+                'in_footer' => true,
+                'localize' => [
+                    'object' => 'dmJobsAdmin',
+                    'data' => [
+                        'ajax_url' => admin_url('admin-ajax.php'),
+                        'strings' => [
+                            'loading' => __('Loading...', 'data-machine'),
+                            'error' => __('An error occurred', 'data-machine'),
                         ]
                     ]
                 ]

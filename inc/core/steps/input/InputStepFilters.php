@@ -31,7 +31,19 @@ if (!defined('ABSPATH')) {
 function dm_register_input_step_filters() {
     
     // Step registration - Input declares itself as 'input' step type
-    add_filter('dm_get_steps', function($step_config, $step_type) {
+    add_filter('dm_get_steps', function($step_config, $step_type = null) {
+        // Discovery mode: return all steps when no type specified
+        if (empty($step_type)) {
+            return array_merge($step_config ?: [], [
+                'input' => [
+                    'label' => __('Input', 'data-machine'),
+                    'description' => __('Collect data from external sources', 'data-machine'),
+                    'class' => InputStep::class
+                ]
+            ]);
+        }
+        
+        // Specific mode: return step config for matching type
         if ($step_type === 'input') {
             return [
                 'label' => __('Input', 'data-machine'),

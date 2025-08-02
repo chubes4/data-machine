@@ -16,9 +16,19 @@
     'use strict';
 
     /**
-     * Core Modal System
+     * Core Modal System - WordPress Integration Pattern
+     * 
+     * CRITICAL FIX: Preserve WordPress-localized object with nonce and configuration
+     * 
+     * This pattern prevents overwriting the WordPress-localized dmCoreModal object that
+     * contains essential data like ajax_url, nonces, and localized strings. The Object.assign
+     * approach extends the existing object rather than replacing it, maintaining WordPress
+     * integration while adding modal functionality.
+     * 
+     * Without this pattern, modal AJAX calls fail due to missing nonce data.
      */
-    window.dmCoreModal = {
+    window.dmCoreModal = window.dmCoreModal || {};
+    Object.assign(window.dmCoreModal, {
         
         /**
          * Initialize the core modal system
@@ -56,8 +66,10 @@
                     if (response.success) {
                         this.showContent(response.data.title || 'Modal', response.data.content);
                     } else {
-                        console.error('DM Core Modal Error:', response.data.message);
-                        this.showError(response.data.message || 'Error loading modal content');
+                        // Handle wp_send_json_error() response structure
+                        const errorMessage = response.data?.message || response.data || 'Error loading modal content';
+                        console.error('DM Core Modal Error:', errorMessage);
+                        this.showError(errorMessage);
                     }
                 },
                 error: (xhr, status, error) => {
@@ -234,7 +246,7 @@
                 }
             }
         }
-    };
+    });
 
     // Initialize when document is ready
     $(document).ready(function() {
