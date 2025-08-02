@@ -62,12 +62,11 @@ Flow C: Custom Content (Manual)
 ### Known Issues  
 - **Limited Testing Coverage**: Initial PHPUnit infrastructure established with Unit and Integration test suites
 - **Ongoing Test Development**: Continuous expansion of test coverage for core components
-- **Debug Logging Active**: Extensive `error_log()` calls throughout codebase should be conditional on WP_DEBUG or removed for production
 
 ### Future Plans
 - **Webhook Integration**: Complete Receiver Step implementation with real-time data reception
 - **Enhanced Testing**: Expand PHPUnit coverage across all components
-- **Performance Optimization**: Conditional debug logging and additional caching strategies
+- **Performance Optimization**: Additional caching strategies and query optimization
 - **API Documentation**: Comprehensive developer API reference
 - **Third-Party Integrations**: Additional social media and content management platforms
 
@@ -119,7 +118,7 @@ cd ../..
 
 # Debugging
 window.dmDebugMode = true;  # Browser debugging (enables AJAX and modal debugging)
-define('WP_DEBUG', true);   # WordPress debugging (enables extensive error_log output)
+define('WP_DEBUG', true);   # WordPress debugging (enables conditional error_log output)
 
 # Pipeline Builder Development
 # Template structure: /inc/core/admin/pages/pipelines/templates/modal/ and /templates/page/
