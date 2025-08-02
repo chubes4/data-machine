@@ -4,9 +4,9 @@
  * 
  * "Plugins Within Plugins" Architecture Implementation
  * 
- * This file serves as the Pipelines Admin Page's "main plugin file" - the complete
- * interface contract with the engine, demonstrating complete self-containment
- * and zero bootstrap dependencies.
+ * Unified admin page architecture with embedded asset configuration and modal integration.
+ * Demonstrates complete self-containment through direct dm_get_admin_page registration
+ * with zero bridge systems or legacy compatibility layers.
  * 
  * @package DataMachine
  * @subpackage Core\Admin\Pages\Pipelines
@@ -30,81 +30,78 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_pipelines_admin_page_filters() {
     
-    // Admin page registration - Pipelines declares itself via parameter-based system
+    // Unified admin page registration with embedded asset configuration
+    // Eliminates bridge systems through direct dm_get_admin_page integration
     add_filter('dm_get_admin_page', function($config, $page_slug) {
         if ($page_slug === 'pipelines') {
+            $pipelines_instance = new Pipelines();
+            
             return [
                 'page_title' => __('Pipelines', 'data-machine'),
                 'menu_title' => __('Pipelines', 'data-machine'),
                 'capability' => 'manage_options',
-                'position' => 10
-            ];
-        }
-        return $config;
-    }, 10, 2);
-    
-    // Page content registration - Pipelines provides its content via filter
-    add_filter('dm_render_admin_page', function($content, $page_slug) {
-        if ($page_slug === 'pipelines') {
-            $pipelines_instance = new Pipelines();
-            ob_start();
-            $pipelines_instance->render_content();
-            return ob_get_clean();
-        }
-        return $content;
-    }, 10, 2);
-    
-    // Asset registration - Pipelines provides its own CSS and JS assets  
-    add_filter('dm_get_page_assets', function($assets, $page_slug) {
-        if ($page_slug === 'pipelines') {
-            // Initialize assets array if null
-            if (!is_array($assets)) {
-                $assets = [];
-            }
-            
-            // Ensure CSS and JS arrays exist
-            if (!isset($assets['css'])) {
-                $assets['css'] = [];
-            }
-            if (!isset($assets['js'])) {
-                $assets['js'] = [];
-            }
-            
-            // Add pipeline-specific assets to existing array (instead of overwriting)
-            $assets['css']['dm-admin-pipelines'] = [
-                'file' => 'inc/core/admin/pages/pipelines/assets/css/admin-pipelines.css',
-                'deps' => [],
-                'media' => 'all'
-            ];
-            
-            // Pipeline modal assets removed - now using universal modal system
-            
-            $assets['js']['dm-pipeline-builder'] = [ 
-                'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
-                'deps' => ['jquery', 'jquery-ui-sortable'],
-                'in_footer' => true,
-                'localize' => [
-                    'object' => 'dmPipelineBuilder',
-                    'data' => [
-                        'ajax_url' => admin_url('admin-ajax.php'),
-                        'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
-                        'strings' => [
-                            'error' => __('An error occurred', 'data-machine'),
-                            'success' => __('Success', 'data-machine'),
-                            'confirm' => __('Are you sure?', 'data-machine'),
-                            'cancel' => __('Cancel', 'data-machine'),
-                            'delete' => __('Delete', 'data-machine'),
-                            'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
-                            'saving' => __('Saving...', 'data-machine'),
-                            'loading' => __('Loading...', 'data-machine'),
-                            'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
-                            'atLeastOneStep' => __('At least one step is required', 'data-machine')
+                'position' => 10,
+                'content_callback' => [$pipelines_instance, 'render_content'],
+                'assets' => [
+                    'css' => [
+                        'dm-core-modal' => [
+                            'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
+                            'deps' => [],
+                            'media' => 'all'
+                        ],
+                        'dm-admin-pipelines' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/css/admin-pipelines.css',
+                            'deps' => [],
+                            'media' => 'all'
+                        ]
+                    ],
+                    'js' => [
+                        'dm-core-modal' => [
+                            'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
+                            'deps' => ['jquery'],
+                            'in_footer' => true,
+                            'localize' => [
+                                'object' => 'dmCoreModal',
+                                'data' => [
+                                    'ajax_url' => admin_url('admin-ajax.php'),
+                                    'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
+                                    'strings' => [
+                                        'loading' => __('Loading...', 'data-machine'),
+                                        'error' => __('Error', 'data-machine'),
+                                        'close' => __('Close', 'data-machine')
+                                    ]
+                                ]
+                            ]
+                        ],
+                        'dm-pipeline-builder' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
+                            'deps' => ['jquery', 'jquery-ui-sortable'],
+                            'in_footer' => true,
+                            'localize' => [
+                                'object' => 'dmPipelineBuilder',
+                                'data' => [
+                                    'ajax_url' => admin_url('admin-ajax.php'),
+                                    'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                    'strings' => [
+                                        'error' => __('An error occurred', 'data-machine'),
+                                        'success' => __('Success', 'data-machine'),
+                                        'confirm' => __('Are you sure?', 'data-machine'),
+                                        'cancel' => __('Cancel', 'data-machine'),
+                                        'delete' => __('Delete', 'data-machine'),
+                                        'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
+                                        'saving' => __('Saving...', 'data-machine'),
+                                        'loading' => __('Loading...', 'data-machine'),
+                                        'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
+                                        'atLeastOneStep' => __('At least one step is required', 'data-machine')
+                                    ]
+                                ]
+                            ]
                         ]
                     ]
                 ]
             ];
         }
-        return $assets;
+        return $config;
     }, 10, 2);
     
     // AJAX handler registration - Pipelines manages its own AJAX operations
@@ -113,8 +110,8 @@ function dm_register_pipelines_admin_page_filters() {
         $ajax_handler->handle_pipeline_ajax();
     });
     
-    // AJAX handler removed - now handled by universal ModalAjax.php
-    // This eliminates competing AJAX handlers and ensures single source of truth
+    // Universal modal AJAX integration - no component-specific handlers needed
+    // All modal content routed through unified ModalAjax.php endpoint
     
     // Modal content filter registration - Pure 2-parameter pattern like all existing systems
     add_filter('dm_get_modal', function($content, $template) {
@@ -127,17 +124,12 @@ function dm_register_pipelines_admin_page_filters() {
         switch ($template) {
             case 'step-selection':
                 // Dual-Mode Step Discovery Pattern
-                //
                 // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
-                // This enables the modal system to display all available step types without 
-                // hardcoding any step types. New step types automatically appear when registered.
-                //
-                // SPECIFIC MODE: apply_filters('dm_get_steps', null, 'input') - Returns single type
-                // Used elsewhere for getting specific step configurations.
-                //
-                // This dual-mode pattern enables both comprehensive discovery for UI generation
-                // and specific lookups for configuration, maintaining architectural consistency.
                 $all_steps = apply_filters('dm_get_steps', []);
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[DM Modal] Step discovery returned: ' . print_r($all_steps, true));
+                }
                 
                 return $pipelines_instance->render_template('modal/step-selection-cards', array_merge($context, [
                     'all_steps' => $all_steps

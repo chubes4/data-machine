@@ -544,7 +544,7 @@ class PipelineAjax
         }
 
         // Render the pipeline card template
-        $pipeline_card_html = $this->render_template('page/new-pipeline-card', ['pipeline' => $pipeline]);
+        $pipeline_card_html = $this->render_template('page/pipeline-card', ['pipeline' => $pipeline]);
 
         wp_send_json_success([
             'message' => __('Draft pipeline created successfully', 'data-machine'),

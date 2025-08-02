@@ -4,8 +4,8 @@
  * Provides universal modal functionality for all Data Machine admin pages.
  * Handles modal lifecycle, AJAX content loading, and user interactions.
  * 
- * Replaces component-specific modal systems with a single, extensible
- * modal infrastructure that works via the dm_get_modal filter system.
+ * Unified modal system replacing component-specific implementations.
+ * Uses server-side PHP template rendering for optimal performance and security.
  * 
  * @package DataMachine\Core\Admin\Modal
  * @since 1.0.0
@@ -43,27 +43,41 @@
             // Show loading state
             this.showLoading();
             
+            const ajaxData = {
+                action: 'dm_get_modal_content',
+                template: template,
+                context: JSON.stringify(context),
+                nonce: dmCoreModal.get_modal_content_nonce
+            };
+            
             // Make AJAX call to universal modal content handler
             $.ajax({
                 url: dmCoreModal.ajax_url,
                 type: 'POST',
-                data: {
-                    action: 'dm_get_modal_content',
-                    template: template,
-                    context: JSON.stringify(context),
-                    nonce: dmCoreModal.modal_nonce
-                },
+                data: ajaxData,
                 success: (response) => {
+                    // Check if response is HTML (server error) instead of JSON
+                    if (typeof response === 'string' && response.includes('<!DOCTYPE html>')) {
+                        console.error('[DM Modal] Server returned HTML instead of JSON - Raw response:', response);
+                        this.showError('Server error - check console for details');
+                        return;
+                    }
+                    
                     if (response.success) {
                         this.showContent(response.data.template || 'Modal', response.data.content);
                     } else {
                         const errorMessage = response.data?.message || response.data || 'Error loading modal content';
-                        console.error('DM Core Modal Error:', errorMessage);
+                        console.error('[DM Modal] Error response:', errorMessage);
                         this.showError(errorMessage);
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('DM Core Modal AJAX Error:', error);
+                    console.error('[DM Modal] AJAX Error:', {
+                        status: status,
+                        error: error,
+                        statusCode: xhr.status,
+                        responseText: xhr.responseText
+                    });
                     this.showError('Error connecting to server');
                 }
             });

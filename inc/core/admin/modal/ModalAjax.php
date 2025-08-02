@@ -7,6 +7,7 @@
  *
  * This enables the universal modal architecture where any component can register
  * modal content via the dm_get_modal filter without needing custom AJAX handlers.
+ * Eliminates component-specific modal AJAX handlers through unified architecture.
  *
  * @package DataMachine\Core\Admin\Modal
  * @since 1.0.0
@@ -76,7 +77,16 @@ class ModalAjax
 
         // Route to dm_get_modal filter system
         // Components access context via $_POST['context'] during filter execution
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[DM Modal] Requesting template: ' . $template);
+            error_log('[DM Modal] Context: ' . print_r($_POST['context'] ?? '', true));
+        }
+        
         $content = apply_filters('dm_get_modal', null, $template);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[DM Modal] Content generated: ' . (empty($content) ? 'EMPTY' : 'SUCCESS'));
+        }
 
         if ($content) {
             wp_send_json_success([
@@ -84,6 +94,9 @@ class ModalAjax
                 'template' => $template
             ]);
         } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[DM Modal] No content returned for template: ' . $template);
+            }
             wp_send_json_error([
                 'message' => sprintf(
                     /* translators: %s: modal template name */

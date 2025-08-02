@@ -42,6 +42,19 @@ function dm_register_modal_system_filters() {
         $modal_pages = ['pipelines', 'jobs', 'logs'];
         
         if (in_array($page_slug, $modal_pages)) {
+            // Initialize assets array if null
+            if (!is_array($assets)) {
+                $assets = [];
+            }
+            
+            // Ensure CSS and JS arrays exist
+            if (!isset($assets['css'])) {
+                $assets['css'] = [];
+            }
+            if (!isset($assets['js'])) {
+                $assets['js'] = [];
+            }
+            
             // Add core modal CSS with high priority (load before page-specific assets)
             $assets['css']['dm-core-modal'] = [
                 'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
@@ -58,7 +71,7 @@ function dm_register_modal_system_filters() {
                     'object' => 'dmCoreModal',
                     'data' => [
                         'ajax_url' => admin_url('admin-ajax.php'),
-                        'modal_nonce' => wp_create_nonce('dm_get_modal_content'),
+                        'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
                         'strings' => [
                             'loading' => __('Loading...', 'data-machine'),
                             'error' => __('Error', 'data-machine'),

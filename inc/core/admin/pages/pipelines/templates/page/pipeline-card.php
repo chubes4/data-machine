@@ -2,8 +2,8 @@
 /**
  * Pipeline Card Template
  *
- * Universal editable pipeline form template.
- * Used for both new pipelines and existing pipelines.
+ * Universal pipeline card template - purely data-driven.
+ * Renders blank card for new pipelines, populated card for existing pipelines.
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
  * @since 1.0.0
@@ -14,12 +14,21 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract pipeline data (always expects a valid pipeline object/array)
-$pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : $pipeline['pipeline_id'];
-$pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-$pipeline_steps = is_object($pipeline) ? json_decode($pipeline->step_configuration, true) : json_decode($pipeline['step_configuration'], true);
-$pipeline_steps = is_array($pipeline_steps) ? $pipeline_steps : [];
+// Data-driven rendering - handle both new (empty) and existing (populated) pipelines
+$pipeline_id = null;
+$pipeline_name = '';
+$pipeline_steps = [];
+
+if (isset($pipeline) && !empty($pipeline)) {
+    $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : ($pipeline['pipeline_id'] ?? null);
+    $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : ($pipeline['pipeline_name'] ?? '');
+    $step_config = is_object($pipeline) ? $pipeline->step_configuration : ($pipeline['step_configuration'] ?? '');
+    $pipeline_steps = !empty($step_config) ? json_decode($step_config, true) : [];
+    $pipeline_steps = is_array($pipeline_steps) ? $pipeline_steps : [];
+}
+
 $step_count = count($pipeline_steps);
+$is_new_pipeline = empty($pipeline_id);
 
 ?>
 <div class="dm-pipeline-card dm-pipeline-form" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">

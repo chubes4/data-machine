@@ -57,7 +57,9 @@ Flow C: Custom Content (Manual)
 - ✅ **Filter System**: 100% filter-based dependencies, universal DataPacket system, component-owned assets
 - ✅ **Handler Integration**: Reorganized step-specific directories, Bluesky AT Protocol, bi-directional Google Sheets
 - ✅ **Pipeline Builder**: AJAX-driven interface, dynamic step discovery, organized template structure
-- ✅ **Universal Modal System**: Filter-based modal architecture with zero hardcoded types and complete component autonomy
+- ✅ **Universal Modal System**: Complete migration to unified filter-based architecture with server-side PHP template rendering
+- ✅ **Unified Admin Architecture**: Direct page registration with embedded asset configuration, eliminating bridge systems
+- ✅ **Template Simplification**: Organized modal/page template separation with consolidated pipeline card templates
 - ✅ **Production Readiness**: Conditional debug logging implementation with WP_DEBUG controls for clean production deployment
 
 ### Known Issues  
@@ -94,7 +96,9 @@ $step_config = apply_filters('dm_get_steps', null, 'input'); // Specific mode - 
 
 // Universal Modal System
 $modal_content = apply_filters('dm_get_modal', null, 'step-selection');
-$step_config_modal = apply_filters('dm_get_step_config_modal', null, 'input', $context);
+$handler_selection = apply_filters('dm_get_modal', null, 'handler-selection');
+$delete_warning = apply_filters('dm_get_modal', null, 'delete-step');
+$step_config = apply_filters('dm_get_modal', null, 'configure-step');
 ```
 
 ### Development Commands
@@ -263,15 +267,16 @@ class MyCustomStep {
 
 ### Universal Modal System Architecture - Filter-Based Design
 
-**Core Design**: 100% filter-based modal content generation with zero hardcoded modal types, providing extensibility through WordPress filter patterns. The system uses server-side PHP template rendering instead of client-side JavaScript HTML creation, ensuring better performance, security, and maintainability.
+**Core Design**: Complete unified modal architecture using the `dm_get_modal` filter with zero hardcoded modal types. The system eliminates component-specific AJAX handlers through a single universal `ModalAjax.php` endpoint, providing consistent server-side PHP template rendering for optimal performance, security, and maintainability.
 
 **Architectural Principles**:
 - **Server-Side Template Rendering**: Modal HTML structure rendered via PHP `ModalTemplate.php` included in `admin_footer` on modal-enabled pages
 - **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "delete-step", "handler-selection") rather than component IDs
 - **Pure Filter Discovery**: Zero hardcoding - all content generated via filter system with consistent 2-parameter pattern
-- **Standard WordPress AJAX**: Single `ModalAjax.php` processes all modal requests with standard WordPress security
-- **Component Autonomy**: Each component registers its own modal content generators independently via *Filters.php files
-- **Infrastructure-Only Core**: Modal system provides pure infrastructure with zero business logic
+- **Unified AJAX Handler**: Single `ModalAjax.php` eliminates competing handlers and provides standardized WordPress security
+- **Component Autonomy**: Components register modal content via the unified `dm_get_modal` filter in their *Filters.php files
+- **Infrastructure-Only Core**: Modal system provides pure infrastructure with zero business logic or component knowledge
+- **Unified Page Architecture**: Admin pages register directly via `dm_get_admin_page` with embedded asset configuration
 
 **Dual-Mode Step Discovery**: The `dm_get_steps` filter operates in two distinct modes enabling both UI generation and configuration lookups:
 - **Discovery Mode**: `apply_filters('dm_get_steps', [])` - Returns ALL registered step types for UI generation
@@ -330,9 +335,9 @@ add_filter('dm_get_modal', function($content, $template) {
   - `handler-settings-form.php` - Handler-specific configuration forms
   - `delete-step-warning.php` - Comprehensive deletion warnings with affected flows analysis
 - **Page Templates** (`/inc/core/admin/pages/pipelines/templates/page/`):
-  - `pipeline-step-card.php` - Individual step cards with drag-and-drop functionality
+  - `pipeline-step-card.php` - Unified step cards with modal trigger integration
   - `flow-instance-card.php` - Flow configuration cards with pipeline template linking
-  - `new-pipeline-card.php` - Pipeline creation interface
+  - `flow-step-card.php` - Individual flow step configuration cards
 - **Pure Rendering Focus**: Templates contain zero business logic - all data provided via filter context
 
 **WordPress AJAX Integration**:
@@ -706,53 +711,45 @@ add_filter('dm_get_database_service', function($service, $type) {
 }, 20, 2);
 ```
 
-#### Admin Extensions
+#### Admin Extensions - Unified Architecture
 ```php
-// Add custom admin page using parameter-based pattern
+// Unified admin page registration with embedded assets
 add_filter('dm_get_admin_page', function($config, $page_slug) {
     if ($page_slug === 'analytics') {
+        $analytics_instance = new MyPlugin\AnalyticsPage();
+        
         return [
             'page_title' => __('Analytics Dashboard', 'my-plugin'),
             'menu_title' => __('Analytics', 'my-plugin'),
             'capability' => 'manage_options',
-            'position' => 35
-        ];
-    }
-    return $config;
-}, 10, 2);
-
-// Provide page content via filter system
-add_filter('dm_render_admin_page', function($content, $page_slug) {
-    if ($page_slug === 'analytics') {
-        $analytics_instance = new MyPlugin\AnalyticsPage();
-        ob_start();
-        $analytics_instance->render_content();
-        return ob_get_clean();
-    }
-    return $content;
-}, 10, 2);
-
-// Register component-owned assets
-add_filter('dm_get_page_assets', function($assets, $page_slug) {
-    if ($page_slug === 'analytics') {
-        return [
-            'css' => [
-                'dm-admin-analytics' => [
-                    'file' => 'path/to/your/plugin/assets/css/admin-analytics.css',
-                    'deps' => [],
-                    'media' => 'all'
-                ]
-            ],
-            'js' => [
-                'dm-analytics-admin' => [
-                    'file' => 'path/to/your/plugin/assets/js/analytics-admin.js',
-                    'deps' => ['jquery'],
-                    'in_footer' => true
+            'position' => 35,
+            'content_callback' => [$analytics_instance, 'render_content'],
+            'assets' => [
+                'css' => [
+                    'dm-admin-analytics' => [
+                        'file' => 'path/to/your/plugin/assets/css/admin-analytics.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ]
+                ],
+                'js' => [
+                    'dm-analytics-admin' => [
+                        'file' => 'path/to/your/plugin/assets/js/analytics-admin.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'analyticsAdmin',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'nonce' => wp_create_nonce('analytics_action')
+                            ]
+                        ]
+                    ]
                 ]
             ]
         ];
     }
-    return $assets;
+    return $config;
 }, 10, 2);
 
 // Universal Modal System - Register custom modal content
@@ -761,12 +758,18 @@ add_filter('dm_get_modal', function($content, $template) {
         case 'analytics-config':
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
             return MyPlugin\AnalyticsConfig::render($context);
+            
         case 'configure-step':
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
             if (($context['step_type'] ?? '') === 'my_custom_step') {
                 return MyPlugin\CustomStep::render_config($context);
             }
             break;
+            
+        case 'custom-handler-settings':
+            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $handler_type = $context['handler_type'] ?? 'unknown';
+            return MyPlugin\HandlerConfig::render_settings($handler_type, $context);
     }
     return $content;
 }, 10, 2);

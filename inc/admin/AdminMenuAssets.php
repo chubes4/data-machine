@@ -40,6 +40,15 @@ class AdminMenuAssets {
     private $page_hook_suffixes = [];
 
     /**
+     * Storage for page configurations for unified rendering.
+     *
+     * @since    NEXT_VERSION
+     * @access   private
+     * @var      array
+     */
+    private $page_configs = [];
+
+    /**
      * Initialize the class with zero constructor dependencies.
      * 
      * Uses filter-based service access for pure filter-based architecture.
@@ -61,17 +70,25 @@ class AdminMenuAssets {
     }
 
     /**
-     * Register admin pages via parameter-based discovery system.
+     * Register admin pages via direct parameter-based discovery system.
      * 
      * Uses consistent parameter-based pattern matching handlers, database services, 
-     * and all other architectural components. Eliminates collection-based patterns.
+     * and all other architectural components. Direct component registration without bridge.
      * Pages are ordered by position parameter with alphabetical fallback.
      *
      * @since    NEXT_VERSION
      */
     public function add_admin_menu() {
-        // Parameter-based discovery - consistent with all other services
-        $registered_pages = apply_filters('dm_discover_admin_pages', []);
+        // Direct parameter-based discovery - consistent with architectural standards
+        $registered_pages = [];
+        $known_slugs = ['jobs', 'pipelines', 'logs'];
+        
+        foreach ($known_slugs as $slug) {
+            $page_config = apply_filters('dm_get_admin_page', null, $slug);
+            if ($page_config !== null) {
+                $registered_pages[$slug] = $page_config;
+            }
+        }
         
         // Only create Data Machine menu if pages are available
         if (empty($registered_pages)) {
@@ -102,13 +119,14 @@ class AdminMenuAssets {
             __('Data Machine', 'data-machine'),
             $first_page['capability'] ?? 'manage_options',
             'dm-' . $first_slug,
-            'DataMachine\\Admin\\dm_admin_page_callback', // Simple callback function
+            '', // No callback - main menu is just container
             'dashicons-database-view',
             30
         );
         
-        // Store hook suffix for first page
+        // Store hook suffix and page config for first page
         $this->store_hook_suffix($first_slug, $main_menu_hook);
+        $this->store_page_config($first_slug, $first_page);
         
         // Add first page as submenu with its proper title
         $first_submenu_hook = add_submenu_page(
@@ -117,7 +135,9 @@ class AdminMenuAssets {
             $first_page['menu_title'] ?? ucfirst($first_slug),
             $first_page['capability'] ?? 'manage_options',
             'dm-' . $first_slug,
-            'DataMachine\\Admin\\dm_admin_page_callback' // Simple callback function
+            function() use ($first_page, $first_slug) {
+                $this->render_admin_page_content($first_page, $first_slug);
+            }
         );
         
         // Add remaining pages as submenus (already sorted)
@@ -129,11 +149,14 @@ class AdminMenuAssets {
                 $page_config['menu_title'] ?? ucfirst($slug),
                 $page_config['capability'] ?? 'manage_options',
                 'dm-' . $slug,
-                'DataMachine\\Admin\\dm_admin_page_callback' // Simple callback function
+                function() use ($page_config, $slug) {
+                    $this->render_admin_page_content($page_config, $slug);
+                }
             );
             
-            // Store hook suffixes for asset loading
+            // Store hook suffixes and page config for asset loading
             $this->store_hook_suffix($slug, $hook_suffix);
+            $this->store_page_config($slug, $page_config);
         }
     }
     
@@ -148,6 +171,31 @@ class AdminMenuAssets {
      */
     private function store_hook_suffix($page_slug, $hook_suffix) {
         $this->page_hook_suffixes[$page_slug] = $hook_suffix;
+    }
+
+    /**
+     * Store page configuration for unified rendering.
+     *
+     * @param string $page_slug Page slug
+     * @param array $page_config Page configuration
+     */
+    private function store_page_config($page_slug, $page_config) {
+        $this->page_configs[$page_slug] = $page_config;
+    }
+
+    /**
+     * Render admin page content using unified configuration.
+     *
+     * @param array $page_config Page configuration
+     * @param string $page_slug Page slug
+     */
+    private function render_admin_page_content($page_config, $page_slug) {
+        if (isset($page_config['content_callback']) && is_callable($page_config['content_callback'])) {
+            call_user_func($page_config['content_callback']);
+        } else {
+            echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
+            echo '<p>' . esc_html__('Page content not configured.', 'data-machine') . '</p></div>';
+        }
     }
 
     /**
@@ -172,15 +220,11 @@ class AdminMenuAssets {
             return; // No registered page for this hook
         }
         
-        // Get page-specific assets via filter system with proper merging
-        // Initialize with empty array to accumulate all filter responses
-        $accumulated_assets = [
-            'css' => [],
-            'js' => []
-        ];
+        // Get page assets from unified configuration
+        $page_config = $this->page_configs[$current_page_slug] ?? [];
+        $page_assets = $page_config['assets'] ?? [];
         
-        // Apply filters to accumulate assets from all components
-        $page_assets = apply_filters('dm_get_page_assets', $accumulated_assets, $current_page_slug);
+        // No fallback - unified system only
         
         if (!empty($page_assets['css']) || !empty($page_assets['js'])) {
             $this->enqueue_page_assets($page_assets, $current_page_slug);

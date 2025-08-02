@@ -452,34 +452,8 @@ function dm_register_utility_filters() {
         return null;
     }, 5, 2);
     
-    /**
-     * Admin page discovery helper for AdminMenuAssets.
-     * 
-     * Returns all available admin pages by checking known page slugs.
-     * Enforces consistent parameter-based page discovery.
-     * 
-     * Core Usage: $all_pages = apply_filters('dm_discover_admin_pages', []);
-     */
-    add_filter('dm_discover_admin_pages', function($pages) {
-        // Known core admin page slugs
-        $known_slugs = ['jobs', 'pipelines', 'logs'];
-        
-        foreach ($known_slugs as $slug) {
-            $page_config = apply_filters('dm_get_admin_page', null, $slug);
-            if ($page_config !== null) {
-                $pages[$slug] = $page_config;
-            }
-        }
-        
-        // External plugins can add their page slugs via this same filter
-        // add_filter('dm_discover_admin_pages', function($pages) {
-        //     $custom_config = apply_filters('dm_get_admin_page', null, 'analytics');
-        //     if ($custom_config) $pages['analytics'] = $custom_config;
-        //     return $pages;
-        // }, 20);
-        
-        return $pages;
-    }, 10);
+    // Bridge system removed - AdminMenuAssets now uses direct parameter-based discovery
+    // This eliminates architectural confusion and aligns with component-owned registration
     
     /**
      * Parameter-based page asset discovery system.

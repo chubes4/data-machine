@@ -55,6 +55,13 @@ class Pipelines
                 <p class="dm-admin-subtitle">
                     <?php esc_html_e('Create pipeline templates and configure flow instances for automated data processing.', 'data-machine'); ?>
                 </p>
+                
+                <!-- Add New Pipeline Button -->
+                <div class="dm-add-pipeline-section">
+                    <button type="button" class="button button-secondary dm-add-new-pipeline-btn">
+                        <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
+                    </button>
+                </div>
             </div>
 
             <!-- Universal Pipeline Cards Container -->
@@ -63,16 +70,9 @@ class Pipelines
                     <!-- Show existing pipelines (latest first) -->
                     <?php if (!empty($all_pipelines)): ?>
                         <?php foreach (array_reverse($all_pipelines) as $pipeline): ?>
-                            <?php echo $this->render_template('page/new-pipeline-card', ['pipeline' => $pipeline]); ?>
+                            <?php echo $this->render_template('page/pipeline-card', ['pipeline' => $pipeline]); ?>
                         <?php endforeach; ?>
                     <?php endif; ?>
-
-                    <!-- Add New Pipeline Button (always visible) -->
-                    <div class="dm-add-pipeline-section">
-                        <button type="button" class="button button-secondary dm-add-new-pipeline-btn">
-                            <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
