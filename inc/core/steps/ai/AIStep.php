@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  * EXTERNAL PLUGIN REQUIREMENTS (minimum):
  * - Class with parameter-less constructor
  * - execute(int $job_id, ?DataPacket $data_packet = null): bool method
- * - Optional: get_prompt_fields(): array static method for UI configuration
+ * - get_prompt_fields(): array static method for UI configuration (optional)
  * 
  * Supports any AI operation: summarization, fact-checking, enhancement, translation,
  * content analysis, research, writing assistance, and complex multi-step workflows.

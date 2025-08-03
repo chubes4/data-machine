@@ -92,7 +92,7 @@ class Logger {
                 // Create a handler (writing to a file)
                 $handler = new StreamHandler($log_file, $log_level);
 
-                // Optional: Customize log format
+                // Customize log format
                 $formatter = new LineFormatter(
                     "[%datetime%] [%channel%.%level_name%]: %message% %context% %extra%\n",
                     "Y-m-d H:i:s", // Human-readable format

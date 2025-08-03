@@ -72,10 +72,9 @@ function dm_register_files_input_filters() {
             }
             
             // Use proper filter-based template rendering
-            $pipelines_instance = new \DataMachine\Core\Admin\Pages\Pipelines\Pipelines();
             $settings_instance = apply_filters('dm_get_handler_settings', null, 'files');
             
-            return $pipelines_instance->render_template('modal/handler-settings-form', [
+            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'files',
                 'handler_config' => [
                     'label' => __('Files', 'data-machine'),

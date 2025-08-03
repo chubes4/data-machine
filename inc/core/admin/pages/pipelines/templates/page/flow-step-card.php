@@ -62,3 +62,18 @@ $step_uses_handlers = ($step_type !== 'ai');
         <?php endif; ?>
     </div>
 </div>
+
+<?php
+// Conditional arrow rendering - show arrow unless this is the last step  
+$show_arrow = !($is_last_step ?? false);
+?>
+<?php if ($show_arrow): ?>
+    <div class="dm-flow-step-arrow">
+        <span class="dashicons dashicons-arrow-right-alt"></span>
+    </div>
+<?php else: ?>
+    <!-- Empty arrow container for consistent spacing -->
+    <div class="dm-flow-step-arrow dm-flow-step-arrow--hidden">
+        <span class="dashicons dashicons-arrow-right-alt" style="visibility: hidden;"></span>
+    </div>
+<?php endif; ?>

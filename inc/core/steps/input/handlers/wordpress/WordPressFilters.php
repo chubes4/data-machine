@@ -74,13 +74,11 @@ function dm_register_wordpress_input_filters() {
             return $content;
         }
         
-        $pipelines_instance = new \DataMachine\Core\Admin\Pages\Pipelines\Pipelines();
-        
         if ($template === 'handler-settings') {
             // Settings modal template
             $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress');
             
-            return $pipelines_instance->render_template('modal/handler-settings-form', [
+            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'wordpress',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),
@@ -94,7 +92,7 @@ function dm_register_wordpress_input_filters() {
         
         if ($template === 'handler-auth') {
             // Authentication modal template
-            return $pipelines_instance->render_template('modal/handler-auth-form', [
+            return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
                 'handler_slug' => 'wordpress',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),

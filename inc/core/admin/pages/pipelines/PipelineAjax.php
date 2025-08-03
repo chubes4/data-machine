@@ -211,14 +211,24 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
         }
 
+        // Calculate if this new step is the last step for arrow rendering
+        $updated_steps = $current_steps; // Current steps now includes the new step
+        $sorted_steps = $updated_steps;
+        usort($sorted_steps, function($a, $b) {
+            return ($a['position'] ?? 0) <=> ($b['position'] ?? 0);
+        });
+        $max_position = !empty($sorted_steps) ? end($sorted_steps)['position'] : 0;
+        $is_new_step_last = ($next_position >= $max_position);
+
         // Generate empty step HTML for adding at the end (replaces JavaScript HTML generation)
-        $empty_step_html = $this->render_template('page/pipeline-step-card', [
+        $empty_step_html = apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
             'step' => [
                 'is_empty' => true,
                 'step_type' => '',
                 'position' => ''
             ],
-            'pipeline_id' => $pipeline_id
+            'pipeline_id' => $pipeline_id,
+            'is_last_step' => true // Empty step is always last
         ]);
 
         wp_send_json_success([
@@ -227,9 +237,10 @@ class PipelineAjax
             'step_config' => $step_config,
             'pipeline_id' => $pipeline_id,
             'position' => $next_position,
-            'step_html' => $this->render_template('page/pipeline-step-card', [
+            'step_html' => apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
                 'step' => $new_step,
-                'pipeline_id' => $pipeline_id
+                'pipeline_id' => $pipeline_id,
+                'is_last_step' => $is_new_step_last
             ]),
             'empty_step_html' => $empty_step_html
         ]);
@@ -292,7 +303,7 @@ class PipelineAjax
         }
 
         // Render the flow instance card template
-        $flow_card_html = $this->render_template('page/flow-instance-card', ['flow' => $flow]);
+        $flow_card_html = apply_filters('dm_render_template', '', 'page/flow-instance-card', ['flow' => $flow]);
 
         wp_send_json_success([
             'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
@@ -328,11 +339,12 @@ class PipelineAjax
                 'step_config' => []  // Empty config for new steps
             ],
             'flow_config' => [],  // Empty flow config for new steps
-            'flow_id' => $flow_id
+            'flow_id' => $flow_id,
+            'is_last_step' => false // Default to false for new flow step cards - position context not available here
         ];
 
         // Render template
-        $html = $this->render_template('page/flow-step-card', $template_data);
+        $html = apply_filters('dm_render_template', '', 'page/flow-step-card', $template_data);
 
         wp_send_json_success([
             'html' => $html,
@@ -341,27 +353,6 @@ class PipelineAjax
         ]);
     }
 
-    /**
-     * Render template with data (strict subdirectory structure only)
-     */
-    private function render_template($template_name, $data = [])
-    {
-        // Enforce strict organized subdirectory structure: 'modal/template-name' or 'page/template-name'
-        $template_path = __DIR__ . '/templates/' . $template_name . '.php';
-        
-        // No fallbacks - template must exist in organized structure
-        if (!file_exists($template_path)) {
-            return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
-        }
-
-        // Extract data variables for template use
-        extract($data);
-
-        // Capture template output
-        ob_start();
-        include $template_path;
-        return ob_get_clean();
-    }
 
 
     // handler-settings content removed - now handled by universal modal system via PipelinesFilters.php
@@ -567,7 +558,7 @@ class PipelineAjax
         }
 
         // Render the pipeline card template
-        $pipeline_card_html = $this->render_template('page/pipeline-card', ['pipeline' => $pipeline]);
+        $pipeline_card_html = apply_filters('dm_render_template', '', 'page/pipeline-card', ['pipeline' => $pipeline]);
 
         wp_send_json_success([
             'message' => __('Draft pipeline created successfully', 'data-machine'),

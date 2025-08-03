@@ -76,8 +76,14 @@ $is_new_pipeline = empty($pipeline_id);
             ];
             
             foreach ($display_steps as $index => $step): 
+                // Calculate if this is the last non-empty step for arrow rendering
+                $is_last_step = ($index === count($display_steps) - 1);
             ?>
-                <?php include __DIR__ . '/pipeline-step-card.php'; ?>
+                <?php echo apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
+                    'step' => $step,
+                    'pipeline_id' => $pipeline_id,
+                    'is_last_step' => $is_last_step
+                ]); ?>
                 <?php if ($index < count($display_steps) - 1 && !($step['is_empty'] ?? false)): ?>
                     <span class="dm-step-arrow">
                         <span class="dashicons dashicons-arrow-right-alt"></span>
@@ -106,7 +112,7 @@ $is_new_pipeline = empty($pipeline_id);
             <!-- Existing Flows from Database -->
             <?php if (!empty($existing_flows)): ?>
                 <?php foreach ($existing_flows as $flow): ?>
-                    <?php echo $pipelines_instance->render_template('page/flow-instance-card', ['flow' => $flow]); ?>
+                    <?php echo apply_filters('dm_render_template', '', 'page/flow-instance-card', ['flow' => $flow]); ?>
                 <?php endforeach; ?>
             <?php endif; ?>
             

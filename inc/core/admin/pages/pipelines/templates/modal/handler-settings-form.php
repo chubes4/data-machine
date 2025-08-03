@@ -54,7 +54,7 @@ $has_auth = ($auth_instance !== null);
                         $field_type = $field_config['type'] ?? 'text';
                         $field_label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $field_key));
                         $field_description = $field_config['description'] ?? '';
-                        $current_value = ''; // TODO: Load from saved config
+                        $current_value = '';
                         
                         ?>
                         <div class="dm-form-field">

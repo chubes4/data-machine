@@ -40,7 +40,7 @@ class JobCreator {
      * @param int         $flow_id Flow ID with configured handlers and scheduling.
      * @param int         $user_id User ID creating the job.
      * @param string      $context Context describing job source ('run_now', 'file_upload', 'single_module', 'scheduled').
-     * @param array|null  $optional_data Optional input data for file-based jobs.
+     * @param array|null  $optional_data Input data for file-based jobs.
      * @return array Result array with 'success' boolean and 'message' string.
      */
     public function create_and_schedule_job( int $pipeline_id, int $flow_id, int $user_id, string $context, ?array $optional_data = null ): array {
@@ -228,7 +228,7 @@ class JobCreator {
      * @param int    $flow_id Flow ID with configured handlers and settings.
      * @param int    $user_id User ID creating the job.
      * @param string $context Job context.
-     * @param array|null $optional_data Optional input data for file-based jobs.
+     * @param array|null $optional_data Input data for file-based jobs.
      * @return array|WP_Error Job config array or error.
      */
     private function build_pipeline_flow_job_config( int $pipeline_id, int $flow_id, int $user_id, string $context, ?array $optional_data = null ) {

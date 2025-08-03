@@ -118,7 +118,11 @@ function render_flow_schedule_modal(int $flow_id, array $context): string
             <p><?php esc_html_e('Configure when this flow should run automatically', 'data-machine'); ?></p>
         </div>
         
-        <form class="dm-flow-schedule-form" data-flow-id="<?php echo esc_attr($flow_id); ?>">
+        <form class="dm-flow-schedule-form dm-modal-form" data-flow-id="<?php echo esc_attr($flow_id); ?>">
+            <!-- Hidden fields for AJAX action -->
+            <input type="hidden" name="action" value="dm_pipeline_ajax">
+            <input type="hidden" name="pipeline_action" value="save_flow_schedule">
+            <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>">
             <!-- Schedule Status -->
             <div class="dm-form-field">
                 <label><?php esc_html_e('Schedule Status', 'data-machine'); ?></label>

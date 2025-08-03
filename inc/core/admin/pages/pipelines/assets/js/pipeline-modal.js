@@ -2,7 +2,7 @@
  * Pipeline Modal Content JavaScript
  * 
  * Handles interactions WITHIN pipeline modal content only.
- * OAuth connections, tab switching, form submissions, visual feedback.
+ * OAuth connections, form submissions, visual feedback.
  * Emits limited events (dm-pipeline-modal-saved) for page communication.
  * Modal lifecycle managed by core-modal.js, page actions by pipeline-builder.js.
  * 
@@ -37,8 +37,7 @@
             $(document).on('click', '.dm-disconnect-account', this.handleDisconnect.bind(this));
             $(document).on('click', '.dm-test-connection', this.handleTestConnection.bind(this));
 
-            // Tab switching in handler modals
-            $(document).on('click', '.dm-tab-button:not(.disabled)', this.handleTabSwitch.bind(this));
+            // Tab switching handled by core modal system based on CSS classes
 
             // Modal form submissions
             $(document).on('submit', '.dm-modal-form', this.handleFormSubmit.bind(this));
@@ -46,6 +45,9 @@
             // Modal content visual feedback - handle highlighting for cards
             $(document).on('click', '.dm-step-selection-card', this.handleStepCardVisualFeedback.bind(this));
             $(document).on('click', '.dm-handler-selection-card', this.handleHandlerCardVisualFeedback.bind(this));
+            
+            // Schedule form interactions within modal content
+            $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
         },
 
         /**
@@ -120,8 +122,8 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Reload modal content to show disconnected state
-                        this.reloadModalContent();
+                        // Account disconnected successfully - user can manually refresh if needed
+                        alert('Account disconnected successfully');
                     } else {
                         alert(response.data?.message || 'Error disconnecting account');
                         $button.text(originalText).prop('disabled', false);
@@ -179,32 +181,6 @@
             });
         },
 
-        /**
-         * Handle tab switching in handler modals
-         */
-        handleTabSwitch: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const $tabContainer = $button.closest('.dm-handler-config-tabs');
-            const $contentContainer = $tabContainer.siblings('.dm-tab-content').parent();
-            const targetTab = $button.data('tab');
-            
-            if (!targetTab) {
-                console.error('DM Pipeline Modal: No tab identifier found on tab button');
-                return;
-            }
-            
-            // Update tab button states
-            $tabContainer.find('.dm-tab-button').removeClass('active');
-            $button.addClass('active');
-            
-            // Update tab content visibility
-            $contentContainer.find('.dm-tab-content').removeClass('active').hide();
-            $contentContainer.find(`.dm-tab-content[data-tab="${targetTab}"]`).addClass('active').show();
-            
-            console.log('DM Pipeline Modal: Switched to tab:', targetTab);
-        },
 
         /**
          * Handle modal form submission
@@ -229,10 +205,6 @@
                 data: formData,
                 success: (response) => {
                     if (response.success) {
-                        // Close modal on successful save
-                        if (window.dmCoreModal && typeof window.dmCoreModal.close === 'function') {
-                            dmCoreModal.close();
-                        }
                         
                         // Show success message
                         if (response.data?.message) {
@@ -283,21 +255,21 @@
         },
 
         /**
-         * Reload current modal content
+         * Handle schedule status radio button change within modal
+         * Shows/hides interval field based on active/inactive status
          */
-        reloadModalContent: function() {
-            // Trigger modal content reload by re-requesting current template
-            const $modal = $('#dm-modal');
-            if ($modal.length && window.dmCoreModal) {
-                // Get current template and context from modal data attributes if available
-                const currentTemplate = $modal.data('current-template');
-                const currentContext = $modal.data('current-context');
-                
-                if (currentTemplate && currentContext) {
-                    dmCoreModal.open(currentTemplate, currentContext);
-                }
+        handleScheduleStatusChange: function(e) {
+            const $form = $(e.target).closest('.dm-flow-schedule-form');
+            const status = e.target.value;
+            const $intervalField = $form.find('.dm-schedule-interval-field');
+            
+            if (status === 'active') {
+                $intervalField.slideDown();
+            } else {
+                $intervalField.slideUp();
             }
         }
+
     };
 
     /**

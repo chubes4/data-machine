@@ -30,70 +30,46 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_jobs_admin_page_filters() {
     
-    // Admin page registration - Jobs declares itself via parameter-based system
+    // Unified admin page registration with embedded asset configuration
     add_filter('dm_get_admin_page', function($config, $page_slug) {
         if ($page_slug === 'jobs') {
+            $jobs_instance = new Jobs();
+            
             return [
                 'page_title' => __('Jobs', 'data-machine'),
                 'menu_title' => __('Jobs', 'data-machine'),  
                 'capability' => 'manage_options',
-                'position' => 20
-            ];
-        }
-        return $config;
-    }, 10, 2);
-    
-    // Page content registration - Jobs provides its content via filter
-    add_filter('dm_render_admin_page', function($content, $page_slug) {
-        if ($page_slug === 'jobs') {
-            $jobs_instance = new Jobs();
-            ob_start();
-            $jobs_instance->render_content();
-            return ob_get_clean();
-        }
-        return $content;
-    }, 10, 2);
-    
-    // Asset registration - Jobs provides its own CSS and JS assets
-    add_filter('dm_get_page_assets', function($assets, $page_slug) {
-        if ($page_slug === 'jobs') {
-            // Initialize assets array if null
-            if (!is_array($assets)) {
-                $assets = [];
-            }
-            
-            // Ensure CSS and JS arrays exist
-            if (!isset($assets['css'])) {
-                $assets['css'] = [];
-            }
-            if (!isset($assets['js'])) {
-                $assets['js'] = [];
-            }
-            
-            // Add jobs-specific assets to existing array (instead of overwriting)
-            $assets['css']['dm-admin-jobs'] = [
-                'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
-                'deps' => [],
-                'media' => 'all'
-            ];
-            
-            $assets['js']['dm-jobs-admin'] = [
-                'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
-                'deps' => ['jquery', 'dm-core-modal'],  // Add dm-core-modal dependency for future modal support
-                'in_footer' => true,
-                'localize' => [
-                    'object' => 'dmJobsAdmin',
-                    'data' => [
-                        'ajax_url' => admin_url('admin-ajax.php'),
-                        'strings' => [
-                            'loading' => __('Loading...', 'data-machine'),
-                            'error' => __('An error occurred', 'data-machine'),
+                'position' => 20,
+                'content_callback' => [$jobs_instance, 'render_content'],
+                'assets' => [
+                    'css' => [
+                        'dm-admin-jobs' => [
+                            'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
+                            'deps' => [],
+                            'media' => 'all'
+                        ]
+                    ],
+                    'js' => [
+                        'dm-jobs-admin' => [
+                            'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
+                            'deps' => ['jquery'],
+                            'in_footer' => true,
+                            'localize' => [
+                                'object' => 'dmJobsAdmin',
+                                'data' => [
+                                    'ajax_url' => admin_url('admin-ajax.php'),
+                                    'strings' => [
+                                        'loading' => __('Loading...', 'data-machine'),
+                                        'error' => __('An error occurred', 'data-machine'),
+                                    ]
+                                ]
+                            ]
                         ]
                     ]
                 ]
             ];
         }
-        return $assets;
+        return $config;
     }, 10, 2);
 }
 

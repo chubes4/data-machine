@@ -42,6 +42,7 @@ function dm_register_pipelines_admin_page_filters() {
                 'capability' => 'manage_options',
                 'position' => 10,
                 'content_callback' => [$pipelines_instance, 'render_content'],
+                'templates' => __DIR__ . '/templates/',
                 'assets' => [
                     'css' => [
                         'dm-core-modal' => [
@@ -158,8 +159,6 @@ function dm_register_pipelines_admin_page_filters() {
     
     // Modal content filter registration - Pure 2-parameter pattern like all existing systems
     add_filter('dm_get_modal', function($content, $template) {
-        $pipelines_instance = new Pipelines();
-        
         // Get context from $_POST directly (like templates access other data)
         $context_raw = wp_unslash($_POST['context'] ?? '{}');
         $context = json_decode($context_raw, true);
@@ -174,7 +173,7 @@ function dm_register_pipelines_admin_page_filters() {
                     error_log('[DM Modal] Step discovery returned: ' . print_r($all_steps, true));
                 }
                 
-                return $pipelines_instance->render_template('modal/step-selection-cards', array_merge($context, [
+                return apply_filters('dm_render_template', '', 'modal/step-selection-cards', array_merge($context, [
                     'all_steps' => $all_steps
                 ]));
                 
@@ -192,7 +191,7 @@ function dm_register_pipelines_admin_page_filters() {
                     </div>';
                 }
                 
-                return $pipelines_instance->render_template('modal/handler-selection-cards', [
+                return apply_filters('dm_render_template', '', 'modal/handler-selection-cards', [
                     'step_type' => $step_type,
                     'handlers' => $available_handlers,
                     'pipeline_id' => $pipeline_id,

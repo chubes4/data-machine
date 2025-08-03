@@ -1,19 +1,6 @@
 <?php
 /**
  * Threads-specific AI directive system.
- *
- * Demonstrates the standard pattern that third-party developers should use
- * to extend the Data Machine directive system. This file provides Threads-specific
- * AI guidance using the universal dm_get_output_directive filter.
- *
- * THIRD-PARTY DEVELOPER REFERENCE:
- * This implementation serves as the canonical example of how external plugins
- * should integrate with the Data Machine directive system. Use this exact
- * pattern in your own handler extensions.
- *
- * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/threads
- * @since      NEXT_VERSION
  */
 
 namespace DataMachine\Core\Handlers\Output\Threads;
@@ -23,59 +10,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * ThreadsDirectives class
- *
  * Provides Threads-specific AI directives for content generation.
- * This class demonstrates the standard extension pattern that all
- * third-party developers should follow when adding directive support
- * for custom output handlers.
  */
 class ThreadsDirectives {
 
-    /**
-     * Constructor - parameter-less for pure filter-based architecture
-     */
     public function __construct() {
-        // No dependencies initialized in constructor for pure filter-based architecture
         $this->register_directive_filter();
     }
 
-    /**
-     * Register the directive filter using the standard extension pattern.
-     *
-     * THIRD-PARTY DEVELOPER NOTE:
-     * This is the exact method signature and pattern you should use
-     * in your own directive extensions. Replace 'threads' with your
-     * handler's output type.
-     */
     private function register_directive_filter(): void {
         add_filter('dm_get_output_directive', [$this, 'add_threads_directives'], 10, 3);
     }
 
-    /**
-     * Add Threads-specific AI directives when generating content for Threads output.
-     * 
-     * THIRD-PARTY DEVELOPER REFERENCE:
-     * This method demonstrates the standard pattern for extending AI directives:
-     * 1. Check if the output_type matches your handler
-     * 2. Extract handler-specific configuration
-     * 3. Build directive content based on configuration
-     * 4. Return the enhanced directive block
-     * 
-     * @param string $directive_block Current directive content
-     * @param string $output_type The output type being processed
-     * @param array $output_config Configuration for the output step
-     * @return string Modified directive block with Threads-specific guidance
-     */
     public function add_threads_directives(string $directive_block, string $output_type, array $output_config): string {
-        // CRITICAL: Only act when output type matches your handler
-        // Third-party developers: Replace 'threads' with your handler's type
         if ($output_type !== 'threads') {
             return $directive_block;
         }
         
-        // Extract handler-specific configuration from output_config
-        // Third-party developers: Adjust this path to match your handler's config structure
         $threads_config = $output_config['threads'] ?? [];
         $char_limit = $threads_config['threads_char_limit'] ?? 500;
         $include_source = $threads_config['threads_include_source'] ?? true;
@@ -183,7 +134,4 @@ class ThreadsDirectives {
     }
 }
 
-// THIRD-PARTY DEVELOPER REFERENCE:
-// This is the standard instantiation pattern for directive extensions.
-// Simply instantiate your directive class - the constructor handles filter registration.
 new ThreadsDirectives();

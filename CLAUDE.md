@@ -16,9 +16,9 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## Current Status
 
-**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, production deployment.
+**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, production deployment.
 
-**Known Issues**: Expanding PHPUnit test coverage across components. Modal system architecture is complete and documented.
+**Known Issues**: Expanding PHPUnit test coverage across components.
 
 **Future Plans**: Webhook integration (Receiver Step), enhanced testing, additional platform integrations.
 
@@ -42,6 +42,9 @@ $step_config = apply_filters('dm_get_steps', null, 'input'); // Specific type
 
 // Modal system
 $modal_content = apply_filters('dm_get_modal', null, 'step-selection');
+
+// Universal template rendering
+$template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
 ```
 
 ## Development Commands
@@ -77,13 +80,14 @@ php -l file.php             # Syntax check
 - Output: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets  
 - Receiver: Webhook framework (stub implementation)
 
-**Admin**: AJAX pipeline builder, job management, universal modal system
+**Admin**: AJAX pipeline builder, job management, universal modal system, universal template rendering
 
 **Key Principles**:
 - Zero constructor injection - all services via `apply_filters()`
 - Components self-register via `*Filters.php` files
 - Engine agnostic - no hardcoded step types in `/inc/engine/`
 - Position-based execution (0-99) with DataPacket flow
+- Universal template rendering via filter-based discovery system
 
 ## DataPacket Structure
 
@@ -181,7 +185,7 @@ Automatic modal triggers using data attributes - no JavaScript required:
 ```php
 add_filter('dm_get_modal', function($content, $template) {
     if ($template === 'my-modal') {
-        return $this->render_template('modal/my-modal', $context);
+        return apply_filters('dm_render_template', '', 'modal/my-modal', $context);
     }
     return $content;
 }, 10, 2);
@@ -200,6 +204,7 @@ Any admin page can use the modal system by:
 
 **Engine Agnosticism**: NEVER hardcode step types in `/inc/engine/` directory  
 **Service Access**: Always use `apply_filters('dm_get_service', null)` - never `new ServiceClass()`  
+**Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods  
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)  
 **CSS Namespace**: All admin CSS must use `dm-` prefix  
 
@@ -228,6 +233,47 @@ function dm_register_twitter_filters() {
 dm_register_twitter_filters();
 ```
 
+
+## Universal Template Rendering
+
+**Filter-Based Template Discovery**: Templates are discovered from admin page registration and rendered through the universal `dm_render_template` filter system.
+
+**Template Registration**: Admin pages register template directories through the `dm_get_admin_page` filter:
+
+```php
+add_filter('dm_get_admin_page', function($config, $page_slug) {
+    if ($page_slug === 'my_page') {
+        return [
+            'page_title' => __('My Page'),
+            'content_callback' => [new MyPage(), 'render'],
+            'templates' => __DIR__ . '/templates/', // Template directory registration
+            'assets' => [...]
+        ];
+    }
+    return $config;
+}, 10, 2);
+```
+
+**Template Usage**: Components use the universal filter for all template rendering:
+
+```php
+// Universal template rendering - discovers from registered admin pages
+$content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
+    'handler_slug' => 'twitter',
+    'settings_data' => $settings
+]);
+
+// Template discovery searches all registered admin page template directories
+// Returns error message if template not found in any registered location
+```
+
+**Template Discovery Process**:
+1. Filter searches all registered admin page template directories
+2. Constructs full path: `{template_dir}/{template_name}.php`
+3. Returns rendered content with extracted data variables
+4. Displays error if template not found in any location
+
+**Critical**: NEVER use legacy `render_template()` methods - always use the universal filter system.
 
 ## Extension Examples
 
@@ -272,6 +318,7 @@ add_filter('dm_get_admin_page', function($config, $page_slug) {
         return [
             'page_title' => __('My Page'),
             'content_callback' => [new MyPage(), 'render'],
+            'templates' => __DIR__ . '/templates/', // Required for template rendering
             'assets' => [
                 'css' => ['my-css' => ['file' => 'path/to/style.css']],
                 'js' => ['my-js' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
@@ -286,7 +333,7 @@ add_filter('dm_get_admin_page', function($config, $page_slug) {
 ```php
 add_filter('dm_get_modal', function($content, $template) {
     if ($template === 'my-modal') {
-        return $this->render_template('modal/my-modal', $context);
+        return apply_filters('dm_render_template', '', 'modal/my-modal', $context);
     }
     return $content;
 }, 10, 2);

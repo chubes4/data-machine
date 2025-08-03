@@ -850,13 +850,13 @@ class WordPress {
             'category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
-                'description' => __('Optional: Filter by a specific category.', 'data-machine'),
+                'description' => __('Filter by a specific category.', 'data-machine'),
                 'options' => $category_options,
             ],
             'tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
-                'description' => __('Optional: Filter by a specific tag.', 'data-machine'),
+                'description' => __('Filter by a specific tag.', 'data-machine'),
                 'options' => $tag_options,
             ],
             'orderby' => [
@@ -968,14 +968,14 @@ class WordPress {
                 'type' => 'select',
                 'wrapper_id' => 'dm-airdrop-category-wrapper',
                 'label' => __('Category', 'data-machine'),
-                'description' => __('Optional: Filter by a specific category ID from the remote site.', 'data-machine'),
+                'description' => __('Filter by a specific category ID from the remote site.', 'data-machine'),
                 'options' => $remote_categories,
             ],
             'rest_tag' => [
                 'type' => 'select',
                 'wrapper_id' => 'dm-airdrop-tag-wrapper',
                 'label' => __('Tag', 'data-machine'),
-                'description' => __('Optional: Filter by a specific tag ID from the remote site.', 'data-machine'),
+                'description' => __('Filter by a specific tag ID from the remote site.', 'data-machine'),
                 'options' => $remote_tags,
             ],
             'rest_orderby' => [
@@ -1030,7 +1030,7 @@ class WordPress {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Optional: Filter items using a search term.', 'data-machine'),
+                'description' => __('Filter items using a search term.', 'data-machine'),
             ],
         ];
     }

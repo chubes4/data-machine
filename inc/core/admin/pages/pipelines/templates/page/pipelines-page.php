@@ -1,0 +1,58 @@
+<?php
+/**
+ * Pipelines Main Page Template
+ *
+ * Overall page structure for the Pipelines admin page.
+ * Contains header, pipeline list, and overall page layout.
+ *
+ * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
+ * @since 1.0.0
+ */
+
+// Prevent direct access
+if (!defined('WPINC')) {
+    die;
+}
+
+?>
+<div class="dm-admin-wrap dm-pipelines-page">
+    <!-- Page Header -->
+    <div class="dm-admin-header">
+        <h1 class="dm-admin-title">
+            <?php esc_html_e('Pipeline + Flow Management', 'data-machine'); ?>
+        </h1>
+        <p class="dm-admin-subtitle">
+            <?php esc_html_e('Create pipeline templates and configure flow instances for automated data processing.', 'data-machine'); ?>
+        </p>
+        
+        <!-- Add New Pipeline Button -->
+        <div class="dm-add-pipeline-section">
+            <button type="button" class="button button-primary dm-add-new-pipeline-btn">
+                <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
+            </button>
+        </div>
+    </div>
+
+    <!-- Universal Pipeline Cards Container -->
+    <div class="dm-pipeline-cards-container">
+        <div class="dm-pipelines-list">
+            <!-- Show existing pipelines (latest first) -->
+            <?php if (!empty($all_pipelines)): ?>
+                <?php foreach (array_reverse($all_pipelines) as $pipeline): ?>
+                    <?php 
+                    // Load flows for this pipeline
+                    $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : $pipeline['pipeline_id'];
+                    $flows_db = apply_filters('dm_get_database_service', null, 'flows');
+                    $existing_flows = $flows_db ? $flows_db->get_flows_for_pipeline($pipeline_id) : [];
+                    
+                    echo apply_filters('dm_render_template', '', 'page/pipeline-card', [
+                        'pipeline' => $pipeline,
+                        'existing_flows' => $existing_flows,
+                        'pipelines_instance' => $pipelines_instance  // Pass instance for nested template calls
+                    ]); 
+                    ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>

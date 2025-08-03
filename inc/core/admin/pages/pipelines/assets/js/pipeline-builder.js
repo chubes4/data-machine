@@ -47,11 +47,8 @@
             // Direct delete action handler (confirmation already happened in modal)
             $(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
             
-            // Flow scheduling handlers
-            $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
-            $(document).on('click', '.dm-save-schedule', this.handleSaveSchedule.bind(this));
+            // Run now button - page action, not modal content
             $(document).on('click', '.dm-run-now-btn', this.handleRunNow.bind(this));
-            $(document).on('click', '.dm-cancel-schedule', this.handleCancelSchedule.bind(this));
         },
 
 
@@ -173,42 +170,16 @@
          * Update arrows between steps
          */
         updateStepArrows: function($pipelineSteps) {
-            // Remove all existing arrows
-            $pipelineSteps.find('.dm-step-arrow').remove();
-            
-            // Add arrows between populated steps (not before empty step)
-            const $steps = $pipelineSteps.find('.dm-step-card');
-            $steps.each(function(index) {
-                const $step = $(this);
-                const $nextStep = $steps.eq(index + 1);
-                
-                // Add arrow if next step exists and current step is not empty
-                if ($nextStep.length && !$step.hasClass('dm-step-card--empty')) {
-                    const arrowHtml = '<span class="dm-step-arrow"><span class="dashicons dashicons-arrow-right-alt"></span></span>';
-                    $step.after(arrowHtml);
-                }
-            });
+            // Arrow rendering now handled by PHP templates with conditional logic
+            // No JavaScript manipulation needed - templates include arrows based on is_last_step context
         },
 
         /**
          * Update arrows between flow steps
          */
         updateFlowStepArrows: function($flowSteps) {
-            // Remove all existing flow arrows
-            $flowSteps.find('.dm-flow-step-arrow').remove();
-            
-            // Add arrows between flow steps (only between actual flow step cards)
-            const $steps = $flowSteps.find('.dm-flow-step');
-            $steps.each(function(index) {
-                const $step = $(this);
-                const $nextStep = $steps.eq(index + 1);
-                
-                // Add arrow if next step exists
-                if ($nextStep.length) {
-                    const arrowHtml = '<span class="dm-flow-step-arrow"><span class="dashicons dashicons-arrow-right-alt"></span></span>';
-                    $step.after(arrowHtml);
-                }
-            });
+            // Arrow rendering now handled by PHP templates with conditional logic
+            // No JavaScript manipulation needed - templates include arrows based on is_last_step context
         },
 
         /**
@@ -712,74 +683,6 @@
         },
 
 
-        /**
-         * Handle schedule status radio button change
-         */
-        handleScheduleStatusChange: function(e) {
-            const $form = $(e.target).closest('.dm-flow-schedule-form');
-            const status = e.target.value;
-            const $intervalField = $form.find('.dm-schedule-interval-field');
-            
-            if (status === 'active') {
-                $intervalField.slideDown();
-            } else {
-                $intervalField.slideUp();
-            }
-        },
-
-        /**
-         * Handle save schedule form submission
-         */
-        handleSaveSchedule: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const $form = $button.closest('.dm-flow-schedule-form');
-            const flowId = $form.data('flow-id');
-            
-            if (!flowId) {
-                alert('Flow ID is required');
-                return;
-            }
-            
-            // Collect form data
-            const formData = {
-                action: 'dm_pipeline_ajax',
-                pipeline_action: 'save_flow_schedule',
-                flow_id: flowId,
-                schedule_status: $form.find('input[name="schedule_status"]:checked').val(),
-                schedule_interval: $form.find('select[name="schedule_interval"]').val(),
-                nonce: dmPipelineBuilder.pipeline_ajax_nonce
-            };
-            
-            // Show loading state
-            const originalText = $button.text();
-            $button.text('Saving...').prop('disabled', true);
-            
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: formData,
-                success: (response) => {
-                    if (response.success) {
-                        
-                        // Show success message
-                        alert(response.data.message || 'Schedule saved successfully');
-                        
-                        // TODO: Update flow card status in UI
-                    } else {
-                        alert(response.data.message || 'Error saving schedule');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
-                },
-                complete: () => {
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
-        },
 
         /**
          * Handle run now button click
@@ -829,12 +732,6 @@
             });
         },
 
-        /**
-         * Handle cancel schedule button click
-         */
-        handleCancelSchedule: function(e) {
-            e.preventDefault();
-        }
     };
 
     // Initialize when document is ready

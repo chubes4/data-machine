@@ -118,13 +118,13 @@ class WordPressSettings {
             'category_id' => [
                 'type' => 'select',
                 'label' => __('Category', 'data-machine'),
-                'description' => __('Optional: Filter by a specific category.', 'data-machine'),
+                'description' => __('Filter by a specific category.', 'data-machine'),
                 'options' => $category_options,
             ],
             'tag_id' => [
                 'type' => 'select',
                 'label' => __('Tag', 'data-machine'),
-                'description' => __('Optional: Filter by a specific tag.', 'data-machine'),
+                'description' => __('Filter by a specific tag.', 'data-machine'),
                 'options' => $tag_options,
             ],
             'orderby' => [
@@ -264,7 +264,7 @@ class WordPressSettings {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Optional: Filter items using a search term.', 'data-machine'),
+                'description' => __('Filter items using a search term.', 'data-machine'),
             ],
         ];
     }
