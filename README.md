@@ -65,11 +65,12 @@ Flow C: Manual Content (On-demand)
 
 ### Your First Pipeline+Flow
 1. **Create Pipeline Template**: Data Machine → Pipelines → Create New
+   - System automatically creates "Draft Flow" instance for immediate use
    - Click "Add Step" to open the dynamic step selection modal
    - Select step type from the visual interface (Input, AI, Output, etc.)
    - Choose specific handler from automatically discovered options
    - Configure step settings through the AJAX-driven interface
-2. **Create Flow Instance**: Configure specific settings
+2. **Configure Your Draft Flow**: Customize the auto-created flow instance
    - RSS Feed URL: Choose your source through the handler settings form
    - AI Model: Select GPT-4, Claude, etc. from available providers
    - WordPress: Select target blog/site with real-time validation
@@ -85,12 +86,14 @@ Flow C: Manual Content (On-demand)
 - **Step Definitions**: Specify step types and positions (0-99)
 - **No Configuration**: Pure workflow structure without handler specifics
 - **Template Library**: Build library of common workflow patterns
+- **Auto-Flow Creation**: Each new pipeline automatically generates a "Draft Flow" instance
 
 ### Flow Layer (Instances)
 - **Pipeline Implementation**: Each flow uses a specific pipeline template
 - **Handler Configuration**: Configure specific handlers for each step
 - **Independent Scheduling**: Each flow has its own timing and triggers
 - **User Settings**: Per-flow customization of AI models, accounts, etc.
+- **Immediate Availability**: "Draft Flow" created automatically for instant workflow execution
 
 ### Linear Processing Within Each Flow
 - **Position-Based Execution**: Steps run in order 0-99 within each flow
@@ -183,10 +186,11 @@ Professional AJAX-driven interface with sophisticated modal system integration:
 - **Dynamic Step Selection**: Real-time discovery of available step types through dual-mode filter system
 - **Handler Auto-Discovery**: Automatically shows available handlers for each step type with parameter-based filter discovery
 - **Professional Modal UX**: Seamless modal interactions with WordPress-native feel using universal modal infrastructure
-- **Template Architecture**: Clean separation of modal and page templates in organized directory structure
+- **Template Architecture**: Clean separation of modal and page templates with PHP-generated arrows and step cards
 - **AJAX Backend**: Comprehensive PipelineAjax class with WordPress security verification and dynamic content generation
 - **Real-time Validation**: Immediate feedback on handler availability and configuration requirements
 - **Filter-Based Content**: All modal content generated via filter system enabling unlimited extensibility without core modifications
+- **Auto-Flow Creation**: Every new pipeline automatically creates "Draft Flow" for immediate workflow execution
 - **WordPress Security**: Standard nonce verification, capability checks, and input sanitization
 
 ### Pipeline+Flow Architecture

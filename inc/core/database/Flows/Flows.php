@@ -5,14 +5,18 @@ namespace DataMachine\Core\Database\Flows;
 /**
  * Flows Database Class
  * 
- * Manages flow instances that execute pipeline configurations with specific user settings
+ * Manages flow instances that execute pipeline configurations with specific handler settings
  * and scheduling. Each flow represents a configured instance of a pipeline with its own
- * handler settings, user preferences, and scheduling configuration.
+ * handler settings and scheduling configuration.
  * 
  * Flow-Level Scheduling Architecture:
  * - ALL scheduling happens at the flow level only
  * - No pipeline-level scheduling whatsoever
  * - scheduling_config JSON contains: interval, status, last_run_at
+ * 
+ * Admin-Only Architecture:
+ * - No user_id field - flows are admin-only in this implementation
+ * - All flows are created and managed by admin users only
  * 
  * @package DataMachine\Core\Database
  */
@@ -57,14 +61,12 @@ class Flows {
             flow_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             pipeline_id bigint(20) unsigned NOT NULL,
             flow_name varchar(255) NOT NULL,
-            user_id bigint(20) unsigned NOT NULL,
             flow_config longtext NOT NULL,
             scheduling_config longtext NOT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (flow_id),
             KEY pipeline_id (pipeline_id),
-            KEY user_id (user_id),
             KEY created_at (created_at)
         ) $charset_collate;";
         
@@ -95,14 +97,14 @@ class Flows {
     /**
      * Create a new flow
      * 
-     * @param array $flow_data Flow data including pipeline_id, flow_name, user_id, flow_config, scheduling_config
+     * @param array $flow_data Flow data including pipeline_id, flow_name, flow_config, scheduling_config
      * @return int|false Flow ID on success, false on failure
      */
     public function create_flow(array $flow_data) {
         $logger = apply_filters('dm_get_logger', null);
         
-        // Validate required fields
-        $required_fields = ['pipeline_id', 'flow_name', 'user_id', 'flow_config', 'scheduling_config'];
+        // Validate required fields (user_id removed - admin-only plugin)
+        $required_fields = ['pipeline_id', 'flow_name', 'flow_config', 'scheduling_config'];
         foreach ($required_fields as $field) {
             if (!isset($flow_data[$field])) {
                 if ($logger) {
@@ -129,14 +131,12 @@ class Flows {
             [
                 'pipeline_id' => intval($flow_data['pipeline_id']),
                 'flow_name' => sanitize_text_field($flow_data['flow_name']),
-                'user_id' => intval($flow_data['user_id']),
                 'flow_config' => $flow_config,
                 'scheduling_config' => $scheduling_config
             ],
             [
                 '%d', // pipeline_id
                 '%s', // flow_name
-                '%d', // user_id
                 '%s', // flow_config
                 '%s'  // scheduling_config
             ]

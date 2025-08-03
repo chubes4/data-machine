@@ -551,14 +551,37 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Failed to create draft pipeline', 'data-machine')]);
         }
 
+        // Create default "Draft Flow" for the new pipeline
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        if ($db_flows) {
+            $flow_data = [
+                'pipeline_id' => $pipeline_id,
+                'flow_name' => __('Draft Flow', 'data-machine'),
+                'flow_config' => json_encode([]),
+                'scheduling_config' => json_encode([
+                    'status' => 'inactive',
+                    'interval' => 'manual'
+                ])
+            ];
+            
+            $flow_id = $db_flows->create_flow($flow_data);
+            // Continue even if flow creation fails - pipeline is more important
+        }
+
         // Get the created pipeline for template rendering
         $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Failed to retrieve created pipeline', 'data-machine')]);
         }
 
-        // Render the pipeline card template
-        $pipeline_card_html = apply_filters('dm_render_template', '', 'page/pipeline-card', ['pipeline' => $pipeline]);
+        // Get existing flows (should include the newly created draft flow)
+        $existing_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
+
+        // Render the pipeline card template with flows
+        $pipeline_card_html = apply_filters('dm_render_template', '', 'page/pipeline-card', [
+            'pipeline' => $pipeline,
+            'existing_flows' => $existing_flows
+        ]);
 
         wp_send_json_success([
             'message' => __('Draft pipeline created successfully', 'data-machine'),
@@ -662,7 +685,7 @@ class PipelineAjax
         $result = $job_creator->create_and_schedule_job(
             (int)$flow['pipeline_id'],
             $flow_id,
-            (int)$flow['user_id'],
+            get_current_user_id(), // Admin-only plugin - use current admin user
             'run_now'
         );
 

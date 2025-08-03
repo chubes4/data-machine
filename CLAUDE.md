@@ -12,13 +12,13 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 **Two-Layer Architecture**:
 - **Pipelines**: Reusable workflow templates with step sequences (positions 0-99)
-- **Flows**: Configured instances with handler settings and scheduling
+- **Flows**: Configured instances with handler settings and scheduling (auto-created "Draft Flow" for new pipelines)
 
 ## Current Status
 
-**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, production deployment.
+**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, arrow rendering migration to PHP templates, production deployment.
 
-**Known Issues**: Expanding PHPUnit test coverage across components.
+**Known Issues**: Expanding PHPUnit test coverage across components. Flows database schema contains references to user_id field that was removed - flows are now admin-only in this implementation.
 
 **Future Plans**: Webhook integration (Receiver Step), enhanced testing, additional platform integrations.
 
@@ -137,6 +137,7 @@ class MyStep {
 - Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="delete-action"`)
 - Manages pipeline state and UI updates
 - Direct AJAX operations for pipeline operations
+- Arrow rendering now handled by PHP templates with `is_last_step` context
 - Never calls modal APIs directly - clean separation maintained
 
 ### Data-Attribute Communication
@@ -191,6 +192,10 @@ add_filter('dm_get_modal', function($content, $template) {
 }, 10, 2);
 ```
 
+### Modal Lifecycle Improvements
+
+**Automatic Modal Closure**: Action buttons (like delete confirmations) now include `dm-modal-close` class for automatic modal dismissal after action completion, eliminating manual modal management in JavaScript.
+
 ### Universal Reusability
 
 Any admin page can use the modal system by:
@@ -210,8 +215,23 @@ Any admin page can use the modal system by:
 
 **Database Tables**:
 - `wp_dm_pipelines`: Template definitions with step sequences
-- `wp_dm_flows`: Configured instances with handler settings  
+- `wp_dm_flows`: Configured instances with handler settings (auto-created \"Draft Flow\" for new pipelines)
 - `wp_dm_jobs`: Execution records
+
+## Pipeline+Flow Lifecycle
+
+**Automatic Flow Creation**: Every new pipeline automatically creates a \"Draft Flow\" instance, eliminating empty state complexity and providing immediate workflow execution capability.
+
+**Pipeline Creation Workflow**:
+1. User creates new pipeline template via \"Add New Pipeline\" action
+2. System automatically generates \"Draft Flow\" instance for immediate use
+3. Flow inherits pipeline structure but maintains independent configuration
+4. Additional flows can be created manually for different configurations
+
+**Template Architecture Migration**:
+- **Arrow Rendering**: Moved from JavaScript HTML generation to PHP templates with `is_last_step` logic
+- **Modal Content**: Eliminated hardcoded placeholder HTML in favor of universal template system
+- **Step Cards**: All HTML generation now handled by PHP templates via `dm_render_template` filter
 
 ## Component Registration
 

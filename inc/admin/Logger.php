@@ -35,19 +35,18 @@ class Logger {
      * Convert string log level to Monolog Level.
      *
      * @param string $level_string Log level string
-     * @return Level Monolog level constant
+     * @return Level|null Monolog level constant, null for 'none'
      */
-    private function get_monolog_level(string $level_string): Level {
+    private function get_monolog_level(string $level_string): ?Level {
         switch (strtolower($level_string)) {
-            case 'error':
-                return Level::Error;
-            case 'warning':
-            case 'warn':
-                return Level::Warning;
-            case 'info':
-                return Level::Info;
             case 'debug':
                 return Level::Debug;
+            case 'info':
+                return Level::Info;
+            case 'error':
+                return Level::Error; // This will include warnings per Monolog hierarchy
+            case 'none':
+                return null; // No logging
             default:
                 return Level::Info;
         }
@@ -89,20 +88,23 @@ class Logger {
                 $log_level_setting = get_option('dm_log_level', 'info');
                 $log_level = $this->get_monolog_level($log_level_setting);
                 
-                // Create a handler (writing to a file)
-                $handler = new StreamHandler($log_file, $log_level);
+                // If log level is 'none', don't add any handlers (disables logging)
+                if ($log_level !== null) {
+                    // Create a handler (writing to a file)
+                    $handler = new StreamHandler($log_file, $log_level);
 
-                // Customize log format
-                $formatter = new LineFormatter(
-                    "[%datetime%] [%channel%.%level_name%]: %message% %context% %extra%\n",
-                    "Y-m-d H:i:s", // Human-readable format
-                    true, // Allow inline line breaks
-                    true  // Ignore empty context/extra
-                );
-                $handler->setFormatter($formatter);
+                    // Customize log format
+                    $formatter = new LineFormatter(
+                        "[%datetime%] [%channel%.%level_name%]: %message% %context% %extra%\n",
+                        "Y-m-d H:i:s", // Human-readable format
+                        true, // Allow inline line breaks
+                        true  // Ignore empty context/extra
+                    );
+                    $handler->setFormatter($formatter);
 
-                // Push the handler
-                $this->monolog_instance->pushHandler($handler);
+                    // Push the handler
+                    $this->monolog_instance->pushHandler($handler);
+                }
 
             } catch (\Exception $e) {
                 wp_die('Data Machine: Failed to initialize logger. Error: ' . esc_html($e->getMessage()));
@@ -357,12 +359,35 @@ class Logger {
      */
     public static function get_available_log_levels(): array {
         return [
-            'critical' => 'Critical (critical errors only)',
-            'error' => 'Error (errors and critical)',
-            'warning' => 'Warning (warnings, errors, and critical)',
+            'debug' => 'Debug (verbose logging)',
             'info' => 'Info (normal logging)',
-            'debug' => 'Debug (verbose logging)'
+            'error' => 'Error (errors and warnings only)',
+            'none' => 'None (disable logging)'
         ];
+    }
+
+    /**
+     * Get current log level setting.
+     *
+     * @return string Current log level
+     */
+    public function get_level(): string {
+        return get_option('dm_log_level', 'info');
+    }
+
+    /**
+     * Set log level setting.
+     *
+     * @param string $level Log level to set
+     * @return bool True on success, false on failure
+     */
+    public function set_level(string $level): bool {
+        $available_levels = array_keys(self::get_available_log_levels());
+        if (!in_array($level, $available_levels)) {
+            return false;
+        }
+        
+        return update_option('dm_log_level', $level);
     }
 
 } // End class

@@ -186,9 +186,7 @@ function dm_register_pipelines_admin_page_filters() {
                 $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
                 
                 if (empty($available_handlers)) {
-                    return '<div class="dm-no-handlers">
-                        <p>' . sprintf(__('No handlers available for %s steps', 'data-machine'), esc_html($step_type)) . '</p>
-                    </div>';
+                    return '';
                 }
                 
                 return apply_filters('dm_render_template', '', 'modal/handler-selection-cards', [
@@ -266,23 +264,8 @@ function dm_register_pipelines_admin_page_filters() {
                 // Step types register their own modal content for 'configure-step' template
                 // Note: Removed recursive filter call - step types handle their own content via this same filter
                 
-                // Professional fallback for steps without custom configuration
-                return '<div class="dm-step-config-placeholder">
-                    <div class="dm-placeholder-header">
-                        <h4>' . sprintf(__('%s Configuration', 'data-machine'), esc_html(ucfirst(str_replace('_', ' ', $step_type)))) . '</h4>
-                    </div>
-                    <div class="dm-placeholder-content">
-                        <p>' . __('This step type does not require additional configuration.', 'data-machine') . '</p>
-                        <div class="dm-step-info">
-                            <strong>' . __('Step Type:', 'data-machine') . '</strong> ' . esc_html($step_type) . '<br>
-                            <strong>' . __('Configuration Type:', 'data-machine') . '</strong> ' . esc_html($config_type) . '<br>
-                            <strong>' . __('Modal Type:', 'data-machine') . '</strong> ' . esc_html($modal_type) . '
-                        </div>
-                    </div>
-                    <div class="dm-placeholder-footer">
-                        <p><em>' . __('Developers: Register custom configuration via the dm_get_modal filter with appropriate template names.', 'data-machine') . '</em></p>
-                    </div>
-                </div>';
+                // No configuration modal needed - component handles its own messaging if required
+                return '';
         }
         
         return $content;
