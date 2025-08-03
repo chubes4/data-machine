@@ -186,7 +186,37 @@ class AI_HTTP_ProviderManager_Component {
                             $component_config,
                             $current_values
                         );
-                        echo wp_kses_post($component_html);
+                        
+                        // WordPress-compliant form element escaping for admin interfaces
+                        $allowed_html = [
+                            'select' => [
+                                'id' => true, 'name' => true, 'class' => true, 
+                                'data-*' => true, 'onchange' => true
+                            ],
+                            'option' => ['value' => true, 'selected' => true],
+                            'input' => [
+                                'type' => true, 'id' => true, 'name' => true, 
+                                'class' => true, 'value' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'textarea' => [
+                                'id' => true, 'name' => true, 'class' => true,
+                                'rows' => true, 'cols' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'tr' => ['class' => true],
+                            'th' => ['scope' => true],
+                            'td' => ['colspan' => true],
+                            'label' => ['for' => true],
+                            'small' => ['class' => true],
+                            'br' => [],
+                            'span' => ['style' => true, 'class' => true, 'id' => true],
+                            'div' => ['class' => true, 'id' => true],
+                            'button' => ['type' => true, 'class' => true, 'onclick' => true, 'title' => true],
+                            'img' => ['src' => true, 'alt' => true, 'class' => true, 'draggable' => true, 'role' => true]
+                        ];
+                        
+                        echo wp_kses($component_html, $allowed_html);
                         // Debug: Add a comment to verify component rendering
                         echo '<!-- Component ' . esc_html($component_name) . ' rendered successfully -->';
                     } catch (Exception $e) {
@@ -208,12 +238,43 @@ class AI_HTTP_ProviderManager_Component {
                     }
                     
                     try {
-                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
+                        $component_html = AI_HTTP_Component_Registry::render_component(
                             $component_name,
                             $unique_id,
                             $component_config,
                             $current_values
-                        ));
+                        );
+                        
+                        // WordPress-compliant form element escaping for admin interfaces
+                        $allowed_html = [
+                            'select' => [
+                                'id' => true, 'name' => true, 'class' => true, 
+                                'data-*' => true, 'onchange' => true
+                            ],
+                            'option' => ['value' => true, 'selected' => true],
+                            'input' => [
+                                'type' => true, 'id' => true, 'name' => true, 
+                                'class' => true, 'value' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'textarea' => [
+                                'id' => true, 'name' => true, 'class' => true,
+                                'rows' => true, 'cols' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'tr' => ['class' => true],
+                            'th' => ['scope' => true],
+                            'td' => ['colspan' => true],
+                            'label' => ['for' => true],
+                            'small' => ['class' => true],
+                            'br' => [],
+                            'span' => ['style' => true, 'class' => true, 'id' => true],
+                            'div' => ['class' => true, 'id' => true],
+                            'button' => ['type' => true, 'class' => true, 'onclick' => true, 'title' => true],
+                            'img' => ['src' => true, 'alt' => true, 'class' => true, 'draggable' => true, 'role' => true]
+                        ];
+                        
+                        echo wp_kses($component_html, $allowed_html);
                     } catch (Exception $e) {
                         echo '<!-- Error rendering component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -232,12 +293,43 @@ class AI_HTTP_ProviderManager_Component {
                     }
                     
                     try {
-                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
+                        $component_html = AI_HTTP_Component_Registry::render_component(
                             $component_name,
                             $unique_id,
                             $component_config,
                             $current_values
-                        ));
+                        );
+                        
+                        // WordPress-compliant form element escaping for admin interfaces
+                        $allowed_html = [
+                            'select' => [
+                                'id' => true, 'name' => true, 'class' => true, 
+                                'data-*' => true, 'onchange' => true
+                            ],
+                            'option' => ['value' => true, 'selected' => true],
+                            'input' => [
+                                'type' => true, 'id' => true, 'name' => true, 
+                                'class' => true, 'value' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'textarea' => [
+                                'id' => true, 'name' => true, 'class' => true,
+                                'rows' => true, 'cols' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'tr' => ['class' => true],
+                            'th' => ['scope' => true],
+                            'td' => ['colspan' => true],
+                            'label' => ['for' => true],
+                            'small' => ['class' => true],
+                            'br' => [],
+                            'span' => ['style' => true, 'class' => true, 'id' => true],
+                            'div' => ['class' => true, 'id' => true],
+                            'button' => ['type' => true, 'class' => true, 'onclick' => true, 'title' => true],
+                            'img' => ['src' => true, 'alt' => true, 'class' => true, 'draggable' => true, 'role' => true]
+                        ];
+                        
+                        echo wp_kses($component_html, $allowed_html);
                     } catch (Exception $e) {
                         echo '<!-- Error rendering custom component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -262,12 +354,45 @@ class AI_HTTP_ProviderManager_Component {
                     <?php
                     // Render TestConnection component
                     try {
-                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
+                        $component_html = AI_HTTP_Component_Registry::render_component(
                             'test_connection',
                             $unique_id,
                             [],
                             $current_values
-                        ));
+                        );
+                        
+                        // WordPress-compliant form element escaping for admin interfaces
+                        $allowed_html = [
+                            'select' => [
+                                'id' => true, 'name' => true, 'class' => true, 
+                                'data-*' => true, 'onchange' => true
+                            ],
+                            'option' => ['value' => true, 'selected' => true],
+                            'input' => [
+                                'type' => true, 'id' => true, 'name' => true, 
+                                'class' => true, 'value' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'textarea' => [
+                                'id' => true, 'name' => true, 'class' => true,
+                                'rows' => true, 'cols' => true, 'placeholder' => true,
+                                'data-*' => true
+                            ],
+                            'tr' => ['class' => true],
+                            'th' => ['scope' => true],
+                            'td' => ['colspan' => true],
+                            'label' => ['for' => true],
+                            'small' => ['class' => true],
+                            'br' => [],
+                            'span' => ['style' => true, 'class' => true, 'id' => true],
+                            'div' => ['class' => true, 'id' => true],
+                            'button' => ['type' => true, 'class' => true, 'onclick' => true, 'title' => true],
+                            'img' => ['src' => true, 'alt' => true, 'class' => true, 'draggable' => true, 'role' => true],
+                            'postbox' => ['class' => true],
+                            'inside' => ['class' => true]
+                        ];
+                        
+                        echo wp_kses($component_html, $allowed_html);
                     } catch (Exception $e) {
                         echo '<!-- Error rendering test connection component: ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -280,6 +405,21 @@ class AI_HTTP_ProviderManager_Component {
         // Enqueue component JavaScript and pass configuration
         $this->enqueue_component_assets($unique_id);
         ?>
+        
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Simple temperature slider binding for modal context
+            const tempSlider = document.getElementById('<?php echo esc_js($unique_id); ?>_temperature');
+            const tempValue = document.getElementById('<?php echo esc_js($unique_id); ?>_temperature_value');
+            
+            if (tempSlider && tempValue) {
+                tempSlider.addEventListener('input', function(e) {
+                    // Show actual slider value (0-2 range, not 0-100)
+                    tempValue.textContent = parseFloat(e.target.value).toString();
+                });
+            }
+        });
+        </script>
         <?php
 
         return ob_get_clean();
@@ -326,10 +466,10 @@ class AI_HTTP_ProviderManager_Component {
         $api_key = $this->get_provider_setting($provider, 'api_key');
         
         if (empty($api_key)) {
-            return '<span style="color: #d63638;">⚠ Not configured</span>';
+            return '<span style="color: #d63638;">Not configured</span>';
         }
 
-        return '<span style="color: #00a32a;">✓ Configured</span>';
+        return '<span style="color: #00a32a;">Configured</span>';
     }
 
     /**
@@ -355,7 +495,7 @@ class AI_HTTP_ProviderManager_Component {
             return $html;
             
         } catch (Exception $e) {
-            return '<option value="">Error loading models</option>';
+            return '<option value="">No API key configured</option>';
         }
     }
 
@@ -368,12 +508,25 @@ class AI_HTTP_ProviderManager_Component {
             return;
         }
         
-        // Create plugin-specific script handle to prevent conflicts between multiple plugins
+        // Create plugin-specific handles to prevent conflicts between multiple plugins
         $script_handle = 'ai-http-provider-manager-' . $this->plugin_context;
+        $style_handle = 'ai-http-components-' . $this->plugin_context;
         
         // Use plugin_dir_url to get the correct URL for this plugin's copy of the library
         // This ensures each plugin loads assets from its own directory
         $script_url = plugin_dir_url(__FILE__) . '../../assets/js/provider-manager.js';
+        $style_url = plugin_dir_url(__FILE__) . '../../assets/css/components.css';
+        
+        // Enqueue CSS first
+        if (!empty($style_url) && !wp_style_is($style_handle, 'enqueued')) {
+            wp_enqueue_style(
+                $style_handle,
+                $style_url,
+                array(),
+                AI_HTTP_CLIENT_VERSION,
+                'all'
+            );
+        }
         
         if (!empty($script_url)) {
             // Only enqueue once per plugin context, even if multiple components exist

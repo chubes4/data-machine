@@ -57,6 +57,54 @@ function dm_register_wordpress_output_filters() {
         }
         return $settings;
     }, 10, 2);
+    
+    // Modal content registration - WordPress owns its handler-settings and handler-auth modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another handler
+        if ($content !== null) {
+            return $content;
+        }
+        
+        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+        $handler_slug = $context['handler_slug'] ?? '';
+        
+        // Only handle wordpress handler (output version)
+        if ($handler_slug !== 'wordpress') {
+            return $content;
+        }
+        
+        $pipelines_instance = new \DataMachine\Core\Admin\Pages\Pipelines\Pipelines();
+        
+        if ($template === 'handler-settings') {
+            // Settings modal template
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress');
+            
+            return $pipelines_instance->render_template('modal/handler-settings-form', [
+                'handler_slug' => 'wordpress',
+                'handler_config' => [
+                    'label' => __('WordPress', 'data-machine'),
+                    'description' => __('Create and update WordPress posts and pages', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'output',
+                'settings_available' => ($settings_instance !== null),
+                'handler_settings' => $settings_instance
+            ]);
+        }
+        
+        if ($template === 'handler-auth') {
+            // Authentication modal template
+            return $pipelines_instance->render_template('modal/handler-auth-form', [
+                'handler_slug' => 'wordpress',
+                'handler_config' => [
+                    'label' => __('WordPress', 'data-machine'),
+                    'description' => __('Create and update WordPress posts and pages', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'output'
+            ]);
+        }
+        
+        return $content;
+    }, 10, 2);
 }
 
 // Auto-register when file loads - achieving complete self-containment

@@ -50,6 +50,40 @@ function dm_register_rss_input_filters() {
         return $settings;
     }, 10, 2);
     
+    // Modal content registration - RSS owns its handler-settings modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        if ($template === 'handler-settings') {
+            // Return early if content already provided by another handler
+            if ($content !== null) {
+                return $content;
+            }
+            
+            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $handler_slug = $context['handler_slug'] ?? '';
+            
+            // Only handle rss handler
+            if ($handler_slug !== 'rss') {
+                return $content;
+            }
+            
+            // Use proper filter-based template rendering
+            $pipelines_instance = new \DataMachine\Core\Admin\Pages\Pipelines\Pipelines();
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'rss');
+            
+            return $pipelines_instance->render_template('modal/handler-settings-form', [
+                'handler_slug' => 'rss',
+                'handler_config' => [
+                    'label' => __('RSS', 'data-machine'),
+                    'description' => __('Read content from RSS feeds', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'input',
+                'settings_available' => ($settings_instance !== null),
+                'handler_settings' => $settings_instance
+            ]);
+        }
+        return $content;
+    }, 10, 2);
+    
     // DataPacket conversion registration - RSS handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'rss') {

@@ -1,0 +1,733 @@
+/**
+ * Data Machine Pipeline Modal Styles
+ * 
+ * Modal-specific styles for pipeline administration interfaces.
+ * Separated from page-level styles for clean architecture.
+ *
+ * @since 1.0.0
+ */
+
+/* ===== STEP SELECTION MODAL ===== */
+
+/* Step selection container */
+.dm-step-selection-container {
+    padding: 0;
+}
+
+.dm-step-selection-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.dm-step-selection-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Step selection cards grid */
+.dm-step-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+/* Individual step selection cards */
+.dm-step-selection-card {
+    background: #fff;
+    border: 2px solid #e1e1e1;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    text-align: left;
+}
+
+.dm-step-selection-card:hover {
+    border-color: #0073aa;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.1);
+    transform: translateY(-2px);
+}
+
+.dm-step-selection-card:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+    border-color: #0073aa;
+}
+
+/* Step selection card content */
+.dm-step-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.dm-step-card-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.dm-step-card-body {
+    margin-top: 12px;
+}
+
+.dm-step-card-description {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Step handlers in modal cards */
+.dm-step-handlers {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+}
+
+.dm-handlers-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.dm-handlers-list {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+}
+
+/* ===== HANDLER SELECTION MODAL ===== */
+
+.dm-handler-selection-container {
+    padding: 0;
+}
+
+.dm-handler-selection-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.dm-handler-selection-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.dm-handler-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.dm-handler-selection-card {
+    background: #fff;
+    border: 2px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.dm-handler-selection-card:hover {
+    border-color: #0073aa;
+    box-shadow: 0 3px 8px rgba(0, 115, 170, 0.1);
+    transform: translateY(-1px);
+}
+
+.dm-handler-card-title {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.dm-handler-card-description {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.3;
+}
+
+/* ===== DELETE STEP MODAL ===== */
+
+.dm-delete-step-container {
+    padding: 0;
+}
+
+.dm-delete-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.dm-delete-warning h4 {
+    margin: 0 0 10px 0;
+    color: #856404;
+}
+
+.dm-affected-flows {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.dm-affected-flows h4 {
+    margin: 0 0 10px 0;
+    color: #856404;
+}
+
+.dm-flows-list {
+    margin: 10px 0;
+}
+
+.dm-flow-item {
+    margin-bottom: 5px;
+}
+
+.dm-flow-name {
+    font-weight: 600;
+}
+
+.dm-flow-info {
+    color: #666;
+    font-size: 12px;
+}
+
+.dm-cascade-warning {
+    margin-top: 15px;
+    color: #856404;
+    font-size: 14px;
+}
+
+.dm-no-flows {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.dm-no-flows .dm-info {
+    margin: 0;
+    color: #0c5460;
+}
+
+/* ===== HANDLER SETTINGS MODAL ===== */
+
+.dm-handler-settings-container {
+    padding: 0;
+}
+
+.dm-handler-settings-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.dm-handler-settings-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.dm-handler-settings-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+/* ===== ENHANCED TAB SYSTEM ===== */
+
+.dm-handler-config-tabs {
+    display: flex;
+    border-bottom: 2px solid #e1e1e1;
+    margin-bottom: 20px;
+    background: #f8f9fa;
+    border-radius: 6px 6px 0 0;
+}
+
+.dm-tab-button {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    flex: 1;
+    text-align: center;
+}
+
+.dm-tab-button.active {
+    border-bottom-color: #0073aa;
+    color: #0073aa;
+    font-weight: 600;
+    background: #fff;
+}
+
+.dm-tab-button:not(.disabled):hover {
+    background: #f0f8ff;
+    color: #0073aa;
+}
+
+.dm-tab-button.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.dm-tab-content {
+    padding: 0;
+}
+
+.dm-tab-content.active {
+    display: block;
+}
+
+/* ===== SETTINGS TAB STYLES ===== */
+
+.dm-settings-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dm-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.dm-form-field label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.dm-form-field input,
+.dm-form-field select,
+.dm-form-field textarea {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.dm-form-field input:focus,
+.dm-form-field select:focus,
+.dm-form-field textarea:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+.dm-form-field .description {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+    font-style: italic;
+}
+
+.dm-no-settings {
+    text-align: center;
+    padding: 30px 20px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e1e1e1;
+}
+
+.dm-no-settings p {
+    margin: 0 0 10px 0;
+    color: #666;
+}
+
+.dm-settings-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e1e1;
+}
+
+/* ===== AUTHENTICATION TAB STYLES ===== */
+
+.dm-auth-content {
+    padding: 0;
+}
+
+.dm-auth-status {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.dm-auth-status--connected {
+    background: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.dm-auth-status--connected strong {
+    color: #155724;
+}
+
+.dm-auth-status--disconnected {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.dm-auth-status--disconnected strong {
+    color: #721c24;
+}
+
+.dm-auth-status-info {
+    flex: 1;
+}
+
+.dm-auth-status-info strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.dm-auth-account-details {
+    margin-top: 10px;
+}
+
+.dm-auth-account-details p {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.dm-auth-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.dm-auth-help {
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.dm-auth-help h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.dm-auth-help p {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.dm-auth-not-available {
+    text-align: center;
+    padding: 30px 20px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e1e1e1;
+}
+
+.dm-auth-not-available h4 {
+    margin: 0 0 10px 0;
+    color: #666;
+}
+
+.dm-auth-not-available p {
+    margin: 0;
+    color: #888;
+    font-size: 14px;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+@media (max-width: 768px) {
+    .dm-step-cards,
+    .dm-handler-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .dm-step-selection-card,
+    .dm-handler-selection-card {
+        padding: 15px;
+    }
+    
+    .dm-step-card-title {
+        font-size: 15px;
+    }
+    
+    .dm-step-card-description {
+        font-size: 13px;
+    }
+    
+    /* Auth modal responsive adjustments */
+    .dm-auth-status {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .dm-auth-actions {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .dm-auth-actions .button {
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+    }
+    
+    .dm-handler-config-tabs {
+        flex-direction: column;
+    }
+    
+    .dm-tab-button {
+        border-bottom: none;
+        border-right: 3px solid transparent;
+        text-align: left;
+    }
+    
+    .dm-tab-button.active {
+        border-bottom: none;
+        border-right-color: #0073aa;
+    }
+    
+    /* Flow header responsive adjustments */
+    .dm-flows-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .dm-flows-header-actions {
+        align-self: flex-start;
+    }
+    
+    .dm-add-flow-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ===== FLOW MANAGEMENT STYLES ===== */
+
+.dm-flows-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.dm-flows-header-content {
+    flex: 1;
+}
+
+.dm-flows-header-content h4 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.dm-flows-header-content .dm-section-description {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.dm-flows-header-actions {
+    flex-shrink: 0;
+}
+
+.dm-add-flow-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.dm-add-flow-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.dm-add-flow-btn:hover:not(:disabled) {
+    background: #005a87;
+    border-color: #005a87;
+}
+
+.dm-add-flow-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ===== FLOW SCHEDULING MODAL STYLES ===== */
+
+.dm-flow-schedule-container {
+    padding: 0;
+}
+
+.dm-flow-schedule-header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.dm-flow-schedule-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.dm-flow-schedule-header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.dm-flow-schedule-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dm-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.dm-radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #e1e1e1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dm-radio-option:hover {
+    border-color: #0073aa;
+    background: #f8f9fa;
+}
+
+.dm-radio-option input[type="radio"] {
+    margin: 2px 0 0 0;
+}
+
+.dm-radio-option span {
+    font-weight: 600;
+    color: #333;
+}
+
+.dm-radio-option small {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.dm-schedule-interval-field {
+    background: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.dm-schedule-info {
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.dm-schedule-info h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.dm-schedule-details p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.dm-schedule-details strong {
+    color: #333;
+}
+
+.dm-schedule-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #e1e1e1;
+}
+
+.dm-run-now-btn {
+    color: #d63638;
+    border-color: #d63638;
+}
+
+.dm-run-now-btn:hover {
+    background: #d63638;
+    border-color: #d63638;
+    color: #fff;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+.dm-no-handlers {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.dm-modal-error {
+    text-align: center;
+    padding: 20px;
+    color: #d63638;
+}
+
+.dm-loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}

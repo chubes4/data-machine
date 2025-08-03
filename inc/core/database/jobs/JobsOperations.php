@@ -146,7 +146,7 @@ class JobsOperations {
      * Used by JobsListTable for filter-based architecture compliance.
      *
      * @param array $args Arguments including orderby, order, per_page, offset
-     * @return array Array of job records with module names
+     * @return array Array of job records with pipeline and flow names
      */
     public function get_jobs_for_list_table(array $args): array {
         global $wpdb;
@@ -205,8 +205,8 @@ class JobsOperations {
             // Build sequence from pipeline step configuration
             $sequence = [];
             foreach ( $step_configuration as $step ) {
-                if ( isset( $step['type'] ) && isset( $step['position'] ) ) {
-                    $sequence[ $step['position'] ] = $step['type'];
+                if ( isset( $step['step_type'] ) && isset( $step['position'] ) ) {
+                    $sequence[ $step['position'] ] = $step['step_type'];
                 }
             }
             
@@ -227,5 +227,26 @@ class JobsOperations {
             }
             return [];
         }
+    }
+
+    /**
+     * Get all jobs for a specific pipeline (for deletion impact analysis).
+     *
+     * @param int $pipeline_id The pipeline ID.
+     * @return array Array of job records.
+     */
+    public function get_jobs_for_pipeline( int $pipeline_id ): array {
+        global $wpdb;
+        
+        if ( $pipeline_id <= 0 ) {
+            return [];
+        }
+        
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY created_at DESC",
+            $pipeline_id
+        ), ARRAY_A );
+        
+        return $results ?: [];
     }
 }

@@ -39,6 +39,11 @@ $schedule_interval = $scheduling_config['interval'] ?? 'manual';
             </div>
         </div>
         <div class="dm-flow-actions">
+            <button type="button" class="button button-small dm-modal-trigger" 
+                    data-template="flow-schedule"
+                    data-context='{"flow_id":<?php echo esc_attr($flow_id); ?>}'>
+                <?php esc_html_e('Manage Schedule', 'data-machine'); ?>
+            </button>
             <button type="button" class="button button-small dm-edit-flow-btn" 
                     data-flow-id="<?php echo esc_attr($flow_id); ?>">
                 <?php esc_html_e('Configure', 'data-machine'); ?>

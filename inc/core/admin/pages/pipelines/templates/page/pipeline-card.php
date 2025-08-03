@@ -47,6 +47,13 @@ $is_new_pipeline = empty($pipeline_id);
             <button type="button" class="button button-primary dm-save-pipeline-btn" disabled>
                 <?php esc_html_e('Save Pipeline', 'data-machine'); ?>
             </button>
+            <?php if (!$is_new_pipeline): ?>
+                <button type="button" class="button button-secondary dm-modal-trigger" 
+                        data-template="confirm-delete"
+                        data-context='{"delete_type":"pipeline","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_name":"<?php echo esc_attr($pipeline_name); ?>"}'>
+                    <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
+                </button>
+            <?php endif; ?>
         </div>
     </div>
     
@@ -57,53 +64,53 @@ $is_new_pipeline = empty($pipeline_id);
             <p class="dm-section-description"><?php esc_html_e('Define the step sequence for this pipeline', 'data-machine'); ?></p>
         </div>
         <div class="dm-pipeline-steps">
-            <?php if (!empty($pipeline_steps)): ?>
-                <?php foreach ($pipeline_steps as $step): ?>
-                    <?php 
-                    $step_type = $step['step_type'] ?? 'unknown';
-                    $step_label = $step['label'] ?? ucfirst(str_replace('_', ' ', $step_type));
-                    ?>
-                    <div class="dm-step-card dm-pipeline-step" data-step-type="<?php echo esc_attr($step_type); ?>">
-                        <div class="dm-step-header">
-                            <div class="dm-step-title"><?php echo esc_html($step_label); ?></div>
-                            <div class="dm-step-actions">
-                                <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
-                                        data-template="delete-step"
-                                        data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-                                    <?php esc_html_e('Delete', 'data-machine'); ?>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="dm-step-body">
-                            <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
-                                <?php echo esc_html(ucfirst($step_type)); ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+            <?php 
+            // Data-driven approach: always append an empty step for "Add Step" functionality
+            $display_steps = $pipeline_steps;
+            $display_steps[] = [
+                'step_type' => '',
+                'position' => count($pipeline_steps),
+                'label' => '',
+                'is_empty' => true,
+                'step_config' => []
+            ];
             
-            <!-- Always available Add Step button for independent pipeline editing -->
-            <div class="dm-step-card dm-placeholder-step">
-                <div class="dm-placeholder-step-content">
-                    <button type="button" class="button button-primary dm-modal-trigger"
-                            data-template="step-selection"
-                            data-context='{"context":"pipeline_builder","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-                        <?php esc_html_e('Add Step', 'data-machine'); ?>
-                    </button>
-                    <p class="dm-placeholder-description"><?php esc_html_e('Choose a step type to add to your pipeline', 'data-machine'); ?></p>
-                </div>
-            </div>
+            foreach ($display_steps as $index => $step): 
+            ?>
+                <?php include __DIR__ . '/pipeline-step-card.php'; ?>
+                <?php if ($index < count($display_steps) - 1 && !($step['is_empty'] ?? false)): ?>
+                    <span class="dm-step-arrow">
+                        <span class="dashicons dashicons-arrow-right-alt"></span>
+                    </span>
+                <?php endif; ?>
+            <?php endforeach; ?>
         </div>
     </div>
     
     <!-- Associated Flows -->
     <div class="dm-pipeline-flows">
         <div class="dm-flows-header">
-            <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
-            <p class="dm-section-description"><?php esc_html_e('Each flow is a configured instance of the pipeline above', 'data-machine'); ?></p>
+            <div class="dm-flows-header-content">
+                <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
+                <p class="dm-section-description"><?php esc_html_e('Each flow is a configured instance of the pipeline above', 'data-machine'); ?></p>
+            </div>
+            <div class="dm-flows-header-actions">
+                <button type="button" class="button button-primary dm-add-flow-btn" 
+                        data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>"
+                        <?php echo $is_new_pipeline ? 'disabled title="' . esc_attr__('Save pipeline first to add flows', 'data-machine') . '"' : ''; ?>>
+                    <?php esc_html_e('Add Flow', 'data-machine'); ?>
+                </button>
+            </div>
         </div>
         <div class="dm-flows-list">
+            <!-- Existing Flows from Database -->
+            <?php if (!empty($existing_flows)): ?>
+                <?php foreach ($existing_flows as $flow): ?>
+                    <?php echo $pipelines_instance->render_template('page/flow-instance-card', ['flow' => $flow]); ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            
+            <!-- Placeholder for New Flows -->
             <div class="dm-flow-instance-card dm-placeholder-flow" data-flow-id="new">
                 <div class="dm-flow-header">
                     <div class="dm-flow-title-section">
@@ -123,9 +130,9 @@ $is_new_pipeline = empty($pipeline_id);
                 <div class="dm-flow-steps-section">
                     <div class="dm-flow-steps">
                         <?php if (!empty($pipeline_steps)): ?>
-                            <?php foreach ($pipeline_steps as $step): ?>
+                            <?php foreach ($pipeline_steps as $index => $step): ?>
                                 <?php 
-                                $step_type = $step['step_type'] ?? 'unknown';
+                                $step_type = $step['step_type'] ?? '';
                                 $step_label = $step['label'] ?? ucfirst(str_replace('_', ' ', $step_type));
                                 
                                 // Dynamic handler discovery using parameter-based filter system
@@ -149,35 +156,34 @@ $is_new_pipeline = empty($pipeline_id);
                                         </div>
                                     </div>
                                     <div class="dm-step-body">
-                                        <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
-                                            <?php echo esc_html(ucfirst($step_type)); ?>
-                                        </div>
-                                        
-                                        <!-- Configured Handlers for this step (only for steps that use handlers) -->
-                                        <?php if ($step_uses_handlers): ?>
-                                            <div class="dm-step-handlers">
-                                                <div class="dm-no-handlers">
+                                        <!-- Uniform step configuration info -->
+                                        <div class="dm-flow-step-info">
+                                            <?php if ($step_uses_handlers): ?>
+                                                <div class="dm-no-config">
                                                     <span><?php esc_html_e('No handlers configured', 'data-machine'); ?></span>
                                                 </div>
-                                            </div>
-                                        <?php endif; ?>
+                                            <?php else: ?>
+                                                <div class="dm-no-config">
+                                                    <span><?php esc_html_e('No AI model configured', 'data-machine'); ?></span>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
+                                <?php if ($index < count($pipeline_steps) - 1): ?>
+                                    <span class="dm-flow-step-arrow">
+                                        <span class="dashicons dashicons-arrow-right-alt"></span>
+                                    </span>
+                                <?php endif; ?>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                        
-                        <!-- Always show flow placeholder for consistent state management -->
-                        <div class="dm-step-card dm-flow-step dm-placeholder-flow-step">
-                            <div class="dm-placeholder-step-content">
-                                <p class="dm-placeholder-description">
-                                    <?php if (empty($pipeline_steps)): ?>
-                                        <?php esc_html_e('Add steps to the pipeline above to configure handlers for this flow', 'data-machine'); ?>
-                                    <?php else: ?>
-                                        <?php esc_html_e('Flow steps will appear here as you add pipeline steps', 'data-machine'); ?>
-                                    <?php endif; ?>
+                        <?php else: ?>
+                            <!-- Placeholder when no pipeline steps exist -->
+                            <div class="dm-flow-placeholder">
+                                <p class="dm-flow-placeholder-text">
+                                    <?php esc_html_e('Add steps to the pipeline above to configure handlers for this flow', 'data-machine'); ?>
                                 </p>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 

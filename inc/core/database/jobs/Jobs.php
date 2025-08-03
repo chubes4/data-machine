@@ -120,6 +120,13 @@ class Jobs {
         return $this->status->has_active_jobs_for_pipeline($pipeline_id, $exclude_job_id);
     }
 
+    /**
+     * Get all jobs for a specific pipeline (for deletion impact analysis).
+     */
+    public function get_jobs_for_pipeline( int $pipeline_id ): array {
+        return $this->operations->get_jobs_for_pipeline($pipeline_id);
+    }
+
     // ========================================
     // Step Management (delegated to JobsSteps)
     // ========================================

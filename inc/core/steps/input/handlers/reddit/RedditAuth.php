@@ -378,5 +378,46 @@ class RedditAuth {
         return true;
     }
 
+    /**
+     * Checks if a user has valid Reddit authentication
+     *
+     * @param int $user_id WordPress User ID
+     * @return bool True if authenticated, false otherwise
+     */
+    public function is_authenticated(int $user_id): bool {
+        $account = get_user_meta($user_id, 'data_machine_reddit_account', true);
+        return !empty($account) && 
+               is_array($account) && 
+               !empty($account['access_token']) && 
+               !empty($account['refresh_token']);
+    }
+
+    /**
+     * Gets Reddit account details for a user
+     *
+     * @param int $user_id WordPress User ID
+     * @return array|null Account details array or null if not authenticated
+     */
+    public static function get_account_details(int $user_id): ?array {
+        $account = get_user_meta($user_id, 'data_machine_reddit_account', true);
+        if (empty($account) || !is_array($account) || empty($account['access_token'])) {
+            return null;
+        }
+        
+        // Return formatted account details for display
+        $details = [];
+        if (!empty($account['username'])) {
+            $details['username'] = $account['username'];
+        }
+        if (!empty($account['scope'])) {
+            $details['scope'] = $account['scope'];
+        }
+        if (!empty($account['last_refreshed_at'])) {
+            $details['last_refreshed'] = gmdate('Y-m-d H:i:s', $account['last_refreshed_at']);
+        }
+        
+        return !empty($details) ? $details : null;
+    }
+
 } // End class
 

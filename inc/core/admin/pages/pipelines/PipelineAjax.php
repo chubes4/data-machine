@@ -67,8 +67,20 @@ class PipelineAjax
                 $this->delete_step_from_pipeline();
                 break;
             
+            case 'delete_pipeline':
+                $this->delete_pipeline();
+                break;
+            
             case 'create_draft_pipeline':
                 $this->create_draft_pipeline();
+                break;
+            
+            case 'save_flow_schedule':
+                $this->save_flow_schedule();
+                break;
+            
+            case 'run_flow_now':
+                $this->run_flow_now();
                 break;
             
             default:
@@ -432,11 +444,11 @@ class PipelineAjax
      */
     private function delete_step_from_pipeline()
     {
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+        $step_position = sanitize_text_field(wp_unslash($_POST['step_position'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
-        if (empty($step_type) || empty($pipeline_id)) {
-            wp_send_json_error(['message' => __('Step type and pipeline ID are required', 'data-machine')]);
+        if (empty($step_position) || empty($pipeline_id)) {
+            wp_send_json_error(['message' => __('Step position and pipeline ID are required', 'data-machine')]);
         }
 
         // Get database services using filter-based discovery
@@ -462,12 +474,12 @@ class PipelineAjax
             wp_send_json_error(['message' => __('No steps found in pipeline', 'data-machine')]);
         }
 
-        // Find and remove the step
+        // Find and remove the step by position
         $updated_steps = [];
         $step_found = false;
         
         foreach ($current_steps as $step) {
-            if (($step['step_type'] ?? '') !== $step_type) {
+            if (($step['position'] ?? '') != $step_position) {
                 $updated_steps[] = $step;
             } else {
                 $step_found = true;
@@ -475,7 +487,7 @@ class PipelineAjax
         }
         
         if (!$step_found) {
-            wp_send_json_error(['message' => __('Step not found in pipeline', 'data-machine')]);
+            wp_send_json_error(['message' => sprintf(__('Step at position %s not found in pipeline', 'data-machine'), $step_position)]);
         }
 
         // Update pipeline with remaining steps
@@ -551,6 +563,204 @@ class PipelineAjax
             'pipeline_id' => $pipeline_id,
             'pipeline_name' => $pipeline_data['pipeline_name'],
             'pipeline_card_html' => $pipeline_card_html
+        ]);
+    }
+
+    /**
+     * Save flow schedule configuration
+     */
+    private function save_flow_schedule()
+    {
+        $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+        $schedule_status = sanitize_text_field(wp_unslash($_POST['schedule_status'] ?? 'inactive'));
+        $schedule_interval = sanitize_text_field(wp_unslash($_POST['schedule_interval'] ?? 'manual'));
+
+        if (empty($flow_id)) {
+            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
+        }
+
+        // Get database service
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        if (!$db_flows) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+
+        // Get existing flow
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
+        }
+
+        // Parse existing scheduling config
+        $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
+        $old_status = $scheduling_config['status'] ?? 'inactive';
+
+        // Update scheduling config
+        $scheduling_config['status'] = $schedule_status;
+        $scheduling_config['interval'] = $schedule_interval;
+
+        // Update database
+        $result = $db_flows->update_flow($flow_id, [
+            'scheduling_config' => wp_json_encode($scheduling_config)
+        ]);
+
+        if (!$result) {
+            wp_send_json_error(['message' => __('Failed to save schedule configuration', 'data-machine')]);
+        }
+
+        // Handle Action Scheduler scheduling
+        $scheduler = apply_filters('dm_get_scheduler', null);
+        if ($scheduler) {
+            if ($schedule_status === 'active' && $schedule_interval !== 'manual') {
+                // Activate scheduling
+                $scheduler->activate_flow($flow_id);
+            } elseif ($old_status === 'active') {
+                // Deactivate scheduling if it was previously active
+                $scheduler->deactivate_flow($flow_id);
+            }
+        }
+
+        wp_send_json_success([
+            'message' => sprintf(__('Schedule saved successfully. Flow is now %s.', 'data-machine'), $schedule_status),
+            'flow_id' => $flow_id,
+            'schedule_status' => $schedule_status,
+            'schedule_interval' => $schedule_interval
+        ]);
+    }
+
+    /**
+     * Run flow immediately
+     */
+    private function run_flow_now()
+    {
+        $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+
+        if (empty($flow_id)) {
+            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
+        }
+
+        // Get database service
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        if (!$db_flows) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+
+        // Get flow data
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
+        }
+
+        // Use existing JobCreator to create and schedule job
+        $job_creator = apply_filters('dm_get_job_creator', null);
+        if (!$job_creator) {
+            wp_send_json_error(['message' => __('Job creator service unavailable', 'data-machine')]);
+        }
+
+        $result = $job_creator->create_and_schedule_job(
+            (int)$flow['pipeline_id'],
+            $flow_id,
+            (int)$flow['user_id'],
+            'run_now'
+        );
+
+        if ($result['success'] ?? false) {
+            wp_send_json_success([
+                'message' => sprintf(__('Flow "%s" started successfully', 'data-machine'), $flow['flow_name']),
+                'job_id' => $result['job_id'] ?? null
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => $result['message'] ?? __('Failed to start flow', 'data-machine')
+            ]);
+        }
+    }
+
+    /**
+     * Delete pipeline with cascade deletion logic
+     * Deletes flows first, then jobs, then the pipeline itself
+     */
+    private function delete_pipeline()
+    {
+        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        
+        if (empty($pipeline_id)) {
+            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
+        }
+
+        // Get database services using filter-based discovery
+        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        
+        if (!$db_pipelines || !$db_flows || !$db_jobs) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger && $logger->error('Database services unavailable in delete_pipeline');
+            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
+        }
+
+        // Get pipeline data before deletion for logging
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        if (!$pipeline) {
+            wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
+        }
+        
+        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        
+        // Get affected flows and jobs for cascade deletion and reporting
+        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $affected_jobs = $db_jobs->get_jobs_for_pipeline($pipeline_id);
+        
+        $flow_count = count($affected_flows);
+        $job_count = count($affected_jobs);
+
+        // Cascade deletion: jobs → flows → pipeline
+        // Delete all jobs associated with this pipeline first
+        if (!empty($affected_jobs)) {
+            foreach ($affected_jobs as $job) {
+                $job_id = is_object($job) ? $job->job_id : $job['job_id'];
+                $success = $db_jobs->delete_job($job_id);
+                if (!$success) {
+                    wp_send_json_error(['message' => sprintf(__('Failed to delete job %d during cascade deletion', 'data-machine'), $job_id)]);
+                }
+            }
+        }
+
+        // Delete all flows associated with this pipeline
+        if (!empty($affected_flows)) {
+            foreach ($affected_flows as $flow) {
+                $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+                $success = $db_flows->delete_flow($flow_id);
+                if (!$success) {
+                    wp_send_json_error(['message' => sprintf(__('Failed to delete flow %d during cascade deletion', 'data-machine'), $flow_id)]);
+                }
+            }
+        }
+
+        // Finally, delete the pipeline itself
+        $success = $db_pipelines->delete_pipeline($pipeline_id);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to delete pipeline', 'data-machine')]);
+        }
+
+        // Log the deletion
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->info("Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows and {$job_count} jobs.");
+        }
+
+        wp_send_json_success([
+            'message' => sprintf(
+                __('Pipeline "%s" deleted successfully. %d flows and %d jobs were also deleted.', 'data-machine'),
+                $pipeline_name,
+                $flow_count,
+                $job_count
+            ),
+            'pipeline_id' => $pipeline_id,
+            'pipeline_name' => $pipeline_name,
+            'deleted_flows' => $flow_count,
+            'deleted_jobs' => $job_count
         ]);
     }
 }

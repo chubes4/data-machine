@@ -32,7 +32,6 @@ class AI_HTTP_Core_ApiKeyInput implements AI_HTTP_Component_Interface {
         $html .= '<label for="' . esc_attr($unique_id) . '_api_key">' . esc_html($config['label']) . '</label>';
         $html .= '</th>';
         $html .= '<td>';
-        $html .= '<div>';
         $html .= '<input type="password" ';
         $html .= 'id="' . esc_attr($unique_id) . '_api_key" ';
         $html .= 'name="ai_api_key" ';
@@ -42,16 +41,6 @@ class AI_HTTP_Core_ApiKeyInput implements AI_HTTP_Component_Interface {
         $html .= 'data-component-type="api_key_input" ';
         $html .= 'data-provider="' . esc_attr($provider) . '" ';
         $html .= 'class="regular-text" />';
-        
-        if ($config['show_toggle']) {
-            $html .= '<button type="button" class="button button-small" ';
-            $html .= 'onclick="aiHttpToggleKeyVisibility(\'' . esc_attr($unique_id) . '_api_key\')" ';
-            $html .= 'title="Toggle API key visibility">';
-            $html .= $config['toggle_icon'];
-            $html .= '</button>';
-        }
-        
-        $html .= '</div>';
         
         if ($config['show_help']) {
             $html .= '<br><small class="description">' . esc_html($config['help_text']) . '</small>';
@@ -80,16 +69,6 @@ class AI_HTTP_Core_ApiKeyInput implements AI_HTTP_Component_Interface {
                 'default' => 'Enter your API key',
                 'description' => 'Placeholder text template'
             ],
-            'show_toggle' => [
-                'type' => 'boolean',
-                'default' => true,
-                'description' => 'Show visibility toggle button'
-            ],
-            'toggle_icon' => [
-                'type' => 'string',
-                'default' => '👁',
-                'description' => 'Icon for visibility toggle'
-            ],
             'show_help' => [
                 'type' => 'boolean',
                 'default' => true,
@@ -112,8 +91,6 @@ class AI_HTTP_Core_ApiKeyInput implements AI_HTTP_Component_Interface {
         return [
             'label' => 'API Key',
             'placeholder_template' => 'Enter your API key',
-            'show_toggle' => true,
-            'toggle_icon' => '👁',
             'show_help' => true,
             'help_text' => 'Your API key is stored securely and only used for AI requests.'
         ];

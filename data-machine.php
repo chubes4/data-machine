@@ -107,11 +107,6 @@ function run_data_machine() {
         return false; // Fail gracefully if orchestrator unavailable
     }, 10, 2 );
 
-    // Initialize scheduler hooks
-    $scheduler = apply_filters('dm_get_scheduler', null);
-    if ($scheduler) {
-        $scheduler->init_hooks();
-    }
 
 }
 

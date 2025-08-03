@@ -86,6 +86,7 @@
     display: flex;
     gap: 15px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 /* Step cards */
@@ -94,18 +95,10 @@
     border: 1px solid #ddd;
     border-radius: 6px;
     padding: 12px;
-    flex: 0 0 auto;
-    min-width: 200px;
-    max-width: 250px;
+    flex: 0 0 160px;
+    height: 80px;
 }
 
-.dm-placeholder-step {
-    border: 2px dashed #ccc;
-    background: #f9f9f9;
-    text-align: center;
-    padding: 30px 20px;
-    flex: 0 0 300px;
-}
 
 .dm-step-header {
     display: flex;
@@ -120,45 +113,8 @@
     color: #333;
 }
 
-/* Step type badges */
-.dm-step-type-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: white;
-    margin-bottom: 8px;
-}
-
-.dm-step-type-badge.dm-step-input {
-    background: #28a745;
-}
-
-.dm-step-type-badge.dm-step-ai {
-    background: #6f42c1;
-}
-
-.dm-step-type-badge.dm-step-output {
-    background: #fd7e14;
-}
 
 
-/* Placeholder step content */
-.dm-placeholder-step-content {
-    text-align: center;
-}
-
-.dm-add-first-step-btn {
-    margin-bottom: 10px;
-}
-
-.dm-placeholder-description {
-    color: #666;
-    font-size: 13px;
-    margin: 0;
-}
 
 /* Flow section */
 .dm-flows-header h4 {
@@ -264,22 +220,50 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 /* Flow step cards (nested, smaller) */
 .dm-flow-step {
     min-width: 180px;
     max-width: 220px;
+    min-height: 120px;
     border-color: #ccc;
     background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
 }
 
-.dm-placeholder-flow-step {
-    border: 2px dashed #ccc;
-    background: #f0f0f0;
-    text-align: center;
-    padding: 20px 15px;
+.dm-flow-step .dm-step-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
+
+.dm-flow-step-info {
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+/* Flow placeholder when no pipeline steps exist */
+.dm-flow-placeholder {
+    text-align: center;
+    padding: 30px 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.dm-flow-placeholder-text {
+    margin: 0;
+    font-size: 14px;
+}
+
+.dm-no-config {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+}
+
 
 .dm-flow-meta {
     padding: 8px 16px;
@@ -328,61 +312,83 @@
     }
 }
 
-/* NOTE: Universal modal styles moved to /inc/core/admin/modal/assets/css/core-modal.css */
+/* Empty step styling - minimal visual distinction */
+.dm-step-card--empty {
+    border: 1px dashed #ddd !important;
+}
 
-/* Modal-specific styles moved to pipeline-modal.css */
-
-.dm-step-card-header {
+/* Empty step content styling - uses same card structure as populated steps */
+.dm-step-empty-content {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    justify-content: center;
+    height: 100%;
+    padding: 0;
 }
 
-/* Removed step-specific styling - using generic approach for all step types */
-
-.dm-step-card-title {
+.dm-step-add-button {
     margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
 }
 
-.dm-step-card-description {
-    margin: 0 0 10px 0;
+/* Delete button styling - WordPress standard */
+.button-link-delete {
+    color: #d63638 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-decoration: none;
+}
+
+.button-link-delete:hover {
+    color: #d63638 !important;
+    background: transparent !important;
+    text-decoration: underline;
+}
+
+/* Configure button styling - WordPress admin blue */
+.button-link-configure {
+    color: #0073aa !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-decoration: none;
+}
+
+.button-link-configure:hover {
+    color: #0073aa !important;
+    background: transparent !important;
+    text-decoration: underline;
+}
+
+/* Step flow arrows */
+.dm-step-arrow {
     color: #666;
+    font-size: 16px;
+    margin: 0 5px;
+    flex-shrink: 0;
+}
+
+.dm-step-arrow .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+
+/* Flow step arrows (smaller for nested flow steps) */
+.dm-flow-step-arrow {
+    color: #888;
+    font-size: 14px;
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+.dm-flow-step-arrow .dashicons {
+    width: 14px;
+    height: 14px;
     font-size: 14px;
 }
 
-.dm-step-card-meta {
-    margin-top: 10px;
-}
-
-.dm-step-class {
-    color: #999;
-    font-size: 12px;
-}
-
-/* Step handlers in modal cards */
-.dm-step-handlers {
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid #eee;
-}
-
-.dm-handlers-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #666;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.dm-handlers-list {
-    font-size: 12px;
-    color: #888;
-    font-style: italic;
-}
+/* Modal-specific styles moved to modal-pipelines.css for better separation of concerns */
 
 /* Notifications */
 .dm-notification {

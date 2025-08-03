@@ -80,5 +80,122 @@ class TwitterSettings {
             'twitter_enable_images' => true,
         ];
     }
+
+    /**
+     * Render Twitter handler settings modal content.
+     *
+     * @param array $context Modal context from JavaScript.
+     * @return string Modal HTML content.
+     */
+    public static function render_modal(array $context): string {
+        $handler_slug = $context['handler_slug'] ?? 'twitter';
+        $step_type = $context['step_type'] ?? 'output';
+        
+        // Get current configuration if editing existing handler
+        $current_config = $context['current_config'] ?? [];
+        
+        // Get field definitions
+        $fields = self::get_fields($current_config);
+        
+        ob_start();
+        ?>
+        <div class="dm-handler-settings-container">
+            <div class="dm-handler-settings-header">
+                <h3><?php echo esc_html(__('Configure Twitter Handler', 'data-machine')); ?></h3>
+                <p><?php echo esc_html(__('Set up your Twitter integration settings below.', 'data-machine')); ?></p>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="dm-handler-config-tabs">
+                <button class="dm-tab-button active" data-tab="settings"><?php esc_html_e('Settings', 'data-machine'); ?></button>
+                <button class="dm-tab-button disabled" data-tab="auth"><?php esc_html_e('Authentication', 'data-machine'); ?></button>
+            </div>
+            
+            <!-- Settings Tab Content -->
+            <div class="dm-tab-content active" data-tab="settings">
+                <form class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
+                    <div class="dm-settings-fields">
+                        <?php foreach ($fields as $field_key => $field_config): ?>
+                            <div class="dm-form-field">
+                                <label for="<?php echo esc_attr($field_key); ?>">
+                                    <?php echo esc_html($field_config['label']); ?>
+                                </label>
+                                
+                                <?php if ($field_config['type'] === 'number'): ?>
+                                    <input type="number" 
+                                           id="<?php echo esc_attr($field_key); ?>" 
+                                           name="<?php echo esc_attr($field_key); ?>" 
+                                           value="<?php echo esc_attr($current_config[$field_key] ?? $field_config['default'] ?? ''); ?>"
+                                           min="<?php echo esc_attr($field_config['min'] ?? ''); ?>"
+                                           max="<?php echo esc_attr($field_config['max'] ?? ''); ?>"
+                                           class="regular-text" />
+                                           
+                                <?php elseif ($field_config['type'] === 'checkbox'): ?>
+                                    <input type="checkbox" 
+                                           id="<?php echo esc_attr($field_key); ?>" 
+                                           name="<?php echo esc_attr($field_key); ?>" 
+                                           value="1"
+                                           <?php checked(!empty($current_config[$field_key])); ?> />
+                                           
+                                <?php elseif ($field_config['type'] === 'textarea'): ?>
+                                    <textarea id="<?php echo esc_attr($field_key); ?>" 
+                                              name="<?php echo esc_attr($field_key); ?>" 
+                                              rows="4" 
+                                              class="large-text"><?php echo esc_textarea($current_config[$field_key] ?? $field_config['default'] ?? ''); ?></textarea>
+                                              
+                                <?php elseif ($field_config['type'] === 'select'): ?>
+                                    <select id="<?php echo esc_attr($field_key); ?>" 
+                                            name="<?php echo esc_attr($field_key); ?>" 
+                                            class="regular-text">
+                                        <?php foreach ($field_config['options'] ?? [] as $option_value => $option_label): ?>
+                                            <option value="<?php echo esc_attr($option_value); ?>" 
+                                                    <?php selected($current_config[$field_key] ?? $field_config['default'] ?? '', $option_value); ?>>
+                                                <?php echo esc_html($option_label); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    
+                                <?php else: // Default to text input ?>
+                                    <input type="text" 
+                                           id="<?php echo esc_attr($field_key); ?>" 
+                                           name="<?php echo esc_attr($field_key); ?>" 
+                                           value="<?php echo esc_attr($current_config[$field_key] ?? $field_config['default'] ?? ''); ?>"
+                                           class="regular-text" />
+                                <?php endif; ?>
+                                
+                                <?php if (!empty($field_config['description'])): ?>
+                                    <p class="description"><?php echo esc_html($field_config['description']); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <div class="dm-settings-actions">
+                        <button type="button" class="button button-secondary dm-cancel-settings">
+                            <?php esc_html_e('Cancel', 'data-machine'); ?>
+                        </button>
+                        <button type="submit" class="button button-primary dm-save-handler-settings">
+                            <?php esc_html_e('Add Handler to Flow', 'data-machine'); ?>
+                        </button>
+                    </div>
+                    
+                    <?php wp_nonce_field('dm_save_handler_settings', 'handler_settings_nonce'); ?>
+                </form>
+            </div>
+            
+            <!-- Authentication Tab Content (Placeholder) -->
+            <div class="dm-tab-content" data-tab="auth" style="display: none;">
+                <div class="dm-auth-placeholder">
+                    <h4><?php esc_html_e('Authentication Settings', 'data-machine'); ?></h4>
+                    <p><?php esc_html_e('Twitter authentication configuration will be available in the next phase.', 'data-machine'); ?></p>
+                    <button type="button" class="button button-secondary" disabled>
+                        <?php esc_html_e('Connect Twitter Account', 'data-machine'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
 }
 

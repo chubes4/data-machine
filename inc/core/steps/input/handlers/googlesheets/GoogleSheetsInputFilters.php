@@ -36,7 +36,7 @@ function dm_register_googlesheets_input_filters() {
     // Handler registration - Google Sheets Input declares itself as input handler
     add_filter('dm_get_handlers', function($handlers, $type) {
         if ($type === 'input') {
-            $handlers['googlesheets_input'] = [
+            $handlers['googlesheets'] = [
                 'class' => GoogleSheetsInput::class,
                 'label' => __('Google Sheets', 'data-machine'),
                 'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
@@ -45,28 +45,75 @@ function dm_register_googlesheets_input_filters() {
         return $handlers;
     }, 10, 2);
     
-    // Settings registration - parameter-matched to 'googlesheets_input' handler
+    // Settings registration - parameter-matched to 'googlesheets' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'googlesheets_input') {
+        if ($handler_slug === 'googlesheets') {
             return new GoogleSheetsInputSettings();
         }
         return $settings;
     }, 10, 2);
     
+    // Modal content registration - Google Sheets Input owns its handler-settings and handler-auth modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another handler
+        if ($content !== null) {
+            return $content;
+        }
+        
+        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+        $handler_slug = $context['handler_slug'] ?? '';
+        
+        // Only handle googlesheets handler when step_type is input
+        if ($handler_slug !== 'googlesheets' || ($context['step_type'] ?? '') !== 'input') {
+            return $content;
+        }
+        
+        $pipelines_instance = new \DataMachine\Core\Admin\Pages\Pipelines\Pipelines();
+        
+        if ($template === 'handler-settings') {
+            // Settings modal template
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'googlesheets');
+            
+            return $pipelines_instance->render_template('modal/handler-settings-form', [
+                'handler_slug' => 'googlesheets',
+                'handler_config' => [
+                    'label' => __('Google Sheets', 'data-machine'),
+                    'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'input',
+                'settings_available' => ($settings_instance !== null),
+                'handler_settings' => $settings_instance
+            ]);
+        }
+        
+        if ($template === 'handler-auth') {
+            // Authentication modal template
+            return $pipelines_instance->render_template('modal/handler-auth-form', [
+                'handler_slug' => 'googlesheets',
+                'handler_config' => [
+                    'label' => __('Google Sheets', 'data-machine'),
+                    'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'input'
+            ]);
+        }
+        
+        return $content;
+    }, 10, 2);
+    
     // Authentication registration - reuse existing Google Sheets OAuth infrastructure
     // This creates bi-directional Google Sheets integration by sharing auth with output handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'googlesheets_input') {
-            // Reuse the existing Google Sheets auth class from output handler
-            // This enables seamless bi-directional integration with shared OAuth credentials
-            return apply_filters('dm_get_auth', null, 'googlesheets');
+        if ($handler_slug === 'googlesheets') {
+            // Return existing Google Sheets auth instance (shared with output handler)
+            return new \DataMachine\Core\Steps\Output\Handlers\GoogleSheets\GoogleSheetsAuth();
         }
         return $auth;
     }, 10, 2);
     
     // DataPacket conversion registration - Google Sheets Input handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        if ($source_type === 'googlesheets_input') {
+        if ($source_type === 'googlesheets') {
             return GoogleSheetsInputDataPacket::create($source_data, $context);
         }
         return $datapacket;

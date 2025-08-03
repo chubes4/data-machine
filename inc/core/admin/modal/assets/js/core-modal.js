@@ -20,7 +20,10 @@
      * Provides the same API as dmPipelineModal for seamless migration
      * while enabling universal modal functionality across all admin pages.
      */
-    window.dmCoreModal = {
+    
+    // Preserve WordPress-localized data and extend with methods
+    window.dmCoreModal = window.dmCoreModal || {};
+    Object.assign(window.dmCoreModal, {
 
         /**
          * Open modal with universal content loading
@@ -40,6 +43,13 @@
                 return;
             }
             
+            // Debug logging
+            console.log('[DM Modal Debug] Opening modal with template:', template);
+            console.log('[DM Modal Debug] Context:', context);
+            console.log('[DM Modal Debug] dmCoreModal object:', dmCoreModal);
+            console.log('[DM Modal Debug] ajax_url:', dmCoreModal.ajax_url);
+            console.log('[DM Modal Debug] nonce:', dmCoreModal.get_modal_content_nonce);
+            
             // Show loading state
             this.showLoading();
             
@@ -50,12 +60,21 @@
                 nonce: dmCoreModal.get_modal_content_nonce
             };
             
+            console.log('[DM Modal Debug] AJAX data:', ajaxData);
+            
             // Make AJAX call to universal modal content handler
+            console.log('[DM Modal Debug] Making AJAX call to:', dmCoreModal.ajax_url);
+            
             $.ajax({
                 url: dmCoreModal.ajax_url,
                 type: 'POST',
                 data: ajaxData,
+                beforeSend: function(xhr, settings) {
+                    console.log('[DM Modal Debug] AJAX beforeSend - URL:', settings.url);
+                    console.log('[DM Modal Debug] AJAX beforeSend - Data:', settings.data);
+                },
                 success: (response) => {
+                    console.log('[DM Modal Debug] AJAX success:', response);
                     // Check if response is HTML (server error) instead of JSON
                     if (typeof response === 'string' && response.includes('<!DOCTYPE html>')) {
                         console.error('[DM Modal] Server returned HTML instead of JSON - Raw response:', response);
@@ -72,12 +91,11 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('[DM Modal] AJAX Error:', {
-                        status: status,
-                        error: error,
-                        statusCode: xhr.status,
-                        responseText: xhr.responseText
-                    });
+                    console.error('[DM Modal] AJAX Error - Status:', status);
+                    console.error('[DM Modal] AJAX Error - Error:', error);
+                    console.error('[DM Modal] AJAX Error - Status Code:', xhr.status);
+                    console.error('[DM Modal] AJAX Error - Response Text:', xhr.responseText);
+                    console.error('[DM Modal] AJAX Error - Full XHR:', xhr);
                     this.showError('Error connecting to server');
                 }
             });
@@ -160,7 +178,7 @@
             // Remove loading state
             $modal.removeClass('dm-modal-loading');
         }
-    };
+    });
 
     /**
      * Initialize universal modal system
@@ -211,6 +229,88 @@
             setTimeout(() => {
                 $button.text(originalText).prop('disabled', false);
             }, 1000);
+        });
+
+        // Tab switching functionality for handler modals
+        $(document).on('click', '.dm-tab-button:not(.disabled)', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const $tabContainer = $button.closest('.dm-handler-config-tabs');
+            const $contentContainer = $tabContainer.siblings('.dm-tab-content').parent();
+            const targetTab = $button.data('tab');
+            
+            if (!targetTab) {
+                console.error('DM Core Modal: No tab identifier found on tab button');
+                return;
+            }
+            
+            // Update tab button states
+            $tabContainer.find('.dm-tab-button').removeClass('active');
+            $button.addClass('active');
+            
+            // Update tab content visibility
+            $contentContainer.find('.dm-tab-content').removeClass('active').hide();
+            $contentContainer.find(`.dm-tab-content[data-tab="${targetTab}"]`).addClass('active').show();
+            
+            console.log('[DM Modal Debug] Switched to tab:', targetTab);
+        });
+
+        // Auth action handlers for handler modals
+        $(document).on('click', '.dm-connect-account', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const handlerSlug = $button.data('handler');
+            
+            if (!handlerSlug) {
+                console.error('DM Core Modal: No handler slug found on connect button');
+                return;
+            }
+            
+            // TODO: Implement OAuth flow initiation
+            console.log('Connect account for handler:', handlerSlug);
+            alert('OAuth connection flow will be implemented in the next phase.');
+        });
+
+        $(document).on('click', '.dm-disconnect-account', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const handlerSlug = $button.data('handler');
+            
+            if (!handlerSlug) {
+                console.error('DM Core Modal: No handler slug found on disconnect button');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.')) {
+                // TODO: Implement account disconnection
+                console.log('Disconnect account for handler:', handlerSlug);
+                alert('Account disconnection will be implemented in the next phase.');
+            }
+        });
+
+        $(document).on('click', '.dm-test-connection', function(e) {
+            e.preventDefault();
+            
+            const $button = $(this);
+            const handlerSlug = $button.data('handler');
+            
+            if (!handlerSlug) {
+                console.error('DM Core Modal: No handler slug found on test connection button');
+                return;
+            }
+            
+            // Show loading state
+            const originalText = $button.text();
+            $button.text('Testing...').prop('disabled', true);
+            
+            // TODO: Implement connection testing
+            setTimeout(() => {
+                $button.text(originalText).prop('disabled', false);
+                alert('Connection test will be implemented in the next phase.');
+            }, 2000);
         });
     });
 

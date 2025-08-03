@@ -172,7 +172,7 @@ function dm_register_ai_step_filters() {
                         'core' => ['provider_selector', 'api_key_input', 'model_selector'],
                         'extended' => ['system_prompt_field', 'temperature_slider']
                     ],
-                    'show_test_connection' => true,
+                    'show_test_connection' => false,
                     'compact_mode' => true // Optimized for modal display
                 ]);
             }
@@ -203,12 +203,78 @@ function dm_register_ai_step_filters() {
             return [
                 'config_type' => 'ai_configuration',
                 'modal_type' => 'ai_step_config', // Links to existing modal content registration
-                'button_text' => __('Configure AI', 'data-machine'),
+                'button_text' => __('Configure', 'data-machine'),
                 'label' => __('AI Configuration', 'data-machine')
             ];
         }
         return $config;
     }, 10, 3);
+    
+    /**
+     * AI Step Configuration Modal Content Registration
+     * 
+     * Register modal content for ai_step_config template using the AI HTTP Client
+     * ProviderManagerComponent. This provides a complete AI configuration interface
+     * with provider selection, API keys, model selection, and advanced settings.
+     * 
+     * @param mixed $content Current modal content (null if none)
+     * @param string $template Modal template being requested
+     * @return string|mixed Modal HTML content or original value
+     */
+    add_filter('dm_get_modal', function($content, $template) {
+        if ($template === 'configure-step') {
+            // Get context from $_POST directly (like templates access other data)
+            $context_raw = wp_unslash($_POST['context'] ?? '{}');
+            $context = json_decode($context_raw, true);
+            $step_type = $context['step_type'] ?? 'unknown';
+            
+            // Only handle AI step configuration
+            if ($step_type !== 'ai') {
+                return $content;
+            }
+            
+            // Extract step information for step-aware configuration
+            $step_key = $context['step_key'] ?? null;
+            $step_type = $context['step_type'] ?? 'ai';
+            $pipeline_id = $context['pipeline_id'] ?? null;
+            
+            // Use AI HTTP Client ProviderManagerComponent for complete AI configuration
+            if (class_exists('AI_HTTP_ProviderManager_Component')) {
+                return \AI_HTTP_ProviderManager_Component::render([
+                    'plugin_context' => 'data-machine',
+                    'ai_type' => 'llm',
+                    'title' => __('AI Step Configuration', 'data-machine'),
+                    'components' => [
+                        'core' => ['provider_selector', 'api_key_input', 'model_selector'],
+                        'extended' => ['temperature_slider', 'system_prompt_field']
+                    ],
+                    'show_test_connection' => false,
+                    'wrapper_class' => 'ai-http-provider-manager dm-ai-step-config',
+                    'step_key' => $step_key, // Step-aware configuration
+                    'component_configs' => [
+                        'temperature_slider' => [
+                            'min' => 0,
+                            'max' => 1,
+                            'step' => 0.1,
+                            'default_value' => 0.7
+                        ],
+                        'system_prompt_field' => [
+                            'placeholder' => __('Enter system prompt for this AI step...', 'data-machine'),
+                            'rows' => 4
+                        ]
+                    ]
+                ]);
+            }
+            
+            // Fallback if AI HTTP Client is not available
+            return '<div class="dm-ai-config-error">
+                <h4>' . __('AI Configuration Unavailable', 'data-machine') . '</h4>
+                <p>' . __('The AI HTTP Client library is required for AI step configuration. Please ensure the library is properly loaded.', 'data-machine') . '</p>
+                <p><em>' . __('Expected class: AI_HTTP_ProviderManager_Component', 'data-machine') . '</em></p>
+            </div>';
+        }
+        return $content;
+    }, 10, 2);
     
     // Future AI-specific filters can be added here following the same pattern
     // Examples:

@@ -32,8 +32,12 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
             $field_name = 'ai_step_' . sanitize_key($config['step_key']) . '_temperature';
         }
         
-        $html = '<div class="ai-field-group ai-temperature-slider">';
-        $html .= '<label for="' . esc_attr($unique_id) . '_temperature">' . esc_html($config['label']) . ':</label>';
+        $html = '<tr class="form-field">';
+        $html .= '<th scope="row">';
+        $html .= '<label for="' . esc_attr($unique_id) . '_temperature">' . esc_html($config['label']) . '</label>';
+        $html .= '</th>';
+        $html .= '<td>';
+        $html .= '<div class="ai-temperature-slider">';
         $html .= '<div class="ai-slider-container">';
         $html .= '<input type="range" ';
         $html .= 'id="' . esc_attr($unique_id) . '_temperature" ';
@@ -44,22 +48,23 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
         $html .= 'value="' . esc_attr($temperature) . '" ';
         $html .= 'data-component-id="' . esc_attr($unique_id) . '" ';
         $html .= 'data-component-type="temperature_slider" ';
-        $html .= 'class="ai-temperature-range" ';
-        $html .= 'oninput="aiHttpUpdateTemperatureValue(\'' . esc_attr($unique_id) . '\', this.value)" />';
+        $html .= 'class="ai-temperature-range" />';
         
         $html .= '<div class="ai-slider-labels">';
-        $html .= '<span class="ai-slider-label-left">' . esc_html($config['labels']['creative']) . '</span>';
+        $html .= '<span class="ai-slider-label-left">' . esc_html($config['labels']['focused']) . '</span>';
         $html .= '<span class="ai-slider-value" id="' . esc_attr($unique_id) . '_temperature_value">' . esc_html($temperature) . '</span>';
-        $html .= '<span class="ai-slider-label-right">' . esc_html($config['labels']['focused']) . '</span>';
+        $html .= '<span class="ai-slider-label-right">' . esc_html($config['labels']['creative']) . '</span>';
         $html .= '</div>';
         
         $html .= '</div>';
         
         if ($config['show_help']) {
-            $html .= '<p class="ai-field-help">' . esc_html($config['help_text']) . '</p>';
+            $html .= '<br><small class="description">' . esc_html($config['help_text']) . '</small>';
         }
         
         $html .= '</div>';
+        $html .= '</td>';
+        $html .= '</tr>';
         
         return $html;
     }
@@ -126,7 +131,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
         return [
             'label' => 'Temperature',
             'min' => 0,
-            'max' => 2,
+            'max' => 1,
             'step' => 0.1,
             'default_value' => 0.7,
             'labels' => [

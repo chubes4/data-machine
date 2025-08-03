@@ -39,6 +39,10 @@ class ModalAjax
     public function __construct()
     {
         add_action('wp_ajax_dm_get_modal_content', [$this, 'handle_get_modal_content']);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[DM Modal] AJAX action wp_ajax_dm_get_modal_content registered');
+        }
     }
 
     /**
@@ -52,6 +56,10 @@ class ModalAjax
      */
     public function handle_get_modal_content()
     {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[DM Modal] AJAX handler called - POST data: ' . print_r($_POST, true));
+        }
+        
         // WordPress security verification
         if (!check_ajax_referer('dm_get_modal_content', 'nonce', false)) {
             wp_send_json_error([

@@ -15,36 +15,48 @@ if (!defined('WPINC')) {
 }
 
 // Extract variables for template use
-$step_type = $step['step_type'] ?? 'unknown';
+$is_empty = $step['is_empty'] ?? false;
+$step_type = $step['step_type'] ?? '';
+$step_position = $step['position'] ?? 'unknown';
 $step_config = $step['step_config'] ?? [];
-$label = $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type));
+$label = $is_empty ? '' : ($step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type)));
 
 // Step configuration discovery (parallel to handler discovery pattern)
-$step_config_info = apply_filters('dm_get_step_config', null, $step_type, ['context' => 'pipeline']);
-$has_step_config = !empty($step_config_info);
+$step_config_info = $is_empty ? null : apply_filters('dm_get_step_config', null, $step_type, ['context' => 'pipeline']);
+$has_step_config = !$is_empty && !empty($step_config_info);
 
 ?>
-<div class="dm-step-card dm-pipeline-step" data-step-type="<?php echo esc_attr($step_type); ?>">
-    <div class="dm-step-header">
-        <div class="dm-step-title"><?php echo esc_html($label); ?></div>
-        <div class="dm-step-actions">
-            <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
-                    data-template="delete-step"
-                    data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-                <?php esc_html_e('Delete', 'data-machine'); ?>
+<div class="dm-step-card dm-pipeline-step<?php echo $is_empty ? ' dm-step-card--empty' : ''; ?>" data-step-type="<?php echo esc_attr($step_type); ?>" data-step-position="<?php echo esc_attr($step_position); ?>">
+    <?php if ($is_empty): ?>
+        <!-- Empty step - Add Step functionality -->
+        <div class="dm-step-empty-content">
+            <button type="button" class="button button-secondary dm-modal-trigger dm-step-add-button"
+                    data-template="step-selection"
+                    data-context='{"context":"pipeline_builder","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
+                <?php esc_html_e('Add Step', 'data-machine'); ?>
             </button>
-            <?php if ($has_step_config): ?>
-                <button type="button" class="button button-small dm-modal-trigger" 
-                        data-template="configure-step"
-                        data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
-                    <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>
+        </div>
+    <?php else: ?>
+        <!-- Populated step - normal step content -->
+        <div class="dm-step-header">
+            <div class="dm-step-title"><?php echo esc_html($label); ?></div>
+            <div class="dm-step-actions">
+                <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
+                        data-template="delete-step"
+                        data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
+                    <?php esc_html_e('Delete', 'data-machine'); ?>
                 </button>
-            <?php endif; ?>
+                <?php if ($has_step_config): ?>
+                    <button type="button" class="button button-small button-link-configure dm-modal-trigger" 
+                            data-template="configure-step"
+                            data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
+                        <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>
+                    </button>
+                <?php endif; ?>
+            </div>
         </div>
-    </div>
-    <div class="dm-step-body">
-        <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
-            <?php echo esc_html(ucfirst($step_type)); ?>
+        <div class="dm-step-body">
+            <!-- Step body content - no colored badges for clean mechanical interface -->
         </div>
-    </div>
+    <?php endif; ?>
 </div>

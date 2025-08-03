@@ -49,15 +49,6 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
         $html .= self::render_model_options($provider, $selected_model);
         
         $html .= '</select>';
-        
-        if ($config['show_refresh']) {
-            $html .= '<button type="button" class="button button-small" ';
-            $html .= 'onclick="aiHttpRefreshModels(\'' . esc_attr($unique_id) . '\', \'' . esc_attr($provider) . '\')" ';
-            $html .= 'title="Refresh available models">';
-            $html .= $config['refresh_icon'];
-            $html .= '</button>';
-        }
-        
         $html .= '</div>';
         
         if ($config['show_help']) {
@@ -82,16 +73,6 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
                 'default' => 'Model',
                 'description' => 'Label for the model selector'
             ],
-            'show_refresh' => [
-                'type' => 'boolean',
-                'default' => true,
-                'description' => 'Show refresh models button'
-            ],
-            'refresh_icon' => [
-                'type' => 'string',
-                'default' => '🔄',
-                'description' => 'Icon for refresh button'
-            ],
             'show_help' => [
                 'type' => 'boolean',
                 'default' => true,
@@ -109,7 +90,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             ],
             'error_text' => [
                 'type' => 'string',
-                'default' => 'Error loading models',
+                'default' => 'No API key configured',
                 'description' => 'Text shown when model loading fails'
             ]
         ];
@@ -123,12 +104,10 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
     public static function get_defaults() {
         return [
             'label' => 'Model',
-            'show_refresh' => true,
-            'refresh_icon' => '🔄',
             'show_help' => true,
             'help_text' => 'Select the AI model to use for requests.',
             'loading_text' => 'Loading models...',
-            'error_text' => 'Error loading models'
+            'error_text' => 'No API key configured'
         ];
     }
     
@@ -181,7 +160,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             $html = '';
             
             if (empty($models)) {
-                $html .= '<option value="">No models available</option>';
+                $html .= '<option value="">Enter API key to load models</option>';
                 return $html;
             }
             
@@ -195,7 +174,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             return $html;
             
         } catch (Exception $e) {
-            return '<option value="">Error loading models</option>';
+            return '<option value="">No API key configured</option>';
         }
     }
     
@@ -228,7 +207,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($provider, $provider_config);
             
             if (empty($models)) {
-                wp_send_json_error('No models available for ' . $provider . '. Check API key configuration.');
+                wp_send_json_error('No API key configured for ' . $provider . '. Enter API key to load models.');
                 return;
             }
             

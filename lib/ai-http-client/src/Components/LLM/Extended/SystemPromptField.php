@@ -32,8 +32,11 @@ class AI_HTTP_Extended_SystemPromptField implements AI_HTTP_Component_Interface 
             $field_name = 'ai_step_' . sanitize_key($config['step_key']) . '_system_prompt';
         }
         
-        $html = '<div class="ai-field-group ai-system-prompt-field">';
-        $html .= '<label for="' . esc_attr($unique_id) . '_system_prompt">' . esc_html($config['label']) . ':</label>';
+        $html = '<tr class="form-field">';
+        $html .= '<th scope="row">';
+        $html .= '<label for="' . esc_attr($unique_id) . '_system_prompt">' . esc_html($config['label']) . '</label>';
+        $html .= '</th>';
+        $html .= '<td>';
         $html .= '<textarea id="' . esc_attr($unique_id) . '_system_prompt" ';
         $html .= 'name="' . esc_attr($field_name) . '" ';
         $html .= 'rows="' . esc_attr($config['rows']) . '" ';
@@ -45,21 +48,12 @@ class AI_HTTP_Extended_SystemPromptField implements AI_HTTP_Component_Interface 
         $html .= esc_textarea($system_prompt);
         $html .= '</textarea>';
         
-        if ($config['show_character_count']) {
-            $html .= '<div class="ai-character-count">';
-            $html .= '<span id="' . esc_attr($unique_id) . '_char_count">' . strlen($system_prompt) . '</span>';
-            $html .= ' characters';
-            if ($config['max_characters'] > 0) {
-                $html .= ' / ' . number_format($config['max_characters']) . ' max';
-            }
-            $html .= '</div>';
-        }
-        
         if ($config['show_help']) {
-            $html .= '<p class="ai-field-help">' . esc_html($config['help_text']) . '</p>';
+            $html .= '<br><small class="description">' . esc_html($config['help_text']) . '</small>';
         }
         
-        $html .= '</div>';
+        $html .= '</td>';
+        $html .= '</tr>';
         
         return $html;
     }
@@ -96,16 +90,6 @@ class AI_HTTP_Extended_SystemPromptField implements AI_HTTP_Component_Interface 
                 'default' => '',
                 'description' => 'Default system prompt value'
             ],
-            'show_character_count' => [
-                'type' => 'boolean',
-                'default' => true,
-                'description' => 'Show character count'
-            ],
-            'max_characters' => [
-                'type' => 'number',
-                'default' => 0,
-                'description' => 'Maximum characters (0 = no limit)'
-            ],
             'show_help' => [
                 'type' => 'boolean',
                 'default' => true,
@@ -131,8 +115,6 @@ class AI_HTTP_Extended_SystemPromptField implements AI_HTTP_Component_Interface 
             'rows' => 6,
             'cols' => 50,
             'default_value' => '',
-            'show_character_count' => true,
-            'max_characters' => 0,
             'show_help' => true,
             'help_text' => 'Instructions that define the AI\'s behavior and response style.'
         ];
@@ -173,10 +155,6 @@ class AI_HTTP_Extended_SystemPromptField implements AI_HTTP_Component_Interface 
         }
         
         if (isset($config['cols']) && $config['cols'] < 1) {
-            return false;
-        }
-        
-        if (isset($config['max_characters']) && $config['max_characters'] < 0) {
             return false;
         }
         

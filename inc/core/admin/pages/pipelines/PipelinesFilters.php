@@ -51,6 +51,16 @@ function dm_register_pipelines_admin_page_filters() {
                         ],
                         'dm-admin-pipelines' => [
                             'file' => 'inc/core/admin/pages/pipelines/assets/css/admin-pipelines.css',
+                            'deps' => ['dm-core-modal'],
+                            'media' => 'all'
+                        ],
+                        'dm-modal-pipelines' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/css/modal-pipelines.css',
+                            'deps' => ['dm-core-modal', 'dm-admin-pipelines'],
+                            'media' => 'all'
+                        ],
+                        'ai-http-components' => [
+                            'file' => 'lib/ai-http-client/assets/css/components.css',
                             'deps' => [],
                             'media' => 'all'
                         ]
@@ -96,6 +106,11 @@ function dm_register_pipelines_admin_page_filters() {
                                     ]
                                 ]
                             ]
+                        ],
+                        'ai-http-provider-manager' => [
+                            'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
+                            'deps' => ['jquery'],
+                            'in_footer' => true
                         ]
                     ]
                 ]
@@ -137,6 +152,8 @@ function dm_register_pipelines_admin_page_filters() {
                 
             case 'handler-selection':
                 $step_type = $context['step_type'] ?? 'unknown';
+                $pipeline_id = $context['pipeline_id'] ?? null;
+                $flow_id = $context['flow_id'] ?? null;
                 
                 // Get available handlers using parameter-based filter discovery
                 $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
@@ -149,34 +166,49 @@ function dm_register_pipelines_admin_page_filters() {
                 
                 return $pipelines_instance->render_template('modal/handler-selection-cards', [
                     'step_type' => $step_type,
-                    'handlers' => $available_handlers
+                    'handlers' => $available_handlers,
+                    'pipeline_id' => $pipeline_id,
+                    'flow_id' => $flow_id
                 ]);
                 
             case 'delete-step':
+            case 'confirm-delete':
+                $delete_type = $context['delete_type'] ?? 'step'; // Default to step for backward compatibility
                 $pipeline_id = $context['pipeline_id'] ?? null;
                 $step_type = $context['step_type'] ?? 'unknown';
+                $step_position = $context['step_position'] ?? 'unknown';
+                $pipeline_name = $context['pipeline_name'] ?? __('Unknown Pipeline', 'data-machine');
                 
                 $affected_flows = [];
+                $affected_jobs = [];
+                
                 if ($pipeline_id && is_numeric($pipeline_id)) {
                     $db_flows = apply_filters('dm_get_database_service', null, 'flows');
                     if ($db_flows) {
                         $affected_flows = $db_flows->get_flows_for_pipeline((int)$pipeline_id);
                     }
+                    
+                    // For pipeline deletion, also get affected jobs count
+                    if ($delete_type === 'pipeline') {
+                        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+                        if ($db_jobs) {
+                            $affected_jobs = $db_jobs->get_jobs_for_pipeline((int)$pipeline_id);
+                        }
+                    }
                 }
                 
-                // Enhance context with affected flows data
+                // Enhance context with affected flows/jobs data and deletion information
                 $enhanced_context = array_merge($context, [
+                    'delete_type' => $delete_type,
                     'step_label' => ucfirst(str_replace('_', ' ', $step_type)),
-                    'affected_flows' => $affected_flows
+                    'step_position' => $step_position,
+                    'pipeline_name' => $pipeline_name,
+                    'affected_flows' => $affected_flows,
+                    'affected_jobs' => $affected_jobs
                 ]);
                 
-                return $pipelines_instance->render_template('modal/delete-step-warning', $enhanced_context);
+                return $pipelines_instance->render_template('modal/confirm-delete', $enhanced_context);
                 
-            case 'handler-settings':
-                $handler_type = $context['handler_type'] ?? 'unknown';
-                return $pipelines_instance->render_template('modal/handler-settings-form', [
-                    'handler_type' => $handler_type
-                ]);
                 
             case 'configure-step':
                 $step_type = $context['step_type'] ?? 'unknown';
@@ -220,6 +252,12 @@ function dm_register_pipelines_admin_page_filters() {
         
         return $content;
     }, 10, 2);
+}
+
+// Load Pipeline Scheduler component filters
+$scheduler_filters_path = __DIR__ . '/scheduler/PipelineSchedulerFilters.php';
+if (file_exists($scheduler_filters_path)) {
+    require_once $scheduler_filters_path;
 }
 
 // Auto-register when file loads - achieving complete self-containment

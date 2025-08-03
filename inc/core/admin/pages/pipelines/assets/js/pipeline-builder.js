@@ -33,8 +33,8 @@
             // Step selection card click handler
             $(document).on('click', '.dm-step-selection-card', this.handleStepSelection.bind(this));
             
-            // Handler selection button click handler
-            $(document).on('click', '.dm-handler-button', this.handleHandlerSelection.bind(this));
+            // Handler selection card click handler
+            $(document).on('click', '.dm-handler-selection-card', this.handleHandlerSelection.bind(this));
             
             // Add Handler button now uses dm-modal-trigger - handler removed
             
@@ -55,6 +55,12 @@
             
             // Simple delete confirmation handler
             $(document).on('click', '.dm-confirm-delete-ajax', this.handleConfirmDelete.bind(this));
+            
+            // Flow scheduling handlers
+            $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
+            $(document).on('click', '.dm-save-schedule', this.handleSaveSchedule.bind(this));
+            $(document).on('click', '.dm-run-now-btn', this.handleRunNow.bind(this));
+            $(document).on('click', '.dm-cancel-schedule', this.handleCancelSchedule.bind(this));
         },
 
         /**
@@ -118,28 +124,38 @@
             }
 
             // Visual feedback - highlight selected handler
-            $('.dm-handler-button').removeClass('selected');
+            $('.dm-handler-selection-card').removeClass('selected');
             $button.addClass('selected');
 
-            // Get context from the current modal
+            // Get context from the current modal - handle both Pipeline and Flow contexts
             const $modal = $('#dm-modal');
             const $pipelineIdInput = $modal.find('input[name="pipeline_id"]');
+            const $flowIdInput = $modal.find('input[name="flow_id"]');
             const $stepTypeInput = $modal.find('input[name="step_type"]');
             
             const pipelineId = $pipelineIdInput.val();
+            const flowId = $flowIdInput.val();
             const modalStepType = $stepTypeInput.val();
             
-            if (!pipelineId) {
-                console.error('No pipeline ID found in modal context');
+            // Handler selection can come from either Pipeline or Flow context
+            if (!pipelineId && !flowId) {
+                console.error('No pipeline ID or flow ID found in modal context');
                 return;
             }
 
             // Prepare context for handler settings modal
             const configContext = {
-                handler_slug: handlerSlug,
-                step_type: stepType,
-                pipeline_id: pipelineId
+                handler_slug: handlerSlug,  // Fixed: ensure handler_slug is included
+                step_type: stepType
             };
+            
+            // Add appropriate ID context
+            if (pipelineId) {
+                configContext.pipeline_id = pipelineId;
+            }
+            if (flowId) {
+                configContext.flow_id = flowId;
+            }
 
             // Open handler settings modal using universal modal system
             dmCoreModal.open('handler-settings', configContext);
@@ -193,7 +209,8 @@
         },
 
         /**
-         * Add pipeline step to interface (handles both first step and subsequent steps)
+         * Add pipeline step to interface using true "blocks" approach
+         * Replaces empty step with new step content, adds fresh empty step at end
          */
         addPipelineStepToInterface: function(stepCardData, pipelineId) {
             // Target the specific pipeline card
@@ -204,29 +221,97 @@
             }
             
             const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
-            const $placeholder = $pipelineSteps.find('.dm-placeholder-step').first();
+            
+            // Find the empty step to replace (true blocks approach)
+            const $emptyStep = $pipelineSteps.find('.dm-step-card--empty').first();
             
             // Use the HTML from the AJAX response
             const stepHtml = stepCardData.step_html || stepCardData.html;
             
-            // Always insert before the placeholder (which always exists now)
-            const $lastPlaceholder = $pipelineSteps.find('.dm-placeholder-step').last();
-            if ($lastPlaceholder.length) {
-                // Insert new step before the always-present Add Step placeholder
-                $lastPlaceholder.before(stepHtml);
+            if ($emptyStep.length) {
+                // True blocks approach: replace empty step with new step content
+                $emptyStep.replaceWith(stepHtml);
+                
+                // Add new empty step at the end
+                this.addNewEmptyStepAtEnd($pipelineSteps, pipelineId);
+                
+                // Update arrows between steps
+                this.updateStepArrows($pipelineSteps);
             } else {
-                // Fallback: just append (shouldn't happen with always-present placeholder)
-                $pipelineSteps.append(stepHtml);
+                console.error('No empty step found to replace');
+                return;
             }
 
             // Update step count in this specific pipeline card
-            const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').length;
+            const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-step-card--empty)').length;
             $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
             
             // Update save button validation state
             this.updateSaveButtonState();
         },
 
+        /**
+         * Add new empty step at end of pipeline (blocks approach)
+         */
+        addNewEmptyStepAtEnd: function($pipelineSteps, pipelineId) {
+            // Create empty step HTML that matches template structure
+            const emptyStepHtml = `
+                <div class="dm-step-card dm-pipeline-step dm-step-card--empty" data-step-type="" data-step-position="">
+                    <div class="dm-step-empty-content">
+                        <button type="button" class="button button-secondary dm-modal-trigger dm-step-add-button"
+                                data-template="step-selection"
+                                data-context='{"context":"pipeline_builder","pipeline_id":"${pipelineId}"}'>
+                            Add Step
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Append new empty step at the end
+            $pipelineSteps.append(emptyStepHtml);
+        },
+
+        /**
+         * Update arrows between steps
+         */
+        updateStepArrows: function($pipelineSteps) {
+            // Remove all existing arrows
+            $pipelineSteps.find('.dm-step-arrow').remove();
+            
+            // Add arrows between populated steps (not before empty step)
+            const $steps = $pipelineSteps.find('.dm-step-card');
+            $steps.each(function(index) {
+                const $step = $(this);
+                const $nextStep = $steps.eq(index + 1);
+                
+                // Add arrow if next step exists and current step is not empty
+                if ($nextStep.length && !$step.hasClass('dm-step-card--empty')) {
+                    const arrowHtml = '<span class="dm-step-arrow"><span class="dashicons dashicons-arrow-right-alt"></span></span>';
+                    $step.after(arrowHtml);
+                }
+            });
+        },
+
+        /**
+         * Update arrows between flow steps
+         */
+        updateFlowStepArrows: function($flowSteps) {
+            // Remove all existing flow arrows
+            $flowSteps.find('.dm-flow-step-arrow').remove();
+            
+            // Add arrows between flow steps (only between actual flow step cards)
+            const $steps = $flowSteps.find('.dm-flow-step');
+            $steps.each(function(index) {
+                const $step = $(this);
+                const $nextStep = $steps.eq(index + 1);
+                
+                // Add arrow if next step exists
+                if ($nextStep.length) {
+                    const arrowHtml = '<span class="dm-flow-step-arrow"><span class="dashicons dashicons-arrow-right-alt"></span></span>';
+                    $step.after(arrowHtml);
+                }
+            });
+        },
 
         /**
          * Update flow steps using AJAX-generated HTML with proper filter-based rendering
@@ -270,15 +355,19 @@
             }
             
             const $flowSteps = $pipelineCard.find('.dm-flow-steps');
-            const $flowPlaceholder = $flowSteps.find('.dm-placeholder-flow-step');
+            const $flowPlaceholder = $flowSteps.find('.dm-flow-placeholder');
             
-            // Always insert flow steps before the placeholder (which always exists now)
+            // Check if this is the first flow step (replacing placeholder)
             if ($flowPlaceholder.length) {
-                $flowPlaceholder.before(flowStepData.html);
+                // Replace placeholder with first flow step
+                $flowPlaceholder.replaceWith(flowStepData.html);
             } else {
-                // Fallback: append (shouldn't happen with always-present placeholder)
+                // Add subsequent flow steps
                 $flowSteps.append(flowStepData.html);
             }
+            
+            // Update arrows between flow steps
+            this.updateFlowStepArrows($flowSteps);
             
             // Update flow meta text when first step is added
             if ($flowSteps.find('.dm-flow-step').length === 1) {
@@ -599,93 +688,155 @@
         // handleModalTriggerClick removed - now handled by core modal system
 
         /**
-         * Handle confirm delete button click
+         * Handle confirm delete button click - supports both step and pipeline deletion
          */
         handleConfirmDelete: function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
-            const stepType = $button.data('step-type');
+            const deleteType = $button.data('delete-type') || 'step'; // Default to step for backward compatibility
+            const stepPosition = $button.data('step-position');
             const pipelineId = $button.data('pipeline-id');
             
-            if (!stepType || !pipelineId) {
-                console.error('Missing step type or pipeline ID');
-                return;
+            // Validation based on deletion type
+            if (deleteType === 'pipeline') {
+                if (!pipelineId) {
+                    console.error('Missing pipeline ID for pipeline deletion');
+                    return;
+                }
+            } else {
+                if (!stepPosition || !pipelineId) {
+                    console.error('Missing step position or pipeline ID for step deletion');
+                    return;
+                }
             }
             
             // Show loading state
             const originalText = $button.text();
             $button.text('Deleting...').prop('disabled', true);
             
-            // Simple AJAX call to existing endpoint
+            // Prepare AJAX data based on deletion type
+            const ajaxData = {
+                action: 'dm_pipeline_ajax',
+                pipeline_action: deleteType === 'pipeline' ? 'delete_pipeline' : 'delete_step',
+                pipeline_id: pipelineId,
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+            };
+            
+            // Add step position only for step deletion
+            if (deleteType === 'step') {
+                ajaxData.step_position = stepPosition;
+            }
+            
+            // AJAX call to appropriate endpoint
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
-                data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'delete_step',
-                    step_type: stepType,
-                    pipeline_id: pipelineId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
-                },
+                data: ajaxData,
                 success: (response) => {
                     if (response.success) {
-                        // Close modal using pipeline modal system
+                        // Close modal using core modal system
                         dmCoreModal.close();
                         
-                        // Find the specific pipeline card
-                        const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-                        
-                        // Remove step from pipeline section
-                        $pipelineCard.find(`.dm-pipeline-step[data-step-type="${stepType}"]`).fadeOut(300, function() {
-                            $(this).remove();
-                            // Update step count for this specific pipeline
-                            const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').length;
-                            $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
-                            
-                            // Show existing placeholder if no steps remain
-                            if (stepCount === 0) {
-                                // Template should already include placeholder - just make sure it's visible
-                                const $existingPlaceholder = $pipelineCard.find('.dm-placeholder-step');
-                                if (!$existingPlaceholder.is(':visible')) {
-                                    $existingPlaceholder.show();
-                                }
-                            }
-                        });
-                        
-                        // Remove corresponding flow step
-                        $pipelineCard.find(`.dm-flow-step[data-step-type="${stepType}"]`).fadeOut(300, function() {
-                            $(this).remove();
-                            
-                            // If no flow steps remain, reset flow section to original state
-                            const flowStepCount = $pipelineCard.find('.dm-flow-step:not(.dm-placeholder-flow-step)').length;
-                            if (flowStepCount === 0) {
-                                // Reset flow placeholder text to original state
-                                const $flowPlaceholder = $pipelineCard.find('.dm-placeholder-flow-step .dm-placeholder-description');
-                                $flowPlaceholder.text(
-                                    dmPipelineBuilder.strings.addStepsToFlow || 'Add steps to the pipeline above to configure handlers for this flow'
-                                );
+                        if (deleteType === 'pipeline') {
+                            // Pipeline deletion - remove entire pipeline card
+                            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+                            $pipelineCard.fadeOut(300, function() {
+                                $(this).remove();
                                 
-                                // Reset flow meta text to original state
-                                $pipelineCard.find('.dm-flow-meta .dm-placeholder-text').text(
-                                    dmPipelineBuilder.strings.addStepsToFlow || 'Add steps to the pipeline above to configure handlers for this flow'
-                                );
-                                
-                                // Make sure placeholder is visible
-                                const $existingFlowPlaceholder = $pipelineCard.find('.dm-placeholder-flow-step');
-                                if (!$existingFlowPlaceholder.is(':visible')) {
-                                    $existingFlowPlaceholder.show();
+                                // Show success message
+                                if (response.data && response.data.message) {
+                                    // Create a temporary success notification
+                                    const $notification = $('<div class="dm-notification dm-notification-success">')
+                                        .text(response.data.message)
+                                        .css({
+                                            position: 'fixed',
+                                            top: '20px',
+                                            right: '20px',
+                                            padding: '15px 20px',
+                                            backgroundColor: '#46b450',
+                                            color: 'white',
+                                            borderRadius: '4px',
+                                            zIndex: 100000,
+                                            maxWidth: '400px'
+                                        });
+                                    
+                                    $('body').append($notification);
+                                    
+                                    // Auto-remove notification after 5 seconds
+                                    setTimeout(() => {
+                                        $notification.fadeOut(300, function() {
+                                            $(this).remove();
+                                        });
+                                    }, 5000);
                                 }
-                            }
-                        });
+                            });
+                        } else {
+                            // Step deletion - existing logic
+                            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+                            
+                            // Remove step from pipeline section by position (specific step)
+                            $pipelineCard.find(`.dm-pipeline-step[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                
+                                // Update arrows after step removal
+                                const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
+                                PipelineBuilder.updateStepArrows($pipelineSteps);
+                                
+                                // Update step count for this specific pipeline
+                                const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').length;
+                                $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
+                                
+                                // Show existing placeholder if no steps remain
+                                if (stepCount === 0) {
+                                    // Template should already include placeholder - just make sure it's visible
+                                    const $existingPlaceholder = $pipelineCard.find('.dm-placeholder-step');
+                                    if (!$existingPlaceholder.is(':visible')) {
+                                        $existingPlaceholder.show();
+                                    }
+                                }
+                            });
+                            
+                            // Remove corresponding flow step by position (same position as pipeline step)
+                            $pipelineCard.find(`.dm-flow-step[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                
+                                // Update flow arrows after step removal
+                                const $flowSteps = $pipelineCard.find('.dm-flow-steps');
+                                PipelineBuilder.updateFlowStepArrows($flowSteps);
+                                
+                                // If no flow steps remain, reset flow section to original state
+                                const flowStepCount = $pipelineCard.find('.dm-flow-step:not(.dm-placeholder-flow-step)').length;
+                                if (flowStepCount === 0) {
+                                    // Reset flow placeholder text to original state
+                                    const $flowPlaceholder = $pipelineCard.find('.dm-placeholder-flow-step .dm-placeholder-description');
+                                    $flowPlaceholder.text(
+                                        dmPipelineBuilder.strings.addStepsToFlow || 'Add steps to the pipeline above to configure handlers for this flow'
+                                    );
+                                    
+                                    // Reset flow meta text to original state
+                                    $pipelineCard.find('.dm-flow-meta .dm-placeholder-text').text(
+                                        dmPipelineBuilder.strings.addStepsToFlow || 'Add steps to the pipeline above to configure handlers for this flow'
+                                    );
+                                    
+                                    // Make sure placeholder is visible
+                                    const $existingFlowPlaceholder = $pipelineCard.find('.dm-placeholder-flow-step');
+                                    if (!$existingFlowPlaceholder.is(':visible')) {
+                                        $existingFlowPlaceholder.show();
+                                    }
+                                }
+                            });
+                        }
                     } else {
-                        alert(response.data.message || 'Error deleting step');
+                        const errorType = deleteType === 'pipeline' ? 'pipeline' : 'step';
+                        alert(response.data.message || `Error deleting ${errorType}`);
                         $button.text(originalText).prop('disabled', false);
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('AJAX Error:', error);
-                    alert('Error deleting step');
+                    const errorType = deleteType === 'pipeline' ? 'pipeline' : 'step';
+                    alert(`Error deleting ${errorType}`);
                     $button.text(originalText).prop('disabled', false);
                 }
             });
@@ -694,6 +845,133 @@
         // openUniversalModal method removed - functionality handled by core modal system
 
         // createModalHTML method removed - functionality handled by core modal system
+
+        /**
+         * Handle schedule status radio button change
+         */
+        handleScheduleStatusChange: function(e) {
+            const $form = $(e.target).closest('.dm-flow-schedule-form');
+            const status = e.target.value;
+            const $intervalField = $form.find('.dm-schedule-interval-field');
+            
+            if (status === 'active') {
+                $intervalField.slideDown();
+            } else {
+                $intervalField.slideUp();
+            }
+        },
+
+        /**
+         * Handle save schedule form submission
+         */
+        handleSaveSchedule: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const $form = $button.closest('.dm-flow-schedule-form');
+            const flowId = $form.data('flow-id');
+            
+            if (!flowId) {
+                alert('Flow ID is required');
+                return;
+            }
+            
+            // Collect form data
+            const formData = {
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'save_flow_schedule',
+                flow_id: flowId,
+                schedule_status: $form.find('input[name="schedule_status"]:checked').val(),
+                schedule_interval: $form.find('select[name="schedule_interval"]').val(),
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+            };
+            
+            // Show loading state
+            const originalText = $button.text();
+            $button.text('Saving...').prop('disabled', true);
+            
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: formData,
+                success: (response) => {
+                    if (response.success) {
+                        // Close modal
+                        dmCoreModal.close();
+                        
+                        // Show success message
+                        alert(response.data.message || 'Schedule saved successfully');
+                        
+                        // TODO: Update flow card status in UI
+                    } else {
+                        alert(response.data.message || 'Error saving schedule');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX Error:', error);
+                    alert('Error connecting to server');
+                },
+                complete: () => {
+                    $button.text(originalText).prop('disabled', false);
+                }
+            });
+        },
+
+        /**
+         * Handle run now button click
+         */
+        handleRunNow: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const flowId = $button.data('flow-id');
+            
+            if (!flowId) {
+                alert('Flow ID is required');
+                return;
+            }
+            
+            if (!confirm('Run this flow now?')) {
+                return;
+            }
+            
+            // Show loading state
+            const originalText = $button.text();
+            $button.text('Running...').prop('disabled', true);
+            
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_pipeline_ajax',
+                    pipeline_action: 'run_flow_now',
+                    flow_id: flowId,
+                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        alert(response.data.message || 'Flow started successfully');
+                    } else {
+                        alert(response.data.message || 'Error starting flow');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX Error:', error);
+                    alert('Error connecting to server');
+                },
+                complete: () => {
+                    $button.text(originalText).prop('disabled', false);
+                }
+            });
+        },
+
+        /**
+         * Handle cancel schedule button click
+         */
+        handleCancelSchedule: function(e) {
+            e.preventDefault();
+            dmCoreModal.close();
+        }
     };
 
     // Initialize when document is ready

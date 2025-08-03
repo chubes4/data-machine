@@ -16,6 +16,7 @@ if (!defined('WPINC')) {
 
 // Extract variables for template use
 $step_type = $step['step_type'] ?? 'unknown';
+$step_position = $step['position'] ?? 'unknown'; // Flow steps mirror pipeline step positions
 $step_handlers = $flow_config['steps'][0] ?? []; // Simplified - could use step_type as key
 
 // Dynamic handler discovery using parameter-based filter system
@@ -26,7 +27,7 @@ $has_handlers = !empty($available_handlers);
 $step_uses_handlers = ($step_type !== 'ai');
 
 ?>
-<div class="dm-step-card dm-flow-step" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
+<div class="dm-step-card dm-flow-step" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>" data-step-position="<?php echo esc_attr($step_position); ?>">
     <div class="dm-step-header">
         <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
         <div class="dm-step-actions">
@@ -40,10 +41,6 @@ $step_uses_handlers = ($step_type !== 'ai');
         </div>
     </div>
     <div class="dm-step-body">
-        <div class="dm-step-type-badge dm-step-<?php echo esc_attr($step_type); ?>">
-            <?php echo esc_html(ucfirst($step_type)); ?>
-        </div>
-        
         <!-- Configured Handlers for this step (only for steps that use handlers) -->
         <?php if ($step_uses_handlers): ?>
             <div class="dm-step-handlers">

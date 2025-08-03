@@ -58,6 +58,54 @@ function dm_register_reddit_input_filters() {
         return $settings;
     }, 10, 2);
     
+    // Modal content registration - Reddit owns its handler-settings and handler-auth modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another handler
+        if ($content !== null) {
+            return $content;
+        }
+        
+        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+        $handler_slug = $context['handler_slug'] ?? '';
+        
+        // Only handle reddit handler
+        if ($handler_slug !== 'reddit') {
+            return $content;
+        }
+        
+        $pipelines_instance = new \DataMachine\Core\Admin\Pages\Pipelines\Pipelines();
+        
+        if ($template === 'handler-settings') {
+            // Settings modal template
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'reddit');
+            
+            return $pipelines_instance->render_template('modal/handler-settings-form', [
+                'handler_slug' => 'reddit',
+                'handler_config' => [
+                    'label' => __('Reddit', 'data-machine'),
+                    'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'input',
+                'settings_available' => ($settings_instance !== null),
+                'handler_settings' => $settings_instance
+            ]);
+        }
+        
+        if ($template === 'handler-auth') {
+            // Authentication modal template
+            return $pipelines_instance->render_template('modal/handler-auth-form', [
+                'handler_slug' => 'reddit',
+                'handler_config' => [
+                    'label' => __('Reddit', 'data-machine'),
+                    'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
+                ],
+                'step_type' => $context['step_type'] ?? 'input'
+            ]);
+        }
+        
+        return $content;
+    }, 10, 2);
+    
     // DataPacket conversion registration - Reddit handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
         if ($source_type === 'reddit') {
