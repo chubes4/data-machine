@@ -211,6 +211,16 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
         }
 
+        // Generate empty step HTML for adding at the end (replaces JavaScript HTML generation)
+        $empty_step_html = $this->render_template('page/pipeline-step-card', [
+            'step' => [
+                'is_empty' => true,
+                'step_type' => '',
+                'position' => ''
+            ],
+            'pipeline_id' => $pipeline_id
+        ]);
+
         wp_send_json_success([
             'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
             'step_type' => $step_type,
@@ -220,7 +230,8 @@ class PipelineAjax
             'step_html' => $this->render_template('page/pipeline-step-card', [
                 'step' => $new_step,
                 'pipeline_id' => $pipeline_id
-            ])
+            ]),
+            'empty_step_html' => $empty_step_html
         ]);
     }
 

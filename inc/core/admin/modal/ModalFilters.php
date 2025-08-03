@@ -98,6 +98,29 @@ function dm_register_modal_system_filters() {
     // Instantiate universal modal AJAX handler
     new ModalAjax();
     
+    // Register core universal delete confirmation modal (pure infrastructure)
+    add_filter('dm_get_modal', function($content, $template) {
+        if ($template === 'confirm-delete') {
+            // This is core infrastructure modal - universal delete confirmation
+            $template_path = __DIR__ . '/templates/confirm-delete.php';
+            if (file_exists($template_path)) {
+                // Extract context data (pure passthrough - no enhancement)
+                $context = $_POST['context'] ?? [];
+                if (is_string($context)) {
+                    $context = json_decode($context, true) ?? [];
+                }
+                
+                // Extract variables for template (components provide enriched context)
+                extract($context);
+                
+                ob_start();
+                include $template_path;
+                return ob_get_clean();
+            }
+        }
+        return $content;
+    }, 10, 2);
+    
     // Pure infrastructure - NO component-specific logic
     // Individual components will register their own modal content generators
     // in their own *Filters.php files using the dm_get_modal filter

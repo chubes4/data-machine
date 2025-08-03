@@ -32,7 +32,7 @@ if (!$has_auth) {
             <p><?php echo esc_html(sprintf(__('The %s handler does not require authentication to function.', 'data-machine'), $handler_label)); ?></p>
         </div>
         <div class="dm-auth-actions">
-            <button type="button" class="button button-secondary dm-modal-trigger" 
+            <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="handler-settings"
                     data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
                 <?php esc_html_e('Back to Settings', 'data-machine'); ?>
@@ -149,7 +149,7 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
     
     <!-- Modal Navigation -->
     <div class="dm-modal-navigation">
-        <button type="button" class="button button-secondary dm-modal-trigger" 
+        <button type="button" class="button button-secondary dm-modal-content" 
                 data-template="handler-settings"
                 data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
             <?php esc_html_e('Back to Settings', 'data-machine'); ?>

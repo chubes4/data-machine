@@ -27,7 +27,9 @@ if (!defined('WPINC')) {
     
     <div class="dm-handler-cards">
         <?php foreach ($handlers as $handler_slug => $handler_config): ?>
-            <div class="dm-handler-selection-card" 
+            <div class="dm-handler-selection-card dm-modal-content" 
+                 data-template="handler-settings"
+                 data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'
                  data-handler-slug="<?php echo esc_attr($handler_slug); ?>" 
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 

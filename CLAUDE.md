@@ -18,7 +18,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 **Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, production deployment.
 
-**Known Issues**: Expanding PHPUnit test coverage across components.
+**Known Issues**: Expanding PHPUnit test coverage across components. Modal system architecture is complete and documented.
 
 **Future Plans**: Webhook integration (Receiver Step), enhanced testing, additional platform integrations.
 
@@ -111,14 +111,73 @@ class MyStep {
 
 ## Modal System
 
-**Universal Architecture**: Server-side PHP templates via `dm_get_modal` filter with single AJAX endpoint.
+**Three-File Architecture**: Clean separation between universal modal lifecycle, content-specific interactions, and page content management.
 
-**Usage**:
+### Core Components
+
+**core-modal.js**: Universal modal lifecycle management only
+- Modal open/close/loading states
+- AJAX content loading via `dm_get_modal_content` action
+- Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes
+- Focus management and accessibility
+- Provides `dmCoreModal` API for programmatic modal operations
+
+**pipeline-modal.js**: Pipeline-specific modal content interactions
+- Handles buttons and forms created by PHP modal templates
+- OAuth connections, tab switching, form submissions
+- Visual feedback for card selections
+- Triggers `dm-pipeline-modal-saved` events for page updates
+- No modal opening/closing - only content interaction
+
+**pipeline-builder.js**: Page content management only
+- Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="delete-action"`)
+- Manages pipeline state and UI updates
+- Direct AJAX operations for pipeline operations
+- Never calls modal APIs directly - clean separation maintained
+
+### Data-Attribute Communication
+
+Pipeline system uses data attributes for clean separation between modal content and page actions:
+
 ```javascript
-dmCoreModal.open('step-selection', { pipeline_id: 123 });
+// Modal content cards with data attributes trigger page actions
+<div class="dm-step-selection-card dm-modal-close" 
+     data-template="add-step-action"
+     data-context='{"step_type":"input","pipeline_id":"123"}'>
+
+// Pipeline-builder.js listens for data-attribute clicks
+$(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
+$(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
 ```
 
-**Registration**:
+### PHP Template Integration
+
+Automatic modal triggers using data attributes - no JavaScript required:
+
+```php
+<!-- Trigger button in PHP template -->
+<button type="button" class="button dm-modal-open" 
+        data-template="step-selection"
+        data-context='{"pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+    <?php esc_html_e('Add Step', 'data-machine'); ?>
+</button>
+```
+
+**Critical**: Individual modal cards need context data attributes, not just containers:
+
+```php
+<!-- CORRECT: Each card has required data -->
+<div class="dm-step-selection-card" 
+     data-step-type="<?php echo esc_attr($step_type); ?>"
+     data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+
+<!-- INCORRECT: Only container has context -->
+<div class="dm-container" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+    <div class="dm-step-selection-card" data-step-type="<?php echo esc_attr($step_type); ?>">
+```
+
+### Modal Content Registration
+
 ```php
 add_filter('dm_get_modal', function($content, $template) {
     if ($template === 'my-modal') {
@@ -127,6 +186,14 @@ add_filter('dm_get_modal', function($content, $template) {
     return $content;
 }, 10, 2);
 ```
+
+### Universal Reusability
+
+Any admin page can use the modal system by:
+1. Including `core-modal.js` via admin page asset filter
+2. Adding `.dm-modal-open` buttons in PHP templates with proper data attributes
+3. Registering modal content via `dm_get_modal` filter
+4. Zero page-specific modal JavaScript required
 
 
 ## Critical Rules
@@ -219,9 +286,37 @@ add_filter('dm_get_admin_page', function($config, $page_slug) {
 ```php
 add_filter('dm_get_modal', function($content, $template) {
     if ($template === 'my-modal') {
-        return '<div>My modal content</div>';
+        return $this->render_template('modal/my-modal', $context);
     }
+    return $content;
 }, 10, 2);
+```
+
+**Modal Trigger in PHP Template**:
+```php
+<button type="button" class="button dm-modal-open" 
+        data-template="my-modal"
+        data-context='{"item_id":"<?php echo esc_attr($item_id); ?>"}'>
+    <?php esc_html_e('Open Modal', 'my-plugin'); ?>
+</button>
+```
+
+**Page-Modal Communication**:
+```javascript
+// Modal content with data attributes triggers page actions
+<div class="dm-selection-card dm-modal-close" 
+     data-template="my-action"
+     data-context='{"item_id":"123","action_type":"process"}'>
+
+// Page script listens for data-attribute actions
+$(document).on('click', '[data-template="my-action"]', function(e) {
+    const contextData = $(e.currentTarget).data('context');
+    // Handle page action with context data
+    console.log('Modal triggered action:', contextData);
+});
+
+// Optional: Modal form events for complex interactions
+$(document).trigger('dm-pipeline-modal-saved', [responseData]);
 ```
 
 **Service Override**:

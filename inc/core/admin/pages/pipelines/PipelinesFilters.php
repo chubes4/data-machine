@@ -107,6 +107,34 @@ function dm_register_pipelines_admin_page_filters() {
                                 ]
                             ]
                         ],
+                        'dm-pipeline-modal' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-modal.js',
+                            'deps' => ['jquery', 'dm-core-modal'],
+                            'in_footer' => true,
+                            'localize' => [
+                                'object' => 'dmPipelineModal',
+                                'data' => [
+                                    'ajax_url' => admin_url('admin-ajax.php'),
+                                    'admin_post_url' => admin_url('admin-post.php'),
+                                    'oauth_nonces' => [
+                                        'twitter' => wp_create_nonce('dm_twitter_oauth_init_nonce'),
+                                        'googlesheets' => wp_create_nonce('dm_googlesheets_oauth_init_nonce'),
+                                        'reddit' => wp_create_nonce('dm_reddit_oauth_init_nonce'),
+                                        'facebook' => wp_create_nonce('dm_facebook_oauth_init_nonce'),
+                                        'threads' => wp_create_nonce('dm_threads_oauth_init_nonce')
+                                    ],
+                                    'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
+                                    'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
+                                    'strings' => [
+                                        'connecting' => __('Connecting...', 'data-machine'),
+                                        'disconnecting' => __('Disconnecting...', 'data-machine'),
+                                        'testing' => __('Testing...', 'data-machine'),
+                                        'saving' => __('Saving...', 'data-machine'),
+                                        'confirmDisconnect' => __('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.', 'data-machine')
+                                    ]
+                                ]
+                            ]
+                        ],
                         'ai-http-provider-manager' => [
                             'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
                             'deps' => ['jquery'],
@@ -171,7 +199,6 @@ function dm_register_pipelines_admin_page_filters() {
                     'flow_id' => $flow_id
                 ]);
                 
-            case 'delete-step':
             case 'confirm-delete':
                 $delete_type = $context['delete_type'] ?? 'step'; // Default to step for backward compatibility
                 $pipeline_id = $context['pipeline_id'] ?? null;
@@ -207,7 +234,16 @@ function dm_register_pipelines_admin_page_filters() {
                     'affected_jobs' => $affected_jobs
                 ]);
                 
-                return $pipelines_instance->render_template('modal/confirm-delete', $enhanced_context);
+                // Render using core modal template with enhanced context
+                $template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/confirm-delete.php';
+                if (file_exists($template_path)) {
+                    extract($enhanced_context);
+                    ob_start();
+                    include $template_path;
+                    return ob_get_clean();
+                }
+                
+                return '<div class="dm-error">Delete confirmation template not found</div>';
                 
                 
             case 'configure-step':

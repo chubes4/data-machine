@@ -1,11 +1,9 @@
 /**
  * Universal Modal JavaScript
  * 
- * Provides universal modal functionality for all Data Machine admin pages.
- * Handles modal lifecycle, AJAX content loading, and user interactions.
- * 
- * Unified modal system replacing component-specific implementations.
- * Uses server-side PHP template rendering for optimal performance and security.
+ * Handles ONLY modal lifecycle management: open/close, loading states, AJAX content loading.
+ * Responds to .dm-modal-open buttons with data-template and data-context attributes.
+ * Content interactions handled by page-specific modal scripts (e.g., pipeline-modal.js).
  * 
  * @package DataMachine\Core\Admin\Modal
  * @since 1.0.0
@@ -185,8 +183,8 @@
      */
     $(document).ready(function() {
         
-        // Close button and overlay click handlers
-        $(document).on('click', '.dm-modal-close, .dm-modal-overlay', function(e) {
+        // Modal close trigger - clean, direct class-based trigger
+        $(document).on('click', '.dm-modal-close, .dm-modal-overlay, .dm-cancel-settings', function(e) {
             e.preventDefault();
             dmCoreModal.close();
         });
@@ -205,8 +203,8 @@
             }
         });
 
-        // Universal modal trigger handler - works on any page
-        $(document).on('click', '.dm-modal-trigger', function(e) {
+        // Modal open trigger - clean, direct class-based trigger
+        $(document).on('click', '.dm-modal-open', function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
@@ -214,7 +212,7 @@
             const contextData = $button.data('context') || {};
             
             if (!template) {
-                console.error('DM Core Modal: No template parameter found on modal trigger button');
+                console.error('DM Core Modal: No template parameter found on modal open button');
                 return;
             }
 
@@ -231,87 +229,26 @@
             }, 1000);
         });
 
-        // Tab switching functionality for handler modals
-        $(document).on('click', '.dm-tab-button:not(.disabled)', function(e) {
+        // Modal content trigger - changes modal content without closing/reopening
+        $(document).on('click', '.dm-modal-content', function(e) {
             e.preventDefault();
             
-            const $button = $(this);
-            const $tabContainer = $button.closest('.dm-handler-config-tabs');
-            const $contentContainer = $tabContainer.siblings('.dm-tab-content').parent();
-            const targetTab = $button.data('tab');
+            const $button = $(e.currentTarget);
+            const template = $button.data('template');
+            const contextData = $button.data('context') || {};
             
-            if (!targetTab) {
-                console.error('DM Core Modal: No tab identifier found on tab button');
+            if (!template) {
+                console.error('DM Core Modal: No template parameter found on modal content button');
                 return;
             }
-            
-            // Update tab button states
-            $tabContainer.find('.dm-tab-button').removeClass('active');
-            $button.addClass('active');
-            
-            // Update tab content visibility
-            $contentContainer.find('.dm-tab-content').removeClass('active').hide();
-            $contentContainer.find(`.dm-tab-content[data-tab="${targetTab}"]`).addClass('active').show();
-            
-            console.log('[DM Modal Debug] Switched to tab:', targetTab);
-        });
 
-        // Auth action handlers for handler modals
-        $(document).on('click', '.dm-connect-account', function(e) {
-            e.preventDefault();
-            
-            const $button = $(this);
-            const handlerSlug = $button.data('handler');
-            
-            if (!handlerSlug) {
-                console.error('DM Core Modal: No handler slug found on connect button');
-                return;
-            }
-            
-            // TODO: Implement OAuth flow initiation
-            console.log('Connect account for handler:', handlerSlug);
-            alert('OAuth connection flow will be implemented in the next phase.');
-        });
-
-        $(document).on('click', '.dm-disconnect-account', function(e) {
-            e.preventDefault();
-            
-            const $button = $(this);
-            const handlerSlug = $button.data('handler');
-            
-            if (!handlerSlug) {
-                console.error('DM Core Modal: No handler slug found on disconnect button');
-                return;
-            }
-            
-            if (confirm('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.')) {
-                // TODO: Implement account disconnection
-                console.log('Disconnect account for handler:', handlerSlug);
-                alert('Account disconnection will be implemented in the next phase.');
-            }
-        });
-
-        $(document).on('click', '.dm-test-connection', function(e) {
-            e.preventDefault();
-            
-            const $button = $(this);
-            const handlerSlug = $button.data('handler');
-            
-            if (!handlerSlug) {
-                console.error('DM Core Modal: No handler slug found on test connection button');
-                return;
-            }
-            
             // Show loading state
-            const originalText = $button.text();
-            $button.text('Testing...').prop('disabled', true);
-            
-            // TODO: Implement connection testing
-            setTimeout(() => {
-                $button.text(originalText).prop('disabled', false);
-                alert('Connection test will be implemented in the next phase.');
-            }, 2000);
+            dmCoreModal.showLoading();
+
+            // Change modal content
+            dmCoreModal.open(template, contextData);
         });
+
     });
 
     /**

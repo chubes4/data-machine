@@ -390,26 +390,6 @@
 
 /* Modal-specific styles moved to modal-pipelines.css for better separation of concerns */
 
-/* Notifications */
-.dm-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #0073aa;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    z-index: 10000;
-}
-
-.dm-notification-success {
-    background: #28a745;
-}
-
-.dm-notification-error {
-    background: #dc3545;
-}
 
 
 

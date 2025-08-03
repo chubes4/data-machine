@@ -386,6 +386,17 @@ function dm_register_universal_handler_system() {
     // }, 10, 2);
     add_filter('dm_get_auth', function($auth, $handler_slug) {
         if ($auth !== null) {
+            // Auto-register hooks if auth service has register_hooks method
+            if (method_exists($auth, 'register_hooks')) {
+                static $registered_hooks = [];
+                $auth_class = get_class($auth);
+                
+                // Only register hooks once per auth class
+                if (!isset($registered_hooks[$auth_class])) {
+                    $auth->register_hooks();
+                    $registered_hooks[$auth_class] = true;
+                }
+            }
             return $auth; // External override provided
         }
         

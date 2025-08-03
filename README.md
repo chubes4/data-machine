@@ -365,56 +365,50 @@ add_filter('dm_get_modal', function($content, $template) {
     return $content;
 }, 10, 2);
 
-// JavaScript usage - any page can trigger modals with consistent interface
+// PHP template integration - trigger modals using data attributes
+// Add these buttons to your PHP templates:
+
+// Analytics dashboard modal trigger
+<button type="button" class="button dm-modal-trigger" 
+        data-template="analytics-dashboard"
+        data-context='{"pipeline_count":"15","success_rate":"94.2%","avg_time":"2.3s"}'>
+    <?php esc_html_e('View Analytics Dashboard', 'my-plugin'); ?>
+</button>
+
+// Step configuration modal trigger  
+<button type="button" class="button dm-modal-trigger"
+        data-template="configure-step" 
+        data-context='{"step_type":"analytics_processor","step_position":"2","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+    <?php esc_html_e('Configure Analytics Step', 'my-plugin'); ?>
+</button>
+
+// Export results modal trigger
+<button type="button" class="button dm-modal-trigger"
+        data-template="export-results"
+        data-context='{"job_id":"<?php echo esc_attr($job_id); ?>","pipeline_name":"<?php echo esc_attr($pipeline_name); ?>"}'>
+    <?php esc_html_e('Export Results', 'my-plugin'); ?>
+</button>
+
+// Handle modal content interactions (not modal opening)
 jQuery(document).ready(function($) {
-    // Open analytics dashboard modal with comprehensive context
-    $('.analytics-button').on('click', function() {
-        dmCoreModal.open('analytics-dashboard', {
-            pipeline_count: 15,
-            success_rate: '94.2%',
-            avg_time: '2.3s',
-            title: 'Pipeline Analytics Dashboard'
-        });
-    });
-    
-    // Open step configuration modal for custom step types
-    $('.configure-analytics-step').on('click', function() {
-        dmCoreModal.open('configure-step', {
-            step_type: 'analytics_processor',
-            step_position: 2,
-            pipeline_id: $(this).data('pipeline-id'),
-            title: 'Configure Analytics Processor'
-        });
-    });
-    
-    // Open export modal with job context
-    $('.export-results').on('click', function() {
-        dmCoreModal.open('export-results', {
-            job_id: $(this).data('job-id'),
-            pipeline_name: $(this).data('pipeline-name'),
-            title: 'Export Pipeline Results'
-        });
-    });
-    
-    // Handle modal-specific actions
+    // Handle actions within modal content
     $(document).on('click', '[data-action="export"]', function() {
-        // Trigger secondary modal for export options
-        dmCoreModal.open('export-results', {
-            job_id: 'latest',
-            pipeline_name: 'Analytics Pipeline'
-        });
+        // Emit event to trigger another modal via data attributes
+        var exportButton = $('<button class="dm-modal-trigger" data-template="export-results" data-context=\'{"job_id":"latest","pipeline_name":"Analytics Pipeline"}\'></button>');
+        exportButton.trigger('click');
     });
 });
 ```
 
 **Key Benefits of Universal Modal Architecture**:
 - **Zero Core Modifications**: Add unlimited modal types without touching Data Machine code
+- **Data-Attribute Triggers**: Simple `.dm-modal-trigger` buttons with `data-template` and `data-context` attributes - no JavaScript API required
 - **WordPress Standards**: Uses familiar WordPress AJAX and filter patterns with proper security
 - **Automatic Discovery**: New modal types appear immediately when registered via filter system
 - **Professional UX**: Seamless integration with WordPress admin interface and native styling
 - **Extensible Configuration**: Step types can register sophisticated configuration interfaces via template names
 - **Template Flexibility**: Support for both universal templates (like 'configure-step') and custom templates
-- **Context Preservation**: Rich context passing between modals and JavaScript components
+- **Context Preservation**: Rich context passing via JSON data attributes between PHP templates and modal content
 - **WordPress Security**: Standard nonce verification and input sanitization automatically applied
 
 ## Practical Examples
@@ -706,34 +700,46 @@ define('WP_DEBUG', false);  // Production mode - clean deployment with essential
 
 **Universal Modal System Debugging**:
 ```javascript
-// Monitor all modal AJAX calls and responses
-$(document).on('dm-modal-content-loaded', function(event, title, content) {
-    console.log('Modal loaded successfully:', title, content.length + ' characters');
-});
-
-// Debug modal failures with detailed error information
-$(document).on('dm-modal-error', function(event, error) {
-    console.error('Modal error occurred:', error);
-    console.log('Error details:', {
-        message: error.message,
-        template: error.template,
-        context: error.context
+// Monitor modal triggers via data attributes
+$(document).on('click', '.dm-modal-trigger', function(e) {
+    console.log('Modal trigger clicked:', {
+        template: $(this).data('template'),
+        context: $(this).data('context'),
+        button: this
     });
 });
 
-// Check modal system availability and configuration
-console.log('Modal system status:', {
-    available: typeof window.dmCoreModal !== 'undefined',
-    ajax_url: dmCoreModal?.ajax_url,
-    nonce: dmCoreModal?.get_modal_content_nonce,
-    strings: dmCoreModal?.strings
+// Monitor AJAX content loading
+$(document).ajaxSuccess(function(event, xhr, settings) {
+    if (settings.data && settings.data.includes('action=dm_get_modal_content')) {
+        console.log('Modal content loaded via AJAX:', {
+            url: settings.url,
+            response_length: xhr.responseText.length
+        });
+    }
 });
 
-// Monitor filter discovery for step types
-console.log('Available step types:', apply_filters('dm_get_steps', []));
+// Debug modal AJAX failures
+$(document).ajaxError(function(event, xhr, settings, error) {
+    if (settings.data && settings.data.includes('action=dm_get_modal_content')) {
+        console.error('Modal AJAX error:', {
+            status: xhr.status,
+            error: error,
+            response: xhr.responseText
+        });
+    }
+});
 
-// Test modal content generation for specific templates
-dmCoreModal.open('step-selection', { pipeline_id: 1, debug: true });
+// Test modal trigger programmatically
+function testModalTrigger(template, context) {
+    var testButton = $('<button class="dm-modal-trigger" data-template="' + template + '" data-context=\'' + JSON.stringify(context) + '\'></button>');
+    $('body').append(testButton);
+    testButton.trigger('click');
+    testButton.remove();
+}
+
+// Example: Test step selection modal
+testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 ```
 
 **Monitoring**:

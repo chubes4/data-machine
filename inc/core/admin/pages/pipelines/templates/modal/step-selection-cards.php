@@ -41,7 +41,9 @@ if (!defined('WPINC')) {
                 $handlers_list = implode(', ', $handler_labels);
             }
             ?>
-            <div class="dm-step-selection-card" 
+            <div class="dm-step-selection-card dm-modal-close" 
+                 data-template="add-step-action"
+                 data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 
                  tabindex="0"

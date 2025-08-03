@@ -106,7 +106,7 @@ function dm_register_googlesheets_input_filters() {
     add_filter('dm_get_auth', function($auth, $handler_slug) {
         if ($handler_slug === 'googlesheets') {
             // Return existing Google Sheets auth instance (shared with output handler)
-            return new \DataMachine\Core\Steps\Output\Handlers\GoogleSheets\GoogleSheetsAuth();
+            return new \DataMachine\Core\Handlers\Output\GoogleSheets\GoogleSheetsAuth();
         }
         return $auth;
     }, 10, 2);

@@ -48,7 +48,7 @@ $is_new_pipeline = empty($pipeline_id);
                 <?php esc_html_e('Save Pipeline', 'data-machine'); ?>
             </button>
             <?php if (!$is_new_pipeline): ?>
-                <button type="button" class="button button-secondary dm-modal-trigger" 
+                <button type="button" class="button button-secondary dm-modal-open" 
                         data-template="confirm-delete"
                         data-context='{"delete_type":"pipeline","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_name":"<?php echo esc_attr($pipeline_name); ?>"}'>
                     <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
@@ -147,7 +147,7 @@ $is_new_pipeline = empty($pipeline_id);
                                         <div class="dm-step-title"><?php echo esc_html($step_label); ?></div>
                                         <div class="dm-step-actions">
                                             <?php if ($has_handlers && $step_uses_handlers): ?>
-                                                <button type="button" class="button button-small dm-modal-trigger" 
+                                                <button type="button" class="button button-small dm-modal-open" 
                                                         data-template="handler-selection"
                                                         data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","flow_id":"new"}'>
                                                     <?php esc_html_e('Add Handler', 'data-machine'); ?>

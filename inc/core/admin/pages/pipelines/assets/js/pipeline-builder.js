@@ -1,9 +1,10 @@
 /**
  * Pipeline Builder JavaScript
  *
- * Handles pipeline building interface and integrates with the universal core modal system.
- * No longer contains hardcoded modal HTML or CSS - uses dmPipelineModal for all modal interactions.
- * All modal content is rendered server-side via dm_get_modal filter system.
+ * Handles pipeline page content management and business logic.
+ * Responds to data-attribute actions (data-template="add-step-action", "delete-action").
+ * Direct AJAX operations, no modal lifecycle dependencies.
+ * Clean separation from modal system via data-attribute communication.
  *
  * @since 1.0.0
  */
@@ -21,22 +22,14 @@
          */
         init: function() {
             this.bindEvents();
-            this.initModal();
         },
 
         /**
          * Bind event handlers
          */
         bindEvents: function() {
-            // Add Step button now uses dm-modal-trigger - handler removed
-            
-            // Step selection card click handler
-            $(document).on('click', '.dm-step-selection-card', this.handleStepSelection.bind(this));
-            
-            // Handler selection card click handler
-            $(document).on('click', '.dm-handler-selection-card', this.handleHandlerSelection.bind(this));
-            
-            // Add Handler button now uses dm-modal-trigger - handler removed
+            // Direct data attribute handler for step selection
+            $(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
             
             // Add Flow button click handler
             $(document).on('click', '.dm-add-flow-btn', this.handleAddFlowClick.bind(this));
@@ -50,11 +43,9 @@
             // Add New Pipeline button click handler
             $(document).on('click', '.dm-add-new-pipeline-btn', this.handleAddNewPipelineClick.bind(this));
             
-            // Modal triggers are now handled by the core modal system in core-modal.js
-            // No need for duplicate handlers
             
-            // Simple delete confirmation handler
-            $(document).on('click', '.dm-confirm-delete-ajax', this.handleConfirmDelete.bind(this));
+            // Direct delete action handler (confirmation already happened in modal)
+            $(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
             
             // Flow scheduling handlers
             $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
@@ -63,103 +54,28 @@
             $(document).on('click', '.dm-cancel-schedule', this.handleCancelSchedule.bind(this));
         },
 
-        /**
-         * Initialize modal functionality - now handled by core modal system
-         */
-        initModal: function() {
-            // Modal initialization now handled by core modal system
-            // Components just need to trigger dmCoreModal.open(template, context)
-        },
 
-        // handleAddStepClick method removed - functionality replaced by universal modal trigger system
 
         /**
-         * Handle step selection card click
+         * Handle add step action via data attributes
+         * Triggered when user clicks any element with data-template="add-step-action"
          */
-        handleStepSelection: function(e) {
+        handleAddStepAction: function(e) {
             e.preventDefault();
             
             const $card = $(e.currentTarget);
-            const stepType = $card.data('step-type');
+            const contextData = $card.data('context');
             
-            if (!stepType) {
-                console.error('No step type found');
+            if (!contextData || !contextData.step_type || !contextData.pipeline_id) {
+                console.error('Invalid step data in card context:', contextData);
                 return;
             }
 
-            // Visual feedback - highlight selected card
-            $('.dm-step-selection-card').removeClass('selected');
-            $card.addClass('selected');
-
-            // Get pipeline ID from hidden input (single source of truth)
-            const $pipelineIdInput = $('#dm-modal input[name="pipeline_id"]');
-            if (!$pipelineIdInput.length) {
-                console.error('No pipeline ID hidden input found in modal');
-                return;
-            }
-            
-            const pipelineId = $pipelineIdInput.val();
-            if (!pipelineId) {
-                console.error('Pipeline ID hidden input is empty');
-                return;
-            }
 
             // Add step to the specific pipeline
-            this.addStepToPipeline(stepType, pipelineId);
+            this.addStepToPipeline(contextData.step_type, contextData.pipeline_id);
         },
 
-        /**
-         * Handle handler selection button click
-         */
-        handleHandlerSelection: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const handlerSlug = $button.data('handler-slug');
-            const stepType = $button.data('step-type');
-            
-            if (!handlerSlug || !stepType) {
-                console.error('Missing handler slug or step type');
-                return;
-            }
-
-            // Visual feedback - highlight selected handler
-            $('.dm-handler-selection-card').removeClass('selected');
-            $button.addClass('selected');
-
-            // Get context from the current modal - handle both Pipeline and Flow contexts
-            const $modal = $('#dm-modal');
-            const $pipelineIdInput = $modal.find('input[name="pipeline_id"]');
-            const $flowIdInput = $modal.find('input[name="flow_id"]');
-            const $stepTypeInput = $modal.find('input[name="step_type"]');
-            
-            const pipelineId = $pipelineIdInput.val();
-            const flowId = $flowIdInput.val();
-            const modalStepType = $stepTypeInput.val();
-            
-            // Handler selection can come from either Pipeline or Flow context
-            if (!pipelineId && !flowId) {
-                console.error('No pipeline ID or flow ID found in modal context');
-                return;
-            }
-
-            // Prepare context for handler settings modal
-            const configContext = {
-                handler_slug: handlerSlug,  // Fixed: ensure handler_slug is included
-                step_type: stepType
-            };
-            
-            // Add appropriate ID context
-            if (pipelineId) {
-                configContext.pipeline_id = pipelineId;
-            }
-            if (flowId) {
-                configContext.flow_id = flowId;
-            }
-
-            // Open handler settings modal using universal modal system
-            dmCoreModal.open('handler-settings', configContext);
-        },
 
         /**
          * Add selected step to pipeline
@@ -177,8 +93,6 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Close modal using pipeline modal system
-                        dmCoreModal.close();
                         
                         // Update interface with new step for the specific pipeline
                         this.updatePipelineInterface(response.data, pipelineId);
@@ -232,8 +146,12 @@
                 // True blocks approach: replace empty step with new step content
                 $emptyStep.replaceWith(stepHtml);
                 
-                // Add new empty step at the end
-                this.addNewEmptyStepAtEnd($pipelineSteps, pipelineId);
+                // Add new empty step at the end using server-generated HTML
+                if (stepCardData.empty_step_html) {
+                    $pipelineSteps.append(stepCardData.empty_step_html);
+                } else {
+                    console.error('No empty step HTML provided by server');
+                }
                 
                 // Update arrows between steps
                 this.updateStepArrows($pipelineSteps);
@@ -250,26 +168,6 @@
             this.updateSaveButtonState();
         },
 
-        /**
-         * Add new empty step at end of pipeline (blocks approach)
-         */
-        addNewEmptyStepAtEnd: function($pipelineSteps, pipelineId) {
-            // Create empty step HTML that matches template structure
-            const emptyStepHtml = `
-                <div class="dm-step-card dm-pipeline-step dm-step-card--empty" data-step-type="" data-step-position="">
-                    <div class="dm-step-empty-content">
-                        <button type="button" class="button button-secondary dm-modal-trigger dm-step-add-button"
-                                data-template="step-selection"
-                                data-context='{"context":"pipeline_builder","pipeline_id":"${pipelineId}"}'>
-                            Add Step
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            // Append new empty step at the end
-            $pipelineSteps.append(emptyStepHtml);
-        },
 
         /**
          * Update arrows between steps
@@ -376,14 +274,6 @@
                 );
             }
         },
-
-
-
-        // closeModal method removed - functionality handled by core modal system
-
-
-        // handleAddHandlerClick method removed - functionality replaced by universal modal trigger system
-
 
 
 
@@ -685,18 +575,25 @@
         },
 
 
-        // handleModalTriggerClick removed - now handled by core modal system
 
         /**
-         * Handle confirm delete button click - supports both step and pipeline deletion
+         * Handle delete action - supports both step and pipeline deletion
+         * Note: Confirmation already happened in modal, this executes the delete action
          */
-        handleConfirmDelete: function(e) {
+        handleDeleteAction: function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
-            const deleteType = $button.data('delete-type') || 'step'; // Default to step for backward compatibility
-            const stepPosition = $button.data('step-position');
-            const pipelineId = $button.data('pipeline-id');
+            const contextData = $button.data('context');
+            
+            if (!contextData) {
+                console.error('No context data found for delete action');
+                return;
+            }
+            
+            const deleteType = contextData.delete_type || 'step';
+            const stepPosition = contextData.step_position;
+            const pipelineId = contextData.pipeline_id;
             
             // Validation based on deletion type
             if (deleteType === 'pipeline') {
@@ -735,8 +632,6 @@
                 data: ajaxData,
                 success: (response) => {
                     if (response.success) {
-                        // Close modal using core modal system
-                        dmCoreModal.close();
                         
                         if (deleteType === 'pipeline') {
                             // Pipeline deletion - remove entire pipeline card
@@ -744,32 +639,6 @@
                             $pipelineCard.fadeOut(300, function() {
                                 $(this).remove();
                                 
-                                // Show success message
-                                if (response.data && response.data.message) {
-                                    // Create a temporary success notification
-                                    const $notification = $('<div class="dm-notification dm-notification-success">')
-                                        .text(response.data.message)
-                                        .css({
-                                            position: 'fixed',
-                                            top: '20px',
-                                            right: '20px',
-                                            padding: '15px 20px',
-                                            backgroundColor: '#46b450',
-                                            color: 'white',
-                                            borderRadius: '4px',
-                                            zIndex: 100000,
-                                            maxWidth: '400px'
-                                        });
-                                    
-                                    $('body').append($notification);
-                                    
-                                    // Auto-remove notification after 5 seconds
-                                    setTimeout(() => {
-                                        $notification.fadeOut(300, function() {
-                                            $(this).remove();
-                                        });
-                                    }, 5000);
-                                }
                             });
                         } else {
                             // Step deletion - existing logic
@@ -842,9 +711,6 @@
             });
         },
 
-        // openUniversalModal method removed - functionality handled by core modal system
-
-        // createModalHTML method removed - functionality handled by core modal system
 
         /**
          * Handle schedule status radio button change
@@ -896,8 +762,6 @@
                 data: formData,
                 success: (response) => {
                     if (response.success) {
-                        // Close modal
-                        dmCoreModal.close();
                         
                         // Show success message
                         alert(response.data.message || 'Schedule saved successfully');
@@ -970,7 +834,6 @@
          */
         handleCancelSchedule: function(e) {
             e.preventDefault();
-            dmCoreModal.close();
         }
     };
 
@@ -978,8 +841,6 @@
     $(document).ready(function() {
         PipelineBuilder.init();
         
-        // Modal event handlers now managed by core modal system
-        // Core modal system handles close button, overlay clicks, and escape key
     });
 
 })(jQuery);

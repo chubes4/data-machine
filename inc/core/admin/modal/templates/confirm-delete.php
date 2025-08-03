@@ -103,10 +103,9 @@ $pipeline_id = $pipeline_id ?? null;
     </div>
     
     <div class="dm-modal-actions">
-        <button type="button" class="button button-primary button-large dm-confirm-delete-ajax" 
-                data-delete-type="<?php echo esc_attr($delete_type); ?>"
-                data-step-position="<?php echo esc_attr($step_position); ?>"
-                data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+        <button type="button" class="button button-primary button-large" 
+                data-template="delete-action"
+                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
             <?php if ($delete_type === 'pipeline'): ?>
                 <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
             <?php else: ?>

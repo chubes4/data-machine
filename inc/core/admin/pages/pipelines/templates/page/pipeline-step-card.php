@@ -30,7 +30,7 @@ $has_step_config = !$is_empty && !empty($step_config_info);
     <?php if ($is_empty): ?>
         <!-- Empty step - Add Step functionality -->
         <div class="dm-step-empty-content">
-            <button type="button" class="button button-secondary dm-modal-trigger dm-step-add-button"
+            <button type="button" class="button button-secondary dm-modal-open dm-step-add-button"
                     data-template="step-selection"
                     data-context='{"context":"pipeline_builder","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
                 <?php esc_html_e('Add Step', 'data-machine'); ?>
@@ -41,13 +41,13 @@ $has_step_config = !$is_empty && !empty($step_config_info);
         <div class="dm-step-header">
             <div class="dm-step-title"><?php echo esc_html($label); ?></div>
             <div class="dm-step-actions">
-                <button type="button" class="button button-small button-link-delete dm-modal-trigger" 
-                        data-template="delete-step"
-                        data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
+                <button type="button" class="button button-small button-link-delete dm-modal-open" 
+                        data-template="confirm-delete"
+                        data-context='{"delete_type":"step","step_type":"<?php echo esc_attr($step_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
                     <?php esc_html_e('Delete', 'data-machine'); ?>
                 </button>
                 <?php if ($has_step_config): ?>
-                    <button type="button" class="button button-small button-link-configure dm-modal-trigger" 
+                    <button type="button" class="button button-small button-link-configure dm-modal-open" 
                             data-template="configure-step"
                             data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
                         <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>

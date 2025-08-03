@@ -34,7 +34,7 @@ $has_auth = ($auth_instance !== null);
                 <span class="dashicons dashicons-admin-network"></span>
                 <span><?php echo esc_html(sprintf(__('%s requires authentication to function properly.', 'data-machine'), $handler_label)); ?></span>
             </div>
-            <button type="button" class="button button-secondary dm-modal-trigger" 
+            <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="handler-auth"
                     data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
                 <?php esc_html_e('Manage Authentication', 'data-machine'); ?>
