@@ -89,14 +89,22 @@
     align-items: center;
 }
 
+/* Universal step containers */
+.dm-step-container {
+    display: flex;
+    align-items: center;
+    flex: 0 0 160px;
+    height: 80px;
+}
+
 /* Step cards */
 .dm-step-card {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 6px;
     padding: 12px;
-    flex: 0 0 160px;
-    height: 80px;
+    flex: 1;
+    height: 100%;
 }
 
 
@@ -219,18 +227,15 @@
     align-items: center;
 }
 
-/* Flow step cards (nested, smaller) */
-.dm-flow-step {
-    min-width: 180px;
-    max-width: 220px;
-    min-height: 120px;
+/* Flow step containers - uniform sizing, just different styling */
+.dm-flow-steps .dm-step-card {
     border-color: #ccc;
     background: #f9f9f9;
     display: flex;
     flex-direction: column;
 }
 
-.dm-flow-step .dm-step-body {
+.dm-flow-steps .dm-step-body {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -279,8 +284,8 @@
         flex-direction: column;
     }
     
-    .dm-step-card,
-    .dm-placeholder-step {
+    .dm-step-container,
+    .dm-step-card {
         min-width: auto;
         max-width: none;
         flex: 1;
@@ -366,11 +371,13 @@
     text-decoration: underline;
 }
 
-/* Step flow arrows */
+/* Universal step arrows - proper flexbox child */
 .dm-step-arrow {
+    margin-right: 8px;
     color: #666;
     font-size: 16px;
-    margin: 0 5px;
+    display: flex;
+    align-items: center;
     flex-shrink: 0;
 }
 
@@ -380,17 +387,14 @@
     font-size: 16px;
 }
 
-/* Flow step arrows (smaller for nested flow steps) */
-.dm-flow-step-arrow {
+/* Flow context - smaller arrows for nested flow steps */
+.dm-flow-steps .dm-step-arrow {
     color: #888;
     font-size: 14px;
-    margin: 0 4px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
+    margin-right: 6px;
 }
 
-.dm-flow-step-arrow .dashicons {
+.dm-flow-steps .dm-step-arrow .dashicons {
     width: 14px;
     height: 14px;
     font-size: 14px;

@@ -44,20 +44,19 @@ class Reddit {
 	 *
 	 * @param object $module The full module object containing configuration and context.
 	 * @param array  $source_config Decoded data_source_config specific to this handler.
-	 * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
 	 * @return array Array containing 'processed_items' key with standardized data packets for Reddit data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
+	public function get_input_data(object $module, array $source_config): array {
 		$logger = apply_filters('dm_get_logger', null);
 		$logger?->debug('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
 
 		// Get module ID from the passed module object
 		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
 
-		if ( empty( $module_id ) || empty( $user_id ) ) {
-			$logger?->error('Reddit Input: Missing module ID or user ID.', ['module_id' => $module_id, 'user_id' => $user_id]);
-			throw new Exception(esc_html__( 'Missing module ID or user ID provided to Reddit handler.', 'data-machine' ));
+		if ( empty( $module_id ) ) {
+			$logger?->error('Reddit Input: Missing module ID.', ['module_id' => $module_id]);
+			throw new Exception(esc_html__( 'Missing module ID provided to Reddit handler.', 'data-machine' ));
 		}
 
 		// Get services via filter-based access (current architecture)

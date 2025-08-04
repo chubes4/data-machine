@@ -43,21 +43,16 @@ class Rss {
      *
      * @param object $module The full module object containing configuration and context.
      * @param array  $source_config Decoded data_source_config specific to this handler.
-     * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
      * @return array Array containing 'processed_items' key with standardized data packets for RSS items.
      * @throws Exception If data cannot be retrieved or is invalid.
      */
-    public function get_input_data(object $module, array $source_config, int $user_id): array {
+    public function get_input_data(object $module, array $source_config): array {
         // Direct filter-based validation
         $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
         if (empty($module_id)) {
             throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
         }
         
-        // Validate user ID
-        if (empty($user_id)) {
-            throw new Exception(esc_html__('User ID not provided.', 'data-machine'));
-        }
 
         $logger = apply_filters('dm_get_logger', null);
         $logger?->debug('RSS Input: Starting RSS feed processing.', ['module_id' => $module_id]);

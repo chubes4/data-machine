@@ -181,8 +181,7 @@ class InputStep {
             }
 
             // Execute handler - handlers return arrays, use universal conversion
-            $user_id = $job->user_id ?? 0;
-            $result = $handler->get_input_data($pipeline_id, $handler_config, $user_id);
+            $result = $handler->get_input_data($pipeline_id, $handler_config);
 
             // Convert handler output to DataPacket using filter system
             $context = [

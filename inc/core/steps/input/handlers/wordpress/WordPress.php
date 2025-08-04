@@ -56,21 +56,16 @@ class WordPress {
      *
      * @param object $module The full module object containing configuration and context.
      * @param array  $source_config Decoded data_source_config for the specific module run.
-     * @param int    $user_id The ID of the user context.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If input data is invalid or cannot be retrieved.
      */
-    public function get_input_data(object $module, array $source_config, int $user_id): array {
+    public function get_input_data(object $module, array $source_config): array {
         // Direct filter-based validation
         $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
         if (empty($module_id)) {
             throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
         }
         
-        // Validate user ID
-        if (empty($user_id)) {
-            throw new Exception(esc_html__('User ID not provided.', 'data-machine'));
-        }
 
         // Access config from nested structure
         $config = $source_config['wordpress'] ?? [];

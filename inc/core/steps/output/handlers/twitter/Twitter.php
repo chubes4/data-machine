@@ -47,10 +47,9 @@ class Twitter {
      * Handles posting the AI output to Twitter.
      *
      * @param object $data_packet Universal DataPacket JSON object with all content and metadata.
-     * @param int $user_id The ID of the user whose Twitter account should be used.
      * @return array Result array on success or failure.
      */
-    public function handle_output($data_packet, int $user_id): array {
+    public function handle_output($data_packet): array {
         // Extract content from DataPacket JSON object
         $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
         

@@ -38,11 +38,10 @@ class Files {
 	 *
      * @param object $module The full module object containing configuration and context.
      * @param array  $source_config Decoded data_source_config specific to this handler (flat array, not sub-array).
-     * @param int    $user_id The ID of the user initiating the process (for ownership/context checks).
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_input_data(object $module, array $source_config, int $user_id): array {
+	public function get_input_data(object $module, array $source_config): array {
         // Direct filter-based validation
         $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
         if (empty($module_id)) {

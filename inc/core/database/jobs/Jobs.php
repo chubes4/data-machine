@@ -237,7 +237,6 @@ class Jobs {
             job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             pipeline_id bigint(20) unsigned NOT NULL,
             flow_id bigint(20) unsigned NOT NULL,
-            user_id bigint(20) unsigned NULL DEFAULT NULL,
             status varchar(20) NOT NULL,
             current_step_name varchar(50) NULL DEFAULT NULL,
             step_sequence longtext NULL,
@@ -252,7 +251,6 @@ class Jobs {
             KEY current_step_name (current_step_name),
             KEY pipeline_id (pipeline_id),
             KEY flow_id (flow_id),
-            KEY user_id (user_id),
             KEY cleanup_scheduled (cleanup_scheduled)
         ) $charset_collate;";
 

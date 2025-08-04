@@ -100,7 +100,6 @@ class TestDataFixtures {
             'flow_id' => 1,
             'status' => 'pending',
             'job_type' => 'pipeline_execution',
-            'user_id' => 1,
             'job_data' => [
                 'execution_context' => 'test',
                 'priority' => 'normal'

@@ -140,13 +140,14 @@
          * Update pipeline interface after adding step using template requests
          */
         updatePipelineInterface: function(stepData, pipelineId) {
-            // Check if this is the first real step (only empty step exists)
+            // Check if this is the first real step (only empty step container exists)
             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            const nonEmptySteps = $pipelineCard.find('.dm-pipeline-step:not(.dm-step-card--empty)').length;
+            const nonEmptySteps = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
             const isFirstRealStep = nonEmptySteps === 0;
             
-            // Request pipeline step template with step data
-            this.requestTemplate('page/pipeline-step-card', {
+            // Request universal step template with pipeline context
+            this.requestTemplate('page/step-card', {
+                context: 'pipeline',
                 step: stepData.step_data,
                 pipeline_id: pipelineId,
                 is_first_step: isFirstRealStep
@@ -178,18 +179,19 @@
             
             const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
             
-            // Find the empty step to replace (true blocks approach)
-            const $emptyStep = $pipelineSteps.find('.dm-step-card--empty').first();
+            // Find the empty step container to replace (true blocks approach)
+            const $emptyStepContainer = $pipelineSteps.find('.dm-step-container:has(.dm-step-card--empty)').first();
             
             // Use the HTML from the AJAX response
             const stepHtml = stepCardData.step_html || stepCardData.html;
             
-            if ($emptyStep.length) {
-                // True blocks approach: replace empty step with new step content
-                $emptyStep.replaceWith(stepHtml);
+            if ($emptyStepContainer.length) {
+                // True blocks approach: replace empty step container with new step content
+                $emptyStepContainer.replaceWith(stepHtml);
                 
-                // Add new empty step at the end using template request
-                this.requestTemplate('page/pipeline-step-card', {
+                // Add new empty step container at the end using template request
+                this.requestTemplate('page/step-card', {
+                    context: 'pipeline',
                     step: {
                         is_empty: true,
                         step_type: '',
@@ -204,12 +206,12 @@
                 
                 // Arrow rendering handled by PHP templates
             } else {
-                console.error('No empty step found to replace');
+                console.error('No empty step container found to replace');
                 return;
             }
 
             // Update step count in this specific pipeline card
-            const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-step-card--empty)').length;
+            const stepCount = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
             $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
             
             // Update save button validation state
@@ -237,13 +239,14 @@
          * Update flow steps using identical template request pattern as pipeline steps
          */
         updateFlowSteps: function(stepData, pipelineId) {
-            // Check if this is the first real flow step (only empty step exists)
+            // Check if this is the first real flow step (only empty step container exists)
             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            const nonEmptyFlowSteps = $pipelineCard.find('.dm-flow-step:not(.dm-step-card--empty)').length;
+            const nonEmptyFlowSteps = $pipelineCard.find('.dm-flow-steps .dm-step-container:not(:has(.dm-step-card--empty))').length;
             const isFirstRealFlowStep = nonEmptyFlowSteps === 0;
             
-            // Use identical logic to pipeline steps
-            this.requestTemplate('page/flow-step-card', {
+            // Use identical logic to pipeline steps with universal template
+            this.requestTemplate('page/step-card', {
+                context: 'flow',
                 step: stepData.step_data,
                 flow_config: [],
                 flow_id: 'new',
@@ -272,15 +275,16 @@
             
             const $flowSteps = $pipelineCard.find('.dm-flow-steps');
             
-            // Find empty flow step to replace (identical to pipeline logic)
-            const $emptyFlowStep = $flowSteps.find('.dm-step-card--empty').first();
+            // Find empty flow step container to replace (identical to pipeline logic)
+            const $emptyFlowStepContainer = $flowSteps.find('.dm-step-container:has(.dm-step-card--empty)').first();
             
-            if ($emptyFlowStep.length) {
-                // Replace empty flow step with new step content
-                $emptyFlowStep.replaceWith(flowStepData.html);
+            if ($emptyFlowStepContainer.length) {
+                // Replace empty flow step container with new step content
+                $emptyFlowStepContainer.replaceWith(flowStepData.html);
                 
-                // Add new empty flow step at the end using template request
-                this.requestTemplate('page/flow-step-card', {
+                // Add new empty flow step container at the end using template request
+                this.requestTemplate('page/step-card', {
+                    context: 'flow',
                     step: {
                         is_empty: true,
                         step_type: '',
@@ -294,12 +298,12 @@
                     console.error('Failed to render empty flow step template:', error);
                 });
             } else {
-                console.error('No empty flow step found to replace');
+                console.error('No empty flow step container found to replace');
                 return;
             }
             
             // Update flow meta text when first step is added
-            const nonEmptyFlowSteps = $flowSteps.find('.dm-flow-step:not(.dm-step-card--empty)').length;
+            const nonEmptyFlowSteps = $flowSteps.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
             if (nonEmptyFlowSteps === 1) {
                 $pipelineCard.find('.dm-flow-meta .dm-placeholder-text').text(
                     dmPipelineBuilder.strings.configureHandlers || 'Configure handlers for each step above'
@@ -456,8 +460,8 @@
             const pipelineName = $pipelineCard.find('.dm-pipeline-title-input').val() || '';
             const stepConfiguration = [];
             
-            // Collect step data from pipeline steps (not flow steps)
-            $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').each(function(index) {
+            // Collect step data from pipeline step containers (not flow steps)
+            $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
                 const $step = $(this);
                 const stepType = $step.data('step-type');
                 
@@ -537,7 +541,7 @@
                 
                 // Get current values
                 const pipelineName = $nameInput.val() ? $nameInput.val().trim() : '';
-                const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').length;
+                const stepCount = $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').length;
                 
                 // Enable/disable save button based on validation
                 const isValid = pipelineName.length > 0 && stepCount > 0;
@@ -702,57 +706,16 @@
                                 $(this).remove();
                             });
                         } else {
-                            // Step deletion - existing logic
+                            // Step deletion - Use universal container targeting (ARCHITECTURE FIX)
                             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
                             
-                            // Remove step from pipeline section by position (specific step)
-                            $pipelineCard.find(`.dm-pipeline-step[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
+                            // Remove step container (includes arrow + card)
+                            $pipelineCard.find(`.dm-step-container[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
                                 $(this).remove();
-                                
-                                // Arrow rendering handled by PHP templates
-                                const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
                                 
                                 // Update step count for this specific pipeline
-                                const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').length;
+                                const stepCount = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
                                 $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
-                                
-                                // Show existing placeholder if no steps remain
-                                if (stepCount === 0) {
-                                    // Template should already include placeholder - just make sure it's visible
-                                    const $existingPlaceholder = $pipelineCard.find('.dm-placeholder-step');
-                                    if (!$existingPlaceholder.is(':visible')) {
-                                        $existingPlaceholder.show();
-                                    }
-                                }
-                            });
-                            
-                            // Remove corresponding flow step by position (same position as pipeline step)
-                            $pipelineCard.find(`.dm-flow-step-container[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
-                                $(this).remove();
-                                
-                                // Arrow rendering handled by PHP templates
-                                const $flowSteps = $pipelineCard.find('.dm-flow-steps');
-                                
-                                // If no flow steps remain, reset flow section to original state
-                                const flowStepCount = $pipelineCard.find('.dm-flow-step:not(.dm-placeholder-flow-step)').length;
-                                if (flowStepCount === 0) {
-                                    // Reset flow placeholder text to original state
-                                    const $flowPlaceholder = $pipelineCard.find('.dm-placeholder-flow-step .dm-placeholder-description');
-                                    $flowPlaceholder.text(
-                                        dmPipelineBuilder.strings.addStepsToFlow || 'Add steps to the pipeline above to configure handlers for this flow'
-                                    );
-                                    
-                                    // Reset flow meta text to original state
-                                    $pipelineCard.find('.dm-flow-meta .dm-placeholder-text').text(
-                                        dmPipelineBuilder.strings.addStepsToFlow || 'Add steps to the pipeline above to configure handlers for this flow'
-                                    );
-                                    
-                                    // Make sure placeholder is visible
-                                    const $existingFlowPlaceholder = $pipelineCard.find('.dm-placeholder-flow-step');
-                                    if (!$existingFlowPlaceholder.is(':visible')) {
-                                        $existingFlowPlaceholder.show();
-                                    }
-                                }
                             });
                         }
                     } else {

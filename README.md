@@ -542,7 +542,7 @@ add_filter('dm_get_handlers', function($handlers, $type) {
 
 class GoogleSheetsHandler {
     // INPUT: Read data from sheets
-    public function get_input_data(object $module, array $source_config, int $user_id): array {
+    public function get_input_data(object $module, array $source_config): array {
         $customer_data = $this->fetch_sheets_data(
             $source_config['sheet_id'], 
             $source_config['input_range']

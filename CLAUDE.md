@@ -16,7 +16,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## Current Status
 
-**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, **arrow rendering architecture with universal is_first_step pattern**, enhanced logger system with runtime configuration, flow deletion functionality, modal system improvements, template requesting architecture, production deployment.
+**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, **universal step card template system with context-aware rendering**, **arrow rendering architecture with universal is_first_step pattern**, enhanced logger system with runtime configuration, flow deletion functionality, modal system improvements, template requesting architecture, admin page direct template rendering pattern, production deployment.
 
 **Known Issues**: Expanding PHPUnit test coverage across components. Flows database schema contains references to user_id field that was removed - flows are now admin-only in this implementation.
 
@@ -151,6 +151,38 @@ class MyStep {
 }
 ```
 
+## Universal Step Card Template System
+
+**Single Template Architecture**: Consolidated step card rendering using one universal template (`step-card.php`) that handles both pipeline and flow contexts through a `context` parameter, eliminating template duplication and ensuring perfect consistency.
+
+**Context-Aware Rendering**: Template dynamically adapts UI elements, actions, and content based on context:
+- **Pipeline Context**: Shows "Add Step" buttons, delete/configure actions, structural-only display
+- **Flow Context**: Shows "Add Handler" buttons, handler management UI, configuration details
+
+**Template Usage Pattern**:
+```php
+// Pipeline step card
+$content = apply_filters('dm_render_template', '', 'page/step-card', [
+    'step' => $step_data,
+    'context' => 'pipeline',
+    'pipeline_id' => $pipeline_id,
+    'is_first_step' => $is_first_step
+]);
+
+// Flow step card  
+$content = apply_filters('dm_render_template', '', 'page/step-card', [
+    'step' => $step_data,
+    'context' => 'flow', 
+    'flow_id' => $flow_id,
+    'flow_config' => $flow_config,
+    'is_first_step' => $is_first_step
+]);
+```
+
+**Universal Container Architecture**: Uses `dm-step-container` wrapper with consistent data attributes and internal `dm-step-card` structure that adapts content based on context while maintaining identical arrow and layout logic.
+
+**Handler Discovery Integration**: Flow context uses parameter-based filter discovery (`apply_filters('dm_get_handlers', null, $step_type)`) for dynamic handler availability, while pipeline context focuses on step configuration discovery.
+
 ## Arrow Rendering Architecture
 
 **Universal is_first_step Pattern**: Simplified arrow logic that eliminates positioning complexity and ensures perfect consistency across all contexts.
@@ -160,15 +192,16 @@ class MyStep {
 - **All other steps**: `is_first_step: false` → **arrow rendered**
 - **Empty steps at end**: `is_first_step: false` → **arrow** (shows flow continuation)
 
-### Template Consistency
+### Universal Template Implementation
 
-**Identical Arrow Logic**: Both `pipeline-step-card.php` and `flow-step-card.php` use the same arrow pattern:
+**Single Template Arrow Logic**: Universal `step-card.php` template uses simplified arrow pattern with WordPress dashicons:
 ```php
-<?php if (!$is_first_step): ?>
-    <div class="dm-step-card__arrow">
-        <svg class="dm-arrow-icon" viewBox="0 0 24 24">
-            <path d="M8 5l8 7-8 7V5z" fill="currentColor"/>
-        </svg>
+<?php
+// Universal arrow logic - before every step except the very first step in the container
+$is_first_step = $is_first_step ?? false;
+if (!$is_first_step): ?>
+    <div class="dm-step-arrow">
+        <span class="dashicons dashicons-arrow-right-alt"></span>
     </div>
 <?php endif; ?>
 ```
@@ -196,14 +229,16 @@ this.requestTemplate('page/step-card', {
 ✅ **Perfect Consistency**: Initial page load and AJAX updates identical  
 ✅ **Simplified Logic**: Binary `is_first_step` replaces complex step_index calculations  
 ✅ **Empty Step Support**: Handles empty steps at end with proper flow continuation arrows  
-✅ **Template Reusability**: Same arrow logic across all step card templates
+✅ **Single Template**: Universal `step-card.php` consolidates all arrow rendering logic
+✅ **WordPress Integration**: Uses native dashicons for consistent styling
 
 ### Critical Implementation Rules
 
 **Always Calculate is_first_step**: JavaScript must calculate this value when requesting step templates
-**Template Pattern**: All step templates use `if (!$is_first_step)` for arrow rendering
+**Universal Template**: Single `step-card.php` template handles all step contexts via `context` parameter
+**Template Pattern**: Universal template uses `if (!$is_first_step)` for arrow rendering
 **No Position Math**: Never use step positions, indices, or counts for arrow logic
-**Universal Application**: Pattern applies to pipeline steps, flow steps, and any future step contexts
+**Context Awareness**: Template adapts UI and actions based on 'pipeline' or 'flow' context parameter
 
 ## Template Rendering Architecture
 
@@ -220,8 +255,10 @@ this.requestTemplate('page/step-card', {
 const nonEmptySteps = $container.find('.dm-step:not(.dm-step-card--empty)').length;
 const isFirstRealStep = nonEmptySteps === 0;
 
-this.requestTemplate('page/pipeline-step-card', {
+// Universal step card template with context awareness
+this.requestTemplate('page/step-card', {
     step: stepData,
+    context: 'pipeline', // or 'flow'
     pipeline_id: pipelineId,
     is_first_step: isFirstRealStep  // Critical for arrow consistency
 }).then((stepHtml) => {
@@ -230,17 +267,30 @@ this.requestTemplate('page/pipeline-step-card', {
 });
 
 // Universal template requesting method
-requestTemplate(template, data) {
-    return $.ajax({
-        url: ajaxurl,
-        method: 'POST',
-        data: {
-            action: 'dm_get_template',
-            template: template,
-            data: JSON.stringify(data),
-            _ajax_nonce: this.nonce
-        }
-    }).then(response => response.data.html);
+requestTemplate(templateName, templateData) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: dmPipelineBuilder.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'get_template',
+                template: templateName,
+                template_data: JSON.stringify(templateData),
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+            },
+            success: (response) => {
+                if (response.success) {
+                    resolve(response.data.html);
+                } else {
+                    reject(response.data.message);
+                }
+            },
+            error: (xhr, status, error) => {
+                reject(error);
+            }
+        });
+    });
 }
 ```
 
@@ -456,6 +506,48 @@ function dm_register_twitter_filters() {
 dm_register_twitter_filters();
 ```
 
+
+## Admin Page Architecture
+
+**Direct Template Rendering Pattern**: AdminMenuAssets.php uses standardized template name pattern for unified page rendering without content_callback dependencies.
+
+**Template Name Convention**: Admin pages render using pattern `"page/{$page_slug}-page"`:
+```php
+// AdminMenuAssets.php - Direct template rendering
+private function render_admin_page_content($page_config, $page_slug) {
+    $content = apply_filters('dm_render_template', '', "page/{$page_slug}-page", [
+        'page_slug' => $page_slug,
+        'page_config' => $page_config
+    ]);
+    
+    if (!empty($content)) {
+        echo $content;
+    } else {
+        // Default empty state
+        echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
+        echo '<p>' . esc_html__('Page content not configured.', 'data-machine') . '</p></div>';
+    }
+}
+```
+
+**Unified Asset Management**: Admin pages register assets directly in their filter configuration, eliminating separate asset management systems:
+```php
+add_filter('dm_get_admin_page', function($config, $page_slug) {
+    if ($page_slug === 'jobs') {
+        return [
+            'page_title' => __('Jobs', 'data-machine'),
+            'templates' => __DIR__ . '/templates/', // Template discovery
+            'assets' => [
+                'css' => ['dm-admin-jobs' => ['file' => 'path/to/style.css']],
+                'js' => ['dm-jobs-admin' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
+            ]
+        ];
+    }
+    return $config;
+}, 10, 2);
+```
+
+**Parameter-Based Discovery**: AdminMenuAssets discovers pages dynamically via parameter-based filters, maintaining architectural consistency with all other services.
 
 ## Universal Template Rendering
 

@@ -198,14 +198,13 @@ class OutputStep {
             }
 
             // Universal JSON DataPacket interface - simple and direct
-            $user_id = $job->user_id ?? 0;
             
             // Convert DataPacket to pure JSON object
             $json_data_packet = json_decode(json_encode($data_packet));
             $json_data_packet->output_config = $handler_config;
             
             // Execute handler with pure JSON object - beautiful simplicity
-            $output_result = $handler->handle_output($json_data_packet, $user_id);
+            $output_result = $handler->handle_output($json_data_packet);
 
             return $output_result;
 

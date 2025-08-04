@@ -14,6 +14,15 @@ if (!defined('WPINC')) {
     die;
 }
 
+// Get pipelines data directly
+$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+
+$all_pipelines = [];
+if ($db_pipelines) {
+    $all_pipelines = $db_pipelines->get_all_pipelines();
+}
+
 ?>
 <div class="dm-admin-wrap dm-pipelines-page">
     <!-- Page Header -->
@@ -48,7 +57,7 @@ if (!defined('WPINC')) {
                     echo apply_filters('dm_render_template', '', 'page/pipeline-card', [
                         'pipeline' => $pipeline,
                         'existing_flows' => $existing_flows,
-                        'pipelines_instance' => $pipelines_instance  // Pass instance for nested template calls
+                        'pipelines_instance' => null  // No instance needed with template-based approach
                     ]); 
                     ?>
                 <?php endforeach; ?>

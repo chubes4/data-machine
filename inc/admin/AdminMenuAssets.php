@@ -190,11 +190,18 @@ class AdminMenuAssets {
      * @param string $page_slug Page slug
      */
     private function render_admin_page_content($page_config, $page_slug) {
-        // Use parameter-based content discovery via existing dm_get_admin_page filter
-        $content = apply_filters('dm_get_admin_page', '', $page_slug, 'content');
+        // Direct template rendering using standardized template name pattern
+        $content = apply_filters('dm_render_template', '', "page/{$page_slug}-page", [
+            'page_slug' => $page_slug,
+            'page_config' => $page_config
+        ]);
         
         if (!empty($content)) {
             echo $content;
+        } else {
+            // Default empty state
+            echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
+            echo '<p>' . esc_html__('Page content not configured.', 'data-machine') . '</p></div>';
         }
     }
 

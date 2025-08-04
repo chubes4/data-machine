@@ -31,26 +31,14 @@ if (!defined('ABSPATH')) {
 function dm_register_jobs_admin_page_filters() {
     
     // Unified admin page registration with embedded asset configuration
-    add_filter('dm_get_admin_page', function($config, $page_slug, $request_type = null) {
-        if ($page_slug !== 'jobs') {
-            return $config;
-        }
-        
-        // Return content when specifically requested
-        if ($request_type === 'content') {
-            $jobs_instance = new Jobs();
-            ob_start();
-            $jobs_instance->render_content();
-            return ob_get_clean();
-        }
-        
-        // Return config for other requests (menu registration, etc.)
-        return [
-            'page_title' => __('Jobs', 'data-machine'),
-            'menu_title' => __('Jobs', 'data-machine'),  
-            'capability' => 'manage_options',
-            'position' => 20,
-            'templates' => __DIR__ . '/templates/',
+    add_filter('dm_get_admin_page', function($config, $page_slug) {
+        if ($page_slug === 'jobs') {
+            return [
+                'page_title' => __('Jobs', 'data-machine'),
+                'menu_title' => __('Jobs', 'data-machine'),  
+                'capability' => 'manage_options',
+                'position' => 20,
+                'templates' => __DIR__ . '/templates/',
                 'assets' => [
                     'css' => [
                         'dm-admin-jobs' => [
@@ -80,7 +68,7 @@ function dm_register_jobs_admin_page_filters() {
             ];
         }
         return $config;
-    }, 10, 3);
+    }, 10, 2);
 }
 
 // Auto-register when file loads - achieving complete self-containment

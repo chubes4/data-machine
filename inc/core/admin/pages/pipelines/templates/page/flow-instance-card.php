@@ -58,8 +58,9 @@ $flow_config = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? 
             <?php if (!empty($pipeline_steps)): ?>
                 <?php foreach ($pipeline_steps as $index => $step): ?>
                     <?php 
-                    // Render populated flow step using flow-step-card template
-                    echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
+                    // Render populated flow step using universal step-card template
+                    echo apply_filters('dm_render_template', '', 'page/step-card', [
+                        'context' => 'flow',
                         'step' => $step,
                         'flow_config' => $flow_config,
                         'flow_id' => $flow_id,
@@ -70,7 +71,8 @@ $flow_config = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? 
                 
                 <!-- Always add empty flow step at the end (identical to pipeline pattern) -->
                 <?php 
-                echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
+                echo apply_filters('dm_render_template', '', 'page/step-card', [
+                    'context' => 'flow',
                     'step' => [
                         'is_empty' => true,
                         'step_type' => '',
@@ -84,7 +86,8 @@ $flow_config = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? 
             <?php else: ?>
                 <!-- When no pipeline steps exist, show empty flow step (not placeholder) -->
                 <?php 
-                echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
+                echo apply_filters('dm_render_template', '', 'page/step-card', [
+                    'context' => 'flow',
                     'step' => [
                         'is_empty' => true,
                         'step_type' => '',
