@@ -114,26 +114,75 @@ class ProcessedItemsManager {
 	}
 
 	/**
-	 * Generate consistent item identifier from source data using pure parameter-based system.
+	 * Generate consistent item identifier from source data using filter-based extraction.
 	 *
 	 * Uses filter-based architecture where handlers register their identifier extraction logic.
 	 * This eliminates hardcoded switches and enables unlimited extensibility.
+	 * 
+	 * Fails fast with explicit logging when no valid identifier can be determined.
 	 *
 	 * @param string $source_type Source type (e.g. 'airdrop_rest_api', 'rss').
 	 * @param array  $raw_data Raw data from input handler.
 	 * @return string|null Generated identifier or null if cannot be determined.
+	 * @throws \InvalidArgumentException When source_type is empty or raw_data lacks required structure.
 	 */
 	public function generate_item_identifier( string $source_type, array $raw_data ): ?string {
-		// Direct fallback logic - try common identifier patterns
-		$identifier = $raw_data['id'] ?? $raw_data['ID'] ?? $raw_data['guid'] ?? $raw_data['name'] ?? $raw_data['link'] ?? $raw_data['file_path'] ?? $raw_data['filename'] ?? null;
+		$logger = apply_filters('dm_get_logger', null);
 		
-		if ( $identifier === null ) {
-			$logger = apply_filters('dm_get_logger', null);
-			$logger?->debug( 'ProcessedItemsManager: No identifier found for source type', [
+		// Fail fast on invalid parameters
+		if ( empty( $source_type ) ) {
+			$logger?->error( 'ProcessedItemsManager: Cannot generate identifier - source_type is required', [
 				'source_type' => $source_type,
+				'data_keys' => array_keys( $raw_data )
+			] );
+			throw new \InvalidArgumentException( 'Source type is required for identifier generation' );
+		}
+		
+		if ( empty( $raw_data ) ) {
+			$logger?->error( 'ProcessedItemsManager: Cannot generate identifier - raw_data is empty', [
+				'source_type' => $source_type
+			] );
+			throw new \InvalidArgumentException( 'Raw data is required for identifier generation' );
+		}
+		
+		// Filter-based identifier extraction - handlers register their extraction logic
+		$identifier = apply_filters( 'dm_extract_item_identifier', null, $source_type, $raw_data );
+		
+		// Fail fast with explicit logging when no identifier handler is registered
+		if ( $identifier === null ) {
+			$logger?->error( 'ProcessedItemsManager: No identifier extraction handler registered for source type', [
+				'source_type' => $source_type,
+				'available_keys' => array_keys( $raw_data ),
+				'raw_data_sample' => array_slice( $raw_data, 0, 3, true ) // Log first 3 items for debugging
+			] );
+			
+			// This is a critical configuration error - no handler registered
+			throw new \RuntimeException( 
+				sprintf( 'No identifier extraction handler registered for source type: %s', $source_type )
+			);
+		}
+		
+		// Validate extracted identifier
+		if ( ! is_string( $identifier ) || trim( $identifier ) === '' ) {
+			$logger?->error( 'ProcessedItemsManager: Handler returned invalid identifier', [
+				'source_type' => $source_type,
+				'identifier_type' => gettype( $identifier ),
+				'identifier_value' => $identifier,
 				'available_keys' => array_keys( $raw_data )
 			] );
+			
+			throw new \RuntimeException( 
+				sprintf( 'Handler for source type "%s" returned invalid identifier: %s', 
+					$source_type, 
+					is_string( $identifier ) ? '"' . $identifier . '"' : gettype( $identifier )
+				)
+			);
 		}
+		
+		$logger?->debug( 'ProcessedItemsManager: Successfully extracted identifier', [
+			'source_type' => $source_type,
+			'identifier' => $identifier
+		] );
 		
 		return $identifier;
 	}

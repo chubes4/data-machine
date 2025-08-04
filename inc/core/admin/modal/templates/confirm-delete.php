@@ -14,17 +14,45 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract variables for template use - supports pipeline, step, and flow deletion
-$delete_type = $delete_type ?? 'step'; // 'pipeline', 'step', or 'flow'
-$step_type = $step_type ?? 'unknown';
-$step_position = $step_position ?? 'unknown';
-$step_label = $step_label ?? ucfirst(str_replace('_', ' ', $step_type));
-$pipeline_name = $pipeline_name ?? __('Unknown Pipeline', 'data-machine');
-$flow_name = $flow_name ?? __('Unknown Flow', 'data-machine');
-$flow_id = $flow_id ?? null;
+// Extract variables with strict validation - no fallbacks
+if (!isset($delete_type)) {
+    throw new \InvalidArgumentException('confirm-delete template requires delete_type parameter');
+}
+
+// Context-specific validation based on deletion type
+if ($delete_type === 'pipeline') {
+    if (!isset($pipeline_id) || empty($pipeline_id)) {
+        throw new \InvalidArgumentException('Pipeline deletion requires pipeline_id parameter');
+    }
+    if (!isset($pipeline_name) || empty($pipeline_name)) {
+        throw new \InvalidArgumentException('Pipeline deletion requires pipeline_name parameter');
+    }
+} elseif ($delete_type === 'flow') {
+    if (!isset($flow_id) || empty($flow_id)) {
+        throw new \InvalidArgumentException('Flow deletion requires flow_id parameter');
+    }
+    if (!isset($flow_name) || empty($flow_name)) {
+        throw new \InvalidArgumentException('Flow deletion requires flow_name parameter');
+    }
+} else {
+    // Step deletion - default case
+    if (!isset($step_position) || $step_position === '') {
+        throw new \InvalidArgumentException('Step deletion requires step_position parameter');
+    }
+    if (!isset($pipeline_id) || empty($pipeline_id)) {
+        throw new \InvalidArgumentException('Step deletion requires pipeline_id parameter');
+    }
+    if (!isset($step_type)) {
+        throw new \InvalidArgumentException('Step deletion requires step_type parameter');  
+    }
+    
+    // Generate step label from type
+    $step_label = $step_label ?? ucfirst(str_replace('_', ' ', $step_type));
+}
+
+// Optional parameters with sensible handling
 $affected_flows = $affected_flows ?? [];
 $affected_jobs = $affected_jobs ?? [];
-$pipeline_id = $pipeline_id ?? null;
 
 ?>
 <div class="dm-delete-warning-modal">

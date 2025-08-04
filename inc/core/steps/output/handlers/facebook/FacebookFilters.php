@@ -84,6 +84,8 @@ function dm_register_facebook_filters() {
                     'description' => __('Post content to Facebook pages and profiles', 'data-machine')
                 ],
                 'step_type' => $context['step_type'] ?? 'output',
+                'flow_id' => $context['flow_id'] ?? '',
+                'pipeline_id' => $context['pipeline_id'] ?? '',
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);

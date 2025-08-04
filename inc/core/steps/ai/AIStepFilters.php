@@ -158,9 +158,8 @@ function dm_register_ai_step_filters() {
     /**
      * AI Step Configuration Modal Content Registration
      * 
-     * Register modal content for ai_step_config template using the AI HTTP Client
-     * ProviderManagerComponent. This provides a complete AI configuration interface
-     * with provider selection, API keys, model selection, and advanced settings.
+     * Register modal content for configure-step template using the universal template system.
+     * This provides a complete AI configuration interface with proper modal action buttons.
      * 
      * @param mixed $content Current modal content (null if none)
      * @param string $template Modal template being requested
@@ -173,50 +172,16 @@ function dm_register_ai_step_filters() {
             $context = json_decode($context_raw, true);
             $step_type = $context['step_type'] ?? 'unknown';
             
-            // Only handle AI step configuration
-            if ($step_type !== 'ai') {
-                return $content;
-            }
+            // Handle all step types, but currently only AI is implemented
+            $template_data = [
+                'step_type' => $step_type,
+                'pipeline_id' => $context['pipeline_id'] ?? null,
+                'current_step' => $context['step_name'] ?? $context['current_step'] ?? 'processing',
+                'step_name' => $context['step_name'] ?? $context['current_step'] ?? 'processing'
+            ];
             
-            // Generate consistent step key aligned with AIStep implementation
-            $pipeline_id = $context['pipeline_id'] ?? null;
-            $current_step = $context['step_name'] ?? $context['current_step'] ?? 'ai_processing';
-            $step_key = $pipeline_id ? "pipeline_{$pipeline_id}_step_{$current_step}" : "temp_ai_step_" . time();
-            
-            // Use AI HTTP Client ProviderManagerComponent for complete AI configuration
-            if (class_exists('AI_HTTP_ProviderManager_Component')) {
-                return \AI_HTTP_ProviderManager_Component::render([
-                    'plugin_context' => 'data-machine',
-                    'ai_type' => 'llm',
-                    'title' => __('AI Step Configuration', 'data-machine'),
-                    'components' => [
-                        'core' => ['provider_selector', 'api_key_input', 'model_selector'],
-                        'extended' => ['temperature_slider', 'system_prompt_field']
-                    ],
-                    'show_test_connection' => false,
-                    'wrapper_class' => 'ai-http-provider-manager dm-ai-step-config',
-                    'step_key' => $step_key, // Step-aware configuration
-                    'component_configs' => [
-                        'temperature_slider' => [
-                            'min' => 0,
-                            'max' => 1,
-                            'step' => 0.1,
-                            'default_value' => 0.7
-                        ],
-                        'system_prompt_field' => [
-                            'placeholder' => __('Enter system prompt for this AI step...', 'data-machine'),
-                            'rows' => 4
-                        ]
-                    ]
-                ]);
-            }
-            
-            // Fallback if AI HTTP Client is not available
-            return '<div class="dm-ai-config-error">
-                <h4>' . __('AI Configuration Unavailable', 'data-machine') . '</h4>
-                <p>' . __('The AI HTTP Client library is required for AI step configuration. Please ensure the library is properly loaded.', 'data-machine') . '</p>
-                <p><em>' . __('Expected class: AI_HTTP_ProviderManager_Component', 'data-machine') . '</em></p>
-            </div>';
+            // Use universal template rendering system
+            return apply_filters('dm_render_template', '', 'modal/configure-step', $template_data);
         }
         return $content;
     }, 10, 2);

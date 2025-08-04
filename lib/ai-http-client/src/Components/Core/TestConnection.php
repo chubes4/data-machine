@@ -101,7 +101,16 @@ class AI_HTTP_Extended_TestConnection implements AI_HTTP_Component_Interface {
      * AJAX handler for testing connection with plugin context
      */
     public static function ajax_test_connection() {
-        check_ajax_referer('ai_http_nonce', 'nonce');
+        // Enhanced nonce verification - no fallbacks
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error('Security nonce is required for connection tests.');
+            return;
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'], 'ai_http_nonce')) {
+            wp_send_json_error('Security verification failed. Please refresh the page and try again.');
+            return;
+        }
         
         try {
             $plugin_context = sanitize_key($_POST['plugin_context']);
@@ -133,4 +142,4 @@ class AI_HTTP_Extended_TestConnection implements AI_HTTP_Component_Interface {
 }
 
 // Initialize AJAX handlers
-add_action('init', ['AI_HTTP_Extended_TestConnection', 'init_ajax_handlers']);
+add_action('plugins_loaded', ['AI_HTTP_Extended_TestConnection', 'init_ajax_handlers']);

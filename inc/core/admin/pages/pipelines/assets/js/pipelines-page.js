@@ -63,6 +63,18 @@
             // Direct data attribute handler for step selection
             $(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
             
+            // Direct data attribute handler for adding handlers to flow steps
+            $(document).on('click', '[data-template="add-handler-action"]', this.handleAddHandlerAction.bind(this));
+            
+            // Direct data attribute handler for configure step modal
+            $(document).on('click', '[data-template="configure-step"]', this.handleConfigureStep.bind(this));
+            
+            // Direct data attribute handler for configure step action (save configuration)
+            $(document).on('click', '[data-template="configure-step-action"]', this.handleConfigureStepAction.bind(this));
+            
+            // Direct data attribute handler for add location action (save remote location)
+            $(document).on('click', '[data-template="add-location-action"]', this.handleAddLocationAction.bind(this));
+            
             // Add Flow button click handler
             $(document).on('click', '.dm-add-flow-btn', this.handleAddFlowClick.bind(this));
             
@@ -108,6 +120,188 @@
             this.addStepToPipeline(contextData.step_type, contextData.pipeline_id);
         },
 
+        /**
+         * Handle add handler action via data attributes
+         * Triggered when user clicks any element with data-template="add-handler-action"
+         */
+        handleAddHandlerAction: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const contextData = $button.data('context');
+            
+            if (!contextData || !contextData.handler_slug || !contextData.step_type || !contextData.flow_id) {
+                console.error('Invalid handler data in button context:', contextData);
+                return;
+            }
+
+            // Add handler to the specific flow step
+            this.addHandlerToFlowStep(contextData);
+        },
+
+        /**
+         * Handle configure step modal opening
+         * Initializes AI provider manager components after modal content loads
+         */
+        handleConfigureStep: function(e) {
+            // Let the modal system handle opening the modal first
+            // We just need to initialize AI components after content loads
+            
+            // Listen for the next modal content loaded event (one-time listener)
+            $(document).one('dm-core-modal-content-loaded', function() {
+                // Initialize any AI provider manager components in the modal
+                if (window.AIHttpProviderManager) {
+                    const $modal = $('#dm-modal');
+                    const $providerComponents = $modal.find('.ai-http-provider-manager');
+                    
+                    $providerComponents.each(function() {
+                        const componentId = $(this).attr('id');
+                        if (componentId && !window.AIHttpProviderManager.instances[componentId]) {
+                            // Extract configuration from inline script or use defaults
+                            const configVarName = 'aiHttpConfig_' + componentId;
+                            const config = window[configVarName] || {
+                                ajax_url: dmPipelineBuilder.ajax_url,
+                                // CRITICAL: Use AI HTTP Client nonce, not Data Machine pipeline nonce
+                                // AI components require 'ai_http_nonce' action for proper verification
+                                nonce: dmPipelineBuilder.ai_http_nonce,
+                                plugin_context: 'data-machine',
+                                component_id: componentId
+                            };
+                            
+                            // Initialize the component
+                            window.AIHttpProviderManager.init(componentId, config);
+                            console.log('[DM Pipeline Builder] Initialized AI provider manager:', componentId);
+                        }
+                    });
+                }
+            });
+        },
+
+        /**
+         * Handle configure step action (save step configuration)
+         * Triggered when user clicks save button in configure step modal
+         */
+        handleConfigureStepAction: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const contextData = $button.data('context');
+            
+            if (!contextData) {
+                console.error('No context data found for configure step action');
+                return;
+            }
+            
+            // Show loading state
+            $button.prop('disabled', true).text('Saving...');
+            
+            // Collect form data from the modal
+            const $modal = $('#dm-modal');
+            const formData = {
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'configure-step-action',
+                context: JSON.stringify(contextData),
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+            };
+            
+            // Add all form inputs from the modal
+            $modal.find('input, select, textarea').each(function() {
+                const $input = $(this);
+                const name = $input.attr('name');
+                if (name) {
+                    formData[name] = $input.val();
+                }
+            });
+            
+            // Send AJAX request
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: formData,
+                success: (response) => {
+                    if (response.success) {
+                        console.log('[DM Pipeline Builder] Step configuration saved successfully');
+                        // Modal will close automatically due to dm-modal-close class
+                        // Trigger refresh event if needed
+                        $(document).trigger('dm-pipeline-modal-saved', [response.data]);
+                    } else {
+                        console.error('Step configuration save failed:', response.data.message);
+                        alert('Failed to save step configuration: ' + response.data.message);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX error saving step configuration:', error);
+                    alert('Error saving step configuration. Please try again.');
+                },
+                complete: () => {
+                    // Restore button state
+                    $button.prop('disabled', false).text('Save Step Configuration');
+                }
+            });
+        },
+
+        /**
+         * Handle add location action (save remote location)
+         * Triggered when user clicks save button in remote locations manager modal
+         */
+        handleAddLocationAction: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const contextData = $button.data('context');
+            
+            if (!contextData) {
+                console.error('No context data found for add location action');
+                return;
+            }
+            
+            // Show loading state
+            $button.prop('disabled', true).text('Saving...');
+            
+            // Collect form data from the modal
+            const $modal = $('#dm-modal');
+            const formData = {
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'add-location-action',
+                context: JSON.stringify(contextData),
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+            };
+            
+            // Add all form inputs from the modal
+            $modal.find('input, select, textarea').each(function() {
+                const $input = $(this);
+                const name = $input.attr('name');
+                if (name) {
+                    formData[name] = $input.val();
+                }
+            });
+            
+            // Send AJAX request
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: formData,
+                success: (response) => {
+                    if (response.success) {
+                        console.log('[DM Pipeline Builder] Remote location saved successfully');
+                        // Modal will close automatically due to dm-modal-close class
+                        // Trigger refresh event if needed
+                        $(document).trigger('dm-pipeline-modal-saved', [response.data]);
+                    } else {
+                        console.error('Remote location save failed:', response.data.message);
+                        alert('Failed to save remote location: ' + response.data.message);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX error saving remote location:', error);
+                    alert('Error saving remote location. Please try again.');
+                },
+                complete: () => {
+                    // Restore button state
+                    $button.prop('disabled', false).text('Add Location');
+                }
+            });
+        },
 
         /**
          * Add selected step to pipeline
@@ -135,6 +329,53 @@
                 error: (xhr, status, error) => {
                     console.error('AJAX Error:', error);
                     alert('Error adding step');
+                }
+            });
+        },
+
+        /**
+         * Add selected handler to flow step using direct AJAX
+         */
+        addHandlerToFlowStep: function(contextData) {
+            // Collect form data from the modal
+            const $modal = $('#dm-modal');
+            const formData = {
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'add-handler-action',
+                context: JSON.stringify(contextData),
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+            };
+            
+            // Add all form inputs from the modal
+            $modal.find('input, select, textarea').each(function() {
+                const $input = $(this);
+                const name = $input.attr('name');
+                if (name && name !== 'nonce') {
+                    formData[name] = $input.val();
+                }
+            });
+            
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: formData,
+                success: (response) => {
+                    if (response.success) {
+                        // Show success message
+                        if (response.data && response.data.message) {
+                            console.log('Handler added successfully:', response.data.message);
+                        }
+                        
+                        // Update the flow step card with the new handler
+                        this.updateFlowStepCard(response.data);
+                    } else {
+                        console.error('Error adding handler:', response.data);
+                        alert(response.data?.message || 'Error adding handler to flow step');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX Error adding handler:', error);
+                    alert('Error connecting to server');
                 }
             });
         },
@@ -793,15 +1034,82 @@
         },
 
         /**
-         * Handle modal saved event to refresh UI
-         * Refreshes the current page to show updated handler states
+         * Handle modal saved event to update specific step card
+         * Updates only the affected flow step card instead of full page reload
          */
         handleModalSaved: function(e, data) {
-            // For handler operations, refresh the page to show updated button states
-            if (data && (data.handler_slug || data.step_type)) {
-                console.log('Handler saved, refreshing page to update UI');
-                window.location.reload();
+            // For handler operations, update the specific step card
+            if (data && data.handler_slug && data.step_type && data.flow_id) {
+                console.log('Handler saved, updating step card for:', data.step_type, 'with handler:', data.handler_slug);
+                this.updateFlowStepCard(data);
             }
+        },
+
+        /**
+         * Update specific flow step card after handler configuration
+         */
+        updateFlowStepCard: function(handlerData) {
+            const { flow_id, step_type, handler_slug } = handlerData;
+            
+            // Find the specific flow step card to update
+            const $flowStepContainer = $(`.dm-step-container[data-flow-id="${flow_id}"][data-step-type="${step_type}"]`);
+            
+            if (!$flowStepContainer.length) {
+                console.error('Flow step container not found for flow_id:', flow_id, 'step_type:', step_type);
+                // Fallback to page reload if step card not found
+                window.location.reload();
+                return;
+            }
+
+            // Get updated flow configuration from database
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_pipeline_ajax',
+                    pipeline_action: 'get_flow_config',
+                    flow_id: flow_id,
+                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success && response.data.flow_config) {
+                        // Calculate is_first_step for consistent arrow rendering
+                        const $parentContainer = $flowStepContainer.parent();
+                        const isFirstStep = $parentContainer.children('.dm-step-container').first().is($flowStepContainer);
+                        
+                        // Request updated step card template with new flow configuration
+                        this.requestTemplate('page/step-card', {
+                            context: 'flow',
+                            step: {
+                                step_type: step_type,
+                                position: $flowStepContainer.data('step-position') || 0,
+                                is_empty: false
+                            },
+                            flow_config: response.data.flow_config,
+                            flow_id: flow_id,
+                            is_first_step: isFirstStep
+                        }).then((updatedStepHtml) => {
+                            // Replace the existing step container with updated version
+                            $flowStepContainer.replaceWith(updatedStepHtml);
+                            
+                            console.log('Step card updated successfully for handler:', handler_slug);
+                        }).catch((error) => {
+                            console.error('Failed to render updated step card template:', error);
+                            // Fallback to page reload on template error
+                            window.location.reload();
+                        });
+                    } else {
+                        console.error('Failed to get updated flow configuration:', response.data?.message);
+                        // Fallback to page reload on data error
+                        window.location.reload();
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('Failed to get flow configuration:', error);
+                    // Fallback to page reload on AJAX error
+                    window.location.reload();
+                }
+            });
         }
 
     };

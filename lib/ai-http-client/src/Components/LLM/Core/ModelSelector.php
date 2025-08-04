@@ -186,10 +186,45 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
     }
     
     /**
+     * Safety check to ensure AJAX action is registered
+     * Called before any AJAX-dependent operations
+     */
+    public static function ensure_ajax_registered() {
+        global $wp_filter;
+        
+        $action_registered = isset($wp_filter['wp_ajax_ai_http_get_models']) && 
+                           !empty($wp_filter['wp_ajax_ai_http_get_models']->callbacks);
+        
+        if (!$action_registered) {
+            // Fallback registration if action is missing
+            self::init_ajax_handlers();
+        }
+        
+        return $action_registered;
+    }
+    
+    /**
      * AJAX handler for getting models with plugin context
      */
     public static function ajax_get_models() {
-        check_ajax_referer('ai_http_nonce', 'nonce');
+        // Ensure AJAX action is registered (safety check)
+        self::ensure_ajax_registered();
+        
+        // Enhanced nonce verification - no fallbacks
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error('Security nonce is required for model requests.');
+            return;
+        }
+        
+        $nonce_valid = wp_verify_nonce($_POST['nonce'], 'ai_http_nonce');
+        if (!$nonce_valid) {
+            // Log nonce verification failure for debugging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('AI HTTP Client: Nonce verification failed for ai_http_get_models. Nonce: ' . substr($_POST['nonce'], 0, 8) . '...');
+            }
+            wp_send_json_error('Security verification failed. Please refresh the page and try again.');
+            return;
+        }
         
         try {
             $plugin_context = sanitize_key($_POST['plugin_context']);
@@ -220,5 +255,5 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
     }
 }
 
-// Initialize AJAX handlers
-add_action('init', ['AI_HTTP_Core_ModelSelector', 'init_ajax_handlers']);
+// Initialize AJAX handlers early to ensure availability
+add_action('plugins_loaded', ['AI_HTTP_Core_ModelSelector', 'init_ajax_handlers']);

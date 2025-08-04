@@ -74,7 +74,7 @@ $locations = $existing_locations ?? [];
     <!-- Add New Location Form -->
     <div class="dm-add-location-section">
         <h4><?php esc_html_e('Add New Remote Location', 'data-machine'); ?></h4>
-        <form class="dm-add-location-form">
+        <div class="dm-add-location-form">
             <div class="dm-form-row">
                 <div class="dm-form-field">
                     <label for="location_name"><?php esc_html_e('Location Name', 'data-machine'); ?></label>
@@ -121,11 +121,13 @@ $locations = $existing_locations ?? [];
                 <button type="button" class="button button-secondary dm-test-new-location">
                     <?php esc_html_e('Test Connection', 'data-machine'); ?>
                 </button>
-                <button type="submit" class="button button-primary">
+                <button type="button" class="button button-primary dm-modal-close" 
+                        data-template="add-location-action"
+                        data-context='{"handler_slug":"wordpress"}'>
                     <?php esc_html_e('Add Location', 'data-machine'); ?>
                 </button>
             </div>
-        </form>
+        </div>
     </div>
     
     <!-- Action Buttons -->

@@ -81,6 +81,8 @@ function dm_register_files_input_filters() {
                     'description' => __('Process uploaded files and documents', 'data-machine')
                 ],
                 'step_type' => $context['step_type'] ?? 'input',
+                'flow_id' => $context['flow_id'] ?? '',
+                'pipeline_id' => $context['pipeline_id'] ?? '',
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);

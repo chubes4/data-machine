@@ -90,6 +90,7 @@ function dm_register_pipelines_admin_page_filters() {
                                 'data' => [
                                     'ajax_url' => admin_url('admin-ajax.php'),
                                     'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                    'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
                                     'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                     'strings' => [
                                         'error' => __('An error occurred', 'data-machine'),
@@ -160,130 +161,180 @@ function dm_register_pipelines_admin_page_filters() {
     // Universal modal AJAX integration - no component-specific handlers needed
     // All modal content routed through unified ModalAjax.php endpoint
     
-    // Modal content filter registration - Pure 2-parameter pattern like all existing systems
+    // Modal content filter registration - Individual filters following architectural consistency
+    
+    // Step Selection Modal - Self-registering modal content
     add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another component
+        if ($content !== null) {
+            return $content;
+        }
+        
+        if ($template !== 'step-selection') {
+            return $content;
+        }
+        
         // Get context from $_POST directly (like templates access other data)
         $context_raw = wp_unslash($_POST['context'] ?? '{}');
         $context = json_decode($context_raw, true);
         
-        switch ($template) {
-            case 'step-selection':
-                // Dual-Mode Step Discovery Pattern
-                // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
-                $all_steps = apply_filters('dm_get_steps', []);
-                
-                // Sort steps by position property for logical UI ordering
-                uasort($all_steps, function($a, $b) {
-                    $pos_a = $a['position'] ?? 999;
-                    $pos_b = $b['position'] ?? 999;
-                    return $pos_a <=> $pos_b;
-                });
-                
-                // Debug logging using logger service
-                $logger = apply_filters('dm_get_logger', null);
-                if ($logger) {
-                    $logger->debug('Step discovery returned for modal rendering.', [
-                        'step_count' => count($all_steps),
-                        'step_types' => array_keys($all_steps)
-                    ]);
-                }
-                
-                return apply_filters('dm_render_template', '', 'modal/step-selection-cards', array_merge($context, [
-                    'all_steps' => $all_steps
-                ]));
-                
-            case 'handler-selection':
-                $step_type = $context['step_type'] ?? 'unknown';
-                $pipeline_id = $context['pipeline_id'] ?? null;
-                $flow_id = $context['flow_id'] ?? null;
-                
-                // Get available handlers using parameter-based filter discovery
-                $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
-                
-                if (empty($available_handlers)) {
-                    return '';
-                }
-                
-                return apply_filters('dm_render_template', '', 'modal/handler-selection-cards', [
-                    'step_type' => $step_type,
-                    'handlers' => $available_handlers,
-                    'pipeline_id' => $pipeline_id,
-                    'flow_id' => $flow_id
-                ]);
-                
-            case 'confirm-delete':
-                $delete_type = $context['delete_type'] ?? 'step'; // Default to step for backward compatibility
-                $pipeline_id = $context['pipeline_id'] ?? null;
-                $step_type = $context['step_type'] ?? 'unknown';
-                $step_position = $context['step_position'] ?? 'unknown';
-                $pipeline_name = $context['pipeline_name'] ?? __('Unknown Pipeline', 'data-machine');
-                
-                $affected_flows = [];
-                $affected_jobs = [];
-                
-                if ($pipeline_id && is_numeric($pipeline_id)) {
-                    $db_flows = apply_filters('dm_get_database_service', null, 'flows');
-                    if ($db_flows) {
-                        $affected_flows = $db_flows->get_flows_for_pipeline((int)$pipeline_id);
-                    }
-                    
-                    // For pipeline deletion, also get affected jobs count
-                    if ($delete_type === 'pipeline') {
-                        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-                        if ($db_jobs) {
-                            $affected_jobs = $db_jobs->get_jobs_for_pipeline((int)$pipeline_id);
-                        }
-                    }
-                }
-                
-                // Enhance context with affected flows/jobs data and deletion information
-                $enhanced_context = array_merge($context, [
-                    'delete_type' => $delete_type,
-                    'step_label' => ucfirst(str_replace('_', ' ', $step_type)),
-                    'step_position' => $step_position,
-                    'pipeline_name' => $pipeline_name,
-                    'affected_flows' => $affected_flows,
-                    'affected_jobs' => $affected_jobs
-                ]);
-                
-                // Render using core modal template with enhanced context
-                $template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/confirm-delete.php';
-                if (file_exists($template_path)) {
-                    extract($enhanced_context);
-                    ob_start();
-                    include $template_path;
-                    return ob_get_clean();
-                }
-                
-                return '<div class="dm-error">Delete confirmation template not found</div>';
-                
-                
-            case 'configure-step':
-                $step_type = $context['step_type'] ?? 'unknown';
-                $modal_type = $context['modal_type'] ?? 'default';
-                $config_type = $context['config_type'] ?? 'default';
-                
-                // Extensible Step Configuration Modal Pattern
-                //
-                // This filter enables any step type to register custom configuration interfaces:
-                // add_filter('dm_get_modal', function($content, $template) {
-                //     if ($template === 'configure-step' && $step_type === 'my_custom_step') {
-                //         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-                //         return '<div>Custom step configuration form</div>';
-                //     }
-                //     return $content;
-                // }, 10, 2);
-                //
-                // This maintains the architecture's extensibility - step types can provide
-                // sophisticated configuration interfaces without modifying core modal code.
-                // Step types register their own modal content for 'configure-step' template
-                // Note: Removed recursive filter call - step types handle their own content via this same filter
-                
-                // No configuration modal needed - component handles its own messaging if required
-                return '';
+        // Dual-Mode Step Discovery Pattern
+        // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
+        $all_steps = apply_filters('dm_get_steps', []);
+        
+        // Sort steps by position property for logical UI ordering
+        uasort($all_steps, function($a, $b) {
+            $pos_a = $a['position'] ?? 999;
+            $pos_b = $b['position'] ?? 999;
+            return $pos_a <=> $pos_b;
+        });
+        
+        // Debug logging using logger service
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->debug('Step discovery returned for modal rendering.', [
+                'step_count' => count($all_steps),
+                'step_types' => array_keys($all_steps)
+            ]);
         }
         
-        return $content;
+        return apply_filters('dm_render_template', '', 'modal/step-selection-cards', array_merge($context, [
+            'all_steps' => $all_steps
+        ]));
+    }, 10, 2);
+    
+    // Handler Selection Modal - Self-registering modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another component
+        if ($content !== null) {
+            return $content;
+        }
+        
+        if ($template !== 'handler-selection') {
+            return $content;
+        }
+        
+        // Get context from $_POST directly (like templates access other data)
+        $context_raw = wp_unslash($_POST['context'] ?? '{}');
+        $context = json_decode($context_raw, true);
+        
+        $step_type = $context['step_type'] ?? 'unknown';
+        $pipeline_id = $context['pipeline_id'] ?? null;
+        $flow_id = $context['flow_id'] ?? null;
+        
+        // Get available handlers using parameter-based filter discovery
+        $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
+        
+        if (empty($available_handlers)) {
+            return '';
+        }
+        
+        return apply_filters('dm_render_template', '', 'modal/handler-selection-cards', [
+            'step_type' => $step_type,
+            'handlers' => $available_handlers,
+            'pipeline_id' => $pipeline_id,
+            'flow_id' => $flow_id
+        ]);
+    }, 10, 2);
+    
+    // Confirm Delete Modal - Self-registering modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another component
+        if ($content !== null) {
+            return $content;
+        }
+        
+        if ($template !== 'confirm-delete') {
+            return $content;
+        }
+        
+        // Get context from $_POST directly (like templates access other data)
+        $context_raw = wp_unslash($_POST['context'] ?? '{}');
+        $context = json_decode($context_raw, true);
+        
+        $delete_type = $context['delete_type'] ?? 'step'; // Default to step for backward compatibility
+        $pipeline_id = $context['pipeline_id'] ?? null;
+        $step_type = $context['step_type'] ?? 'unknown';
+        $step_position = $context['step_position'] ?? 'unknown';
+        $pipeline_name = $context['pipeline_name'] ?? __('Unknown Pipeline', 'data-machine');
+        
+        $affected_flows = [];
+        $affected_jobs = [];
+        
+        if ($pipeline_id && is_numeric($pipeline_id)) {
+            $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+            if ($db_flows) {
+                $affected_flows = $db_flows->get_flows_for_pipeline((int)$pipeline_id);
+            }
+            
+            // For pipeline deletion, also get affected jobs count
+            if ($delete_type === 'pipeline') {
+                $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+                if ($db_jobs) {
+                    $affected_jobs = $db_jobs->get_jobs_for_pipeline((int)$pipeline_id);
+                }
+            }
+        }
+        
+        // Enhance context with affected flows/jobs data and deletion information
+        $enhanced_context = array_merge($context, [
+            'delete_type' => $delete_type,
+            'step_label' => ucfirst(str_replace('_', ' ', $step_type)),
+            'step_position' => $step_position,
+            'pipeline_name' => $pipeline_name,
+            'affected_flows' => $affected_flows,
+            'affected_jobs' => $affected_jobs
+        ]);
+        
+        // Render using core modal template with enhanced context
+        $template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/confirm-delete.php';
+        if (file_exists($template_path)) {
+            extract($enhanced_context);
+            ob_start();
+            include $template_path;
+            return ob_get_clean();
+        }
+        
+        return '<div class="dm-error">Delete confirmation template not found</div>';
+    }, 10, 2);
+    
+    // Configure Step Modal - Self-registering modal content
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another component
+        if ($content !== null) {
+            return $content;
+        }
+        
+        if ($template !== 'configure-step') {
+            return $content;
+        }
+        
+        // Get context from $_POST directly (like templates access other data)
+        $context_raw = wp_unslash($_POST['context'] ?? '{}');
+        $context = json_decode($context_raw, true);
+        
+        $step_type = $context['step_type'] ?? 'unknown';
+        $modal_type = $context['modal_type'] ?? 'default';
+        $config_type = $context['config_type'] ?? 'default';
+        
+        // Extensible Step Configuration Modal Pattern
+        //
+        // This filter enables any step type to register custom configuration interfaces:
+        // add_filter('dm_get_modal', function($content, $template) {
+        //     if ($template === 'configure-step' && $step_type === 'my_custom_step') {
+        //         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+        //         return '<div>Custom step configuration form</div>';
+        //     }
+        //     return $content;
+        // }, 10, 2);
+        //
+        // This maintains the architecture's extensibility - step types can provide
+        // sophisticated configuration interfaces without modifying core modal code.
+        // Step types register their own modal content for 'configure-step' template
+        // Note: Removed recursive filter call - step types handle their own content via this same filter
+        
+        // No configuration modal needed - component handles its own messaging if required
+        return '';
     }, 10, 2);
 }
 
@@ -294,6 +345,7 @@ function dm_register_pipelines_admin_page_filters() {
  * According to architecture, handlers don't need to be configured before being added to flows.
  */
 function dm_handle_save_handler_settings() {
+    
     // Verify nonce
     if (!wp_verify_nonce($_POST['handler_settings_nonce'] ?? '', 'dm_save_handler_settings')) {
         wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
@@ -319,6 +371,7 @@ function dm_handle_save_handler_settings() {
     
     // Get handler configuration via filter system
     $handlers = apply_filters('dm_get_handlers', null, $step_type);
+    
     if (!isset($handlers[$handler_slug])) {
         wp_send_json_error(['message' => __('Invalid handler for this step type.', 'data-machine')]);
         return;
@@ -360,7 +413,9 @@ function dm_handle_save_handler_settings() {
         }
         
         // Parse current flow configuration
-        $flow_config = json_decode($flow['flow_config'] ?? '{}', true) ?: [];
+        $flow_config_raw = $flow['flow_config'] ?? '{}';
+        $flow_config = is_string($flow_config_raw) ? json_decode($flow_config_raw, true) : $flow_config_raw;
+        $flow_config = $flow_config ?: [];
         
         // Initialize step configuration if it doesn't exist
         if (!isset($flow_config['steps'])) {
@@ -376,13 +431,19 @@ function dm_handle_save_handler_settings() {
             ];
         }
         
-        // Enforce single handler per step - replace any existing handlers
-        $flow_config['steps'][$step_key]['handlers'] = [
-            $handler_slug => [
-                'handler_slug' => $handler_slug,
-                'settings' => $handler_settings,
-                'enabled' => true
-            ]
+        // Initialize handlers array if it doesn't exist
+        if (!isset($flow_config['steps'][$step_key]['handlers'])) {
+            $flow_config['steps'][$step_key]['handlers'] = [];
+        }
+        
+        // Check if handler already exists
+        $handler_exists = isset($flow_config['steps'][$step_key]['handlers'][$handler_slug]);
+        
+        // UPDATE existing handler settings OR ADD new handler (no replacement)
+        $flow_config['steps'][$step_key]['handlers'][$handler_slug] = [
+            'handler_slug' => $handler_slug,
+            'settings' => $handler_settings,
+            'enabled' => true
         ];
         
         // Update flow with new configuration
@@ -395,20 +456,25 @@ function dm_handle_save_handler_settings() {
             return;
         }
         
+        // Log the action
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('Handler added to flow successfully.', [
-            'handler_slug' => $handler_slug,
-            'step_type' => $step_type,
-            'flow_id' => $flow_id
-        ]);
+        if ($logger) {
+            $action_type = $handler_exists ? 'updated' : 'added';
+            $logger->debug("Handler '{$handler_slug}' {$action_type} for step '{$step_type}' in flow {$flow_id}");
+        }
+        
+        $action_message = $handler_exists 
+            ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug)
+            : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug);
         
         wp_send_json_success([
-            'message' => sprintf(__('Handler "%s" added to flow successfully.', 'data-machine'), $handler_config['label'] ?? $handler_slug),
+            'message' => $action_message,
             'handler_slug' => $handler_slug,
             'step_type' => $step_type,
             'flow_id' => $flow_id,
             'handler_config' => $handler_config,
-            'handler_settings' => $handler_settings
+            'handler_settings' => $handler_settings,
+            'action_type' => $handler_exists ? 'updated' : 'added'
         ]);
         
     } else {

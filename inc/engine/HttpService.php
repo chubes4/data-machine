@@ -16,6 +16,14 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
+/**
+ * HTTP service for Data Machine handlers.
+ * 
+ * Provides centralized HTTP request functionality with standardized error handling,
+ * timeout management, and logging integration for all handler components.
+ * 
+ * @since 0.15.0
+ */
 class HttpService {
 
     /**

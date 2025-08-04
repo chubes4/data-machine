@@ -302,7 +302,7 @@ function dm_register_universal_handler_system() {
         }
         
         return $handlers;
-    }, 10, 2);
+    }, 50, 2); // Priority 50 ensures individual handlers register first at priority 10
     
     // Parameter-based handler settings system (2-parameter pattern for consistency)
     // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files

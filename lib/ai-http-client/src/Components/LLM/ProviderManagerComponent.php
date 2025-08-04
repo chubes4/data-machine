@@ -113,6 +113,7 @@ class AI_HTTP_ProviderManager_Component {
                 'extended' => array()
             ),
             'show_test_connection' => true,
+            'show_save_button' => true, // NEW: Allow hiding save button for custom modal integration
             'allowed_providers' => array(), // Empty = all providers
             'wrapper_class' => 'ai-http-provider-manager',
             'component_configs' => array(),
@@ -340,14 +341,16 @@ class AI_HTTP_ProviderManager_Component {
                 </table>
             </div>
 
-            <!-- Save Button -->
-            <p class="submit">
-                <button type="button" class="button button-primary ai-save-settings" 
-                        onclick="aiHttpSaveSettings('<?php echo esc_attr($unique_id); ?>')">
-                    Save Settings
-                </button>
-                <span class="ai-save-result" id="<?php echo esc_attr($unique_id); ?>_save_result"></span>
-            </p>
+            <?php if ($args['show_save_button']): ?>
+                <!-- Save Button -->
+                <p class="submit">
+                    <button type="button" class="button button-primary ai-save-settings" 
+                            onclick="aiHttpSaveSettings('<?php echo esc_attr($unique_id); ?>')">
+                        Save Settings
+                    </button>
+                    <span class="ai-save-result" id="<?php echo esc_attr($unique_id); ?>_save_result"></span>
+                </p>
+            <?php endif; ?>
 
             <?php if ($args['show_test_connection']): ?>
                 <div class="test-connection-section">

@@ -77,16 +77,20 @@ function dm_register_twitter_filters() {
             // Settings modal template
             $settings_instance = apply_filters('dm_get_handler_settings', null, 'twitter');
             
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
+            $template_variables = [
                 'handler_slug' => 'twitter',
                 'handler_config' => [
                     'label' => __('Twitter', 'data-machine'),
                     'description' => __('Post content to Twitter with media support', 'data-machine')
                 ],
                 'step_type' => $context['step_type'] ?? 'output',
+                'flow_id' => $context['flow_id'] ?? '',
+                'pipeline_id' => $context['pipeline_id'] ?? '',
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
-            ]);
+            ];
+            
+            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', $template_variables);
         }
         
         if ($template === 'handler-auth') {

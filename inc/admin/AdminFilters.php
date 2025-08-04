@@ -1,4 +1,14 @@
 <?php
+/**
+ * Admin Component Filter Registration
+ * 
+ * Registers core admin services and universal template rendering system.
+ * Implements parameter-based discovery patterns for admin pages and modal content.
+ * 
+ * @package    Data_Machine
+ * @subpackage Data_Machine/includes/admin
+ * @since      0.15.0
+ */
 
 namespace DataMachine\Admin;
 
@@ -6,8 +16,19 @@ use DataMachine\Admin\AdminMenuAssets;
 use DataMachine\Admin\Logger;
 use DataMachine\Admin\EncryptionHelper;
 
-// Legacy admin page callback removed - now using unified system in AdminMenuAssets
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly.
+}
 
+/**
+ * Register all admin component filters.
+ * 
+ * Implements complete filter-based service registration following the established
+ * architectural patterns. Includes universal template rendering and parameter-based
+ * discovery systems for admin pages and modal content.
+ * 
+ * @since 0.15.0
+ */
 function dm_register_admin_filters() {
     add_filter('dm_get_admin_menu_assets', function($admin_menu_assets) {
         if ($admin_menu_assets === null) {

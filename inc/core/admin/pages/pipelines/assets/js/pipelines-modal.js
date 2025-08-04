@@ -39,8 +39,7 @@
 
             // Tab switching handled by core modal system based on CSS classes
 
-            // Modal form submissions
-            $(document).on('submit', '.dm-modal-form', this.handleFormSubmit.bind(this));
+            // Legacy form submissions removed - all forms converted to direct action pattern
 
             // Modal content visual feedback - handle highlighting for cards
             $(document).on('click', '.dm-step-selection-card', this.handleStepCardVisualFeedback.bind(this));
@@ -185,49 +184,7 @@
         },
 
 
-        /**
-         * Handle modal form submission
-         */
-        handleFormSubmit: function(e) {
-            e.preventDefault();
-            
-            const $form = $(e.currentTarget);
-            const $submitButton = $form.find('button[type="submit"]');
-            
-            // Show loading state
-            const originalText = $submitButton.text();
-            $submitButton.text(dmPipelineModal.strings?.saving || 'Saving...').prop('disabled', true);
-            
-            // Prepare form data
-            const formData = $form.serialize();
-            
-            // Make AJAX call to save form
-            $.ajax({
-                url: dmPipelineModal.ajax_url,
-                type: 'POST',
-                data: formData,
-                success: (response) => {
-                    if (response.success) {
-                        
-                        // Show success message
-                        if (response.data?.message) {
-                            alert(response.data.message);
-                        }
-                        
-                        // Trigger page update event for pipeline-builder.js
-                        $(document).trigger('dm-pipeline-modal-saved', [response.data]);
-                    } else {
-                        alert(response.data?.message || 'Error saving settings');
-                        $submitButton.text(originalText).prop('disabled', false);
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('DM Pipeline Modal: AJAX Error:', error);
-                    alert('Error connecting to server');
-                    $submitButton.text(originalText).prop('disabled', false);
-                }
-            });
-        },
+        // Legacy handleFormSubmit method removed - all forms converted to direct action pattern
 
         /**
          * Handle visual feedback for step selection cards

@@ -14,6 +14,7 @@ if (!defined('WPINC')) {
     die;
 }
 
+
 $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
 
 // Authentication discovery via filter
@@ -62,20 +63,7 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
         </div>
     <?php endif; ?>
     
-    <form class="dm-handler-settings-form dm-modal-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
-        <!-- Hidden fields for handler identification -->
-        <input type="hidden" name="action" value="dm_save_handler_settings" />
-        <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
-        <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type ?? ''); ?>" />
-        <?php 
-        // Add flow_id and pipeline_id from context if available
-        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-        if (!empty($context['flow_id'])): ?>
-        <input type="hidden" name="flow_id" value="<?php echo esc_attr($context['flow_id']); ?>" />
-        <?php endif;
-        if (!empty($context['pipeline_id'])): ?>
-        <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($context['pipeline_id']); ?>" />
-        <?php endif; ?>
+    <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
         <?php if ($settings_available && $handler_settings): ?>
             <div class="dm-settings-fields">
@@ -218,18 +206,18 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
             <button type="button" class="button button-secondary dm-cancel-settings">
                 <?php esc_html_e('Cancel', 'data-machine'); ?>
             </button>
-            <button type="button" class="button button-secondary dm-modal-open dm-modal-close" 
+            <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="handler-selection"
                     data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>"}'>
                 <?php esc_html_e('Change Handler Type', 'data-machine'); ?>
             </button>
-            <button type="submit" class="button button-primary dm-save-handler-settings">
+            <button type="button" class="button button-primary dm-modal-close" 
+                    data-template="add-handler-action"
+                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
                 <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
             </button>
         </div>
-        
-        <?php wp_nonce_field('dm_save_handler_settings', 'handler_settings_nonce'); ?>
-    </form>
+    </div>
 </div>
 
 <?php if ($handler_slug === 'wordpress' && $has_auth_system): ?>

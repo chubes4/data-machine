@@ -328,7 +328,17 @@ class ProcessingOrchestrator {
 		
 		try {
 			$pipeline_config = $db_pipelines->get_pipeline_configuration( $pipeline_id );
-			$config = isset($pipeline_config['steps']) ? $pipeline_config['steps'] : [];
+			
+			// Fail fast - no fallbacks
+			if ( !isset($pipeline_config['steps']) || empty($pipeline_config['steps']) ) {
+				$logger->error( 'Pipeline configuration missing or has no steps', [
+					'pipeline_id' => $pipeline_id,
+					'config_keys' => array_keys($pipeline_config ?? [])
+				] );
+				throw new \RuntimeException( "Pipeline {$pipeline_id} has no configured steps - cannot process" );
+			}
+			
+			$config = $pipeline_config['steps'];
 			
 			// Basic validation - ensure we have steps
 			$validation = ['valid' => !empty($config), 'errors' => empty($config) ? ['No pipeline steps configured'] : []];

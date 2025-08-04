@@ -119,11 +119,7 @@ function render_flow_schedule_modal(int $flow_id, array $context): string
             <p><?php esc_html_e('Configure when this flow should run automatically', 'data-machine'); ?></p>
         </div>
         
-        <form class="dm-flow-schedule-form dm-modal-form" data-flow-id="<?php echo esc_attr($flow_id); ?>">
-            <!-- Hidden fields for AJAX action -->
-            <input type="hidden" name="action" value="dm_pipeline_ajax">
-            <input type="hidden" name="pipeline_action" value="save_flow_schedule">
-            <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>">
+        <div class="dm-flow-schedule-form" data-flow-id="<?php echo esc_attr($flow_id); ?>">
             <!-- Schedule Interval -->
             <div class="dm-form-field dm-schedule-interval-field">
                 <label for="schedule_interval"><?php esc_html_e('Schedule Interval', 'data-machine'); ?></label>
@@ -166,13 +162,13 @@ function render_flow_schedule_modal(int $flow_id, array $context): string
                 <button type="button" class="button button-secondary dm-run-now-btn" data-flow-id="<?php echo esc_attr($flow_id); ?>">
                     <?php esc_html_e('Run Now', 'data-machine'); ?>
                 </button>
-                <button type="submit" class="button button-primary dm-save-schedule">
+                <button type="button" class="button button-primary dm-modal-close" 
+                        data-template="save-schedule-action"
+                        data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
                     <?php esc_html_e('Save Schedule', 'data-machine'); ?>
                 </button>
             </div>
-            
-            <?php wp_nonce_field('dm_save_flow_schedule', 'flow_schedule_nonce'); ?>
-        </form>
+        </div>
     </div>
     <?php
     return ob_get_clean();

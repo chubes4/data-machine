@@ -468,7 +468,16 @@ class AI_HTTP_Options_Manager {
      * AJAX handler for saving settings with plugin context
      */
     public static function ajax_save_settings() {
-        check_ajax_referer('ai_http_nonce', 'nonce');
+        // Enhanced nonce verification - no fallbacks
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error('Security nonce is required for settings save.');
+            return;
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'], 'ai_http_nonce')) {
+            wp_send_json_error('Security verification failed. Please refresh the page and try again.');
+            return;
+        }
         
         try {
             $plugin_context = sanitize_key($_POST['plugin_context']);
@@ -536,7 +545,16 @@ class AI_HTTP_Options_Manager {
      * AJAX handler for loading provider settings with plugin context and step support
      */
     public static function ajax_load_provider_settings() {
-        check_ajax_referer('ai_http_nonce', 'nonce');
+        // Enhanced nonce verification - no fallbacks
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error('Security nonce is required for loading provider settings.');
+            return;
+        }
+        
+        if (!wp_verify_nonce($_POST['nonce'], 'ai_http_nonce')) {
+            wp_send_json_error('Security verification failed. Please refresh the page and try again.');
+            return;
+        }
         
         try {
             $plugin_context = sanitize_key($_POST['plugin_context']);
@@ -718,4 +736,4 @@ class AI_HTTP_Options_Manager {
 }
 
 // Initialize AJAX handlers
-add_action('init', ['AI_HTTP_Options_Manager', 'init_ajax_handlers']);
+add_action('plugins_loaded', ['AI_HTTP_Options_Manager', 'init_ajax_handlers']);

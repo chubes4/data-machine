@@ -113,7 +113,7 @@ class TwitterSettings {
             
             <!-- Settings Tab Content -->
             <div class="dm-tab-content active" data-tab="settings">
-                <form class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
+                <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
                     <div class="dm-settings-fields">
                         <?php foreach ($fields as $field_key => $field_config): ?>
                             <div class="dm-form-field">
@@ -174,13 +174,13 @@ class TwitterSettings {
                         <button type="button" class="button button-secondary dm-cancel-settings">
                             <?php esc_html_e('Cancel', 'data-machine'); ?>
                         </button>
-                        <button type="submit" class="button button-primary dm-save-handler-settings">
-                            <?php esc_html_e('Add Handler to Flow', 'data-machine'); ?>
+                        <button type="button" class="button button-primary dm-modal-close" 
+                                data-template="add-handler-action"
+                                data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","flow_id":"<?php echo esc_attr($context['flow_id'] ?? ''); ?>","pipeline_id":"<?php echo esc_attr($context['pipeline_id'] ?? ''); ?>"}'>
+                            <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
                         </button>
                     </div>
-                    
-                    <?php wp_nonce_field('dm_save_handler_settings', 'handler_settings_nonce'); ?>
-                </form>
+                </div>
             </div>
             
             <!-- Authentication Tab Content (Placeholder) -->

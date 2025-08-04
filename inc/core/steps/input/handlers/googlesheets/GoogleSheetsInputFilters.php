@@ -79,6 +79,8 @@ function dm_register_googlesheets_input_filters() {
                     'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
                 ],
                 'step_type' => $context['step_type'] ?? 'input',
+                'flow_id' => $context['flow_id'] ?? '',
+                'pipeline_id' => $context['pipeline_id'] ?? '',
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);

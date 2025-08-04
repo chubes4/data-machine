@@ -24,6 +24,100 @@ define( 'DATA_MACHINE_VERSION', '0.1.0' );
 /** Define plugin path constant */
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 
+/**
+ * Data Machine WordPress Hook Documentation
+ * 
+ * This plugin follows a pure filter-based architecture with extensive hook integration.
+ * All services, components, and functionality are accessible through WordPress filters.
+ * 
+ * CORE SERVICE FILTERS:
+ * 
+ * @filter dm_get_logger
+ * Retrieves the logger service instance for structured logging.
+ * Usage: $logger = apply_filters('dm_get_logger', null);
+ * 
+ * @filter dm_get_orchestrator  
+ * Retrieves the processing orchestrator for pipeline execution.
+ * Usage: $orchestrator = apply_filters('dm_get_orchestrator', null);
+ * 
+ * @filter dm_get_ai_http_client
+ * Retrieves the AI HTTP client for multi-provider AI integration.
+ * Usage: $ai_client = apply_filters('dm_get_ai_http_client', null);
+ * 
+ * @filter dm_get_encryption_helper
+ * Retrieves the encryption helper for secure data handling.
+ * Usage: $encryption = apply_filters('dm_get_encryption_helper', null);
+ * 
+ * @filter dm_get_action_scheduler
+ * Retrieves the Action Scheduler service for background job management.
+ * Usage: $scheduler = apply_filters('dm_get_action_scheduler', null);
+ * 
+ * PARAMETER-BASED SERVICE FILTERS:
+ * 
+ * @filter dm_get_database_service
+ * Retrieves database services by type parameter.
+ * Usage: $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+ * Types: 'jobs', 'pipelines', 'flows', 'processed_items', 'remote_locations'
+ * 
+ * @filter dm_get_handlers
+ * Retrieves handler instances by type parameter.
+ * Usage: $handlers = apply_filters('dm_get_handlers', null, 'output');
+ * Types: 'input', 'output', 'receiver'
+ * 
+ * @filter dm_get_auth
+ * Retrieves authentication instances by handler slug parameter.
+ * Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
+ * 
+ * @filter dm_get_context
+ * Retrieves pipeline context data for job processing.
+ * Usage: $context = apply_filters('dm_get_context', null, $job_id);
+ * 
+ * @filter dm_get_steps
+ * Retrieves step configurations by type parameter.
+ * Usage: $all_steps = apply_filters('dm_get_steps', []);
+ * Usage: $step_config = apply_filters('dm_get_steps', null, 'input');
+ * 
+ * TEMPLATE SYSTEM FILTERS:
+ * 
+ * @filter dm_render_template
+ * Universal template rendering system for all UI components.
+ * Usage: $html = apply_filters('dm_render_template', '', 'page/step-card', $data);
+ * 
+ * @filter dm_get_template
+ * AJAX template requesting for dynamic UI updates.
+ * Usage: $html = apply_filters('dm_get_template', '', 'modal/handler-settings', $data);
+ * 
+ * @filter dm_get_modal
+ * Modal content registration and retrieval system.
+ * Usage: $content = apply_filters('dm_get_modal', null, 'step-selection');
+ * 
+ * ADMIN SYSTEM FILTERS:
+ * 
+ * @filter dm_get_admin_page
+ * Admin page registration and configuration system.
+ * Usage: $config = apply_filters('dm_get_admin_page', null, 'pipelines');
+ * 
+ * @filter dm_get_admin_menu_assets
+ * Admin menu and asset management system.
+ * Usage: $assets = apply_filters('dm_get_admin_menu_assets', null);
+ * 
+ * EXTENSIBILITY HOOKS:
+ * 
+ * External plugins can extend Data Machine by:
+ * 1. Adding custom handlers via dm_get_handlers filter
+ * 2. Adding custom steps via dm_get_steps filter  
+ * 3. Adding custom admin pages via dm_get_admin_page filter
+ * 4. Adding custom modal content via dm_get_modal filter
+ * 5. Overriding core services with higher filter priorities
+ * 
+ * ARCHITECTURAL PRINCIPLES:
+ * - All services accessed via apply_filters() - no direct instantiation
+ * - Parameter-based discovery for type-specific services
+ * - Self-registering components via *Filters.php files
+ * - Universal template rendering through filter system
+ * - Complete WordPress integration following plugin standards
+ */
+
 // Load Composer autoloader and dependencies (includes Action Scheduler)
 require_once __DIR__ . '/vendor/autoload.php';
 

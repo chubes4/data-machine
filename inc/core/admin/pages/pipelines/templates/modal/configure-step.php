@@ -1,0 +1,98 @@
+<?php
+/**
+ * Configure Step Modal Template
+ *
+ * Pure rendering template for step configuration modal content.
+ * Handles AI step configuration with proper modal action buttons.
+ *
+ * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
+ * @since 1.0.0
+ */
+
+// Prevent direct access
+if (!defined('WPINC')) {
+    die;
+}
+
+$step_type = $step_type ?? 'unknown';
+$pipeline_id = $pipeline_id ?? null;
+$current_step = $current_step ?? $step_name ?? 'processing';
+
+?>
+<div class="dm-configure-step-container">
+    <div class="dm-configure-step-header">
+        <h3><?php echo esc_html(sprintf(__('Configure %s Step', 'data-machine'), ucfirst($step_type))); ?></h3>
+        <p><?php echo esc_html(sprintf(__('Set up your %s step configuration below.', 'data-machine'), $step_type)); ?></p>
+    </div>
+    
+    <?php if ($step_type === 'ai'): ?>
+        <?php
+        // FAIL FAST - require pipeline_id and current_step for proper step_key generation
+        if (!$pipeline_id || !$current_step) {
+            echo '<div class="dm-error">
+                <h4>' . __('Configuration Error', 'data-machine') . '</h4>
+                <p>' . __('Pipeline ID and step name are required for AI step configuration.', 'data-machine') . '</p>
+                <p><em>' . sprintf(__('Missing: %s', 'data-machine'), 
+                    (!$pipeline_id ? 'pipeline_id' : '') . 
+                    (!$pipeline_id && !$current_step ? ', ' : '') . 
+                    (!$current_step ? 'current_step' : '')) . '</em></p>
+            </div>';
+            return;
+        }
+        
+        // Generate proper step key - no fallbacks
+        $step_key = "pipeline_{$pipeline_id}_step_{$current_step}";
+        
+        // Render AI HTTP Client ProviderManagerComponent for complete AI configuration
+        if (class_exists('AI_HTTP_ProviderManager_Component')) {
+            echo \AI_HTTP_ProviderManager_Component::render([
+                'plugin_context' => 'data-machine',
+                'ai_type' => 'llm',
+                'title' => '', // No title since we have our own header
+                'components' => [
+                    'core' => ['provider_selector', 'api_key_input', 'model_selector'],
+                    'extended' => ['temperature_slider', 'system_prompt_field']
+                ],
+                'show_test_connection' => false,
+                'show_save_button' => false, // Hide built-in save button - we provide our own
+                'wrapper_class' => 'ai-http-provider-manager dm-ai-step-config',
+                'step_key' => $step_key, // Step-aware configuration
+                'component_configs' => [
+                    'temperature_slider' => [
+                        'min' => 0,
+                        'max' => 1,
+                        'step' => 0.1,
+                        'default_value' => 0.7
+                    ],
+                    'system_prompt_field' => [
+                        'placeholder' => __('Enter system prompt for this AI step...', 'data-machine'),
+                        'rows' => 4
+                    ]
+                ]
+            ]);
+        } else {
+            // Fallback if AI HTTP Client is not available
+            echo '<div class="dm-ai-config-error">
+                <h4>' . __('AI Configuration Unavailable', 'data-machine') . '</h4>
+                <p>' . __('The AI HTTP Client library is required for AI step configuration. Please ensure the library is properly loaded.', 'data-machine') . '</p>
+                <p><em>' . __('Expected class: AI_HTTP_ProviderManager_Component', 'data-machine') . '</em></p>
+            </div>';
+        }
+        ?>
+    <?php else: ?>
+        <div class="dm-generic-step-config">
+            <p><?php echo esc_html(sprintf(__('Configuration for %s steps is not yet implemented.', 'data-machine'), $step_type)); ?></p>
+        </div>
+    <?php endif; ?>
+    
+    <div class="dm-step-config-actions">
+        <button type="button" class="button button-secondary dm-cancel-settings">
+            <?php esc_html_e('Cancel', 'data-machine'); ?>
+        </button>
+        <button type="button" class="button button-primary dm-modal-close" 
+                data-template="configure-step-action"
+                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","current_step":"<?php echo esc_attr($current_step); ?>","step_key":"<?php echo esc_attr($step_key ?? ''); ?>"}'>
+            <?php esc_html_e('Save Step Configuration', 'data-machine'); ?>
+        </button>
+    </div>
+</div>

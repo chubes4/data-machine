@@ -15,16 +15,23 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract and prepare template variables
-$context = $context ?? 'pipeline'; // 'pipeline' or 'flow'
-$is_empty = $step['is_empty'] ?? false;
-$step_type = $step['step_type'] ?? '';
-$step_position = $step['position'] ?? 'unknown';
-$step_config = $step['step_config'] ?? [];
+// Extract and prepare template variables - no fallbacks
+if (!isset($context)) {
+    throw new \InvalidArgumentException('step-card template requires context parameter');
+}
+if (!isset($step) || !is_array($step)) {
+    throw new \InvalidArgumentException('step-card template requires step data array');
+}
+$is_empty = $step['is_empty'];
+$step_type = $step['step_type'];
+$step_position = $step['position'];
+$step_config = $step['step_config'];
 
 // Context-specific variables
 if ($context === 'pipeline') {
-    $pipeline_id = $pipeline_id ?? '';
+    if (!isset($pipeline_id)) {
+        throw new \InvalidArgumentException('pipeline context requires pipeline_id parameter');
+    }
     $step_title = $is_empty ? '' : ($step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type)));
     
     // Step configuration discovery (parallel to handler discovery pattern)
@@ -32,8 +39,12 @@ if ($context === 'pipeline') {
     $has_step_config = !$is_empty && !empty($step_config_info);
 } else {
     // Flow context
-    $flow_id = $flow_id ?? '';
-    $flow_config = $flow_config ?? [];
+    if (!isset($flow_id)) {
+        throw new \InvalidArgumentException('flow context requires flow_id parameter');
+    }
+    if (!isset($flow_config)) {
+        throw new \InvalidArgumentException('flow context requires flow_config parameter');
+    }
     $step_title = $is_empty ? '' : ucfirst(str_replace('_', ' ', $step_type));
     $step_handlers = $flow_config['steps'][$step_type]['handlers'] ?? [];
     
@@ -53,8 +64,17 @@ if ($context === 'pipeline') {
      <?php if ($context === 'flow'): ?>data-flow-id="<?php echo esc_attr($flow_id); ?>"<?php endif; ?>>
 
     <?php
-    // Universal arrow logic - before every step except the very first step in the container
-    $is_first_step = $is_first_step ?? false;
+    // Universal arrow logic - contextual validation
+    // For empty steps or when arrows aren't critical, default to showing arrow (safer for UI)
+    if (!isset($is_first_step)) {
+        if ($is_empty) {
+            // Empty steps don't need strict arrow validation - default to showing arrow
+            $is_first_step = false;
+        } else {
+            // Populated steps should have proper arrow logic
+            throw new \InvalidArgumentException('step-card template requires is_first_step parameter for populated steps');
+        }
+    }
     if (!$is_first_step): ?>
         <div class="dm-step-arrow">
             <span class="dashicons dashicons-arrow-right-alt"></span>
@@ -94,7 +114,7 @@ if ($context === 'pipeline') {
                         <?php if ($has_step_config): ?>
                             <button type="button" class="button button-small button-link-configure dm-modal-open" 
                                     data-template="configure-step"
-                                    data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
+                                    data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","current_step":"<?php echo esc_attr($step_type); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
                                 <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>
                             </button>
                         <?php endif; ?>
@@ -114,7 +134,7 @@ if ($context === 'pipeline') {
                                 $current_handler = array_keys($step_handlers)[0]; // Get first (and only) handler
                                 ?>
                                 <button type="button" class="button button-small dm-modal-open" 
-                                        data-template="handler-settings-form"
+                                        data-template="handler-settings"
                                         data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($current_handler); ?>"}'>
                                     <?php esc_html_e('Edit Handler', 'data-machine'); ?>
                                 </button>

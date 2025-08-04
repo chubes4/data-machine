@@ -416,7 +416,17 @@ class RedditAuth {
             $details['last_refreshed'] = gmdate('Y-m-d H:i:s', $account['last_refreshed_at']);
         }
         
-        return !empty($details) ? $details : null;
+        // Log when account exists but details are missing
+        if (empty($details)) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger?->warning('Reddit account exists but all details are missing', [
+                'user_id' => $user_id,
+                'has_access_token' => !empty($account['access_token']),
+                'available_keys' => array_keys($account)
+            ]);
+        }
+        
+        return $details;
     }
 
 } // End class

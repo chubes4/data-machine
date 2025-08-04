@@ -65,12 +65,46 @@ $is_new_pipeline = empty($pipeline_id);
         </div>
         <div class="dm-pipeline-steps">
             <?php 
-            // Data-driven approach: always append an empty step for "Add Step" functionality
-            $display_steps = $pipeline_steps;
+            // Transform database step structure to template format
+            $display_steps = [];
+            foreach ($pipeline_steps as $step) {
+                // Database structure validation - fail fast if corrupt
+                if (!is_array($step)) {
+                    $logger = apply_filters('dm_get_logger', null);
+                    $logger?->error('Pipeline data corruption: non-array step data', [
+                        'pipeline_id' => $pipeline_id,
+                        'step_data' => $step
+                    ]);
+                    throw new \RuntimeException("Pipeline {$pipeline_id} contains corrupted step data - cannot render");
+                }
+                
+                // Validate required fields exist
+                $required_fields = ['step_type', 'position'];
+                foreach ($required_fields as $field) {
+                    if (!isset($step[$field])) {
+                        $logger = apply_filters('dm_get_logger', null);
+                        $logger?->error('Pipeline step missing required field', [
+                            'pipeline_id' => $pipeline_id,
+                            'missing_field' => $field,
+                            'step_data' => $step
+                        ]);
+                        throw new \RuntimeException("Pipeline {$pipeline_id} step missing required field: {$field}");
+                    }
+                }
+                
+                // Transform to template expected format
+                $display_steps[] = [
+                    'step_type' => $step['step_type'],
+                    'position' => $step['position'],
+                    'is_empty' => false,
+                    'step_config' => $step // Pass full step data as step_config
+                ];
+            }
+            
+            // Always append an empty step for "Add Step" functionality
             $display_steps[] = [
                 'step_type' => '',
                 'position' => count($pipeline_steps),
-                'label' => '',
                 'is_empty' => true,
                 'step_config' => []
             ];

@@ -1,18 +1,26 @@
 <?php
+/**
+ * Data Packet - Standardized data contract for pipeline flow.
+ * 
+ * Defines the universal data format that ALL handlers (input, AI, output) must provide.
+ * Enforces strict data structure requirements with no auto-conversion - fail fast approach.
+ * 
+ * @package    Data_Machine
+ * @subpackage Data_Machine/includes/engine
+ * @since      0.6.0
+ */
 
 namespace DataMachine\Engine;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly.
 }
 
 /**
- * Data Packet - Standardized data contract for pipeline flow
+ * Universal data packet format for pipeline processing.
  * 
- * This class defines the standard data format that ALL handlers (input, AI, output) 
- * must provide. Any step that doesn't provide this exact format will fail fast.
- * 
- * No hand-holding or auto-conversion - provide the correct format or fail.
+ * Implements standardized data contract between all pipeline steps.
+ * Strict format requirements with JsonSerializable interface for data persistence.
  */
 class DataPacket implements \JsonSerializable {
     

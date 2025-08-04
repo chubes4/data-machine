@@ -86,7 +86,15 @@ class AI_HTTP_Plugin_Context_Helper {
      * @return string Plugin context string
      */
     public static function get_context($validation_result) {
-        return isset($validation_result['context']) ? $validation_result['context'] : self::FALLBACK_CONTEXT;
+        if (!isset($validation_result['context'])) {
+            throw new \InvalidArgumentException('Context validation result is malformed - context key missing');
+        }
+        
+        if (isset($validation_result['is_fallback']) && $validation_result['is_fallback']) {
+            throw new \RuntimeException('Plugin context is using fallback - component should not proceed with potentially invalid context');
+        }
+        
+        return $validation_result['context'];
     }
 
     /**

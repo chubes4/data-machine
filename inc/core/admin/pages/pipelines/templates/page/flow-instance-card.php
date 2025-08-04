@@ -23,9 +23,26 @@ $created_at = is_object($flow) ? $flow->created_at : $flow['created_at'];
 $scheduling_config = is_object($flow) ? $flow->scheduling_config : $flow['scheduling_config'];
 $schedule_interval = $scheduling_config['interval'] ?? 'manual';
 
-// Get pipeline steps for this flow (passed from parent template)
-$pipeline_steps = $pipeline_steps ?? [];
-$flow_config = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? []);
+// Validate required data - no fallbacks
+if (!isset($pipeline_steps)) {
+    throw new \InvalidArgumentException('flow-instance-card template requires pipeline_steps parameter');
+}
+if (!is_array($pipeline_steps)) {
+    throw new \InvalidArgumentException('flow-instance-card template pipeline_steps must be array');
+}
+
+// Extract flow config without fallbacks
+if (!isset($flow)) {
+    throw new \InvalidArgumentException('flow-instance-card template requires flow parameter');
+}
+
+if (is_object($flow)) {
+    $flow_config = $flow->flow_config;
+} else if (is_array($flow) && isset($flow['flow_config'])) {
+    $flow_config = $flow['flow_config'];
+} else {
+    throw new \InvalidArgumentException('flow-instance-card template flow must have flow_config property/key');
+}
 
 ?>
 <div class="dm-flow-instance-card" data-flow-id="<?php echo esc_attr($flow_id); ?>">
@@ -56,7 +73,45 @@ $flow_config = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? 
     <div class="dm-flow-steps-section">
         <div class="dm-flow-steps">
             <?php if (!empty($pipeline_steps)): ?>
-                <?php foreach ($pipeline_steps as $index => $step): ?>
+                <?php 
+                // Transform and validate steps for flow context
+                $validated_steps = [];
+                foreach ($pipeline_steps as $step) {
+                    // Database structure validation - fail fast if corrupt
+                    if (!is_array($step)) {
+                        $logger = apply_filters('dm_get_logger', null);
+                        $logger?->error('Flow data corruption: non-array step data', [
+                            'flow_id' => $flow_id,
+                            'step_data' => $step
+                        ]);
+                        throw new \RuntimeException("Flow {$flow_id} contains corrupted step data - cannot render");
+                    }
+                    
+                    // Validate required fields exist
+                    $required_fields = ['step_type', 'position'];
+                    foreach ($required_fields as $field) {
+                        if (!isset($step[$field])) {
+                            $logger = apply_filters('dm_get_logger', null);
+                            $logger?->error('Flow step missing required field', [
+                                'flow_id' => $flow_id,
+                                'missing_field' => $field,
+                                'step_data' => $step
+                            ]);
+                            throw new \RuntimeException("Flow {$flow_id} step missing required field: {$field}");
+                        }
+                    }
+                    
+                    // Transform to template expected format
+                    $validated_steps[] = [
+                        'step_type' => $step['step_type'],
+                        'position' => $step['position'],
+                        'is_empty' => false,
+                        'step_config' => $step // Pass full step data as step_config
+                    ];
+                }
+                ?>
+                
+                <?php foreach ($validated_steps as $index => $step): ?>
                     <?php 
                     // Render populated flow step using universal step-card template
                     echo apply_filters('dm_render_template', '', 'page/step-card', [
@@ -76,7 +131,8 @@ $flow_config = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? 
                     'step' => [
                         'is_empty' => true,
                         'step_type' => '',
-                        'position' => ''
+                        'position' => '',
+                        'step_config' => []
                     ],
                     'flow_config' => [],
                     'flow_id' => $flow_id,

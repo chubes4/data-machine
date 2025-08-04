@@ -84,6 +84,8 @@ function dm_register_wordpress_output_filters() {
                     'description' => __('Create and update WordPress posts and pages', 'data-machine')
                 ],
                 'step_type' => $context['step_type'] ?? 'output',
+                'flow_id' => $context['flow_id'] ?? '',
+                'pipeline_id' => $context['pipeline_id'] ?? '',
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);
