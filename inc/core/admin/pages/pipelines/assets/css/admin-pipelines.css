@@ -84,7 +84,6 @@
 /* Pipeline steps - horizontal flexbox layout */
 .dm-pipeline-steps {
     display: flex;
-    gap: 15px;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -95,6 +94,7 @@
     align-items: center;
     flex: 0 0 160px;
     height: 80px;
+    margin: 20px 0;
 }
 
 /* Step cards */
@@ -105,6 +105,7 @@
     padding: 12px;
     flex: 1;
     height: 100%;
+    width: 120px;
 }
 
 
@@ -222,7 +223,6 @@
 
 .dm-flow-steps {
     display: flex;
-    gap: 12px;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -372,7 +372,7 @@
 
 /* Universal step arrows - proper flexbox child */
 .dm-step-arrow {
-    margin-right: 8px;
+    margin: 12px;
     color: #666;
     font-size: 16px;
     display: flex;
@@ -390,7 +390,6 @@
 .dm-flow-steps .dm-step-arrow {
     color: #888;
     font-size: 14px;
-    margin-right: 6px;
 }
 
 .dm-flow-steps .dm-step-arrow .dashicons {

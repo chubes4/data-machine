@@ -457,7 +457,7 @@ class PipelineAjax
         $step_position = sanitize_text_field(wp_unslash($_POST['step_position'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
-        if (empty($step_position) || empty($pipeline_id)) {
+        if (!isset($_POST['step_position']) || $pipeline_id <= 0) {
             wp_send_json_error(['message' => __('Step position and pipeline ID are required', 'data-machine')]);
         }
 

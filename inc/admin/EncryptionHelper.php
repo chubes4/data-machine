@@ -2,7 +2,8 @@
 /**
  * Data Machine Encryption Helper
  *
- * Handles encryption and decryption of sensitive data.
+ * Filter-based encryption service for sensitive data handling.
+ * Accessible via apply_filters('dm_get_encryption_helper', null)
  *
  * @package Data_Machine
  * @subpackage Admin
@@ -10,15 +11,12 @@
 
 namespace DataMachine\Admin;
 
-use DataMachine\Core\Constants;
-use DataMachine\Admin\Logger;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
 /**
- * Class EncryptionHelper
+ * Encryption Helper Service - Filter-based architecture
  */
 class EncryptionHelper {
 
@@ -30,7 +28,7 @@ class EncryptionHelper {
 	 * @param string $data The data to encrypt.
 	 * @return string|false The encrypted data (Base64 encoded with IV prepended) or false on failure.
 	 */
-	public static function encrypt( $data ) {
+	public function encrypt( $data ) {
 		if ( ! function_exists( 'openssl_encrypt' ) || ! function_exists('openssl_random_pseudo_bytes') || ! function_exists('openssl_cipher_iv_length') ) {
 			return false;
 		}
@@ -68,7 +66,7 @@ class EncryptionHelper {
 	 * @param string $encrypted_data_with_iv The Base64 encoded encrypted data (with IV prepended).
 	 * @return string|false The decrypted data or false on failure.
 	 */
-	public static function decrypt( $encrypted_data_with_iv ) {
+	public function decrypt( $encrypted_data_with_iv ) {
 		if ( ! function_exists( 'openssl_decrypt' ) || ! function_exists('openssl_cipher_iv_length') ) {
 			return false;
 		}

@@ -716,6 +716,12 @@
                                 // Update step count for this specific pipeline
                                 const stepCount = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
                                 $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
+                                
+                                // Check if only empty step remains and remove its arrow
+                                if (stepCount === 0) {
+                                    // Only empty step remains - it should be treated as first step (no arrow)
+                                    $pipelineCard.find('.dm-step-container:has(.dm-step-card--empty) .dm-step-arrow').remove();
+                                }
                             });
                         }
                     } else {

@@ -56,9 +56,7 @@ class AIStep {
         try {
             // Validate required services
             if (!$logger) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('AIStep: Logger service unavailable');
-                }
+                // Logger service unavailable - fail gracefully
                 return false;
             }
             
@@ -212,9 +210,7 @@ class AIStep {
                     'trace' => $e->getTraceAsString()
                 ]);
             } else {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('AIStep Exception: ' . $e->getMessage());
-                }
+                // Logger unavailable - fail gracefully with no logging
             }
             return $this->fail_job($job_id, 'AI step failed: ' . $e->getMessage());
         }

@@ -39,10 +39,6 @@ class ModalAjax
     public function __construct()
     {
         add_action('wp_ajax_dm_get_modal_content', [$this, 'handle_get_modal_content']);
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[DM Modal] AJAX action wp_ajax_dm_get_modal_content registered');
-        }
     }
 
     /**
@@ -56,10 +52,6 @@ class ModalAjax
      */
     public function handle_get_modal_content()
     {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[DM Modal] AJAX handler called - POST data: ' . print_r($_POST, true));
-        }
-        
         // WordPress security verification
         if (!check_ajax_referer('dm_get_modal_content', 'nonce', false)) {
             wp_send_json_error([
@@ -85,16 +77,7 @@ class ModalAjax
 
         // Route to dm_get_modal filter system
         // Components access context via $_POST['context'] during filter execution
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[DM Modal] Requesting template: ' . $template);
-            error_log('[DM Modal] Context: ' . print_r($_POST['context'] ?? '', true));
-        }
-        
         $content = apply_filters('dm_get_modal', null, $template);
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[DM Modal] Content generated: ' . (empty($content) ? 'EMPTY' : 'SUCCESS'));
-        }
 
         if ($content) {
             wp_send_json_success([
@@ -102,9 +85,6 @@ class ModalAjax
                 'template' => $template
             ]);
         } else {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[DM Modal] No content returned for template: ' . $template);
-            }
             wp_send_json_error([
                 'message' => sprintf(
                     /* translators: %s: modal template name */
