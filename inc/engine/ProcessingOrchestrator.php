@@ -58,7 +58,7 @@ class ProcessingOrchestrator {
 			return false;
 		}
 		
-		// Fix parameter order: method expects (step_position, job_id)
+		// Call execute_step with correct parameter order
 		return $orchestrator->execute_step( $step_position, $job_id );
 	}
 	/**

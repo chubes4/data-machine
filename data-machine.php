@@ -52,6 +52,10 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Retrieves the Action Scheduler service for background job management.
  * Usage: $scheduler = apply_filters('dm_get_action_scheduler', null);
  * 
+ * @filter dm_get_http_service
+ * Retrieves the HTTP service for external API communications.
+ * Usage: $http_service = apply_filters('dm_get_http_service', null);
+ * 
  * PARAMETER-BASED SERVICE FILTERS:
  * 
  * @filter dm_get_database_service
@@ -76,6 +80,10 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Retrieves step configurations by type parameter.
  * Usage: $all_steps = apply_filters('dm_get_steps', []);
  * Usage: $step_config = apply_filters('dm_get_steps', null, 'input');
+ * 
+ * @filter dm_get_step_config
+ * Retrieves detailed step configuration for UI rendering.
+ * Usage: $config = apply_filters('dm_get_step_config', null, $step_type, $context);
  * 
  * TEMPLATE SYSTEM FILTERS:
  * 

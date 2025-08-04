@@ -8,14 +8,14 @@ WordPress plugin for AI content processing workflows. Built with WordPress-nativ
 
 ## Features
 
-- **🤖 Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter support
-- **🎨 Advanced Pipeline Builder**: AJAX-driven visual workflow construction with professional modal system
-- **🧠 Context Processing**: Multi-source data collection and processing with dynamic step discovery
-- **🔄 Sequential Workflows**: Chain different AI models and providers with real-time configuration
-- **📤 Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets
-- **🌐 WordPress Integration**: Uses familiar WordPress patterns and interfaces with native admin UX
-- **🔌 Filter Architecture**: Extensible system using WordPress filters with dynamic content generation
-- **🚀 Modular Design**: Clean separation of concerns with organized template architecture
+- **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter support
+- **Visual Pipeline Builder**: AJAX-driven workflow construction with modal system
+- **Context Processing**: Multi-source data collection and processing with dynamic step discovery
+- **Sequential Workflows**: Chain different AI models and providers with real-time configuration
+- **Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets
+- **WordPress Integration**: Native WordPress patterns and admin interface
+- **Filter Architecture**: Extensible system using WordPress filters
+- **Modular Design**: Clean separation of concerns with organized template architecture
 
 ## Real-World Example: Pipeline+Flow Architecture
 
@@ -160,37 +160,37 @@ $steps = apply_filters('dm_get_steps', [], '');
 $ai_config = apply_filters('dm_get_steps', null, 'ai');
 ```
 
-### Frontend/Backend Separation
+### Architecture Separation
 
 - **Frontend**: Replaceable via filter overrides
-- **Backend**: Engine accepts any components following filter contracts
+- **Backend**: Engine accepts components following filter contracts
 - **Extensions**: Add services, handlers, steps via filters
-- **Modularity**: Replace core functionality without touching engine code
+- **Modularity**: Replace core functionality without modifying engine code
 
 ## Key Features
 
 ### Universal Modal System
-100% filter-based modal architecture with zero hardcoded modal types enabling unlimited extensibility:
-- **Pure Filter Discovery**: Any component can register modal content via `dm_get_modal` filter without touching core code
-- **Template-Based Interface**: Modals identified by template names (e.g., "step-selection", "handler-selection") rather than component IDs
-- **Dual-Mode Step Discovery**: `apply_filters('dm_get_steps', [])` discovers all step types dynamically for UI generation
-- **Multi-Layer Security**: Nonce verification, capability checks, input sanitization following WordPress standards
-- **Component Autonomy**: Each component registers its own modal content generators independently via *Filters.php files
-- **Universal AJAX Handler**: Single `ModalAjax.php` processes all modal requests with comprehensive WordPress security
-- **Template Organization**: Clean separation of modal and page templates with organized directory structure
-- **Extension Pattern**: Custom step types can register configuration modals via appropriate template names
-- **Performance Optimized**: Conditional asset loading and priority-based dependency management
+Filter-based modal architecture enabling unlimited extensibility:
+- **Filter Discovery**: Components register modal content via `dm_get_modal` filter
+- **Template-Based Interface**: Modals identified by template names rather than component IDs
+- **Dynamic Step Discovery**: `apply_filters('dm_get_steps', [])` discovers all step types for UI generation
+- **WordPress Security**: Nonce verification, capability checks, input sanitization
+- **Component Independence**: Each component registers modal content via *Filters.php files
+- **Universal AJAX Handler**: Single handler processes all modal requests with security verification
+- **Template Organization**: Clean separation of modal and page templates
+- **Extension Pattern**: Custom step types register configuration modals via template names
+- **Performance Optimization**: Conditional asset loading and dependency management
 
-### Advanced Pipeline Builder System  
-Professional AJAX-driven interface with sophisticated modal system integration:
-- **Dynamic Step Selection**: Real-time discovery of available step types through dual-mode filter system
-- **Handler Auto-Discovery**: Automatically shows available handlers for each step type with parameter-based filter discovery
-- **Professional Modal UX**: Seamless modal interactions with WordPress-native feel using universal modal infrastructure
-- **Template Architecture**: Clean separation of modal and page templates with PHP-generated arrows and step cards
-- **AJAX Backend**: Comprehensive PipelineAjax class with WordPress security verification and dynamic content generation
-- **Real-time Validation**: Immediate feedback on handler availability and configuration requirements
-- **Filter-Based Content**: All modal content generated via filter system enabling unlimited extensibility without core modifications
-- **Auto-Flow Creation**: Every new pipeline automatically creates "Draft Flow" for immediate workflow execution
+### Pipeline Builder System
+AJAX-driven interface with modal system integration:
+- **Dynamic Step Selection**: Real-time discovery of available step types through filter system
+- **Handler Auto-Discovery**: Automatically shows available handlers for each step type
+- **Modal Integration**: Seamless modal interactions with WordPress-native interface
+- **Template Architecture**: Clean separation of modal and page templates with dynamic step cards
+- **AJAX Backend**: PipelineAjax class with WordPress security verification
+- **Real-time Validation**: Immediate feedback on handler availability and configuration
+- **Filter-Based Content**: Modal content generated via filter system for extensibility
+- **Auto-Flow Creation**: New pipelines automatically create "Draft Flow" for immediate execution
 - **WordPress Security**: Standard nonce verification, capability checks, and input sanitization
 
 ### Pipeline+Flow Architecture
@@ -231,18 +231,18 @@ Chain different AI providers in sequential pipeline steps:
 - **Google Sheets**: Export data to spreadsheets for business intelligence with OAuth 2.0
 
 **Receiver Step Framework** - Located in `/inc/core/steps/receiver/`:
-- **Webhook Reception**: Fully integrated stub implementation visible in step selection modal
+- **Webhook Reception**: Integrated stub implementation visible in step selection modal
 - **Extension Pattern**: Demonstrates dynamic step discovery and handler integration
-- **Coming Soon Status**: Professional presentation indicating future webhook capabilities
+- **Development Status**: Framework prepared for future webhook capabilities
 
 **AI Integration**:
 - **Multi-Provider AI HTTP Client**: OpenAI, Anthropic, Google, Grok, OpenRouter
 - **Features**: Streaming, tool calling, function execution with provider-specific optimizations
 - **Dynamic Configuration**: Real-time model selection and parameter adjustment
 
-### Extension Examples (Not Included)
+### Extension Examples
 
-The filter-based architecture makes adding custom handlers straightforward. Common extensions:
+The filter-based architecture supports custom handlers. Common extension patterns:
 
 **Database & Business Intelligence**:
 - **Airtable**: Database operations with flexible schema
@@ -1303,22 +1303,22 @@ testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 ```
 
 **Monitoring**:
-- **Jobs**: Data Machine → Jobs (with real-time status updates and comprehensive logging)
-- **Pipelines**: Data Machine → Pipelines (AJAX-driven interface with universal modal system and dynamic step discovery)
-- **Scheduler**: WordPress → Tools → Action Scheduler (for automated pipeline execution)
-- **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables (two-layer Pipeline+Flow architecture)
-- **AJAX Debugging**: Browser network tab shows all pipeline builder and modal AJAX calls with security verification
-- **Universal Modal Debugging**: Console logs show modal content generation, filter discovery, and template matching
-- **Filter Discovery Monitoring**: `dm_get_steps`, `dm_get_modal`, `dm_get_handlers` filter calls visible in debug output
-- **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/` with organized structure
-- **Security Verification**: Standard WordPress nonce verification and capability checks logged in debug mode
-- **Performance Metrics**: Asset loading order, dependency resolution, and conditional loading visible in browser DevTools
+- **Jobs**: Data Machine → Jobs (real-time status updates and logging)
+- **Pipelines**: Data Machine → Pipelines (AJAX interface with modal system and step discovery)
+- **Scheduler**: WordPress → Tools → Action Scheduler (automated pipeline execution)
+- **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables (Pipeline+Flow architecture)
+- **AJAX Debugging**: Browser network tab shows pipeline builder and modal AJAX calls
+- **Modal Debugging**: Console logs show modal content generation and filter discovery
+- **Filter Monitoring**: `dm_get_steps`, `dm_get_modal`, `dm_get_handlers` filter calls in debug output
+- **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/`
+- **Security Verification**: WordPress nonce verification and capability checks in debug mode
+- **Performance Metrics**: Asset loading and dependency resolution in browser DevTools
 
 ### Code Standards
-- **100% WordPress Filters**: All service access via `apply_filters()`
+- **WordPress Filters**: All service access via `apply_filters()`
 - **Object Registration**: Handlers registered as instantiated objects
 - **PSR-4 Namespacing**: `DataMachine\Core\`, `DataMachine\Engine\`
-- **Zero Constructor Dependencies**: Services retrieved via filters
+- **Filter-Based Dependencies**: Services retrieved via filters
 - **WordPress Security**: Native escaping and sanitization
 
 ## License & Links
