@@ -166,6 +166,13 @@ function dm_register_pipelines_admin_page_filters() {
                 // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
                 $all_steps = apply_filters('dm_get_steps', []);
                 
+                // Sort steps by position property for logical UI ordering
+                uasort($all_steps, function($a, $b) {
+                    $pos_a = $a['position'] ?? 999;
+                    $pos_b = $b['position'] ?? 999;
+                    return $pos_a <=> $pos_b;
+                });
+                
                 // Debug logging using logger service
                 $logger = apply_filters('dm_get_logger', null);
                 if ($logger) {

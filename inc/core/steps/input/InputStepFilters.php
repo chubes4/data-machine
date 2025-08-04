@@ -38,7 +38,8 @@ function dm_register_input_step_filters() {
                 'input' => [
                     'label' => __('Input', 'data-machine'),
                     'description' => __('Collect data from external sources', 'data-machine'),
-                    'class' => InputStep::class
+                    'class' => InputStep::class,
+                    'position' => 10
                 ]
             ]);
         }

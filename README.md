@@ -259,308 +259,845 @@ The filter-based architecture makes adding custom handlers straightforward. Comm
 - **Image Processing**: Visual content workflows
 - **Custom APIs**: Any REST/GraphQL endpoint
 
-### Universal Modal System Extension Example
 
-The modal architecture allows any plugin to add custom modals without touching core code:
+## Comprehensive Examples
 
+### 1. Filter-Based Service Usage
+
+**Core Services Discovery**:
 ```php
-// Register custom modal content via consistent 2-parameter filter pattern
+// All services accessed via apply_filters - zero constructor injection
+$logger = apply_filters('dm_get_logger', null);
+$ai_client = apply_filters('dm_get_ai_http_client', null);
+$orchestrator = apply_filters('dm_get_orchestrator', null);
+$encryption = apply_filters('dm_get_encryption_helper', null);
+
+// Parameter-based service discovery
+$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+
+// Dynamic handler discovery
+$input_handlers = apply_filters('dm_get_handlers', null, 'input');
+$output_handlers = apply_filters('dm_get_handlers', null, 'output');
+$twitter_auth = apply_filters('dm_get_auth', null, 'twitter');
+
+// Step discovery (dual-mode)
+$all_steps = apply_filters('dm_get_steps', []);              // All step types
+$ai_config = apply_filters('dm_get_steps', null, 'ai');      // Specific type
+```
+
+**EncryptionHelper Service Pattern**:
+```php
+// Secure API key storage using the new EncryptionHelper service
+class MyCustomHandler {
+    public function save_credentials($api_key, $api_secret) {
+        $encryption = apply_filters('dm_get_encryption_helper', null);
+        
+        // Encrypt sensitive data before storage
+        $encrypted_key = $encryption->encrypt($api_key);
+        $encrypted_secret = $encryption->encrypt($api_secret);
+        
+        update_option('my_handler_api_key', $encrypted_key);
+        update_option('my_handler_api_secret', $encrypted_secret);
+    }
+    
+    public function get_credentials() {
+        $encryption = apply_filters('dm_get_encryption_helper', null);
+        
+        // Decrypt when needed
+        $encrypted_key = get_option('my_handler_api_key');
+        $encrypted_secret = get_option('my_handler_api_secret');
+        
+        return [
+            'api_key' => $encryption->decrypt($encrypted_key),
+            'api_secret' => $encryption->decrypt($encrypted_secret)
+        ];
+    }
+}
+```
+
+### 2. Pipeline+Flow Architecture Examples
+
+**Multi-Source News Analysis Pipeline**:
+```php
+// Pipeline Template: "Comprehensive News Analysis"
+// Step 0: RSS Feed Input
+// Step 1: Reddit Posts Input 
+// Step 2: WordPress Content Input
+// Step 3: AI Cross-Reference Analysis
+// Step 4: AI Summary Generation
+// Step 5: Social Media Output
+// Step 6: WordPress Blog Output
+
+// Flow A: Daily Tech News (Automated)
+$flow_config_a = [
+    'schedule' => 'daily',
+    'steps' => [
+        0 => ['handler' => 'rss', 'config' => ['feed_url' => 'https://techcrunch.com/feed/']],
+        1 => ['handler' => 'reddit', 'config' => ['subreddit' => 'technology', 'limit' => 10]],
+        2 => ['handler' => 'wordpress', 'config' => ['post_type' => 'post', 'category' => 'tech']],
+        3 => ['handler' => 'ai', 'config' => ['model' => 'gpt-4', 'prompt' => 'Analyze correlations']],
+        4 => ['handler' => 'ai', 'config' => ['model' => 'claude-3-5-sonnet', 'prompt' => 'Create summary']],
+        5 => ['handler' => 'twitter', 'config' => ['account' => '@tech_insights']],
+        6 => ['handler' => 'wordpress', 'config' => ['post_type' => 'post', 'status' => 'publish']]
+    ]
+];
+
+// Flow B: Weekly Industry Report (Manual)
+$flow_config_b = [
+    'schedule' => 'manual',
+    'steps' => [
+        0 => ['handler' => 'rss', 'config' => ['feed_url' => 'https://feeds.feedburner.com/oreilly/radar']],
+        1 => ['handler' => 'reddit', 'config' => ['subreddit' => 'programming', 'limit' => 20]],
+        2 => ['handler' => 'wordpress', 'config' => ['post_type' => 'case_study']],
+        3 => ['handler' => 'ai', 'config' => ['model' => 'gemini-pro', 'prompt' => 'Industry trend analysis']],
+        4 => ['handler' => 'ai', 'config' => ['model' => 'gpt-4', 'prompt' => 'Executive summary']],
+        5 => ['handler' => 'facebook', 'config' => ['page_id' => 'industry_reports']],
+        6 => ['handler' => 'google_sheets', 'config' => ['sheet_id' => 'analytics_data']]
+    ]
+];
+```
+
+**E-commerce Product Analysis Pipeline**:
+```php
+// Pipeline Template: "Product Research & Marketing"
+// Step 0: Google Sheets Product Data
+// Step 1: Reddit Market Research 
+// Step 2: AI Competitive Analysis
+// Step 3: AI Marketing Copy Generation
+// Step 4: Multi-Platform Publishing
+
+// Implementation showing DataPacket flow
+class ProductAnalysisStep {
+    public function execute(int $job_id, array $data_packets = []): bool {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // AI steps consume all packets for complete context
+        foreach ($data_packets as $index => $packet) {
+            $content = $packet->content['body'];
+            $source = $packet->metadata['source'] ?? "Step $index";
+            
+            $logger->debug("Processing packet from: $source");
+            
+            // Build comprehensive analysis from:
+            // - Product specifications (Google Sheets)
+            // - Market sentiment (Reddit)
+            // - Competitive landscape (Previous AI analysis)
+        }
+        
+        return true;
+    }
+}
+```
+
+### 3. Handler Diversity Examples
+
+**Input Handlers - Data Collection**:
+```php
+// RSS Feed Handler
+class RSSContentPipeline {
+    public function setup_rss_input() {
+        return [
+            'handler' => 'rss',
+            'config' => [
+                'feed_url' => 'https://blog.example.com/feed/',
+                'max_items' => 5,
+                'filter_keywords' => ['AI', 'automation', 'workflow']
+            ]
+        ];
+    }
+}
+
+// Reddit Handler with OAuth
+class RedditResearchPipeline {
+    public function setup_reddit_input() {
+        return [
+            'handler' => 'reddit',
+            'config' => [
+                'subreddit' => 'MachineLearning',
+                'sort' => 'hot',
+                'limit' => 15,
+                'time_filter' => 'week'
+            ]
+        ];
+    }
+}
+
+// Google Sheets Handler
+class SheetsDataPipeline {
+    public function setup_sheets_input() {
+        return [
+            'handler' => 'google_sheets',
+            'config' => [
+                'sheet_id' => '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+                'range' => 'Class Data!A2:F',
+                'include_headers' => true
+            ]
+        ];
+    }
+}
+
+// WordPress Content Handler
+class WordPressContentPipeline {
+    public function setup_wp_input() {
+        return [
+            'handler' => 'wordpress',
+            'config' => [
+                'post_type' => 'product',
+                'post_status' => 'publish',
+                'meta_query' => [
+                    [
+                        'key' => 'featured_product',
+                        'value' => 'yes'
+                    ]
+                ],
+                'posts_per_page' => 10
+            ]
+        ];
+    }
+}
+
+// File Upload Handler
+class FileProcessingPipeline {
+    public function setup_file_input() {
+        return [
+            'handler' => 'files',
+            'config' => [
+                'allowed_types' => ['pdf', 'docx', 'txt'],
+                'max_file_size' => '10MB',
+                'process_archives' => true
+            ]
+        ];
+    }
+}
+```
+
+**Output Handlers - Content Distribution**:
+```php
+// Social Media Distribution
+class SocialMediaPipeline {
+    public function setup_twitter_output() {
+        return [
+            'handler' => 'twitter',
+            'config' => [
+                'account' => '@company_updates',
+                'include_media' => true,
+                'hashtags' => ['#AI', '#automation'],
+                'thread_if_long' => true
+            ]
+        ];
+    }
+    
+    public function setup_facebook_output() {
+        return [
+            'handler' => 'facebook',
+            'config' => [
+                'page_id' => 'your-facebook-page',
+                'include_link_preview' => true,
+                'target_audience' => 'tech_professionals'
+            ]
+        ];
+    }
+    
+    public function setup_threads_output() {
+        return [
+            'handler' => 'threads',
+            'config' => [
+                'profile' => '@company_threads',
+                'formatting' => 'markdown',
+                'include_alt_text' => true
+            ]
+        ];
+    }
+    
+    public function setup_bluesky_output() {
+        return [
+            'handler' => 'bluesky',
+            'config' => [
+                'handle' => 'company.bsky.social',
+                'rich_text' => true,
+                'reply_to_mentions' => false
+            ]
+        ];
+    }
+}
+
+// Content Management Output
+class ContentManagementPipeline {
+    public function setup_wordpress_output() {
+        return [
+            'handler' => 'wordpress',
+            'config' => [
+                'post_type' => 'ai_generated_content',
+                'post_status' => 'draft',
+                'category' => 'automated-content',
+                'custom_fields' => [
+                    'ai_model_used' => 'gpt-4',
+                    'generation_timestamp' => date('Y-m-d H:i:s')
+                ]
+            ]
+        ];
+    }
+    
+    public function setup_sheets_output() {
+        return [
+            'handler' => 'google_sheets',
+            'config' => [
+                'sheet_id' => 'analytics_tracking_sheet',
+                'worksheet' => 'Content Performance',
+                'append_mode' => true,
+                'include_timestamp' => true
+            ]
+        ];
+    }
+}
+```
+
+### 4. Advanced Step Types Examples
+
+**Custom Input Step**:
+```php
+class DatabaseInputStep {
+    public function execute(int $job_id, array $data_packets = []): bool {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // Custom database connection
+        global $wpdb;
+        $results = $wpdb->get_results(
+            "SELECT * FROM {$wpdb->prefix}custom_data WHERE status = 'active'"
+        );
+        
+        // Create DataPacket for next step
+        $data_packet = [
+            'content' => ['body' => json_encode($results), 'title' => 'Database Export'],
+            'metadata' => ['source' => 'custom_database', 'record_count' => count($results)],
+            'context' => ['job_id' => $job_id, 'step_position' => 0]
+        ];
+        
+        $logger->info("Processed " . count($results) . " database records");
+        return true;
+    }
+}
+
+// Register the custom step
+add_filter('dm_get_steps', function($config, $step_type) {
+    if ($step_type === 'database_input') {
+        return [
+            'label' => __('Database Input', 'my-plugin'),
+            'description' => __('Read data from custom database tables', 'my-plugin'),
+            'class' => '\MyPlugin\Steps\DatabaseInputStep',
+            'type' => 'input'
+        ];
+    }
+    return $config;
+}, 10, 2);
+```
+
+**Custom AI Processing Step**:
+```php
+class SentimentAnalysisStep {
+    public function execute(int $job_id, array $data_packets = []): bool {
+        $ai_client = apply_filters('dm_get_ai_http_client', null);
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // AI steps consume all packets for complete context
+        $combined_content = '';
+        foreach ($data_packets as $packet) {
+            $combined_content .= $packet->content['body'] . "\n\n";
+        }
+        
+        // Custom AI prompt for sentiment analysis
+        $response = $ai_client->chat([
+            'model' => 'gpt-4',
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => 'Analyze the sentiment of the following content and provide a detailed breakdown with scores.'
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $combined_content
+                ]
+            ],
+            'temperature' => 0.3
+        ]);
+        
+        // Create enhanced DataPacket with sentiment data
+        $sentiment_data = [
+            'content' => [
+                'body' => $response['choices'][0]['message']['content'],
+                'title' => 'Sentiment Analysis Results'
+            ],
+            'metadata' => [
+                'source' => 'sentiment_analysis_ai',
+                'model_used' => 'gpt-4',
+                'analysis_type' => 'sentiment',
+                'input_length' => strlen($combined_content)
+            ],
+            'context' => ['job_id' => $job_id, 'step_position' => 2]
+        ];
+        
+        $logger->debug('Sentiment analysis completed for ' . strlen($combined_content) . ' characters');
+        return true;
+    }
+}
+```
+
+**Custom Output Step**:
+```php
+class SlackNotificationStep {
+    public function execute(int $job_id, array $data_packets = []): bool {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // Output steps typically use latest packet
+        $latest_packet = $data_packets[0] ?? null;
+        if (!$latest_packet) {
+            $logger->error('No data packet available for Slack notification');
+            return false;
+        }
+        
+        // Send to Slack webhook
+        $webhook_url = get_option('slack_webhook_url');
+        $message = [
+            'text' => 'Data Machine Pipeline Completed',
+            'attachments' => [
+                [
+                    'color' => 'good',
+                    'title' => $latest_packet->content['title'] ?? 'Pipeline Result',
+                    'text' => substr($latest_packet->content['body'], 0, 500) . '...',
+                    'fields' => [
+                        [
+                            'title' => 'Job ID',
+                            'value' => (string)$job_id,
+                            'short' => true
+                        ],
+                        [
+                            'title' => 'Source',
+                            'value' => $latest_packet->metadata['source'] ?? 'Unknown',
+                            'short' => true
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        
+        $response = wp_remote_post($webhook_url, [
+            'body' => json_encode($message),
+            'headers' => ['Content-Type' => 'application/json']
+        ]);
+        
+        if (is_wp_error($response)) {
+            $logger->error('Slack notification failed: ' . $response->get_error_message());
+            return false;
+        }
+        
+        $logger->info('Slack notification sent successfully');
+        return true;
+    }
+}
+```
+
+### 5. Universal Modal System Examples
+
+**Custom Modal Registration**:
+```php
+// Register custom modals for your components
 add_filter('dm_get_modal', function($content, $template) {
     switch ($template) {
         case 'analytics-dashboard':
-            // Access context via WordPress AJAX standard pattern
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            return apply_filters('dm_render_template', '', 'modal/analytics-dashboard', $context);
             
-            return '<div class="dm-analytics-modal">
-                <h3>' . __('Analytics Dashboard', 'my-plugin') . '</h3>
-                <div class="dm-metrics-grid">
-                    <div class="dm-metric">
-                        <strong>Total Pipelines:</strong> ' . esc_html($context['pipeline_count'] ?? 0) . '
-                    </div>
-                    <div class="dm-metric">
-                        <strong>Success Rate:</strong> ' . esc_html($context['success_rate'] ?? '0%') . '
-                    </div>
-                    <div class="dm-metric">
-                        <strong>Avg Processing Time:</strong> ' . esc_html($context['avg_time'] ?? '0s') . '
-                    </div>
-                </div>
-                <div class="dm-actions">
-                    <button class="button-primary" data-action="export">' . __('Export Data', 'my-plugin') . '</button>
-                    <button class="button-secondary" data-action="refresh">' . __('Refresh', 'my-plugin') . '</button>
-                </div>
-            </div>';
-            
-        case 'configure-step':
-            // Custom step configuration within universal configure-step template
+        case 'bulk-operations':
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-            $step_type = $context['step_type'] ?? 'unknown';
+            return apply_filters('dm_render_template', '', 'modal/bulk-operations', [
+                'selected_items' => $context['selected_items'] ?? [],
+                'operation_types' => [
+                    'delete' => __('Delete Selected', 'my-plugin'),
+                    'export' => __('Export Data', 'my-plugin'),
+                    'duplicate' => __('Duplicate Items', 'my-plugin')
+                ]
+            ]);
             
-            if ($step_type === 'analytics_processor') {
-                return '<div class="dm-step-config">
-                    <h4>' . __('Analytics Processor Configuration', 'my-plugin') . '</h4>
-                    <form class="dm-analytics-config-form">
-                        <div class="dm-form-row">
-                            <label>' . __('Data Source:', 'my-plugin') . '
-                                <select name="data_source" required>
-                                    <option value="">' . __('Select Source...', 'my-plugin') . '</option>
-                                    <option value="google_analytics">Google Analytics</option>
-                                    <option value="facebook_insights">Facebook Insights</option>
-                                    <option value="custom_api">Custom API</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dm-form-row">
-                            <label>' . __('Metrics to Track:', 'my-plugin') . '
-                                <select name="metrics[]" multiple size="4">
-                                    <option value="conversions">Conversions</option>
-                                    <option value="engagement">Engagement Rate</option>
-                                    <option value="retention">User Retention</option>
-                                    <option value="revenue">Revenue</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dm-form-row">
-                            <label>' . __('Report Frequency:', 'my-plugin') . '
-                                <select name="frequency">
-                                    <option value="hourly">Hourly</option>
-                                    <option value="daily" selected>Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                </select>
-                            </label>
-                        </div>
-                        <div class="dm-form-actions">
-                            <button type="submit" class="button-primary">' . __('Save Configuration', 'my-plugin') . '</button>
-                            <button type="button" class="button-secondary dm-test-connection">' . __('Test Connection', 'my-plugin') . '</button>
-                        </div>
-                    </form>
-                </div>';
-            }
-            break;
-            
-        case 'export-results':
-            // Custom export modal with dynamic options
+        case 'advanced-settings':
             $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-            $job_id = $context['job_id'] ?? null;
-            $pipeline_name = $context['pipeline_name'] ?? 'Unknown Pipeline';
+            $current_settings = get_option('dm_advanced_settings', []);
             
-            return '<div class="dm-export-modal">
-                <h4>' . sprintf(__('Export Results - %s', 'my-plugin'), esc_html($pipeline_name)) . '</h4>
-                <form class="dm-export-form">
-                    <input type="hidden" name="job_id" value="' . esc_attr($job_id) . '">
-                    <div class="dm-export-options">
-                        <label><input type="checkbox" name="include_metadata" checked> ' . __('Include Metadata', 'my-plugin') . '</label>
-                        <label><input type="checkbox" name="include_errors"> ' . __('Include Error Logs', 'my-plugin') . '</label>
-                        <label><input type="checkbox" name="compress_output" checked> ' . __('Compress Output', 'my-plugin') . '</label>
-                    </div>
-                    <div class="dm-format-selection">
-                        <label>' . __('Export Format:', 'my-plugin') . '
-                            <select name="format">
-                                <option value="json">JSON</option>
-                                <option value="csv">CSV</option>
-                                <option value="xml">XML</option>
-                            </select>
-                        </label>
-                    </div>
-                    <button type="submit" class="button-primary">' . __('Export Now', 'my-plugin') . '</button>
-                </form>
-            </div>';
+            return apply_filters('dm_render_template', '', 'modal/advanced-settings', [
+                'settings' => $current_settings,
+                'pipeline_id' => $context['pipeline_id'] ?? null,
+                'available_models' => [
+                    'gpt-4' => 'OpenAI GPT-4',
+                    'claude-3-5-sonnet' => 'Anthropic Claude 3.5 Sonnet',
+                    'gemini-pro' => 'Google Gemini Pro'
+                ]
+            ]);
     }
     return $content;
 }, 10, 2);
+```
 
-// PHP template integration - trigger modals using data attributes
-// Add these buttons to your PHP templates:
-
-// Analytics dashboard modal trigger
-<button type="button" class="button dm-modal-open" 
+**Modal Trigger Templates**:
+```php
+<!-- Analytics Dashboard Modal Trigger -->
+<button type="button" class="button button-primary dm-modal-open" 
         data-template="analytics-dashboard"
-        data-context='{"pipeline_count":"15","success_rate":"94.2%","avg_time":"2.3s"}'>
-    <?php esc_html_e('View Analytics Dashboard', 'my-plugin'); ?>
+        data-context='{"pipeline_count":"<?php echo esc_attr($pipeline_count); ?>","success_rate":"<?php echo esc_attr($success_rate); ?>"}'>
+    <?php esc_html_e('View Analytics', 'my-plugin'); ?>
 </button>
 
-// Step configuration modal trigger  
-<button type="button" class="button dm-modal-open"
-        data-template="configure-step" 
-        data-context='{"step_type":"analytics_processor","step_position":"2","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-    <?php esc_html_e('Configure Analytics Step', 'my-plugin'); ?>
+<!-- Bulk Operations Modal Trigger -->
+<button type="button" class="button dm-modal-open" 
+        data-template="bulk-operations"
+        data-context='{"selected_items":[<?php echo esc_attr(implode(',', $selected_ids)); ?>]}'>
+    <?php esc_html_e('Bulk Operations', 'my-plugin'); ?>
 </button>
 
-// Export results modal trigger
-<button type="button" class="button dm-modal-open"
-        data-template="export-results"
-        data-context='{"job_id":"<?php echo esc_attr($job_id); ?>","pipeline_name":"<?php echo esc_attr($pipeline_name); ?>"}'>
-    <?php esc_html_e('Export Results', 'my-plugin'); ?>
+<!-- Advanced Settings Modal Trigger -->
+<button type="button" class="button button-secondary dm-modal-open" 
+        data-template="advanced-settings"
+        data-context='{"pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","context":"pipeline_edit"}'>
+    <?php esc_html_e('Advanced Settings', 'my-plugin'); ?>
 </button>
+```
 
-// Handle modal content interactions (not modal opening)
-jQuery(document).ready(function($) {
-    // Handle actions within modal content
-    $(document).on('click', '[data-action="export"]', function() {
-        // Emit event to trigger another modal via data attributes
-        var exportButton = $('<button class="dm-modal-open" data-template="export-results" data-context=\'{"job_id":"latest","pipeline_name":"Analytics Pipeline"}\'></button>');
-        exportButton.trigger('click');
-    });
+**Modal Content Templates** (`/templates/modal/analytics-dashboard.php`):
+```php
+<div class="dm-analytics-modal">
+    <h3><?php esc_html_e('Pipeline Analytics Dashboard', 'my-plugin'); ?></h3>
+    
+    <div class="dm-metrics-grid">
+        <div class="dm-metric-card">
+            <div class="dm-metric-value"><?php echo esc_html($pipeline_count ?? '0'); ?></div>
+            <div class="dm-metric-label"><?php esc_html_e('Total Pipelines', 'my-plugin'); ?></div>
+        </div>
+        
+        <div class="dm-metric-card">
+            <div class="dm-metric-value"><?php echo esc_html($success_rate ?? '0%'); ?></div>
+            <div class="dm-metric-label"><?php esc_html_e('Success Rate', 'my-plugin'); ?></div>
+        </div>
+        
+        <div class="dm-metric-card">
+            <div class="dm-metric-value"><?php echo esc_html($avg_processing_time ?? '0s'); ?></div>
+            <div class="dm-metric-label"><?php esc_html_e('Avg Processing Time', 'my-plugin'); ?></div>
+        </div>
+    </div>
+    
+    <div class="dm-chart-container">
+        <canvas id="dm-performance-chart" width="400" height="200"></canvas>
+    </div>
+    
+    <div class="dm-modal-actions">
+        <button type="button" class="button button-primary dm-modal-close" 
+                data-template="export-analytics"
+                data-context='{"export_type":"full","date_range":"30_days"}'>
+            <?php esc_html_e('Export Analytics', 'my-plugin'); ?>
+        </button>
+        
+        <button type="button" class="button button-secondary" id="dm-refresh-analytics">
+            <?php esc_html_e('Refresh Data', 'my-plugin'); ?>
+        </button>
+    </div>
+</div>
+```
+
+### 6. Universal Template System Examples
+
+**Template Registration**:
+```php
+// Register admin page with template directory
+add_filter('dm_get_admin_page', function($config, $page_slug) {
+    if ($page_slug === 'my_custom_page') {
+        return [
+            'page_title' => __('My Custom Page', 'my-plugin'),
+            'menu_title' => __('Custom Page', 'my-plugin'),
+            'capability' => 'manage_options',
+            'templates' => __DIR__ . '/templates/',  // Template directory registration
+            'assets' => [
+                'css' => [
+                    'my-custom-css' => [
+                        'file' => plugin_dir_url(__FILE__) . 'assets/css/custom-page.css',
+                        'deps' => ['dm-admin-core']
+                    ]
+                ],
+                'js' => [
+                    'my-custom-js' => [
+                        'file' => plugin_dir_url(__FILE__) . 'assets/js/custom-page.js',
+                        'deps' => ['jquery', 'dm-core-modal']
+                    ]
+                ]
+            ]
+        ];
+    }
+    return $config;
+}, 10, 2);
+```
+
+**Universal Template Rendering**:
+```php
+// Use templates from any registered admin page
+class MyCustomComponent {
+    public function render_dashboard() {
+        // Template discovery searches all registered admin page template directories
+        $dashboard_content = apply_filters('dm_render_template', '', 'page/dashboard', [
+            'stats' => $this->get_stats(),
+            'recent_items' => $this->get_recent_items(10)
+        ]);
+        
+        $modal_content = apply_filters('dm_render_template', '', 'modal/item-settings', [
+            'item_id' => 123,
+            'available_options' => $this->get_available_options()
+        ]);
+        
+        return $dashboard_content;
+    }
+    
+    public function render_dynamic_content() {
+        // Template rendering with dynamic data
+        $items = $this->get_items();
+        $template_data = [];
+        
+        foreach ($items as $item) {
+            $template_data[] = apply_filters('dm_render_template', '', 'component/item-card', [
+                'item' => $item,
+                'context' => 'dashboard',
+                'actions' => ['edit', 'delete', 'duplicate']
+            ]);
+        }
+        
+        return implode('', $template_data);
+    }
+}
+```
+
+### 7. AJAX Integration & Template Requesting
+
+**JavaScript Template Requesting**:
+```javascript
+class CustomPageManager {
+    constructor() {
+        this.ajax_url = ajaxurl;
+        this.nonce = dmCustomPage.nonce;
+        this.init();
+    }
+    
+    init() {
+        // Data-attribute action handlers
+        $(document).on('click', '[data-template="add-item-action"]', this.handleAddItem.bind(this));
+        $(document).on('click', '[data-template="delete-action"]', this.handleDeleteItem.bind(this));
+        $(document).on('click', '[data-template="bulk-action"]', this.handleBulkAction.bind(this));
+    }
+    
+    // Universal template requesting method
+    requestTemplate(templateName, templateData) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: this.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_get_template',
+                    template: templateName,
+                    template_data: JSON.stringify(templateData),
+                    nonce: this.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        resolve(response.data.html);
+                    } else {
+                        reject(response.data.message || 'Template request failed');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    reject(`AJAX Error: ${error}`);
+                }
+            });
+        });
+    }
+    
+    handleAddItem(e) {
+        const $button = $(e.currentTarget);
+        const context = $button.data('context') || {};
+        
+        // First, make AJAX call to add item (returns data only)
+        $.ajax({
+            url: this.ajax_url,
+            method: 'POST',
+            data: {
+                action: 'dm_add_custom_item',
+                item_data: context,
+                nonce: this.nonce
+            }
+        }).then(response => {
+            if (response.success) {
+                // Then request template with response data
+                return this.requestTemplate('component/item-card', {
+                    item: response.data.item,
+                    context: 'newly_added',
+                    is_first_item: $('.dm-items-container .dm-item-card').length === 0
+                });
+            }
+            throw new Error(response.data.message);
+        }).then(itemHtml => {
+            // Insert rendered template
+            $('.dm-items-container').append(itemHtml);
+            this.showNotification('Item added successfully', 'success');
+        }).catch(error => {
+            this.showNotification(`Error: ${error.message}`, 'error');
+        });
+    }
+    
+    handleBulkAction(e) {
+        const $button = $(e.currentTarget);
+        const action = $button.data('action');
+        const selectedItems = $('.dm-item-checkbox:checked').map((i, el) => $(el).val()).get();
+        
+        if (selectedItems.length === 0) {
+            this.showNotification('Please select items first', 'warning');
+            return;
+        }
+        
+        // Bulk operation AJAX call
+        $.ajax({
+            url: this.ajax_url,
+            method: 'POST',
+            data: {
+                action: 'dm_bulk_operation',
+                operation: action,
+                item_ids: selectedItems,
+                nonce: this.nonce
+            }
+        }).then(response => {
+            if (response.success) {
+                // Request updated template for each affected item
+                const templatePromises = response.data.updated_items.map(item => 
+                    this.requestTemplate('component/item-card', {
+                        item: item,
+                        context: 'bulk_updated',
+                        highlight: true
+                    })
+                );
+                
+                return Promise.all(templatePromises);
+            }
+            throw new Error(response.data.message);
+        }).then(itemHtmlArray => {
+            // Replace affected items with updated templates
+            itemHtmlArray.forEach((html, index) => {
+                const itemId = response.data.updated_items[index].id;
+                $(`.dm-item-card[data-item-id="${itemId}"]`).replaceWith(html);
+            });
+            
+            this.showNotification(`Bulk ${action} completed successfully`, 'success');
+        }).catch(error => {
+            this.showNotification(`Error: ${error.message}`, 'error');
+        });
+    }
+    
+    showNotification(message, type) {
+        // Request notification template
+        this.requestTemplate('component/notification', {
+            message: message,
+            type: type,
+            dismissible: true
+        }).then(notificationHtml => {
+            $('.dm-notifications-container').append(notificationHtml);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                $('.dm-notification:last').fadeOut(() => {
+                    $(this).remove();
+                });
+            }, 5000);
+        });
+    }
+}
+
+// Initialize when DOM ready
+$(document).ready(() => {
+    if (typeof dmCustomPage !== 'undefined') {
+        new CustomPageManager();
+    }
 });
 ```
 
-**Key Benefits of Universal Modal Architecture**:
-- **Zero Core Modifications**: Add unlimited modal types without touching Data Machine code
-- **Data-Attribute Triggers**: Simple `.dm-modal-open` buttons with `data-template` and `data-context` attributes - no JavaScript API required
-- **WordPress Standards**: Uses familiar WordPress AJAX and filter patterns with proper security
-- **Automatic Discovery**: New modal types appear immediately when registered via filter system
-- **Professional UX**: Seamless integration with WordPress admin interface and native styling
-- **Extensible Configuration**: Step types can register sophisticated configuration interfaces via template names
-- **Template Flexibility**: Support for both universal templates (like 'configure-step') and custom templates
-- **Context Preservation**: Rich context passing via JSON data attributes between PHP templates and modal content
-- **WordPress Security**: Standard nonce verification and input sanitization automatically applied
-
-## Practical Examples
-
-### Example 1: Pipeline+Flow Content Processing
-
-**Pipeline Template**: "RSS to Social Media"
+**AJAX Handler Pattern** (Returns data only, never HTML):
 ```php
-// Pipeline Definition (reusable template):
-// Step 1: Input Handler (position 0) - data collection
-// Step 2: AI Handler (position 1) - content enhancement  
-// Step 3: Output Handler (position 2) - content publishing
-```
-
-**Flow Implementations**:
-```php
-// Flow A: Tech News to Twitter (Daily)
-// - RSS: TechCrunch feed
-// - AI: GPT-4 analysis
-// - Output: @tech_twitter
-
-// Flow B: Gaming News to Facebook (Weekly)
-// - RSS: Gaming feeds
-// - AI: Claude creative writing
-// - Output: Gaming Facebook page
-
-// Step execution within each flow:
-// Position-based sequential processing (0 → 1 → 2)
-// Context accumulation at each step:
-
-// At Step 2 (AI processing) - uses entire array for context:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps consume all packets (most recent first)
-    foreach ($data_packets as $packet) {
-        // Process all previous data for complete context
-    }
-}
-
-// At Step 3 (Output) - uses latest packet:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // Output steps use latest packet (data_packets[0])
-    $latest_packet = $data_packets[0] ?? null;
-    // Publish AI-enhanced content from Step 2
-}
-```
-
-### Example 2: Multi-Source Content Pipeline+Flows
-
-**Pipeline Template**: "Multi-Source Analysis and Publishing"
-```php
-// Pipeline Structure (reusable across flows):
-// Step 1: Input Handler (position 0) - source data collection
-// Step 2: Input Handler (position 1) - additional context  
-// Step 3: AI Handler (position 2) - cross-source analysis
-// Step 4: Output Handler (position 3) - content distribution
-// Step 5: Output Handler (position 4) - secondary distribution
-```
-
-**Flow Configurations**:
-```php
-// Flow A: Tech Analysis (Daily)
-// - Input 1: Reddit r/technology
-// - Input 2: WordPress tech blog posts
-// - AI: Claude correlation analysis
-// - Output 1: Facebook tech page
-// - Output 2: Twitter @tech_updates
-
-// Flow B: News Aggregation (Hourly)
-// - Input 1: RSS news feeds
-// - Input 2: Reddit r/worldnews
-// - AI: GPT-4 summarization
-// - Output 1: Threads news account
-// - Output 2: WordPress news blog
-
-// Sequential execution within each flow:
-// Context accumulation through position-based processing:
-
-// At Step 3 (AI processing) - uses entire array for multi-source analysis:
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps consume all packets (most recent first)
-    foreach ($data_packets as $packet) {
-        $source_type = $packet->metadata['source_type'];
-        // Analyze all input sources together
-    }
-}
-
-// At Steps 4-5 (outputs) - use latest processed packet:
-// Most output handlers use latest packet (data_packets[0]) by default
-```
-
-### Example 3: Extension - Email Campaign Automation
-
-**Extension Workflow**: Contact List → Content Analysis → Personalized Email
-
-```php
-// Extension example - AWS SES Email Handler (not included in core)
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'output') {
-        $handlers['aws_ses'] = new \MyPlugin\Handlers\AWSEmailHandler();
-    }
-    return $handlers;
-}, 10, 2);
-
-class AWSEmailHandler {
-    public function execute(int $job_id, array $data_packets = []): bool {
-        // Output handlers use latest packet (data_packets[0])
-        $latest_packet = $data_packets[0] ?? null;
+class CustomPageAjax {
+    public function add_custom_item() {
+        // Verify nonce and capabilities
+        if (!wp_verify_nonce($_POST['nonce'], 'dm_custom_page_nonce') || 
+            !current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed', 'my-plugin')]);
+        }
         
-        // Send personalized email using latest processed data
-        return $this->send_personalized_email($latest_packet);
-    }
-}
-```
-
-### Example 4: Extension - Google Sheets Integration
-
-**Extension Workflow**: Google Sheets Input → AI Processing → Google Sheets Output
-
-```php
-// Extension example - Google Sheets Handler (not included in core)
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input' || $type === 'output') {
-        $handlers['google_sheets'] = new \MyPlugin\Handlers\GoogleSheetsHandler();
-    }
-    return $handlers;
-}, 10, 2);
-
-class GoogleSheetsHandler {
-    // INPUT: Read data from sheets
-    public function get_input_data(object $module, array $source_config): array {
-        $customer_data = $this->fetch_sheets_data(
-            $source_config['sheet_id'], 
-            $source_config['input_range']
-        );
-        return ['processed_items' => $customer_data];
+        // Sanitize input data
+        $item_data = json_decode(wp_unslash($_POST['item_data']), true);
+        $item_data = array_map('sanitize_text_field', $item_data);
+        
+        // Process business logic
+        $new_item = $this->create_item($item_data);
+        
+        if ($new_item) {
+            // Return structured data only - NO HTML
+            wp_send_json_success([
+                'item' => $new_item,
+                'message' => __('Item created successfully', 'my-plugin')
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to create item', 'my-plugin')]);
+        }
     }
     
-    // OUTPUT: Write processed results back
-    public function execute(int $job_id, array $data_packets = []): bool {
-        // Output handlers use latest packet (data_packets[0])
-        $latest_packet = $data_packets[0] ?? null;
-        if (!$latest_packet) return false;
+    public function bulk_operation() {
+        // Security checks
+        if (!wp_verify_nonce($_POST['nonce'], 'dm_custom_page_nonce') || 
+            !current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed', 'my-plugin')]);
+        }
         
-        return $this->update_sheets_data(
-            $latest_packet->metadata['sheet_id'] ?? '',
-            $latest_packet->metadata['output_range'] ?? '', 
-            $latest_packet->content
-        );
+        // Sanitize input
+        $operation = sanitize_text_field($_POST['operation']);
+        $item_ids = array_map('intval', $_POST['item_ids']);
+        
+        // Perform bulk operation
+        $updated_items = [];
+        foreach ($item_ids as $item_id) {
+            $result = $this->perform_operation($operation, $item_id);
+            if ($result) {
+                $updated_items[] = $this->get_item($item_id);
+            }
+        }
+        
+        // Return data only - JavaScript will request templates
+        wp_send_json_success([
+            'updated_items' => $updated_items,
+            'operation' => $operation,
+            'message' => sprintf(
+                __('%d items updated with %s operation', 'my-plugin'),
+                count($updated_items),
+                $operation
+            )
+        ]);
+    }
+    
+    // Template endpoint (universal across all admin pages)
+    public function get_template() {
+        if (!wp_verify_nonce($_POST['nonce'], 'dm_template_nonce')) {
+            wp_send_json_error(['message' => 'Security check failed']);
+        }
+        
+        $template = sanitize_text_field($_POST['template']);
+        $data = json_decode(wp_unslash($_POST['template_data']), true);
+        
+        // Use universal template rendering system
+        $html = apply_filters('dm_render_template', '', $template, $data);
+        
+        if (!empty($html)) {
+            wp_send_json_success(['html' => $html]);
+        } else {
+            wp_send_json_error(['message' => "Template '{$template}' not found"]);
+        }
     }
 }
 ```

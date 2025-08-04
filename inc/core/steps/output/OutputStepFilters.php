@@ -38,7 +38,8 @@ function dm_register_output_step_filters() {
                 'output' => [
                     'label' => __('Output', 'data-machine'),
                     'description' => __('Publish to target destinations', 'data-machine'),
-                    'class' => OutputStep::class
+                    'class' => OutputStep::class,
+                    'position' => 30
                 ]
             ]);
         }

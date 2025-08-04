@@ -38,7 +38,8 @@ function dm_register_receiver_step_filters() {
                 'receiver' => [
                     'label' => __('Receiver', 'data-machine'),
                     'description' => __('Accept webhooks from external platforms (framework implementation - coming soon)', 'data-machine'),
-                    'class' => ReceiverStep::class
+                    'class' => ReceiverStep::class,
+                    'position' => 40
                 ]
             ]);
         }

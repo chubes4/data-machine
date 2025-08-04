@@ -63,7 +63,8 @@ function dm_register_ai_step_filters() {
                     'label' => __('AI Processing', 'data-machine'),
                     'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
                     'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
-                    'consume_all_packets' => true
+                    'consume_all_packets' => true,
+                    'position' => 20
                 ]
             ]);
         }
