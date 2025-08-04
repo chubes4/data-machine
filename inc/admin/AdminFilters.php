@@ -4,6 +4,7 @@ namespace DataMachine\Admin;
 
 use DataMachine\Admin\AdminMenuAssets;
 use DataMachine\Admin\Logger;
+use DataMachine\Admin\EncryptionHelper;
 
 // Legacy admin page callback removed - now using unified system in AdminMenuAssets
 
@@ -20,6 +21,13 @@ function dm_register_admin_filters() {
             return new Logger();
         }
         return $logger;
+    }, 10);
+
+    add_filter('dm_get_encryption_helper', function($encryption_helper) {
+        if ($encryption_helper === null) {
+            return new EncryptionHelper();
+        }
+        return $encryption_helper;
     }, 10);
     
     // Legacy content rendering filter removed - now using unified system

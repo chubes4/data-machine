@@ -466,8 +466,13 @@ class ThreadsAuth {
             // Log success or failure of revocation, but don't stop deletion
             if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
                 // Token revocation failed, but continue with local cleanup
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Threads token revocation failed for user ' . $user_id);
+                $logger = $this->get_logger();
+                if ($logger) {
+                    $error_details = is_wp_error($response) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($response);
+                    $logger->error('Threads token revocation failed during account deletion.', [
+                        'user_id' => $user_id,
+                        'error' => $error_details
+                    ]);
                 }
             }
         }

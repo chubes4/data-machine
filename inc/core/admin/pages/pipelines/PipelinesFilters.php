@@ -166,8 +166,13 @@ function dm_register_pipelines_admin_page_filters() {
                 // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
                 $all_steps = apply_filters('dm_get_steps', []);
                 
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[DM Modal] Step discovery returned: ' . print_r($all_steps, true));
+                // Debug logging using logger service
+                $logger = apply_filters('dm_get_logger', null);
+                if ($logger) {
+                    $logger->debug('Step discovery returned for modal rendering.', [
+                        'step_count' => count($all_steps),
+                        'step_types' => array_keys($all_steps)
+                    ]);
                 }
                 
                 return apply_filters('dm_render_template', '', 'modal/step-selection-cards', array_merge($context, [
