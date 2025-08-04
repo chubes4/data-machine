@@ -140,17 +140,23 @@
          * Update pipeline interface after adding step using template requests
          */
         updatePipelineInterface: function(stepData, pipelineId) {
+            // Check if this is the first real step (only empty step exists)
+            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+            const nonEmptySteps = $pipelineCard.find('.dm-pipeline-step:not(.dm-step-card--empty)').length;
+            const isFirstRealStep = nonEmptySteps === 0;
+            
             // Request pipeline step template with step data
             this.requestTemplate('page/pipeline-step-card', {
                 step: stepData.step_data,
-                pipeline_id: pipelineId
+                pipeline_id: pipelineId,
+                is_first_step: isFirstRealStep
             }).then((stepHtml) => {
                 this.addPipelineStepToInterface({
                     step_html: stepHtml,
                     step_data: stepData.step_data
                 }, pipelineId);
                 
-                // Also update flow steps for this specific pipeline
+                // Also update flow steps using identical logic
                 this.updateFlowSteps(stepData, pipelineId);
             }).catch((error) => {
                 console.error('Failed to render pipeline step template:', error);
@@ -228,46 +234,33 @@
         },
 
         /**
-         * Update flow steps using template request pattern
+         * Update flow steps using identical template request pattern as pipeline steps
          */
         updateFlowSteps: function(stepData, pipelineId) {
-            // Get flow step card data first
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'get_flow_step_card',
+            // Check if this is the first real flow step (only empty step exists)
+            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+            const nonEmptyFlowSteps = $pipelineCard.find('.dm-flow-step:not(.dm-step-card--empty)').length;
+            const isFirstRealFlowStep = nonEmptyFlowSteps === 0;
+            
+            // Use identical logic to pipeline steps
+            this.requestTemplate('page/flow-step-card', {
+                step: stepData.step_data,
+                flow_config: [],
+                flow_id: 'new',
+                is_first_step: isFirstRealFlowStep
+            }).then((flowStepHtml) => {
+                this.addFlowStepToInterface({
+                    html: flowStepHtml,
                     step_type: stepData.step_type,
-                    flow_id: 'new', // For new pipelines
-                    pipeline_id: pipelineId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        // Request template with the template data
-                        this.requestTemplate('page/flow-step-card', response.data.template_data)
-                            .then((flowStepHtml) => {
-                                this.addFlowStepToInterface({
-                                    html: flowStepHtml,
-                                    ...response.data
-                                }, pipelineId);
-                            })
-                            .catch((error) => {
-                                console.error('Failed to render flow step template:', error);
-                            });
-                    } else {
-                        console.error('Error getting flow step card data:', response.data.message);
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error getting flow step card data:', error);
-                }
+                    flow_id: 'new'
+                }, pipelineId);
+            }).catch((error) => {
+                console.error('Failed to render flow step template:', error);
             });
         },
 
         /**
-         * Add flow step to interface (handles both first step and subsequent steps)
+         * Add flow step to interface using identical empty step pattern as pipeline steps
          */
         addFlowStepToInterface: function(flowStepData, pipelineId) {
             // Target the specific pipeline card
@@ -278,19 +271,36 @@
             }
             
             const $flowSteps = $pipelineCard.find('.dm-flow-steps');
-            const $flowPlaceholder = $flowSteps.find('.dm-flow-placeholder');
             
-            // Check if this is the first flow step (replacing placeholder)
-            if ($flowPlaceholder.length) {
-                // Replace placeholder with first flow step (no arrow needed)
-                $flowPlaceholder.replaceWith(flowStepData.html);
+            // Find empty flow step to replace (identical to pipeline logic)
+            const $emptyFlowStep = $flowSteps.find('.dm-step-card--empty').first();
+            
+            if ($emptyFlowStep.length) {
+                // Replace empty flow step with new step content
+                $emptyFlowStep.replaceWith(flowStepData.html);
+                
+                // Add new empty flow step at the end using template request
+                this.requestTemplate('page/flow-step-card', {
+                    step: {
+                        is_empty: true,
+                        step_type: '',
+                        position: ''
+                    },
+                    flow_config: [],
+                    flow_id: 'new'
+                }).then((emptyFlowStepHtml) => {
+                    $flowSteps.append(emptyFlowStepHtml);
+                }).catch((error) => {
+                    console.error('Failed to render empty flow step template:', error);
+                });
             } else {
-                // Add subsequent flow steps - arrow should be included in server response
-                $flowSteps.append(flowStepData.html);
+                console.error('No empty flow step found to replace');
+                return;
             }
             
             // Update flow meta text when first step is added
-            if ($flowSteps.find('.dm-flow-step').length === 1) {
+            const nonEmptyFlowSteps = $flowSteps.find('.dm-flow-step:not(.dm-step-card--empty)').length;
+            if (nonEmptyFlowSteps === 1) {
                 $pipelineCard.find('.dm-flow-meta .dm-placeholder-text').text(
                     dmPipelineBuilder.strings.configureHandlers || 'Configure handlers for each step above'
                 );

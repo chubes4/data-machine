@@ -32,17 +32,38 @@ function dm_register_pipelines_admin_page_filters() {
     
     // Unified admin page registration with embedded asset configuration
     // Eliminates bridge systems through direct dm_get_admin_page integration
-    add_filter('dm_get_admin_page', function($config, $page_slug) {
-        if ($page_slug === 'pipelines') {
-            $pipelines_instance = new Pipelines();
+    add_filter('dm_get_admin_page', function($config, $page_slug, $request_type = null) {
+        if ($page_slug !== 'pipelines') {
+            return $config;
+        }
+        
+        // Return content when specifically requested
+        if ($request_type === 'content') {
+            // Get database services
+            $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+            $db_flows = apply_filters('dm_get_database_service', null, 'flows');
             
-            return [
-                'page_title' => __('Pipelines', 'data-machine'),
-                'menu_title' => __('Pipelines', 'data-machine'),
-                'capability' => 'manage_options',
-                'position' => 10,
-                'content_callback' => [$pipelines_instance, 'render_content'],
-                'templates' => __DIR__ . '/templates/',
+            if (!$db_pipelines || !$db_flows) {
+                return '<div class="dm-admin-error">' . esc_html__('Database services unavailable.', 'data-machine') . '</div>';
+            }
+
+            // Get data
+            $all_pipelines = $db_pipelines->get_all_pipelines();
+            
+            // Use universal template system for the entire page
+            return apply_filters('dm_render_template', '', 'page/pipelines-page', [
+                'all_pipelines' => $all_pipelines,
+                'pipelines_instance' => null // No longer needed
+            ]);
+        }
+        
+        // Return config for other requests (menu registration, etc.)
+        return [
+            'page_title' => __('Pipelines', 'data-machine'),
+            'menu_title' => __('Pipelines', 'data-machine'),
+            'capability' => 'manage_options',
+            'position' => 10,
+            'templates' => __DIR__ . '/templates/',
                 'assets' => [
                     'css' => [
                         'dm-core-modal' => [
@@ -146,7 +167,7 @@ function dm_register_pipelines_admin_page_filters() {
             ];
         }
         return $config;
-    }, 10, 2);
+    }, 10, 3);
     
     // AJAX handler registration - Pipelines manages its own AJAX operations
     add_action('wp_ajax_dm_pipeline_ajax', function() {

@@ -27,8 +27,9 @@ $has_step_config = !$is_empty && !empty($step_config_info);
 
 ?>
 <?php
-// Arrow before every card except the first
-if (($step_index ?? 0) > 0): ?>
+// Arrow before every step except the very first step in the container
+$is_first_step = $is_first_step ?? false;
+if (!$is_first_step): ?>
     <div class="dm-step-arrow">
         <span class="dashicons dashicons-arrow-right-alt"></span>
     </div>

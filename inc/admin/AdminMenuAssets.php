@@ -190,11 +190,11 @@ class AdminMenuAssets {
      * @param string $page_slug Page slug
      */
     private function render_admin_page_content($page_config, $page_slug) {
-        if (isset($page_config['content_callback']) && is_callable($page_config['content_callback'])) {
-            call_user_func($page_config['content_callback']);
-        } else {
-            echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
-            echo '<p>' . esc_html__('Page content not configured.', 'data-machine') . '</p></div>';
+        // Use parameter-based content discovery via existing dm_get_admin_page filter
+        $content = apply_filters('dm_get_admin_page', '', $page_slug, 'content');
+        
+        if (!empty($content)) {
+            echo $content;
         }
     }
 

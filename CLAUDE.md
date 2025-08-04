@@ -16,7 +16,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## Current Status
 
-**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, arrow rendering migration to PHP templates, enhanced logger system with runtime configuration, flow deletion functionality, modal system improvements, **template requesting architecture**, production deployment.
+**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, **arrow rendering architecture with universal is_first_step pattern**, enhanced logger system with runtime configuration, flow deletion functionality, modal system improvements, template requesting architecture, production deployment.
 
 **Known Issues**: Expanding PHPUnit test coverage across components. Flows database schema contains references to user_id field that was removed - flows are now admin-only in this implementation.
 
@@ -151,6 +151,60 @@ class MyStep {
 }
 ```
 
+## Arrow Rendering Architecture
+
+**Universal is_first_step Pattern**: Simplified arrow logic that eliminates positioning complexity and ensures perfect consistency across all contexts.
+
+**Core Arrow Logic**: Every step uses the same universal pattern:
+- **First step in container**: `is_first_step: true` → **NO arrow**
+- **All other steps**: `is_first_step: false` → **arrow rendered**
+- **Empty steps at end**: `is_first_step: false` → **arrow** (shows flow continuation)
+
+### Template Consistency
+
+**Identical Arrow Logic**: Both `pipeline-step-card.php` and `flow-step-card.php` use the same arrow pattern:
+```php
+<?php if (!$is_first_step): ?>
+    <div class="dm-step-card__arrow">
+        <svg class="dm-arrow-icon" viewBox="0 0 24 24">
+            <path d="M8 5l8 7-8 7V5z" fill="currentColor"/>
+        </svg>
+    </div>
+<?php endif; ?>
+```
+
+### JavaScript is_first_step Calculation
+
+**Consistent Logic for Template Requests**:
+```javascript
+// Check if this is the first real step (only empty steps exist)
+const nonEmptySteps = $container.find('.dm-step:not(.dm-step-card--empty)').length;
+const isFirstRealStep = nonEmptySteps === 0;
+
+// Pass to template for consistent arrow rendering
+this.requestTemplate('page/step-card', {
+    step: stepData,
+    is_first_step: isFirstRealStep,
+    pipeline_id: this.pipelineId
+});
+```
+
+### Architecture Benefits
+
+✅ **Eliminates Double Arrows**: No complex position calculations or index tracking  
+✅ **Universal Pattern**: Same logic works for pipelines, flows, and all contexts  
+✅ **Perfect Consistency**: Initial page load and AJAX updates identical  
+✅ **Simplified Logic**: Binary `is_first_step` replaces complex step_index calculations  
+✅ **Empty Step Support**: Handles empty steps at end with proper flow continuation arrows  
+✅ **Template Reusability**: Same arrow logic across all step card templates
+
+### Critical Implementation Rules
+
+**Always Calculate is_first_step**: JavaScript must calculate this value when requesting step templates
+**Template Pattern**: All step templates use `if (!$is_first_step)` for arrow rendering
+**No Position Math**: Never use step positions, indices, or counts for arrow logic
+**Universal Application**: Pattern applies to pipeline steps, flow steps, and any future step contexts
+
 ## Template Rendering Architecture
 
 **JavaScript Template Requesting**: Critical architectural pattern that eliminates HTML generation inconsistencies between initial page load and AJAX updates by maintaining PHP templates as the single source of HTML structure.
@@ -159,12 +213,17 @@ class MyStep {
 
 ### Template Requesting Pattern
 
-**JavaScript Template Requests**:
+**JavaScript Template Requests with Arrow Logic**:
 ```javascript
 // New architecture - JavaScript requests templates with data
+// Calculate is_first_step for consistent arrow rendering
+const nonEmptySteps = $container.find('.dm-step:not(.dm-step-card--empty)').length;
+const isFirstRealStep = nonEmptySteps === 0;
+
 this.requestTemplate('page/pipeline-step-card', {
     step: stepData,
-    pipeline_id: pipelineId
+    pipeline_id: pipelineId,
+    is_first_step: isFirstRealStep  // Critical for arrow consistency
 }).then((stepHtml) => {
     // Insert rendered template into DOM
     $(container).append(stepHtml);
@@ -224,6 +283,7 @@ public function get_template() {
 ✅ **Clean Separation**: JavaScript becomes pure DOM manipulation layer  
 ✅ **Perfect Integration**: Seamless integration with `dm_render_template` filter system  
 ✅ **Maintainability**: Template changes automatically apply to all contexts  
+✅ **Arrow Consistency**: Universal `is_first_step` pattern eliminates double arrows and positioning issues  
 
 ### JavaScript Architecture Principles
 
@@ -256,7 +316,7 @@ public function get_template() {
 - Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="delete-action"`)
 - Manages pipeline state and UI updates via template requesting pattern
 - Direct AJAX operations return data only - HTML via `requestTemplate()` method
-- Arrow rendering handled by PHP templates with `is_last_step` context
+- Arrow rendering handled by PHP templates with universal `is_first_step` logic
 - Never calls modal APIs directly - clean separation maintained
 - Pure DOM manipulation layer - zero HTML generation
 
@@ -351,11 +411,12 @@ Any admin page can use the modal system by:
 4. Additional flows can be created manually for different configurations
 
 **Template Architecture Migration**:
-- **Arrow Rendering**: Moved from JavaScript HTML generation to PHP templates with `is_last_step` logic
+- **Arrow Rendering**: Moved from JavaScript HTML generation to PHP templates with universal `is_first_step` logic
 - **Modal Content**: Eliminated hardcoded placeholder HTML in favor of universal template system
 - **Step Cards**: All HTML generation now handled by PHP templates via `dm_render_template` filter
 - **Template Requesting**: JavaScript requests pre-rendered templates instead of generating HTML
 - **AJAX Consistency**: Perfect HTML consistency between initial page load and AJAX updates
+- **Arrow Consistency**: Universal `is_first_step` pattern eliminates double arrows and positioning issues
 
 ## Flow Management System
 
@@ -457,11 +518,16 @@ class PipelineBuilder {
         }).then(response => response.data.html);
     }
     
-    // Usage example
+    // Usage example with arrow logic
     addStepToUI(stepData) {
+        // Calculate is_first_step for consistent arrow rendering
+        const nonEmptySteps = $('.dm-pipeline-steps').find('.dm-step:not(.dm-step-card--empty)').length;
+        const isFirstRealStep = nonEmptySteps === 0;
+        
         this.requestTemplate('page/pipeline-step-card', {
             step: stepData,
-            pipeline_id: this.pipelineId
+            pipeline_id: this.pipelineId,
+            is_first_step: isFirstRealStep  // Critical for arrow consistency
         }).then(stepHtml => {
             $('.dm-pipeline-steps').append(stepHtml);
         });

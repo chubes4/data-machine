@@ -79,8 +79,8 @@ $is_new_pipeline = empty($pipeline_id);
             ?>
                 <?php echo apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
                     'step' => $step,
-                    'step_index' => $index,
-                    'pipeline_id' => $pipeline_id
+                    'pipeline_id' => $pipeline_id,
+                    'is_first_step' => ($index === 0)
                 ]); ?>
                 <!-- Arrow rendering handled by pipeline-step-card template -->
             <?php endforeach; ?>
