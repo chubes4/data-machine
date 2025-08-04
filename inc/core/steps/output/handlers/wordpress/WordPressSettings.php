@@ -343,4 +343,17 @@ class WordPressSettings {
             'post_date_source' => 'current_date',
         ];
     }
+
+    /**
+     * Determine if authentication is required based on current configuration.
+     *
+     * @param array $current_config Current configuration values for this handler.
+     * @return bool True if authentication is required, false otherwise.
+     */
+    public static function requires_authentication(array $current_config = []): bool {
+        $destination_type = $current_config['destination_type'] ?? 'local';
+        
+        // Only remote destination requires authentication (Remote Locations)
+        return $destination_type === 'remote';
+    }
 }

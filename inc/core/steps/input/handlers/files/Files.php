@@ -34,6 +34,15 @@ class Files {
 	}
 
 	/**
+	 * Get repository instance via filter-based service discovery
+	 *
+	 * @return FilesRepository|null
+	 */
+	private function get_repository(): ?FilesRepository {
+		return apply_filters('dm_get_files_repository', null);
+	}
+
+	/**
 	 * Processes uploaded files and prepares input data.
 	 *
      * @param object $module The full module object containing configuration and context.
@@ -48,33 +57,52 @@ class Files {
             throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
         }
         
-        // Validate user ID
-        if (empty($user_id)) {
-            throw new Exception(esc_html__('User ID not provided.', 'data-machine'));
+        $logger = apply_filters('dm_get_logger', null);
+        $repository = $this->get_repository();
+        
+        if (!$repository) {
+            throw new Exception(esc_html__('Files repository service not available.', 'data-machine'));
+        }
+
+        // Get uploaded files from repository or config
+        $uploaded_files = $source_config['uploaded_files'] ?? [];
+        
+        // If no uploaded files in config, check repository for available files
+        if (empty($uploaded_files)) {
+            $repo_files = $repository->get_all_files();
+            if (empty($repo_files)) {
+                $logger?->debug('Files Input: No files available in repository.', ['module_id' => $module_id]);
+                return ['processed_items' => []];
+            }
+            
+            // Convert repository files to expected format
+            $uploaded_files = array_map(function($file) {
+                return [
+                    'original_name' => $file['filename'],
+                    'persistent_path' => $file['path'],
+                    'size' => $file['size'],
+                    'mime_type' => $this->get_mime_type_from_file($file['path']),
+                    'uploaded_at' => gmdate('Y-m-d H:i:s', $file['modified'])
+                ];
+            }, $repo_files);
         }
         
-        $logger = apply_filters('dm_get_logger', null);
-
-        // Access config from nested structure
-        $config = $source_config['files'] ?? [];
-        
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($module_id, $config);
+        $next_file = $this->find_next_unprocessed_file($module_id, ['uploaded_files' => $uploaded_files]);
         
         if (!$next_file) {
             $logger?->debug('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
-            // Return empty array for no data scenario
             return ['processed_items' => []];
         }
 
-        // No safety nets - configure your file paths correctly or fail
+        // Check if file exists
         if (!file_exists($next_file['persistent_path'])) {
-            throw new Exception("File not found: {$next_file['persistent_path']}. Configure your file paths correctly.");
+            throw new Exception("File not found: {$next_file['persistent_path']}");
         }
 
         // Create input_data_packet using the file path as the identifier
         $file_identifier = $next_file['persistent_path'];
-        $mime_type = $next_file['mime_type'] ?? 'text/plain';
+        $mime_type = $next_file['mime_type'] ?? 'application/octet-stream';
         
         // Read text file content for supported text types
         $content_string = null;
@@ -84,7 +112,7 @@ class Files {
         
         // Create standardized item data
         $item_data = [
-            'content_string' => $content_string, // Text content for text files, null for PDFs/images
+            'content_string' => $content_string, // Text content for text files, null for other types
             'file_info' => [
                 'original_name' => $next_file['original_name'],
                 'mime_type' => $mime_type,
@@ -143,7 +171,19 @@ class Files {
 
 
     /**
+     * Get MIME type from file path using WordPress
+     *
+     * @param string $file_path Path to file
+     * @return string MIME type
+     */
+    private function get_mime_type_from_file(string $file_path): string {
+        $file_info = wp_check_filetype($file_path);
+        return $file_info['type'] ?? 'application/octet-stream';
+    }
+
+    /**
      * Check if a MIME type represents a text file that should be read as content.
+     * Simplified - let AI models handle most file types
      *
      * @param string $mime_type MIME type to check.
      * @return bool True if it's a text file type.
@@ -370,216 +410,36 @@ class Files {
     }
 
     /**
-     * Comprehensive file security validation.
+     * Basic file validation - keep only essential security checks
      *
-     * @param array $file The uploaded file array from $_FILES
-     * @param int $module_id Module ID for logging context
-     * @throws Exception If file fails security validation
+     * @param string $file_path Path to file
+     * @param string $filename Original filename
+     * @throws Exception If file fails basic validation
      */
-    private function validate_file_security(array $file, int $module_id): void {
-        // 1. File size validation
-        $max_file_size = $this->get_max_file_size();
-        if ($file['size'] > $max_file_size) {
-            $error_message = sprintf(
+    private function validate_file_basic(string $file_path, string $filename): void {
+        // Basic file size check to prevent memory issues
+        $file_size = filesize($file_path);
+        if ($file_size === false) {
+            throw new Exception(esc_html__('Cannot determine file size.', 'data-machine'));
+        }
+        
+        // Conservative 32MB limit
+        $max_file_size = 32 * 1024 * 1024; // 32MB
+        if ($file_size > $max_file_size) {
+            throw new Exception(sprintf(
                 /* translators: %1$s: actual file size, %2$s: maximum allowed size */
                 __('File too large: %1$s. Maximum allowed size: %2$s', 'data-machine'),
-                size_format($file['size']),
+                size_format($file_size),
                 size_format($max_file_size)
-            );
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('Files Input: File too large.', [
-                'module_id' => $module_id,
-                'file_size' => $file['size'],
-                'max_size' => $max_file_size
-            ]);
-            throw new Exception(esc_html($error_message));
+            ));
         }
 
-        // 2. File extension validation
-        $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed_extensions = $this->get_allowed_file_extensions();
-        if (!in_array($file_extension, $allowed_extensions)) {
-            $error_message = sprintf(
-                /* translators: %1$s: invalid file extension, %2$s: list of allowed extensions */
-                __('Invalid file extension: %1$s. Allowed extensions: %2$s', 'data-machine'),
-                $file_extension,
-                implode(', ', $allowed_extensions)
-            );
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('Files Input: Invalid file extension.', [
-                'module_id' => $module_id,
-                'extension' => $file_extension,
-                'allowed' => $allowed_extensions
-            ]);
-            throw new Exception(esc_html($error_message));
-        }
-
-        // 3. MIME type validation with magic byte checking
-        $this->validate_mime_type($file, $file_extension, $module_id);
-
-        // 4. Filename sanitization check
-        $this->validate_filename($file['name'], $module_id);
-
-        // 5. Content scanning for basic malware patterns
-        $this->scan_file_content($file['tmp_name'], $module_id);
-    }
-
-    /**
-     * Get maximum allowed file size in bytes.
-     *
-     * @return int Maximum file size in bytes
-     */
-    private function get_max_file_size(): int {
-        // Default 10MB, but respect PHP limits
-        $default_max = 10 * 1024 * 1024; // 10MB
-        $php_max = wp_max_upload_size();
-        return min($default_max, $php_max);
-    }
-
-    /**
-     * Get allowed file extensions.
-     *
-     * @return array Array of allowed file extensions
-     */
-    private function get_allowed_file_extensions(): array {
-        return [
-            'txt',
-            'csv',
-            'json',
-            'pdf',
-            'doc',
-            'docx'
-        ];
-    }
-
-    /**
-     * Validate MIME type against file extension using magic bytes.
-     *
-     * @param array $file The uploaded file array
-     * @param string $extension File extension
-     * @param int $module_id Module ID for logging
-     * @throws Exception If MIME type validation fails
-     */
-    private function validate_mime_type(array $file, string $extension, int $module_id): void {
-        // Get expected MIME types for this extension
-        $extension_mime_map = [
-            'txt' => ['text/plain'],
-            'csv' => ['text/csv', 'text/plain', 'application/csv'],
-            'json' => ['application/json', 'text/plain'],
-            'pdf' => ['application/pdf'],
-            'doc' => ['application/msword'],
-            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-        ];
-
-        if (!isset($extension_mime_map[$extension])) {
-            throw new Exception(esc_html__('Unsupported file extension.', 'data-machine'));
-        }
-
-        // Check reported MIME type
-        $reported_mime = $file['type'];
-        $expected_mimes = $extension_mime_map[$extension];
+        // Only block obviously dangerous extensions
+        $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr'];
+        $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
-        if (!in_array($reported_mime, $expected_mimes)) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('Files Input: MIME type mismatch.', [
-                'module_id' => $module_id,
-                'reported_mime' => $reported_mime,
-                'expected_mimes' => $expected_mimes
-            ]);
-            throw new Exception(esc_html__('File type does not match extension.', 'data-machine'));
-        }
-
-        // Magic byte validation using fileinfo
-        if (function_exists('finfo_open')) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $actual_mime = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-
-            if ($actual_mime && !in_array($actual_mime, $expected_mimes)) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Magic byte MIME type mismatch.', [
-                    'module_id' => $module_id,
-                    'actual_mime' => $actual_mime,
-                    'expected_mimes' => $expected_mimes
-                ]);
-                throw new Exception(esc_html__('File content does not match declared type.', 'data-machine'));
-            }
-        }
-    }
-
-    /**
-     * Validate and sanitize filename.
-     *
-     * @param string $filename Original filename
-     * @param int $module_id Module ID for logging
-     * @throws Exception If filename contains dangerous patterns
-     */
-    private function validate_filename(string $filename, int $module_id): void {
-        // Check for dangerous patterns
-        $dangerous_patterns = [
-            '/\.php$/i',
-            '/\.exe$/i',
-            '/\.bat$/i',
-            '/\.cmd$/i',
-            '/\.scr$/i',
-            '/\.htaccess$/i',
-            '/\.\./',  // Path traversal
-            '/[<>:"|?*]/i'  // Invalid filename characters
-        ];
-
-        foreach ($dangerous_patterns as $pattern) {
-            if (preg_match($pattern, $filename)) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Dangerous filename pattern detected.', [
-                    'module_id' => $module_id,
-                    'filename' => $filename,
-                    'pattern' => $pattern
-                ]);
-                throw new Exception(esc_html__('Filename contains unsafe characters or patterns.', 'data-machine'));
-            }
-        }
-
-        // Check filename length
-        if (strlen($filename) > 255) {
-            throw new Exception(esc_html__('Filename too long. Maximum 255 characters allowed.', 'data-machine'));
-        }
-    }
-
-    /**
-     * Basic content scanning for malware patterns.
-     *
-     * @param string $file_path Path to uploaded file
-     * @param int $module_id Module ID for logging
-     * @throws Exception If suspicious content is detected
-     */
-    private function scan_file_content(string $file_path, int $module_id): void {
-        // Only scan first 8KB for performance
-        $content = file_get_contents($file_path, false, null, 0, 8192);
-        if ($content === false) {
-            throw new Exception(esc_html__('Unable to read uploaded file for security scanning.', 'data-machine'));
-        }
-
-        // Basic malware patterns (extend as needed)
-        $suspicious_patterns = [
-            '/<script[^>]*>/i',
-            '/javascript:/i',
-            '/on\w+\s*=/i',  // onload, onclick, etc.
-            '/eval\s*\(/i',
-            '/base64_decode\s*\(/i',
-            '/shell_exec\s*\(/i',
-            '/system\s*\(/i',
-            '/exec\s*\(/i'
-        ];
-
-        foreach ($suspicious_patterns as $pattern) {
-            if (preg_match($pattern, $content)) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Suspicious content pattern detected.', [
-                    'module_id' => $module_id,
-                    'pattern' => $pattern
-                ]);
-                throw new Exception(esc_html__('Uploaded file contains suspicious content and cannot be processed.', 'data-machine'));
-            }
+        if (in_array($file_extension, $dangerous_extensions)) {
+            throw new Exception(esc_html__('File type not allowed for security reasons.', 'data-machine'));
         }
     }
 }

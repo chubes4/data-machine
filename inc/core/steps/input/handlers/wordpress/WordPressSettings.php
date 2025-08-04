@@ -372,4 +372,17 @@ class WordPressSettings {
             'search' => '',
         ];
     }
+
+    /**
+     * Determine if authentication is required based on current configuration.
+     *
+     * @param array $current_config Current configuration values for this handler.
+     * @return bool True if authentication is required, false otherwise.
+     */
+    public static function requires_authentication(array $current_config = []): bool {
+        $source_type = $current_config['source_type'] ?? 'local';
+        
+        // Only remote airdrop requires authentication (Remote Locations)
+        return $source_type === 'remote_airdrop';
+    }
 }

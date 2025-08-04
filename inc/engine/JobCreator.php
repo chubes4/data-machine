@@ -95,7 +95,17 @@ class JobCreator {
             }
 
             // Schedule Step 1: Pipeline Processing (starts async pipeline at position 0)
-            $action_id = as_schedule_single_action(
+            $scheduler = apply_filters('dm_get_action_scheduler', null);
+            if (!$scheduler) {
+                $logger = apply_filters('dm_get_logger', null);
+                $logger->error('ActionScheduler service not available');
+                return [
+                    'success' => false,
+                    'message' => 'ActionScheduler service not available'
+                ];
+            }
+            
+            $action_id = $scheduler->schedule_single_action(
                 time() + 1, // Start immediately
                 'dm_execute_step',
                 ['job_id' => $job_id, 'step_position' => 0],

@@ -94,6 +94,13 @@ function dm_register_direct_service_filters() {
         return new \DataMachine\Engine\PipelineContext();
     }, 10);
     
+    add_filter('dm_get_action_scheduler', function($service) {
+        if ($service !== null) {
+            return $service;
+        }
+        return new \DataMachine\Engine\ActionSchedulerService();
+    }, 10);
+    
     // Note: Business logic services moved to appropriate core component *Filters.php files:
     // - Logger → Admin component
     // - FluidContextBridge → AI step component  

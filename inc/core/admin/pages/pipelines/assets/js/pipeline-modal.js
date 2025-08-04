@@ -48,6 +48,9 @@
             
             // Schedule form interactions within modal content
             $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
+            
+            // Files handler upload functionality
+            $(document).on('click', '#dm-upload-files', this.handleFileUpload.bind(this));
         },
 
         /**
@@ -268,6 +271,116 @@
             } else {
                 $intervalField.slideUp();
             }
+        },
+
+        /**
+         * Handle file upload for Files handler
+         */
+        handleFileUpload: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const $fileInput = $('#dm-file-upload');
+            const $fileList = $('#dm-uploaded-files-list');
+            const files = $fileInput[0].files;
+            
+            if (!files || files.length === 0) {
+                alert('Please select files to upload.');
+                return;
+            }
+            
+            // Show loading state
+            const originalText = $button.text();
+            $button.text('Uploading...').prop('disabled', true);
+            
+            // Upload each file
+            const uploadPromises = [];
+            for (let i = 0; i < files.length; i++) {
+                uploadPromises.push(this.uploadSingleFile(files[i]));
+            }
+            
+            Promise.all(uploadPromises)
+                .then(results => {
+                    // Add successful uploads to the list
+                    results.forEach(result => {
+                        if (result.success) {
+                            this.addFileToList(result.data.file_info);
+                        }
+                    });
+                    
+                    // Reset form
+                    $fileInput.val('');
+                    $button.text(originalText).prop('disabled', false);
+                    
+                    // Show success message
+                    const successCount = results.filter(r => r.success).length;
+                    if (successCount > 0) {
+                        alert(`${successCount} file(s) uploaded successfully.`);
+                    }
+                })
+                .catch(error => {
+                    console.error('File upload error:', error);
+                    $button.text(originalText).prop('disabled', false);
+                    alert('File upload failed. Please try again.');
+                });
+        },
+
+        /**
+         * Upload a single file via AJAX
+         */
+        uploadSingleFile: function(file) {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('action', 'dm_upload_file');
+                formData.append('file', file);
+                formData.append('nonce', dmPipelineBuilder.upload_file_nonce || wp.ajax.settings.nonce);
+                
+                $.ajax({
+                    url: dmPipelineBuilder.ajax_url || ajaxurl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        resolve(response);
+                    },
+                    error: function(xhr, status, error) {
+                        reject(error);
+                    }
+                });
+            });
+        },
+
+        /**
+         * Add uploaded file to the display list
+         */
+        addFileToList: function(fileInfo) {
+            const $fileList = $('#dm-uploaded-files-list');
+            const sizeFormatted = this.formatFileSize(fileInfo.size);
+            
+            const fileHtml = `
+                <div class="dm-file-item" data-filename="${fileInfo.filename}">
+                    <span class="dashicons dashicons-media-default"></span>
+                    <div class="dm-file-info">
+                        <div class="dm-file-name">${fileInfo.filename}</div>
+                        <div class="dm-file-size">${sizeFormatted}</div>
+                    </div>
+                    <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
+                </div>
+            `;
+            
+            $fileList.append(fileHtml);
+        },
+
+        /**
+         * Format file size for display
+         */
+        formatFileSize: function(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
     };

@@ -236,7 +236,13 @@ class ProcessingOrchestrator {
 	private function schedule_next_step( int $job_id, int $step_position ): bool {
 		$logger = apply_filters('dm_get_logger', null);
 		
-		$action_id = as_schedule_single_action(
+		$scheduler = apply_filters('dm_get_action_scheduler', null);
+		if (!$scheduler) {
+			$logger && $logger->error('ActionScheduler service not available');
+			return false;
+		}
+		
+		$action_id = $scheduler->schedule_single_action(
 			time() + 1, // Schedule immediately
 			'dm_execute_step',
 			['job_id' => $job_id, 'step_position' => $step_position],

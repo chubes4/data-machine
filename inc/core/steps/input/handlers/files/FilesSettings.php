@@ -34,39 +34,15 @@ class FilesSettings {
      */
     public static function get_fields(array $current_config = []): array {
         return [
-            'max_file_size' => [
-                'type' => 'select',
-                'label' => __('Maximum File Size', 'data-machine'),
-                'description' => __('Maximum allowed file size for uploads.', 'data-machine'),
-                'options' => [
-                    '1048576' => __('1 MB', 'data-machine'), // 1 * 1024 * 1024
-                    '5242880' => __('5 MB', 'data-machine'), // 5 * 1024 * 1024
-                    '10485760' => __('10 MB', 'data-machine'), // 10 * 1024 * 1024
-                    '20971520' => __('20 MB', 'data-machine'), // 20 * 1024 * 1024
-                ],
+            'file_upload_section' => [
+                'type' => 'section',
+                'label' => __('File Upload', 'data-machine'),
+                'description' => __('Upload files to be processed by this handler.', 'data-machine'),
             ],
-            'allowed_file_types' => [
-                'type' => 'multiselect',
-                'label' => __('Allowed File Types', 'data-machine'),
-                'description' => __('Select which file types are allowed for upload.', 'data-machine'),
-                'options' => [
-                    'txt' => __('Text Files (.txt)', 'data-machine'),
-                    'csv' => __('CSV Files (.csv)', 'data-machine'),
-                    'json' => __('JSON Files (.json)', 'data-machine'),
-                    'pdf' => __('PDF Files (.pdf)', 'data-machine'),
-                    'doc' => __('Word Documents (.doc)', 'data-machine'),
-                    'docx' => __('Word Documents (.docx)', 'data-machine'),
-                ],
-            ],
-            'enable_content_scanning' => [
+            'auto_cleanup_enabled' => [
                 'type' => 'checkbox',
-                'label' => __('Enable Content Scanning', 'data-machine'),
-                'description' => __('Scan uploaded files for suspicious content patterns.', 'data-machine'),
-            ],
-            'auto_process_files' => [
-                'type' => 'checkbox',
-                'label' => __('Auto-Process Files', 'data-machine'),
-                'description' => __('Automatically process uploaded files in order they were uploaded.', 'data-machine'),
+                'label' => __('Auto-cleanup old files', 'data-machine'),
+                'description' => __('Automatically delete processed files older than 7 days to save disk space.', 'data-machine'),
             ],
         ];
     }
@@ -80,31 +56,23 @@ class FilesSettings {
     public static function sanitize(array $raw_settings): array {
         $sanitized = [];
         
-        // Max file size
-        $valid_sizes = ['1048576', '5242880', '10485760', '20971520'];
-        $max_size = sanitize_text_field($raw_settings['max_file_size'] ?? '10485760');
-        if (!in_array($max_size, $valid_sizes)) {
-            throw new Exception(esc_html__('Invalid max file size parameter provided in settings.', 'data-machine'));
-        }
-        $sanitized['max_file_size'] = $max_size;
+        // Auto-cleanup setting
+        $sanitized['auto_cleanup_enabled'] = isset($raw_settings['auto_cleanup_enabled']) && $raw_settings['auto_cleanup_enabled'] == '1';
         
-        // Allowed file types
-        $valid_types = ['txt', 'csv', 'json', 'pdf', 'doc', 'docx'];
-        $allowed_types = $raw_settings['allowed_file_types'] ?? ['txt', 'csv', 'json', 'pdf', 'docx'];
-        if (is_array($allowed_types)) {
-            $sanitized['allowed_file_types'] = array_intersect($allowed_types, $valid_types);
+        // Uploaded files (if provided through file upload interface)
+        if (isset($raw_settings['uploaded_files']) && is_array($raw_settings['uploaded_files'])) {
+            $sanitized['uploaded_files'] = array_map(function($file) {
+                return [
+                    'original_name' => sanitize_file_name($file['original_name'] ?? ''),
+                    'persistent_path' => sanitize_text_field($file['persistent_path'] ?? ''),
+                    'size' => absint($file['size'] ?? 0),
+                    'mime_type' => sanitize_text_field($file['mime_type'] ?? ''),
+                    'uploaded_at' => sanitize_text_field($file['uploaded_at'] ?? gmdate('Y-m-d H:i:s'))
+                ];
+            }, $raw_settings['uploaded_files']);
         } else {
-            $sanitized['allowed_file_types'] = ['txt', 'csv', 'json', 'pdf', 'docx'];
+            $sanitized['uploaded_files'] = [];
         }
-        
-        // Ensure at least one file type is allowed
-        if (empty($sanitized['allowed_file_types'])) {
-            $sanitized['allowed_file_types'] = ['txt'];
-        }
-        
-        // Boolean settings
-        $sanitized['enable_content_scanning'] = isset($raw_settings['enable_content_scanning']) && $raw_settings['enable_content_scanning'] == '1';
-        $sanitized['auto_process_files'] = isset($raw_settings['auto_process_files']) && $raw_settings['auto_process_files'] == '1';
         
         return $sanitized;
     }
@@ -116,10 +84,8 @@ class FilesSettings {
      */
     public static function get_defaults(): array {
         return [
-            'max_file_size' => '10485760', // 10MB
-            'allowed_file_types' => ['txt', 'csv', 'json', 'pdf', 'docx'],
-            'enable_content_scanning' => true,
-            'auto_process_files' => true,
+            'auto_cleanup_enabled' => true,
+            'uploaded_files' => [],
         ];
     }
 }

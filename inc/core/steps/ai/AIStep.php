@@ -67,16 +67,10 @@ class AIStep {
 
             $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
 
-            // Get step configuration from project or job
-            $step_config = $this->get_step_configuration($job_id, 'ai');
+            // Get step configuration from pipeline/flow context  
+            $step_config = $this->get_pipeline_step_config($job_id);
             if (!$step_config) {
                 return $this->fail_job($job_id, 'AI step configuration not found');
-            }
-
-            // Support handlers array for architectural consistency (typically contains single 'ai' handler)
-            $handlers = $step_config['handlers'] ?? ['ai']; // Default to single AI handler
-            if (!is_array($handlers) || empty($handlers)) {
-                $handlers = ['ai']; // Fallback to default
             }
 
             // Validate required configuration
@@ -93,14 +87,12 @@ class AIStep {
             if (!empty($all_packets)) {
                 $logger->debug('AI Step: Processing with all data packets', [
                     'job_id' => $job_id,
-                    'packets_count' => count($all_packets),
-                    'handlers' => $handlers
+                    'packets_count' => count($all_packets)
                 ]);
             } else {
                 // First step in pipeline - no previous DataPackets
                 $logger->debug('AI Step: First step - no previous data packets available', [
-                    'job_id' => $job_id,
-                    'handlers' => $handlers
+                    'job_id' => $job_id
                 ]);
             }
 
@@ -136,15 +128,15 @@ class AIStep {
             // Use the most recent packet as the primary input for output processing
             $input_packet = end($all_packets);
 
-            // AI configuration handled by AI HTTP Client library's plugin-scoped system
-            // Library manages provider/model/parameters automatically via 'data-machine' plugin_context
-
-            // Prepare AI request with messages - library handles all provider/model configuration
+            // Generate proper step key for AI HTTP Client step-aware configuration
+            $step_key = $this->generate_step_key($job_id);
+            
+            // Prepare AI request with messages for step-aware processing
             $ai_request = ['messages' => $messages];
             
-            // Execute AI request using AI HTTP Client library
-            // Library automatically uses plugin-scoped configuration for provider/model/parameters
-            $ai_response = $ai_http_client->send_step_request('ai', $ai_request);
+            // Execute AI request using AI HTTP Client's step-aware method
+            // This automatically uses step-specific configuration (provider, model, temperature, etc.)
+            $ai_response = $ai_http_client->send_step_request($step_key, $ai_request);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
@@ -217,57 +209,59 @@ class AIStep {
     }
 
     /**
-     * Get step configuration from pipeline or job context
+     * Get pipeline step configuration from pipeline/flow context
      * 
      * @param int $job_id Job ID
-     * @param string $step_name Step name
      * @return array|null Step configuration or null if not found
      */
-    public function get_step_configuration(int $job_id, string $step_name): ?array {
-        // Get configuration from direct database access
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+    private function get_pipeline_step_config(int $job_id): ?array {
+        // Get step configuration from pipeline context service
+        $context = apply_filters('dm_get_context', null, $job_id);
+        if (!$context) {
+            return null;
+        }
+        
+        // Get step data from pipeline context - this contains prompt, title, etc.
+        $step_data = $context->get_current_step_data();
+        
+        return $step_data;
+    }
 
-        // Validate database services
+    /**
+     * Generate step key for AI HTTP Client step-aware configuration
+     * 
+     * @param int $job_id Job ID
+     * @return string Step key for configuration scoping
+     */
+    private function generate_step_key(int $job_id): string {
+        // Get pipeline context for proper step identification
+        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
+        if (!$pipeline_context) {
+            // Fallback to job-based key if pipeline context unavailable
+            return "job_{$job_id}_ai_step";
+        }
+        
+        $current_step = $pipeline_context->get_current_step_name($job_id);
+        $pipeline_id = $this->get_pipeline_id_from_job_id($job_id);
+        
+        // Generate step key: pipeline_123_step_ai_processing_position_2
+        return "pipeline_{$pipeline_id}_step_{$current_step}";
+    }
+
+    /**
+     * Get pipeline ID from job ID
+     * 
+     * @param int $job_id Job ID
+     * @return int|null Pipeline ID or null if not found
+     */
+    private function get_pipeline_id_from_job_id(int $job_id): ?int {
+        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
         if (!$db_jobs) {
             return null;
         }
-
-        // Get job to find pipeline context
-        $job = $db_jobs->get_job($job_id);
-        if (!$job) {
-            return null;
-        }
-
-        // Get step-level AI configuration using AI HTTP Client's OptionsManager
-        if (class_exists('AI_HTTP_Options_Manager')) {
-            
-            // Generate step-specific key for configuration scoping
-            $step_key = $job_id . '_ai_' . $step_name;
-            
-            // Retrieve step-level AI configuration
-            $step_config = AI_HTTP_Options_Manager::get_step_config([
-                'plugin_context' => 'data-machine',
-                'ai_type' => 'llm',
-                'step_key' => $step_key,
-                'config_keys' => ['system_prompt', 'temperature', 'selected_provider', 'selected_model']
-            ]);
-            
-            // Return configuration if found, otherwise return empty config for defaults
-            return $step_config ?: [
-                'system_prompt' => '',
-                'temperature' => 0.7,
-                'selected_provider' => '',
-                'selected_model' => ''
-            ];
-        }
         
-        // Fallback if AI HTTP Client not available - return empty config
-        return [
-            'system_prompt' => '',
-            'temperature' => 0.7,
-            'selected_provider' => '',
-            'selected_model' => ''
-        ];
+        $job = $db_jobs->get_job($job_id);
+        return $job ? ($job->pipeline_id ?? null) : null;
     }
 
     /**

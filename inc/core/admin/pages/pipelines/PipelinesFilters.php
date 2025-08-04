@@ -90,6 +90,7 @@ function dm_register_pipelines_admin_page_filters() {
                                 'data' => [
                                     'ajax_url' => admin_url('admin-ajax.php'),
                                     'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                    'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                     'strings' => [
                                         'error' => __('An error occurred', 'data-machine'),
                                         'success' => __('Success', 'data-machine'),

@@ -46,6 +46,26 @@ function dm_register_remote_locations_database_filters() {
         
         return $service;
     }, 10, 2);
+    
+    // Modal content registration - Remote Locations modal for pipeline integration
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another component
+        if ($content !== null) {
+            return $content;
+        }
+        
+        if ($template === 'remote-locations-manager') {
+            // Get Remote Locations service
+            $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+            
+            return apply_filters('dm_render_template', '', 'modal/remote-locations-manager', [
+                'remote_locations_service' => $db_remote_locations,
+                'existing_locations' => $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : []
+            ]);
+        }
+        
+        return $content;
+    }, 10, 2);
 }
 
 // Auto-register when file loads - achieving complete self-containment
