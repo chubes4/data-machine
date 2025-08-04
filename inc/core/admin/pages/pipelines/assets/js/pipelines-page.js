@@ -81,6 +81,9 @@
             
             // Run now button - page action, not modal content
             $(document).on('click', '.dm-run-now-btn', this.handleRunNow.bind(this));
+            
+            // Listen for handler saving to refresh UI
+            $(document).on('dm-pipeline-modal-saved', this.handleModalSaved.bind(this));
         },
 
 
@@ -788,6 +791,18 @@
                 }
             });
         },
+
+        /**
+         * Handle modal saved event to refresh UI
+         * Refreshes the current page to show updated handler states
+         */
+        handleModalSaved: function(e, data) {
+            // For handler operations, refresh the page to show updated button states
+            if (data && (data.handler_slug || data.step_type)) {
+                console.log('Handler saved, refreshing page to update UI');
+                window.location.reload();
+            }
+        }
 
     };
 

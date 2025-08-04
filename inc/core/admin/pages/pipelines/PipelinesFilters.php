@@ -376,11 +376,13 @@ function dm_handle_save_handler_settings() {
             ];
         }
         
-        // Add handler configuration to step
-        $flow_config['steps'][$step_key]['handlers'][$handler_slug] = [
-            'handler_slug' => $handler_slug,
-            'settings' => $handler_settings,
-            'enabled' => true
+        // Enforce single handler per step - replace any existing handlers
+        $flow_config['steps'][$step_key]['handlers'] = [
+            $handler_slug => [
+                'handler_slug' => $handler_slug,
+                'settings' => $handler_settings,
+                'enabled' => true
+            ]
         ];
         
         // Update flow with new configuration

@@ -218,8 +218,13 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
             <button type="button" class="button button-secondary dm-cancel-settings">
                 <?php esc_html_e('Cancel', 'data-machine'); ?>
             </button>
+            <button type="button" class="button button-secondary dm-modal-open dm-modal-close" 
+                    data-template="handler-selection"
+                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>"}'>
+                <?php esc_html_e('Change Handler Type', 'data-machine'); ?>
+            </button>
             <button type="submit" class="button button-primary dm-save-handler-settings">
-                <?php esc_html_e('Add Handler to Flow', 'data-machine'); ?>
+                <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
             </button>
         </div>
         

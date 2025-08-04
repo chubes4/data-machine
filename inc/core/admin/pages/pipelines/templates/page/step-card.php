@@ -35,7 +35,7 @@ if ($context === 'pipeline') {
     $flow_id = $flow_id ?? '';
     $flow_config = $flow_config ?? [];
     $step_title = $is_empty ? '' : ucfirst(str_replace('_', ' ', $step_type));
-    $step_handlers = $flow_config['steps'][0] ?? []; // Simplified - could use step_type as key
+    $step_handlers = $flow_config['steps'][$step_type]['handlers'] ?? [];
     
     // Dynamic handler discovery using parameter-based filter system (only for non-empty steps)
     $available_handlers = $is_empty ? [] : apply_filters('dm_get_handlers', null, $step_type);
@@ -101,11 +101,24 @@ if ($context === 'pipeline') {
                     <?php else: ?>
                         <!-- Flow actions: Add Handler -->
                         <?php if ($has_handlers && $step_uses_handlers): ?>
-                            <button type="button" class="button button-small dm-modal-open" 
-                                    data-template="handler-selection"
-                                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>"}'>
-                                <?php esc_html_e('Add Handler', 'data-machine'); ?>
-                            </button>
+                            <?php if (empty($step_handlers)): ?>
+                                <!-- No handlers configured - show Add Handler button -->
+                                <button type="button" class="button button-small dm-modal-open" 
+                                        data-template="handler-selection"
+                                        data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>"}'>
+                                    <?php esc_html_e('Add Handler', 'data-machine'); ?>
+                                </button>
+                            <?php else: ?>
+                                <!-- Handler configured - show Edit Handler button -->
+                                <?php
+                                $current_handler = array_keys($step_handlers)[0]; // Get first (and only) handler
+                                ?>
+                                <button type="button" class="button button-small dm-modal-open" 
+                                        data-template="handler-settings-form"
+                                        data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($current_handler); ?>"}'>
+                                    <?php esc_html_e('Edit Handler', 'data-machine'); ?>
+                                </button>
+                            <?php endif; ?>
                         <?php endif; ?>
                     <?php endif; ?>
                 </div>
@@ -119,10 +132,7 @@ if ($context === 'pipeline') {
                             <?php if (!empty($step_handlers)): ?>
                                 <?php foreach ($step_handlers as $handler_key => $handler_config): ?>
                                     <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($handler_key); ?>">
-                                        <span class="dm-handler-name"><?php echo esc_html($handler_config['name'] ?? $handler_key); ?></span>
-                                        <button type="button" class="dm-handler-remove" 
-                                                data-handler-key="<?php echo esc_attr($handler_key); ?>" 
-                                                data-flow-id="<?php echo esc_attr($flow_id); ?>">×</button>
+                                        <span class="dm-handler-name"><?php echo esc_html($handler_config['handler_slug'] ?? $handler_key); ?></span>
                                     </div>
                                 <?php endforeach; ?>
                             <?php else: ?>
