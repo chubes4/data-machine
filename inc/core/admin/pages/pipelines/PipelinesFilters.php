@@ -152,6 +152,11 @@ function dm_register_pipelines_admin_page_filters() {
         $ajax_handler->handle_pipeline_ajax();
     });
     
+    // Handler settings AJAX endpoint - handles "Add Handler to Flow" form submissions
+    add_action('wp_ajax_dm_save_handler_settings', function() {
+        dm_handle_save_handler_settings();
+    });
+    
     // Universal modal AJAX integration - no component-specific handlers needed
     // All modal content routed through unified ModalAjax.php endpoint
     
@@ -280,6 +285,141 @@ function dm_register_pipelines_admin_page_filters() {
         
         return $content;
     }, 10, 2);
+}
+
+/**
+ * Handle AJAX request to save handler settings and add handler to flow
+ * 
+ * This endpoint handles the "Add Handler to Flow" button submissions from handler settings modals.
+ * According to architecture, handlers don't need to be configured before being added to flows.
+ */
+function dm_handle_save_handler_settings() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['handler_settings_nonce'] ?? '', 'dm_save_handler_settings')) {
+        wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
+        return;
+    }
+    
+    // Verify user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => __('Insufficient permissions.', 'data-machine')]);
+        return;
+    }
+    
+    // Get form data
+    $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
+    $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+    $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+    $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+    
+    if (empty($handler_slug) || empty($step_type)) {
+        wp_send_json_error(['message' => __('Handler slug and step type are required.', 'data-machine')]);
+        return;
+    }
+    
+    // Get handler configuration via filter system
+    $handlers = apply_filters('dm_get_handlers', null, $step_type);
+    if (!isset($handlers[$handler_slug])) {
+        wp_send_json_error(['message' => __('Invalid handler for this step type.', 'data-machine')]);
+        return;
+    }
+    
+    $handler_config = $handlers[$handler_slug];
+    
+    // Get settings class to process form data
+    $settings_instance = apply_filters('dm_get_handler_settings', null, $handler_slug);
+    $handler_settings = [];
+    
+    // If handler has settings, sanitize the form data
+    if ($settings_instance && method_exists($settings_instance, 'sanitize')) {
+        $raw_settings = [];
+        
+        // Extract form fields (skip WordPress and system fields)
+        foreach ($_POST as $key => $value) {
+            if (!in_array($key, ['handler_settings_nonce', '_wp_http_referer', 'handler_slug', 'step_type', 'flow_id', 'pipeline_id'])) {
+                $raw_settings[$key] = $value;
+            }
+        }
+        
+        $handler_settings = $settings_instance->sanitize($raw_settings);
+    }
+    
+    // For flow context, add handler to flow configuration
+    if ($flow_id > 0) {
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        if (!$db_flows) {
+            wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
+            return;
+        }
+        
+        // Get current flow
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Flow not found.', 'data-machine')]);
+            return;
+        }
+        
+        // Parse current flow configuration
+        $flow_config = json_decode($flow['flow_config'] ?? '{}', true) ?: [];
+        
+        // Initialize step configuration if it doesn't exist
+        if (!isset($flow_config['steps'])) {
+            $flow_config['steps'] = [];
+        }
+        
+        // Find or create step configuration
+        $step_key = $step_type;
+        if (!isset($flow_config['steps'][$step_key])) {
+            $flow_config['steps'][$step_key] = [
+                'step_type' => $step_type,
+                'handlers' => []
+            ];
+        }
+        
+        // Add handler configuration to step
+        $flow_config['steps'][$step_key]['handlers'][$handler_slug] = [
+            'handler_slug' => $handler_slug,
+            'settings' => $handler_settings,
+            'enabled' => true
+        ];
+        
+        // Update flow with new configuration
+        $success = $db_flows->update_flow($flow_id, [
+            'flow_config' => wp_json_encode($flow_config)
+        ]);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to add handler to flow.', 'data-machine')]);
+            return;
+        }
+        
+        $logger = apply_filters('dm_get_logger', null);
+        $logger?->debug('Handler added to flow successfully.', [
+            'handler_slug' => $handler_slug,
+            'step_type' => $step_type,
+            'flow_id' => $flow_id
+        ]);
+        
+        wp_send_json_success([
+            'message' => sprintf(__('Handler "%s" added to flow successfully.', 'data-machine'), $handler_config['label'] ?? $handler_slug),
+            'handler_slug' => $handler_slug,
+            'step_type' => $step_type,
+            'flow_id' => $flow_id,
+            'handler_config' => $handler_config,
+            'handler_settings' => $handler_settings
+        ]);
+        
+    } else {
+        // For pipeline context (template), just confirm the handler is valid
+        wp_send_json_success([
+            'message' => sprintf(__('Handler "%s" configuration saved.', 'data-machine'), $handler_config['label'] ?? $handler_slug),
+            'handler_slug' => $handler_slug,
+            'step_type' => $step_type,
+            'pipeline_id' => $pipeline_id,
+            'handler_config' => $handler_config,
+            'handler_settings' => $handler_settings
+        ]);
+    }
 }
 
 // Load Pipeline Scheduler component filters

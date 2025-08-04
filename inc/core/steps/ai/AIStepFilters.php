@@ -158,8 +158,8 @@ function dm_register_ai_step_filters() {
             
             // Generate consistent step key aligned with AIStep implementation
             $pipeline_id = $context['pipeline_id'] ?? null;
-            $step_name = $context['step_name'] ?? 'ai_processing';
-            $step_key = $pipeline_id ? "pipeline_{$pipeline_id}_step_{$step_name}" : "temp_ai_step_" . time();
+            $current_step = $context['step_name'] ?? $context['current_step'] ?? 'ai_processing';
+            $step_key = $pipeline_id ? "pipeline_{$pipeline_id}_step_{$current_step}" : "temp_ai_step_" . time();
             
             // Use AI HTTP Client ProviderManagerComponent for complete AI configuration
             if (class_exists('AI_HTTP_ProviderManager_Component')) {

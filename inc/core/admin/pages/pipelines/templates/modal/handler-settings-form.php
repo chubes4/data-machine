@@ -63,6 +63,19 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
     <?php endif; ?>
     
     <form class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
+        <!-- Hidden fields for handler identification -->
+        <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
+        <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type ?? ''); ?>" />
+        <?php 
+        // Add flow_id and pipeline_id from context if available
+        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+        if (!empty($context['flow_id'])): ?>
+        <input type="hidden" name="flow_id" value="<?php echo esc_attr($context['flow_id']); ?>" />
+        <?php endif;
+        if (!empty($context['pipeline_id'])): ?>
+        <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($context['pipeline_id']); ?>" />
+        <?php endif; ?>
+        
         <?php if ($settings_available && $handler_settings): ?>
             <div class="dm-settings-fields">
                 <?php
