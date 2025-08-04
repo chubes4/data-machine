@@ -27,6 +27,9 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 // Load Composer autoloader and dependencies (includes Action Scheduler)
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Initialize Action Scheduler before plugins_loaded hook (required for API functions)
+require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
+
 // Load AI HTTP Client library for unified multi-provider AI integration
 require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
 

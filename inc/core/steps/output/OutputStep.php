@@ -40,7 +40,7 @@ class OutputStep {
         $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
 
         try {
-            $logger->info('Output Step: Starting data publishing (closed-door)', ['job_id' => $job_id]);
+            $logger->debug('Output Step: Starting data publishing (closed-door)', ['job_id' => $job_id]);
 
             // Get job and pipeline configuration
             $job = $db_jobs->get_job($job_id);
@@ -102,7 +102,7 @@ class OutputStep {
             $success = $this->store_step_data_packet($job_id, $result_packet);
 
             if ($success) {
-                $logger->info('Output Step: Multi-handler publishing completed', [
+                $logger->debug('Output Step: Multi-handler publishing completed', [
                     'job_id' => $job_id,
                     'handlers' => $handlers,
                     'handler_count' => count($handlers),
@@ -234,7 +234,7 @@ class OutputStep {
         $failed_handlers = [];
         $handler_results = [];
         
-        $logger->info('Output Step: Starting multi-handler publishing', [
+        $logger->debug('Output Step: Starting multi-handler publishing', [
             'job_id' => $job->job_id,
             'handlers' => $handlers,
             'handler_count' => count($handlers)
@@ -249,7 +249,7 @@ class OutputStep {
                     $successful_handlers[] = $handler_name;
                     $handler_results[$handler_name] = $result;
                     
-                    $logger->info('Output Step: Handler published successfully', [
+                    $logger->debug('Output Step: Handler published successfully', [
                         'job_id' => $job->job_id,
                         'handler' => $handler_name,
                         'result' => $result
@@ -303,7 +303,7 @@ class OutputStep {
             ]
         ];
         
-        $logger->info('Output Step: Multi-handler publishing completed', [
+        $logger->debug('Output Step: Multi-handler publishing completed', [
             'job_id' => $job->job_id,
             'overall_success' => $overall_success,
             'summary' => $summary,

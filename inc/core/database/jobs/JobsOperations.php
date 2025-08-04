@@ -37,7 +37,7 @@ class JobsOperations {
     /**
      * Create a new pipeline+flow-based job record.
      *
-     * @param array $job_data Job data with pipeline_id, flow_id, user_id, flow_config.
+     * @param array $job_data Job data with pipeline_id, flow_id, flow_config.
      * @return int|false The job ID on success, false on failure.
      */
     public function create_job(array $job_data): int|false {
@@ -46,7 +46,6 @@ class JobsOperations {
         
         $pipeline_id = absint($job_data['pipeline_id'] ?? 0);
         $flow_id = absint($job_data['flow_id'] ?? 0);
-        $user_id = absint($job_data['user_id'] ?? 0);
         $flow_config_json = $job_data['flow_config'] ?? '{}';
         
         // Validate required fields
@@ -54,7 +53,6 @@ class JobsOperations {
             $logger && $logger->error('Invalid pipeline+flow-based job data', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'user_id' => $user_id,
                 'flow_config_type' => gettype($flow_config_json)
             ]);
             return false;
@@ -65,8 +63,7 @@ class JobsOperations {
         if (empty($step_sequence)) {
             $logger && $logger->warning('Cannot create pipeline+flow-based job - no pipeline configuration found', [
                 'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'user_id' => $user_id
+                'flow_id' => $flow_id
             ]);
             return false;
         }
@@ -74,7 +71,6 @@ class JobsOperations {
         $data = [
             'pipeline_id' => $pipeline_id,
             'flow_id' => $flow_id,
-            'user_id' => $user_id,
             'status' => 'pending',
             'flow_config' => $flow_config_json,
             'step_sequence' => wp_json_encode($step_sequence),
@@ -82,7 +78,7 @@ class JobsOperations {
             'created_at' => current_time('mysql', 1)
         ];
         
-        $format = ['%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s'];
+        $format = ['%d', '%d', '%s', '%s', '%s', '%s', '%s'];
         
         $inserted = $wpdb->insert($this->table_name, $data, $format);
         
@@ -90,18 +86,16 @@ class JobsOperations {
             $logger && $logger->error('Failed to insert pipeline+flow-based job', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'user_id' => $user_id,
                 'db_error' => $wpdb->last_error
             ]);
             return false;
         }
         
         $job_id = $wpdb->insert_id;
-        $logger && $logger->info('Successfully created pipeline+flow-based job', [
+        $logger && $logger->debug('Successfully created pipeline+flow-based job', [
             'job_id' => $job_id,
             'pipeline_id' => $pipeline_id,
-            'flow_id' => $flow_id,
-            'user_id' => $user_id
+            'flow_id' => $flow_id
         ]);
         
         return $job_id;

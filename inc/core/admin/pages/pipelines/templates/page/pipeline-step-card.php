@@ -26,6 +26,14 @@ $step_config_info = $is_empty ? null : apply_filters('dm_get_step_config', null,
 $has_step_config = !$is_empty && !empty($step_config_info);
 
 ?>
+<?php
+// Arrow before every card except the first
+if (($step_index ?? 0) > 0): ?>
+    <div class="dm-step-arrow">
+        <span class="dashicons dashicons-arrow-right-alt"></span>
+    </div>
+<?php endif; ?>
+
 <div class="dm-step-card dm-pipeline-step<?php echo $is_empty ? ' dm-step-card--empty' : ''; ?>" data-step-type="<?php echo esc_attr($step_type); ?>" data-step-position="<?php echo esc_attr($step_position); ?>">
     <?php if ($is_empty): ?>
         <!-- Empty step - Add Step functionality -->

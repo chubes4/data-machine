@@ -78,7 +78,7 @@ class JobStatusManager {
 		$success = $db_jobs->complete_job($job_id, $status, $error_details);
 		
 		if ($success) {
-			$logger?->info($completion_message, [
+			$logger?->debug($completion_message, [
 				'job_id' => $job_id,
 				'final_status' => $status,
 				'has_error_details' => $error_details !== null
@@ -216,7 +216,7 @@ class JobStatusManager {
 		}
 
 		if ($success) {
-			$logger?->info($log_message, [
+			$logger?->debug($log_message, [
 				'job_id' => $job_id,
 				'previous_status' => $current_status,
 				'new_status' => $new_status

@@ -71,7 +71,7 @@ class TwitterAuth {
      * @return TwitterOAuth|\WP_Error Authenticated connection object or WP_Error on failure.
      */
     public function get_connection(int $user_id) {
-        $this->get_logger() && $this->get_logger()->info('Attempting to get authenticated Twitter connection for user.', ['user_id' => $user_id]);
+        $this->get_logger() && $this->get_logger()->debug('Attempting to get authenticated Twitter connection for user.', ['user_id' => $user_id]);
 
         $credentials = get_user_meta($user_id, self::USER_META_KEY, true);
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
@@ -102,7 +102,7 @@ class TwitterAuth {
 
         try {
             $connection = new TwitterOAuth($consumer_key, $consumer_secret, $decrypted_access_token, $decrypted_access_token_secret);
-            $this->get_logger() && $this->get_logger()->info('Successfully created authenticated Twitter connection for user.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->debug('Successfully created authenticated Twitter connection for user.', ['user_id' => $user_id]);
             return $connection;
         } catch (\Exception $e) {
             $this->get_logger() && $this->get_logger()->error('Exception creating TwitterOAuth connection: ' . $e->getMessage(), ['user_id' => $user_id]);

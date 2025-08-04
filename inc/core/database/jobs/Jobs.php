@@ -261,7 +261,7 @@ class Jobs {
         // Log table creation
         $logger = apply_filters('dm_get_logger', null);
         if ( $logger ) {
-            $logger->info( 'Created jobs database table with pipeline+flow architecture', [
+            $logger->debug( 'Created jobs database table with pipeline+flow architecture', [
                 'table_name' => $table_name,
                 'action' => 'create_table'
             ] );

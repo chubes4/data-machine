@@ -56,13 +56,12 @@ class Pipelines
     /**
      * Render pipeline step card (template level, no handlers).
      */
-    private function render_pipeline_step_card($step, $pipeline_id = null, $is_last_step = false)
+    private function render_pipeline_step_card($step, $pipeline_id = null)
     {
         // Use the same template as AJAX for consistency - ensures Configure AI button appears
         echo apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
             'step' => $step,
-            'pipeline_id' => $pipeline_id,
-            'is_last_step' => $is_last_step
+            'pipeline_id' => $pipeline_id
         ]);
     }
 
@@ -82,13 +81,13 @@ class Pipelines
     /**
      * Render flow step card (with handler configuration).
      */
-    private function render_flow_step_card($step, $flow_config, $flow_id, $is_last_step = false)
+    private function render_flow_step_card($step, $flow_config, $flow_id)
     {
         echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
             'step' => $step,
             'flow_config' => $flow_config,
-            'flow_id' => $flow_id,
-            'is_last_step' => $is_last_step
+            'flow_id' => $flow_id
+            // Arrow visibility handled by templates with index-based logic
         ]);
     }
 

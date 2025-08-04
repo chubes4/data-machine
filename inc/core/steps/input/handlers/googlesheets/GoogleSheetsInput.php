@@ -63,7 +63,7 @@ class GoogleSheetsInput {
         }
 
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->info('Google Sheets Input: Starting Google Sheets data processing.', ['module_id' => $module_id]);
+        $logger?->debug('Google Sheets Input: Starting Google Sheets data processing.', ['module_id' => $module_id]);
 
         // Access config from nested structure
         $config = $source_config['googlesheets_input'] ?? [];
@@ -99,7 +99,7 @@ class GoogleSheetsInput {
         $range_param = urlencode($worksheet_name . '!' . $cell_range);
         $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
         
-        $logger?->info('Google Sheets Input: Fetching spreadsheet data.', [
+        $logger?->debug('Google Sheets Input: Fetching spreadsheet data.', [
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
             'range' => $cell_range,
@@ -141,12 +141,12 @@ class GoogleSheetsInput {
 
         $sheet_data = json_decode($response_body, true);
         if (empty($sheet_data['values'])) {
-            $logger?->info('Google Sheets Input: No data found in specified range.', ['module_id' => $module_id]);
+            $logger?->debug('Google Sheets Input: No data found in specified range.', ['module_id' => $module_id]);
             return ['processed_items' => []];
         }
 
         $rows = $sheet_data['values'];
-        $logger?->info('Google Sheets Input: Retrieved spreadsheet data.', [
+        $logger?->debug('Google Sheets Input: Retrieved spreadsheet data.', [
             'total_rows' => count($rows),
             'module_id' => $module_id
         ]);
@@ -249,7 +249,7 @@ class GoogleSheetsInput {
         }
 
         $found_count = count($eligible_items_packets);
-        $logger?->info('Google Sheets Input: Finished processing Google Sheets data.', [
+        $logger?->debug('Google Sheets Input: Finished processing Google Sheets data.', [
             'found_count' => $found_count,
             'total_rows' => count($rows),
             'module_id' => $module_id

@@ -68,7 +68,7 @@ class Bluesky {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->info('Starting Bluesky output handling.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Starting Bluesky output handling.', ['user_id' => $user_id]);
         
         // 1. Get config
         $output_config = $module_job_config['output_config']['bluesky'] ?? [];
@@ -188,12 +188,12 @@ class Bluesky {
         $image_alt_text = $parser ? ($parser->get_title() ?: $parser->get_content_summary(50)) : '';
 
         if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL)) {
-            $logger && $logger->info('Attempting to upload image to Bluesky.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
+            $logger && $logger->debug('Attempting to upload image to Bluesky.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
             
             $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_source_url, $image_alt_text);
             
             if (!is_wp_error($uploaded_image_blob) && isset($uploaded_image_blob['blob'])) {
-                $logger && $logger->info('Bluesky image uploaded successfully.', ['user_id' => $user_id]);
+                $logger && $logger->debug('Bluesky image uploaded successfully.', ['user_id' => $user_id]);
                 $embed_data = [
                     '$type' => 'app.bsky.embed.images',
                     'images' => [
@@ -250,7 +250,7 @@ class Bluesky {
             $post_uri = $post_result['uri'] ?? '';
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
 
-            $logger && $logger->info('Successfully posted to Bluesky.', ['user_id' => $user_id, 'post_uri' => $post_uri]);
+            $logger && $logger->debug('Successfully posted to Bluesky.', ['user_id' => $user_id, 'post_uri' => $post_uri]);
 
             return [
                 'success' => true,

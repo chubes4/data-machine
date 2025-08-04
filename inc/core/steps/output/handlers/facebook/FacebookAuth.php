@@ -138,7 +138,7 @@ class FacebookAuth {
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
     public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
-        $this->get_logger() && $this->get_logger()->info('Handling Facebook OAuth callback.', ['user_id' => $user_id]);
+        $this->get_logger() && $this->get_logger()->debug('Handling Facebook OAuth callback.', ['user_id' => $user_id]);
 
         // 1. Verify state
         $stored_state = get_user_meta($user_id, 'dm_facebook_oauth_state', true);
@@ -272,7 +272,7 @@ class FacebookAuth {
 
         // Store details
         update_user_meta($user_id, self::USER_META_KEY, $account_details);
-        $this->get_logger() && $this->get_logger()->info(
+        $this->get_logger() && $this->get_logger()->debug(
             'Facebook account authenticated. User and Page credentials stored.',
             [
                 'user_id' => $user_id,
@@ -376,7 +376,7 @@ class FacebookAuth {
      * @return array|\WP_Error ['access_token' => ..., 'expires_at' => timestamp] or WP_Error
      */
     private function exchange_for_long_lived_token(string $short_lived_token): array|\WP_Error {
-        $this->get_logger() && $this->get_logger()->info('Exchanging Facebook short-lived token for long-lived token.');
+        $this->get_logger() && $this->get_logger()->debug('Exchanging Facebook short-lived token for long-lived token.');
         $params = [
             'grant_type'        => 'fb_exchange_token',
             'client_id'         => $this->get_client_id(),
@@ -412,7 +412,7 @@ class FacebookAuth {
         $expires_in = $data['expires_in'] ?? 3600 * 24 * 60; // Default to ~60 days if not provided
         $expires_at = time() + intval($expires_in);
 
-        $this->get_logger() && $this->get_logger()->info('Successfully obtained Facebook long-lived token.');
+        $this->get_logger() && $this->get_logger()->debug('Successfully obtained Facebook long-lived token.');
 
         return [
             'access_token' => $data['access_token'],
@@ -428,7 +428,7 @@ class FacebookAuth {
      * @return array|\WP_Error An array containing the first page's 'id', 'name', and 'access_token', or WP_Error on failure.
      */
     private function get_page_credentials(string $user_access_token, int $user_id): array|\WP_Error {
-        $this->get_logger() && $this->get_logger()->info('Fetching Facebook page credentials.', ['user_id' => $user_id]);
+        $this->get_logger() && $this->get_logger()->debug('Fetching Facebook page credentials.', ['user_id' => $user_id]);
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
 
         // Use HttpService for external override capability
@@ -472,7 +472,7 @@ class FacebookAuth {
             return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'data-machine'));
         }
 
-        $this->get_logger() && $this->get_logger()->info('Successfully fetched credentials for Facebook page.', ['user_id' => $user_id, 'page_id' => $first_page['id']]);
+        $this->get_logger() && $this->get_logger()->debug('Successfully fetched credentials for Facebook page.', ['user_id' => $user_id, 'page_id' => $first_page['id']]);
 
         return [
             'id'           => $first_page['id'],
@@ -586,7 +586,7 @@ class FacebookAuth {
             // Redirect with a generic or specific error code
             wp_redirect(add_query_arg('auth_error', $error_code, admin_url('admin.php?page=dm-project-management')));
         } else {
-            $this->get_logger() && $this->get_logger()->info('Facebook OAuth Callback Successful.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->debug('Facebook OAuth Callback Successful.', ['user_id' => $user_id]);
             wp_redirect(add_query_arg('auth_success', 'facebook', admin_url('admin.php?page=dm-project-management')));
         }
         exit;

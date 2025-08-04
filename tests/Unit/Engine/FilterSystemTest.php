@@ -328,7 +328,7 @@ class FilterSystemTest extends TestCase {
         $this->assertArrayHasKey('mock_input', $input_handlers);
         
         // Test service functionality
-        $logger->info('Test log message');
+        $logger->debug('Test log message');
         $log_entries = MockLogger::getLogEntries();
         $this->assertCount(1, $log_entries);
         $this->assertEquals('Test log message', $log_entries[0]['message']);

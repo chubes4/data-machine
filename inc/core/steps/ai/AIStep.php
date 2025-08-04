@@ -67,7 +67,7 @@ class AIStep {
                 return $this->fail_job($job_id, 'AI HTTP client service unavailable');
             }
 
-            $logger->info('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
+            $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
 
             // Get step configuration from project or job
             $step_config = $this->get_step_configuration($job_id, 'ai');
@@ -93,14 +93,14 @@ class AIStep {
             $all_packets = $data_packets;
             
             if (!empty($all_packets)) {
-                $logger->info('AI Step: Processing with all data packets', [
+                $logger->debug('AI Step: Processing with all data packets', [
                     'job_id' => $job_id,
                     'packets_count' => count($all_packets),
                     'handlers' => $handlers
                 ]);
             } else {
                 // First step in pipeline - no previous DataPackets
-                $logger->info('AI Step: First step - no previous data packets available', [
+                $logger->debug('AI Step: First step - no previous data packets available', [
                     'job_id' => $job_id,
                     'handlers' => $handlers
                 ]);
@@ -192,7 +192,7 @@ class AIStep {
             $success = $this->store_step_data_packet($job_id, $ai_output_packet);
 
             if ($success) {
-                $logger->info('AI Step: Processing completed successfully', [
+                $logger->debug('AI Step: Processing completed successfully', [
                     'job_id' => $job_id,
                     'content_length' => strlen($ai_content),
                     'model' => $ai_response['data']['model'] ?? 'unknown',

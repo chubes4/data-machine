@@ -525,7 +525,7 @@ class WordPress {
                     $assigned_tag_names = [$first_tag_name];
                     if (count($parsed_data['tags']) > 1) {
                         $logger = apply_filters('dm_get_logger', null);
-                        $logger && $logger->info("Remote Publish: Instruct mode - Sending only first tag '{$first_tag_name}'. AI provided: " . implode(', ', $parsed_data['tags']), ['location_id' => $location_id]);
+                        $logger && $logger->debug("Remote Publish: Instruct mode - Sending only first tag '{$first_tag_name}'. AI provided: " . implode(', ', $parsed_data['tags']), ['location_id' => $location_id]);
                     }
                 } else {
                     $assigned_tag_names = [];

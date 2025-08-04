@@ -14,12 +14,14 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract variables for template use - supports both pipeline and step deletion
-$delete_type = $delete_type ?? 'step'; // 'pipeline' or 'step'
+// Extract variables for template use - supports pipeline, step, and flow deletion
+$delete_type = $delete_type ?? 'step'; // 'pipeline', 'step', or 'flow'
 $step_type = $step_type ?? 'unknown';
 $step_position = $step_position ?? 'unknown';
 $step_label = $step_label ?? ucfirst(str_replace('_', ' ', $step_type));
 $pipeline_name = $pipeline_name ?? __('Unknown Pipeline', 'data-machine');
+$flow_name = $flow_name ?? __('Unknown Flow', 'data-machine');
+$flow_id = $flow_id ?? null;
 $affected_flows = $affected_flows ?? [];
 $affected_jobs = $affected_jobs ?? [];
 $pipeline_id = $pipeline_id ?? null;
@@ -33,6 +35,8 @@ $pipeline_id = $pipeline_id ?? null;
         <div class="dm-warning-title">
             <?php if ($delete_type === 'pipeline'): ?>
                 <h3><?php echo esc_html(sprintf(__('Delete Pipeline "%s"?', 'data-machine'), $pipeline_name)); ?></h3>
+            <?php elseif ($delete_type === 'flow'): ?>
+                <h3><?php echo esc_html(sprintf(__('Delete Flow "%s"?', 'data-machine'), $flow_name)); ?></h3>
             <?php else: ?>
                 <h3><?php echo esc_html(sprintf(__('Delete "%s" Step (Position %s)?', 'data-machine'), $step_label, $step_position)); ?></h3>
             <?php endif; ?>
@@ -43,6 +47,8 @@ $pipeline_id = $pipeline_id ?? null;
         <p class="dm-warning-description">
             <?php if ($delete_type === 'pipeline'): ?>
                 <?php esc_html_e('This action will permanently delete the entire pipeline template and all associated flows.', 'data-machine'); ?>
+            <?php elseif ($delete_type === 'flow'): ?>
+                <?php esc_html_e('This action will permanently delete this flow instance and all its configuration settings.', 'data-machine'); ?>
             <?php else: ?>
                 <?php esc_html_e('This action will permanently remove this step from the pipeline template.', 'data-machine'); ?>
             <?php endif; ?>
@@ -52,6 +58,8 @@ $pipeline_id = $pipeline_id ?? null;
             <div class="dm-affected-flows">
                 <?php if ($delete_type === 'pipeline'): ?>
                     <h4><?php esc_html_e('The following flows will be permanently deleted:', 'data-machine'); ?></h4>
+                <?php elseif ($delete_type === 'flow'): ?>
+                    <!-- Flows don't have sub-flows, so this section would be empty for flow deletion -->
                 <?php else: ?>
                     <h4><?php esc_html_e('This will also affect the following flows:', 'data-machine'); ?></h4>
                 <?php endif; ?>
@@ -68,6 +76,8 @@ $pipeline_id = $pipeline_id ?? null;
                 <p class="dm-cascade-warning">
                     <?php if ($delete_type === 'pipeline'): ?>
                         <strong><?php esc_html_e('All flows, their configurations, and associated job history will be permanently deleted.', 'data-machine'); ?></strong>
+                    <?php elseif ($delete_type === 'flow'): ?>
+                        <strong><?php esc_html_e('The flow configuration and any associated job history will be permanently deleted.', 'data-machine'); ?></strong>
                     <?php else: ?>
                         <strong><?php esc_html_e('All step instances and their configurations will be removed from these flows.', 'data-machine'); ?></strong>
                     <?php endif; ?>
@@ -77,6 +87,8 @@ $pipeline_id = $pipeline_id ?? null;
             <div class="dm-no-flows">
                 <?php if ($delete_type === 'pipeline'): ?>
                     <p class="dm-info"><?php esc_html_e('No flows are associated with this pipeline.', 'data-machine'); ?></p>
+                <?php elseif ($delete_type === 'flow'): ?>
+                    <!-- Flows don't have dependencies, so no message needed -->
                 <?php else: ?>
                     <p class="dm-info"><?php esc_html_e('No flows are currently using this step.', 'data-machine'); ?></p>
                 <?php endif; ?>
@@ -105,9 +117,11 @@ $pipeline_id = $pipeline_id ?? null;
     <div class="dm-modal-actions">
         <button type="button" class="button button-primary button-large dm-modal-close" 
                 data-template="delete-action"
-                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
             <?php if ($delete_type === 'pipeline'): ?>
                 <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
+            <?php elseif ($delete_type === 'flow'): ?>
+                <?php esc_html_e('Delete Flow', 'data-machine'); ?>
             <?php else: ?>
                 <?php esc_html_e('Delete Step', 'data-machine'); ?>
             <?php endif; ?>

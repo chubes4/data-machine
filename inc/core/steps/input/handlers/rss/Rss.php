@@ -60,7 +60,7 @@ class Rss {
         }
 
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->info('RSS Input: Starting RSS feed processing.', ['module_id' => $module_id]);
+        $logger?->debug('RSS Input: Starting RSS feed processing.', ['module_id' => $module_id]);
 
         // Access config from nested structure
         $config = $source_config['rss'] ?? [];
@@ -99,7 +99,7 @@ class Rss {
         }
 
         // Fetch the RSS feed
-        $logger?->info('RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'module_id' => $module_id]);
+        $logger?->debug('RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'module_id' => $module_id]);
         
         // Use HTTP service for feed fetching
         $http_service = apply_filters('dm_get_http_service', null);
@@ -127,7 +127,7 @@ class Rss {
         }
 
         // Parse the RSS feed
-        $logger?->info('RSS Input: Parsing RSS feed content.', ['module_id' => $module_id]);
+        $logger?->debug('RSS Input: Parsing RSS feed content.', ['module_id' => $module_id]);
         
         // Disable WordPress automatic feed parsing errors
         libxml_use_internal_errors(true);
@@ -166,7 +166,7 @@ class Rss {
         }
 
         if (empty($items)) {
-            $logger?->info('RSS Input: No items found in RSS feed.', ['module_id' => $module_id]);
+            $logger?->debug('RSS Input: No items found in RSS feed.', ['module_id' => $module_id]);
             return ['processed_items' => []];
         }
 
@@ -284,7 +284,7 @@ class Rss {
         }
 
         $found_count = count($eligible_items_packets);
-        $logger?->info('RSS Input: Finished processing RSS feed.', [
+        $logger?->debug('RSS Input: Finished processing RSS feed.', [
             'found_count' => $found_count,
             'total_checked' => $total_checked,
             'module_id' => $module_id

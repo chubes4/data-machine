@@ -41,14 +41,12 @@ class Logger {
         switch (strtolower($level_string)) {
             case 'debug':
                 return Level::Debug;
-            case 'info':
-                return Level::Info;
             case 'error':
                 return Level::Error; // This will include warnings per Monolog hierarchy
             case 'none':
                 return null; // No logging
             default:
-                return Level::Info;
+                return Level::Debug; // Default to full logging if invalid level
         }
     }
 
@@ -85,7 +83,7 @@ class Logger {
 
             try {
                 // Get configurable log level from WordPress options
-                $log_level_setting = get_option('dm_log_level', 'info');
+                $log_level_setting = get_option('dm_log_level', 'error');
                 $log_level = $this->get_monolog_level($log_level_setting);
                 
                 // If log level is 'none', don't add any handlers (disables logging)
@@ -213,14 +211,14 @@ class Logger {
         // Check file size
         if ( filesize( $log_file ) > $max_size_bytes ) {
             $cleanup_needed = true;
-            $this->info( "Log file cleanup triggered: Size " . round( filesize( $log_file ) / 1024 / 1024, 2 ) . "MB exceeds limit of {$max_size_mb}MB" );
+            $this->debug( "Log file cleanup triggered: Size " . round( filesize( $log_file ) / 1024 / 1024, 2 ) . "MB exceeds limit of {$max_size_mb}MB" );
         }
         
         // Check file age
         $file_age_days = ( time() - filemtime( $log_file ) ) / DAY_IN_SECONDS;
         if ( $file_age_days > $max_age_days ) {
             $cleanup_needed = true;
-            $this->info( "Log file cleanup triggered: Age " . round( $file_age_days, 1 ) . " days exceeds limit of {$max_age_days} days" );
+            $this->debug( "Log file cleanup triggered: Age " . round( $file_age_days, 1 ) . " days exceeds limit of {$max_age_days} days" );
         }
 
         if ( $cleanup_needed ) {
@@ -254,7 +252,7 @@ class Logger {
             
             // Move current log to backup
             if ( $wp_filesystem->move( $log_file, $backup_file ) ) {
-                $this->info( "Log file rotated successfully. Old log archived as data-machine.log.old" );
+                $this->debug( "Log file rotated successfully. Old log archived as data-machine.log.old" );
                 return true;
             } else {
                 $this->error( "Failed to rotate log file" );
@@ -344,7 +342,7 @@ class Logger {
         }
         
         if ($success) {
-            $this->info('Log files cleared successfully.');
+            $this->debug('Log files cleared successfully.');
         } else {
             $this->error('Failed to clear some log files.');
         }
@@ -359,9 +357,8 @@ class Logger {
      */
     public static function get_available_log_levels(): array {
         return [
-            'debug' => 'Debug (verbose logging)',
-            'info' => 'Info (normal logging)',
-            'error' => 'Error (errors and warnings only)',
+            'debug' => 'Debug (full logging)',
+            'error' => 'Error (problems only)',
             'none' => 'None (disable logging)'
         ];
     }
@@ -372,7 +369,7 @@ class Logger {
      * @return string Current log level
      */
     public function get_level(): string {
-        return get_option('dm_log_level', 'info');
+        return get_option('dm_log_level', 'error');
     }
 
     /**

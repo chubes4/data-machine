@@ -27,7 +27,15 @@ $has_handlers = !empty($available_handlers);
 $step_uses_handlers = ($step_type !== 'ai');
 
 ?>
-<div class="dm-step-card dm-flow-step" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>" data-step-position="<?php echo esc_attr($step_position); ?>">
+<div class="dm-flow-step-container" data-flow-id="<?php echo esc_attr($flow_id); ?>" data-step-type="<?php echo esc_attr($step_type); ?>" data-step-position="<?php echo esc_attr($step_position); ?>">
+    <!-- Arrow before step except the first -->
+    <?php if (!($is_first_step ?? true)): ?>
+        <div class="dm-flow-step-arrow">
+            <span class="dashicons dashicons-arrow-right-alt"></span>
+        </div>
+    <?php endif; ?>
+
+    <div class="dm-step-card dm-flow-step">
     <div class="dm-step-header">
         <div class="dm-step-title"><?php echo esc_html(ucfirst(str_replace('_', ' ', $step_type))); ?></div>
         <div class="dm-step-actions">
@@ -61,19 +69,5 @@ $step_uses_handlers = ($step_type !== 'ai');
             </div>
         <?php endif; ?>
     </div>
+    </div>
 </div>
-
-<?php
-// Conditional arrow rendering - show arrow unless this is the last step  
-$show_arrow = !($is_last_step ?? false);
-?>
-<?php if ($show_arrow): ?>
-    <div class="dm-flow-step-arrow">
-        <span class="dashicons dashicons-arrow-right-alt"></span>
-    </div>
-<?php else: ?>
-    <!-- Empty arrow container for consistent spacing -->
-    <div class="dm-flow-step-arrow dm-flow-step-arrow--hidden">
-        <span class="dashicons dashicons-arrow-right-alt" style="visibility: hidden;"></span>
-    </div>
-<?php endif; ?>

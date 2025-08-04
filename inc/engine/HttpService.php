@@ -44,7 +44,7 @@ class HttpService {
      * @return array|WP_Error Parsed response data or WP_Error on failure.
      */
     public function get($url, $args = [], $context = 'API Request') {
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Making GET request to {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Making GET request to {$context}.", [
             'url' => $url
         ]);
 
@@ -108,7 +108,7 @@ class HttpService {
             ]);
         }
 
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Successful response from {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successful response from {$context}.", [
             'url' => $url,
             'status_code' => $status_code,
             'content_length' => strlen($body)
@@ -139,7 +139,7 @@ class HttpService {
             $args['body'] = $data;
         }
 
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Making POST request to {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Making POST request to {$context}.", [
             'url' => $url,
             'data_size' => is_array($data) ? count($data) : strlen($data)
         ]);
@@ -203,7 +203,7 @@ class HttpService {
             ]);
         }
 
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Successful POST to {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successful POST to {$context}.", [
             'url' => $url,
             'status_code' => $status_code
         ]);
@@ -260,7 +260,7 @@ class HttpService {
             ));
         }
 
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Successfully parsed JSON from {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successfully parsed JSON from {$context}.", [
             'item_count' => count($decoded)
         ]);
 
@@ -288,7 +288,7 @@ class HttpService {
                 $pagination['next_url'] = $matches[1];
                 $pagination['has_more'] = true;
                 
-                $this->get_logger() && $this->get_logger()->info('Handler HTTP: Found pagination link.', [
+                $this->get_logger() && $this->get_logger()->debug('Handler HTTP: Found pagination link.', [
                     'next_url' => $pagination['next_url']
                 ]);
             }
@@ -393,7 +393,7 @@ class HttpService {
     private function make_request($url, $args, $context) {
         $method = $args['method'] ?? 'REQUEST';
         
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Making {$method} request to {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Making {$method} request to {$context}.", [
             'url' => $url,
             'method' => $method
         ]);
@@ -462,7 +462,7 @@ class HttpService {
             ]);
         }
 
-        $this->get_logger() && $this->get_logger()->info("Handler HTTP: Successful {$method} to {$context}.", [
+        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successful {$method} to {$context}.", [
             'url' => $url,
             'method' => $method,
             'status_code' => $status_code

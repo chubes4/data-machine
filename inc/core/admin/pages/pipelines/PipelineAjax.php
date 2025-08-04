@@ -41,6 +41,10 @@ class PipelineAjax
             case 'get_modal':
                 $this->get_modal();
                 break;
+            
+            case 'get_template':
+                $this->get_template();
+                break;
             // get_step_selection removed - now handled by universal modal system
             
             case 'add_step':
@@ -83,6 +87,10 @@ class PipelineAjax
                 $this->run_flow_now();
                 break;
             
+            case 'delete_flow':
+                $this->delete_flow_from_pipeline();
+                break;
+            
             default:
                 wp_send_json_error(['message' => __('Invalid action', 'data-machine')]);
         }
@@ -108,6 +116,34 @@ class PipelineAjax
         } else {
             wp_send_json_error([
                 'message' => sprintf(__('Modal template "%s" not found', 'data-machine'), $template)
+            ]);
+        }
+    }
+
+    /**
+     * Get rendered template with provided data
+     * Dedicated endpoint for template rendering to maintain architecture consistency
+     */
+    private function get_template()
+    {
+        $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
+        $template_data = json_decode(wp_unslash($_POST['template_data'] ?? '{}'), true) ?: [];
+
+        if (empty($template)) {
+            wp_send_json_error(['message' => __('Template name is required', 'data-machine')]);
+        }
+
+        // Use universal template rendering system
+        $content = apply_filters('dm_render_template', '', $template, $template_data);
+        
+        if ($content) {
+            wp_send_json_success([
+                'html' => $content,
+                'template' => $template
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => sprintf(__('Template "%s" not found', 'data-machine'), $template)
             ]);
         }
     }
@@ -211,38 +247,13 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
         }
 
-        // Calculate if this new step is the last step for arrow rendering
-        $updated_steps = $current_steps; // Current steps now includes the new step
-        $sorted_steps = $updated_steps;
-        usort($sorted_steps, function($a, $b) {
-            return ($a['position'] ?? 0) <=> ($b['position'] ?? 0);
-        });
-        $max_position = !empty($sorted_steps) ? end($sorted_steps)['position'] : 0;
-        $is_new_step_last = ($next_position >= $max_position);
-
-        // Generate empty step HTML for adding at the end (replaces JavaScript HTML generation)
-        $empty_step_html = apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
-            'step' => [
-                'is_empty' => true,
-                'step_type' => '',
-                'position' => ''
-            ],
-            'pipeline_id' => $pipeline_id,
-            'is_last_step' => true // Empty step is always last
-        ]);
-
         wp_send_json_success([
             'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
             'step_type' => $step_type,
             'step_config' => $step_config,
             'pipeline_id' => $pipeline_id,
             'position' => $next_position,
-            'step_html' => apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
-                'step' => $new_step,
-                'pipeline_id' => $pipeline_id,
-                'is_last_step' => $is_new_step_last
-            ]),
-            'empty_step_html' => $empty_step_html
+            'step_data' => $new_step
         ]);
     }
 
@@ -296,26 +307,23 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Failed to create flow', 'data-machine')]);
         }
 
-        // Get the created flow for template rendering
+        // Get the created flow data
         $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             wp_send_json_error(['message' => __('Failed to retrieve created flow', 'data-machine')]);
         }
-
-        // Render the flow instance card template
-        $flow_card_html = apply_filters('dm_render_template', '', 'page/flow-instance-card', ['flow' => $flow]);
 
         wp_send_json_success([
             'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
             'flow_id' => $flow_id,
             'flow_name' => $flow_name,
             'pipeline_id' => $pipeline_id,
-            'flow_card_html' => $flow_card_html
+            'flow_data' => $flow
         ]);
     }
 
     /**
-     * Generate flow step card HTML using template system
+     * Get flow step card data for template rendering
      */
     private function get_flow_step_card()
     {
@@ -332,6 +340,11 @@ class PipelineAjax
             wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
         }
 
+        // Check if this is the first flow step by counting existing steps in flows
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $flows = $db_flows ? $db_flows->get_flows_by_pipeline($_POST['pipeline_id'] ?? 0) : [];
+        $is_first_step = empty($flows) || empty($flows[0]['flow_config'] ?? []);
+
         // Prepare data for template
         $template_data = [
             'step' => [
@@ -340,20 +353,15 @@ class PipelineAjax
             ],
             'flow_config' => [],  // Empty flow config for new steps
             'flow_id' => $flow_id,
-            'is_last_step' => false // Default to false for new flow step cards - position context not available here
+            'is_first_step' => $is_first_step  // Template uses this to determine arrow
         ];
 
-        // Render template
-        $html = apply_filters('dm_render_template', '', 'page/flow-step-card', $template_data);
-
         wp_send_json_success([
-            'html' => $html,
+            'template_data' => $template_data,
             'step_type' => $step_type,
             'flow_id' => $flow_id
         ]);
     }
-
-
 
     // handler-settings content removed - now handled by universal modal system via PipelinesFilters.php
 
@@ -511,18 +519,18 @@ class PipelineAjax
         // Log the deletion
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
-            $logger->info("Deleted step '{$step_type}' from pipeline '{$pipeline_name}' (ID: {$pipeline_id}). Affected {$flow_count} flows.");
+            $logger->debug("Deleted step at position '{$step_position}' from pipeline '{$pipeline_name}' (ID: {$pipeline_id}). Affected {$flow_count} flows.");
         }
 
         wp_send_json_success([
             'message' => sprintf(
-                __('Step "%s" deleted successfully from pipeline "%s". %d flows were affected.', 'data-machine'),
-                ucfirst(str_replace('_', ' ', $step_type)),
+                __('Step at position %s deleted successfully from pipeline "%s". %d flows were affected.', 'data-machine'),
+                $step_position,
                 $pipeline_name,
                 $flow_count
             ),
             'pipeline_id' => (int)$pipeline_id,
-            'step_type' => $step_type,
+            'step_position' => $step_position,
             'affected_flows' => $flow_count,
             'remaining_steps' => count($updated_steps)
         ]);
@@ -568,7 +576,7 @@ class PipelineAjax
             // Continue even if flow creation fails - pipeline is more important
         }
 
-        // Get the created pipeline for template rendering
+        // Get the created pipeline data
         $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Failed to retrieve created pipeline', 'data-machine')]);
@@ -577,17 +585,12 @@ class PipelineAjax
         // Get existing flows (should include the newly created draft flow)
         $existing_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
 
-        // Render the pipeline card template with flows
-        $pipeline_card_html = apply_filters('dm_render_template', '', 'page/pipeline-card', [
-            'pipeline' => $pipeline,
-            'existing_flows' => $existing_flows
-        ]);
-
         wp_send_json_success([
             'message' => __('Draft pipeline created successfully', 'data-machine'),
             'pipeline_id' => $pipeline_id,
             'pipeline_name' => $pipeline_data['pipeline_name'],
-            'pipeline_card_html' => $pipeline_card_html
+            'pipeline_data' => $pipeline,
+            'existing_flows' => $existing_flows
         ]);
     }
 
@@ -685,7 +688,6 @@ class PipelineAjax
         $result = $job_creator->create_and_schedule_job(
             (int)$flow['pipeline_id'],
             $flow_id,
-            get_current_user_id(), // Admin-only plugin - use current admin user
             'run_now'
         );
 
@@ -772,7 +774,7 @@ class PipelineAjax
         // Log the deletion
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
-            $logger->info("Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows and {$job_count} jobs.");
+            $logger->debug("Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows and {$job_count} jobs.");
         }
 
         wp_send_json_success([
@@ -785,6 +787,79 @@ class PipelineAjax
             'pipeline_id' => $pipeline_id,
             'pipeline_name' => $pipeline_name,
             'deleted_flows' => $flow_count,
+            'deleted_jobs' => $job_count
+        ]);
+    }
+
+    /**
+     * Delete flow from pipeline
+     * Deletes the flow instance and any associated jobs
+     */
+    private function delete_flow_from_pipeline()
+    {
+        $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+        
+        if (empty($flow_id)) {
+            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
+        }
+
+        // Get database services using filter-based discovery
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        
+        if (!$db_flows || !$db_jobs) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger && $logger->error('Database services unavailable in delete_flow_from_pipeline');
+            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
+        }
+
+        // Get flow data before deletion for logging and response
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
+        }
+        
+        $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
+        $pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
+        
+        // Get affected jobs for cascade deletion
+        $affected_jobs = $db_jobs->get_jobs_for_flow($flow_id);
+        $job_count = count($affected_jobs);
+
+        // Cascade deletion: jobs → flow
+        // Delete all jobs associated with this flow first
+        if (!empty($affected_jobs)) {
+            foreach ($affected_jobs as $job) {
+                $job_id = is_object($job) ? $job->job_id : $job['job_id'];
+                $success = $db_jobs->delete_job($job_id);
+                if (!$success) {
+                    wp_send_json_error(['message' => sprintf(__('Failed to delete job %d during flow deletion', 'data-machine'), $job_id)]);
+                }
+            }
+        }
+
+        // Delete the flow itself
+        $success = $db_flows->delete_flow($flow_id);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to delete flow', 'data-machine')]);
+        }
+
+        // Log the deletion
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->debug("Deleted flow '{$flow_name}' (ID: {$flow_id}) with cascade deletion of {$job_count} jobs.");
+        }
+
+        wp_send_json_success([
+            'message' => sprintf(
+                __('Flow "%s" deleted successfully. %d associated jobs were also deleted.', 'data-machine'),
+                $flow_name,
+                $job_count
+            ),
+            'flow_id' => $flow_id,
+            'flow_name' => $flow_name,
+            'pipeline_id' => $pipeline_id,
             'deleted_jobs' => $job_count
         ]);
     }

@@ -15,65 +15,46 @@ if (!class_exists('DataMachine\Core\Constants')) {
     class Constants {
 
         /**
-         * Get all allowed cron schedule intervals via WordPress filter.
-         * Allows third-party plugins to add custom scheduling intervals.
+         * Get Action Scheduler intervals for flow scheduling.
+         * Direct interval data for Action Scheduler - no WordPress cron involvement.
          * 
          * @return array Array of schedule definitions with 'label' and 'interval' keys.
          */
-        public static function get_cron_schedules(): array {
-            // Default core schedules
-            $default_schedules = [
+        public static function get_scheduler_intervals(): array {
+            return [
                 'every_5_minutes' => [
-                    'label'    => 'Every 5 Minutes',
+                    'label'    => __('Every 5 Minutes', 'data-machine'),
                     'interval' => 300 // 5 * 60
                 ],
                 'hourly'          => [
-                    'label'    => 'Hourly',
+                    'label'    => __('Hourly', 'data-machine'),
                     'interval' => HOUR_IN_SECONDS
                 ],
                 'every_2_hours'   => [
-                    'label'    => 'Every 2 Hours',
+                    'label'    => __('Every 2 Hours', 'data-machine'),
                     'interval' => HOUR_IN_SECONDS * 2
                 ],
                 'every_4_hours'   => [
-                    'label'    => 'Every 4 Hours',
+                    'label'    => __('Every 4 Hours', 'data-machine'),
                     'interval' => HOUR_IN_SECONDS * 4
                 ],
                 'qtrdaily'        => [
-                    'label'    => 'Every 6 Hours',   // Quarter-daily
+                    'label'    => __('Every 6 Hours', 'data-machine'),
                     'interval' => HOUR_IN_SECONDS * 6
                 ],
                 'twicedaily'      => [
-                    'label'    => 'Twice Daily',
+                    'label'    => __('Twice Daily', 'data-machine'),
                     'interval' => HOUR_IN_SECONDS * 12
                 ],
                 'daily'           => [
-                    'label'    => 'Daily',
+                    'label'    => __('Daily', 'data-machine'),
                     'interval' => DAY_IN_SECONDS
                 ],
                 'weekly'          => [
-                    'label'    => 'Weekly',
+                    'label'    => __('Weekly', 'data-machine'),
                     'interval' => WEEK_IN_SECONDS
                 ],
             ];
-
-            /**
-             * Filter to allow third-party plugins to add custom CRON schedule intervals.
-             * 
-             * @param array $schedules Array of schedule definitions.
-             *                        Key: schedule slug
-             *                        Value: array with 'label' (display name) and 'interval' (seconds)
-             * 
-             * Example usage:
-             * add_filter('dm_cron_schedules', function($schedules) {
-             *     $schedules['every_15_minutes'] = [
-             *         'label' => 'Every 15 Minutes',
-             *         'interval' => 900 // 15 * 60
-             *     ];
-             *     return $schedules;
-             * });
-             */
-            return apply_filters('dm_cron_schedules', $default_schedules);
         }
 
 
@@ -93,76 +74,45 @@ if (!class_exists('DataMachine\Core\Constants')) {
         // --- Helper Methods for accessing constants ---
 
         /**
-         * Get all allowed cron interval slugs.
+         * Get all scheduler interval slugs.
          *
          * @return array
          */
-        public static function get_all_cron_intervals(): array {
-            return array_keys(self::get_cron_schedules());
+        public static function get_all_scheduler_intervals(): array {
+            return array_keys(self::get_scheduler_intervals());
         }
 
         /**
-         * Get cron interval slugs allowed for Project-level scheduling.
-         * Excludes intervals like 'every_5_minutes'.
-         *
-         * @return array
-         */
-        public static function get_project_cron_intervals(): array {
-            $excluded = ['every_5_minutes'];
-            return array_keys(array_diff_key(self::get_cron_schedules(), array_flip($excluded)));
-        }
-
-         /**
-         * Get cron intervals allowed for Module-level scheduling (excluding project/manual).
-         *
-         * @return array
-         */
-        public static function get_module_cron_intervals(): array {
-            // Currently all defined schedules are allowed for modules if not 'project_schedule' or 'manual'
-            return array_keys(self::get_cron_schedules());
-        }
-
-        /**
-         * Get cron schedule intervals allowed for Module validation
-         * (includes special values like 'project_schedule' and 'manual').
-         *
-         * @return array
-         */
-        public static function get_allowed_module_intervals_for_validation(): array {
-            return array_merge(['project_schedule', 'manual'], array_keys(self::get_cron_schedules()));
-        }
-
-        /**
-         * Get the display label for a given cron interval slug.
+         * Get the display label for a given scheduler interval slug.
          *
          * @param string $interval The interval slug (e.g., 'daily').
          * @return string|null The display label or null if not found.
          */
-        public static function get_cron_label(string $interval): ?string {
-            $schedules = self::get_cron_schedules();
+        public static function get_scheduler_label(string $interval): ?string {
+            $schedules = self::get_scheduler_intervals();
             return $schedules[$interval]['label'] ?? null;
         }
 
         /**
-         * Get the interval in seconds for a given cron interval slug.
+         * Get the interval in seconds for a given scheduler interval slug.
          *
          * @param string $interval The interval slug (e.g., 'daily').
          * @return int|null The interval in seconds or null if not found.
          */
-        public static function get_cron_interval_seconds(string $interval): ?int {
-            $schedules = self::get_cron_schedules();
+        public static function get_scheduler_interval_seconds(string $interval): ?int {
+            $schedules = self::get_scheduler_intervals();
             return $schedules[$interval]['interval'] ?? null;
         }
 
         /**
-         * Get the cron schedules array suitable for wp_localize_script
+         * Get the scheduler intervals array suitable for wp_localize_script
          * (contains only label for UI purposes).
          *
          * @return array
          */
-        public static function get_cron_schedules_for_js(): array {
+        public static function get_scheduler_intervals_for_js(): array {
             $js_schedules = [];
-            $schedules = self::get_cron_schedules();
+            $schedules = self::get_scheduler_intervals();
             foreach ($schedules as $slug => $details) {
                 $js_schedules[$slug] = $details['label'];
             }

@@ -113,7 +113,7 @@ class ProcessingOrchestrator {
 				return false;
 			}
 			
-			$logger->info( 'Executing pipeline step', [
+			$logger->debug( 'Executing pipeline step', [
 				'job_id' => $job_id,
 				'pipeline_id' => $pipeline_id,
 				'flow_id' => $flow_id,
@@ -176,7 +176,7 @@ class ProcessingOrchestrator {
 			$all_data_packets = $this->get_all_previous_data_packets( $job_id, $step_position, $logger );
 			$result = $step_instance->execute( $job_id, $all_data_packets );
 			
-			$logger->info( 'Step executed with data packets array', [
+			$logger->debug( 'Step executed with data packets array', [
 				'job_id' => $job_id,
 				'step_position' => $step_position,
 				'class' => $step_class,
@@ -195,14 +195,14 @@ class ProcessingOrchestrator {
 						return false;
 					}
 					
-					$logger->info( 'Scheduled next step', [
+					$logger->debug( 'Scheduled next step', [
 						'current_position' => $step_position,
 						'next_position' => $next_step_position,
 						'job_id' => $job_id
 					] );
 				} else {
 					// Final step completed successfully
-					$logger->info( 'Pipeline completed successfully', [
+					$logger->debug( 'Pipeline completed successfully', [
 						'final_position' => $step_position,
 						'job_id' => $job_id
 					] );
@@ -266,7 +266,7 @@ class ProcessingOrchestrator {
 		$logger = apply_filters('dm_get_logger', null);
 		
 		if ( ! empty( $job->pipeline_id ) ) {
-			$logger && $logger->info( 'Using pipeline_id from job', [
+			$logger && $logger->debug( 'Using pipeline_id from job', [
 				'job_id' => $job->job_id ?? 'unknown',
 				'pipeline_id' => $job->pipeline_id
 			] );
@@ -290,7 +290,7 @@ class ProcessingOrchestrator {
 		$logger = apply_filters('dm_get_logger', null);
 		
 		if ( ! empty( $job->flow_id ) ) {
-			$logger && $logger->info( 'Using flow_id from job', [
+			$logger && $logger->debug( 'Using flow_id from job', [
 				'job_id' => $job->job_id ?? 'unknown',
 				'flow_id' => $job->flow_id
 			] );
@@ -440,7 +440,7 @@ class ProcessingOrchestrator {
 	private function get_all_previous_data_packets( int $job_id, int $step_position, object $logger ): array {
 		// First step gets empty array (input steps generate their own data)
 		if ( $step_position === 0 ) {
-			$logger->info( 'First step - no previous DataPackets available', [
+			$logger->debug( 'First step - no previous DataPackets available', [
 				'job_id' => $job_id,
 				'step_position' => $step_position
 			] );

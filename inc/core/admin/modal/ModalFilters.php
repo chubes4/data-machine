@@ -36,54 +36,8 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_modal_system_filters() {
     
-    // Register core modal assets globally for any page that needs modals
-    add_filter('dm_get_page_assets', function($assets, $page_slug) {
-        // Pages that use the universal modal system
-        $modal_pages = ['pipelines', 'jobs', 'logs'];
-        
-        if (in_array($page_slug, $modal_pages)) {
-            // Initialize assets array if null
-            if (!is_array($assets)) {
-                $assets = [];
-            }
-            
-            // Ensure CSS and JS arrays exist
-            if (!isset($assets['css'])) {
-                $assets['css'] = [];
-            }
-            if (!isset($assets['js'])) {
-                $assets['js'] = [];
-            }
-            
-            // Add core modal CSS with high priority (load before page-specific assets)
-            $assets['css']['dm-core-modal'] = [
-                'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
-                'deps' => [],
-                'media' => 'all'
-            ];
-            
-            // Add core modal JavaScript with proper localization
-            $assets['js']['dm-core-modal'] = [
-                'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
-                'deps' => ['jquery'],
-                'in_footer' => true,
-                'localize' => [
-                    'object' => 'dmCoreModal',
-                    'data' => [
-                        'ajax_url' => admin_url('admin-ajax.php'),
-                        'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
-                        'strings' => [
-                            'loading' => __('Loading...', 'data-machine'),
-                            'error' => __('Error', 'data-machine'),
-                            'close' => __('Close', 'data-machine')
-                        ]
-                    ]
-                ]
-            ];
-        }
-        
-        return $assets;
-    }, 5, 2); // Priority 5 = loads before page-specific assets (priority 10)
+    // Note: Modal assets are now included directly in page-specific asset configurations
+    // This eliminates the unused dm_get_page_assets filter and simplifies the asset loading system
     
     // Include modal template dynamically when universal modal system is loaded
     add_action('admin_footer', function() {

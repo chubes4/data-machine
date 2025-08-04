@@ -25,6 +25,38 @@
         },
 
         /**
+         * Request template rendering from server
+         * Maintains architecture consistency by using PHP templates only
+         */
+        requestTemplate: function(templateName, templateData) {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: dmPipelineBuilder.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_pipeline_ajax',
+                        pipeline_action: 'get_template',
+                        template: templateName,
+                        template_data: JSON.stringify(templateData),
+                        nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            resolve(response.data.html);
+                        } else {
+                            console.error('Template rendering failed:', response.data.message);
+                            reject(response.data.message);
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        console.error('Template request failed:', error);
+                        reject(error);
+                    }
+                });
+            });
+        },
+
+        /**
          * Bind event handlers
          */
         bindEvents: function() {
@@ -105,18 +137,25 @@
         },
 
         /**
-         * Update pipeline interface after adding step using AJAX-generated templates
+         * Update pipeline interface after adding step using template requests
          */
         updatePipelineInterface: function(stepData, pipelineId) {
-            // Use the step HTML returned from add_step AJAX call
-            if (stepData.step_html) {
-                this.addPipelineStepToInterface(stepData, pipelineId);
+            // Request pipeline step template with step data
+            this.requestTemplate('page/pipeline-step-card', {
+                step: stepData.step_data,
+                pipeline_id: pipelineId
+            }).then((stepHtml) => {
+                this.addPipelineStepToInterface({
+                    step_html: stepHtml,
+                    step_data: stepData.step_data
+                }, pipelineId);
                 
                 // Also update flow steps for this specific pipeline
                 this.updateFlowSteps(stepData, pipelineId);
-            } else {
-                console.error('No step HTML provided by server');
-            }
+            }).catch((error) => {
+                console.error('Failed to render pipeline step template:', error);
+                alert('Error rendering step template');
+            });
         },
 
         /**
@@ -143,15 +182,21 @@
                 // True blocks approach: replace empty step with new step content
                 $emptyStep.replaceWith(stepHtml);
                 
-                // Add new empty step at the end using server-generated HTML
-                if (stepCardData.empty_step_html) {
-                    $pipelineSteps.append(stepCardData.empty_step_html);
-                } else {
-                    console.error('No empty step HTML provided by server');
-                }
+                // Add new empty step at the end using template request
+                this.requestTemplate('page/pipeline-step-card', {
+                    step: {
+                        is_empty: true,
+                        step_type: '',
+                        position: ''
+                    },
+                    pipeline_id: pipelineId
+                }).then((emptyStepHtml) => {
+                    $pipelineSteps.append(emptyStepHtml);
+                }).catch((error) => {
+                    console.error('Failed to render empty step template:', error);
+                });
                 
-                // Update arrows between steps
-                this.updateStepArrows($pipelineSteps);
+                // Arrow rendering handled by PHP templates
             } else {
                 console.error('No empty step found to replace');
                 return;
@@ -171,7 +216,7 @@
          */
         updateStepArrows: function($pipelineSteps) {
             // Arrow rendering now handled by PHP templates with conditional logic
-            // No JavaScript manipulation needed - templates include arrows based on is_last_step context
+            // No JavaScript manipulation needed - templates include arrows
         },
 
         /**
@@ -179,14 +224,14 @@
          */
         updateFlowStepArrows: function($flowSteps) {
             // Arrow rendering now handled by PHP templates with conditional logic
-            // No JavaScript manipulation needed - templates include arrows based on is_last_step context
+            // No JavaScript manipulation needed - templates include arrows
         },
 
         /**
-         * Update flow steps using AJAX-generated HTML with proper filter-based rendering
+         * Update flow steps using template request pattern
          */
         updateFlowSteps: function(stepData, pipelineId) {
-            // Make AJAX call to get properly rendered flow step card
+            // Get flow step card data first
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
@@ -195,19 +240,28 @@
                     pipeline_action: 'get_flow_step_card',
                     step_type: stepData.step_type,
                     flow_id: 'new', // For new pipelines
+                    pipeline_id: pipelineId,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.addFlowStepToInterface(response.data, pipelineId);
+                        // Request template with the template data
+                        this.requestTemplate('page/flow-step-card', response.data.template_data)
+                            .then((flowStepHtml) => {
+                                this.addFlowStepToInterface({
+                                    html: flowStepHtml,
+                                    ...response.data
+                                }, pipelineId);
+                            })
+                            .catch((error) => {
+                                console.error('Failed to render flow step template:', error);
+                            });
                     } else {
-                        console.error('Error getting flow step card:', response.data.message);
-                        // No fallback - server should always provide proper template
+                        console.error('Error getting flow step card data:', response.data.message);
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error getting flow step card:', error);
-                    // No fallback - server should always provide proper template
+                    console.error('AJAX Error getting flow step card data:', error);
                 }
             });
         },
@@ -228,15 +282,12 @@
             
             // Check if this is the first flow step (replacing placeholder)
             if ($flowPlaceholder.length) {
-                // Replace placeholder with first flow step
+                // Replace placeholder with first flow step (no arrow needed)
                 $flowPlaceholder.replaceWith(flowStepData.html);
             } else {
-                // Add subsequent flow steps
+                // Add subsequent flow steps - arrow should be included in server response
                 $flowSteps.append(flowStepData.html);
             }
-            
-            // Update arrows between flow steps
-            this.updateFlowStepArrows($flowSteps);
             
             // Update flow meta text when first step is added
             if ($flowSteps.find('.dm-flow-step').length === 1) {
@@ -300,7 +351,7 @@
         },
 
         /**
-         * Add new flow card to the interface using server-rendered template
+         * Add new flow card to the interface using template request
          */
         addNewFlowToInterface: function(flowData, pipelineId) {
             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
@@ -317,14 +368,18 @@
                 $noFlows.remove();
             }
 
-            // Use server-rendered HTML from AJAX response
-            if (flowData.flow_card_html) {
-                $flowsList.append(flowData.flow_card_html);
-            }
-
-            // Update flow count in pipeline header
-            const flowCount = $pipelineCard.find('.dm-flow-instance-card').length;
-            $pipelineCard.find('.dm-flow-count').text(flowCount + ' flow' + (flowCount > 1 ? 's' : ''));
+            // Request flow instance card template
+            this.requestTemplate('page/flow-instance-card', {
+                flow: flowData.flow_data
+            }).then((flowCardHtml) => {
+                $flowsList.append(flowCardHtml);
+                
+                // Update flow count in pipeline header
+                const flowCount = $pipelineCard.find('.dm-flow-instance-card').length;
+                $pipelineCard.find('.dm-flow-count').text(flowCount + ' flow' + (flowCount > 1 ? 's' : ''));
+            }).catch((error) => {
+                console.error('Failed to render flow card template:', error);
+            });
         },
 
 
@@ -526,23 +581,30 @@
         addNewPipelineCardToPage: function(pipelineData) {
             const $pipelinesList = $('.dm-pipelines-list');
             
-            // Insert new pipeline at top of list (newest-first positioning)
-            // Find the first existing pipeline card and insert before it, or prepend if none exist
-            const $firstPipelineCard = $pipelinesList.find('.dm-pipeline-card').first();
-            
-            if ($firstPipelineCard.length) {
-                // Insert before the first existing pipeline (maintains newest-first order)
-                $firstPipelineCard.before(pipelineData.pipeline_card_html);
-            } else {
-                // No existing pipelines, prepend to the list (before Add button)
-                $pipelinesList.prepend(pipelineData.pipeline_card_html);
-            }
-            
-            // Focus on the pipeline name input in the new card
-            setTimeout(() => {
-                const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
-                $newCard.find('.dm-pipeline-title-input').focus().select();
-            }, 100);
+            // Request pipeline card template
+            this.requestTemplate('page/pipeline-card', {
+                pipeline: pipelineData.pipeline_data,
+                existing_flows: pipelineData.existing_flows
+            }).then((pipelineCardHtml) => {
+                // Insert new pipeline at top of list (newest-first positioning)
+                const $firstPipelineCard = $pipelinesList.find('.dm-pipeline-card').first();
+                
+                if ($firstPipelineCard.length) {
+                    // Insert before the first existing pipeline (maintains newest-first order)
+                    $firstPipelineCard.before(pipelineCardHtml);
+                } else {
+                    // No existing pipelines, prepend to the list (before Add button)
+                    $pipelinesList.prepend(pipelineCardHtml);
+                }
+                
+                // Focus on the pipeline name input in the new card
+                setTimeout(() => {
+                    const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
+                    $newCard.find('.dm-pipeline-title-input').focus().select();
+                }, 100);
+            }).catch((error) => {
+                console.error('Failed to render pipeline card template:', error);
+            });
         },
 
 
@@ -565,11 +627,17 @@
             const deleteType = contextData.delete_type || 'step';
             const stepPosition = contextData.step_position;
             const pipelineId = contextData.pipeline_id;
+            const flowId = contextData.flow_id;
             
             // Validation based on deletion type
             if (deleteType === 'pipeline') {
                 if (!pipelineId) {
                     console.error('Missing pipeline ID for pipeline deletion');
+                    return;
+                }
+            } else if (deleteType === 'flow') {
+                if (!flowId) {
+                    console.error('Missing flow ID for flow deletion');
                     return;
                 }
             } else {
@@ -586,13 +654,19 @@
             // Prepare AJAX data based on deletion type
             const ajaxData = {
                 action: 'dm_pipeline_ajax',
-                pipeline_action: deleteType === 'pipeline' ? 'delete_pipeline' : 'delete_step',
-                pipeline_id: pipelineId,
                 nonce: dmPipelineBuilder.pipeline_ajax_nonce
             };
             
-            // Add step position only for step deletion
-            if (deleteType === 'step') {
+            // Set action and parameters based on deletion type
+            if (deleteType === 'pipeline') {
+                ajaxData.pipeline_action = 'delete_pipeline';
+                ajaxData.pipeline_id = pipelineId;
+            } else if (deleteType === 'flow') {
+                ajaxData.pipeline_action = 'delete_flow';
+                ajaxData.flow_id = flowId;
+            } else {
+                ajaxData.pipeline_action = 'delete_step';
+                ajaxData.pipeline_id = pipelineId;
                 ajaxData.step_position = stepPosition;
             }
             
@@ -611,6 +685,12 @@
                                 $(this).remove();
                                 
                             });
+                        } else if (deleteType === 'flow') {
+                            // Flow deletion - remove specific flow instance card
+                            const $flowCard = $(`.dm-flow-instance-card[data-flow-id="${flowId}"]`);
+                            $flowCard.fadeOut(300, function() {
+                                $(this).remove();
+                            });
                         } else {
                             // Step deletion - existing logic
                             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
@@ -619,9 +699,8 @@
                             $pipelineCard.find(`.dm-pipeline-step[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
                                 $(this).remove();
                                 
-                                // Update arrows after step removal
+                                // Arrow rendering handled by PHP templates
                                 const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
-                                PipelineBuilder.updateStepArrows($pipelineSteps);
                                 
                                 // Update step count for this specific pipeline
                                 const stepCount = $pipelineCard.find('.dm-pipeline-step:not(.dm-placeholder-step)').length;
@@ -638,12 +717,11 @@
                             });
                             
                             // Remove corresponding flow step by position (same position as pipeline step)
-                            $pipelineCard.find(`.dm-flow-step[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
+                            $pipelineCard.find(`.dm-flow-step-container[data-step-position="${stepPosition}"]`).fadeOut(300, function() {
                                 $(this).remove();
                                 
-                                // Update flow arrows after step removal
+                                // Arrow rendering handled by PHP templates
                                 const $flowSteps = $pipelineCard.find('.dm-flow-steps');
-                                PipelineBuilder.updateFlowStepArrows($flowSteps);
                                 
                                 // If no flow steps remain, reset flow section to original state
                                 const flowStepCount = $pipelineCard.find('.dm-flow-step:not(.dm-placeholder-flow-step)').length;

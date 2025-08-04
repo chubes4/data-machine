@@ -104,7 +104,7 @@
          */
         close: function() {
             const $modal = $('#dm-modal');
-            $modal.removeClass('dm-modal-open');
+            $modal.removeClass('dm-modal-active');
             $modal.attr('aria-hidden', 'true');
             $('body').removeClass('dm-modal-active');
             
@@ -123,7 +123,7 @@
             $modalTitle.text(dmCoreModal.strings?.loading || 'Loading...');
             $modalBody.html('');
             
-            $modal.addClass('dm-modal-loading dm-modal-open');
+            $modal.addClass('dm-modal-loading dm-modal-active');
             $modal.attr('aria-hidden', 'false');
             $('body').addClass('dm-modal-active');
 
@@ -191,14 +191,14 @@
 
         // Escape key to close modal
         $(document).on('keydown', function(e) {
-            if (e.keyCode === 27 && $('#dm-modal').hasClass('dm-modal-open')) {
+            if (e.keyCode === 27 && $('#dm-modal').hasClass('dm-modal-active')) {
                 dmCoreModal.close();
             }
         });
 
         // Focus trap within modal for accessibility
         $(document).on('keydown', function(e) {
-            if (e.keyCode === 9 && $('#dm-modal').hasClass('dm-modal-open')) {
+            if (e.keyCode === 9 && $('#dm-modal').hasClass('dm-modal-active')) {
                 trapFocus(e);
             }
         });

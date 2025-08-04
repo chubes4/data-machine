@@ -66,7 +66,7 @@ class BlueskyAuth {
      */
     public function get_session(int $user_id) {
         $logger = $this->get_logger();
-        $logger && $logger->info('Attempting to get authenticated Bluesky session for user.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Attempting to get authenticated Bluesky session for user.', ['user_id' => $user_id]);
 
         // Get credentials from site options (global configuration)
         $handle = get_option('bluesky_username', '');
@@ -126,7 +126,7 @@ class BlueskyAuth {
         // Add handle to session data for URL building
         $session_data['handle'] = $handle;
 
-        $logger && $logger->info('Bluesky authentication successful.', [
+        $logger && $logger->debug('Bluesky authentication successful.', [
             'user_id' => $user_id,
             'did' => $did,
             'pds' => $pds_url,
@@ -157,7 +157,7 @@ class BlueskyAuth {
             return new \WP_Error('bluesky_json_encode_error', __('Could not encode authentication request.', 'data-machine'));
         }
 
-        $logger && $logger->info('Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
+        $logger && $logger->debug('Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
 
         $response = wp_remote_post($url, [
             'headers' => [

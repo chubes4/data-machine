@@ -50,7 +50,7 @@ class Reddit {
 	 */
 	public function get_input_data(object $module, array $source_config, int $user_id): array {
 		$logger = apply_filters('dm_get_logger', null);
-		$logger?->info('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
+		$logger?->debug('Reddit Input: Entering get_input_data.', ['module_id' => $module->module_id ?? null]);
 
 		// Get module ID from the passed module object
 		$module_id = isset($module->module_id) ? absint($module->module_id) : 0;
@@ -78,7 +78,7 @@ class Reddit {
 		$needs_refresh = false;
 		if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['access_token'])) {
 			 if (!empty($reddit_account['refresh_token'])) {
-				$logger?->info('Reddit Input: Token missing or empty, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id]);
+				$logger?->debug('Reddit Input: Token missing or empty, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				  $needs_refresh = true;
 			 } else {
 				$logger?->error('Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['module_id' => $module_id, 'user_id' => $user_id]);
@@ -87,13 +87,13 @@ class Reddit {
 		} else {
 			 $token_expires_at = $reddit_account['token_expires_at'] ?? 0;
 			if (time() >= ($token_expires_at - 300)) { // Check if expired or within 5 mins
-				$logger?->info('Reddit Input: Token expired or expiring soon, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id, 'expiry' => $token_expires_at]);
+				$logger?->debug('Reddit Input: Token expired or expiring soon, refresh needed.', ['module_id' => $module_id, 'user_id' => $user_id, 'expiry' => $token_expires_at]);
 				$needs_refresh = true;
 			 }
 		}
 
 		if ($needs_refresh) {
-			$logger?->info('Reddit Input: Attempting token refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->debug('Reddit Input: Attempting token refresh.', ['module_id' => $module_id, 'user_id' => $user_id]);
 			// Use the OAuth service
 			$refreshed = $oauth_reddit->refresh_token($user_id);
 
@@ -109,7 +109,7 @@ class Reddit {
 				$logger?->error('Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['module_id' => $module_id, 'user_id' => $user_id]);
 				 throw new Exception(esc_html__( 'Reddit token refresh seemed successful, but failed to retrieve new token data.', 'data-machine' ));
 			}
-			$logger?->info('Reddit Input: Token refresh successful.', ['module_id' => $module_id, 'user_id' => $user_id]);
+			$logger?->debug('Reddit Input: Token refresh successful.', ['module_id' => $module_id, 'user_id' => $user_id]);
 		}
 
 		// Decrypt the access token
@@ -211,7 +211,7 @@ class Reddit {
 			if (isset($log_headers['Authorization'])) {
 				$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
 			}
-			$logger?->info('Reddit Input: Making API call.', [
+			$logger?->debug('Reddit Input: Making API call.', [
 				'module_id' => $module_id,
 				'page' => $pages_fetched,
 				'url' => $reddit_url,
@@ -236,7 +236,7 @@ class Reddit {
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
-				$logger?->info('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'module_id' => $module_id]);
+				$logger?->debug('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'module_id' => $module_id]);
 				break; // Stop fetching
 			}
 			// --- End API Response Handling ---
@@ -492,7 +492,7 @@ class Reddit {
 		} // End while loop
 
 		$found_count = count($eligible_items_packets);
-		$logger?->info('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'module_id' => $module_id]);
+		$logger?->debug('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'module_id' => $module_id]);
 
 		if (empty($eligible_items_packets)) {
 			return [

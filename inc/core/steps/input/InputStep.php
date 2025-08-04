@@ -42,7 +42,7 @@ class InputStep {
 
         try {
             // Input steps ignore provided DataPacket (closed-door philosophy)
-            $logger->info('Input Step: Starting data collection (closed-door)', [
+            $logger->debug('Input Step: Starting data collection (closed-door)', [
                 'job_id' => $job_id,
                 'data_packet_ignored' => $data_packets !== null ? 'yes' : 'n/a'
             ]);
@@ -50,7 +50,7 @@ class InputStep {
             // Context awareness: Get pipeline position if available
             $context = apply_filters('dm_get_context', null, $job_id);
             if ($context) {
-                $logger->info('Input Step: Pipeline context available', [
+                $logger->debug('Input Step: Pipeline context available', [
                     'job_id' => $job_id,
                     'step_position' => $context['current_step_position'] ?? 'unknown',
                     'is_first_step' => $context['pipeline_summary']['is_first_step'] ?? false
@@ -88,7 +88,7 @@ class InputStep {
             $success = $this->store_step_data_packet($job_id, $merged_data_packet);
 
             if ($success) {
-                $logger->info('Input Step: Multi-handler data collection completed', [
+                $logger->debug('Input Step: Multi-handler data collection completed', [
                     'job_id' => $job_id,
                     'handlers' => $handlers,
                     'handler_count' => count($handlers),
@@ -253,7 +253,7 @@ class InputStep {
         $successful_results = [];
         $successful_handlers = [];
         
-        $logger->info('Input Step: Starting multi-handler execution', [
+        $logger->debug('Input Step: Starting multi-handler execution', [
             'job_id' => $job->job_id,
             'handlers' => $handlers,
             'handler_count' => count($handlers)
@@ -268,7 +268,7 @@ class InputStep {
                     $successful_results[] = $result;
                     $successful_handlers[] = $handler_name;
                     
-                    $logger->info('Input Step: Handler executed successfully', [
+                    $logger->debug('Input Step: Handler executed successfully', [
                         'job_id' => $job->job_id,
                         'handler' => $handler_name,
                         'content_length' => $result->getContentLength()
@@ -361,7 +361,7 @@ class InputStep {
             ['multi_input']
         );
         
-        $logger->info('Input Step: DataPackets merged successfully', [
+        $logger->debug('Input Step: DataPackets merged successfully', [
             'job_id' => $job_id,
             'source_packets' => count($datapackets),
             'merged_content_length' => strlen($merged_packet->content['body']),

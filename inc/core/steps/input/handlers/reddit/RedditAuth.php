@@ -271,7 +271,7 @@ class RedditAuth {
      * @return bool True on successful refresh and update, false otherwise.
      */
     public function refresh_token(int $user_id): bool {
-        $this->get_logger()->info('Attempting Reddit token refresh.', ['user_id' => $user_id]);
+        $this->get_logger()->debug('Attempting Reddit token refresh.', ['user_id' => $user_id]);
 
         $reddit_account = get_user_meta($user_id, 'data_machine_reddit_account', true);
         if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['refresh_token'])) {
@@ -374,7 +374,7 @@ class RedditAuth {
         ];
 
         update_user_meta($user_id, 'data_machine_reddit_account', $updated_account_data);
-        $this->get_logger()->info('Reddit token refreshed successfully.', ['user_id' => $user_id, 'new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
+        $this->get_logger()->debug('Reddit token refreshed successfully.', ['user_id' => $user_id, 'new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
         return true;
     }
 

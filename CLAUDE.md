@@ -16,7 +16,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## Current Status
 
-**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, arrow rendering migration to PHP templates, production deployment.
+**Completed**: Core Pipeline+Flow architecture, universal AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, universal template rendering system, automatic "Draft Flow" creation, arrow rendering migration to PHP templates, enhanced logger system with runtime configuration, flow deletion functionality, modal system improvements, **template requesting architecture**, production deployment.
 
 **Known Issues**: Expanding PHPUnit test coverage across components. Flows database schema contains references to user_id field that was removed - flows are now admin-only in this implementation.
 
@@ -45,6 +45,9 @@ $modal_content = apply_filters('dm_get_modal', null, 'step-selection');
 
 // Universal template rendering
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
+
+// Template requesting via AJAX
+$template_html = apply_filters('dm_get_template', '', 'page/pipeline-step-card', $data);
 ```
 
 ## Development Commands
@@ -73,7 +76,7 @@ php -l file.php             # Syntax check
 
 ## Components
 
-**Core Services**: Logger, Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter)
+**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter)
 
 **Handlers**:
 - Input: Files, Reddit, RSS, WordPress, Google Sheets
@@ -88,6 +91,41 @@ php -l file.php             # Syntax check
 - Engine agnostic - no hardcoded step types in `/inc/engine/`
 - Position-based execution (0-99) with DataPacket flow
 - Universal template rendering via filter-based discovery system
+
+## Logger System
+
+**Three-Level Logging**: Simplified system with configurable levels and runtime control.
+
+**Log Levels**:
+- `debug`: Full logging (all debug, info, warning, error, critical messages)
+- `error`: Problems only (warning, error, critical messages)  
+- `none`: Disable logging completely
+
+**Runtime Configuration**:
+```php
+$logger = apply_filters('dm_get_logger', null);
+
+// Get current level
+$current_level = $logger->get_level(); // Returns 'debug', 'error', or 'none'
+
+// Set new level
+$logger->set_level('error'); // Changes effective immediately
+
+// Available levels
+$levels = Logger::get_available_log_levels(); // Returns array with descriptions
+```
+
+**Default Configuration**: Log level defaults to `error` (problems only) for production environments while providing full debugging capability when needed.
+
+**Log Management**:
+```php
+// File operations
+$log_path = $logger->get_log_file_path();
+$log_size = $logger->get_log_file_size(); // Returns MB
+$recent_logs = $logger->get_recent_logs(100); // Last 100 lines
+$logger->clear_logs(); // Remove all log files
+$logger->cleanup_log_files(10, 30); // Auto-cleanup based on size/age
+```
 
 ## DataPacket Structure
 
@@ -113,6 +151,87 @@ class MyStep {
 }
 ```
 
+## Template Rendering Architecture
+
+**JavaScript Template Requesting**: Critical architectural pattern that eliminates HTML generation inconsistencies between initial page load and AJAX updates by maintaining PHP templates as the single source of HTML structure.
+
+**Core Principle**: JavaScript requests pre-rendered templates from PHP instead of generating HTML directly, ensuring perfect consistency across all UI updates.
+
+### Template Requesting Pattern
+
+**JavaScript Template Requests**:
+```javascript
+// New architecture - JavaScript requests templates with data
+this.requestTemplate('page/pipeline-step-card', {
+    step: stepData,
+    pipeline_id: pipelineId
+}).then((stepHtml) => {
+    // Insert rendered template into DOM
+    $(container).append(stepHtml);
+});
+
+// Universal template requesting method
+requestTemplate(template, data) {
+    return $.ajax({
+        url: ajaxurl,
+        method: 'POST',
+        data: {
+            action: 'dm_get_template',
+            template: template,
+            data: JSON.stringify(data),
+            _ajax_nonce: this.nonce
+        }
+    }).then(response => response.data.html);
+}
+```
+
+**AJAX Handler Data-Only Responses**:
+```php
+// AJAX handlers return structured data only
+public function add_step_to_pipeline() {
+    // Process step addition logic
+    wp_send_json_success([
+        'step_data' => $step_data,  // NOT step_html
+        'message' => __('Step added successfully', 'data-machine')
+    ]);
+}
+
+public function add_flow_to_pipeline() {
+    // Process flow addition logic  
+    wp_send_json_success([
+        'flow_data' => $flow_data,  // NOT flow_card_html
+        'message' => __('Flow added successfully', 'data-machine')
+    ]);
+}
+```
+
+**Template Rendering Endpoint**:
+```php
+public function get_template() {
+    $template = sanitize_text_field($_POST['template']);
+    $data = json_decode(wp_unslash($_POST['data']), true);
+    
+    $html = apply_filters('dm_render_template', '', $template, $data);
+    
+    wp_send_json_success(['html' => $html]);
+}
+```
+
+### Architecture Benefits
+
+✅ **Eliminates Inconsistencies**: HTML structure identical between page load and AJAX updates  
+✅ **Single Source of Truth**: PHP templates control all HTML generation  
+✅ **Clean Separation**: JavaScript becomes pure DOM manipulation layer  
+✅ **Perfect Integration**: Seamless integration with `dm_render_template` filter system  
+✅ **Maintainability**: Template changes automatically apply to all contexts  
+
+### JavaScript Architecture Principles
+
+**Pure DOM Manipulation**: JavaScript handles only data processing and DOM insertion - never HTML generation
+**Template Requesting**: All HTML comes from PHP templates via AJAX template requests
+**Data-Driven Updates**: AJAX responses contain structured data, templates requested separately
+**Consistency Guarantee**: Identical rendering logic for initial load and dynamic updates
+
 ## Modal System
 
 **Three-File Architecture**: Clean separation between universal modal lifecycle, content-specific interactions, and page content management.
@@ -122,7 +241,7 @@ class MyStep {
 **core-modal.js**: Universal modal lifecycle management only
 - Modal open/close/loading states
 - AJAX content loading via `dm_get_modal_content` action
-- Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes
+- Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes (uses `dm-modal-active` CSS class for state management)
 - Focus management and accessibility
 - Provides `dmCoreModal` API for programmatic modal operations
 
@@ -135,10 +254,11 @@ class MyStep {
 
 **pipeline-builder.js**: Page content management only
 - Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="delete-action"`)
-- Manages pipeline state and UI updates
-- Direct AJAX operations for pipeline operations
-- Arrow rendering now handled by PHP templates with `is_last_step` context
+- Manages pipeline state and UI updates via template requesting pattern
+- Direct AJAX operations return data only - HTML via `requestTemplate()` method
+- Arrow rendering handled by PHP templates with `is_last_step` context
 - Never calls modal APIs directly - clean separation maintained
+- Pure DOM manipulation layer - zero HTML generation
 
 ### Data-Attribute Communication
 
@@ -194,7 +314,9 @@ add_filter('dm_get_modal', function($content, $template) {
 
 ### Modal Lifecycle Improvements
 
-**Automatic Modal Closure**: Action buttons (like delete confirmations) now include `dm-modal-close` class for automatic modal dismissal after action completion, eliminating manual modal management in JavaScript.
+**Automatic Modal Closure**: Action buttons (like delete confirmations) now include `dm-modal-close` class for automatic modal dismissal after action completion, eliminating manual modal management in JavaScript. Modal state managed via `dm-modal-active` CSS class for enhanced accessibility and focus management.
+
+**Enhanced Confirm-Delete Modal**: Universal confirmation modal supporting pipeline, step, AND flow deletion with context-aware messaging and automatic action execution upon confirmation.
 
 ### Universal Reusability
 
@@ -232,6 +354,26 @@ Any admin page can use the modal system by:
 - **Arrow Rendering**: Moved from JavaScript HTML generation to PHP templates with `is_last_step` logic
 - **Modal Content**: Eliminated hardcoded placeholder HTML in favor of universal template system
 - **Step Cards**: All HTML generation now handled by PHP templates via `dm_render_template` filter
+- **Template Requesting**: JavaScript requests pre-rendered templates instead of generating HTML
+- **AJAX Consistency**: Perfect HTML consistency between initial page load and AJAX updates
+
+## Flow Management System
+
+**Complete Flow Deletion**: Flows can be deleted with confirmation modals and cascade cleanup of associated jobs.
+
+**Jobs Table Enhancement**: Displays "Pipeline → Flow" format instead of generic "Module" for clear relationship visibility.
+
+**Flow Operations**:
+```php
+// Flow deletion with cascade cleanup
+$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+$success = $db_flows->delete_flow($flow_id); // Automatically removes associated jobs
+
+// Flow-aware job display
+// Jobs table now shows clear pipeline/flow relationships for better tracking
+```
+
+**Enhanced Error Handling**: Improved status display and error details for all job states (running/pending/failed) with better tracking of pipeline/flow relationships.
 
 ## Component Registration
 
@@ -294,6 +436,56 @@ $content = apply_filters('dm_render_template', '', 'modal/handler-settings-form'
 4. Displays error if template not found in any location
 
 **Critical**: NEVER use legacy `render_template()` methods - always use the universal filter system.
+
+### Template Requesting in JavaScript
+
+**JavaScript Template Integration**: Use the template requesting pattern for all dynamic HTML updates:
+
+```javascript
+// Template requesting in page scripts
+class PipelineBuilder {
+    requestTemplate(template, data) {
+        return $.ajax({
+            url: ajaxurl,
+            method: 'POST', 
+            data: {
+                action: 'dm_get_template',
+                template: template,
+                data: JSON.stringify(data),
+                _ajax_nonce: this.nonce
+            }
+        }).then(response => response.data.html);
+    }
+    
+    // Usage example
+    addStepToUI(stepData) {
+        this.requestTemplate('page/pipeline-step-card', {
+            step: stepData,
+            pipeline_id: this.pipelineId
+        }).then(stepHtml => {
+            $('.dm-pipeline-steps').append(stepHtml);
+        });
+    }
+}
+```
+
+**AJAX Handler Pattern**: Return data only, never HTML:
+
+```php
+public function ajax_handler() {
+    // Process business logic
+    $result_data = $this->process_action();
+    
+    // Return structured data only - NO HTML
+    wp_send_json_success([
+        'data' => $result_data,
+        'message' => __('Action completed', 'data-machine')
+    ]);
+    
+    // JavaScript will request template separately:
+    // this.requestTemplate('page/result-card', result_data)
+}
+```
 
 ## Extension Examples
 
@@ -378,8 +570,19 @@ add_filter('dm_get_modal', function($content, $template) {
 // Page script listens for data-attribute actions
 $(document).on('click', '[data-template="my-action"]', function(e) {
     const contextData = $(e.currentTarget).data('context');
-    // Handle page action with context data
-    console.log('Modal triggered action:', contextData);
+    
+    // Process action and request template for UI update
+    $.ajax({
+        url: ajaxurl,
+        method: 'POST',
+        data: { action: 'my_action', context: contextData }
+    }).then(response => {
+        // Request template with response data
+        return this.requestTemplate('page/result-card', response.data);
+    }).then(html => {
+        // Insert rendered template
+        $(container).append(html);
+    });
 });
 
 // Optional: Modal form events for complex interactions

@@ -48,10 +48,9 @@ class PipelineScheduler
         }
 
         // Parse scheduling config
-        $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
-        if (($scheduling_config['status'] ?? 'inactive') !== 'active') {
-            return false;
-        }
+        $scheduling_config = is_array($flow['scheduling_config'] ?? null) 
+            ? $flow['scheduling_config'] 
+            : json_decode($flow['scheduling_config'] ?? '{}', true);
 
         $interval = $scheduling_config['interval'] ?? 'manual';
         if ($interval === 'manual') {
@@ -65,7 +64,11 @@ class PipelineScheduler
         }
 
         // Schedule directly in Action Scheduler - no wrapper needed
-        $action_id = as_schedule_recurring_action(
+        if (!function_exists('as_schedule_recurring_action')) {
+            return false;
+        }
+        
+        $action_id = \as_schedule_recurring_action(
             time(),
             $interval_seconds,
             "dm_execute_flow_{$flow_id}",
@@ -77,7 +80,7 @@ class PipelineScheduler
             // Log successful scheduling
             $logger = apply_filters('dm_get_logger', null);
             if ($logger) {
-                $logger->info('Flow scheduled successfully', [
+                $logger->debug('Flow scheduled successfully', [
                     'flow_id' => $flow_id,
                     'interval' => $interval,
                     'action_id' => $action_id
@@ -97,7 +100,11 @@ class PipelineScheduler
      */
     public function deactivate_flow(int $flow_id): bool
     {
-        $result = as_unschedule_action(
+        if (!function_exists('as_unschedule_action')) {
+            return false;
+        }
+        
+        $result = \as_unschedule_action(
             "dm_execute_flow_{$flow_id}",
             ['flow_id' => $flow_id],
             'data-machine'
@@ -106,7 +113,7 @@ class PipelineScheduler
         if ($result) {
             $logger = apply_filters('dm_get_logger', null);
             if ($logger) {
-                $logger->info('Flow unscheduled successfully', [
+                $logger->debug('Flow unscheduled successfully', [
                     'flow_id' => $flow_id
                 ]);
             }
@@ -161,7 +168,11 @@ class PipelineScheduler
      */
     public function get_next_run_time(int $flow_id): ?string
     {
-        $action = as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
+        if (!function_exists('as_next_scheduled_action')) {
+            return null;
+        }
+        
+        $action = \as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
         
         if ($action) {
             return date('Y-m-d H:i:s', $action);
@@ -178,7 +189,11 @@ class PipelineScheduler
      */
     public function is_flow_scheduled(int $flow_id): bool
     {
-        return as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine') !== false;
+        if (!function_exists('as_next_scheduled_action')) {
+            return false;
+        }
+        
+        return \as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine') !== false;
     }
 
     /**
@@ -227,7 +242,6 @@ class PipelineScheduler
         $result = $job_creator->create_and_schedule_job(
             (int)$flow['pipeline_id'],
             $flow_id,
-            (int)$flow['user_id'],
             'scheduled'
         );
 

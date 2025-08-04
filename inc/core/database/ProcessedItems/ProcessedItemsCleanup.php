@@ -49,7 +49,7 @@ class ProcessedItemsCleanup {
 
         $logger = apply_filters('dm_get_logger', null);
         if ($logger && $deleted > 0) {
-            $logger->info('Cleaned up old processed items', [
+            $logger->debug('Cleaned up old processed items', [
                 'deleted_count' => $deleted,
                 'days_to_keep' => $days_to_keep,
                 'table' => $this->table_name
@@ -76,7 +76,7 @@ class ProcessedItemsCleanup {
 
         $logger = apply_filters('dm_get_logger', null);
         if ($logger && $deleted > 0) {
-            $logger->info('Cleaned up processed items for flow', [
+            $logger->debug('Cleaned up processed items for flow', [
                 'flow_id' => $flow_id,
                 'deleted_count' => $deleted,
                 'table' => $this->table_name
@@ -103,7 +103,7 @@ class ProcessedItemsCleanup {
 
         $logger = apply_filters('dm_get_logger', null);
         if ($logger && $deleted > 0) {
-            $logger->info('Cleaned up processed items by source type', [
+            $logger->debug('Cleaned up processed items by source type', [
                 'source_type' => $source_type,
                 'deleted_count' => $deleted,
                 'table' => $this->table_name
@@ -168,7 +168,7 @@ class ProcessedItemsCleanup {
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
             if ($result !== false) {
-                $logger->info('Optimized processed items table', [
+                $logger->debug('Optimized processed items table', [
                     'table' => $this->table_name
                 ]);
             } else {

@@ -66,7 +66,7 @@ class Jobs
                         <thead>
                             <tr>
                                 <th style="width: 80px;"><?php esc_html_e('Job ID', 'data-machine'); ?></th>
-                                <th><?php esc_html_e('Module', 'data-machine'); ?></th>
+                                <th><?php esc_html_e('Pipeline / Flow', 'data-machine'); ?></th>
                                 <th style="width: 100px;"><?php esc_html_e('Status', 'data-machine'); ?></th>
                                 <th style="width: 140px;"><?php esc_html_e('Created At', 'data-machine'); ?></th>
                                 <th style="width: 140px;"><?php esc_html_e('Started At', 'data-machine'); ?></th>
@@ -120,12 +120,13 @@ class Jobs
     {
         // Handle both object and array format
         $job_id = is_array($job) ? $job['job_id'] : $job->job_id;
-        $pipeline_name = is_array($job) ? ($job['pipeline_name'] ?: 'Unknown Module') : ($job->pipeline_name ?: 'Unknown Module');
+        $pipeline_name = is_array($job) ? ($job['pipeline_name'] ?: 'Unknown Pipeline') : ($job->pipeline_name ?: 'Unknown Pipeline');
+        $flow_name = is_array($job) ? ($job['flow_name'] ?? 'Unknown Flow') : ($job->flow_name ?? 'Unknown Flow');
         $status = is_array($job) ? $job['status'] : $job->status;
         $created_at = is_array($job) ? $job['created_at'] : $job->created_at;
         $started_at = is_array($job) ? ($job['started_at'] ?: '') : ($job->started_at ?: '');
         $completed_at = is_array($job) ? ($job['completed_at'] ?: '') : ($job->completed_at ?: '');
-        $error_details = is_array($job) ? ($job['error_details'] ?: '') : ($job->error_details ?: '');
+        $error_details = is_array($job) ? ($job['error_details'] ?? '') : ($job->error_details ?? '');
 
         // Format status display
         $status_display = ucfirst(str_replace('_', ' ', $status));
@@ -138,15 +139,22 @@ class Jobs
         // Determine result/error display
         $result_display = '';
         if ($status === 'failed' && $error_details) {
-            $result_display = 'Raw Data: ' . esc_html($error_details);
+            $result_display = esc_html($error_details);
+        } elseif ($status === 'completed_with_errors' && $error_details) {
+            $result_display = esc_html($error_details);
         } elseif ($status === 'completed') {
-            $result_display = 'Status: completed_no_items Message: No new items found to process.';
+            $result_display = 'No new items found to process.';
+        } elseif ($status === 'running') {
+            $current_step = is_array($job) ? ($job['current_step_name'] ?? '') : ($job->current_step_name ?? '');
+            $result_display = $current_step ? "Processing: {$current_step}" : 'Processing...';
+        } elseif ($status === 'pending') {
+            $result_display = 'Waiting to start';
         }
 
         ?>
         <tr>
             <td><strong><?php echo esc_html($job_id); ?></strong></td>
-            <td><?php echo esc_html($pipeline_name); ?></td>
+            <td><?php echo esc_html($pipeline_name . ' → ' . $flow_name); ?></td>
             <td><span style="color: <?php echo $status === 'failed' ? '#d63638' : ($status === 'completed' ? '#00a32a' : '#646970'); ?>;"><?php echo esc_html($status_display); ?></span></td>
             <td><?php echo esc_html($created_display); ?></td>
             <td><?php echo esc_html($started_display); ?></td>

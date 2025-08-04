@@ -69,7 +69,7 @@ class ProcessedItemsOperations {
             // Item already processed - return true to indicate success (idempotent behavior)
             $logger = apply_filters('dm_get_logger', null);
             if ($logger) {
-                $logger->info("Item already processed, skipping duplicate insert.", [
+                $logger->debug("Item already processed, skipping duplicate insert.", [
                     'flow_id' => $flow_id,
                     'source_type' => $source_type,
                     'item_identifier' => substr($item_identifier, 0, 100) . '...'
@@ -101,7 +101,7 @@ class ProcessedItemsOperations {
              if (strpos($db_error, 'Duplicate entry') !== false) {
                  $logger = apply_filters('dm_get_logger', null);
                  if ($logger) {
-                     $logger->info("Duplicate key detected during insert - item already processed by another process.", [
+                     $logger->debug("Duplicate key detected during insert - item already processed by another process.", [
                          'flow_id' => $flow_id,
                          'source_type' => $source_type,
                          'item_identifier' => substr($item_identifier, 0, 100) . '...'

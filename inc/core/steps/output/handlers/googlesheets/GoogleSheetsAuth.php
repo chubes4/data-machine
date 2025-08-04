@@ -71,7 +71,7 @@ class GoogleSheetsAuth {
      */
     public function get_service(int $user_id) {
         $logger = $this->get_logger();
-        $logger && $logger->info('Attempting to get authenticated Google Sheets access token for user.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Attempting to get authenticated Google Sheets access token for user.', ['user_id' => $user_id]);
 
         $credentials = get_user_meta($user_id, self::USER_META_KEY, true);
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
@@ -97,7 +97,7 @@ class GoogleSheetsAuth {
         // Check if access token needs refreshing
         $expires_at = $credentials['expires_at'] ?? 0;
         if (time() >= $expires_at - 300) { // Refresh 5 minutes before expiry
-            $logger && $logger->info('Google Sheets access token expired, attempting refresh.', ['user_id' => $user_id]);
+            $logger && $logger->debug('Google Sheets access token expired, attempting refresh.', ['user_id' => $user_id]);
             
             $refreshed_token = $this->refresh_access_token($decrypted_refresh_token, $user_id);
             if (is_wp_error($refreshed_token)) {
@@ -107,7 +107,7 @@ class GoogleSheetsAuth {
             return $refreshed_token; // Return the new access token
         }
 
-        $logger && $logger->info('Successfully retrieved valid Google Sheets access token for user.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Successfully retrieved valid Google Sheets access token for user.', ['user_id' => $user_id]);
         return $decrypted_access_token;
     }
 
@@ -168,7 +168,7 @@ class GoogleSheetsAuth {
         // Update stored credentials with new access token
         $this->update_user_credentials($user_id, $token_data['access_token'], $refresh_token, $token_data['expires_in'] ?? 3600);
         
-        $logger && $logger->info('Successfully refreshed Google Sheets access token.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Successfully refreshed Google Sheets access token.', ['user_id' => $user_id]);
         return $token_data['access_token'];
     }
 
@@ -255,7 +255,7 @@ class GoogleSheetsAuth {
 
         $auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($auth_params);
 
-        $logger && $logger->info('Redirecting user to Google OAuth authorization.', [
+        $logger && $logger->debug('Redirecting user to Google OAuth authorization.', [
             'user_id' => get_current_user_id(),
             'auth_url' => $auth_url
         ]);
@@ -379,7 +379,7 @@ class GoogleSheetsAuth {
 
         update_user_meta($user_id, self::USER_META_KEY, $account_data);
 
-        $logger && $logger->info('Successfully completed Google Sheets OAuth flow.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Successfully completed Google Sheets OAuth flow.', ['user_id' => $user_id]);
 
         // 5. Redirect on success
         wp_redirect(admin_url('admin.php?page=dm-project-management&auth_success=googlesheets'));

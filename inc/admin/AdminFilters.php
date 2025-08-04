@@ -31,6 +31,24 @@ function dm_register_admin_filters() {
         return $config;
     }, 5, 3);
     
+    // Parameter-based admin page registration system  
+    add_filter('dm_get_admin_page', function($config, $page_slug) {
+        if ($config !== null) {
+            return $config; // Component self-registration provided
+        }
+        
+        // Pure parameter-based system - admin pages self-register via this same filter
+        // No hardcoded page lists - complete architectural consistency
+        return null;
+    }, 5, 2);
+    
+    // Parameter-based modal content system for admin interface
+    add_filter('dm_get_modal', function($content, $template) {
+        // Pure parameter-based system - admin modal templates register their content generation logic
+        // Admin layer returns null to allow UI components to handle their own templates
+        return $content;
+    }, 5, 2);
+    
     // Universal template rendering filter - discovers templates from admin page registration
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         // Discover all registered admin pages and their template directories

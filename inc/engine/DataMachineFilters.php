@@ -5,20 +5,21 @@
  * TRUE ENGINE AGNOSTICISM: Pure orchestration services with zero business logic.
  * Business logic components self-register via their own *Filters.php files.
  * 
- * Engine Bootstrap Functions (Pure Orchestration Only):
+ * Engine Bootstrap Functions (Pure Backend Processing Only):
  * - dm_register_direct_service_filters(): Core orchestration services
  * - dm_register_database_service_system(): Parameter-based database filter hooks  
  * - dm_register_wpdb_service_filter(): WordPress database access
  * - dm_register_context_retrieval_service(): DataPacket context orchestration
  * - dm_register_universal_handler_system(): Handler registration filter hooks
- * - dm_register_utility_filters(): Utility and modal filter hooks  
+ * - dm_register_utility_filters(): Backend utility filter hooks only
  * - dm_register_step_auto_discovery_system(): Step registration filter hooks
  * - dm_register_datapacket_creation_system(): DataPacket creation filter hooks
  * 
- * Business Logic Separation:
+ * Architectural Separation:
+ * - Backend processing logic → Engine components (this file)
+ * - Admin/UI logic → Admin components (AdminFilters.php)
  * - Jobs/ProcessedItems logic → Core database components
  * - AI processing logic → AI step components
- * - Admin logic → Admin components
  * - Handler logic → Handler components
  *
  * @package DataMachine
@@ -222,10 +223,8 @@ function dm_register_context_retrieval_service() {
                             // Use source_type from packet metadata for dynamic filtering
                             $source_type = $data_packet->metadata['source_type'] ?? 'unknown';
                             
-                            // Dynamic pattern matching - no hardcoded step types
-                            $filter_matches = apply_filters('dm_context_filter_matches', false, $filter_type, $source_type, $data_packet);
-                            
-                            if ($filter_matches) {
+                            // Direct source type matching - simplified without unused filter
+                            if ($filter_type === $source_type) {
                                 $context_packets[] = $data_packet;
                             }
                         }
@@ -339,53 +338,20 @@ function dm_register_universal_handler_system() {
 }
 
 /**
- * Register utility filters for external handlers.
+ * Register backend utility filters for data processing.
  * 
- * Provides pure parameter-based filter hooks for modal content, field rendering,
- * item identification, and context filtering. These filters support external
- * plugin integration and maintain architectural consistency.
+ * BACKEND-ONLY FILTERS: Provides pure parameter-based filter hooks for backend
+ * content processing operations. Admin/UI filters have been moved to AdminFilters.php
+ * to maintain clear architectural separation between engine and admin layers.
  * 
  * @since 0.1.0
  */
 function dm_register_utility_filters() {
     
-    /**
-     * Parameter-based admin page system for architectural consistency.
-     * 
-     * Follows same pattern as handlers, database services, auth, and all other services.
-     * Eliminates collection-based registration for pure parameter-based architecture.
-     * 
-     * Usage: $page_config = apply_filters('dm_get_admin_page', null, 'jobs');
-     */
-    add_filter('dm_get_admin_page', function($config, $page_slug) {
-        if ($config !== null) {
-            return $config; // Component self-registration provided
-        }
-        
-        // Pure parameter-based system - pages self-register via this same filter
-        // No hardcoded page lists - complete architectural consistency
-        return null;
-    }, 5, 2);
     
     // Bridge system removed - AdminMenuAssets now uses direct parameter-based discovery
     // This eliminates architectural confusion and aligns with component-owned registration
     
-    /**
-     * Parameter-based page asset discovery system.
-     * 
-     * Allows pages to declare their required assets for dynamic loading.
-     * Replaces hardcoded asset enqueuing with filter-based auto-discovery.
-     * 
-     * Usage: $assets = apply_filters('dm_get_page_assets', null, $page_slug);
-     */
-    add_filter('dm_get_page_assets', function($assets, $page_slug) {
-        if ($assets !== null) {
-            return $assets; // External override provided
-        }
-        
-        // No hardcoded core assets - pages register their own assets via filters
-        return null;
-    }, 10, 2);
     
     // Common configuration parsing removed - handlers manage their own config parsing
     // This maintains proper separation of concerns and handler autonomy
@@ -400,80 +366,10 @@ function dm_register_utility_filters() {
     // Timeframe filtering removed - handlers should implement their own time-based logic
     // This avoids over-engineered abstractions and maintains handler control
     
-    /**
-     * Register pure parameter-based identifier generation system.
-     * 
-     * Eliminates hardcoded switches in ProcessedItemsManager by allowing handlers
-     * to register their identifier extraction logic via filters.
-     * 
-     * Usage: $identifier = apply_filters('dm_get_item_identifier', null, $source_type, $raw_data);
-     */
-    add_filter('dm_get_item_identifier', function($identifier, $source_type, $raw_data) {
-        // Pure parameter-based system - handlers register their extraction logic
-        // Core provides baseline - components extend functionality
-        return $identifier;
-    }, 5, 3);
     
-    /**
-     * Register pure parameter-based modal content system.
-     * 
-     * Eliminates hardcoded modal type switches by allowing components to register
-     * their modal content generation via filters.
-     * 
-     * Usage: $content = apply_filters('dm_get_modal', null, $template);
-     */
-    add_filter('dm_get_modal', function($content, $template) {
-        // Pure parameter-based system - modal templates register their content generation logic
-        // Core returns null to allow components to handle their own templates
-        return $content;
-    }, 5, 2);
     
-    /**
-     * Register pure parameter-based modal save system.
-     * 
-     * Eliminates hardcoded modal save switches by allowing components to register
-     * their configuration save logic via filters.
-     * 
-     * Usage: $result = apply_filters('dm_save_modal_config', null, $modal_type, $context, $config_data);
-     */
-    add_filter('dm_save_modal_config', function($result, $modal_type, $context, $config_data) {
-        // Pure parameter-based system - modal types register their save logic
-        // Core provides baseline - components implement specific save handlers
-        return $result;
-    }, 5, 4);
     
-    /**
-     * Register pure parameter-based field rendering system.
-     * 
-     * Eliminates hardcoded field type switches by allowing custom field renderers
-     * to register their HTML generation via filters.
-     * 
-     * Usage: $html = apply_filters('dm_render_field', null, $field_type, $field_config, $field_value, $field_key);
-     */
-    add_filter('dm_render_field', function($html, $field_type, $field_config, $field_value, $field_key) {
-        // Pure parameter-based system - field types register their rendering logic
-        // Core provides baseline - components implement specific field renderers
-        return $html;
-    }, 5, 5);
     
-    /**
-     * Register context filter matching for completely dynamic context filtering.
-     * 
-     * Engine provides pure filter hook with no hardcoded assumptions.
-     * Components register their own filtering logic as needed.
-     * 
-     * Usage: add_filter('dm_context_filter_matches', function($matches, $filter_type, $source_type, $data_packet) {
-     *     if ($filter_type === 'my_custom_filter' && $source_type === 'my_source') {
-     *         return true;
-     *     }
-     *     return $matches;
-     * }, 10, 4);
-     */
-    add_filter('dm_context_filter_matches', function($matches, $filter_type, $source_type, $data_packet) {
-        // Pure filter hook - no core implementation, completely external
-        // Components define their own filter logic with zero engine assumptions
-        return $matches;
-    }, 5, 4);
     
     // Admin notices removed - components use WordPress add_action('admin_notices') directly
     

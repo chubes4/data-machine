@@ -81,7 +81,7 @@ class Pipelines {
 		}
 
 		$pipeline_id = $wpdb->insert_id;
-		$logger && $logger->info( 'Successfully created pipeline', [
+		$logger && $logger->debug( 'Successfully created pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
@@ -190,7 +190,7 @@ class Pipelines {
 			return false;
 		}
 
-		$logger && $logger->info( 'Successfully updated pipeline', [
+		$logger && $logger->debug( 'Successfully updated pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'updated_fields' => array_keys( $update_data )
 		] );
@@ -239,7 +239,7 @@ class Pipelines {
 			return false;
 		}
 
-		$logger && $logger->info( 'Successfully deleted pipeline', [
+		$logger && $logger->debug( 'Successfully deleted pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
@@ -413,7 +413,7 @@ class Pipelines {
 		// Log table creation
 		$logger = apply_filters( 'dm_get_logger', null );
 		if ( $logger ) {
-			$logger->info( 'Created pipelines database table', [
+			$logger->debug( 'Created pipelines database table', [
 				'table_name' => $table_name,
 				'action' => 'create_table'
 			] );

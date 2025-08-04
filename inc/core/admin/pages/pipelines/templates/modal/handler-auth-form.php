@@ -15,7 +15,6 @@ if (!defined('WPINC')) {
 }
 
 $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
-$user_id = get_current_user_id();
 
 // Authentication discovery via filter
 $auth_instance = apply_filters('dm_get_auth', null, $handler_slug);
@@ -43,12 +42,12 @@ if (!$has_auth) {
     return;
 }
 
-// Get authentication status
-$is_authenticated = $auth_instance->is_authenticated($user_id);
+// Get authentication status - admin-global authentication
+$is_authenticated = $auth_instance->is_authenticated();
 $account_details = null;
 
 if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
-    $account_details = $auth_instance->get_account_details($user_id);
+    $account_details = $auth_instance->get_account_details();
 }
 
 ?>

@@ -373,21 +373,21 @@ add_filter('dm_get_modal', function($content, $template) {
 // Add these buttons to your PHP templates:
 
 // Analytics dashboard modal trigger
-<button type="button" class="button dm-modal-trigger" 
+<button type="button" class="button dm-modal-open" 
         data-template="analytics-dashboard"
         data-context='{"pipeline_count":"15","success_rate":"94.2%","avg_time":"2.3s"}'>
     <?php esc_html_e('View Analytics Dashboard', 'my-plugin'); ?>
 </button>
 
 // Step configuration modal trigger  
-<button type="button" class="button dm-modal-trigger"
+<button type="button" class="button dm-modal-open"
         data-template="configure-step" 
         data-context='{"step_type":"analytics_processor","step_position":"2","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
     <?php esc_html_e('Configure Analytics Step', 'my-plugin'); ?>
 </button>
 
 // Export results modal trigger
-<button type="button" class="button dm-modal-trigger"
+<button type="button" class="button dm-modal-open"
         data-template="export-results"
         data-context='{"job_id":"<?php echo esc_attr($job_id); ?>","pipeline_name":"<?php echo esc_attr($pipeline_name); ?>"}'>
     <?php esc_html_e('Export Results', 'my-plugin'); ?>
@@ -398,7 +398,7 @@ jQuery(document).ready(function($) {
     // Handle actions within modal content
     $(document).on('click', '[data-action="export"]', function() {
         // Emit event to trigger another modal via data attributes
-        var exportButton = $('<button class="dm-modal-trigger" data-template="export-results" data-context=\'{"job_id":"latest","pipeline_name":"Analytics Pipeline"}\'></button>');
+        var exportButton = $('<button class="dm-modal-open" data-template="export-results" data-context=\'{"job_id":"latest","pipeline_name":"Analytics Pipeline"}\'></button>');
         exportButton.trigger('click');
     });
 });
@@ -406,7 +406,7 @@ jQuery(document).ready(function($) {
 
 **Key Benefits of Universal Modal Architecture**:
 - **Zero Core Modifications**: Add unlimited modal types without touching Data Machine code
-- **Data-Attribute Triggers**: Simple `.dm-modal-trigger` buttons with `data-template` and `data-context` attributes - no JavaScript API required
+- **Data-Attribute Triggers**: Simple `.dm-modal-open` buttons with `data-template` and `data-context` attributes - no JavaScript API required
 - **WordPress Standards**: Uses familiar WordPress AJAX and filter patterns with proper security
 - **Automatic Discovery**: New modal types appear immediately when registered via filter system
 - **Professional UX**: Seamless integration with WordPress admin interface and native styling
@@ -702,10 +702,29 @@ define('WP_DEBUG', true);   // Enable conditional error_log output throughout co
 define('WP_DEBUG', false);  // Production mode - clean deployment with essential error handling
 ```
 
+**Logger Configuration**:
+```php
+// Runtime logger configuration (3-level system)
+$logger = apply_filters('dm_get_logger', null);
+
+// Set log level: 'debug' (full), 'error' (problems only), 'none' (disabled)
+$logger->set_level('debug');  // Enable full logging for development
+$logger->set_level('error');  // Production setting (default)
+$logger->set_level('none');   // Disable logging completely
+
+// Check current setting
+$current_level = $logger->get_level();
+
+// Log management
+$logger->clear_logs();                    // Clear all log files
+$logger->cleanup_log_files(10, 30);      // Auto-cleanup: 10MB max, 30 days max
+$recent_entries = $logger->get_recent_logs(100); // Get last 100 log entries
+```
+
 **Universal Modal System Debugging**:
 ```javascript
 // Monitor modal triggers via data attributes
-$(document).on('click', '.dm-modal-trigger', function(e) {
+$(document).on('click', '.dm-modal-open', function(e) {
     console.log('Modal trigger clicked:', {
         template: $(this).data('template'),
         context: $(this).data('context'),
@@ -736,7 +755,7 @@ $(document).ajaxError(function(event, xhr, settings, error) {
 
 // Test modal trigger programmatically
 function testModalTrigger(template, context) {
-    var testButton = $('<button class="dm-modal-trigger" data-template="' + template + '" data-context=\'' + JSON.stringify(context) + '\'></button>');
+    var testButton = $('<button class="dm-modal-open" data-template="' + template + '" data-context=\'' + JSON.stringify(context) + '\'></button>');
     $('body').append(testButton);
     testButton.trigger('click');
     testButton.remove();

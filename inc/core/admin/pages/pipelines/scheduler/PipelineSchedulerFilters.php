@@ -31,8 +31,8 @@ function dm_register_pipeline_scheduler_filters() {
     // Main scheduler service - parameter-based like all other services
     add_filter('dm_get_scheduler', function($scheduler, $type = null) {
         if ($type === 'intervals') {
-            // Return schedule intervals from Constants
-            return \DataMachine\Engine\Constants::get_cron_schedules();
+            // Return Action Scheduler intervals from Constants
+            return \DataMachine\Engine\Constants::get_scheduler_intervals();
         }
         
         if ($type === null) {
@@ -98,8 +98,9 @@ function render_flow_schedule_modal(int $flow_id, array $context): string
     }
     
     // Parse current scheduling config
-    $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
-    $current_status = $scheduling_config['status'] ?? 'inactive';
+    $scheduling_config = is_array($flow['scheduling_config'] ?? null) 
+        ? $flow['scheduling_config'] 
+        : json_decode($flow['scheduling_config'] ?? '{}', true);
     $current_interval = $scheduling_config['interval'] ?? 'manual';
     $last_run_at = $scheduling_config['last_run_at'] ?? null;
     
@@ -123,25 +124,8 @@ function render_flow_schedule_modal(int $flow_id, array $context): string
             <input type="hidden" name="action" value="dm_pipeline_ajax">
             <input type="hidden" name="pipeline_action" value="save_flow_schedule">
             <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>">
-            <!-- Schedule Status -->
-            <div class="dm-form-field">
-                <label><?php esc_html_e('Schedule Status', 'data-machine'); ?></label>
-                <div class="dm-radio-group">
-                    <label class="dm-radio-option">
-                        <input type="radio" name="schedule_status" value="inactive" <?php checked($current_status, 'inactive'); ?>>
-                        <span><?php esc_html_e('Inactive', 'data-machine'); ?></span>
-                        <small><?php esc_html_e('Manual execution only', 'data-machine'); ?></small>
-                    </label>
-                    <label class="dm-radio-option">
-                        <input type="radio" name="schedule_status" value="active" <?php checked($current_status, 'active'); ?>>
-                        <span><?php esc_html_e('Active', 'data-machine'); ?></span>
-                        <small><?php esc_html_e('Automatic execution on schedule', 'data-machine'); ?></small>
-                    </label>
-                </div>
-            </div>
-            
             <!-- Schedule Interval -->
-            <div class="dm-form-field dm-schedule-interval-field" <?php echo $current_status === 'inactive' ? 'style="display: none;"' : ''; ?>>
+            <div class="dm-form-field dm-schedule-interval-field">
                 <label for="schedule_interval"><?php esc_html_e('Schedule Interval', 'data-machine'); ?></label>
                 <select id="schedule_interval" name="schedule_interval" class="regular-text">
                     <option value="manual" <?php selected($current_interval, 'manual'); ?>><?php esc_html_e('Manual Only', 'data-machine'); ?></option>

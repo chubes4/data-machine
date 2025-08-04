@@ -95,7 +95,7 @@ class ProcessedItemsManager {
 		
 		$logger = apply_filters('dm_get_logger', null);
 		if ( $success ) {
-			$logger?->info( 'ProcessedItemsManager: Item marked as processed successfully', [
+			$logger?->debug( 'ProcessedItemsManager: Item marked as processed successfully', [
 				'job_id' => $job_id,
 				'flow_id' => $flow_id,
 				'source_type' => $source_type,
@@ -124,19 +124,15 @@ class ProcessedItemsManager {
 	 * @return string|null Generated identifier or null if cannot be determined.
 	 */
 	public function generate_item_identifier( string $source_type, array $raw_data ): ?string {
-		// Use parameter-based filter system for identifier generation
-		$identifier = apply_filters( 'dm_get_item_identifier', null, $source_type, $raw_data );
+		// Direct fallback logic - try common identifier patterns
+		$identifier = $raw_data['id'] ?? $raw_data['ID'] ?? $raw_data['guid'] ?? $raw_data['name'] ?? $raw_data['link'] ?? $raw_data['file_path'] ?? $raw_data['filename'] ?? null;
 		
-		// If no handler registered for this source type, use fallback logic
 		if ( $identifier === null ) {
 			$logger = apply_filters('dm_get_logger', null);
-			$logger?->debug( 'ProcessedItemsManager: No handler registered for source type, using fallback detection', [
+			$logger?->debug( 'ProcessedItemsManager: No identifier found for source type', [
 				'source_type' => $source_type,
 				'available_keys' => array_keys( $raw_data )
 			] );
-			
-			// Intelligent fallback: try common identifier patterns
-			$identifier = $raw_data['id'] ?? $raw_data['ID'] ?? $raw_data['guid'] ?? $raw_data['name'] ?? $raw_data['link'] ?? $raw_data['file_path'] ?? $raw_data['filename'] ?? null;
 		}
 		
 		return $identifier;

@@ -105,7 +105,7 @@ class ProcessedItems {
         // Log table creation
         $logger = apply_filters('dm_get_logger', null);
         if ( $logger ) {
-            $logger->info( 'Created processed items database table', [
+            $logger->debug( 'Created processed items database table', [
                 'table_name' => $this->table_name,
                 'action' => 'create_table'
             ] );

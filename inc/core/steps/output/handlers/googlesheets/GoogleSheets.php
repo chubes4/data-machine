@@ -70,7 +70,7 @@ class GoogleSheets {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->info('Starting Google Sheets output handling.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Starting Google Sheets output handling.', ['user_id' => $user_id]);
         
         // 1. Get configuration
         $output_config = $module_job_config['output_config']['googlesheets'] ?? [];
@@ -163,7 +163,7 @@ class GoogleSheets {
             }
 
             $sheet_url = "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}";
-            $logger && $logger->info('Successfully appended data to Google Sheets.', [
+            $logger && $logger->debug('Successfully appended data to Google Sheets.', [
                 'user_id' => $user_id, 
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet' => $worksheet_name

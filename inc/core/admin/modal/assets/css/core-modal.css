@@ -22,7 +22,7 @@
     z-index: 9999;
 }
 
-.dm-modal.dm-modal-open {
+.dm-modal.dm-modal-active {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -76,7 +76,7 @@
     transition: opacity 0.3s ease;
 }
 
-.dm-modal.dm-modal-open {
+.dm-modal.dm-modal-active {
     opacity: 1;
 }
 
@@ -85,7 +85,7 @@
     transition: transform 0.3s ease;
 }
 
-.dm-modal.dm-modal-open .dm-modal-container {
+.dm-modal.dm-modal-active .dm-modal-container {
     transform: translateY(0);
 }
 

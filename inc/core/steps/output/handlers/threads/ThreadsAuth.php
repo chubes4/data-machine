@@ -196,7 +196,7 @@ class ThreadsAuth {
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
     public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
-        $this->get_logger() && $this->get_logger()->info('Handling Threads OAuth callback.', ['user_id' => $user_id]);
+        $this->get_logger() && $this->get_logger()->debug('Handling Threads OAuth callback.', ['user_id' => $user_id]);
 
         // 1. Verify state
         $stored_state = get_user_meta($user_id, 'dm_threads_oauth_state', true);
@@ -243,7 +243,7 @@ class ThreadsAuth {
         $initial_access_token = $data['access_token'];
 
         // 3. Exchange short-lived token for a long-lived one
-        $this->get_logger() && $this->get_logger()->info('Threads OAuth: Exchanging short-lived token for long-lived token.', ['user_id' => $user_id]);
+        $this->get_logger() && $this->get_logger()->debug('Threads OAuth: Exchanging short-lived token for long-lived token.', ['user_id' => $user_id]);
         $exchange_params = [
             'grant_type'    => 'th_exchange_token',
             'client_secret' => $this->get_client_secret(),
@@ -273,7 +273,7 @@ class ThreadsAuth {
         }
 
         // Successfully exchanged for long-lived token
-        $this->get_logger() && $this->get_logger()->info('Threads OAuth: Successfully exchanged for long-lived token.', ['user_id' => $user_id]);
+        $this->get_logger() && $this->get_logger()->debug('Threads OAuth: Successfully exchanged for long-lived token.', ['user_id' => $user_id]);
         $long_lived_access_token = $exchange_data['access_token'];
         $long_lived_expires_in = $exchange_data['expires_in'] ?? null; // Should be ~60 days in seconds
         $long_lived_token_type = $exchange_data['token_type'] ?? 'bearer';
@@ -300,7 +300,7 @@ class ThreadsAuth {
         if (!is_wp_error($posting_entity_info) && isset($posting_entity_info['id'])) {
             $account_details['page_id'] = $posting_entity_info['id']; // Store the ID returned by /me as page_id
             $account_details['page_name'] = $posting_entity_info['name'] ?? 'Unknown Page/User';
-            $this->get_logger() && $this->get_logger()->info('Fetched posting entity info from /me.', ['user_id' => $user_id, 'posting_entity_id' => $posting_entity_info['id'], 'posting_entity_name' => $account_details['page_name']]);
+            $this->get_logger() && $this->get_logger()->debug('Fetched posting entity info from /me.', ['user_id' => $user_id, 'posting_entity_id' => $posting_entity_info['id'], 'posting_entity_name' => $account_details['page_name']]);
         } else {
             // Critical error if /me doesn't return the necessary ID
             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Failed to fetch posting entity info from /me endpoint.', [
@@ -325,7 +325,7 @@ class ThreadsAuth {
 
         // Update user meta with all collected details
         update_user_meta($user_id, self::USER_META_KEY, $account_details);
-        $this->get_logger() && $this->get_logger()->info('Threads account authenticated and token stored.', ['user_id' => $user_id, 'page_id' => $account_details['page_id']]);
+        $this->get_logger() && $this->get_logger()->debug('Threads account authenticated and token stored.', ['user_id' => $user_id, 'page_id' => $account_details['page_id']]);
 
         return true;
     }
@@ -548,7 +548,7 @@ class ThreadsAuth {
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_message), 60);
             wp_redirect(admin_url('admin.php?page=dm-project-management&dm_oauth_status=error_token'));
         } else {
-            $this->get_logger() && $this->get_logger()->info('Threads OAuth Callback Successful.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->debug('Threads OAuth Callback Successful.', ['user_id' => $user_id]);
             set_transient('dm_oauth_success_threads', 'Threads account connected successfully!', 60);
             wp_redirect(admin_url('admin.php?page=dm-project-management&dm_oauth_status=success'));
         }

@@ -63,7 +63,7 @@ class Files {
         $next_file = $this->find_next_unprocessed_file($module_id, $config);
         
         if (!$next_file) {
-            $logger?->info('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
+            $logger?->debug('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
             // Return empty array for no data scenario
             return ['processed_items' => []];
         }
@@ -99,7 +99,7 @@ class Files {
             'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
         ];
 
-        $logger?->info('Files Input: Found unprocessed file for processing.', [
+        $logger?->debug('Files Input: Found unprocessed file for processing.', [
             'module_id' => $module_id,
             'file_path' => $file_identifier
         ]);
@@ -248,7 +248,7 @@ class Files {
             }
 
             $logger = apply_filters('dm_get_logger', null);
-            $logger?->info('Files Input: Successfully read text file.', [
+            $logger?->debug('Files Input: Successfully read text file.', [
                 'file_path' => $file_path,
                 'content_length' => strlen($content)
             ]);

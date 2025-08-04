@@ -76,7 +76,7 @@ class Flows {
         
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
-            $logger->info('Flows table creation attempted', [
+            $logger->debug('Flows table creation attempted', [
                 'table_name' => $table_name,
                 'result' => $result
             ]);
@@ -86,7 +86,7 @@ class Flows {
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name;
         
         if ($logger) {
-            $logger->info('Flows table creation verified', [
+            $logger->debug('Flows table creation verified', [
                 'table_exists' => $table_exists
             ]);
         }
@@ -155,7 +155,7 @@ class Flows {
         $flow_id = $this->wpdb->insert_id;
         
         if ($logger) {
-            $logger->info('Flow created successfully', [
+            $logger->debug('Flow created successfully', [
                 'flow_id' => $flow_id,
                 'pipeline_id' => $flow_data['pipeline_id'],
                 'flow_name' => $flow_data['flow_name']
@@ -231,7 +231,7 @@ class Flows {
         }
         
         if ($logger) {
-            $logger->info('Retrieved flows for pipeline', [
+            $logger->debug('Retrieved flows for pipeline', [
                 'pipeline_id' => $pipeline_id,
                 'flow_count' => count($flows)
             ]);
@@ -257,7 +257,7 @@ class Flows {
         
         if ($flows === null) {
             if ($logger) {
-                $logger->info('No active flows found');
+                $logger->debug('No active flows found');
             }
             return [];
         }
@@ -269,7 +269,7 @@ class Flows {
         }
         
         if ($logger) {
-            $logger->info('Retrieved active flows', [
+            $logger->debug('Retrieved active flows', [
                 'active_flow_count' => count($flows)
             ]);
         }
@@ -339,7 +339,7 @@ class Flows {
         }
         
         if ($logger) {
-            $logger->info('Flow updated successfully', [
+            $logger->debug('Flow updated successfully', [
                 'flow_id' => $flow_id,
                 'updated_fields' => array_keys($update_data),
                 'rows_affected' => $result
@@ -384,7 +384,7 @@ class Flows {
         }
         
         if ($logger) {
-            $logger->info('Flow deleted successfully', [
+            $logger->debug('Flow deleted successfully', [
                 'flow_id' => $flow_id
             ]);
         }
@@ -422,7 +422,7 @@ class Flows {
         }
         
         if ($logger) {
-            $logger->info('Flow scheduling updated successfully', [
+            $logger->debug('Flow scheduling updated successfully', [
                 'flow_id' => $flow_id,
                 'scheduling_config' => $scheduling_config,
                 'rows_affected' => $result
@@ -513,7 +513,7 @@ class Flows {
         }
         
         if ($logger) {
-            $logger->info('Retrieved flows ready for execution', [
+            $logger->debug('Retrieved flows ready for execution', [
                 'ready_flow_count' => count($ready_flows),
                 'current_time' => $current_time
             ]);

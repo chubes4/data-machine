@@ -72,7 +72,7 @@ class FluidContextBridge {
         $aggregated_context['packet_count'] = count($aggregated_context['pipeline_data']);
         $aggregated_context['unique_sources'] = array_unique($aggregated_context['source_types']);
 
-        $logger->info('FluidContextBridge: Successfully aggregated pipeline context', [
+        $logger->debug('FluidContextBridge: Successfully aggregated pipeline context', [
             'packet_count' => $aggregated_context['packet_count'],
             'total_content_length' => $aggregated_context['total_content_length'],
             'unique_sources' => count($aggregated_context['unique_sources'])
@@ -189,7 +189,7 @@ class FluidContextBridge {
             $request['temperature'] = $temperature;
         }
 
-        $logger->info('FluidContextBridge: Built enhanced AI request with critical directives', [
+        $logger->debug('FluidContextBridge: Built enhanced AI request with critical directives', [
             'message_count' => count($messages),
             'context_packets' => count($aggregated_context['pipeline_data'] ?? []),
             'variables_count' => count($prompt_variables),

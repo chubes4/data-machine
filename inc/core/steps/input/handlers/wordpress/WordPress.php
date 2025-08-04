@@ -275,7 +275,7 @@ class WordPress {
         $hit_time_limit_boundary = false;
 
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->info('WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $module_id]);
+        $logger && $logger->debug('WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $module_id]);
 
         while ($next_page_url && count($eligible_items_packets) < $process_limit && $pages_fetched < $max_pages) {
             $pages_fetched++;
@@ -609,7 +609,7 @@ class WordPress {
             $total_pages = $response_data['max_num_pages'] ?? ($response_headers['x-wp-totalpages'] ?? null);
             if ($total_pages !== null && $current_page >= (int)$total_pages) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->info('Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
+                $logger && $logger->debug('Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
                 break;
             }
 
@@ -621,7 +621,7 @@ class WordPress {
             // Stop after 1 empty page (no new items added) for efficiency
             if ($items_added_this_page === 0) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->info('Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
+                $logger && $logger->debug('Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
                 break;
             }
 

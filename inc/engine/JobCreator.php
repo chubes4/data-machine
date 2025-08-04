@@ -38,18 +38,17 @@ class JobCreator {
      *
      * @param int         $pipeline_id Pipeline ID defining the workflow steps.
      * @param int         $flow_id Flow ID with configured handlers and scheduling.
-     * @param int         $user_id User ID creating the job.
      * @param string      $context Context describing job source ('run_now', 'file_upload', 'single_module', 'scheduled').
      * @param array|null  $optional_data Input data for file-based jobs.
      * @return array Result array with 'success' boolean and 'message' string.
      */
-    public function create_and_schedule_job( int $pipeline_id, int $flow_id, int $user_id, string $context, ?array $optional_data = null ): array {
+    public function create_and_schedule_job( int $pipeline_id, int $flow_id, string $context, ?array $optional_data = null ): array {
         try {
             // Validate required parameters
-            if ( empty( $pipeline_id ) || empty( $flow_id ) || empty( $user_id ) ) {
+            if ( empty( $pipeline_id ) || empty( $flow_id ) ) {
                 return [
                     'success' => false,
-                    'message' => 'Invalid pipeline ID, flow ID, or user ID'
+                    'message' => 'Invalid pipeline ID or flow ID'
                 ];
             }
 
@@ -65,7 +64,7 @@ class JobCreator {
             // Action Scheduler handles global concurrency control (MAX_CONCURRENT_JOBS = 2)
 
             // Build job config for database storage
-            $job_config = $this->build_pipeline_flow_job_config( $pipeline_id, $flow_id, $user_id, $context, $optional_data );
+            $job_config = $this->build_pipeline_flow_job_config( $pipeline_id, $flow_id, $context, $optional_data );
             if ( is_wp_error( $job_config ) ) {
                 return [
                     'success' => false,
@@ -77,7 +76,6 @@ class JobCreator {
             $job_data = [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'user_id' => $user_id,
                 'flow_config' => wp_json_encode( $job_config )
             ];
             $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
@@ -88,7 +86,6 @@ class JobCreator {
                 $logger->error( 'Failed to create job record', [
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,
-                    'user_id' => $user_id,
                     'context' => $context
                 ] );
                 return [
@@ -127,11 +124,10 @@ class JobCreator {
             }
 
             $logger = apply_filters('dm_get_logger', null);
-            $logger->info( 'Job created and scheduled successfully', [
+            $logger->debug( 'Job created and scheduled successfully', [
                 'job_id' => $job_id,
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'user_id' => $user_id,
                 'context' => $context,
                 'action_id' => $action_id
             ] );
@@ -148,7 +144,6 @@ class JobCreator {
             $logger->error( 'Exception in job creation', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'user_id' => $user_id,
                 'context' => $context,
                 'error' => $e->getMessage()
             ] );
@@ -226,12 +221,11 @@ class JobCreator {
      *
      * @param int    $pipeline_id Pipeline ID defining the workflow steps.
      * @param int    $flow_id Flow ID with configured handlers and settings.
-     * @param int    $user_id User ID creating the job.
      * @param string $context Job context.
      * @param array|null $optional_data Input data for file-based jobs.
      * @return array|WP_Error Job config array or error.
      */
-    private function build_pipeline_flow_job_config( int $pipeline_id, int $flow_id, int $user_id, string $context, ?array $optional_data = null ) {
+    private function build_pipeline_flow_job_config( int $pipeline_id, int $flow_id, string $context, ?array $optional_data = null ) {
         // Get pipeline data
         $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
         $pipeline = $db_pipelines->get_pipeline( $pipeline_id );
@@ -261,7 +255,6 @@ class JobCreator {
         $job_config = [
             'pipeline_id' => $pipeline_id,
             'flow_id' => $flow_id,
-            'user_id' => $user_id,
             'context' => $context,
             'pipeline_name' => $pipeline->pipeline_name ?? 'Unknown Pipeline',
             'flow_name' => $flow['flow_name'] ?? 'Unknown Flow',
@@ -278,10 +271,9 @@ class JobCreator {
         // Log pipeline+flow configuration for debugging
         $logger = apply_filters('dm_get_logger', null);
         if ( $logger ) {
-            $logger->info( 'Built pipeline+flow job configuration', [
+            $logger->debug( 'Built pipeline+flow job configuration', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'user_id' => $user_id,
                 'context' => $context,
                 'pipeline_steps_count' => count( $pipeline_step_config ),
                 'has_optional_data' => ! empty( $optional_data )

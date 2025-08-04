@@ -142,10 +142,6 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.dm-placeholder-flow {
-    border: 2px dashed #bbb;
-    background: #f5f5f5;
-}
 
 /* Flow header */
 .dm-flow-header {
@@ -163,7 +159,7 @@
 
 .dm-flow-title-input {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     border: 1px solid transparent;
     background: transparent;
     padding: 4px 8px;
@@ -202,7 +198,7 @@
 
 /* Flow steps section */
 .dm-flow-steps-section {
-    padding: 16px;
+    padding: 36px 18px;
 }
 
 .dm-flow-steps-header {
@@ -271,10 +267,6 @@
     background: #f9f9f9;
 }
 
-.dm-placeholder-text {
-    color: #999;
-    font-style: italic;
-}
 
 /* Responsive design */
 @media (max-width: 768px) {
@@ -345,6 +337,20 @@
     text-decoration: underline;
 }
 
+/* Red delete button styling - secondary style with red border and text */
+.button-delete {
+    background: #fff !important;
+    border-color: #d63638 !important;
+    color: #d63638 !important;
+}
+
+.button-delete:hover,
+.button-delete:focus {
+    background: #f8f9fa !important;
+    border-color: #b32d2e !important;
+    color: #b32d2e !important;
+}
+
 /* Configure button styling - WordPress admin blue */
 .button-link-configure {
     color: #0073aa !important;
@@ -380,6 +386,8 @@
     font-size: 14px;
     margin: 0 4px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
 }
 
 .dm-flow-step-arrow .dashicons {
@@ -387,6 +395,7 @@
     height: 14px;
     font-size: 14px;
 }
+
 
 /* Modal-specific styles moved to modal-pipelines.css for better separation of concerns */
 

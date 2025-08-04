@@ -70,7 +70,7 @@ class Facebook {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->info('Starting Facebook output handling.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Starting Facebook output handling.', ['user_id' => $user_id]);
 
         // 1. Get config
         $output_config = $module_job_config['output_config']['facebook'] ?? []; // Use 'facebook' sub-key
@@ -166,7 +166,7 @@ class Facebook {
             }
         } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL) && $include_videos) {
             // Video Post (Fallback to Text with video link)
-            $logger && $logger->info('Facebook API: Including video link in text post.', ['video_url' => $video_url, 'user_id' => $user_id]);
+            $logger && $logger->debug('Facebook API: Including video link in text post.', ['video_url' => $video_url, 'user_id' => $user_id]);
             $content .= "\n\nVideo: " . $video_url;
             $endpoint = "/{$page_id}/feed";
             $api_params = ['message' => $content];
@@ -232,7 +232,7 @@ class Facebook {
                 // Construct the URL to the post
                 $output_url = "https://www.facebook.com/" . $post_id;
 
-                $logger && $logger->info('Facebook post published successfully.', [
+                $logger && $logger->debug('Facebook post published successfully.', [
                     'user_id' => $user_id, 
                     'post_id' => $post_id, 
                     'output_url' => $output_url
@@ -275,7 +275,7 @@ class Facebook {
                                 'user_id' => $user_id
                             ]);
                         } elseif ($comment_http_code >= 200 && $comment_http_code < 300 && isset($comment_data['id'])) {
-                            $logger && $logger->info('Facebook API: Successfully posted source link as comment.', [
+                            $logger && $logger->debug('Facebook API: Successfully posted source link as comment.', [
                                 'post_id' => $post_id, 
                                 'comment_id' => $comment_data['id'], 
                                 'user_id' => $user_id

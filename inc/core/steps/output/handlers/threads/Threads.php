@@ -57,7 +57,7 @@ class Threads {
         ];
         
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->info('Threads Output: Starting Threads publication.', ['user_id' => $user_id]);
+        $logger?->debug('Threads Output: Starting Threads publication.', ['user_id' => $user_id]);
 
         if (empty($user_id)) {
             return [
@@ -120,7 +120,7 @@ class Threads {
         }
 
         if ($needs_refresh) {
-            $logger?->info('Threads Output: Refreshing access token.', ['user_id' => $user_id]);
+            $logger?->debug('Threads Output: Refreshing access token.', ['user_id' => $user_id]);
             $refreshed = $threads_auth->refresh_token($user_id);
             if (!$refreshed) {
                 return [
@@ -194,7 +194,7 @@ class Threads {
             $media_id = $publish_response['media_id'];
             $post_url = "https://www.threads.net/@{$threads_account['username']}/post/{$media_id}";
 
-            $logger?->info('Threads Output: Successfully published to Threads.', [
+            $logger?->debug('Threads Output: Successfully published to Threads.', [
                 'user_id' => $user_id,
                 'media_id' => $media_id
             ]);
