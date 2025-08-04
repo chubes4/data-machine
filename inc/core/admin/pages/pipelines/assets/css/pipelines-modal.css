@@ -3,6 +3,7 @@
  * 
  * Modal-specific styles for pipeline administration interfaces.
  * Separated from page-level styles for clean architecture.
+ * MODAL-SPECIFIC STYLES ONLY - Page styles in pipelines-page.css
  *
  * @since 1.0.0
  */
@@ -175,6 +176,7 @@
     color: #856404;
 }
 
+/* Affected flows styling - moved from page file */
 .dm-affected-flows {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
@@ -466,76 +468,6 @@
     font-size: 14px;
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
-
-@media (max-width: 768px) {
-    .dm-step-cards,
-    .dm-handler-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .dm-step-selection-card,
-    .dm-handler-selection-card {
-        padding: 15px;
-    }
-    
-    .dm-step-card-title {
-        font-size: 15px;
-    }
-    
-    .dm-step-card-description {
-        font-size: 13px;
-    }
-    
-    /* Auth modal responsive adjustments */
-    .dm-auth-status {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .dm-auth-actions {
-        justify-content: center;
-        width: 100%;
-    }
-    
-    .dm-auth-actions .button {
-        flex: 1;
-        min-width: 120px;
-        text-align: center;
-    }
-    
-    .dm-handler-config-tabs {
-        flex-direction: column;
-    }
-    
-    .dm-tab-button {
-        border-bottom: none;
-        border-right: 3px solid transparent;
-        text-align: left;
-    }
-    
-    .dm-tab-button.active {
-        border-bottom: none;
-        border-right-color: #0073aa;
-    }
-    
-    /* Flow header responsive adjustments */
-    .dm-flows-header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: stretch;
-    }
-    
-    .dm-flows-header-actions {
-        align-self: flex-start;
-    }
-    
-    .dm-add-flow-btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
 /* ===== FLOW MANAGEMENT STYLES ===== */
 
 .dm-flows-header {
@@ -709,6 +641,121 @@
     background: #d63638;
     border-color: #d63638;
     color: #fff;
+}
+
+/* Remote Locations Manager Modal Styles - moved from page file */
+.dm-remote-locations-modal .dm-location-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background: #fafafa;
+}
+
+.dm-remote-locations-modal .dm-location-info strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.dm-remote-locations-modal .dm-location-info span {
+    display: block;
+    font-size: 12px;
+    color: #666;
+}
+
+.dm-remote-locations-modal .dm-location-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.dm-remote-locations-modal .dm-form-row {
+    margin-bottom: 20px;
+}
+
+.dm-remote-locations-modal .dm-form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+}
+
+.dm-remote-locations-modal .dm-modal-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+    text-align: right;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+@media (max-width: 768px) {
+    .dm-step-cards,
+    .dm-handler-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .dm-step-selection-card,
+    .dm-handler-selection-card {
+        padding: 15px;
+    }
+    
+    .dm-step-card-title {
+        font-size: 15px;
+    }
+    
+    .dm-step-card-description {
+        font-size: 13px;
+    }
+    
+    /* Auth modal responsive adjustments */
+    .dm-auth-status {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .dm-auth-actions {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .dm-auth-actions .button {
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+    }
+    
+    .dm-handler-config-tabs {
+        flex-direction: column;
+    }
+    
+    .dm-tab-button {
+        border-bottom: none;
+        border-right: 3px solid transparent;
+        text-align: left;
+    }
+    
+    .dm-tab-button.active {
+        border-bottom: none;
+        border-right-color: #0073aa;
+    }
+    
+    /* Flow header responsive adjustments */
+    .dm-flows-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .dm-flows-header-actions {
+        align-self: flex-start;
+    }
+    
+    .dm-add-flow-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* ===== UTILITY CLASSES ===== */

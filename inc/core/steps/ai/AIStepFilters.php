@@ -132,6 +132,28 @@ function dm_register_ai_step_filters() {
         return $builder_instance;
     }, 10);
     
+    /**
+     * AI Step Configuration Registration
+     * 
+     * Register AI step configuration capability so the pipeline step card shows Configure button.
+     * This tells the step-card template that AI steps have configurable options.
+     * 
+     * @param mixed $config Current step configuration (null if none)
+     * @param string $step_type Step type being requested
+     * @param array $context Step context data
+     * @return array|mixed Step configuration or original value
+     */
+    add_filter('dm_get_step_config', function($config, $step_type, $context) {
+        if ($step_type === 'ai') {
+            return [
+                'config_type' => 'ai_configuration',
+                'modal_type' => 'configure-step', // Links to existing modal content registration
+                'button_text' => __('Configure', 'data-machine'),
+                'label' => __('AI Configuration', 'data-machine')
+            ];
+        }
+        return $config;
+    }, 10, 3);
     
     /**
      * AI Step Configuration Modal Content Registration

@@ -47,14 +47,14 @@ function dm_register_pipelines_admin_page_filters() {
                             'deps' => [],
                             'media' => 'all'
                         ],
-                        'dm-admin-pipelines' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/css/admin-pipelines.css',
+                        'dm-pipelines-page' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-page.css',
                             'deps' => ['dm-core-modal'],
                             'media' => 'all'
                         ],
-                        'dm-modal-pipelines' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/css/modal-pipelines.css',
-                            'deps' => ['dm-core-modal', 'dm-admin-pipelines'],
+                        'dm-pipelines-modal' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-modal.css',
+                            'deps' => ['dm-core-modal', 'dm-pipelines-page'],
                             'media' => 'all'
                         ],
                         'ai-http-components' => [
@@ -81,8 +81,8 @@ function dm_register_pipelines_admin_page_filters() {
                                 ]
                             ]
                         ],
-                        'dm-pipeline-builder' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
+                        'dm-pipelines-page' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-page.js',
                             'deps' => ['jquery', 'jquery-ui-sortable'],
                             'in_footer' => true,
                             'localize' => [
@@ -106,8 +106,8 @@ function dm_register_pipelines_admin_page_filters() {
                                 ]
                             ]
                         ],
-                        'dm-pipeline-modal' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-modal.js',
+                        'dm-pipelines-modal' => [
+                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-modal.js',
                             'deps' => ['jquery', 'dm-core-modal'],
                             'in_footer' => true,
                             'localize' => [
@@ -336,7 +336,7 @@ function dm_handle_save_handler_settings() {
         
         // Extract form fields (skip WordPress and system fields)
         foreach ($_POST as $key => $value) {
-            if (!in_array($key, ['handler_settings_nonce', '_wp_http_referer', 'handler_slug', 'step_type', 'flow_id', 'pipeline_id'])) {
+            if (!in_array($key, ['action', 'handler_settings_nonce', '_wp_http_referer', 'handler_slug', 'step_type', 'flow_id', 'pipeline_id'])) {
                 $raw_settings[$key] = $value;
             }
         }

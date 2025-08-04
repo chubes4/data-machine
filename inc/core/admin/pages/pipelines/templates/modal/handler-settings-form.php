@@ -62,8 +62,9 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
         </div>
     <?php endif; ?>
     
-    <form class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
+    <form class="dm-handler-settings-form dm-modal-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         <!-- Hidden fields for handler identification -->
+        <input type="hidden" name="action" value="dm_save_handler_settings" />
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type ?? ''); ?>" />
         <?php 

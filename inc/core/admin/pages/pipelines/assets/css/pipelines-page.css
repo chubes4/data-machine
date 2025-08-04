@@ -3,6 +3,7 @@
  * 
  * Clean slate styles for the Pipeline+Flow two-layer architecture.
  * Component-based design with proper namespace isolation.
+ * PAGE-LEVEL STYLES ONLY - Modal styles in pipelines-modal.css
  *
  * @since NEXT_VERSION
  */
@@ -397,104 +398,3 @@
     height: 14px;
     font-size: 14px;
 }
-
-
-/* Modal-specific styles moved to modal-pipelines.css for better separation of concerns */
-
-
-
-
-.dm-affected-flows {
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: 4px;
-    padding: 15px;
-    margin: 15px 0;
-}
-
-.dm-affected-flows h4 {
-    margin: 0 0 10px 0;
-    color: #856404;
-}
-
-.dm-flows-list {
-    margin: 10px 0;
-}
-
-.dm-flow-item {
-    margin-bottom: 5px;
-}
-
-.dm-flow-name {
-    font-weight: 600;
-}
-
-.dm-flow-info {
-    color: #666;
-    font-size: 12px;
-}
-
-.dm-cascade-warning {
-    margin-top: 15px;
-    color: #856404;
-    font-size: 14px;
-}
-
-.dm-no-flows {
-    background: #d1ecf1;
-    border: 1px solid #bee5eb;
-    border-radius: 4px;
-    padding: 15px;
-    margin: 15px 0;
-}
-
-.dm-no-flows .dm-info {
-    margin: 0;
-    color: #0c5460;
-}
-
-/* Remote Locations Manager Modal Styles */
-.dm-remote-locations-modal .dm-location-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    background: #fafafa;
-}
-
-.dm-remote-locations-modal .dm-location-info strong {
-    display: block;
-    margin-bottom: 4px;
-}
-
-.dm-remote-locations-modal .dm-location-info span {
-    display: block;
-    font-size: 12px;
-    color: #666;
-}
-
-.dm-remote-locations-modal .dm-location-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.dm-remote-locations-modal .dm-form-row {
-    margin-bottom: 20px;
-}
-
-.dm-remote-locations-modal .dm-form-actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 12px;
-}
-
-.dm-remote-locations-modal .dm-modal-actions {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
-    text-align: right;
-}
-
