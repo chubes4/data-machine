@@ -30,45 +30,43 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_jobs_admin_page_filters() {
     
-    // Unified admin page registration with embedded asset configuration
-    add_filter('dm_get_admin_page', function($config, $page_slug) {
-        if ($page_slug === 'jobs') {
-            return [
-                'page_title' => __('Jobs', 'data-machine'),
-                'menu_title' => __('Jobs', 'data-machine'),  
-                'capability' => 'manage_options',
-                'position' => 20,
-                'templates' => __DIR__ . '/templates/',
-                'assets' => [
-                    'css' => [
-                        'dm-admin-jobs' => [
-                            'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
-                            'deps' => [],
-                            'media' => 'all'
-                        ]
-                    ],
-                    'js' => [
-                        'dm-jobs-admin' => [
-                            'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
-                            'deps' => ['jquery'],
-                            'in_footer' => true,
-                            'localize' => [
-                                'object' => 'dmJobsAdmin',
-                                'data' => [
-                                    'ajax_url' => admin_url('admin-ajax.php'),
-                                    'strings' => [
-                                        'loading' => __('Loading...', 'data-machine'),
-                                        'error' => __('An error occurred', 'data-machine'),
-                                    ]
+    // Discovery mode registration - allows dynamic admin page discovery
+    add_filter('dm_get_admin_pages', function($pages) {
+        $pages['jobs'] = [
+            'page_title' => __('Jobs', 'data-machine'),
+            'menu_title' => __('Jobs', 'data-machine'),  
+            'capability' => 'manage_options',
+            'position' => 20,
+            'templates' => __DIR__ . '/templates/',
+            'assets' => [
+                'css' => [
+                    'dm-admin-jobs' => [
+                        'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ]
+                ],
+                'js' => [
+                    'dm-jobs-admin' => [
+                        'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmJobsAdmin',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'strings' => [
+                                    'loading' => __('Loading...', 'data-machine'),
+                                    'error' => __('An error occurred', 'data-machine')
                                 ]
                             ]
                         ]
                     ]
                 ]
-            ];
-        }
-        return $config;
-    }, 10, 2);
+            ]
+        ];
+        return $pages;
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

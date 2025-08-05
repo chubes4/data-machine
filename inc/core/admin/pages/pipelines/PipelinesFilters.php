@@ -30,124 +30,132 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_pipelines_admin_page_filters() {
     
-    // Unified admin page registration with embedded asset configuration
-    // Eliminates bridge systems through direct dm_get_admin_page integration
-    add_filter('dm_get_admin_page', function($config, $page_slug) {
-        if ($page_slug === 'pipelines') {
-            return [
-                'page_title' => __('Pipelines', 'data-machine'),
-                'menu_title' => __('Pipelines', 'data-machine'),
-                'capability' => 'manage_options',
-                'position' => 10,
-                'templates' => __DIR__ . '/templates/',
-                'assets' => [
-                    'css' => [
-                        'dm-core-modal' => [
-                            'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
-                            'deps' => [],
-                            'media' => 'all'
-                        ],
-                        'dm-pipelines-page' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-page.css',
-                            'deps' => ['dm-core-modal'],
-                            'media' => 'all'
-                        ],
-                        'dm-pipelines-modal' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-modal.css',
-                            'deps' => ['dm-core-modal', 'dm-pipelines-page'],
-                            'media' => 'all'
-                        ],
-                        'ai-http-components' => [
-                            'file' => 'lib/ai-http-client/assets/css/components.css',
-                            'deps' => [],
-                            'media' => 'all'
+    // Discovery mode registration - allows dynamic admin page discovery  
+    add_filter('dm_get_admin_pages', function($pages) {
+        $pages['pipelines'] = [
+            'page_title' => __('Pipelines', 'data-machine'),
+            'menu_title' => __('Pipelines', 'data-machine'),
+            'capability' => 'manage_options',
+            'position' => 10,
+            'templates' => __DIR__ . '/templates/',
+            'assets' => [
+                'css' => [
+                    'dm-core-modal' => [
+                        'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
+                    'dm-pipelines-page' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-page.css',
+                        'deps' => ['dm-core-modal'],
+                        'media' => 'all'
+                    ],
+                    'dm-pipelines-modal' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-modal.css',
+                        'deps' => ['dm-core-modal', 'dm-pipelines-page'],
+                        'media' => 'all'
+                    ],
+                    'ai-http-components' => [
+                        'file' => 'lib/ai-http-client/assets/css/components.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ]
+                ],
+                'js' => [
+                    'dm-core-modal' => [
+                        'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmCoreModal',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
+                                'strings' => [
+                                    'loading' => __('Loading...', 'data-machine'),
+                                    'error' => __('Error', 'data-machine'),
+                                    'close' => __('Close', 'data-machine')
+                                ]
+                            ]
                         ]
                     ],
-                    'js' => [
-                        'dm-core-modal' => [
-                            'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
-                            'deps' => ['jquery'],
-                            'in_footer' => true,
-                            'localize' => [
-                                'object' => 'dmCoreModal',
-                                'data' => [
-                                    'ajax_url' => admin_url('admin-ajax.php'),
-                                    'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
-                                    'strings' => [
-                                        'loading' => __('Loading...', 'data-machine'),
-                                        'error' => __('Error', 'data-machine'),
-                                        'close' => __('Close', 'data-machine')
-                                    ]
+                    'dm-pipeline-shared' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-shared.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmPipelineBuilder',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
+                                'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
+                                'strings' => [
+                                    'error' => __('An error occurred', 'data-machine'),
+                                    'success' => __('Success', 'data-machine'),
+                                    'confirm' => __('Are you sure?', 'data-machine'),
+                                    'cancel' => __('Cancel', 'data-machine'),
+                                    'delete' => __('Delete', 'data-machine'),
+                                    'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
+                                    'saving' => __('Saving...', 'data-machine'),
+                                    'loading' => __('Loading...', 'data-machine'),
+                                    'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
+                                    'atLeastOneStep' => __('At least one step is required', 'data-machine'),
+                                    'noFlows' => __('0 flows', 'data-machine'),
+                                    'noFlowsMessage' => __('No flows configured for this pipeline.', 'data-machine'),
+                                    'configureHandlers' => __('Configure handlers for each step above', 'data-machine')
                                 ]
                             ]
-                        ],
-                        'dm-pipelines-page' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-page.js',
-                            'deps' => ['jquery', 'jquery-ui-sortable'],
-                            'in_footer' => true,
-                            'localize' => [
-                                'object' => 'dmPipelineBuilder',
-                                'data' => [
-                                    'ajax_url' => admin_url('admin-ajax.php'),
-                                    'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
-                                    'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
-                                    'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
-                                    'strings' => [
-                                        'error' => __('An error occurred', 'data-machine'),
-                                        'success' => __('Success', 'data-machine'),
-                                        'confirm' => __('Are you sure?', 'data-machine'),
-                                        'cancel' => __('Cancel', 'data-machine'),
-                                        'delete' => __('Delete', 'data-machine'),
-                                        'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
-                                        'saving' => __('Saving...', 'data-machine'),
-                                        'loading' => __('Loading...', 'data-machine'),
-                                        'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
-                                        'atLeastOneStep' => __('At least one step is required', 'data-machine'),
-                                        'noFlows' => __('0 flows', 'data-machine'),
-                                        'noFlowsMessage' => __('No flows configured for this pipeline.', 'data-machine')
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'dm-pipelines-modal' => [
-                            'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-modal.js',
-                            'deps' => ['jquery', 'dm-core-modal'],
-                            'in_footer' => true,
-                            'localize' => [
-                                'object' => 'dmPipelineModal',
-                                'data' => [
-                                    'ajax_url' => admin_url('admin-ajax.php'),
-                                    'admin_post_url' => admin_url('admin-post.php'),
-                                    'oauth_nonces' => [
-                                        'twitter' => wp_create_nonce('dm_twitter_oauth_init_nonce'),
-                                        'googlesheets' => wp_create_nonce('dm_googlesheets_oauth_init_nonce'),
-                                        'reddit' => wp_create_nonce('dm_reddit_oauth_init_nonce'),
-                                        'facebook' => wp_create_nonce('dm_facebook_oauth_init_nonce'),
-                                        'threads' => wp_create_nonce('dm_threads_oauth_init_nonce')
-                                    ],
-                                    'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
-                                    'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
-                                    'strings' => [
-                                        'connecting' => __('Connecting...', 'data-machine'),
-                                        'disconnecting' => __('Disconnecting...', 'data-machine'),
-                                        'testing' => __('Testing...', 'data-machine'),
-                                        'saving' => __('Saving...', 'data-machine'),
-                                        'confirmDisconnect' => __('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.', 'data-machine')
-                                    ]
-                                ]
-                            ]
-                        ],
-                        'ai-http-provider-manager' => [
-                            'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
-                            'deps' => ['jquery'],
-                            'in_footer' => true
                         ]
+                    ],
+                    'dm-pipeline-builder' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
+                        'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipeline-shared'],
+                        'in_footer' => true
+                    ],
+                    'dm-flow-builder' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/flow-builder.js',
+                        'deps' => ['jquery', 'dm-pipeline-shared'],
+                        'in_footer' => true
+                    ],
+                    'dm-pipelines-modal' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-modal.js',
+                        'deps' => ['jquery', 'dm-core-modal'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmPipelineModal',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'admin_post_url' => admin_url('admin-post.php'),
+                                'oauth_nonces' => [
+                                    'twitter' => wp_create_nonce('dm_twitter_oauth_init_nonce'),
+                                    'googlesheets' => wp_create_nonce('dm_googlesheets_oauth_init_nonce'),
+                                    'reddit' => wp_create_nonce('dm_reddit_oauth_init_nonce'),
+                                    'facebook' => wp_create_nonce('dm_facebook_oauth_init_nonce'),
+                                    'threads' => wp_create_nonce('dm_threads_oauth_init_nonce')
+                                ],
+                                'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
+                                'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
+                                'strings' => [
+                                    'connecting' => __('Connecting...', 'data-machine'),
+                                    'disconnecting' => __('Disconnecting...', 'data-machine'),
+                                    'testing' => __('Testing...', 'data-machine'),
+                                    'saving' => __('Saving...', 'data-machine'),
+                                    'confirmDisconnect' => __('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.', 'data-machine')
+                                ]
+                            ]
+                        ]
+                    ],
+                    'ai-http-provider-manager' => [
+                        'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true
                     ]
                 ]
-            ];
-        }
-        return $config;
-    }, 10, 2);
+            ]
+        ];
+        return $pages;
+    });
     
     // AJAX handler registration - Route to specialized page or modal handlers
     add_action('wp_ajax_dm_pipeline_ajax', function() {

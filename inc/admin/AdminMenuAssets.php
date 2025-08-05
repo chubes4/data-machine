@@ -8,9 +8,7 @@
  */
 
 namespace DataMachine\Admin;
-
-use DataMachine\Core\Constants;
-
+ 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
@@ -70,25 +68,17 @@ class AdminMenuAssets {
     }
 
     /**
-     * Register admin pages via direct parameter-based discovery system.
+     * Register admin pages via dynamic discovery system.
      * 
-     * Uses consistent parameter-based pattern matching handlers, database services, 
-     * and all other architectural components. Direct component registration without bridge.
+     * Uses consistent discovery pattern matching dm_get_steps and dm_get_handlers.
+     * All components self-register via filters with zero hardcoded limitations.
      * Pages are ordered by position parameter with alphabetical fallback.
      *
      * @since    NEXT_VERSION
      */
     public function add_admin_menu() {
-        // Direct parameter-based discovery - consistent with architectural standards
-        $registered_pages = [];
-        $known_slugs = ['jobs', 'pipelines', 'logs'];
-        
-        foreach ($known_slugs as $slug) {
-            $page_config = apply_filters('dm_get_admin_page', null, $slug);
-            if ($page_config !== null) {
-                $registered_pages[$slug] = $page_config;
-            }
-        }
+        // Discovery mode - get all registered admin pages dynamically
+        $registered_pages = apply_filters('dm_get_admin_pages', []);
         
         // Only create Data Machine menu if pages are available
         if (empty($registered_pages)) {

@@ -52,11 +52,11 @@ if (in_array($action, $modal_actions)) {
 ## Database Schema
 
 **Core Tables**:
-- **wp_dm_jobs**: Execution records with job_id, flow_id, status, created_at, updated_at, step_data (JSON)
-- **wp_dm_pipelines**: Template definitions with pipeline_id, pipeline_name, step_configuration (JSON), created_at, updated_at
-- **wp_dm_flows**: Configured instances with flow_id, pipeline_id, flow_name, flow_config (JSON), scheduling_config (JSON), created_at, updated_at
-- **wp_dm_processed_items**: Deduplication tracking with item_hash, source_identifier, processed_at
-- **wp_dm_remote_locations**: Multi-site configuration with location_id, site_url, auth_token, is_active
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, current_step_name, step_sequence (JSON), flow_config (JSON), step_data (JSON), cleanup_scheduled, created_at, started_at, completed_at
+- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (JSON), created_at, updated_at
+- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (JSON), scheduling_config (JSON), created_at, updated_at
+- **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
+- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, encrypted_password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 
 **Table Relationships**:
 - Flows reference Pipelines (many-to-one): `flows.pipeline_id → pipelines.pipeline_id`
@@ -72,9 +72,18 @@ $ai_client = apply_filters('dm_get_ai_http_client', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
 $encryption = apply_filters('dm_get_encryption_helper', null);
 $scheduler = apply_filters('dm_get_action_scheduler', null);
+$http_service = apply_filters('dm_get_http_service', null);
+$constants = apply_filters('dm_get_constants', null);
+$wpdb = apply_filters('dm_get_wpdb_service', null);
+$pipeline_context = apply_filters('dm_get_pipeline_context', null);
 
 // Parameter-based services
 $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+$db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+
 $handlers = apply_filters('dm_get_handlers', null, 'output');
 $auth = apply_filters('dm_get_auth', null, 'twitter');
 $context = apply_filters('dm_get_context', null, $job_id);
@@ -82,9 +91,17 @@ $context = apply_filters('dm_get_context', null, $job_id);
 // Step discovery (dual-mode)
 $all_steps = apply_filters('dm_get_steps', []);              // All step types
 $step_config = apply_filters('dm_get_steps', null, 'input'); // Specific type
+$step_config_info = apply_filters('dm_get_step_config', null, $step_type, $context);
+
+// DataPacket creation
+$datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
 
 // Modal system
 $modal_content = apply_filters('dm_get_modal', null, 'step-selection');
+
+// Admin page discovery
+$admin_pages = apply_filters('dm_get_admin_pages', []); // All registered admin pages
+$specific_page = apply_filters('dm_get_admin_page', null, 'jobs'); // Specific page
 
 // Universal template rendering
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
@@ -94,6 +111,8 @@ $template_html = apply_filters('dm_get_template', '', 'page/step-card', $data);
 
 // Admin page template rendering
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
+$admin_page_config = apply_filters('dm_get_admin_page', null, 'pipelines');
+$admin_menu_assets = apply_filters('dm_get_admin_menu_assets', null);
 ```
 
 ## Development Commands
@@ -118,6 +137,10 @@ define('WP_DEBUG', true);    # Enable conditional error_log
 # Common fixes
 composer dump-autoload      # Fix class loading
 php -l file.php             # Syntax check
+
+# Service Discovery Validation
+$all_services = apply_filters('dm_get_debug_services', []); # Debug service registration
+define('WP_DEBUG', true) && error_log(print_r($all_services, true)); # Service debugging
 ```
 
 ## Components
@@ -231,60 +254,39 @@ $content = apply_filters('dm_render_template', '', 'page/step-card', [
 
 ## Arrow Rendering Architecture
 
-**is_first_step Pattern**: Simplified arrow logic that eliminates positioning complexity and ensures consistency across contexts.
+**is_first_step Pattern**: Simplified arrow logic using binary flag for consistent rendering across all contexts.
 
-**Core Arrow Logic**: Every step uses the same universal pattern:
-- **First step in container**: `is_first_step: true` → **NO arrow**
-- **All other steps**: `is_first_step: false` → **arrow rendered**
-- **Empty steps at end**: `is_first_step: false` → **arrow** (shows flow continuation)
-
-### Universal Template Implementation
-
-**Single Template Arrow Logic**: Universal `step-card.php` template uses simplified arrow pattern with WordPress dashicons:
+**Universal Arrow Logic**: Single template pattern with context validation:
 ```php
-<?php
-// Universal arrow logic - before every step except the very first step in the container
-$is_first_step = $is_first_step ?? false;
+// Universal arrow logic with contextual validation
+if (!isset($is_first_step)) {
+    if ($is_empty) {
+        // Empty steps default to showing arrow
+        $is_first_step = false;
+    } else {
+        // Populated steps require proper arrow logic
+        throw new \InvalidArgumentException('step-card template requires is_first_step parameter for populated steps');
+    }
+}
 if (!$is_first_step): ?>
     <div class="dm-step-arrow">
         <span class="dashicons dashicons-arrow-right-alt"></span>
     </div>
-<?php endif; ?>
+<?php endif;
 ```
 
-### JavaScript is_first_step Calculation
-
-**Consistent Logic for Template Requests**:
+**JavaScript Template Integration**: Calculate `is_first_step` when requesting templates:
 ```javascript
-// Check if this is the first real step (only empty steps exist)
+// Calculate is_first_step for template requests
 const nonEmptySteps = $container.find('.dm-step:not(.dm-step-card--empty)').length;
 const isFirstRealStep = nonEmptySteps === 0;
 
-// Pass to template for consistent arrow rendering
 this.requestTemplate('page/step-card', {
     step: stepData,
     is_first_step: isFirstRealStep,
-    pipeline_id: this.pipelineId
+    context: 'pipeline'
 });
 ```
-
-### Architecture Benefits
-
-- **Eliminates Positioning Logic**: No complex position calculations or index tracking
-- **Universal Pattern**: Same logic works for pipelines, flows, and all contexts
-- **Consistency**: Initial page load and AJAX updates identical
-- **Simplified Logic**: Binary `is_first_step` replaces complex step_index calculations
-- **Empty Step Support**: Handles empty steps at end with proper flow continuation arrows
-- **Single Template**: Universal `step-card.php` consolidates all arrow rendering logic
-- **WordPress Integration**: Uses native dashicons for consistent styling
-
-### Critical Implementation Rules
-
-**Always Calculate is_first_step**: JavaScript must calculate this value when requesting step templates
-**Universal Template**: Single `step-card.php` template handles all step contexts via `context` parameter
-**Template Pattern**: Universal template uses `if (!$is_first_step)` for arrow rendering
-**No Position Math**: Never use step positions, indices, or counts for arrow logic
-**Context Awareness**: Template adapts UI and actions based on 'pipeline' or 'flow' context parameter
 
 ## Template Rendering Architecture
 
@@ -630,7 +632,53 @@ add_filter('dm_get_admin_page', function($config, $page_slug) {
 }, 10, 2);
 ```
 
-**Parameter-Based Discovery**: AdminMenuAssets discovers pages dynamically via parameter-based filters, maintaining architectural consistency with all other services.
+**Dynamic Discovery System**: AdminMenuAssets uses pure discovery mode for extensible admin page registration, eliminating hardcoded limitations:
+```php
+// Discovery mode - get all registered admin pages dynamically
+$registered_pages = apply_filters('dm_get_admin_pages', []);
+
+// Only create Data Machine menu if pages are available
+if (empty($registered_pages)) {
+    return;
+}
+
+// Pages sorted by position, then alphabetically
+uasort($registered_pages, function($a, $b) {
+    $pos_a = $a['position'] ?? 50;
+    $pos_b = $b['position'] ?? 50;
+    return ($pos_a === $pos_b) ? strcasecmp($a['menu_title'] ?? '', $b['menu_title'] ?? '') : $pos_a <=> $pos_b;
+});
+```
+
+**Pure Discovery Registration**: Components use single registration pattern with central parameter resolution:
+```php
+// Single discovery mode registration - zero redundancy
+add_filter('dm_get_admin_pages', function($pages) {
+    $pages['jobs'] = [
+        'page_title' => __('Jobs', 'data-machine'),
+        'menu_title' => __('Jobs', 'data-machine'),
+        'capability' => 'manage_options',
+        'position' => 20,
+        'templates' => __DIR__ . '/templates/',
+        'assets' => [/* asset configuration */]
+    ];
+    return $pages;
+});
+```
+
+**Central Parameter Resolution**: AdminFilters.php provides parameter-based access via discovery routing:
+```php
+// Parameter-based access routes to discovery data automatically
+add_filter('dm_get_admin_page', function($config, $page_slug) {
+    if ($config !== null) {
+        return $config; // Direct registration takes priority
+    }
+    
+    // Route to discovery data for parameter-based access
+    $all_pages = apply_filters('dm_get_admin_pages', []);
+    return $all_pages[$page_slug] ?? null;
+}, 5, 2);
+```
 
 ## Universal Template Rendering
 
@@ -643,7 +691,6 @@ add_filter('dm_get_admin_page', function($config, $page_slug) {
     if ($page_slug === 'my_page') {
         return [
             'page_title' => __('My Page'),
-            'content_callback' => [new MyPage(), 'render'],
             'templates' => __DIR__ . '/templates/', // Template directory registration
             'assets' => [...]
         ];
@@ -790,7 +837,6 @@ add_filter('dm_get_admin_page', function($config, $page_slug) {
     if ($page_slug === 'my_page') {
         return [
             'page_title' => __('My Page'),
-            'content_callback' => [new MyPage(), 'render'],
             'templates' => __DIR__ . '/templates/', // Required for template rendering
             'assets' => [
                 'css' => ['my-css' => ['file' => 'path/to/style.css']],

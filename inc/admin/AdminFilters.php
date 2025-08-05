@@ -60,15 +60,15 @@ function dm_register_admin_filters() {
         return $config;
     }, 5, 3);
     
-    // Parameter-based admin page registration system  
+    // Parameter-based admin page resolution - routes discovery data for parameter access
     add_filter('dm_get_admin_page', function($config, $page_slug) {
         if ($config !== null) {
-            return $config; // Component self-registration provided
+            return $config; // Direct registration takes priority
         }
         
-        // Pure parameter-based system - admin pages self-register via this same filter
-        // No hardcoded page lists - complete architectural consistency
-        return null;
+        // Route to discovery data for parameter-based access
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        return $all_pages[$page_slug] ?? null;
     }, 5, 2);
     
     // Parameter-based modal content system for admin interface

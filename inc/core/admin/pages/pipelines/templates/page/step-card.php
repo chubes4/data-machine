@@ -25,8 +25,8 @@ if (!isset($step) || !is_array($step)) {
 $is_empty = $step['is_empty'];
 $step_type = $step['step_type'];
 $step_position = $step['position'];
+$step_id = $step['step_id'] ?? null;
 $step_data = $step['step_data'] ?? [];
-$step_id = $step_data['step_id'] ?? null;
 
 // Context-specific variables
 if ($context === 'pipeline') {
@@ -61,6 +61,7 @@ if ($context === 'pipeline') {
 <div class="dm-step-container" 
      data-step-position="<?php echo esc_attr($step_position); ?>"
      data-step-type="<?php echo esc_attr($step_type); ?>"
+     <?php if (!empty($step_id)): ?>data-step-id="<?php echo esc_attr($step_id); ?>"<?php endif; ?>
      <?php if ($context === 'pipeline'): ?>data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>"<?php endif; ?>
      <?php if ($context === 'flow'): ?>data-flow-id="<?php echo esc_attr($flow_id); ?>"<?php endif; ?>>
 
