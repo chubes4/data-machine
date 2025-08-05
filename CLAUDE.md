@@ -16,136 +16,52 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 - **Pipelines**: Reusable workflow templates with step sequences (positions 0-99)
 - **Flows**: Configured instances with handler settings and scheduling (auto-created "Draft Flow" for new pipelines)
 
-## Architectural Evolution
+## AJAX Handler Architecture
 
-**Legacy Pattern Elimination**: Systematic modernization achieved consistent architectural patterns throughout the codebase.
+**Specialized Handler Separation**: Clean separation between modal UI operations and page business logic:
 
-### User-Scoped Pattern Removal
+- **PipelinePageAjax.php**: Business logic operations (add_step, delete_step, save_pipeline, delete_pipeline, delete_flow)
+- **PipelineModalAjax.php**: UI/template operations (get_modal, get_template, configure-step-action, add-handler-action)
 
-**Admin-Only Architecture**: Elimination of user_id parameters and user-scoped logic achieved consistent admin-only operation patterns:
-- **Handler Interfaces**: All input/output handlers now use clean admin-only signatures
-- **Database Operations**: All database methods standardized to admin-context operations
-- **Template System**: Universal template rendering with zero user-scope dependencies
-- **Authentication**: OAuth and API authentication patterns simplified for admin-only use
-
-### Handler Interface Standardization
-
-**Consistent Handler Signatures**: Handler interfaces standardized to admin-only patterns:
+**Routing Logic**: PipelinesFilters.php routes based on action type:
 ```php
-// Modern admin-only interface pattern
-public function get_input_data(object $module, array $source_config): array
-public function send_output_data(object $module, array $handler_config, array $data_packet): bool
+// Modal actions route to PipelineModalAjax
+$modal_actions = ['get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config', 
+                  'configure-step-action', 'add-location-action', 'add-handler-action'];
+
+if (in_array($action, $modal_actions)) {
+    $ajax_handler = new PipelineModalAjax();
+} else {
+    $ajax_handler = new PipelinePageAjax();
+}
 ```
 
-**Interface Consistency**: Standardized interfaces eliminate fallbacks and legacy support patterns.
-
-### Database Schema Standardization
-
-**Schema Alignment**: Database schema consistent with admin-only implementation patterns:
-- **Flows Table**: All user_id column references eliminated
-- **Jobs Table**: Simplified admin-context execution tracking
-- **Pipelines Table**: Pure template-based structure without user scoping
-- **Test Data**: All fixture data updated to reflect admin-only patterns
-
-### Template System Unification
-
-**Single Template Architecture**: Unified template system handles multiple rendering contexts:
-- **Single Template**: `step-card.php` handles pipeline AND flow contexts
-- **Context Parameter**: `context: 'pipeline'` or `context: 'flow'` determines UI behavior
-- **Arrow Logic**: Universal `is_first_step` pattern eliminates positioning complexity
-- **Handler Integration**: Dynamic handler discovery via filter-based system
-
-### Service Integration Standardization
-
-**Universal Filter Architecture**: All services follow consistent filter-based discovery patterns:
-- **EncryptionHelper**: Accessible via `apply_filters('dm_get_encryption_helper', null)`
-- **ActionScheduler**: Accessible via `apply_filters('dm_get_action_scheduler', null)`
-- **Logger Service**: Integrated error handling replaces all direct error_log() calls
-- **Service Access Pattern**: No hardcoded service instantiation across codebase
-- **Helper Services**: Even utility classes follow consistent filter registration patterns
-
-### AI Configuration System Integration
-
-**Library Alignment**: AI configuration system integrated with AI HTTP Client library capabilities:
-- **Configuration Cleanup**: Removed redundant configuration bypass that duplicated library functionality
-- **Step-Aware Configuration**: AI steps properly use library's `send_step_request()` method with step-specific configuration
-- **Consistent Step Keys**: Fixed step key generation inconsistency using `pipeline_{id}_step_{name}` pattern
-- **Modal Integration**: ProviderManagerComponent properly integrated with step-aware configuration system
-- **Library Integration**: Restored proper use of existing library capabilities, reducing overengineering
-
-### Handler Modal System Integration
-
-**Direct Action Architecture**: Handler configuration system implements consistent direct action patterns:
-- **Button Architecture**: Handler save buttons use `data-template="add-handler-action"` + `dm-modal-close` class for automatic modal closure
-- **Event Handling**: pipelines-page.js handles `[data-template="add-handler-action"]` clicks with direct AJAX calls
-- **AJAX Endpoint**: Direct calls to `dm_save_handler_settings` action for immediate processing
-- **UI Updates**: Immediate step card updates via `updateFlowStepCard()` method using template requesting pattern
-- **Filter Priority Optimization**: Universal handler system filter priority changed from 10 to 50 ensuring individual handlers register first
-
-**Template System Enhancements**: Handler modal templates provide production-ready reliability:
-- **JSON Decode Protection**: Proper type checking for flow_config prevents template errors
-- **Template Variables**: All handler filters now receive flow_id and pipeline_id for context-aware rendering
-- **Handler Display**: Step cards properly show configured handler status and details
-
-**Form Pattern Modernization**: Legacy form submission patterns replaced with direct action architecture:
-- **Handler Settings Forms**: All handler configuration converted from form submission to direct action pattern
-- **Twitter Settings**: Modernized to data-template actions with automatic modal closure
-- **Schedule Configuration**: Converted to direct action pattern with data-context attributes
-- **Remote Locations Manager**: Fully modernized to direct action architecture
-- **JavaScript Cleanup**: Removed all legacy form submission handlers from pipelines-modal.js
-- **Single Handler Per Step**: Implemented replacement workflow eliminating accumulation complexity
-- **Dynamic UI States**: "Add Handler" vs "Edit Handler" buttons based on configuration state
-
-**Architectural Consistency**: Handler configuration implements direct action patterns aligned with established system architecture.
-
-### Production Code Quality
-
-**Debug System Integration**: Structured debugging system replaces ad-hoc debug patterns:
-- **Structured Error Handling**: ThreadsAuth and PipelinesFilters converted to filter-based logger service
-- **Logger Service Integration**: All logging uses proper logger service architecture
-- **Conditional Debug Output**: Debug information properly controlled through logger levels
-- **Production Integration**: Clean, consistent logging integrated throughout codebase
-
-**Quality Standards**:
-- **No Legacy Fallbacks**: No hardcoded defaults or compatibility layers
-- **Consistent Architecture**: Identical architectural patterns across components
-- **Clean Interfaces**: Method signatures follow consistent admin-only patterns
-- **Standards Compliance**: PSR-4 namespacing and filter-based dependencies throughout
-- **Reduced Technical Debt**: Elimination of inconsistent patterns
-
-**Component Consistency**: All components follow standardized patterns:
-- Filter-based service discovery
-- Admin-only operation context
-- Universal template rendering
-- Consistent error handling
-- Standardized data structures
-- Production-ready logging integration
+**Benefits**:
+- Clear separation between UI and business logic
+- No method duplication across handlers
+- Predictable routing based on action type
 
 ## Current Status
 
-**Production Ready**: Codebase optimization and standardization completed for production deployment.
+**Production Ready**: All core systems operational and validated.
 
-**Implementation Status**: Core Pipeline+Flow architecture, AI integration, filter-based dependencies, AJAX pipeline builder, modal system, template rendering system, automatic "Draft Flow" creation, step card template system with context-aware rendering, arrow rendering architecture with is_first_step pattern, enhanced logger system with runtime configuration, flow deletion functionality, modal system improvements, template requesting architecture, admin page direct template rendering pattern, legacy pattern elimination, handler interface standardization, database schema standardization, service integration standardization, production debug logging integration, filter-based EncryptionHelper integration, filter-based ActionScheduler service integration, AI configuration system integration, direct action handler modal save pattern, form pattern modernization, single handler per step workflow, security audit, architecture validation.
+**Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, specialized AJAX handlers.
 
-**Audit Results**: Comprehensive codebase audit completed:
-- **HIGH/MEDIUM Impact Issues**: None identified across codebase
-- **LOW Impact Issues**: 2 minor items (external library logging, testing coverage expansion)
-- **Security Assessment**: Robust OAuth, encryption, and sanitization patterns
-- **Architecture Consistency**: Consistent alignment across components
-- **Performance Profile**: Optimized with efficient resource usage
-- **Code Quality**: Reduced technical debt, consistent patterns, production-ready state
-- **Legacy Cleanup**: Removal of legacy form patterns and inconsistencies
+**Quality**: Zero known critical issues, robust security patterns, consistent architecture throughout.
 
-**Quality Standards**:
-- **Component Consistency**: Components follow consistent filter-based patterns
-- **Unified Architecture**: Consistent architectural patterns throughout codebase
-- **Production Grade**: Architecture validated for production deployment
-- **WordPress Compliance**: Adherence to WordPress coding standards
-- **Maintainability**: Clean, modular, extensible architecture
+## Database Schema
 
-**Known Issues**: PHPUnit test coverage expansion in progress (core functionality tested).
+**Core Tables**:
+- **wp_dm_jobs**: Execution records with job_id, flow_id, status, created_at, updated_at, step_data (JSON)
+- **wp_dm_pipelines**: Template definitions with pipeline_id, pipeline_name, step_configuration (JSON), created_at, updated_at
+- **wp_dm_flows**: Configured instances with flow_id, pipeline_id, flow_name, flow_config (JSON), scheduling_config (JSON), created_at, updated_at
+- **wp_dm_processed_items**: Deduplication tracking with item_hash, source_identifier, processed_at
+- **wp_dm_remote_locations**: Multi-site configuration with location_id, site_url, auth_token, is_active
 
-**Future Plans**: Webhook integration (Receiver Step), test coverage expansion, additional platform integrations.
+**Table Relationships**:
+- Flows reference Pipelines (many-to-one): `flows.pipeline_id → pipelines.pipeline_id`
+- Jobs reference Flows (many-to-one): `jobs.flow_id → flows.flow_id`
+- Admin-only architecture: No user_id columns in any table
 
 ## Filter Reference
 
@@ -606,6 +522,31 @@ Any admin page can use the modal system by:
 3. Registering modal content via `dm_get_modal` filter
 4. Zero page-specific modal JavaScript required
 
+### AJAX Handler Routing
+
+**Specialized Handler Selection**: PipelinesFilters.php implements clean routing logic based on action type for optimal separation of concerns:
+
+```php
+// Modal actions route to PipelineModalAjax
+$modal_actions = [
+    'get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config',
+    'configure-step-action', 'add-location-action', 'add-handler-action'
+];
+
+// Business logic actions route to PipelinePageAjax
+if (in_array($action, $modal_actions)) {
+    $ajax_handler = new PipelineModalAjax();
+} else {
+    $ajax_handler = new PipelinePageAjax();
+}
+```
+
+**Architecture Benefits**:
+- **Clear Separation**: Modal UI operations isolated from business logic
+- **Predictable Routing**: Action type determines handler selection
+- **No Method Duplication**: Each method exists in only one handler
+- **Maintainability**: Changes scoped to appropriate handler context
+
 
 ## Critical Rules
 
@@ -622,39 +563,11 @@ Any admin page can use the modal system by:
 
 ## Pipeline+Flow Lifecycle
 
-**Automatic Flow Creation**: Every new pipeline automatically creates a \"Draft Flow\" instance, eliminating empty state complexity and providing immediate workflow execution capability.
+**Automatic Flow Creation**: Every new pipeline automatically creates a "Draft Flow" instance for immediate workflow execution.
 
-**Pipeline Creation Workflow**:
-1. User creates new pipeline template via \"Add New Pipeline\" action
-2. System automatically generates \"Draft Flow\" instance for immediate use
-3. Flow inherits pipeline structure but maintains independent configuration
-4. Additional flows can be created manually for different configurations
+## Flow Management
 
-**Template Architecture Migration**:
-- **Arrow Rendering**: Moved from JavaScript HTML generation to PHP templates with universal `is_first_step` logic
-- **Modal Content**: Eliminated hardcoded placeholder HTML in favor of universal template system
-- **Step Cards**: All HTML generation now handled by PHP templates via `dm_render_template` filter
-- **Template Requesting**: JavaScript requests pre-rendered templates instead of generating HTML
-- **AJAX Consistency**: HTML consistency between initial page load and AJAX updates
-- **Arrow Consistency**: Universal `is_first_step` pattern eliminates double arrows and positioning issues
-
-## Flow Management System
-
-**Complete Flow Deletion**: Flows can be deleted with confirmation modals and cascade cleanup of associated jobs.
-
-**Jobs Table Enhancement**: Displays "Pipeline → Flow" format instead of generic "Module" for clear relationship visibility.
-
-**Flow Operations**:
-```php
-// Flow deletion with cascade cleanup
-$db_flows = apply_filters('dm_get_database_service', null, 'flows');
-$success = $db_flows->delete_flow($flow_id); // Automatically removes associated jobs
-
-// Flow-aware job display
-// Jobs table now shows clear pipeline/flow relationships for better tracking
-```
-
-**Enhanced Error Handling**: Improved status display and error details for all job states (running/pending/failed) with better tracking of pipeline/flow relationships.
+**Flow Operations**: Flows support deletion with cascade cleanup of associated jobs. Jobs table displays "Pipeline → Flow" format for clear relationship visibility.
 
 ## Component Registration
 
@@ -821,11 +734,29 @@ public function ajax_handler() {
 
 **Custom Handler**:
 ```php
+// Handler class with required methods
+class MyInputHandler {
+    public function __construct() {
+        // Filter-based service access only
+    }
+    
+    public function get_input_data(object $module, array $source_config): array {
+        $logger = apply_filters('dm_get_logger', null);
+        // Process input and return data packets array
+        return [];
+    }
+}
+
+// Registration with configuration array
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input') {
+        if ($handlers === null) {
+            $handlers = [];
+        }
         $handlers['my_handler'] = [
-            'class' => \MyPlugin\MyHandler::class,
-            'label' => __('My Handler', 'my-plugin')
+            'class' => \MyPlugin\MyInputHandler::class,
+            'label' => __('My Handler', 'my-plugin'),
+            'description' => __('Custom input handler', 'my-plugin')
         ];
     }
     return $handlers;

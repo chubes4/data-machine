@@ -117,29 +117,29 @@ class AI_HTTP_ProviderManager_Component {
             'allowed_providers' => array(), // Empty = all providers
             'wrapper_class' => 'ai-http-provider-manager',
             'component_configs' => array(),
-            'step_key' => null // NEW: Step identifier for multi-step workflows
+            'step_id' => null // Step identifier for multi-step workflows (UUID)
         );
 
         $args = array_merge($defaults, $args);
-        $step_key = $args['step_key'];
+        $step_id = $args['step_id'];
         
         // Generate unique ID with step context if provided
         $unique_id = 'ai-provider-manager-' . $this->plugin_context;
-        if ($step_key) {
-            $unique_id .= '-step-' . sanitize_html_class($step_key);
+        if ($step_id) {
+            $unique_id .= '-step-' . sanitize_html_class($step_id);
         }
         $unique_id .= '-' . uniqid();
         
         // Load configuration (step-aware or global)
-        if ($step_key) {
+        if ($step_id) {
             // Step-aware configuration
-            $step_config = $this->options_manager->get_step_configuration($step_key);
+            $step_config = $this->options_manager->get_step_configuration($step_id);
             $selected_provider = isset($step_config['provider']) 
                 ? $step_config['provider'] 
                 : null;
             
             $current_values = array_merge(
-                $this->options_manager->get_provider_settings_with_step($selected_provider, $step_key),
+                $this->options_manager->get_provider_settings_with_step($selected_provider, $step_id),
                 array('provider' => $selected_provider),
                 $step_config // Step config takes priority
             );
@@ -158,7 +158,7 @@ class AI_HTTP_ProviderManager_Component {
 
         ob_start();
         ?>
-        <div class="<?php echo esc_attr($args['wrapper_class']); ?>" id="<?php echo esc_attr($unique_id); ?>" data-plugin-context="<?php echo esc_attr($this->plugin_context); ?>"<?php if ($step_key): ?> data-step-key="<?php echo esc_attr($step_key); ?>"<?php endif; ?>>
+        <div class="<?php echo esc_attr($args['wrapper_class']); ?>" id="<?php echo esc_attr($unique_id); ?>" data-plugin-context="<?php echo esc_attr($this->plugin_context); ?>"<?php if ($step_id): ?> data-step-id="<?php echo esc_attr($step_id); ?>"<?php endif; ?>>
             
             <?php if ($args['title']): ?>
                 <h3><?php echo esc_html($args['title']); ?></h3>
@@ -175,9 +175,9 @@ class AI_HTTP_ProviderManager_Component {
                         ? $args['component_configs'][$component_name] 
                         : array();
                     
-                    // Add step_key to component config for step-aware field naming
-                    if ($step_key) {
-                        $component_config['step_key'] = $step_key;
+                    // Add step_id to component config for step-aware field naming
+                    if ($step_id) {
+                        $component_config['step_id'] = $step_id;
                     }
                     
                     try {
@@ -233,9 +233,9 @@ class AI_HTTP_ProviderManager_Component {
                         ? $args['component_configs'][$component_name] 
                         : array();
                     
-                    // Add step_key to component config for step-aware field naming
-                    if ($step_key) {
-                        $component_config['step_key'] = $step_key;
+                    // Add step_id to component config for step-aware field naming
+                    if ($step_id) {
+                        $component_config['step_id'] = $step_id;
                     }
                     
                     try {
@@ -288,9 +288,9 @@ class AI_HTTP_ProviderManager_Component {
                         ? $args['component_configs'][$component_name] 
                         : array();
                     
-                    // Add step_key to component config for step-aware field naming
-                    if ($step_key) {
-                        $component_config['step_key'] = $step_key;
+                    // Add step_id to component config for step-aware field naming
+                    if ($step_id) {
+                        $component_config['step_id'] = $step_id;
                     }
                     
                     try {

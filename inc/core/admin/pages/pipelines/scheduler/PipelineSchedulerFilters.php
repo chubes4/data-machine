@@ -51,7 +51,7 @@ function dm_register_pipeline_scheduler_filters() {
                 return $content;
             }
             
-            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $context = $_POST['context'] ?? [];
             $flow_id = $context['flow_id'] ?? 0;
             
             if (!$flow_id) {

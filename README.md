@@ -187,7 +187,7 @@ AJAX-driven interface with modal system integration:
 - **Handler Auto-Discovery**: Automatically shows available handlers for each step type
 - **Modal Integration**: Seamless modal interactions with WordPress-native interface
 - **Template Architecture**: Clean separation of modal and page templates with dynamic step cards
-- **AJAX Backend**: PipelineAjax class with WordPress security verification
+- **AJAX Architecture**: Specialized handler separation - PipelinePageAjax handles business logic operations (add_step, save_pipeline, delete_flow), PipelineModalAjax handles UI operations (get_modal, get_template, configure-step-action)
 - **Real-time Validation**: Immediate feedback on handler availability and configuration
 - **Filter-Based Content**: Modal content generated via filter system for extensibility
 - **Auto-Flow Creation**: New pipelines automatically create "Draft Flow" for immediate execution
@@ -1106,18 +1106,63 @@ class CustomPageAjax {
 
 ### Adding Custom Handlers
 
-**Object-Based Registration** (matches core handler pattern):
+**Configuration Array Registration** (matches core handler pattern):
 
 ```php
-// Register handler as instantiated object
+// Input Handler Implementation
+class MyInputHandler {
+    public function __construct() {
+        // Filter-based service access only
+    }
+    
+    // Required method for input handlers
+    public function get_input_data(object $module, array $source_config): array {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // Process input data and return array of data packets
+        $data_packets = [];
+        
+        // Your custom input logic here
+        
+        return $data_packets;
+    }
+}
+
+// Output Handler Implementation
+class MyOutputHandler {
+    public function __construct() {
+        // Filter-based service access only
+    }
+    
+    // Required method for output handlers
+    public function handle_output($data_packet): array {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        // Process output data
+        // Your custom output logic here
+        
+        return ['success' => true, 'message' => 'Data sent successfully'];
+    }
+}
+
+// Register handler with configuration array
 add_filter('dm_get_handlers', function($handlers, $type) {
     if ($type === 'input') {
-        $handlers['my_handler'] = new \MyPlugin\Handlers\MyHandler();
+        // Initialize handlers array if null
+        if ($handlers === null) {
+            $handlers = [];
+        }
+        
+        $handlers['my_handler'] = [
+            'class' => \MyPlugin\Handlers\MyInputHandler::class,
+            'label' => __('My Handler', 'my-plugin'),
+            'description' => __('Custom handler description', 'my-plugin')
+        ];
     }
     return $handlers;
 }, 10, 2);
 
-// Authentication component (optional)
+// Authentication component (optional) - instantiated objects
 add_filter('dm_get_auth', function($auth, $handler_slug) {
     if ($handler_slug === 'my_handler') {
         return new \MyPlugin\Handlers\MyHandlerAuth();
@@ -1125,12 +1170,34 @@ add_filter('dm_get_auth', function($auth, $handler_slug) {
     return $auth;
 }, 10, 2);
 
-// Settings component (optional)
+// Settings component (optional) - instantiated objects  
 add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
     if ($handler_slug === 'my_handler') {
         return new \MyPlugin\Handlers\MyHandlerSettings();
     }
     return $settings;
+}, 10, 2);
+
+// Modal content registration for handler settings
+add_filter('dm_get_modal', function($content, $template) {
+    if ($template === 'handler-settings' && $content === null) {
+        $context = $_POST['context'] ?? [];
+        $handler_slug = $context['handler_slug'] ?? '';
+        
+        if ($handler_slug === 'my_handler') {
+            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
+                'handler_slug' => 'my_handler',
+                'handler_config' => [
+                    'label' => __('My Handler', 'my-plugin'),
+                    'description' => __('Custom handler description', 'my-plugin')
+                ],
+                'step_type' => $context['step_type'] ?? 'input',
+                'flow_id' => $context['flow_id'] ?? '',
+                'pipeline_id' => $context['pipeline_id'] ?? ''
+            ]);
+        }
+    }
+    return $content;
 }, 10, 2);
 ```
 
@@ -1302,11 +1369,17 @@ function testModalTrigger(template, context) {
 testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 ```
 
+**Database Schema**:
+- **wp_dm_jobs**: Execution records with job_id, flow_id, status, created_at, updated_at, step_data
+- **wp_dm_pipelines**: Template definitions with pipeline_id, pipeline_name, step_configuration, created_at, updated_at
+- **wp_dm_flows**: Configured instances with flow_id, pipeline_id, flow_name, flow_config, scheduling_config, created_at, updated_at
+- **wp_dm_processed_items**: Deduplication tracking with item_hash, source_identifier, processed_at
+- **wp_dm_remote_locations**: Multi-site configuration with location_id, site_url, auth_token, is_active
+
 **Monitoring**:
 - **Jobs**: Data Machine → Jobs (real-time status updates and logging)
 - **Pipelines**: Data Machine → Pipelines (AJAX interface with modal system and step discovery)
 - **Scheduler**: WordPress → Tools → Action Scheduler (automated pipeline execution)
-- **Database**: `wp_dm_jobs`, `wp_dm_pipelines`, `wp_dm_flows` tables (Pipeline+Flow architecture)
 - **AJAX Debugging**: Browser network tab shows pipeline builder and modal AJAX calls
 - **Modal Debugging**: Console logs show modal content generation and filter discovery
 - **Filter Monitoring**: `dm_get_steps`, `dm_get_modal`, `dm_get_handlers` filter calls in debug output
@@ -1316,10 +1389,10 @@ testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 
 ### Code Standards
 - **WordPress Filters**: All service access via `apply_filters()`
-- **Object Registration**: Handlers registered as instantiated objects
+- **Configuration Arrays**: Handlers registered with configuration arrays containing class, label, description
 - **PSR-4 Namespacing**: `DataMachine\Core\`, `DataMachine\Engine\`
-- **Filter-Based Dependencies**: Services retrieved via filters
-- **WordPress Security**: Native escaping and sanitization
+- **Filter-Based Dependencies**: Services retrieved via filters with parameter-based discovery
+- **WordPress Security**: Native escaping, sanitization, nonce verification, capability checks
 
 ## License & Links
 

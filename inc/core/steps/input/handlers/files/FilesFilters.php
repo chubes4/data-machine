@@ -63,7 +63,7 @@ function dm_register_files_input_filters() {
                 return $content;
             }
             
-            $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+            $context = $_POST['context'] ?? [];
             $handler_slug = $context['handler_slug'] ?? '';
             
             // Only handle files handler

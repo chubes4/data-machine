@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
 
 $step_type = $step_type ?? 'unknown';
 $pipeline_id = $pipeline_id ?? null;
-$current_step = $current_step ?? $step_name ?? 'processing';
+$step_id = $step_id ?? null;
 
 ?>
 <div class="dm-configure-step-container">
@@ -27,21 +27,15 @@ $current_step = $current_step ?? $step_name ?? 'processing';
     
     <?php if ($step_type === 'ai'): ?>
         <?php
-        // FAIL FAST - require pipeline_id and current_step for proper step_key generation
-        if (!$pipeline_id || !$current_step) {
+        // FAIL FAST - require step_id for unique AI step configuration
+        if (!$step_id) {
             echo '<div class="dm-error">
                 <h4>' . __('Configuration Error', 'data-machine') . '</h4>
-                <p>' . __('Pipeline ID and step name are required for AI step configuration.', 'data-machine') . '</p>
-                <p><em>' . sprintf(__('Missing: %s', 'data-machine'), 
-                    (!$pipeline_id ? 'pipeline_id' : '') . 
-                    (!$pipeline_id && !$current_step ? ', ' : '') . 
-                    (!$current_step ? 'current_step' : '')) . '</em></p>
+                <p>' . __('Step ID is required for AI step configuration.', 'data-machine') . '</p>
+                <p><em>' . __('Missing: step_id', 'data-machine') . '</em></p>
             </div>';
             return;
         }
-        
-        // Generate proper step key - no fallbacks
-        $step_key = "pipeline_{$pipeline_id}_step_{$current_step}";
         
         // Render AI HTTP Client ProviderManagerComponent for complete AI configuration
         if (class_exists('AI_HTTP_ProviderManager_Component')) {
@@ -56,7 +50,7 @@ $current_step = $current_step ?? $step_name ?? 'processing';
                 'show_test_connection' => false,
                 'show_save_button' => false, // Hide built-in save button - we provide our own
                 'wrapper_class' => 'ai-http-provider-manager dm-ai-step-config',
-                'step_key' => $step_key, // Step-aware configuration
+                'step_id' => $step_id, // Unique step-aware configuration
                 'component_configs' => [
                     'temperature_slider' => [
                         'min' => 0,
@@ -91,7 +85,7 @@ $current_step = $current_step ?? $step_name ?? 'processing';
         </button>
         <button type="button" class="button button-primary dm-modal-close" 
                 data-template="configure-step-action"
-                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","current_step":"<?php echo esc_attr($current_step); ?>","step_key":"<?php echo esc_attr($step_key ?? ''); ?>"}'>
+                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>"}'>
             <?php esc_html_e('Save Step Configuration', 'data-machine'); ?>
         </button>
     </div>

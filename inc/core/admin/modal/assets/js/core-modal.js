@@ -54,7 +54,7 @@
             const ajaxData = {
                 action: 'dm_get_modal_content',
                 template: template,
-                context: JSON.stringify(context),
+                context: context,
                 nonce: dmCoreModal.get_modal_content_nonce
             };
             

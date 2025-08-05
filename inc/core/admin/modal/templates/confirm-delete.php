@@ -36,8 +36,8 @@ if ($delete_type === 'pipeline') {
     }
 } else {
     // Step deletion - default case
-    if (!isset($step_position) || $step_position === '') {
-        throw new \InvalidArgumentException('Step deletion requires step_position parameter');
+    if (!isset($step_id) || empty($step_id)) {
+        throw new \InvalidArgumentException('Step deletion requires step_id parameter');
     }
     if (!isset($pipeline_id) || empty($pipeline_id)) {
         throw new \InvalidArgumentException('Step deletion requires pipeline_id parameter');
@@ -66,7 +66,7 @@ $affected_jobs = $affected_jobs ?? [];
             <?php elseif ($delete_type === 'flow'): ?>
                 <h3><?php echo esc_html(sprintf(__('Delete Flow "%s"?', 'data-machine'), $flow_name)); ?></h3>
             <?php else: ?>
-                <h3><?php echo esc_html(sprintf(__('Delete "%s" Step (Position %s)?', 'data-machine'), $step_label, $step_position)); ?></h3>
+                <h3><?php echo esc_html(sprintf(__('Delete "%s" Step?', 'data-machine'), $step_label)); ?></h3>
             <?php endif; ?>
         </div>
     </div>
@@ -145,7 +145,7 @@ $affected_jobs = $affected_jobs ?? [];
     <div class="dm-modal-actions">
         <button type="button" class="button button-primary button-large dm-modal-close" 
                 data-template="delete-action"
-                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","step_position":"<?php echo esc_attr($step_position); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'>
             <?php if ($delete_type === 'pipeline'): ?>
                 <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
             <?php elseif ($delete_type === 'flow'): ?>

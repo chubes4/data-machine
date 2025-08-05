@@ -97,7 +97,7 @@ $is_new_pipeline = empty($pipeline_id);
                     'step_type' => $step['step_type'],
                     'position' => $step['position'],
                     'is_empty' => false,
-                    'step_config' => $step // Pass full step data as step_config
+                    'step_data' => $step // Pass full step data as step_data
                 ];
             }
             
@@ -106,7 +106,7 @@ $is_new_pipeline = empty($pipeline_id);
                 'step_type' => '',
                 'position' => count($pipeline_steps),
                 'is_empty' => true,
-                'step_config' => []
+                'step_data' => []
             ];
             
             foreach ($display_steps as $index => $step): 

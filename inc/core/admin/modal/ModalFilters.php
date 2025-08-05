@@ -60,8 +60,10 @@ function dm_register_modal_system_filters() {
             if (file_exists($template_path)) {
                 // Extract context data (pure passthrough - no enhancement)
                 $context = $_POST['context'] ?? [];
-                if (is_string($context)) {
-                    $context = json_decode($context, true) ?? [];
+                
+                // Context is now passed as object from JavaScript, no JSON decoding needed
+                if (!is_array($context)) {
+                    $context = [];
                 }
                 
                 // Extract variables for template (components provide enriched context)

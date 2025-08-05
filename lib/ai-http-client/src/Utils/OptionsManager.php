@@ -486,7 +486,7 @@ class AI_HTTP_Options_Manager {
             }
             
             $step_key = isset($_POST['step_key']) ? sanitize_key($_POST['step_key']) : null;
-            $options_manager = new self($plugin_context);
+            $options_manager = new self($plugin_context, 'llm');
             
             if ($step_key) {
                 // Step-aware form processing
@@ -565,7 +565,7 @@ class AI_HTTP_Options_Manager {
             $provider = sanitize_text_field($_POST['provider']);
             $step_key = isset($_POST['step_key']) ? sanitize_key($_POST['step_key']) : null;
             
-            $options_manager = new self($plugin_context);
+            $options_manager = new self($plugin_context, 'llm');
             
             // Use step-aware method if step_key is provided
             if ($step_key) {

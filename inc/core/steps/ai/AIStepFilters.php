@@ -167,17 +167,15 @@ function dm_register_ai_step_filters() {
      */
     add_filter('dm_get_modal', function($content, $template) {
         if ($template === 'configure-step') {
-            // Get context from $_POST directly (like templates access other data)
-            $context_raw = wp_unslash($_POST['context'] ?? '{}');
-            $context = json_decode($context_raw, true);
+            // Get context from $_POST directly - jQuery auto-parses JSON data attributes
+            $context = $_POST['context'] ?? [];
             $step_type = $context['step_type'] ?? 'unknown';
             
             // Handle all step types, but currently only AI is implemented
             $template_data = [
-                'step_type' => $step_type,
+                'step_type' => $step_type,  
                 'pipeline_id' => $context['pipeline_id'] ?? null,
-                'current_step' => $context['step_name'] ?? $context['current_step'] ?? 'processing',
-                'step_name' => $context['step_name'] ?? $context['current_step'] ?? 'processing'
+                'step_id' => $context['step_id'] ?? null
             ];
             
             // Use universal template rendering system

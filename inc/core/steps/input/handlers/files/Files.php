@@ -64,14 +64,27 @@ class Files {
             throw new Exception(esc_html__('Files repository service not available.', 'data-machine'));
         }
 
+        // Create handler context for file isolation
+        $flow_id = isset($module->flow_id) ? absint($module->flow_id) : 0;
+        $step_id = isset($module->step_id) ? sanitize_text_field($module->step_id) : null;
+        
+        if (!$flow_id || !$step_id) {
+            throw new Exception(esc_html__('Missing flow_id or step_id for file isolation.', 'data-machine'));
+        }
+        
+        $handler_context = [
+            'flow_id' => $flow_id,
+            'step_id' => $step_id
+        ];
+        
         // Get uploaded files from repository or config
         $uploaded_files = $source_config['uploaded_files'] ?? [];
         
         // If no uploaded files in config, check repository for available files
         if (empty($uploaded_files)) {
-            $repo_files = $repository->get_all_files();
+            $repo_files = $repository->get_all_files($handler_context);
             if (empty($repo_files)) {
-                $logger?->debug('Files Input: No files available in repository.', ['module_id' => $module_id]);
+                $logger?->debug('Files Input: No files available in repository.', ['module_id' => $module_id, 'handler_context' => $handler_context]);
                 return ['processed_items' => []];
             }
             
@@ -239,57 +252,27 @@ class Files {
                 return null;
             }
 
-            // Handle different file types with proper error handling
-            try {
-                switch ($mime_type) {
-                    case 'text/plain':
-                    case 'text/csv':
-                    case 'application/json':
-                        // Simple text files - read directly
-                        $content = file_get_contents($file_path);
-                        if ($content === false) {
-                            throw new \Exception('Failed to read file contents');
-                        }
-                        break;
+            // Pass file directly to AI instead of pre-processing
+            // Let AI providers handle text extraction with their specialized systems
+            $content = [
+                'file_path' => $file_path,
+                'mime_type' => $mime_type,
+                'filename' => basename($file_path),
+                'file_size' => filesize($file_path)
+            ];
 
-                    case 'application/msword':
-                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                        // Word documents - extract text (simplified)
-                        $content = $this->extract_word_document_text($file_path, $mime_type);
-                        break;
-
-                    default:
-                        $logger = apply_filters('dm_get_logger', null);
-                        $logger?->error('Files Input: Unsupported text file type.', ['mime_type' => $mime_type]);
-                        return null;
-                }
-            } catch (\Exception $e) {
+            // File data is ready - no content validation needed since AI will handle it
+            if (empty($content['file_path']) || !file_exists($content['file_path'])) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Error reading file content.', [
-                    'file_path' => $file_path,
-                    'error' => $e->getMessage()
-                ]);
-                return null;
-            }
-
-            if ($content === false || $content === null) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Failed to read file content.', ['file_path' => $file_path]);
-                return null;
-            }
-
-            // Basic content sanitization
-            $content = trim($content);
-            if (empty($content)) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->warning('Files Input: File appears to be empty.', ['file_path' => $file_path]);
+                $logger?->error('Files Input: File not found or inaccessible.', ['file_path' => $file_path]);
                 return null;
             }
 
             $logger = apply_filters('dm_get_logger', null);
-            $logger?->debug('Files Input: Successfully read text file.', [
+            $logger?->debug('Files Input: Successfully prepared file for AI processing.', [
                 'file_path' => $file_path,
-                'content_length' => strlen($content)
+                'mime_type' => $content['mime_type'],
+                'file_size' => $content['file_size']
             ]);
 
             return $content;
@@ -304,52 +287,6 @@ class Files {
         }
     }
 
-    /**
-     * Extract text from Word documents.
-     *
-     * @param string $file_path Path to the Word document.
-     * @param string $mime_type MIME type of the document.
-     * @return string|null Extracted text or null if extraction failed.
-     */
-    private function extract_word_document_text(string $file_path, string $mime_type): ?string {
-        // For .docx files (Office Open XML), we can try a simple approach
-        if ($mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            try {
-                // .docx files are ZIP archives - try to extract text from document.xml
-                $zip = new ZipArchive();
-                if ($zip->open($file_path) === TRUE) {
-                    $xml_content = $zip->getFromName('word/document.xml');
-                    $zip->close();
-                    
-                    if ($xml_content) {
-                        // Simple XML parsing to extract text content
-                        $xml_content = preg_replace('/<[^>]*>/', ' ', $xml_content);
-                        $xml_content = html_entity_decode($xml_content);
-                        $xml_content = preg_replace('/\s+/', ' ', $xml_content);
-                        return trim($xml_content);
-                    }
-                }
-            } catch (Exception $e) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Error extracting .docx content.', [
-                    'file_path' => $file_path,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-
-        // For .doc files (legacy format), extraction is more complex
-        // For now, return a helpful message
-        if ($mime_type === 'application/msword') {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->warning('Files Input: Legacy .doc format not fully supported. Please use .docx or plain text.', [
-                'file_path' => $file_path
-            ]);
-            return "Note: Legacy .doc file uploaded but text extraction not available. Please convert to .docx or .txt format for full content processing.";
-        }
-
-        return null;
-    }
 
     
     /**

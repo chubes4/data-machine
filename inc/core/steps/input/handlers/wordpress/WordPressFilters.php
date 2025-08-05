@@ -65,7 +65,7 @@ function dm_register_wordpress_input_filters() {
             return $content;
         }
         
-        $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
+        $context = $_POST['context'] ?? [];
         $handler_slug = $context['handler_slug'] ?? '';
         $step_type = $context['step_type'] ?? '';
         

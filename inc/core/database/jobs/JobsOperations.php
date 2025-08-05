@@ -230,16 +230,65 @@ class JobsOperations {
      * @return array Array of job records.
      */
     public function get_jobs_for_pipeline( int $pipeline_id ): array {
-        global $wpdb;
-        
         if ( $pipeline_id <= 0 ) {
             return [];
         }
         
-        $results = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY created_at DESC",
-            $pipeline_id
-        ), ARRAY_A );
+        // Get flows service using filter-based discovery
+        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        if (!$db_flows) {
+            // Fallback to direct pipeline query if flows service unavailable
+            global $wpdb;
+            $results = $wpdb->get_results( $wpdb->prepare(
+                "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY created_at DESC",
+                $pipeline_id
+            ), ARRAY_A );
+            return $results ?: [];
+        }
+        
+        // Get all flows for this pipeline
+        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        if (empty($flows)) {
+            return [];
+        }
+        
+        // Aggregate jobs from all flows
+        $all_jobs = [];
+        foreach ($flows as $flow) {
+            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_jobs = $this->get_jobs_for_flow($flow_id);
+            $all_jobs = array_merge($all_jobs, $flow_jobs);
+        }
+        
+        // Sort by created_at DESC (most recent first)
+        if (!empty($all_jobs)) {
+            usort($all_jobs, function($a, $b) {
+                $time_a = is_array($a) ? $a['created_at'] : $a->created_at;
+                $time_b = is_array($b) ? $b['created_at'] : $b->created_at;
+                return strcmp($time_b, $time_a); // DESC order
+            });
+        }
+        
+        return $all_jobs;
+    }
+
+    /**
+     * Get all jobs for a specific flow.
+     *
+     * @param int $flow_id The ID of the flow.
+     * @return array Array of job records.
+     */
+    public function get_jobs_for_flow(int $flow_id): array {
+        global $wpdb;
+        
+        if ($flow_id <= 0) {
+            return [];
+        }
+        
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE flow_id = %d ORDER BY created_at DESC",
+            $flow_id
+        ), ARRAY_A);
         
         return $results ?: [];
     }

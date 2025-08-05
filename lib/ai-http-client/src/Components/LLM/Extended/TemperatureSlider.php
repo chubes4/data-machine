@@ -28,8 +28,8 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
         
         // Generate step-aware field name
         $field_name = 'ai_temperature';
-        if (isset($config['step_key']) && !empty($config['step_key'])) {
-            $field_name = 'ai_step_' . sanitize_key($config['step_key']) . '_temperature';
+        if (isset($config['step_id']) && !empty($config['step_id'])) {
+            $field_name = 'ai_step_' . sanitize_key($config['step_id']) . '_temperature';
         }
         
         $html = '<tr class="form-field">';

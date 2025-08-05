@@ -127,6 +127,13 @@ class Jobs {
         return $this->operations->get_jobs_for_pipeline($pipeline_id);
     }
 
+    /**
+     * Get all jobs for a specific flow.
+     */
+    public function get_jobs_for_flow( int $flow_id ): array {
+        return $this->operations->get_jobs_for_flow($flow_id);
+    }
+
     // ========================================
     // Step Management (delegated to JobsSteps)
     // ========================================

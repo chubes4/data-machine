@@ -102,7 +102,9 @@ function dm_register_pipelines_admin_page_filters() {
                                         'saving' => __('Saving...', 'data-machine'),
                                         'loading' => __('Loading...', 'data-machine'),
                                         'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
-                                        'atLeastOneStep' => __('At least one step is required', 'data-machine')
+                                        'atLeastOneStep' => __('At least one step is required', 'data-machine'),
+                                        'noFlows' => __('0 flows', 'data-machine'),
+                                        'noFlowsMessage' => __('No flows configured for this pipeline.', 'data-machine')
                                     ]
                                 ]
                             ]
@@ -147,10 +149,25 @@ function dm_register_pipelines_admin_page_filters() {
         return $config;
     }, 10, 2);
     
-    // AJAX handler registration - Pipelines manages its own AJAX operations
+    // AJAX handler registration - Route to specialized page or modal handlers
     add_action('wp_ajax_dm_pipeline_ajax', function() {
-        $ajax_handler = new PipelineAjax();
-        $ajax_handler->handle_pipeline_ajax();
+        $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
+        
+        // Define modal actions (UI/template operations)
+        $modal_actions = [
+            'get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config',
+            'configure-step-action', 'add-location-action', 'add-handler-action'
+        ];
+        
+        // Route to appropriate specialized handler
+        if (in_array($action, $modal_actions)) {
+            $ajax_handler = new PipelineModalAjax();
+            $ajax_handler->handle_pipeline_modal_ajax();
+        } else {
+            // All other actions are page/business logic operations
+            $ajax_handler = new PipelinePageAjax();
+            $ajax_handler->handle_pipeline_page_ajax();
+        }
     });
     
     // Handler settings AJAX endpoint - handles "Add Handler to Flow" form submissions
@@ -174,9 +191,8 @@ function dm_register_pipelines_admin_page_filters() {
             return $content;
         }
         
-        // Get context from $_POST directly (like templates access other data)
-        $context_raw = wp_unslash($_POST['context'] ?? '{}');
-        $context = json_decode($context_raw, true);
+        // Get context from $_POST directly - jQuery auto-parses JSON data attributes
+        $context = $_POST['context'] ?? [];
         
         // Dual-Mode Step Discovery Pattern
         // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
@@ -214,20 +230,41 @@ function dm_register_pipelines_admin_page_filters() {
             return $content;
         }
         
-        // Get context from $_POST directly (like templates access other data)
-        $context_raw = wp_unslash($_POST['context'] ?? '{}');
-        $context = json_decode($context_raw, true);
+        // Get context from $_POST directly - handle both array and JSON string formats
+        $context = $_POST['context'] ?? [];
+        if (is_string($context)) {
+            $context = json_decode($context, true) ?: [];
+        }
         
         $step_type = $context['step_type'] ?? 'unknown';
         $pipeline_id = $context['pipeline_id'] ?? null;
         $flow_id = $context['flow_id'] ?? null;
         
+        // Enhanced debugging for modal context generation
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->debug('Handler selection modal context', [
+                'template' => $template,
+                'step_type' => $step_type,
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id,
+                'context_keys' => array_keys($context),
+                'post_keys' => array_keys($_POST)
+            ]);
+        }
+        
         // Get available handlers using parameter-based filter discovery
         $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
         
         if (empty($available_handlers)) {
+            $logger && $logger->warning('No handlers found for step type', ['step_type' => $step_type]);
             return '';
         }
+        
+        $logger && $logger->debug('Handler selection rendering', [
+            'handler_count' => count($available_handlers),
+            'handler_slugs' => array_keys($available_handlers)
+        ]);
         
         return apply_filters('dm_render_template', '', 'modal/handler-selection-cards', [
             'step_type' => $step_type,
@@ -237,66 +274,6 @@ function dm_register_pipelines_admin_page_filters() {
         ]);
     }, 10, 2);
     
-    // Confirm Delete Modal - Self-registering modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another component
-        if ($content !== null) {
-            return $content;
-        }
-        
-        if ($template !== 'confirm-delete') {
-            return $content;
-        }
-        
-        // Get context from $_POST directly (like templates access other data)
-        $context_raw = wp_unslash($_POST['context'] ?? '{}');
-        $context = json_decode($context_raw, true);
-        
-        $delete_type = $context['delete_type'] ?? 'step'; // Default to step for backward compatibility
-        $pipeline_id = $context['pipeline_id'] ?? null;
-        $step_type = $context['step_type'] ?? 'unknown';
-        $step_position = $context['step_position'] ?? 'unknown';
-        $pipeline_name = $context['pipeline_name'] ?? __('Unknown Pipeline', 'data-machine');
-        
-        $affected_flows = [];
-        $affected_jobs = [];
-        
-        if ($pipeline_id && is_numeric($pipeline_id)) {
-            $db_flows = apply_filters('dm_get_database_service', null, 'flows');
-            if ($db_flows) {
-                $affected_flows = $db_flows->get_flows_for_pipeline((int)$pipeline_id);
-            }
-            
-            // For pipeline deletion, also get affected jobs count
-            if ($delete_type === 'pipeline') {
-                $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-                if ($db_jobs) {
-                    $affected_jobs = $db_jobs->get_jobs_for_pipeline((int)$pipeline_id);
-                }
-            }
-        }
-        
-        // Enhance context with affected flows/jobs data and deletion information
-        $enhanced_context = array_merge($context, [
-            'delete_type' => $delete_type,
-            'step_label' => ucfirst(str_replace('_', ' ', $step_type)),
-            'step_position' => $step_position,
-            'pipeline_name' => $pipeline_name,
-            'affected_flows' => $affected_flows,
-            'affected_jobs' => $affected_jobs
-        ]);
-        
-        // Render using core modal template with enhanced context
-        $template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/confirm-delete.php';
-        if (file_exists($template_path)) {
-            extract($enhanced_context);
-            ob_start();
-            include $template_path;
-            return ob_get_clean();
-        }
-        
-        return '<div class="dm-error">Delete confirmation template not found</div>';
-    }, 10, 2);
     
     // Configure Step Modal - Self-registering modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -309,9 +286,8 @@ function dm_register_pipelines_admin_page_filters() {
             return $content;
         }
         
-        // Get context from $_POST directly (like templates access other data)
-        $context_raw = wp_unslash($_POST['context'] ?? '{}');
-        $context = json_decode($context_raw, true);
+        // Get context from $_POST directly - jQuery auto-parses JSON data attributes
+        $context = $_POST['context'] ?? [];
         
         $step_type = $context['step_type'] ?? 'unknown';
         $modal_type = $context['modal_type'] ?? 'default';
@@ -346,14 +322,27 @@ function dm_register_pipelines_admin_page_filters() {
  */
 function dm_handle_save_handler_settings() {
     
+    // Enhanced debugging for save handler process
+    $logger = apply_filters('dm_get_logger', null);
+    if ($logger) {
+        $logger->debug('Save handler settings request received', [
+            'post_keys' => array_keys($_POST),
+            'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action'])),
+            'has_nonce' => isset($_POST['handler_settings_nonce']),
+            'user_can_manage' => current_user_can('manage_options')
+        ]);
+    }
+    
     // Verify nonce
     if (!wp_verify_nonce($_POST['handler_settings_nonce'] ?? '', 'dm_save_handler_settings')) {
+        $logger && $logger->error('Handler settings nonce verification failed');
         wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
         return;
     }
     
     // Verify user capabilities
     if (!current_user_can('manage_options')) {
+        $logger && $logger->error('Handler settings insufficient permissions');
         wp_send_json_error(['message' => __('Insufficient permissions.', 'data-machine')]);
         return;
     }
@@ -364,8 +353,26 @@ function dm_handle_save_handler_settings() {
     $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
     $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
     
+    $logger && $logger->debug('Handler settings extracted parameters', [
+        'handler_slug' => $handler_slug,
+        'step_type' => $step_type,
+        'flow_id' => $flow_id,
+        'pipeline_id' => $pipeline_id
+    ]);
+    
     if (empty($handler_slug) || empty($step_type)) {
-        wp_send_json_error(['message' => __('Handler slug and step type are required.', 'data-machine')]);
+        $error_details = [
+            'handler_slug_empty' => empty($handler_slug),
+            'step_type_empty' => empty($step_type),
+            'post_keys' => array_keys($_POST)
+        ];
+        
+        $logger && $logger->error('Handler slug and step type validation failed', $error_details);
+        
+        wp_send_json_error([
+            'message' => __('Handler slug and step type are required.', 'data-machine'),
+            'debug_info' => $error_details
+        ]);
         return;
     }
     

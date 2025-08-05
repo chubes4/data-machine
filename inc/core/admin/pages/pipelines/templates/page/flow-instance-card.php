@@ -17,6 +17,7 @@ if (!defined('WPINC')) {
 // Extract flow data
 $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
 $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
+$pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
 $created_at = is_object($flow) ? $flow->created_at : $flow['created_at'];
 
 // Get scheduling info (already decoded by database service)
@@ -64,7 +65,7 @@ if (is_object($flow)) {
             </button>
             <button type="button" class="button button-small button-delete dm-modal-open" 
                     data-template="confirm-delete"
-                    data-context='{"delete_type":"flow","flow_id":"<?php echo esc_attr($flow_id); ?>","flow_name":"<?php echo esc_attr($flow_name); ?>"}'>
+                    data-context='{"delete_type":"flow","flow_id":"<?php echo esc_attr($flow_id); ?>","flow_name":"<?php echo esc_attr($flow_name); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
                 <?php esc_html_e('Delete', 'data-machine'); ?>
             </button>
         </div>
@@ -106,7 +107,7 @@ if (is_object($flow)) {
                         'step_type' => $step['step_type'],
                         'position' => $step['position'],
                         'is_empty' => false,
-                        'step_config' => $step // Pass full step data as step_config
+                        'step_data' => $step // Pass full step data as step_data
                     ];
                 }
                 ?>
@@ -132,7 +133,7 @@ if (is_object($flow)) {
                         'is_empty' => true,
                         'step_type' => '',
                         'position' => '',
-                        'step_config' => []
+                        'step_data' => []
                     ],
                     'flow_config' => [],
                     'flow_id' => $flow_id,
