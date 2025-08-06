@@ -54,9 +54,24 @@
                 });
             }
             
+            // API key change handler - fetch models when API key is entered
+            if (elements.apiKeyInput) {
+                elements.apiKeyInput.addEventListener('input', (e) => {
+                    this.onApiKeyChange(componentId, e.target.value);
+                });
+            }
+            
             // Temperature slider update
             if (elements.temperatureInput) {
+                console.log('Binding temperature slider for', componentId);
                 elements.temperatureInput.addEventListener('input', (e) => {
+                    console.log('Temperature changed to', e.target.value);
+                    this.updateTemperatureValue(componentId, e.target.value);
+                });
+                
+                // Also bind change event as backup
+                elements.temperatureInput.addEventListener('change', (e) => {
+                    console.log('Temperature change event', e.target.value);
                     this.updateTemperatureValue(componentId, e.target.value);
                 });
             }
@@ -64,13 +79,79 @@
         
         // Handle provider change
         onProviderChange: function(componentId, provider) {
-            this.loadProviderSettings(componentId, provider);
-            this.refreshModels(componentId, provider);
+            this.loadProviderSettings(componentId, provider)
+                .then(() => {
+                    // Only attempt to fetch models after provider settings are loaded
+                    // This prevents unnecessary requests when switching to providers without API keys
+                    this.autoFetchModels(componentId);
+                })
+                .catch(error => {
+                    console.error('AI HTTP Client: Failed to load provider settings:', error);
+                    // Still attempt to fetch models in case of load failure
+                    this.autoFetchModels(componentId);
+                });
+        },
+        
+        // Handle API key change
+        onApiKeyChange: function(componentId, apiKey) {
+            // Ensure component is initialized
+            const instance = this.instances[componentId];
+            if (!instance) {
+                console.error('AI HTTP Client: Component not initialized:', componentId);
+                return;
+            }
+            
+            // Debounce API key input to avoid excessive requests
+            clearTimeout(instance.apiKeyTimeout);
+            
+            instance.apiKeyTimeout = setTimeout(() => {
+                // SEQUENTIAL: Auto-save settings first, then fetch models
+                // This prevents race condition where model fetch happens before API key is saved
+                this.autoSaveSettings(componentId)
+                    .then(() => {
+                        // API key now saved to database, safe to fetch models
+                        this.autoFetchModels(componentId);
+                    })
+                    .catch(error => {
+                        console.error('AI HTTP Client: Auto-save failed during API key change:', error);
+                        // Still attempt to fetch models in case of save failure
+                        this.autoFetchModels(componentId);
+                    });
+            }, 500); // Wait 500ms after user stops typing
+        },
+        
+        // Automatically fetch models if both provider and API key are available
+        autoFetchModels: function(componentId) {
+            const elements = this.instances[componentId].elements;
+            
+            const provider = elements.providerSelect ? elements.providerSelect.value : '';
+            const apiKey = elements.apiKeyInput ? elements.apiKeyInput.value.trim() : '';
+            
+            // Only fetch if we have both provider and API key
+            if (provider && apiKey) {
+                this.refreshModels(componentId, provider);
+            } else {
+                // Clear models if no API key
+                this.clearModels(componentId);
+            }
+        },
+        
+        // Clear model options
+        clearModels: function(componentId) {
+            const elements = this.instances[componentId].elements;
+            if (elements.modelSelect) {
+                elements.modelSelect.innerHTML = '<option value="">Select provider and enter API key first</option>';
+            }
         },
         
         // Save settings
         saveSettings: function(componentId) {
             const instance = this.instances[componentId];
+            if (!instance) {
+                console.error('AI HTTP Client: Component not initialized:', componentId);
+                return Promise.reject('Component not initialized');
+            }
+            
             const elements = instance.elements;
             const config = instance.config;
             
@@ -79,10 +160,10 @@
             formData.append('nonce', config.nonce);
             formData.append('plugin_context', config.plugin_context);
             
-            // Add step_key if this is a step-aware component
-            const stepKey = elements.component.getAttribute('data-step-key');
-            if (stepKey) {
-                formData.append('step_key', stepKey);
+            // Add step_id if this is a step-aware component
+            const stepId = elements.component.getAttribute('data-step-id');
+            if (stepId) {
+                formData.append('step_id', stepId);
             }
             
             // Collect all form inputs
@@ -100,13 +181,13 @@
             .then(data => {
                 if (elements.saveResult) {
                     if (data.success) {
-                        elements.saveResult.textContent = '✓ Settings saved';
+                        elements.saveResult.textContent = 'Settings saved';
                         elements.saveResult.style.color = '#00a32a';
                         
                         // Update provider status
                         this.updateProviderStatus(componentId);
                     } else {
-                        elements.saveResult.textContent = '✗ Save failed: ' + (data.message || 'Unknown error');
+                        elements.saveResult.textContent = 'Save failed: ' + (data.message || 'Unknown error');
                         elements.saveResult.style.color = '#d63638';
                     }
                     setTimeout(() => elements.saveResult.textContent = '', 3000);
@@ -115,19 +196,49 @@
             .catch(error => {
                 console.error('AI HTTP Client: Save failed', error);
                 if (elements.saveResult) {
-                    elements.saveResult.textContent = '✗ Save failed';
+                    elements.saveResult.textContent = 'Save failed';
                     elements.saveResult.style.color = '#d63638';
                     setTimeout(() => elements.saveResult.textContent = '', 3000);
                 }
             });
         },
         
-        // Toggle API key visibility
-        toggleKeyVisibility: function(inputId) {
-            const input = document.getElementById(inputId);
-            if (input) {
-                input.type = input.type === 'password' ? 'text' : 'password';
+        // Auto-save settings (silent, returns Promise for chaining)
+        autoSaveSettings: function(componentId) {
+            const instance = this.instances[componentId];
+            const elements = instance.elements;
+            const config = instance.config;
+            
+            const formData = new FormData();
+            formData.append('action', 'ai_http_save_settings');
+            formData.append('nonce', config.nonce);
+            formData.append('plugin_context', config.plugin_context);
+            
+            // Add step_id if this is a step-aware component
+            const stepId = elements.component.getAttribute('data-step-id');
+            if (stepId) {
+                formData.append('step_id', stepId);
             }
+            
+            // Collect all form inputs
+            elements.component.querySelectorAll('input, select, textarea').forEach(input => {
+                if (input.name) {
+                    formData.append(input.name, input.value);
+                }
+            });
+            
+            // Return Promise for chaining
+            return fetch(config.ajax_url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Auto-save failed');
+                }
+                return data;
+            });
         },
         
         // Refresh models for provider
@@ -202,27 +313,43 @@
             })
             .then(response => response.json())
             .then(data => {
-                elements.testResult.textContent = data.success ? '✓ Connected' : '✗ ' + (data.message || 'Connection failed');
+                elements.testResult.textContent = data.success ? 'Connected' : (data.message || 'Connection failed');
                 elements.testResult.style.color = data.success ? '#00a32a' : '#d63638';
             })
             .catch(error => {
                 console.error('AI HTTP Client: Connection test failed', error);
-                elements.testResult.textContent = '✗ Test failed';
+                elements.testResult.textContent = 'Test failed';
                 elements.testResult.style.color = '#d63638';
             });
         },
         
         // Update temperature display value
         updateTemperatureValue: function(componentId, value) {
-            const elements = this.instances[componentId].elements;
+            console.log('updateTemperatureValue called with', componentId, value);
+            
+            const instance = this.instances[componentId];
+            if (!instance) {
+                console.error('AI HTTP Client: Component not initialized:', componentId);
+                return;
+            }
+            
+            const elements = instance.elements;
             if (elements.temperatureValue) {
+                console.log('Updating temperature display to', value);
                 elements.temperatureValue.textContent = value;
+            } else {
+                console.log('Temperature value element not found for', componentId);
             }
         },
         
-        // Load provider settings
+        // Load provider settings (returns Promise for chaining)
         loadProviderSettings: function(componentId, provider) {
             const instance = this.instances[componentId];
+            if (!instance) {
+                console.error('AI HTTP Client: Component not initialized:', componentId);
+                return Promise.reject('Component not initialized');
+            }
+            
             const elements = instance.elements;
             const config = instance.config;
             
@@ -233,13 +360,14 @@
                 nonce: config.nonce
             });
             
-            // Add step_key if this is a step-aware component
-            const stepKey = elements.component.getAttribute('data-step-key');
-            if (stepKey) {
-                requestBody.append('step_key', stepKey);
+            // Add step_id if this is a step-aware component
+            const stepId = elements.component.getAttribute('data-step-id');
+            if (stepId) {
+                requestBody.append('step_id', stepId);
             }
             
-            fetch(config.ajax_url, {
+            // Return Promise for chaining
+            return fetch(config.ajax_url, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: requestBody
@@ -283,12 +411,16 @@
                             }
                         }
                     });
+                    
+                    return data;
                 } else {
                     console.error('AI HTTP Client: Failed to load provider settings', data.message);
+                    throw new Error(data.message || 'Failed to load provider settings');
                 }
             })
             .catch(error => {
                 console.error('AI HTTP Client: Provider settings load failed', error);
+                throw error;
             });
         },
         
@@ -302,9 +434,9 @@
                 }
                 
                 if (apiKey && apiKey.trim()) {
-                    elements.providerStatus.innerHTML = '<span style="color: #00a32a;">✓ Configured</span>';
+                    elements.providerStatus.innerHTML = '<span style="color: #00a32a;">Configured</span>';
                 } else {
-                    elements.providerStatus.innerHTML = '<span style="color: #d63638;">⚠ Not configured</span>';
+                    elements.providerStatus.innerHTML = '<span style="color: #d63638;">Not configured</span>';
                 }
             }
         }
@@ -319,13 +451,7 @@
         window.AIHttpProviderManager.saveSettings(componentId);
     };
     
-    window.aiHttpToggleKeyVisibility = function(inputId) {
-        window.AIHttpProviderManager.toggleKeyVisibility(inputId);
-    };
     
-    window.aiHttpRefreshModels = function(componentId, provider) {
-        window.AIHttpProviderManager.refreshModels(componentId, provider);
-    };
     
     window.aiHttpTestConnection = function(componentId) {
         window.AIHttpProviderManager.testConnection(componentId);

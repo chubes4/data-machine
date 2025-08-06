@@ -29,8 +29,8 @@ class AI_HTTP_Core_ProviderSelector implements AI_HTTP_Component_Interface {
         
         // Generate step-aware field name
         $field_name = 'ai_provider';
-        if (isset($config['step_key']) && !empty($config['step_key'])) {
-            $field_name = 'ai_step_' . sanitize_key($config['step_key']) . '_provider';
+        if (isset($config['step_id']) && !empty($config['step_id'])) {
+            $field_name = 'ai_step_' . sanitize_key($config['step_id']) . '_provider';
         }
         
         $html = '<tr class="form-field">';
@@ -181,9 +181,9 @@ class AI_HTTP_Core_ProviderSelector implements AI_HTTP_Component_Interface {
         $api_key = $current_values['api_key'] ?? '';
         
         if (empty($api_key)) {
-            return '<span style="color: #d63638;">⚠ Not configured</span>';
+            return '<span style="color: #d63638;">Not configured</span>';
         }
         
-        return '<span style="color: #00a32a;">✓ Configured</span>';
+        return '<span style="color: #00a32a;">Configured</span>';
     }
 }

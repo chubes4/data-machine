@@ -29,8 +29,8 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
         
         // Generate step-aware field name
         $field_name = 'ai_model';
-        if (isset($config['step_key']) && !empty($config['step_key'])) {
-            $field_name = 'ai_step_' . sanitize_key($config['step_key']) . '_model';
+        if (isset($config['step_id']) && !empty($config['step_id'])) {
+            $field_name = 'ai_step_' . sanitize_key($config['step_id']) . '_model';
         }
         
         $html = '<tr class="form-field">';
@@ -49,15 +49,6 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
         $html .= self::render_model_options($provider, $selected_model);
         
         $html .= '</select>';
-        
-        if ($config['show_refresh']) {
-            $html .= '<button type="button" class="button button-small" ';
-            $html .= 'onclick="aiHttpRefreshModels(\'' . esc_attr($unique_id) . '\', \'' . esc_attr($provider) . '\')" ';
-            $html .= 'title="Refresh available models">';
-            $html .= $config['refresh_icon'];
-            $html .= '</button>';
-        }
-        
         $html .= '</div>';
         
         if ($config['show_help']) {
@@ -82,16 +73,6 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
                 'default' => 'Model',
                 'description' => 'Label for the model selector'
             ],
-            'show_refresh' => [
-                'type' => 'boolean',
-                'default' => true,
-                'description' => 'Show refresh models button'
-            ],
-            'refresh_icon' => [
-                'type' => 'string',
-                'default' => '🔄',
-                'description' => 'Icon for refresh button'
-            ],
             'show_help' => [
                 'type' => 'boolean',
                 'default' => true,
@@ -109,7 +90,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             ],
             'error_text' => [
                 'type' => 'string',
-                'default' => 'Error loading models',
+                'default' => 'No API key configured',
                 'description' => 'Text shown when model loading fails'
             ]
         ];
@@ -123,12 +104,10 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
     public static function get_defaults() {
         return [
             'label' => 'Model',
-            'show_refresh' => true,
-            'refresh_icon' => '🔄',
             'show_help' => true,
             'help_text' => 'Select the AI model to use for requests.',
             'loading_text' => 'Loading models...',
-            'error_text' => 'Error loading models'
+            'error_text' => 'No API key configured'
         ];
     }
     
@@ -181,7 +160,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             $html = '';
             
             if (empty($models)) {
-                $html .= '<option value="">No models available</option>';
+                $html .= '<option value="">Enter API key to load models</option>';
                 return $html;
             }
             
@@ -195,7 +174,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             return $html;
             
         } catch (Exception $e) {
-            return '<option value="">Error loading models</option>';
+            return '<option value="">No API key configured</option>';
         }
     }
     
@@ -207,10 +186,45 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
     }
     
     /**
+     * Safety check to ensure AJAX action is registered
+     * Called before any AJAX-dependent operations
+     */
+    public static function ensure_ajax_registered() {
+        global $wp_filter;
+        
+        $action_registered = isset($wp_filter['wp_ajax_ai_http_get_models']) && 
+                           !empty($wp_filter['wp_ajax_ai_http_get_models']->callbacks);
+        
+        if (!$action_registered) {
+            // Fallback registration if action is missing
+            self::init_ajax_handlers();
+        }
+        
+        return $action_registered;
+    }
+    
+    /**
      * AJAX handler for getting models with plugin context
      */
     public static function ajax_get_models() {
-        check_ajax_referer('ai_http_nonce', 'nonce');
+        // Ensure AJAX action is registered (safety check)
+        self::ensure_ajax_registered();
+        
+        // Enhanced nonce verification - no fallbacks
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error('Security nonce is required for model requests.');
+            return;
+        }
+        
+        $nonce_valid = wp_verify_nonce($_POST['nonce'], 'ai_http_nonce');
+        if (!$nonce_valid) {
+            // Log nonce verification failure for debugging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('AI HTTP Client: Nonce verification failed for ai_http_get_models. Nonce: ' . substr($_POST['nonce'], 0, 8) . '...');
+            }
+            wp_send_json_error('Security verification failed. Please refresh the page and try again.');
+            return;
+        }
         
         try {
             $plugin_context = sanitize_key($_POST['plugin_context']);
@@ -228,7 +242,7 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($provider, $provider_config);
             
             if (empty($models)) {
-                wp_send_json_error('No models available for ' . $provider . '. Check API key configuration.');
+                wp_send_json_error('No API key configured for ' . $provider . '. Enter API key to load models.');
                 return;
             }
             
@@ -241,5 +255,5 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
     }
 }
 
-// Initialize AJAX handlers
-add_action('init', ['AI_HTTP_Core_ModelSelector', 'init_ajax_handlers']);
+// Initialize AJAX handlers early to ensure availability
+add_action('plugins_loaded', ['AI_HTTP_Core_ModelSelector', 'init_ajax_handlers']);
