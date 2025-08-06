@@ -126,12 +126,15 @@ $pipelines_page = $admin_pages['pipelines'] ?? null;
 // Universal template rendering
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
 
-// Template requesting via AJAX - Universal step card template
-$template_html = apply_filters('dm_get_template', '', 'page/step-card', $data);
+// Template requesting via AJAX - Uses get_template action, not dm_get_template filter
+// JavaScript: action: 'dm_pipeline_ajax', pipeline_action: 'get_template'
+$template_html = 'Requested via AJAX, not direct filter access';
 
 // Admin page template rendering
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
-$admin_menu_assets = apply_filters('dm_get_admin_menu_assets', null);
+
+// Admin pages discovered and managed by AdminMenuAssets.php
+$all_pages = apply_filters('dm_get_admin_pages', []);
 ```
 
 ## Development Commands
@@ -178,9 +181,10 @@ grep -r "\$all_handlers = apply_filters('dm_get_handlers'" inc/
 **Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration), ActionScheduler
 
 **Handlers**:
-- Input: Files, Reddit, RSS, WordPress, Google Sheets
-- Output: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets  
+- Input: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
+- Output: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (6 handlers)
 - Receiver: Webhook framework (stub implementation)
+- Total: 11 active handlers with unified authentication and settings patterns
 
 **Admin**: AJAX pipeline builder, job management, universal modal system, universal template rendering
 
@@ -594,6 +598,20 @@ if (in_array($action, $modal_actions)) {
 - `wp_dm_flows`: Configured instances with handler settings (auto-created \"Draft Flow\" for new pipelines)
 - `wp_dm_jobs`: Execution records
 
+## ProcessedItems Architecture
+
+**Database Layer Location**: ProcessedItems system located in `/inc/core/database/ProcessedItems/` following consistent database component architecture.
+
+**Components**:
+- ProcessedItems.php: Core database operations
+- ProcessedItemsManager.php: Business logic and duplicate tracking
+- ProcessedItemsFilters.php: Self-registration via pure discovery patterns
+- ProcessedItemsOperations.php: CRUD operations
+- ProcessedItemsQueries.php: Query builders
+- ProcessedItemsCleanup.php: Automated maintenance
+
+**Pure Discovery Registration**: Uses standard database service pattern with manager service for business operations.
+
 ## Pipeline+Flow Lifecycle
 
 **Automatic Flow Creation**: Every new pipeline automatically creates a "Draft Flow" instance for immediate workflow execution.
@@ -651,19 +669,21 @@ private function render_admin_page_content($page_config, $page_slug) {
 
 **Unified Asset Management**: Admin pages register assets directly in their filter configuration, eliminating separate asset management systems:
 ```php
-add_filter('dm_get_admin_page', function($config, $page_slug) {
-    if ($page_slug === 'jobs') {
-        return [
-            'page_title' => __('Jobs', 'data-machine'),
-            'templates' => __DIR__ . '/templates/', // Template discovery
-            'assets' => [
-                'css' => ['dm-admin-jobs' => ['file' => 'path/to/style.css']],
-                'js' => ['dm-jobs-admin' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
-            ]
-        ];
-    }
-    return $config;
-}, 10, 2);
+// Note: Uses dm_get_admin_pages filter (plural), not dm_get_admin_page (singular)
+add_filter('dm_get_admin_pages', function($pages) {
+    $pages['jobs'] = [
+        'page_title' => __('Jobs', 'data-machine'),
+        'menu_title' => __('Jobs', 'data-machine'),
+        'capability' => 'manage_options',
+        'position' => 20,
+        'templates' => __DIR__ . '/templates/',
+        'assets' => [
+            'css' => ['dm-admin-jobs' => ['file' => 'path/to/style.css']],
+            'js' => ['dm-jobs-admin' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
+        ]
+    ];
+    return $pages;
+});
 ```
 
 **Dynamic Discovery System**: AdminMenuAssets uses pure discovery mode for extensible admin page registration, eliminating hardcoded limitations:
@@ -731,16 +751,18 @@ $jobs_page = $all_pages['jobs'] ?? null;
 **Template Registration**: Admin pages register template directories through the `dm_get_admin_page` filter:
 
 ```php
-add_filter('dm_get_admin_page', function($config, $page_slug) {
-    if ($page_slug === 'my_page') {
-        return [
-            'page_title' => __('My Page'),
-            'templates' => __DIR__ . '/templates/', // Template directory registration
-            'assets' => [...]
-        ];
-    }
-    return $config;
-}, 10, 2);
+// Note: Uses dm_get_admin_pages filter (plural)
+add_filter('dm_get_admin_pages', function($pages) {
+    $pages['my_page'] = [
+        'page_title' => __('My Page'),
+        'menu_title' => __('My Page'),
+        'capability' => 'manage_options',
+        'position' => 50,
+        'templates' => __DIR__ . '/templates/', // Template directory registration
+        'assets' => [...]
+    ];
+    return $pages;
+});
 ```
 
 **Template Usage**: Components use the universal filter for all template rendering:
