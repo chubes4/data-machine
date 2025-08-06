@@ -53,59 +53,29 @@ function dm_register_twitter_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Twitter owns its handler-settings and handler-auth modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another handler
-        if ($content !== null) {
-            return $content;
-        }
+    // Modal content registration - Pure discovery mode
+    add_filter('dm_get_modals', function($modals) {
+        // Get Twitter settings for modal content
+        $all_settings = apply_filters('dm_get_handler_settings', []);
+        $settings_instance = $all_settings['twitter'] ?? null;
         
-        // Properly sanitize context data following WordPress security standards
-        $raw_context = wp_unslash($_POST['context'] ?? '');
-        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
-        $context = is_array($context) ? $context : [];
-        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
+        // Handler-specific modal removed - core modal handles generic 'handler-settings'
         
-        // Only handle twitter handler
-        if ($handler_slug !== 'twitter') {
-            return $content;
-        }
-        
-        if ($template === 'handler-settings') {
-            // Settings modal template
-            $all_settings = apply_filters('dm_get_handler_settings', []);
-            $settings_instance = $all_settings['twitter'] ?? null;
-            
-            $template_variables = [
+        // Handler authentication modal
+        $modals['twitter-handler-auth'] = [
+            'content' => apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
                 'handler_slug' => 'twitter',
                 'handler_config' => [
                     'label' => __('Twitter', 'data-machine'),
                     'description' => __('Post content to Twitter with media support', 'data-machine')
                 ],
-                'step_type' => sanitize_text_field($context['step_type'] ?? 'output'),
-                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
-                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
-                'settings_available' => ($settings_instance !== null),
-                'handler_settings' => $settings_instance
-            ];
-            
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', $template_variables);
-        }
+                'step_type' => 'output'
+            ]),
+            'title' => __('Twitter Authentication', 'data-machine')
+        ];
         
-        if ($template === 'handler-auth') {
-            // Authentication modal template
-            return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'twitter',
-                'handler_config' => [
-                    'label' => __('Twitter', 'data-machine'),
-                    'description' => __('Post content to Twitter with media support', 'data-machine')
-                ],
-                'step_type' => sanitize_text_field($context['step_type'] ?? 'output')
-            ]);
-        }
-        
-        return $content;
-    }, 10, 2);
+        return $modals;
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

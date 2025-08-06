@@ -59,7 +59,7 @@ if (is_object($flow)) {
                     data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
                 <?php esc_html_e('Manage Schedule', 'data-machine'); ?>
             </button>
-            <button type="button" class="button button-small button-primary dm-run-flow-btn" 
+            <button type="button" class="button button-small button-primary dm-run-now-btn" 
                     data-flow-id="<?php echo esc_attr($flow_id); ?>">
                 <?php esc_html_e('Run Now', 'data-machine'); ?>
             </button>

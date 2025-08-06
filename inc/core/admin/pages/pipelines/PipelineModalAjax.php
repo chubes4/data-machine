@@ -80,13 +80,17 @@ class PipelineModalAjax
         $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
         $context = $_POST['context'] ?? [];
 
-        // Pure filter-based routing - zero hardcoded templates
-        $content = apply_filters('dm_get_modal', null, $template);
+        // Pure discovery pattern - get all registered modals
+        $all_modals = apply_filters('dm_get_modals', []);
+        $modal_data = $all_modals[$template] ?? null;
         
-        if ($content) {
+        if ($modal_data) {
+            $content = $modal_data['content'] ?? '';
+            $title = $modal_data['title'] ?? ucfirst(str_replace('-', ' ', $template));
+            
             wp_send_json_success([
                 'content' => $content,
-                'title' => ucfirst(str_replace('-', ' ', $template))
+                'title' => $title
             ]);
         } else {
             wp_send_json_error([

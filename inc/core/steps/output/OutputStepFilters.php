@@ -41,38 +41,8 @@ function dm_register_output_step_filters() {
         return $steps;
     });
     
-    // DataPacket conversion registration - parameter-based self-registration
-    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        if ($source_type === 'output_result') {
-            // Create output result DataPacket with proper structure
-            $packet = new \DataMachine\Engine\DataPacket(
-                'Output Complete',
-                $source_data['content'] ?? '',
-                'output_result'
-            );
-            
-            // Add output-specific metadata
-            if (isset($source_data['metadata'])) {
-                $metadata = $source_data['metadata'];
-                $packet->metadata['handler_used'] = $metadata['handler_used'] ?? null;
-                $packet->metadata['output_success'] = $metadata['output_success'] ?? true;
-                $packet->metadata['processing_time'] = $metadata['processing_time'] ?? time();
-            }
-            
-            // Add context information
-            if (isset($context['job_id'])) {
-                $packet->metadata['job_id'] = $context['job_id'];
-            }
-            if (isset($context['handler_name'])) {
-                $packet->metadata['handler_name'] = $context['handler_name'];
-            }
-            
-            $packet->processing['steps_completed'][] = 'output';
-            
-            return $packet;
-        }
-        return $datapacket;
-    }, 10, 4);
+    // DataPacket creation removed - engine uses universal DataPacket constructor
+    // Output step returns properly formatted data for direct constructor usage
 }
 
 // Auto-register when file loads - achieving complete self-containment

@@ -12,9 +12,6 @@
 
 namespace DataMachine\Engine;
 
-use DataMachine\Core\Database\Jobs\Jobs;
-use DataMachine\Admin\Logger;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }

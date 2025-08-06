@@ -83,13 +83,8 @@ function dm_register_rss_input_filters() {
         return $content;
     }, 10, 2);
     
-    // DataPacket conversion registration - RSS handler uses dedicated DataPacket class
-    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        if ($source_type === 'rss') {
-            return RssDataPacket::create($source_data, $context);
-        }
-        return $datapacket;
-    }, 10, 4);
+    // DataPacket creation removed - engine uses universal DataPacket constructor
+    // RSS handler returns properly formatted data for direct constructor usage
 }
 
 // Auto-register when file loads - achieving complete self-containment

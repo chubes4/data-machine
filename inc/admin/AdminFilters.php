@@ -53,12 +53,12 @@ function dm_register_admin_filters() {
     
     // Legacy content rendering filter removed - now using unified system
     
-    // Step configuration discovery filter - infrastructure hook for components
-    add_filter('dm_get_step_config', function($config, $step_type, $context) {
+    // Step configurations collection filter - infrastructure hook for components
+    add_filter('dm_get_step_configs', function($configs) {
         // Admin engine provides the filter hook infrastructure
         // Step components self-register their configuration capabilities via this same filter
-        return $config;
-    }, 5, 3);
+        return $configs;
+    }, 5);
     
     // Parameter-based modal content system for admin interface
     add_filter('dm_get_modal', function($content, $template) {
@@ -83,6 +83,16 @@ function dm_register_admin_filters() {
                     return ob_get_clean();
                 }
             }
+        }
+        
+        // Fallback: Search core modal templates directory
+        $core_modal_template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/' . $template_name . '.php';
+        if (file_exists($core_modal_template_path)) {
+            // Extract data variables for template use
+            extract($data);
+            ob_start();
+            include $core_modal_template_path;
+            return ob_get_clean();
         }
         
         // Log error and return empty string - no user-facing error display

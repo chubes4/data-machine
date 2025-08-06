@@ -53,57 +53,29 @@ function dm_register_wordpress_output_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - WordPress owns its handler-settings and handler-auth modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another handler
-        if ($content !== null) {
-            return $content;
-        }
+    // Modal content registration - Pure discovery mode
+    add_filter('dm_get_modals', function($modals) {
+        // Get WordPress settings for modal content
+        $all_settings = apply_filters('dm_get_handler_settings', []);
+        $settings_instance = $all_settings['wordpress_output'] ?? null;
         
-        // Properly sanitize context data following WordPress security standards
-        $raw_context = wp_unslash($_POST['context'] ?? '');
-        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
-        $context = is_array($context) ? $context : [];
-        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
+        // Handler-specific modal removed - core modal handles generic 'handler-settings'
         
-        // Only handle wordpress_output handler (output version)
-        if ($handler_slug !== 'wordpress_output') {
-            return $content;
-        }
-        
-        if ($template === 'handler-settings') {
-            // Settings modal template
-            $all_settings = apply_filters('dm_get_handler_settings', []);
-            $settings_instance = $all_settings['wordpress_output'] ?? null;
-            
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
+        // Remote Locations Manager modal (WordPress uses Remote Locations, not OAuth)
+        $modals['remote-locations-manager'] = [
+            'content' => apply_filters('dm_render_template', '', 'modal/remote-locations-manager', [
                 'handler_slug' => 'wordpress_output',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),
                     'description' => __('Create and update WordPress posts and pages', 'data-machine')
                 ],
-                'step_type' => sanitize_text_field($context['step_type'] ?? 'output'),
-                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
-                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
-                'settings_available' => ($settings_instance !== null),
-                'handler_settings' => $settings_instance
-            ]);
-        }
+                'step_type' => 'output'
+            ]),
+            'title' => __('WordPress Remote Locations', 'data-machine')
+        ];
         
-        if ($template === 'handler-auth') {
-            // Authentication modal template
-            return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'wordpress_output',
-                'handler_config' => [
-                    'label' => __('WordPress', 'data-machine'),
-                    'description' => __('Create and update WordPress posts and pages', 'data-machine')
-                ],
-                'step_type' => sanitize_text_field($context['step_type'] ?? 'output')
-            ]);
-        }
-        
-        return $content;
-    }, 10, 2);
+        return $modals;
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

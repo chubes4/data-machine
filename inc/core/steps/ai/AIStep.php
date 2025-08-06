@@ -62,7 +62,7 @@ class AIStep {
             
             if (!$ai_http_client) {
                 $logger->error('AI Step: AI HTTP client service unavailable', ['job_id' => $job_id]);
-                return $this->fail_job($job_id, 'AI HTTP client service unavailable');
+                return false;
             }
 
             $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
@@ -70,7 +70,8 @@ class AIStep {
             // Get step configuration from pipeline/flow context  
             $step_config = $this->get_pipeline_step_config($job_id);
             if (!$step_config) {
-                return $this->fail_job($job_id, 'AI step configuration not found');
+                $logger->error('AI Step: AI step configuration not found', ['job_id' => $job_id]);
+                return false;
             }
 
             // Validate required configuration
@@ -78,7 +79,8 @@ class AIStep {
             $title = $step_config['title'] ?? 'AI Processing';
             
             if (empty($prompt)) {
-                return $this->fail_job($job_id, 'AI step requires prompt configuration');
+                $logger->error('AI Step: AI step requires prompt configuration', ['job_id' => $job_id]);
+                return false;
             }
 
             // AI steps consume all packets from the provided array
@@ -100,7 +102,8 @@ class AIStep {
             // Use FluidContextBridge for enhanced AI request
             $context_bridge = apply_filters('dm_get_fluid_context_bridge', null);
             if (!$context_bridge) {
-                return $this->fail_job($job_id, 'Fluid context bridge service unavailable');
+                $logger->error('AI Step: Fluid context bridge service unavailable', ['job_id' => $job_id]);
+                return false;
             }
             
             $aggregated_context = $context_bridge->aggregate_pipeline_context($all_packets);
@@ -109,19 +112,22 @@ class AIStep {
             $all_databases = apply_filters('dm_get_database_services', []);
             $db_jobs = $all_databases['jobs'] ?? null;
             if (!$db_jobs) {
-                return $this->fail_job($job_id, 'Database jobs service unavailable');
+                $logger->error('AI Step: Database jobs service unavailable', ['job_id' => $job_id]);
+                return false;
             }
             
             $job = $db_jobs->get_job($job_id);
             if (!$job) {
-                return $this->fail_job($job_id, 'Job not found in database');
+                $logger->error('AI Step: Job not found in database', ['job_id' => $job_id]);
+                return false;
             }
             
             $pipeline_id = $this->get_pipeline_id_from_job($job);
             $enhanced_request = $context_bridge->build_ai_request($aggregated_context, $step_config, $pipeline_id);
             
             if (empty($enhanced_request['messages'])) {
-                return $this->fail_job($job_id, 'Failed to build enhanced AI request from fluid context');
+                $logger->error('AI Step: Failed to build enhanced AI request from fluid context', ['job_id' => $job_id]);
+                return false;
             }
             
             $messages = $enhanced_request['messages'];
@@ -146,7 +152,7 @@ class AIStep {
                     'error' => $ai_response['error'] ?? 'Unknown error',
                     'provider' => $ai_response['provider'] ?? 'Unknown'
                 ]);
-                return $this->fail_job($job_id, $error_message);
+                return false;
             }
 
             // Create output DataPacket from AI response using filter system
@@ -168,15 +174,43 @@ class AIStep {
                 'job_id' => $job_id
             ];
             
-            $ai_output_packet = apply_filters('dm_create_datapacket', null, $ai_data, 'ai', $context);
-
-            if (!$ai_output_packet instanceof DataPacket) {
+            // Create DataPacket using universal constructor
+            try {
+                // Simple heuristic: first line as title if it's short
+                $content_lines = explode("\n", trim($ai_content), 2);
+                $title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : 'AI Generated Content';
+                $body = $ai_content;
+                
+                $ai_output_packet = new DataPacket($title, $body, 'ai');
+                
+                // Add AI-specific metadata
+                $ai_output_packet->metadata = array_merge($ai_output_packet->metadata, [
+                    'model' => $ai_data['metadata']['model'],
+                    'provider' => $ai_data['metadata']['provider'],
+                    'usage' => $ai_data['metadata']['usage'],
+                    'prompt_used' => $ai_data['metadata']['prompt_used'],
+                    'step_title' => $ai_data['metadata']['step_title'],
+                    'processing_time' => $ai_data['metadata']['processing_time']
+                ]);
+                
+                // Copy context from original packet if available
+                if (isset($context['original_packet']) && $context['original_packet'] instanceof DataPacket) {
+                    $original = $context['original_packet'];
+                    $ai_output_packet->metadata['source_type'] = $original->metadata['source_type'] ?? 'unknown';
+                    if (!empty($original->attachments)) {
+                        $ai_output_packet->attachments = $original->attachments;
+                    }
+                }
+                
+                $ai_output_packet->processing['steps_completed'][] = 'ai';
+                
+            } catch (\Exception $e) {
                 $logger->error('AI Step: Failed to create DataPacket from AI output', [
                     'job_id' => $job_id,
                     'ai_content_length' => strlen($ai_content),
-                    'conversion_failed' => true
+                    'error' => $e->getMessage()
                 ]);
-                return $this->fail_job($job_id, 'Failed to create DataPacket from AI processing results');
+                return false;
             }
 
             // Store transformed DataPacket for next step (maintains fluid context chain)
@@ -192,7 +226,7 @@ class AIStep {
                 return true;
             } else {
                 $logger->error('AI Step: Failed to store output DataPacket', ['job_id' => $job_id]);
-                return $this->fail_job($job_id, 'Failed to store AI processing results');
+                return false;
             }
 
         } catch (\Exception $e) {
@@ -205,7 +239,7 @@ class AIStep {
             } else {
                 // Logger unavailable - fail gracefully with no logging
             }
-            return $this->fail_job($job_id, 'AI step failed: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -346,24 +380,6 @@ class AIStep {
         return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);
     }
 
-    /**
-     * Fail a job with an error message.
-     *
-     * @param int $job_id The job ID.
-     * @param string $message The error message.
-     * @return bool Always returns false for easy return usage.
-     */
-    private function fail_job(int $job_id, string $message): bool {
-        $job_status_manager = apply_filters('dm_get_job_status_manager', null);
-        $logger = apply_filters('dm_get_logger', null);
-        if ($job_status_manager) {
-            $job_status_manager->fail($job_id, $message);
-        }
-        if ($logger) {
-            $logger->error($message, ['job_id' => $job_id]);
-        }
-        return false;
-    }
 }
 
 

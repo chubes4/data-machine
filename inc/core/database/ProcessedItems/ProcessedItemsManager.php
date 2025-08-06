@@ -5,12 +5,12 @@
  * Consolidates all processed items logic into a single, consistent interface
  * for robust deduplication across input/output handlers and pipeline steps.
  *
- * @package    Data_Machine
- * @subpackage Data_Machine/includes/engine
+ * @package DataMachine
+ * @subpackage Core\Database\ProcessedItems
  * @since      0.17.0
  */
 
-namespace DataMachine\Engine;
+namespace DataMachine\Core\Database\ProcessedItems;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.

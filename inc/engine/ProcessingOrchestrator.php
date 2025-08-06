@@ -43,9 +43,13 @@ class ProcessingOrchestrator {
 	 *
 	 * @param int $job_id The job ID.
 	 * @param int $step_position The step position in pipeline (0-based).
+	 * @param int|null $pipeline_id The pipeline ID.
+	 * @param int|null $flow_id The flow ID.
+	 * @param array|null $pipeline_config Pre-built pipeline configuration.
+	 * @param array|null $previous_data_packets Previous step data packets.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function execute_step_callback( $job_id, $step_position ): bool {
+	public static function execute_step_callback( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $pipeline_config = null, $previous_data_packets = null ): bool {
 		$orchestrator = apply_filters('dm_get_orchestrator', null);
 		if ( ! $orchestrator ) {
 			$logger = apply_filters('dm_get_logger', null);
@@ -58,81 +62,64 @@ class ProcessingOrchestrator {
 			return false;
 		}
 		
-		// Call execute_step with correct parameter order
-		return $orchestrator->execute_step( $step_position, $job_id );
+		// Call execute_step with complete parameter set
+		if ( $pipeline_id && $flow_id && $pipeline_config ) {
+			return $orchestrator->execute_step( $step_position, $job_id, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets ?: [] );
+		} else {
+			// Legacy fallback - should not occur with new JobCreator
+			$logger = apply_filters('dm_get_logger', null);
+			if ( $logger ) {
+				$logger->error( 'Legacy execute_step_callback invocation - missing pipeline data', [
+					'job_id' => $job_id,
+					'step_position' => $step_position
+				] );
+			}
+			return false;
+		}
 	}
 	/**
-	 * Execute a pipeline step at the specified position using pure position-based execution.
+	 * Execute a pipeline step at the specified position using pure stateless execution.
 	 * 
-	 * Uses pipeline configuration as the single source of truth, enabling 
-	 * user-controlled pipeline order through drag-and-drop interface. Multiple steps 
-	 * of the same type can exist in a single pipeline.
+	 * Ultra-lean execution engine with zero database dependencies. All required data
+	 * is passed as parameters from JobCreator/ActionScheduler.
 	 *
 	 * @param int $step_position The step position in pipeline (0-based).
 	 * @param int $job_id The job ID.
+	 * @param int $pipeline_id The pipeline ID.
+	 * @param int $flow_id The flow ID.
+	 * @param array $pipeline_config Pre-built pipeline configuration from JobCreator.
+	 * @param array $previous_data_packets Previous step data packets for execution.
 	 * @return bool True on success, false on failure.
 	 */
-	public function execute_step( int $step_position, int $job_id ): bool {
+	public function execute_step( int $step_position, int $job_id, int $pipeline_id, int $flow_id, array $pipeline_config, array $previous_data_packets = [] ): bool {
 		try {
 			// Get services via filters
 			$logger = apply_filters('dm_get_logger', null);
-			$all_databases = apply_filters('dm_get_database_services', []);
-			$db_jobs = $all_databases['jobs'] ?? null;
-			$db_pipelines = $all_databases['pipelines'] ?? null;
 			
-			if (!$logger || !$db_jobs) {
+			if (!$logger) {
 				return false;
 			}
 			
-			// Get job details to determine pipeline_id and flow_id
-			$job = $db_jobs->get_job( $job_id );
-			if ( ! $job ) {
-				$logger->error( 'Job not found', [
-					'job_id' => $job_id,
-					'step_position' => $step_position
-				] );
-				return false;
-			}
-			
-			// Get pipeline_id for pipeline configuration
-			$pipeline_id = $this->get_pipeline_id_from_job( $job );
-			if ( ! $pipeline_id ) {
-				$logger->error( 'Pipeline ID not found for job', [
-					'job_id' => $job_id,
-					'step_position' => $step_position
-				] );
-				return false;
-			}
-			
-			// Get flow_id for flow context
-			$flow_id = $this->get_flow_id_from_job( $job );
-			if ( ! $flow_id ) {
-				$logger->error( 'Flow ID not found for job', [
-					'job_id' => $job_id,
-					'step_position' => $step_position
-				] );
-				return false;
-			}
-			
-			$logger->debug( 'Executing pipeline step', [
+			$logger->debug( 'Executing pipeline step with pre-built configuration', [
 				'job_id' => $job_id,
 				'pipeline_id' => $pipeline_id,
 				'flow_id' => $flow_id,
 				'step_position' => $step_position
 			] );
 			
-			// Get pipeline configuration as single source of truth
-			$pipeline_config = $this->get_pipeline_steps( $pipeline_id, $db_pipelines, $logger );
+			// Use pre-built pipeline configuration from JobCreator
 			if ( empty( $pipeline_config ) ) {
-				$logger->error( 'Pipeline configuration not found or invalid', [
+				$logger->error( 'Pipeline configuration is empty', [
 					'pipeline_id' => $pipeline_id,
-					'job_id' => $job_id
+					'job_id' => $job_id,
+					'step_position' => $step_position
 				] );
 				return false;
 			}
 			
 			// Find step configuration by position
-			$step_config = $this->find_step_config_by_position( $step_position, $pipeline_config, $logger );
+			$pipeline_steps = $pipeline_config['pipeline_step_config'] ?? [];
+			$step_config = $this->find_step_config_by_position( $step_position, $pipeline_steps, $logger );
 			if ( ! $step_config ) {
 				$logger->error( 'Pipeline step configuration not found at position', [
 					'step_position' => $step_position,
@@ -142,7 +129,7 @@ class ProcessingOrchestrator {
 				return false;
 			}
 			
-			$next_step_position = $this->get_next_step_position( $step_position, $pipeline_config );
+			$next_step_position = $this->get_next_step_position( $step_position, $pipeline_steps );
 
 			$step_class = $step_config['class'];
 			if ( ! class_exists( $step_class ) ) {
@@ -154,9 +141,7 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Update job's current step before execution
-			$step_type = $step_config['type'] ?? 'unknown';
-			$db_jobs->update_current_step_name( $job_id, $step_type );
+			// ProcessingOrchestrator is now lean - job tracking moved to ActionScheduler
 
 			// Create step instance (parameter-less constructor)
 			$step_instance = new $step_class();
@@ -172,22 +157,21 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Always pass full array of DataPackets (most recent first)
+			// Use pre-passed data packets - no database queries needed
 			// Steps self-select what they need based on their consume_all_packets flag
-			$all_data_packets = $this->get_all_previous_data_packets( $job_id, $step_position, $logger );
-			$result = $step_instance->execute( $job_id, $all_data_packets );
+			$result = $step_instance->execute( $job_id, $previous_data_packets );
 			
-			$logger->debug( 'Step executed with data packets array', [
+			$logger->debug( 'Step executed with pre-passed data packets', [
 				'job_id' => $job_id,
 				'step_position' => $step_position,
 				'class' => $step_class,
-				'packets_count' => count( $all_data_packets )
+				'packets_count' => count( $previous_data_packets )
 			] );
 
-			// Schedule next step using direct Action Scheduler execution
+			// Handle job status based on step execution result
 			if ( $result ) {
 				if ( $next_step_position !== null ) {
-					if ( ! $this->schedule_next_step( $job_id, $next_step_position ) ) {
+					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $pipeline_config, [] ) ) {
 						$logger->error( 'Failed to schedule next step', [
 							'current_position' => $step_position,
 							'next_position' => $next_step_position,
@@ -202,12 +186,18 @@ class ProcessingOrchestrator {
 						'job_id' => $job_id
 					] );
 				} else {
-					// Final step completed successfully
-					$logger->debug( 'Pipeline completed successfully', [
+					// Final step completed successfully - job status handled by ActionScheduler
+					$logger->debug( 'Pipeline execution completed', [
 						'final_position' => $step_position,
 						'job_id' => $job_id
 					] );
 				}
+			} else {
+				// Step execution failed - job status handled by ActionScheduler
+				$logger->debug( 'Step execution failed', [
+					'job_id' => $job_id,
+					'failed_step' => $step_position
+				] );
 			}
 
 			return $result;
@@ -232,9 +222,13 @@ class ProcessingOrchestrator {
 	 *
 	 * @param int $job_id The job ID.
 	 * @param int $step_position The next step position.
+	 * @param int $pipeline_id The pipeline ID.
+	 * @param int $flow_id The flow ID.
+	 * @param array $pipeline_config Pre-built pipeline configuration.
+	 * @param array $previous_data_packets Previous step data for next execution.
 	 * @return bool True on success, false on failure.
 	 */
-	private function schedule_next_step( int $job_id, int $step_position ): bool {
+	private function schedule_next_step( int $job_id, int $step_position, int $pipeline_id, int $flow_id, array $pipeline_config, array $previous_data_packets = [] ): bool {
 		$logger = apply_filters('dm_get_logger', null);
 		
 		$scheduler = apply_filters('dm_get_action_scheduler', null);
@@ -244,9 +238,16 @@ class ProcessingOrchestrator {
 		}
 		
 		$action_id = $scheduler->schedule_single_action(
-			time() + 1, // Schedule immediately
+			time(), // Action Scheduler handles immediate execution precisely
 			'dm_execute_step',
-			['job_id' => $job_id, 'step_position' => $step_position],
+			[
+				'job_id' => $job_id,
+				'step_position' => $step_position,
+				'pipeline_id' => $pipeline_id,
+				'flow_id' => $flow_id,
+				'pipeline_config' => $pipeline_config,
+				'previous_data_packets' => $previous_data_packets
+			],
 			\DataMachine\Engine\Constants::ACTION_GROUP
 		);
 
@@ -263,106 +264,6 @@ class ProcessingOrchestrator {
 		return $success;
 	}
 
-	/**
-	 * Get pipeline_id from job.
-	 *
-	 * @param object $job The job object.
-	 * @return int|null The pipeline ID or null if not found.
-	 */
-	private function get_pipeline_id_from_job( object $job ): ?int {
-		$logger = apply_filters('dm_get_logger', null);
-		
-		if ( ! empty( $job->pipeline_id ) ) {
-			$logger && $logger->debug( 'Using pipeline_id from job', [
-				'job_id' => $job->job_id ?? 'unknown',
-				'pipeline_id' => $job->pipeline_id
-			] );
-			return (int) $job->pipeline_id;
-		}
-		
-		$logger && $logger->error( 'Job missing pipeline_id', [
-			'job_id' => $job->job_id ?? 'unknown',
-			'available_fields' => array_keys( (array) $job )
-		] );
-		return null;
-	}
-
-	/**
-	 * Get flow_id from job.
-	 *
-	 * @param object $job The job object.
-	 * @return int|null The flow ID or null if not found.
-	 */
-	private function get_flow_id_from_job( object $job ): ?int {
-		$logger = apply_filters('dm_get_logger', null);
-		
-		if ( ! empty( $job->flow_id ) ) {
-			$logger && $logger->debug( 'Using flow_id from job', [
-				'job_id' => $job->job_id ?? 'unknown',
-				'flow_id' => $job->flow_id
-			] );
-			return (int) $job->flow_id;
-		}
-		
-		$logger && $logger->error( 'Job missing flow_id', [
-			'job_id' => $job->job_id ?? 'unknown',
-			'available_fields' => array_keys( (array) $job )
-		] );
-		return null;
-	}
-
-	/**
-	 * Get pipeline steps configuration as single source of truth.
-	 *
-	 * @param int $pipeline_id The pipeline ID.
-	 * @param object|null $db_pipelines The database pipelines service.
-	 * @param object $logger The logger instance.
-	 * @return array Pipeline steps configuration array.
-	 */
-	private function get_pipeline_steps( int $pipeline_id, ?object $db_pipelines, object $logger ): array {
-		if ( ! $db_pipelines ) {
-			$logger->error( 'Database pipelines service not available', [
-				'pipeline_id' => $pipeline_id
-			] );
-			return [];
-		}
-		
-		try {
-			$pipeline_config = $db_pipelines->get_pipeline_configuration( $pipeline_id );
-			
-			// Fail fast - no fallbacks
-			if ( !isset($pipeline_config['steps']) || empty($pipeline_config['steps']) ) {
-				$logger->error( 'Pipeline configuration missing or has no steps', [
-					'pipeline_id' => $pipeline_id,
-					'config_keys' => array_keys($pipeline_config ?? [])
-				] );
-				throw new \RuntimeException( "Pipeline {$pipeline_id} has no configured steps - cannot process" );
-			}
-			
-			$config = $pipeline_config['steps'];
-			
-			// Basic validation - ensure we have steps
-			$validation = ['valid' => !empty($config), 'errors' => empty($config) ? ['No pipeline steps configured'] : []];
-			if ( ! $validation['valid'] ) {
-				$logger->error( 'Invalid pipeline configuration', [
-					'pipeline_id' => $pipeline_id,
-					'errors' => $validation['errors']
-				] );
-				return [];
-			}
-			
-			return $config;
-		} catch ( \Exception $e ) {
-			$logger = apply_filters('dm_get_logger', null);
-			$logger && $logger->error( 'Error loading pipeline configuration', [
-				'pipeline_id' => $pipeline_id,
-				'error' => $e->getMessage(),
-				'trace' => $e->getTraceAsString(),
-				'method' => __METHOD__
-			] );
-			return [];
-		}
-	}
 
 	/**
 	 * Find step configuration by position in pipeline configuration.
@@ -403,9 +304,9 @@ class ProcessingOrchestrator {
 	 * @return array|null Mapped step configuration or null if mapping fails.
 	 */
 	private function map_pipeline_step_to_execution_format( array $pipeline_step, object $logger ): ?array {
-		$step_type = $pipeline_step['type'] ?? '';
+		$step_type = $pipeline_step['step_type'] ?? '';
 		
-		// Get step config via parameter-based discovery
+		// Get step config via pure discovery
 		$step_config = $this->get_step_config_by_type( $step_type );
 		
 		if ( $step_config ) {
@@ -418,7 +319,7 @@ class ProcessingOrchestrator {
 			];
 		}
 		
-		$logger->warning( 'Unable to map pipeline step to execution format - step type not found via parameter-based discovery', [
+		$logger->warning( 'Unable to map pipeline step to execution format - step type not found', [
 			'step_type' => $step_type,
 			'pipeline_step' => $pipeline_step
 		] );
@@ -448,77 +349,6 @@ class ProcessingOrchestrator {
 
 
 
-	/**
-	 * Get all previous DataPackets for steps that consume all packets.
-	 *
-	 * @param int $job_id The job ID.
-	 * @param int $step_position The current step position.
-	 * @param object $logger The logger instance.
-	 * @return array Array of DataPacket objects from all previous steps.
-	 */
-	private function get_all_previous_data_packets( int $job_id, int $step_position, object $logger ): array {
-		// First step gets empty array (input steps generate their own data)
-		if ( $step_position === 0 ) {
-			$logger->debug( 'First step - no previous DataPackets available', [
-				'job_id' => $job_id,
-				'step_position' => $step_position
-			] );
-			return [];
-		}
-
-		// Get required services
-		$pipeline_context = apply_filters( 'dm_get_pipeline_context', null );
-		$all_databases = apply_filters('dm_get_database_services', []);
-		$db_jobs = $all_databases['jobs'] ?? null;
-
-		if ( ! $pipeline_context || ! $db_jobs ) {
-			$logger->warning( 'Required services unavailable for all DataPackets retrieval', [
-				'job_id' => $job_id,
-				'step_position' => $step_position,
-				'pipeline_context_available' => $pipeline_context !== null,
-				'db_jobs_available' => $db_jobs !== null
-			] );
-			return [];
-		}
-
-		// Get previous step names and retrieve DataPackets
-		$previous_step_names = $pipeline_context->get_all_previous_step_names( $job_id );
-		if ( empty( $previous_step_names ) ) {
-			return []; // No previous steps
-		}
-
-		$data_packets = [];
-
-		// Get DataPackets from all previous steps
-		foreach ( $previous_step_names as $step_name ) {
-			if ( ! $step_name ) {
-				continue;
-			}
-
-			$json_data = $db_jobs->get_step_data_by_name( $job_id, $step_name );
-			if ( ! $json_data ) {
-				continue;
-			}
-
-			try {
-				$packet = \DataMachine\Engine\DataPacket::fromJson( $json_data );
-				if ( $packet ) {
-					$data_packets[] = $packet;
-				}
-			} catch ( \Exception $e ) {
-				$logger->warning( 'Skipping malformed DataPacket', [
-					'job_id' => $job_id,
-					'step_name' => $step_name,
-					'error' => $e->getMessage()
-				] );
-				// Skip malformed packets
-				continue;
-			}
-		}
-
-		// Reverse array to ensure most recent packets are first
-		return array_reverse( $data_packets );
-	}
 
 
 } // End class

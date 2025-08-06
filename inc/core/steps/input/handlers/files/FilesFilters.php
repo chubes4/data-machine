@@ -83,13 +83,8 @@ function dm_register_files_input_filters() {
         return $content;
     }, 10, 2);
     
-    // DataPacket conversion registration - Files handler uses dedicated DataPacket class
-    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        if ($source_type === 'files') {
-            return FilesDataPacket::create($source_data, $context);
-        }
-        return $datapacket;
-    }, 10, 4);
+    // DataPacket creation removed - engine uses universal DataPacket constructor
+    // Files handler returns properly formatted data for direct constructor usage
     
     // FilesRepository service registration - singleton pattern for consistency
     add_filter('dm_get_files_repository', function($repository) {

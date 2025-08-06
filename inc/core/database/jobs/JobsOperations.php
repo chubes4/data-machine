@@ -236,6 +236,7 @@ class JobsOperations {
         }
         
         // Get flows service using filter-based discovery
+        $all_databases = apply_filters('dm_get_database_services', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             // Fallback to direct pipeline query if flows service unavailable

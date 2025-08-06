@@ -61,13 +61,6 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Retrieves the HTTP service for external API communications.
  * Usage: $http_service = apply_filters('dm_get_http_service', null);
  * 
- * PARAMETER-BASED SERVICE FILTERS:
- * 
- * @filter dm_get_database_service
- * Retrieves database services by type parameter.
- * Usage: $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
- * Types: 'jobs', 'pipelines', 'flows', 'processed_items', 'remote_locations'
- * 
  * @filter dm_get_handlers
  * Retrieves all handler instances via pure discovery mode.
  * Usage: $all_handlers = apply_filters('dm_get_handlers', []);
@@ -86,9 +79,9 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Usage: $all_steps = apply_filters('dm_get_steps', []);
  * Access specific: $step_config = $all_steps['input'] ?? null;
  * 
- * @filter dm_get_step_config
- * Retrieves detailed step configuration for UI rendering.
- * Usage: $config = apply_filters('dm_get_step_config', null, $step_type, $context);
+ * @filter dm_get_step_configs
+ * Retrieves all step configurations via pure discovery mode.
+ * Usage: $all_configs = apply_filters('dm_get_step_configs', []); $config = $all_configs[$step_type] ?? null;
  * 
  * TEMPLATE SYSTEM FILTERS:
  * 
@@ -169,8 +162,7 @@ function run_data_machine() {
     // Register utility filters for external handlers
     dm_register_utility_filters();
     
-    // Register universal DataPacket creation system
-    dm_register_datapacket_creation_system();
+    // DataPacket creation system removed - engine uses universal DataPacket constructor
     
     // Admin setup moved to component self-registration
     // Logger component manages its own admin_notices hook via LoggerFilters.php
@@ -202,13 +194,77 @@ function run_data_machine() {
     // Register single Action Scheduler hook for direct pipeline execution
     // Eliminates 100 WordPress hook registrations in favor of direct Action Scheduler callbacks
     // Use filter-based orchestrator access for consistency with pure architecture
-    add_action( 'dm_execute_step', function( $job_id, $step_position ) {
-        $orchestrator = apply_filters('dm_get_orchestrator', null);
-        if ($orchestrator && is_object($orchestrator) && method_exists($orchestrator, 'execute_step_callback')) {
-            return $orchestrator->execute_step_callback( $job_id, $step_position );
+    add_action( 'dm_execute_step', function( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $pipeline_config = null, $previous_data_packets = null ) {
+        $logger = apply_filters('dm_get_logger', null);
+        
+        try {
+            $orchestrator = apply_filters('dm_get_orchestrator', null);
+            if ($orchestrator && is_object($orchestrator) && method_exists($orchestrator, 'execute_step_callback')) {
+                $result = $orchestrator->execute_step_callback( $job_id, $step_position, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets );
+                
+                // If step execution failed, mark job as failed
+                if (!$result) {
+                    $all_databases = apply_filters('dm_get_database_services', []);
+                    $db_jobs = $all_databases['jobs'] ?? null;
+                    if ($db_jobs) {
+                        $db_jobs->update_status($job_id, 'failed');
+                        $logger && $logger->error('Job marked as failed due to step execution failure', [
+                            'job_id' => $job_id,
+                            'step_position' => $step_position
+                        ]);
+                    }
+                }
+                
+                return $result;
+            } else {
+                // Mark job as failed if orchestrator unavailable
+                $all_databases = apply_filters('dm_get_database_services', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
+                if ($db_jobs) {
+                    $db_jobs->update_status($job_id, 'failed');
+                }
+                
+                $logger && $logger->error('Job failed - orchestrator unavailable', [
+                    'job_id' => $job_id,
+                    'step_position' => $step_position
+                ]);
+                
+                return false;
+            }
+        } catch (Exception $e) {
+            // Mark job as failed on any exception
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $db_jobs->update_status($job_id, 'failed');
+            }
+            
+            $logger && $logger->error('Job failed due to exception in Action Scheduler hook', [
+                'job_id' => $job_id,
+                'step_position' => $step_position,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return false;
+        } catch (Throwable $e) {
+            // Catch any fatal errors or other throwables
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $db_jobs->update_status($job_id, 'failed');
+            }
+            
+            $logger && $logger->error('Job failed due to fatal error in Action Scheduler hook', [
+                'job_id' => $job_id,
+                'step_position' => $step_position,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return false;
         }
-        return false; // Fail gracefully if orchestrator unavailable
-    }, 10, 2 );
+    }, 10, 6 );
 
 
 }

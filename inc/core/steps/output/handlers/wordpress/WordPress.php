@@ -37,33 +37,62 @@ class WordPress {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Access structured content directly from DataPacket (no parsing needed)
-        $content_title = $data_packet->content->title ?? '';
-        $content_body = $data_packet->content->body ?? '';
-        $content_tags = $data_packet->content->tags ?? [];
-        $content_summary = $data_packet->content->summary ?? '';
+        // Validate DataPacket contract - fail fast if structure violated
+        if (!isset($data_packet->content)) {
+            return ['success' => false, 'error' => 'DataPacket contract violation: content object missing'];
+        }
+        
+        if (!isset($data_packet->content->title) || !isset($data_packet->content->body)) {
+            return ['success' => false, 'error' => 'DataPacket contract violation: required content properties (title, body) missing'];
+        }
+        
+        // Access structured content directly from DataPacket - contract guaranteed
+        $content_title = $data_packet->content->title;
+        $content_body = $data_packet->content->body;
+        $content_tags = $data_packet->content->tags ?? []; // Optional property
+        $content_summary = $data_packet->content->summary ?? ''; // Optional property
 
+        // Validate output_config in DataPacket
+        if (!isset($data_packet->output_config)) {
+            return ['success' => false, 'error' => 'DataPacket contract violation: output_config missing'];
+        }
+        
         // Get output config from DataPacket
         $module_job_config = [
-            'output_config' => $data_packet->output_config ?? []
+            'output_config' => $data_packet->output_config
         ];
 
-        // Extract metadata from DataPacket
-        $input_metadata = [
-            'original_date_gmt' => $data_packet->metadata->date_created ?? null,
-            'source_url' => $data_packet->metadata->source_url ?? null,
-            'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
-        ];
-
-        // Get output config directly from the job config array
-        $config = $module_job_config['output_config'] ?? [];
-        if (!is_array($config)) $config = array();
-
-        // Access config from nested structure
-        $wordpress_config = $config['wordpress'] ?? [];
+        // Validate metadata in DataPacket
+        if (!isset($data_packet->metadata)) {
+            return ['success' => false, 'error' => 'DataPacket contract violation: metadata object missing'];
+        }
         
-        // Determine destination type
-        $destination_type = $wordpress_config['destination_type'] ?? 'local';
+        // Extract metadata from DataPacket - optional properties use fallbacks
+        $input_metadata = [
+            'original_date_gmt' => $data_packet->metadata->date_created ?? null, // Optional
+            'source_url' => $data_packet->metadata->source_url ?? null, // Optional 
+            'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null // Optional
+        ];
+
+        // Get output config directly from the job config array - guaranteed by validation above
+        $config = $module_job_config['output_config'];
+        if (!is_array($config)) {
+            return ['success' => false, 'error' => 'Invalid output_config format - array required'];
+        }
+
+        // Validate WordPress configuration - require explicit setup
+        if (!isset($config['wordpress']) || !is_array($config['wordpress'])) {
+            return ['success' => false, 'error' => 'WordPress configuration missing - wordpress config block required'];
+        }
+        
+        $wordpress_config = $config['wordpress'];
+        
+        // Require explicit destination type - no defaults
+        if (!isset($wordpress_config['destination_type'])) {
+            return ['success' => false, 'error' => 'WordPress destination_type configuration required (local or remote)'];
+        }
+        
+        $destination_type = $wordpress_config['destination_type'];
 
         // Structure content data for handlers
         $structured_content = [
@@ -98,12 +127,29 @@ class WordPress {
      * @return array Result array.
      */
     private function publish_local(array $structured_content, array $config, array $input_metadata): array {
-        // Get settings from config
-        $post_type = $config['post_type'] ?? 'post';
-        $post_status = $config['post_status'] ?? 'draft';
-        $post_author = $config['post_author'] ?? get_current_user_id();
-        $category_id = $config['selected_local_category_id'] ?? -1;
-        $tag_id = $config['selected_local_tag_id'] ?? -1;
+        // Validate required local WordPress configuration
+        if (!isset($config['post_type'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: post_type required'];
+        }
+        if (!isset($config['post_status'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: post_status required'];
+        }
+        if (!isset($config['post_author'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: post_author required'];
+        }
+        if (!isset($config['selected_local_category_id'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: selected_local_category_id required'];
+        }
+        if (!isset($config['selected_local_tag_id'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: selected_local_tag_id required'];
+        }
+        
+        // Get settings from validated config
+        $post_type = $config['post_type'];
+        $post_status = $config['post_status'];
+        $post_author = $config['post_author'];
+        $category_id = $config['selected_local_category_id'];
+        $tag_id = $config['selected_local_tag_id'];
 
         // Use structured content directly from DataPacket (no parsing needed)
         $parsed_data = [
@@ -125,7 +171,10 @@ class WordPress {
         $block_content = $this->create_gutenberg_blocks_from_content($final_content);
 
         // Determine Post Date
-        $post_date_source = $config['post_date_source'] ?? 'current_date';
+        if (!isset($config['post_date_source'])) {
+            return ['success' => false, 'error' => 'WordPress configuration missing: post_date_source required'];
+        }
+        $post_date_source = $config['post_date_source'];
         $post_date_gmt = null;
         $post_date = null;
 
@@ -339,15 +388,15 @@ class WordPress {
             ];
         }
 
-        // Get remote locations database service
+        // Get remote locations database service - fail fast if unavailable
         $all_databases = apply_filters('dm_get_database_services', []);
-        $db_locations = $all_databases['remote_locations'] ?? null;
-        if (!$db_locations) {
+        if (!isset($all_databases['remote_locations'])) {
             return [
                 'success' => false,
                 'error' => __('Remote Locations database service not available.', 'data-machine')
             ];
         }
+        $db_locations = $all_databases['remote_locations'];
 
         // Fetch location details (using system access for admin-only architecture)
         $location = $db_locations->get_location($location_id, null, true, true);
@@ -400,7 +449,10 @@ class WordPress {
         $block_content = $this->create_gutenberg_blocks_from_content($final_content);
 
         // Determine Post Date
-        $post_date_source = $config['post_date_source'] ?? 'current_date';
+        if (!isset($config['post_date_source'])) {
+            return ['success' => false, 'error' => 'WordPress configuration missing: post_date_source required'];
+        }
+        $post_date_source = $config['post_date_source'];
         $post_date_iso = null;
 
         if ($post_date_source === 'source_date' && !empty($input_metadata['original_date_gmt'])) {
@@ -599,7 +651,16 @@ class WordPress {
 
         // Check if the remote operation was successful
         if (empty($response_data['success']) || $response_data['success'] !== true) {
-            $error_message = $response_data['error'] ?? __('Unknown error from remote WordPress site.', 'data-machine');
+            if (!isset($response_data['error'])) {
+                $logger = apply_filters('dm_get_logger', null);
+                $logger && $logger->error('Remote WordPress site returned no error message.', ['location_id' => $location_id, 'response_data' => $response_data]);
+                return [
+                    'success' => false,
+                    'error' => __('Remote WordPress site failed with no error message provided.', 'data-machine')
+                ];
+            }
+            
+            $error_message = $response_data['error'];
             $logger = apply_filters('dm_get_logger', null);
             $logger && $logger->error($error_message, ['location_id' => $location_id, 'response_data' => $response_data]);
             return [
@@ -608,14 +669,14 @@ class WordPress {
             ];
         }
 
-        // Success - return detailed information
+        // Success - return detailed information (optional response fields allowed for backwards compatibility)
         return array(
             'success' => true,
             'status' => 'success',
             'message' => __('Post published to remote WordPress site successfully!', 'data-machine'),
-            'remote_post_id' => $response_data['post_id'] ?? null,
-            'remote_edit_link' => $response_data['edit_link'] ?? null,
-            'remote_view_link' => $response_data['view_link'] ?? null,
+            'remote_post_id' => $response_data['post_id'] ?? null, // Optional for backwards compatibility
+            'remote_edit_link' => $response_data['edit_link'] ?? null, // Optional for backwards compatibility
+            'remote_view_link' => $response_data['view_link'] ?? null, // Optional for backwards compatibility
             'post_title' => $parsed_data['title'],
             'final_output' => $parsed_data['content'],
             'assigned_category_id' => $assigned_category_id,
@@ -710,11 +771,12 @@ class WordPress {
      * @return array Settings fields.
      */
     private static function get_remote_fields(array $current_config = []): array {
-        // Get remote locations service via filter system
-        $db_remote_locations = $all_databases['remote_locations'] ?? null;
-        if (!$db_remote_locations) {
+        // Get remote locations service via filter system - fail fast if unavailable
+        $all_databases = apply_filters('dm_get_database_services', []);
+        if (!isset($all_databases['remote_locations'])) {
             throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
         }
+        $db_remote_locations = $all_databases['remote_locations'];
         $locations = $db_remote_locations->get_locations_for_current_user();
 
         $options = [0 => __('Select a Remote Location', 'data-machine')];

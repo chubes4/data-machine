@@ -129,7 +129,6 @@ class GoogleSheets {
 
             if (is_wp_error($result)) {
                 $logger && $logger->error('Failed to append data to Google Sheets.', [
-                    'user_id' => $user_id,
                     'spreadsheet_id' => $spreadsheet_id,
                     'error_code' => $result->get_error_code(),
                     'error_message' => $result->get_error_message()
@@ -142,7 +141,6 @@ class GoogleSheets {
 
             $sheet_url = "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}";
             $logger && $logger->debug('Successfully appended data to Google Sheets.', [
-                'user_id' => $user_id, 
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet' => $worksheet_name
             ]);
@@ -156,7 +154,7 @@ class GoogleSheets {
             ];
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Google Sheets Output Exception: ' . $e->getMessage(), ['user_id' => $user_id]);
+            $logger && $logger->error('Google Sheets Output Exception: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage()

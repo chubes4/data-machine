@@ -35,8 +35,13 @@ if ($context === 'pipeline') {
     }
     $step_title = $is_empty ? '' : ($step_data['label'] ?? ucfirst(str_replace('_', ' ', $step_type)));
     
-    // Step configuration discovery (parallel to handler discovery pattern)
-    $step_config_info = $is_empty ? null : apply_filters('dm_get_step_config', null, $step_type, ['context' => 'pipeline']);
+    // Step configurations discovery (pure discovery pattern)
+    if ($is_empty) {
+        $step_config_info = null;
+    } else {
+        $all_step_configs = apply_filters('dm_get_step_configs', []);
+        $step_config_info = $all_step_configs[$step_type] ?? null;
+    }
     $has_step_config = !$is_empty && !empty($step_config_info);
 } else {
     // Flow context

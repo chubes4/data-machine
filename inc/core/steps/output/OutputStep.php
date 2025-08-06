@@ -46,13 +46,15 @@ class OutputStep {
             // Get job and pipeline configuration
             $job = $db_jobs->get_job($job_id);
             if (!$job) {
-                return $this->fail_job($job_id, 'Job not found for output step');
+                $logger->error('Output Step: Job not found for output step', ['job_id' => $job_id]);
+                return false;
             }
 
             // Get step configuration
             $step_config = $this->get_step_configuration($job_id, 'output');
             if (!$step_config || empty($step_config['handlers']) || !is_array($step_config['handlers'])) {
-                return $this->fail_job($job_id, 'Output step requires handlers array configuration');
+                $logger->error('Output Step: Output step requires handlers array configuration', ['job_id' => $job_id]);
+                return false;
             }
 
             $handlers = $step_config['handlers'];
@@ -61,7 +63,8 @@ class OutputStep {
             // Output steps use latest DataPacket (first in array)
             $data_packet = $data_packets[0] ?? null;
             if (!$data_packet) {
-                return $this->fail_job($job_id, 'No DataPacket available from previous step');
+                $logger->error('Output Step: No DataPacket available from previous step', ['job_id' => $job_id]);
+                return false;
             }
 
             // Execute multiple output handlers in batch
@@ -69,7 +72,8 @@ class OutputStep {
 
             if (!$batch_results['overall_success']) {
                 $error_message = 'Multi-output publishing failed: ' . $batch_results['summary'];
-                return $this->fail_job($job_id, $error_message);
+                $logger->error('Output Step: ' . $error_message, ['job_id' => $job_id]);
+                return false;
             }
 
             // Create result DataPacket using filter system
@@ -88,15 +92,40 @@ class OutputStep {
                 'handlers' => $handlers
             ];
             
-            $result_packet = apply_filters('dm_create_datapacket', null, $output_data, 'output_result', $context);
-
-            if (!$result_packet instanceof DataPacket) {
+            // Create DataPacket using universal constructor
+            try {
+                $result_packet = new DataPacket(
+                    'Output Complete',
+                    $output_data['content'] ?? '',
+                    'output_result'
+                );
+                
+                // Add output-specific metadata
+                if (isset($output_data['metadata'])) {
+                    $metadata = $output_data['metadata'];
+                    $result_packet->metadata['handlers_used'] = $metadata['handlers_used'] ?? null;
+                    $result_packet->metadata['output_success'] = $metadata['output_success'] ?? true;
+                    $result_packet->metadata['successful_handlers'] = $metadata['successful_handlers'] ?? [];
+                    $result_packet->metadata['failed_handlers'] = $metadata['failed_handlers'] ?? [];
+                    $result_packet->metadata['processing_time'] = $metadata['processing_time'] ?? time();
+                }
+                
+                // Add context information
+                if (isset($context['job_id'])) {
+                    $result_packet->metadata['job_id'] = $context['job_id'];
+                }
+                if (isset($context['handlers'])) {
+                    $result_packet->metadata['handlers'] = $context['handlers'];
+                }
+                
+                $result_packet->processing['steps_completed'][] = 'output';
+                
+            } catch (\Exception $e) {
                 $logger->error('Output Step: Failed to create result DataPacket', [
                     'job_id' => $job_id,
-                    'handler' => $handler_name,
-                    'conversion_failed' => true
+                    'error' => $e->getMessage()
                 ]);
-                return $this->fail_job($job_id, 'Failed to create output result DataPacket');
+                return false;
             }
             
             // Store result DataPacket
@@ -121,7 +150,7 @@ class OutputStep {
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return $this->fail_job($job_id, 'Output step failed: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -151,7 +180,7 @@ class OutputStep {
         // Get pipeline-level flow configuration
         $db_pipelines = $all_databases['pipelines'] ?? null;
         if ($db_pipelines) {
-            $config = $db_pipelines->get_pipeline_flow_configuration($pipeline_id);
+            $config = $db_pipelines->get_pipeline_configuration($pipeline_id);
             $flow_config = isset($config['steps']) ? $config['steps'] : [];
             // Find output step configuration in flow
             foreach ($flow_config as $step) {
@@ -331,7 +360,6 @@ class OutputStep {
      * This method examines the handler registration information to auto-discover
      * which class registered itself, eliminating the need for explicit class parameters.
      * 
-    /**
      * Get handler object directly from the handler system.
      * 
      * Uses the object-based handler registration to get
@@ -416,24 +444,6 @@ class OutputStep {
         return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);
     }
 
-    /**
-     * Fail a job with an error message.
-     *
-     * @param int $job_id The job ID.
-     * @param string $message The error message.
-     * @return bool Always returns false for easy return usage.
-     */
-    private function fail_job(int $job_id, string $message): bool {
-        $job_status_manager = apply_filters('dm_get_job_status_manager', null);
-        $logger = apply_filters('dm_get_logger', null);
-        if ($job_status_manager) {
-            $job_status_manager->fail($job_id, $message);
-        }
-        if ($logger) {
-            $logger->error($message, ['job_id' => $job_id]);
-        }
-        return false;
-    }
 }
 
 

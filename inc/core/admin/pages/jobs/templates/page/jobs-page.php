@@ -13,8 +13,20 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Use data passed from Jobs class
-$recent_jobs = $recent_jobs ?? [];
+// Get jobs data using filter-based discovery
+$all_databases = apply_filters('dm_get_database_services', []);
+$db_jobs = $all_databases['jobs'] ?? null;
+
+$recent_jobs = [];
+if ($db_jobs) {
+    $args = [
+        'orderby' => 'j.job_id',
+        'order' => 'DESC',
+        'per_page' => 50,
+        'offset' => 0
+    ];
+    $recent_jobs = $db_jobs->get_jobs_for_list_table($args);
+}
 
 /**
  * Render individual job table row.

@@ -32,6 +32,10 @@ class Bluesky {
         // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('dm_get_auth_providers', []);
         $this->auth = $all_auth['bluesky'] ?? null;
+        
+        if ($this->auth === null) {
+            throw new \RuntimeException('Bluesky authentication service not available. Required service missing from dm_get_auth_providers filter.');
+        }
     }
 
     /**
@@ -197,11 +201,17 @@ class Bluesky {
                         ]
                     ]
                 ];
-            } elseif (is_wp_error($uploaded_image_blob)) {
-                $logger && $logger->warning('Bluesky image upload failed, proceeding without image.', [
-                    'error_code' => $uploaded_image_blob->get_error_code(),
-                    'error_message' => $uploaded_image_blob->get_error_message()
+            } else {
+                // Fail immediately if image upload fails when images are enabled
+                $error_message = is_wp_error($uploaded_image_blob) ? $uploaded_image_blob->get_error_message() : 'Image upload failed with unknown error.';
+                $logger && $logger->error('Bluesky image upload failed when images are enabled.', [
+                    'error_message' => $error_message,
+                    'image_url' => $image_source_url
                 ]);
+                return [
+                    'success' => false,
+                    'error' => __('Image upload failed when images are enabled: ', 'data-machine') . $error_message
+                ];
             }
         }
 
@@ -241,6 +251,17 @@ class Bluesky {
 
             $post_uri = $post_result['uri'] ?? '';
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
+            
+            if (is_wp_error($post_url)) {
+                $logger && $logger->error('Failed to build post URL.', [
+                    'error_code' => $post_url->get_error_code(),
+                    'error_message' => $post_url->get_error_message()
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $post_url->get_error_message()
+                ];
+            }
 
             $logger && $logger->debug('Successfully posted to Bluesky.', ['post_uri' => $post_uri]);
 
@@ -443,15 +464,20 @@ class Bluesky {
      *
      * @param string $uri AT Protocol URI
      * @param string $handle User handle
-     * @return string User-friendly URL
+     * @return string|WP_Error User-friendly URL or error if URL construction fails
      */
-    private function build_post_url(string $uri, string $handle): string {
+    private function build_post_url(string $uri, string $handle) {
         // Extract post ID from AT URI (format: at://did:plc:xxx/app.bsky.feed.post/postid)
         if (preg_match('/\/app\.bsky\.feed\.post\/(.+)$/', $uri, $matches)) {
             $post_id = $matches[1];
             return "https://bsky.app/profile/{$handle}/post/{$post_id}";
         }
         
-        return "https://bsky.app/profile/{$handle}"; // Fallback to profile
+        $logger = apply_filters('dm_get_logger', null);
+        $logger && $logger->error('Failed to extract post ID from AT Protocol URI.', [
+            'uri' => $uri,
+            'handle' => $handle
+        ]);
+        return new \WP_Error('bluesky_url_construction_failed', __('Failed to construct post URL from AT Protocol URI.', 'data-machine'));
     }
 }

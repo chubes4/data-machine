@@ -28,11 +28,16 @@ class Facebook {
     private $auth;
 
     /**
-     * Constructor - direct auth initialization for security
+     * Constructor - filter-based auth access following pure discovery architectural standards
      */
     public function __construct() {
-        // Initialize auth directly - auth is internal implementation detail
-        $this->auth = new FacebookAuth();
+        // Use filter-based auth access following pure discovery architectural standards
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $this->auth = $all_auth['facebook'] ?? null;
+        
+        if ($this->auth === null) {
+            throw new \RuntimeException('Facebook authentication service not available. Required service missing from dm_get_auth_providers filter.');
+        }
     }
 
     /**
@@ -71,15 +76,55 @@ class Facebook {
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->debug('Starting Facebook output handling.');
 
-        // 1. Get config
-        $output_config = $module_job_config['output_config']['facebook'] ?? []; // Use 'facebook' sub-key
-        $target_id = trim($output_config['facebook_target_id'] ?? 'me');
-        if (empty($target_id)) $target_id = 'me'; // Ensure 'me' if empty
-
-        // Get additional config options
-        $include_images = !empty($output_config['include_images']);
-        $include_videos = !empty($output_config['include_videos']);
-        $link_handling = $output_config['link_handling'] ?? 'append';
+        // 1. Validate configuration - no defaults allowed
+        $output_config = $module_job_config['output_config']['facebook'] ?? [];
+        
+        if (!isset($output_config['facebook_target_id'])) {
+            return [
+                'success' => false,
+                'error' => __('Facebook target_id configuration is required.', 'data-machine')
+            ];
+        }
+        
+        if (!isset($output_config['include_images'])) {
+            return [
+                'success' => false,
+                'error' => __('Facebook include_images configuration is required.', 'data-machine')
+            ];
+        }
+        
+        if (!isset($output_config['include_videos'])) {
+            return [
+                'success' => false,
+                'error' => __('Facebook include_videos configuration is required.', 'data-machine')
+            ];
+        }
+        
+        if (!isset($output_config['link_handling'])) {
+            return [
+                'success' => false,
+                'error' => __('Facebook link_handling configuration is required.', 'data-machine')
+            ];
+        }
+        
+        $target_id = trim($output_config['facebook_target_id']);
+        $include_images = (bool) $output_config['include_images'];
+        $include_videos = (bool) $output_config['include_videos'];
+        $link_handling = $output_config['link_handling'];
+        
+        if (empty($target_id)) {
+            return [
+                'success' => false,
+                'error' => __('Facebook target_id cannot be empty.', 'data-machine')
+            ];
+        }
+        
+        if (!in_array($link_handling, ['append', 'replace', 'none'])) {
+            return [
+                'success' => false,
+                'error' => __('Invalid Facebook link_handling configuration. Must be "append", "replace", or "none".', 'data-machine')
+            ];
+        }
 
         // 2. Get authenticated Page credentials using internal FacebookAuth
         $page_id = $this->auth->get_page_id();
@@ -119,32 +164,47 @@ class Facebook {
             $video_url = esc_url($input_metadata['video_source_url']);
         }
 
-        // Get HTTP service via filter
+        // Get HTTP service via filter - required for all operations
         $http_service = apply_filters('dm_get_http_service', null);
         if (!$http_service) {
             $logger && $logger->error('Facebook Output: HTTP service not available.');
             return [
                 'success' => false,
-                'error' => __('HTTP service not available.', 'data-machine')
+                'error' => __('Facebook output requires HTTP service. Service not available from dm_get_http_service filter.', 'data-machine')
             ];
         }
 
-        // Determine post type and prepare API parameters
-        if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url, $logger)) {
-            // Image Post
-            if ($include_images) {
-                $endpoint = "/{$page_id}/photos";
-                $api_params = [
-                    'caption' => $post_content,
-                    'url' => $image_url
+        // Determine post type and prepare API parameters - no silent fallbacks
+        if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+            if (!$this->is_image_accessible($image_url, $logger)) {
+                return [
+                    'success' => false,
+                    'error' => sprintf(__('Facebook image URL not accessible: %s', 'data-machine'), $image_url)
                 ];
-            } else {
-                // Fallback to text post if images disabled
-                $endpoint = "/{$page_id}/feed";
-                $api_params = ['message' => $post_content];
             }
-        } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL) && $include_videos) {
-            // Video Post (Fallback to Text with video link)
+            
+            if (!$include_images) {
+                return [
+                    'success' => false,
+                    'error' => __('Facebook handler configured to exclude images but image URL provided in content. Enable images or remove image from content.', 'data-machine')
+                ];
+            }
+            
+            // Image Post
+            $endpoint = "/{$page_id}/photos";
+            $api_params = [
+                'caption' => $post_content,
+                'url' => $image_url
+            ];
+        } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL)) {
+            if (!$include_videos) {
+                return [
+                    'success' => false,
+                    'error' => __('Facebook handler configured to exclude videos but video URL provided in content. Enable videos or remove video from content.', 'data-machine')
+                ];
+            }
+            
+            // Video Post - append video link to content
             $logger && $logger->debug('Facebook API: Including video link in text post.', ['video_url' => $video_url]);
             $post_content .= "\n\nVideo: " . $video_url;
             $endpoint = "/{$page_id}/feed";
@@ -210,12 +270,11 @@ class Facebook {
                 $output_url = "https://www.facebook.com/" . $post_id;
 
                 $logger && $logger->debug('Facebook post published successfully.', [
-                    'user_id' => $user_id, 
                     'post_id' => $post_id, 
                     'output_url' => $output_url
                 ]);
 
-                // Attempt to post the source link as a comment
+                // Post source link as comment - fail if configured to do so
                 if (!empty($source_link) && filter_var($source_link, FILTER_VALIDATE_URL)) {
                     $comment_message = "Source: " . $source_link;
                     $comment_endpoint = "/{$post_id}/comments";
@@ -228,33 +287,60 @@ class Facebook {
                     $comment_response = $http_service->post($comment_url, $comment_api_params, [], 'Facebook Comments API');
 
                     if (is_wp_error($comment_response)) {
-                        $logger && $logger->warning('Facebook API: Failed to post source link comment.', [
+                        $logger && $logger->error('Facebook API: Failed to post source link comment.', [
                             'post_id' => $post_id,
                             'error' => $comment_response->get_error_message(),
-                                ]);
-                    } else {
-                        $comment_body = $comment_response['body'];
-                        $comment_data = $http_service->parse_json($comment_body, 'Facebook Comments API');
-                        $comment_http_code = $comment_response['status_code'];
-
-                        if (is_wp_error($comment_data)) {
-                            $logger && $logger->warning('Facebook API: Failed to parse comment response.', [
-                                'post_id' => $post_id,
-                                'error' => $comment_data->get_error_message(),
-                                        ]);
-                        } elseif (isset($comment_data['error'])) {
-                            $logger && $logger->warning('Facebook API: Failed to post source link comment (API error).', [
-                                'post_id' => $post_id,
-                                'http_code' => $comment_http_code,
-                                'fb_error' => $comment_data['error'],
-                                        ]);
-                        } elseif ($comment_http_code >= 200 && $comment_http_code < 300 && isset($comment_data['id'])) {
-                            $logger && $logger->debug('Facebook API: Successfully posted source link as comment.', [
-                                'post_id' => $post_id, 
-                                'comment_id' => $comment_data['id'], 
-                                        ]);
-                        }
+                        ]);
+                        return [
+                            'success' => false,
+                            'error' => sprintf(__('Facebook post successful but source comment failed: %s', 'data-machine'), $comment_response->get_error_message())
+                        ];
                     }
+                    
+                    $comment_body = $comment_response['body'];
+                    $comment_data = $http_service->parse_json($comment_body, 'Facebook Comments API');
+                    $comment_http_code = $comment_response['status_code'];
+
+                    if (is_wp_error($comment_data)) {
+                        $logger && $logger->error('Facebook API: Failed to parse comment response.', [
+                            'post_id' => $post_id,
+                            'error' => $comment_data->get_error_message(),
+                        ]);
+                        return [
+                            'success' => false,
+                            'error' => sprintf(__('Facebook post successful but source comment parsing failed: %s', 'data-machine'), $comment_data->get_error_message())
+                        ];
+                    }
+                    
+                    if (isset($comment_data['error'])) {
+                        $error_message = $comment_data['error']['message'] ?? 'Unknown comment API error';
+                        $logger && $logger->error('Facebook API: Source link comment API error.', [
+                            'post_id' => $post_id,
+                            'http_code' => $comment_http_code,
+                            'fb_error' => $comment_data['error'],
+                        ]);
+                        return [
+                            'success' => false,
+                            'error' => sprintf(__('Facebook post successful but source comment failed: %s', 'data-machine'), $error_message)
+                        ];
+                    }
+                    
+                    if ($comment_http_code < 200 || $comment_http_code >= 300 || !isset($comment_data['id'])) {
+                        $logger && $logger->error('Facebook API: Unexpected comment response.', [
+                            'post_id' => $post_id,
+                            'http_code' => $comment_http_code,
+                            'response' => $comment_data
+                        ]);
+                        return [
+                            'success' => false,
+                            'error' => sprintf(__('Facebook post successful but source comment had unexpected response (HTTP %d)', 'data-machine'), $comment_http_code)
+                        ];
+                    }
+                    
+                    $logger && $logger->debug('Facebook API: Successfully posted source link as comment.', [
+                        'post_id' => $post_id, 
+                        'comment_id' => $comment_data['id']
+                    ]);
                 }
 
                 return [
@@ -280,7 +366,6 @@ class Facebook {
 
         } catch (\Exception $e) {
             $logger && $logger->error('Facebook Output Exception: ' . $e->getMessage(), [
-                'user_id' => $user_id, 
                 'trace' => $e->getTraceAsString()
             ]);
             return [
@@ -303,20 +388,42 @@ class Facebook {
 
     /**
      * Sanitizes the settings specific to the Facebook output handler.
+     * No defaults allowed - all settings must be explicitly provided.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.
      */
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
-        $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
-        $sanitized['include_images'] = !empty($raw_settings['include_images']);
-        $sanitized['include_videos'] = !empty($raw_settings['include_videos']);
-        $link_handling = $raw_settings['link_handling'] ?? 'append';
+        
+        // facebook_target_id is required - no defaults allowed
+        if (!isset($raw_settings['facebook_target_id'])) {
+            throw new Exception(esc_html__('Facebook target_id setting is required.', 'data-machine'));
+        }
+        $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id']);
+        
+        // include_images is required - no defaults allowed
+        if (!isset($raw_settings['include_images'])) {
+            throw new Exception(esc_html__('Facebook include_images setting is required.', 'data-machine'));
+        }
+        $sanitized['include_images'] = (bool) $raw_settings['include_images'];
+        
+        // include_videos is required - no defaults allowed  
+        if (!isset($raw_settings['include_videos'])) {
+            throw new Exception(esc_html__('Facebook include_videos setting is required.', 'data-machine'));
+        }
+        $sanitized['include_videos'] = (bool) $raw_settings['include_videos'];
+        
+        // link_handling is required - no defaults allowed
+        if (!isset($raw_settings['link_handling'])) {
+            throw new Exception(esc_html__('Facebook link_handling setting is required.', 'data-machine'));
+        }
+        $link_handling = $raw_settings['link_handling'];
         if (!in_array($link_handling, ['append', 'replace', 'none'])) {
-            throw new Exception(esc_html__('Invalid link handling parameter provided in settings.', 'data-machine'));
+            throw new Exception(esc_html__('Invalid Facebook link_handling parameter. Must be "append", "replace", or "none".', 'data-machine'));
         }
         $sanitized['link_handling'] = $link_handling;
+        
         return $sanitized;
     }
 

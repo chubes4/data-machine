@@ -46,7 +46,7 @@ function dm_register_processed_items_database_filters() {
         
         static $manager_instance = null;
         if ($manager_instance === null) {
-            $manager_instance = new \DataMachine\Engine\ProcessedItemsManager();
+            $manager_instance = new ProcessedItemsManager();
         }
         return $manager_instance;
     }, 10);

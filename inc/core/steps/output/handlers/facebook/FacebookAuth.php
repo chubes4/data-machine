@@ -85,13 +85,13 @@ class FacebookAuth {
     }
 
     /**
-     * Retrieves the stored Page access token for a user.
+     * Retrieves the stored Page access token.
+     * Uses global site options for admin-only authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return string|null Page Access token or null if not found/valid/decryption fails.
      */
-    public function get_page_access_token(int $user_id): ?string {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_page_access_token(): ?string {
+        $account = get_option('facebook_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['page_access_token'])) {
             return null;
         }
@@ -115,13 +115,13 @@ class FacebookAuth {
     }
 
     /**
-     * Retrieves the stored Page ID for a user.
+     * Retrieves the stored Page ID.
+     * Uses global site options for admin-only authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return string|null Page ID or null if not found.
      */
-    public function get_page_id(int $user_id): ?string {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_page_id(): ?string {
+        $account = get_option('facebook_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -139,9 +139,9 @@ class FacebookAuth {
     public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
         $this->get_logger() && $this->get_logger()->debug('Handling Facebook OAuth callback.', ['user_id' => $user_id]);
 
-        // 1. Verify state
-        $stored_state = get_user_meta($user_id, 'dm_facebook_oauth_state', true);
-        delete_user_meta($user_id, 'dm_facebook_oauth_state'); // Clean up state
+        // 1. Verify state - use transient for admin-only architecture
+        $stored_state = get_transient('dm_facebook_oauth_state_' . $user_id);
+        delete_transient('dm_facebook_oauth_state_' . $user_id); // Clean up state
         if (empty($stored_state) || !hash_equals($stored_state, $state)) {
             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: State mismatch.', ['user_id' => $user_id]);
             return new \WP_Error('facebook_oauth_state_mismatch', __('Invalid state parameter during Facebook authentication.', 'data-machine'));
@@ -269,8 +269,8 @@ class FacebookAuth {
             'token_expires_at'   => $token_expires_at,
         ];
 
-        // Store details
-        update_user_meta($user_id, self::USER_META_KEY, $account_details);
+        // Store details in site options for admin-only architecture
+        update_option('facebook_auth_data', $account_details);
         $this->get_logger() && $this->get_logger()->debug(
             'Facebook account authenticated. User and Page credentials stored.',
             [
@@ -291,8 +291,8 @@ class FacebookAuth {
      */
     public function get_authorization_url(int $user_id): string {
         $state = wp_create_nonce('dm_facebook_oauth_state_' . $user_id);
-        // Store state temporarily for verification on callback
-        update_user_meta($user_id, 'dm_facebook_oauth_state', $state);
+        // Store state temporarily for verification on callback using transient for admin-only architecture
+        set_transient('dm_facebook_oauth_state_' . $user_id, $state, 15 * MINUTE_IN_SECONDS);
 
         $params = [
             'client_id'     => $this->get_client_id(),
@@ -481,15 +481,15 @@ class FacebookAuth {
     }
 
     /**
-     * Removes the authenticated Facebook account for the user.
+     * Removes the authenticated Facebook account.
+     * Uses global site options for admin-only authentication.
      * Attempts to deauthorize the app via the Graph API first.
      *
-     * @param int $user_id WordPress User ID.
      * @return bool True on success (local data deleted), false otherwise.
      */
-    public static function remove_account(int $user_id): bool {
+    public function remove_account(): bool {
         // Try to get the stored token to attempt deauthorization
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+        $account = get_option('facebook_auth_data', []);
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['user_access_token'])) {
@@ -512,8 +512,8 @@ class FacebookAuth {
             }
         }
 
-        // Always attempt to delete the local user meta regardless of deauth success
-        return delete_user_meta($user_id, self::USER_META_KEY);
+        // Always attempt to delete the site option regardless of deauth success
+        return delete_option('facebook_auth_data');
     }
 
     /**

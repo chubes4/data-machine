@@ -33,6 +33,7 @@ class WordPressSettings {
      * @return array Associative array defining the settings fields.
      */
     public static function get_fields(array $current_config = []): array {
+        // Provide default destination_type if not set (for modal configuration)
         $destination_type = $current_config['destination_type'] ?? 'local';
 
         $fields = [
@@ -237,10 +238,14 @@ class WordPressSettings {
     public static function sanitize(array $raw_settings): array {
         $sanitized = [];
 
-        // Destination type is required
-        $sanitized['destination_type'] = sanitize_text_field($raw_settings['destination_type'] ?? 'local');
+        // Destination type is required - no defaults allowed
+        if (!isset($raw_settings['destination_type'])) {
+            throw new \Exception(esc_html__('WordPress destination_type setting is required.', 'data-machine'));
+        }
+        
+        $sanitized['destination_type'] = sanitize_text_field($raw_settings['destination_type']);
         if (!in_array($sanitized['destination_type'], ['local', 'remote'])) {
-            $sanitized['destination_type'] = 'local';
+            throw new \Exception(esc_html__('Invalid destination_type value. Must be "local" or "remote".', 'data-machine'));
         }
 
         // Sanitize based on destination type
@@ -254,11 +259,15 @@ class WordPressSettings {
                 break;
         }
 
-        // Sanitize common fields
+        // Sanitize common fields - require explicit values
+        if (!isset($raw_settings['post_date_source'])) {
+            throw new \Exception(esc_html__('WordPress post_date_source setting is required.', 'data-machine'));
+        }
+        
         $valid_date_sources = ['current_date', 'source_date'];
-        $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
+        $date_source = sanitize_text_field($raw_settings['post_date_source']);
         if (!in_array($date_source, $valid_date_sources)) {
-            throw new Exception(esc_html__('Invalid post date source parameter provided in settings.', 'data-machine'));
+            throw new \Exception(esc_html__('Invalid post date source parameter provided in settings.', 'data-machine'));
         }
         $sanitized['post_date_source'] = $date_source;
 
@@ -353,6 +362,7 @@ class WordPressSettings {
      * @return bool True if authentication is required, false otherwise.
      */
     public static function requires_authentication(array $current_config = []): bool {
+        // Provide default destination_type if not set (for modal configuration)
         $destination_type = $current_config['destination_type'] ?? 'local';
         
         // Only remote destination requires authentication (Remote Locations)

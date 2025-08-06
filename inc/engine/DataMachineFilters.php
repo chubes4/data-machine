@@ -7,10 +7,9 @@
  * 
  * Engine Bootstrap Functions (Pure Backend Processing Only):
  * - dm_register_direct_service_filters(): Core orchestration services
- * - dm_register_database_service_system(): Parameter-based database filter hooks  
- * - dm_register_context_retrieval_service(): DataPacket context orchestration
- * - dm_register_utility_filters(): Backend utility filter hooks only
- * - dm_register_datapacket_creation_system(): DataPacket creation filter hooks
+ * - dm_register_database_service_system(): Pure discovery database service hooks
+ * - dm_register_context_retrieval_service(): DataPacket context orchestration (dependency injection)
+ * - dm_register_utility_filters(): Pure discovery utility filter hooks
  * 
  * Architectural Separation:
  * - Backend processing logic → Engine components (this file)
@@ -107,12 +106,12 @@ function dm_register_direct_service_filters() {
 }
 
 /**
- * Register parameter-based database service system.
+ * Register pure discovery database service system.
  * 
- * Provides a unified filter for all database services using type parameters.
- * Pure parameter-based system enforcing architectural consistency.
+ * Provides pure discovery access to all database services via collection filtering.
+ * Components self-register via *Filters.php files using dm_get_database_services filter.
  * 
- * Usage: $db_service = apply_filters('dm_get_database_service', null, 'jobs');
+ * Usage: $all_databases = apply_filters('dm_get_database_services', []); $db_jobs = $all_databases['jobs'] ?? null;
  *
  * @since NEXT_VERSION
  */
@@ -123,13 +122,13 @@ function dm_register_database_service_system() {
 }
 
 /**
- * Register core database services via pure filter-based self-registration.
+ * Register core database services via pure discovery self-registration.
  * 
- * ARCHITECTURAL COMPLIANCE: Each service registers individually via filters,
+ * ARCHITECTURAL COMPLIANCE: Each service registers via dm_get_database_services filter,
  * following the "plugins within plugins" architecture. External plugins can
  * override or extend services using standard WordPress filter patterns.
  * 
- * Usage: add_filter('dm_get_database_service', function($service, $type) {...}, 10, 2);
+ * Usage: add_filter('dm_get_database_services', function($services) { $services['my_db'] = $instance; return $services; });
  * 
  * @since NEXT_VERSION
  */
@@ -143,11 +142,11 @@ function dm_register_core_database_services() {
     // - ProcessedItemsFilters.php
     // - RemoteLocationsFilters.php
     
-    // Pure filter hook - components self-register
-    add_filter('dm_get_database_service', function($service, $type) {
+    // Pure discovery filter hook - components self-register via dm_get_database_services
+    add_filter('dm_get_database_services', function($services) {
         // Components self-register via this same filter with higher priority
-        return $service;
-    }, 5, 2);
+        return $services;
+    }, 5, 1);
 }
 
 
@@ -251,38 +250,16 @@ function dm_register_context_retrieval_service() {
 /**
  * Register backend utility filters for data processing.
  * 
- * BACKEND-ONLY FILTERS: Provides pure parameter-based filter hooks for backend
- * content processing operations. Admin/UI filters have been moved to AdminFilters.php
+ * BACKEND-ONLY FILTERS: Provides pure discovery filter hooks for backend
+ * service registration. Admin/UI filters have been moved to AdminFilters.php
  * to maintain clear architectural separation between engine and admin layers.
  * 
  * @since 0.1.0
  */
 function dm_register_utility_filters() {
-    
-    
-    // Bridge system removed - AdminMenuAssets now uses direct parameter-based discovery
-    // This eliminates architectural confusion and aligns with component-owned registration
-    
-    
-    // Common configuration parsing removed - handlers manage their own config parsing
-    // This maintains proper separation of concerns and handler autonomy
-    
-    // Duplicate checking removed - handlers should directly use ProcessedItemsManager service
-    // Usage: $manager = apply_filters('dm_get_processed_items_manager', null);
-    
-    
-    // Search term filtering removed - handlers should implement their own filtering logic
-    // This maintains handler autonomy and avoids over-engineered abstractions
-    
-    // Timeframe filtering removed - handlers should implement their own time-based logic
-    // This avoids over-engineered abstractions and maintains handler control
-    
-    
-    
-    
-    
-    
-    // Admin notices removed - components use WordPress add_action('admin_notices') directly
+    // Bridge system, configuration parsing, duplicate checking, search/timeframe filtering, 
+    // and admin notices all removed - components now use direct WordPress patterns 
+    // or dedicated service discovery for proper separation of concerns
     
     // Pure discovery authentication system - consistent with handler discovery patterns
     // Usage: $all_auth = apply_filters('dm_get_auth_providers', []); $twitter_auth = $all_auth['twitter'] ?? null;
@@ -307,53 +284,20 @@ function dm_register_utility_filters() {
     
     // Legacy dm_get_auth filter removed - authentication now uses pure discovery via dm_get_auth_providers
     
-    // Parameter-based handler settings system (2-parameter pattern for consistency)
+    // Pure discovery handler settings system (consistent with all other filters)
     // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files
     // Bootstrap provides pure filter hook - components add their own registration logic
-    add_filter('dm_get_handler_settings', function($service, $handler_key) {
-        if ($service !== null) {
-            return $service; // Component self-registration provided
-        }
-        
-        // ARCHITECTURAL COMPLIANCE COMPLETE - Pure filter hook only
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        // ARCHITECTURAL COMPLIANCE COMPLETE - Pure discovery pattern
         // Components self-register via *Filters.php files following established patterns
         //
         // Bootstrap provides only pure filter hook - components add their own logic
         
-        return null; // Components self-register via filters
-    }, 10, 2);
+        return $all_settings; // Components self-register via filters
+    }, 10, 1);
     
 }
 
 
-/**
- * Register universal DataPacket creation system.
- * 
- * UNIVERSAL SYSTEM: Pure parameter-based DataPacket conversion system
- * with zero engine hardcoding. Components self-register conversion logic via 
- * parameter matching, enabling universal extensibility.
- * 
- * Usage: $datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
- * 
- * @since NEXT_VERSION
- */
-function dm_register_datapacket_creation_system() {
-    
-    /**
-     * Universal DataPacket creation filter - Pure parameter-based discovery.
-     * 
-     * Engine provides filter hook only - components self-register conversion logic.
-     * No hardcoded source types, no switch statements, maximum extensibility.
-     * 
-     * @param DataPacket|null $datapacket Current DataPacket (null if none created)
-     * @param array $source_data Raw data from component (handler output, AI response, etc.)
-     * @param string $source_type Component identifier (files, rss, reddit, ai, custom_api, etc.)
-     * @param array $context Additional context for conversion (job_id, step info, etc.)
-     * @return DataPacket|null DataPacket instance or null if no converter available
-     */
-    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        // Pure filter hook - no core implementation
-        // Components self-register via parameter matching in their *Filters.php files
-        return $datapacket;
-    }, 5, 4);
-}
+// DataPacket creation system removed - engine uses universal DataPacket constructor
+// Input handlers return properly formatted data for direct constructor usage

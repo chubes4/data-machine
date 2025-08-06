@@ -111,12 +111,27 @@ $input_step = $all_steps['input'] ?? null;
 $step_configs = apply_filters('dm_get_step_configs', []);
 $step_config = $step_configs[$step_type] ?? null;
 
-// DataPacket creation
+// DataPacket creation - Handler-based creation
 $datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
+
+// ProcessedItems service discovery
+$processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
+
+// Job services - Pure discovery
+$job_status_manager = apply_filters('dm_get_job_status_manager', null);
+$job_creator = apply_filters('dm_get_job_creator', null);
+
+// Additional AI services - Pure discovery
+$all_ai_services = apply_filters('dm_get_ai_services', []);
+$fluid_context_bridge = apply_filters('dm_get_fluid_context_bridge', null);
+$ai_response_parser = apply_filters('dm_get_ai_response_parser', null);
+$prompt_builder = apply_filters('dm_get_prompt_builder', null);
 
 // Modal system - Pure discovery
 $all_modals = apply_filters('dm_get_modals', []);
 $step_selection_modal = $all_modals['step-selection'] ?? null;
+$handler_settings_modal = $all_modals['handler-settings'] ?? null;
+$confirmation_modal = $all_modals['confirmation'] ?? null;
 
 // Admin page discovery - Pure discovery
 $admin_pages = apply_filters('dm_get_admin_pages', []);
@@ -161,19 +176,10 @@ composer dump-autoload      # Fix class loading
 php -l file.php             # Syntax check
 
 # Service Discovery Validation
-$all_services = apply_filters('dm_get_debug_services', []); # Debug service registration
-define('WP_DEBUG', true) && error_log(print_r($all_services, true)); # Service debugging
-
-# Architectural Compliance Verification
-# Verify zero parameter-based discovery patterns (should return NO RESULTS)
-grep -r "apply_filters.*dm_get_handler_settings.*null.*['\"]" inc/core/steps/
-grep -r "apply_filters.*dm_get_steps.*null.*['\"]" inc/engine/
-grep -r "apply_filters.*dm_get_handlers.*null.*['\"]" inc/engine/
-
-# Verify pure discovery patterns are used correctly
-grep -r "\$all_settings = apply_filters('dm_get_handler_settings'" inc/
-grep -r "\$all_steps = apply_filters('dm_get_steps'" inc/
-grep -r "\$all_handlers = apply_filters('dm_get_handlers'" inc/
+define('WP_DEBUG', true); # Enable debugging
+error_log('Database services: ' . print_r(apply_filters('dm_get_database_services', []), true));
+error_log('Handlers: ' . print_r(apply_filters('dm_get_handlers', []), true));
+error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 ```
 
 ## Components
@@ -197,7 +203,7 @@ grep -r "\$all_handlers = apply_filters('dm_get_handlers'" inc/
 
 ## Logger System
 
-**Three-Level Logging**: Simplified system with configurable levels and runtime control.
+**Three-Level Logging**: Log system with configurable levels and runtime control.
 
 **Log Levels**:
 - `debug`: Full logging (all debug, info, warning, error, critical messages)
@@ -587,7 +593,7 @@ if (in_array($action, $modal_actions)) {
 ## Critical Rules
 
 **Engine Agnosticism**: NEVER hardcode step types in `/inc/engine/` directory  
-**Pure Discovery Pattern**: NEVER use parameter-based filters like `apply_filters('dm_get_service', null, $param)` - always use pure discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;`  
+**Pure Discovery Pattern**: NEVER use parameter-based filters like `apply_filters('dm_get_service', null, $param)` - always use pure discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;` - This migration eliminates over-engineered parameter passing in favor of simple collection-based discovery  
 **Service Access**: Always use pure discovery patterns - never `new ServiceClass()` or parameter-based filters  
 **Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods  
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)  
@@ -603,14 +609,20 @@ if (in_array($action, $modal_actions)) {
 **Database Layer Location**: ProcessedItems system located in `/inc/core/database/ProcessedItems/` following consistent database component architecture.
 
 **Components**:
-- ProcessedItems.php: Core database operations
-- ProcessedItemsManager.php: Business logic and duplicate tracking
-- ProcessedItemsFilters.php: Self-registration via pure discovery patterns
-- ProcessedItemsOperations.php: CRUD operations
-- ProcessedItemsQueries.php: Query builders
-- ProcessedItemsCleanup.php: Automated maintenance
+- **ProcessedItems.php**: Core database operations and table management
+- **ProcessedItemsManager.php**: Business logic and duplicate tracking services
+- **ProcessedItemsFilters.php**: Self-registration via pure discovery patterns
+- **ProcessedItemsOperations.php**: CRUD operations and data manipulation
+- **ProcessedItemsQueries.php**: Query builders and data retrieval logic
+- **ProcessedItemsCleanup.php**: Automated maintenance and cleanup operations
 
-**Pure Discovery Registration**: Uses standard database service pattern with manager service for business operations.
+**Pure Discovery Registration**: Uses standard database service pattern with manager service for business operations:
+```php
+// ProcessedItems discovery pattern
+$all_databases = apply_filters('dm_get_database_services', []);
+$processed_items_service = $all_databases['processed_items'] ?? null;
+$processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
+```
 
 ## Pipeline+Flow Lifecycle
 
@@ -622,10 +634,13 @@ if (in_array($action, $modal_actions)) {
 
 ## Component Registration
 
-**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using pure discovery patterns:
+**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using pure discovery patterns.
+
+**Critical Architecture Rule**: All services use pure discovery filters - never parameter-based filters. Components register collections, not individual services:
 
 ```php
 function dm_register_twitter_filters() {
+    // Collection-based registration - CORRECT
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'output',
@@ -639,8 +654,18 @@ function dm_register_twitter_filters() {
         $providers['twitter'] = new TwitterAuth();
         return $providers;
     });
+    
+    // Database service registration - Pure discovery pattern
+    add_filter('dm_get_database_services', function($services) {
+        $services['processed_items'] = new ProcessedItems();
+        return $services;
+    });
 }
 dm_register_twitter_filters();
+
+// NEVER use parameter-based filters - INCORRECT:
+// add_filter('dm_get_handler', function($handler, $type) { return $handler; }, 10, 2);
+// add_filter('dm_get_database_service', function($service, $type) { return $service; }, 10, 2);
 ```
 
 
@@ -748,7 +773,7 @@ $jobs_page = $all_pages['jobs'] ?? null;
 
 **Filter-Based Template Discovery**: Templates are discovered from admin page registration and rendered through the universal `dm_render_template` filter system.
 
-**Template Registration**: Admin pages register template directories through the `dm_get_admin_page` filter:
+**Template Registration**: Admin pages register template directories through the `dm_get_admin_pages` filter:
 
 ```php
 // Note: Uses dm_get_admin_pages filter (plural)

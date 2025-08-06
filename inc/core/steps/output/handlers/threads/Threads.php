@@ -56,10 +56,7 @@ class Threads {
         ];
         
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('Threads Output: Starting Threads publication.');
-
-        // For admin-only architecture, use current user (temporary fix until auth is globalized)
-        $user_id = get_current_user_id();
+        $logger && $logger->debug('Threads Output: Starting Threads publication.');
 
         // Get output config from the job config array
         $config = $module_job_config['output_config'] ?? [];
@@ -70,7 +67,7 @@ class Threads {
 
         // Validate content from DataPacket
         if (empty($title) && empty($content)) {
-            $logger?->error('Threads Output: DataPacket content is empty.');
+            $logger && $logger->error('Threads Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Threads.', 'data-machine')
@@ -89,62 +86,26 @@ class Threads {
             $post_content = substr($post_content, 0, $max_length - 3) . '...';
         }
 
-        // Use internal Threads auth service
-        $threads_auth = $this->auth;
-
-        // Get user's Threads account
-        $threads_account = get_user_meta($user_id, 'data_machine_threads_account', true);
-        if (empty($threads_account) || !is_array($threads_account) || empty($threads_account['access_token'])) {
+        // Get authenticated access token using auth service (handles refresh automatically)
+        $access_token = $this->auth->get_access_token();
+        if (empty($access_token)) {
             return [
                 'success' => false,
-                'error' => __('Threads account not connected. Please connect your Threads account in API Keys.', 'data-machine')
+                'error' => __('Threads account not connected or access token expired. Please reconnect your Threads account in API Keys.', 'data-machine')
             ];
         }
 
-        // Check if token needs refresh
-        $needs_refresh = false;
-        $token_expires_at = $threads_account['token_expires_at'] ?? 0;
-        if (time() >= ($token_expires_at - 300)) { // Refresh if expires within 5 minutes
-            $needs_refresh = true;
-        }
-
-        if ($needs_refresh) {
-            $logger?->debug('Threads Output: Refreshing access token.', ['user_id' => $user_id]);
-            $refreshed = $threads_auth->refresh_token($user_id);
-            if (!$refreshed) {
-                return [
-                    'success' => false,
-                    'error' => __('Failed to refresh Threads access token. Please reconnect your account.', 'data-machine')
-                ];
-            }
-            // Re-fetch updated account data
-            $threads_account = get_user_meta($user_id, 'data_machine_threads_account', true);
-        }
-
-        // Decrypt access token
-        $encryption_helper = apply_filters('dm_get_encryption_helper', null);
-        if (!$encryption_helper) {
+        // Get page ID for posting
+        $page_id = $this->auth->get_page_id();
+        if (empty($page_id)) {
             return [
                 'success' => false,
-                'error' => __('Encryption service not available.', 'data-machine')
+                'error' => __('Threads page ID not available. Please reconnect your Threads account.', 'data-machine')
             ];
         }
 
-        $access_token = $encryption_helper->decrypt($threads_account['access_token']);
-        if ($access_token === false) {
-            return [
-                'success' => false,
-                'error' => __('Failed to decrypt Threads access token.', 'data-machine')
-            ];
-        }
-
-        $user_id_threads = $threads_account['user_id'] ?? '';
-        if (empty($user_id_threads)) {
-            return [
-                'success' => false,
-                'error' => __('Threads user ID not found.', 'data-machine')
-            ];
-        }
+        // Use page_id as the Threads user ID for API calls
+        $user_id_threads = $page_id;
 
         try {
             // Prepare media container data
@@ -181,10 +142,10 @@ class Threads {
             }
 
             $media_id = $publish_response['media_id'];
-            $post_url = "https://www.threads.net/@{$threads_account['username']}/post/{$media_id}";
+            // Build post URL using page_id since we don't have username in new architecture
+            $post_url = "https://www.threads.net/t/{$media_id}";
 
-            $logger?->debug('Threads Output: Successfully published to Threads.', [
-                'user_id' => $user_id,
+            $logger && $logger->debug('Threads Output: Successfully published to Threads.', [
                 'media_id' => $media_id
             ]);
 
@@ -198,8 +159,7 @@ class Threads {
             ];
 
         } catch (Exception $e) {
-            $logger?->error('Threads Output: Exception during publication.', [
-                'user_id' => $user_id,
+            $logger && $logger->error('Threads Output: Exception during publication.', [
                 'error' => $e->getMessage()
             ]);
             

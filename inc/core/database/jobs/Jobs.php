@@ -250,6 +250,7 @@ class Jobs {
             flow_config longtext NULL,
             step_data longtext NULL,
             cleanup_scheduled datetime NULL DEFAULT NULL,
+            error_details longtext NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,

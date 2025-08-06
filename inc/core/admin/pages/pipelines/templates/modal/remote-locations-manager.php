@@ -14,6 +14,9 @@ if (!defined('WPINC')) {
     die;
 }
 
+// Service discovery - ensure remote locations service is available
+$remote_locations_service = $remote_locations_service ?? (apply_filters('dm_get_database_services', [])['remote_locations'] ?? null);
+
 // Service availability check
 if (!$remote_locations_service) {
     ?>

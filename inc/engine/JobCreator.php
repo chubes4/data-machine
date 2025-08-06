@@ -109,7 +109,14 @@ class JobCreator {
             $action_id = $scheduler->schedule_single_action(
                 time() + 1, // Start immediately
                 'dm_execute_step',
-                ['job_id' => $job_id, 'step_position' => 0],
+                [
+                    'job_id' => $job_id,
+                    'step_position' => 0,
+                    'pipeline_id' => $pipeline_id,
+                    'flow_id' => $flow_id,
+                    'pipeline_config' => $job_config,
+                    'previous_data_packets' => [] // First step has no previous data
+                ],
                 \DataMachine\Engine\Constants::ACTION_GROUP
             );
 
@@ -191,42 +198,20 @@ class JobCreator {
         }
 
         // Validate flow belongs to pipeline
-        if ( $flow['pipeline_id'] !== $pipeline_id ) {
+        if ( (int)$flow['pipeline_id'] !== (int)$pipeline_id ) {
             return new \WP_Error( 'flow_pipeline_mismatch', 'Flow does not belong to the specified pipeline' );
         }
 
-        // Parse pipeline configuration
+        // Basic pipeline configuration validation
         $pipeline_config = json_decode( $pipeline->step_configuration ?? '[]', true );
-        if ( ! is_array( $pipeline_config ) || empty( $pipeline_config ) ) {
-            return new \WP_Error( 'invalid_pipeline', 'Pipeline has no configured steps' );
+        if ( ! is_array( $pipeline_config ) ) {
+            return new \WP_Error( 'invalid_pipeline_config', 'Invalid pipeline configuration' );
         }
 
-        // Validate each pipeline step using dynamic parameter-based discovery
-        foreach ( $pipeline_config as $step ) {
-            $step_type = $step['type'] ?? '';
-            $step_subtype = $step['subtype'] ?? '';
-
-            // Validate step type exists via pure discovery (engine agnostic)
-            $all_steps = apply_filters('dm_get_steps', []);
-            $step_config = $all_steps[$step_type] ?? null;
-            if ( ! $step_config ) {
-                return new \WP_Error( 'invalid_step_type', sprintf( 'Invalid step type: %s', $step_type ) );
-            }
-
-            // Validate handlers dynamically if step has subtype (engine agnostic)
-            if ( ! empty( $step_subtype ) ) {
-                $all_handlers = apply_filters('dm_get_handlers', []);
-                $step_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === $step_type);
-                if ( !empty($step_handlers) && ! isset( $step_handlers[ $step_subtype ] ) ) {
-                    return new \WP_Error( 'invalid_handler', sprintf( 'Invalid %s handler: %s', $step_type, $step_subtype ) );
-                }
-            }
-
-            // Validate step position is numeric
-            if ( ! isset( $step['position'] ) || ! is_numeric( $step['position'] ) ) {
-                return new \WP_Error( 'invalid_step_position', 'All pipeline steps must have numeric positions' );
-            }
+        if ( empty( $pipeline_config ) ) {
+            return new \WP_Error( 'empty_pipeline', 'Pipeline has no steps defined' );
         }
+
 
         return true;
     }
@@ -260,6 +245,17 @@ class JobCreator {
         $pipeline_step_config = json_decode( $pipeline->step_configuration ?? '[]', true );
         if ( ! is_array( $pipeline_step_config ) ) {
             $pipeline_step_config = [];
+        }
+
+        // Filter out empty/placeholder steps before execution
+        $pipeline_step_config = array_filter($pipeline_step_config, function($step) {
+            $step_type = $step['type'] ?? $step['step_type'] ?? '';
+            return !empty(trim($step_type));
+        });
+
+        // Validate we have executable steps after filtering
+        if ( empty( $pipeline_step_config ) ) {
+            return new \WP_Error( 'no_executable_steps', 'Pipeline has no executable steps after filtering empty placeholders' );
         }
 
         // Sort pipeline steps by position for position-based execution

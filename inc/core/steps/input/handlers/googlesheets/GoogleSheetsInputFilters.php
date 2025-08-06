@@ -110,13 +110,8 @@ function dm_register_googlesheets_input_filters() {
         return $providers;
     });
     
-    // DataPacket conversion registration - Google Sheets Input handler uses dedicated DataPacket class
-    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        if ($source_type === 'googlesheets') {
-            return GoogleSheetsInputDataPacket::create($source_data, $context);
-        }
-        return $datapacket;
-    }, 10, 4);
+    // DataPacket creation removed - engine uses universal DataPacket constructor
+    // Google Sheets handler returns properly formatted data for direct constructor usage
 }
 
 // Auto-register when file loads - achieving complete self-containment

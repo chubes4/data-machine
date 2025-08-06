@@ -186,234 +186,43 @@ function dm_register_pipelines_admin_page_filters() {
     // Universal modal AJAX integration - no component-specific handlers needed
     // All modal content routed through unified ModalAjax.php endpoint
     
-    // Modal content filter registration - Individual filters following architectural consistency
-    
-    // Step Selection Modal - Self-registering modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another component
-        if ($content !== null) {
-            return $content;
-        }
+    // Modal registration - Two-layer architecture: metadata only, content via dm_render_template
+    add_filter('dm_get_modals', function($modals) {
+        // Static pipeline modals - metadata only, content generated during AJAX via dm_render_template
+        $modals['step-selection'] = [
+            'template' => 'modal/step-selection-cards',
+            'title' => __('Select Step Type', 'data-machine')
+        ];
         
-        if ($template !== 'step-selection') {
-            return $content;
-        }
+        $modals['handler-selection'] = [
+            'template' => 'modal/handler-selection-cards',
+            'title' => __('Select Handler', 'data-machine')
+        ];
         
-        // Get context from $_POST directly - jQuery auto-parses JSON data attributes
-        $context = $_POST['context'] ?? [];
+        $modals['configure-step'] = [
+            'template' => 'modal/configure-step', // Extensible - steps can register their own templates
+            'title' => __('Configure Step', 'data-machine')
+        ];
         
-        // Dual-Mode Step Discovery Pattern
-        // DISCOVERY MODE: apply_filters('dm_get_steps', []) - Returns ALL registered step types
-        $all_steps = apply_filters('dm_get_steps', []);
+        $modals['confirm-delete'] = [
+            'template' => 'modal/confirm-delete',
+            'title' => __('Confirm Delete', 'data-machine')
+        ];
         
-        // Sort steps by position property for logical UI ordering
-        uasort($all_steps, function($a, $b) {
-            $pos_a = $a['position'] ?? 999;
-            $pos_b = $b['position'] ?? 999;
-            return $pos_a <=> $pos_b;
-        });
+        // Flow scheduling modal
+        $modals['flow-schedule'] = [
+            'template' => 'modal/flow-schedule',
+            'title' => __('Schedule Flow', 'data-machine')
+        ];
         
-        // Debug logging using logger service
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug('Step discovery returned for modal rendering.', [
-                'step_count' => count($all_steps),
-                'step_types' => array_keys($all_steps)
-            ]);
-        }
+        // Generic handler settings modal (redirects to specific handlers)
+        $modals['handler-settings'] = [
+            'template' => 'modal/handler-settings-form',
+            'title' => __('Handler Settings', 'data-machine')
+        ];
         
-        return apply_filters('dm_render_template', '', 'modal/step-selection-cards', array_merge($context, [
-            'all_steps' => $all_steps
-        ]));
-    }, 10, 2);
-    
-    // Handler Selection Modal - Self-registering modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another component
-        if ($content !== null) {
-            return $content;
-        }
-        
-        if ($template !== 'handler-selection') {
-            return $content;
-        }
-        
-        // Get context from $_POST directly - handle both array and JSON string formats
-        $context = $_POST['context'] ?? [];
-        if (is_string($context)) {
-            $context = json_decode($context, true) ?: [];
-        }
-        
-        $step_type = $context['step_type'] ?? 'unknown';
-        $pipeline_id = $context['pipeline_id'] ?? null;
-        $flow_id = $context['flow_id'] ?? null;
-        
-        // Enhanced debugging for modal context generation
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug('Handler selection modal context', [
-                'template' => $template,
-                'step_type' => $step_type,
-                'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'context_keys' => array_keys($context),
-                'post_keys' => array_keys($_POST)
-            ]);
-        }
-        
-        // Get available handlers using pure discovery
-        $all_handlers = apply_filters('dm_get_handlers', []);
-        $available_handlers = array_filter($all_handlers, function($handler) use ($step_type) {
-            return ($handler['type'] ?? '') === $step_type;
-        });
-        
-        if (empty($available_handlers)) {
-            $logger && $logger->warning('No handlers found for step type', ['step_type' => $step_type]);
-            return '';
-        }
-        
-        $logger && $logger->debug('Handler selection rendering', [
-            'handler_count' => count($available_handlers),
-            'handler_slugs' => array_keys($available_handlers)
-        ]);
-        
-        return apply_filters('dm_render_template', '', 'modal/handler-selection-cards', [
-            'step_type' => $step_type,
-            'handlers' => $available_handlers,
-            'pipeline_id' => $pipeline_id,
-            'flow_id' => $flow_id
-        ]);
-    }, 10, 2);
-    
-    
-    // Configure Step Modal - Self-registering modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another component
-        if ($content !== null) {
-            return $content;
-        }
-        
-        if ($template !== 'configure-step') {
-            return $content;
-        }
-        
-        // Get context from $_POST directly - jQuery auto-parses JSON data attributes
-        $context = $_POST['context'] ?? [];
-        
-        $step_type = $context['step_type'] ?? 'unknown';
-        $modal_type = $context['modal_type'] ?? 'default';
-        $config_type = $context['config_type'] ?? 'default';
-        
-        // Extensible Step Configuration Modal Pattern
-        //
-        // This filter enables any step type to register custom configuration interfaces:
-        // add_filter('dm_get_modal', function($content, $template) {
-        //     if ($template === 'configure-step' && $step_type === 'my_custom_step') {
-        //         $context = json_decode(wp_unslash($_POST['context'] ?? '{}'), true);
-        //         return '<div>Custom step configuration form</div>';
-        //     }
-        //     return $content;
-        // }, 10, 2);
-        //
-        // This maintains the architecture's extensibility - step types can provide
-        // sophisticated configuration interfaces without modifying core modal code.
-        // Step types register their own modal content for 'configure-step' template
-        // Note: Removed recursive filter call - step types handle their own content via this same filter
-        
-        // No configuration modal needed - component handles its own messaging if required
-        return '';
-    }, 10, 2);
-    
-    // Confirm Delete Modal - Self-registering modal content with flow data enrichment
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another component
-        if ($content !== null) {
-            return $content;
-        }
-        
-        if ($template !== 'confirm-delete') {
-            return $content;
-        }
-        
-        // Get context from $_POST directly - jQuery auto-parses JSON data attributes
-        $context = $_POST['context'] ?? [];
-        if (is_string($context)) {
-            $context = json_decode($context, true) ?: [];
-        }
-        
-        $delete_type = $context['delete_type'] ?? 'step';
-        $pipeline_id = $context['pipeline_id'] ?? null;
-        $flow_id = $context['flow_id'] ?? null;
-        $step_id = $context['step_id'] ?? null;
-        
-        // Enhanced logging for modal context
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug('Confirm delete modal context', [
-                'delete_type' => $delete_type,
-                'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'step_id' => $step_id
-            ]);
-        }
-        
-        // Enrich context with flow data based on deletion type
-        $affected_flows = [];
-        $affected_jobs = [];
-        
-        if ($delete_type === 'pipeline' && $pipeline_id) {
-            // Get all flows for this pipeline
-            $all_databases = apply_filters('dm_get_database_services', []);
-            $db_flows = $all_databases['flows'] ?? null;
-            if ($db_flows) {
-                $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-                foreach ($flows as $flow) {
-                    $affected_flows[] = [
-                        'name' => $flow['flow_name'],
-                        'created_at' => $flow['created_at']
-                    ];
-                }
-            }
-            
-            // Get jobs count for this pipeline
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $jobs = $db_jobs->get_jobs_for_pipeline($pipeline_id);
-                $affected_jobs = $jobs; // Count will be used in template
-            }
-            
-        } elseif ($delete_type === 'step' && $pipeline_id) {
-            // For step deletion, get flows for pipeline to show impact
-            $all_databases = apply_filters('dm_get_database_services', []);
-            $db_flows = $all_databases['flows'] ?? null;
-            if ($db_flows) {
-                $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-                foreach ($flows as $flow) {
-                    $affected_flows[] = [
-                        'name' => $flow['flow_name'],
-                        'created_at' => $flow['created_at']
-                    ];
-                }
-            }
-        }
-        // For flow deletion, no additional flows needed (flows don't have sub-flows)
-        
-        // Log the enriched data
-        if ($logger) {
-            $logger->debug('Delete modal flow enrichment', [
-                'affected_flows_count' => count($affected_flows),
-                'affected_jobs_count' => count($affected_jobs)
-            ]);
-        }
-        
-        // Merge enriched data with context for template
-        $enriched_context = array_merge($context, [
-            'affected_flows' => $affected_flows,
-            'affected_jobs' => $affected_jobs
-        ]);
-        
-        return apply_filters('dm_render_template', '', 'modal/confirm-delete', $enriched_context);
-    }, 10, 2);
+        return $modals;
+    });
 }
 
 /**

@@ -191,7 +191,17 @@ class BlueskyAuth {
         }
 
         if ($response_code !== 200) {
-            $error_message = $session_data['message'] ?? 'Authentication failed.';
+            if (empty($session_data['message'])) {
+                $logger && $logger->error('Bluesky authentication failed with no error message provided.', [
+                    'handle' => $handle,
+                    'code' => $response_code,
+                    'response_data' => $session_data
+                ]);
+                return new \WP_Error('bluesky_auth_failed_no_message', 
+                    sprintf(__('Bluesky authentication failed with no error message provided (Code: %1$d)', 'data-machine'), $response_code));
+            }
+            
+            $error_message = $session_data['message'];
             $logger && $logger->error('Bluesky authentication failed (non-200 response).', [
                 'handle' => $handle,
                 'code' => $response_code,

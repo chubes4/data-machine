@@ -28,6 +28,16 @@ class PipelineScheduler
     }
 
     /**
+     * Get available scheduler intervals
+     * 
+     * @return array Available intervals with labels and seconds
+     */
+    public function get_intervals(): array
+    {
+        return \DataMachine\Engine\Constants::get_scheduler_intervals();
+    }
+
+    /**
      * Activate scheduling for a specific flow
      * Schedules flow directly in Action Scheduler
      *
@@ -210,13 +220,13 @@ class PipelineScheduler
      */
     private function get_interval_seconds(string $interval)
     {
-        // Get schedule intervals via filter
-        $schedules = apply_filters('dm_get_scheduler', null, 'intervals');
-        if (!$schedules || !isset($schedules[$interval])) {
+        // Get schedule intervals via scheduler service
+        $intervals = $this->get_intervals();
+        if (!$intervals || !isset($intervals[$interval])) {
             return false;
         }
 
-        return $schedules[$interval]['interval'] ?? false;
+        return $intervals[$interval]['interval'] ?? false;
     }
 
     /**

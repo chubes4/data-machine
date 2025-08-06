@@ -487,9 +487,9 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
         }
 
-        // Get database service
-        $db_flows = $all_databases['flows'] ?? null;
+        // Get database services using filter-based discovery
         $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
         if (!$db_flows || !$db_pipelines) {
@@ -555,6 +555,7 @@ class PipelinePageAjax
         }
 
         // Get database services using filter-based discovery
+        $all_databases = apply_filters('dm_get_database_services', []);
         $db_flows = $all_databases['flows'] ?? null;
         $db_jobs = $all_databases['jobs'] ?? null;
         
@@ -628,7 +629,8 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
         }
 
-        // Get database service
+        // Get database services using filter-based discovery
+        $all_databases = apply_filters('dm_get_database_services', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
@@ -688,7 +690,8 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
         }
 
-        // Get database service
+        // Get database services using filter-based discovery
+        $all_databases = apply_filters('dm_get_database_services', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);

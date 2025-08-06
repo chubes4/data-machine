@@ -21,7 +21,6 @@ class GoogleSheetsAuth {
 
     const OAUTH_CALLBACK_ACTION = 'dm_googlesheets_oauth_callback';
     const STATE_TRANSIENT_PREFIX = 'dm_googlesheets_state_'; // Prefix + state value
-    const USER_META_KEY = 'data_machine_googlesheets_account';
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets'; // Google Sheets read/write scope
 
     /**
@@ -320,7 +319,6 @@ class GoogleSheetsAuth {
 
         if (is_wp_error($response)) {
             $logger && $logger->error('Google token exchange request failed.', [
-                'user_id' => $user_id,
                 'error' => $response->get_error_message()
             ]);
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_token_exchange_failed'));
@@ -332,7 +330,6 @@ class GoogleSheetsAuth {
         
         if ($response_code !== 200) {
             $logger && $logger->error('Google token exchange failed.', [
-                'user_id' => $user_id,
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
@@ -342,7 +339,7 @@ class GoogleSheetsAuth {
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token']) || empty($token_data['refresh_token'])) {
-            $logger && $logger->error('Invalid token response from Google.', ['user_id' => $user_id]);
+            $logger && $logger->error('Invalid token response from Google.');
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_invalid_token_response'));
             exit;
         }
@@ -350,7 +347,7 @@ class GoogleSheetsAuth {
         // 4. Store encrypted credentials
         $encryption_helper = $this->get_encryption_helper();
         if (!$encryption_helper) {
-            $logger && $logger->error('Encryption helper service unavailable during OAuth callback.', ['user_id' => $user_id]);
+            $logger && $logger->error('Encryption helper service unavailable during OAuth callback.');
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_service_unavailable'));
             exit;
         }
@@ -359,7 +356,7 @@ class GoogleSheetsAuth {
         $encrypted_refresh_token = $encryption_helper->encrypt($token_data['refresh_token']);
         
         if ($encrypted_access_token === false || $encrypted_refresh_token === false) {
-            $logger && $logger->error('Failed to encrypt Google Sheets tokens.', ['user_id' => $user_id]);
+            $logger && $logger->error('Failed to encrypt Google Sheets tokens.');
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_encryption_failed'));
             exit;
         }
@@ -372,9 +369,9 @@ class GoogleSheetsAuth {
             'last_verified_at' => time()
         ];
 
-        update_user_meta($user_id, self::USER_META_KEY, $account_data);
+        update_option('googlesheets_auth_data', $account_data);
 
-        $logger && $logger->debug('Successfully completed Google Sheets OAuth flow.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Successfully completed Google Sheets OAuth flow.');
 
         // 5. Redirect on success
         wp_redirect(admin_url('admin.php?page=dm-project-management&auth_success=googlesheets'));
@@ -383,7 +380,7 @@ class GoogleSheetsAuth {
 
     /**
      * Retrieves the stored Google Sheets account details.
-     * Uses global site options for admin-global authentication.
+     * Uses global site options for admin-only authentication.
      *
      * @return array|null Account details array or null if not found/invalid.
      */
@@ -397,7 +394,7 @@ class GoogleSheetsAuth {
 
     /**
      * Removes the stored Google Sheets account details.
-     * Uses global site options for admin-global authentication.
+     * Uses global site options for admin-only authentication.
      *
      * @return bool True on success, false on failure.
      */

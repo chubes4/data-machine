@@ -38,7 +38,7 @@ if (!defined('ABSPATH')) {
  * 
  * Registered Filters:
  * - dm_get_steps: Register AI step for pipeline discovery
- * - dm_create_datapacket: AI-specific DataPacket creation
+ * - dm_get_step_configs: AI step configuration for UI rendering
  * - Service filters: FluidContextBridge, AiResponseParser, PromptBuilder
  * 
  * @since 1.0.0
@@ -67,12 +67,8 @@ function dm_register_ai_step_filters() {
     
     
     // DataPacket conversion registration - AI step uses dedicated DataPacket class
-    add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {
-        if ($source_type === 'ai') {
-            return AIStepDataPacket::create($source_data, $context);
-        }
-        return $datapacket;
-    }, 10, 4);
+    // DataPacket creation removed - engine uses universal DataPacket constructor
+    // AI steps return properly formatted data for direct constructor usage
     
     // AI service registrations - components that belong with AI step logic
     
@@ -127,17 +123,15 @@ function dm_register_ai_step_filters() {
      * @param array $context Step context data
      * @return array|mixed Step configuration or original value
      */
-    add_filter('dm_get_step_config', function($config, $step_type, $context) {
-        if ($step_type === 'ai') {
-            return [
-                'config_type' => 'ai_configuration',
-                'modal_type' => 'configure-step', // Links to existing modal content registration
-                'button_text' => __('Configure', 'data-machine'),
-                'label' => __('AI Configuration', 'data-machine')
-            ];
-        }
-        return $config;
-    }, 10, 3);
+    add_filter('dm_get_step_configs', function($configs) {
+        $configs['ai'] = [
+            'config_type' => 'ai_configuration',
+            'modal_type' => 'configure-step', // Links to existing modal content registration
+            'button_text' => __('Configure', 'data-machine'),
+            'label' => __('AI Configuration', 'data-machine')
+        ];
+        return $configs;
+    });
     
     /**
      * AI Step Configuration Modal Content Registration

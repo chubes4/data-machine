@@ -87,14 +87,14 @@ class ThreadsAuth {
     }
 
     /**
-     * Retrieves the stored access token for a user.
+     * Retrieves the stored access token.
+     * Uses global site options for admin-only authentication.
      * Handles decryption and token refresh if needed.
      *
-     * @param int $user_id WordPress User ID.
      * @return string|null Access token or null if not found/valid.
      */
-    public function get_access_token(int $user_id): ?string {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_access_token(): ?string {
+        $account = get_option('threads_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
@@ -123,7 +123,7 @@ class ThreadsAuth {
         }
 
         if ($needs_refresh) {
-            $refreshed_data = $this->refresh_access_token($current_token, $user_id);
+            $refreshed_data = $this->refresh_access_token($current_token);
             if (!is_wp_error($refreshed_data)) {
                 // Update stored account details with refreshed token and expiry
                 $encryption_helper = $this->get_encryption_helper();
@@ -132,8 +132,8 @@ class ThreadsAuth {
                 }
                 $account['access_token'] = $encryption_helper->encrypt($refreshed_data['access_token']);
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
-                // Update the user meta immediately
-                update_user_meta($user_id, self::USER_META_KEY, $account);
+                // Update the site option immediately
+                update_option('threads_auth_data', $account);
                 return $refreshed_data['access_token']; // Return the new plaintext token
             } else {
                 // If refresh fails and token is already expired, return null
@@ -150,13 +150,13 @@ class ThreadsAuth {
     }
 
     /**
-     * Retrieves the stored Page ID for a user.
+     * Retrieves the stored Page ID.
+     * Uses global site options for admin-only authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return string|null Page ID or null if not found.
      */
-    public function get_page_id(int $user_id): ?string {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_page_id(): ?string {
+        $account = get_option('threads_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -171,8 +171,8 @@ class ThreadsAuth {
      */
     public function get_authorization_url(int $user_id): string {
         $state = wp_create_nonce('dm_threads_oauth_state_' . $user_id);
-        // Store state temporarily for verification on callback
-        update_user_meta($user_id, 'dm_threads_oauth_state', $state);
+        // Store state temporarily for verification on callback using transient for admin-only architecture
+        set_transient('dm_threads_oauth_state_' . $user_id, $state, 15 * MINUTE_IN_SECONDS);
 
         $params = [
             'client_id'     => $this->get_client_id(),
@@ -197,9 +197,9 @@ class ThreadsAuth {
     public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
         $this->get_logger() && $this->get_logger()->debug('Handling Threads OAuth callback.', ['user_id' => $user_id]);
 
-        // 1. Verify state
-        $stored_state = get_user_meta($user_id, 'dm_threads_oauth_state', true);
-        delete_user_meta($user_id, 'dm_threads_oauth_state'); // Clean up state
+        // 1. Verify state - use transient for admin-only architecture
+        $stored_state = get_transient('dm_threads_oauth_state_' . $user_id);
+        delete_transient('dm_threads_oauth_state_' . $user_id); // Clean up state
         if (empty($stored_state) || !hash_equals($stored_state, $state)) {
             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: State mismatch.', ['user_id' => $user_id]);
             return new \WP_Error('threads_oauth_state_mismatch', __('Invalid state parameter during Threads authentication.', 'data-machine'));
@@ -322,8 +322,8 @@ class ThreadsAuth {
              return new \WP_Error('threads_oauth_encryption_failed', __('Failed to securely store the Threads access token.', 'data-machine'));
         }
 
-        // Update user meta with all collected details
-        update_user_meta($user_id, self::USER_META_KEY, $account_details);
+        // Update site option with all collected details for admin-only architecture
+        update_option('threads_auth_data', $account_details);
         $this->get_logger() && $this->get_logger()->debug('Threads account authenticated and token stored.', ['user_id' => $user_id, 'page_id' => $account_details['page_id']]);
 
         return true;
@@ -399,10 +399,9 @@ class ThreadsAuth {
      * Refreshes a long-lived Threads access token.
      *
      * @param string $access_token The current, valid (or recently expired) long-lived token.
-     * @param int $user_id WP User ID for logging context.
      * @return array|\WP_Error ['access_token' => ..., 'expires_at' => timestamp] or WP_Error
      */
-    private function refresh_access_token(string $access_token, int $user_id): array|\WP_Error {
+    private function refresh_access_token(string $access_token): array|\WP_Error {
          $params = [
              'grant_type' => 'th_refresh_token', // Correct grant type for Threads
              'access_token' => $access_token,
@@ -435,15 +434,15 @@ class ThreadsAuth {
     }
 
     /**
-     * Removes the authenticated Threads account for the user.
+     * Removes the authenticated Threads account.
+     * Uses global site options for admin-only authentication.
      * Attempts to revoke the token via the Graph API first.
      *
-     * @param int $user_id WordPress User ID.
      * @return bool True on success, false otherwise.
      */
-    public static function remove_account(int $user_id): bool {
+    public function remove_account(): bool {
         // Try to get the stored token to attempt revocation
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+        $account = get_option('threads_auth_data', []);
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {
@@ -469,15 +468,14 @@ class ThreadsAuth {
                 if ($logger) {
                     $error_details = is_wp_error($response) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($response);
                     $logger->error('Threads token revocation failed during account deletion.', [
-                        'user_id' => $user_id,
                         'error' => $error_details
                     ]);
                 }
             }
         }
 
-        // Always attempt to delete the local user meta regardless of revocation success
-        return delete_user_meta($user_id, self::USER_META_KEY);
+        // Always attempt to delete the site option regardless of revocation success
+        return delete_option('threads_auth_data');
     }
 
     /**
