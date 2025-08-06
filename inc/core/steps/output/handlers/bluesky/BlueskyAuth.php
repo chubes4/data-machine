@@ -47,51 +47,49 @@ class BlueskyAuth {
     }
 
     /**
-     * Checks if a user has valid Bluesky authentication
+     * Checks if admin has valid Bluesky authentication
      *
-     * @param int $user_id WordPress User ID
      * @return bool True if authenticated, false otherwise
      */
-    public function is_authenticated(int $user_id): bool {
+    public function is_authenticated(): bool {
         $handle = get_option('bluesky_username', '');
         $encrypted_password = get_option('bluesky_app_password', '');
         return !empty($handle) && !empty($encrypted_password);
     }
 
     /**
-     * Gets an authenticated Bluesky session for a specific user.
+     * Gets an authenticated Bluesky session.
      *
-     * @param int $user_id The user ID.
      * @return array|\WP_Error Session data array or WP_Error on failure.
      */
-    public function get_session(int $user_id) {
+    public function get_session() {
         $logger = $this->get_logger();
-        $logger && $logger->debug('Attempting to get authenticated Bluesky session for user.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Attempting to get authenticated Bluesky session.');
 
         // Get credentials from site options (global configuration)
         $handle = get_option('bluesky_username', '');
         $encrypted_password = get_option('bluesky_app_password', '');
 
         if (empty($handle) || empty($encrypted_password)) {
-            $logger && $logger->error('Bluesky handle or app password missing in site options.', ['user_id' => $user_id]);
+            $logger && $logger->error('Bluesky handle or app password missing in site options.');
             return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured on the API Keys page.', 'data-machine'));
         }
 
         // Decrypt the stored password
         $encryption_helper = $this->get_encryption_helper();
         if (!$encryption_helper) {
-            $logger && $logger->error('Encryption helper service unavailable for Bluesky authentication.', ['user_id' => $user_id]);
+            $logger && $logger->error('Encryption helper service unavailable for Bluesky authentication.');
             return new \WP_Error('bluesky_service_unavailable', __('Encryption service unavailable for Bluesky authentication.', 'data-machine'));
         }
 
         $password = $encryption_helper->decrypt($encrypted_password);
         if ($password === false) {
-            $logger && $logger->error('Failed to decrypt Bluesky app password.', ['user_id' => $user_id]);
+            $logger && $logger->error('Failed to decrypt Bluesky app password.');
             return new \WP_Error('bluesky_decryption_failed', __('Failed to decrypt Bluesky app password. Please re-save the settings.', 'data-machine'));
         }
 
         if (empty($password)) {
-            $logger && $logger->error('Bluesky app password is empty after decryption.', ['user_id' => $user_id]);
+            $logger && $logger->error('Bluesky app password is empty after decryption.');
             return new \WP_Error('bluesky_empty_password', __('Bluesky app password is empty. Please check your configuration.', 'data-machine'));
         }
 
@@ -103,7 +101,6 @@ class BlueskyAuth {
 
         if (is_wp_error($session_data)) {
             $logger && $logger->error('Bluesky authentication failed.', [
-                'user_id' => $user_id,
                 'error_code' => $session_data->get_error_code(),
                 'error_message' => $session_data->get_error_message()
             ]);
@@ -116,7 +113,6 @@ class BlueskyAuth {
 
         if (empty($access_token) || empty($did)) {
             $logger && $logger->error('Bluesky session data incomplete after authentication.', [
-                'user_id' => $user_id,
                 'has_token' => !empty($access_token),
                 'has_did' => !empty($did)
             ]);
@@ -127,7 +123,6 @@ class BlueskyAuth {
         $session_data['handle'] = $handle;
 
         $logger && $logger->debug('Bluesky authentication successful.', [
-            'user_id' => $user_id,
             'did' => $did,
             'pds' => $pds_url,
             'handle' => $handle
@@ -235,13 +230,12 @@ class BlueskyAuth {
     }
 
     /**
-     * Retrieves the stored Bluesky account details for a user.
-     * Note: Currently uses global site options rather than per-user storage.
+     * Retrieves the stored Bluesky account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return array|null Account details array or null if not found/invalid.
      */
-    public static function get_account_details(int $user_id): ?array {
+    public function get_account_details(): ?array {
         $handle = get_option('bluesky_username', '');
         $encrypted_password = get_option('bluesky_app_password', '');
         
@@ -258,12 +252,11 @@ class BlueskyAuth {
 
     /**
      * Removes the stored Bluesky account details.
-     * Note: Currently removes global site options rather than per-user storage.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return bool True on success, false on failure.
      */
-    public static function remove_account(int $user_id): bool {
+    public function remove_account(): bool {
         $result1 = delete_option('bluesky_username');
         $result2 = delete_option('bluesky_app_password');
         delete_option('bluesky_last_verified');

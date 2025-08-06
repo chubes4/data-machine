@@ -34,3 +34,62 @@
     float: none;
     vertical-align: middle;
 }
+
+/* Jobs page layout */
+.dm-jobs-page {
+    padding: 20px;
+}
+
+/* Empty state styling */
+.dm-jobs-empty-state {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+
+.dm-jobs-empty-message {
+    margin: 0;
+    font-style: italic;
+}
+
+/* Jobs table container */
+.dm-jobs-table-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+}
+
+/* Jobs table column widths */
+.dm-jobs-table th.dm-col-job-id {
+    width: 80px;
+}
+
+.dm-jobs-table th.dm-col-status {
+    width: 100px;
+}
+
+.dm-jobs-table th.dm-col-created,
+.dm-jobs-table th.dm-col-started,
+.dm-jobs-table th.dm-col-completed {
+    width: 140px;
+}
+
+/* Job status colors */
+.dm-job-status--failed {
+    color: #d63638;
+}
+
+.dm-job-status--completed {
+    color: #00a32a;
+}
+
+.dm-job-status--other {
+    color: #646970;
+}
+
+/* Job result text styling */
+.dm-job-result {
+    font-size: 11px;
+    color: #646970;
+}

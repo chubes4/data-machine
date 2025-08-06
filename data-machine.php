@@ -16,6 +16,11 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// Check minimum requirements and deactivate plugin if not met
+if ( ! dm_check_requirements() ) {
+	return;
+}
+
 /**
  * Currently plugin version.
  */
@@ -129,8 +134,10 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 // Load Composer autoloader and dependencies (includes Action Scheduler)
 require_once __DIR__ . '/vendor/autoload.php';
 
-// Initialize Action Scheduler before plugins_loaded hook (required for API functions)
-require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
+// Initialize Action Scheduler only if not already loaded (prevents conflicts with WooCommerce)
+if ( ! class_exists( 'ActionScheduler' ) ) {
+    require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
 
 // Load AI HTTP Client library for unified multi-provider AI integration
 require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
@@ -155,9 +162,6 @@ function run_data_machine() {
     
     // Register parameter-based database service system
     dm_register_database_service_system();
-    
-    // Register WPDB service filter for architectural consistency
-    dm_register_wpdb_service_filter();
     
     // Register context retrieval service for pipeline DataPackets
     dm_register_context_retrieval_service();
@@ -189,7 +193,7 @@ function run_data_machine() {
 
     // --- Initialize Admin Interface ---
     $admin_menu_assets = apply_filters('dm_get_admin_menu_assets', null);
-    if ($admin_menu_assets) {
+    if ($admin_menu_assets && method_exists($admin_menu_assets, 'init_hooks')) {
         $admin_menu_assets->init_hooks();
     }
 
@@ -200,7 +204,7 @@ function run_data_machine() {
     // Use filter-based orchestrator access for consistency with pure architecture
     add_action( 'dm_execute_step', function( $job_id, $step_position ) {
         $orchestrator = apply_filters('dm_get_orchestrator', null);
-        if ($orchestrator && method_exists($orchestrator, 'execute_step_callback')) {
+        if ($orchestrator && is_object($orchestrator) && method_exists($orchestrator, 'execute_step_callback')) {
             return $orchestrator->execute_step_callback( $job_id, $step_position );
         }
         return false; // Fail gracefully if orchestrator unavailable
@@ -335,7 +339,6 @@ function activate_data_machine() {
 	dm_autoload_core_component_directory('inc/core/database/');
 
 	// Initialize filter systems needed for activation
-	dm_register_wpdb_service_filter();
 	dm_register_database_service_system();
 
 	// Create/Update all database tables using filter-based database service access
@@ -368,5 +371,55 @@ function activate_data_machine() {
 
 	// Set a transient flag for first-time admin notice or setup wizard (optional)
 	set_transient( 'dm_activation_notice', true, 5 * MINUTE_IN_SECONDS );
+}
+
+/**
+ * Check minimum plugin requirements.
+ * 
+ * @return bool True if requirements met, false otherwise
+ */
+function dm_check_requirements() {
+	// Check PHP version
+	if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
+		add_action( 'admin_notices', function() {
+			echo '<div class="notice notice-error"><p>';
+			printf( 
+				/* translators: %1$s: current PHP version, %2$s: required PHP version */
+				esc_html__( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.', 'data-machine' ),
+				esc_html( PHP_VERSION ),
+				'8.0'
+			);
+			echo '</p></div>';
+		});
+		return false;
+	}
+	
+	// Check WordPress version
+	global $wp_version;
+	if ( version_compare( $wp_version, '5.0', '<' ) ) {
+		add_action( 'admin_notices', function() use ( $wp_version ) {
+			echo '<div class="notice notice-error"><p>';
+			printf( 
+				/* translators: %1$s: current WordPress version, %2$s: required WordPress version */
+				esc_html__( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.', 'data-machine' ),
+				esc_html( $wp_version ),
+				'5.0'
+			);
+			echo '</p></div>';
+		});
+		return false;
+	}
+	
+	// Check if vendor directory exists
+	if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+		add_action( 'admin_notices', function() {
+			echo '<div class="notice notice-error"><p>';
+			esc_html_e( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact support.', 'data-machine' );
+			echo '</p></div>';
+		});
+		return false;
+	}
+	
+	return true;
 }
 

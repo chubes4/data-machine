@@ -31,7 +31,7 @@ if ($db_pipelines) {
             <?php esc_html_e('Pipeline + Flow Management', 'data-machine'); ?>
         </h1>
         <p class="dm-admin-subtitle">
-            <?php esc_html_e('Create pipeline templates and configure flow instances for automated data processing.', 'data-machine'); ?>
+            <?php esc_html_e('Configure automated workflow pipelines', 'data-machine'); ?>
         </p>
         
         <!-- Add New Pipeline Button -->

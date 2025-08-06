@@ -61,7 +61,7 @@ $is_new_pipeline = empty($pipeline_id);
     <div class="dm-pipeline-steps-section">
         <div class="dm-section-header">
             <h4><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h4>
-            <p class="dm-section-description"><?php esc_html_e('Define the step sequence for this pipeline', 'data-machine'); ?></p>
+            <p class="dm-section-description"><?php esc_html_e('Add steps to define the data flow', 'data-machine'); ?></p>
         </div>
         <div class="dm-pipeline-steps">
             <?php 
@@ -123,7 +123,7 @@ $is_new_pipeline = empty($pipeline_id);
         <div class="dm-flows-header">
             <div class="dm-flows-header-content">
                 <h4><?php esc_html_e('Flow Instances', 'data-machine'); ?></h4>
-                <p class="dm-section-description"><?php esc_html_e('Each flow is a configured instance of the pipeline above', 'data-machine'); ?></p>
+                <p class="dm-section-description"><?php esc_html_e('Add flows to run data through the pipeline', 'data-machine'); ?></p>
             </div>
             <div class="dm-flows-header-actions">
                 <button type="button" class="button button-primary dm-add-flow-btn" 

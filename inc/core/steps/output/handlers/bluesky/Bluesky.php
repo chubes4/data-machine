@@ -30,8 +30,9 @@ class Bluesky {
      * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // Use filter-based auth access following architectural standards
-        $this->auth = apply_filters('dm_get_auth', null, 'bluesky');
+        // Use filter-based auth access following pure discovery architectural standards
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $this->auth = $all_auth['bluesky'] ?? null;
     }
 
     /**
@@ -67,29 +68,19 @@ class Bluesky {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Bluesky output handling.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Starting Bluesky output handling.');
         
         // 1. Get config
         $output_config = $module_job_config['output_config']['bluesky'] ?? [];
         $include_source = $output_config['bluesky_include_source'] ?? true;
         $enable_images = $output_config['bluesky_enable_images'] ?? true;
 
-        // 2. Ensure user_id is provided
-        if (empty($user_id)) {
-            $logger && $logger->error('Bluesky Output: User ID context is missing.');
-            return [
-                'success' => false,
-                'error' => __('Cannot post to Bluesky without a specified user account.', 'data-machine')
-            ];
-        }
+        // 2. Get authenticated session using internal BlueskyAuth
+        $session = $this->auth->get_session();
 
-        // 3. Get authenticated session using internal BlueskyAuth
-        $session = $this->auth->get_session($user_id);
-
-        // 4. Handle authentication errors
+        // 3. Handle authentication errors
         if (is_wp_error($session)) {
              $logger && $logger->error('Bluesky Output Error: Failed to get authenticated session.', [
-                'user_id' => $user_id,
                 'error_code' => $session->get_error_code(),
                 'error_message' => $session->get_error_message(),
              ]);
@@ -126,7 +117,7 @@ class Bluesky {
         $content = $parser->get_content();
 
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Bluesky Output: Parsed AI output is empty.', ['user_id' => $user_id]);
+            $logger && $logger->warning('Bluesky Output: Parsed AI output is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Bluesky.', 'data-machine')
@@ -171,7 +162,7 @@ class Bluesky {
         $final_post_text = trim($final_post_text);
 
         if (empty($final_post_text)) {
-             $logger && $logger->error('Bluesky Output: Formatted post content is empty after processing.', ['user_id' => $user_id]);
+             $logger && $logger->error('Bluesky Output: Formatted post content is empty after processing.');
              return [
                  'success' => false,
                  'error' => __('Formatted post content is empty after processing.', 'data-machine')
@@ -187,12 +178,12 @@ class Bluesky {
         $image_alt_text = $parser ? ($parser->get_title() ?: $parser->get_content_summary(50)) : '';
 
         if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL)) {
-            $logger && $logger->debug('Attempting to upload image to Bluesky.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
+            $logger && $logger->debug('Attempting to upload image to Bluesky.', ['image_url' => $image_source_url]);
             
             $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_source_url, $image_alt_text);
             
             if (!is_wp_error($uploaded_image_blob) && isset($uploaded_image_blob['blob'])) {
-                $logger && $logger->debug('Bluesky image uploaded successfully.', ['user_id' => $user_id]);
+                $logger && $logger->debug('Bluesky image uploaded successfully.');
                 $embed_data = [
                     '$type' => 'app.bsky.embed.images',
                     'images' => [
@@ -204,7 +195,6 @@ class Bluesky {
                 ];
             } elseif (is_wp_error($uploaded_image_blob)) {
                 $logger && $logger->warning('Bluesky image upload failed, proceeding without image.', [
-                    'user_id' => $user_id,
                     'error_code' => $uploaded_image_blob->get_error_code(),
                     'error_message' => $uploaded_image_blob->get_error_message()
                 ]);
@@ -236,7 +226,6 @@ class Bluesky {
 
             if (is_wp_error($post_result)) {
                 $logger && $logger->error('Failed to create Bluesky post.', [
-                    'user_id' => $user_id,
                     'error_code' => $post_result->get_error_code(),
                     'error_message' => $post_result->get_error_message()
                 ]);
@@ -249,7 +238,7 @@ class Bluesky {
             $post_uri = $post_result['uri'] ?? '';
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
 
-            $logger && $logger->debug('Successfully posted to Bluesky.', ['user_id' => $user_id, 'post_uri' => $post_uri]);
+            $logger && $logger->debug('Successfully posted to Bluesky.', ['post_uri' => $post_uri]);
 
             return [
                 'success' => true,
@@ -260,7 +249,7 @@ class Bluesky {
             ];
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Bluesky Output Exception: ' . $e->getMessage(), ['user_id' => $user_id]);
+            $logger && $logger->error('Bluesky Output Exception: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage()

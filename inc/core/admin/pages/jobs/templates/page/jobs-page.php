@@ -59,38 +59,38 @@ function dm_render_job_row($job) {
     <tr>
         <td><strong><?php echo esc_html($job_id); ?></strong></td>
         <td><?php echo esc_html($pipeline_name . ' → ' . $flow_name); ?></td>
-        <td><span style="color: <?php echo $status === 'failed' ? '#d63638' : ($status === 'completed' ? '#00a32a' : '#646970'); ?>;"><?php echo esc_html($status_display); ?></span></td>
+        <td><span class="dm-job-status--<?php echo $status === 'failed' ? 'failed' : ($status === 'completed' ? 'completed' : 'other'); ?>"><?php echo esc_html($status_display); ?></span></td>
         <td><?php echo esc_html($created_display); ?></td>
         <td><?php echo esc_html($started_display); ?></td>
         <td><?php echo esc_html($completed_display); ?></td>
-        <td style="font-size: 11px; color: #646970;"><?php echo esc_html($result_display); ?></td>
+        <td class="dm-job-result"><?php echo esc_html($result_display); ?></td>
     </tr>
     <?php
 }
 ?>
 
-<div class="dm-jobs-page" style="padding: 20px;">
+<div class="dm-jobs-page">
     
     <h1><?php esc_html_e('Jobs', 'data-machine'); ?></h1>
     
     <?php if (empty($recent_jobs)): ?>
-        <div style="background: #fff; border: 1px solid #ccd0d4; padding: 20px; text-align: center; color: #666;">
-            <p style="margin: 0; font-style: italic;">
+        <div class="dm-jobs-empty-state">
+            <p class="dm-jobs-empty-message">
                 <?php esc_html_e('No jobs found. Jobs will appear here when Data Machine processes data.', 'data-machine'); ?>
             </p>
         </div>
     <?php else: ?>
         
-        <div style="background: #fff; border: 1px solid #ccd0d4;">
+        <div class="dm-jobs-table-container">
             <table class="wp-list-table widefat fixed striped">
                 <thead>
                     <tr>
-                        <th style="width: 80px;"><?php esc_html_e('Job ID', 'data-machine'); ?></th>
+                        <th class="dm-col-job-id"><?php esc_html_e('Job ID', 'data-machine'); ?></th>
                         <th><?php esc_html_e('Pipeline / Flow', 'data-machine'); ?></th>
-                        <th style="width: 100px;"><?php esc_html_e('Status', 'data-machine'); ?></th>
-                        <th style="width: 140px;"><?php esc_html_e('Created At', 'data-machine'); ?></th>
-                        <th style="width: 140px;"><?php esc_html_e('Started At', 'data-machine'); ?></th>
-                        <th style="width: 140px;"><?php esc_html_e('Completed At', 'data-machine'); ?></th>
+                        <th class="dm-col-status"><?php esc_html_e('Status', 'data-machine'); ?></th>
+                        <th class="dm-col-created"><?php esc_html_e('Created At', 'data-machine'); ?></th>
+                        <th class="dm-col-started"><?php esc_html_e('Started At', 'data-machine'); ?></th>
+                        <th class="dm-col-completed"><?php esc_html_e('Completed At', 'data-machine'); ?></th>
                         <th><?php esc_html_e('Result / Error', 'data-machine'); ?></th>
                     </tr>
                 </thead>

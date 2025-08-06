@@ -379,13 +379,12 @@ class RedditAuth {
     }
 
     /**
-     * Checks if a user has valid Reddit authentication
+     * Checks if admin has valid Reddit authentication
      *
-     * @param int $user_id WordPress User ID
      * @return bool True if authenticated, false otherwise
      */
-    public function is_authenticated(int $user_id): bool {
-        $account = get_user_meta($user_id, 'data_machine_reddit_account', true);
+    public function is_authenticated(): bool {
+        $account = get_option('reddit_auth_data', []);
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -393,13 +392,13 @@ class RedditAuth {
     }
 
     /**
-     * Gets Reddit account details for a user
+     * Gets Reddit account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID
      * @return array|null Account details array or null if not authenticated
      */
-    public static function get_account_details(int $user_id): ?array {
-        $account = get_user_meta($user_id, 'data_machine_reddit_account', true);
+    public function get_account_details(): ?array {
+        $account = get_option('reddit_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }

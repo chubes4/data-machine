@@ -50,13 +50,12 @@ class GoogleSheetsAuth {
     }
 
     /**
-     * Checks if a user has valid Google Sheets authentication
+     * Checks if admin has valid Google Sheets authentication
      *
-     * @param int $user_id WordPress User ID
      * @return bool True if authenticated, false otherwise
      */
-    public function is_authenticated(int $user_id): bool {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function is_authenticated(): bool {
+        $account = get_option('googlesheets_auth_data', []);
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -64,25 +63,24 @@ class GoogleSheetsAuth {
     }
 
     /**
-     * Gets an authenticated Google Sheets API access token for a specific user.
+     * Gets an authenticated Google Sheets API access token.
      *
-     * @param int $user_id The user ID.
      * @return string|\WP_Error Access token string or WP_Error on failure.
      */
-    public function get_service(int $user_id) {
+    public function get_service() {
         $logger = $this->get_logger();
-        $logger && $logger->debug('Attempting to get authenticated Google Sheets access token for user.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Attempting to get authenticated Google Sheets access token.');
 
-        $credentials = get_user_meta($user_id, self::USER_META_KEY, true);
+        $credentials = get_option('googlesheets_auth_data', []);
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
-            $logger && $logger->error('Missing Google Sheets credentials in user meta.', ['user_id' => $user_id]);
-            return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found for this user. Please authenticate on the API Keys page.', 'data-machine'));
+            $logger && $logger->error('Missing Google Sheets credentials in options.');
+            return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
         // Decrypt the stored tokens
         $encryption_helper = $this->get_encryption_helper();
         if (!$encryption_helper) {
-            $logger && $logger->error('Encryption helper service unavailable for Google Sheets connection.', ['user_id' => $user_id]);
+            $logger && $logger->error('Encryption helper service unavailable for Google Sheets connection.');
             return new \WP_Error('googlesheets_service_unavailable', __('Encryption service unavailable for Google Sheets authentication.', 'data-machine'));
         }
 
@@ -90,16 +88,16 @@ class GoogleSheetsAuth {
         $decrypted_refresh_token = $encryption_helper->decrypt($credentials['refresh_token']);
         
         if ($decrypted_access_token === false || $decrypted_refresh_token === false) {
-            $logger && $logger->error('Failed to decrypt Google Sheets credentials.', ['user_id' => $user_id]);
+            $logger && $logger->error('Failed to decrypt Google Sheets credentials.');
             return new \WP_Error('googlesheets_decryption_failed', __('Failed to decrypt Google Sheets credentials. Please re-authenticate.', 'data-machine'));
         }
 
         // Check if access token needs refreshing
         $expires_at = $credentials['expires_at'] ?? 0;
         if (time() >= $expires_at - 300) { // Refresh 5 minutes before expiry
-            $logger && $logger->debug('Google Sheets access token expired, attempting refresh.', ['user_id' => $user_id]);
+            $logger && $logger->debug('Google Sheets access token expired, attempting refresh.');
             
-            $refreshed_token = $this->refresh_access_token($decrypted_refresh_token, $user_id);
+            $refreshed_token = $this->refresh_access_token($decrypted_refresh_token);
             if (is_wp_error($refreshed_token)) {
                 return $refreshed_token;
             }
@@ -107,7 +105,7 @@ class GoogleSheetsAuth {
             return $refreshed_token; // Return the new access token
         }
 
-        $logger && $logger->debug('Successfully retrieved valid Google Sheets access token for user.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Successfully retrieved valid Google Sheets access token.');
         return $decrypted_access_token;
     }
 
@@ -115,17 +113,16 @@ class GoogleSheetsAuth {
      * Refresh an expired access token using the refresh token.
      *
      * @param string $refresh_token The refresh token.
-     * @param int $user_id The user ID for logging and credential updates.
      * @return string|\WP_Error New access token or WP_Error on failure.
      */
-    private function refresh_access_token(string $refresh_token, int $user_id) {
+    private function refresh_access_token(string $refresh_token) {
         $logger = $this->get_logger();
         
         $client_id = get_option('googlesheets_client_id');
         $client_secret = get_option('googlesheets_client_secret');
         
         if (empty($client_id) || empty($client_secret)) {
-            $logger && $logger->error('Missing Google OAuth client credentials.', ['user_id' => $user_id]);
+            $logger && $logger->error('Missing Google OAuth client credentials.');
             return new \WP_Error('googlesheets_missing_oauth_config', __('Google OAuth configuration is incomplete.', 'data-machine'));
         }
 
@@ -141,7 +138,6 @@ class GoogleSheetsAuth {
 
         if (is_wp_error($response)) {
             $logger && $logger->error('Google token refresh request failed.', [
-                'user_id' => $user_id,
                 'error' => $response->get_error_message()
             ]);
             return new \WP_Error('googlesheets_refresh_failed', __('Failed to refresh Google Sheets access token.', 'data-machine'));
@@ -152,7 +148,6 @@ class GoogleSheetsAuth {
         
         if ($response_code !== 200) {
             $logger && $logger->error('Google token refresh failed.', [
-                'user_id' => $user_id,
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
@@ -161,26 +156,26 @@ class GoogleSheetsAuth {
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token'])) {
-            $logger && $logger->error('Invalid token refresh response from Google.', ['user_id' => $user_id]);
+            $logger && $logger->error('Invalid token refresh response from Google.');
             return new \WP_Error('googlesheets_invalid_refresh_response', __('Invalid response from Google during token refresh.', 'data-machine'));
         }
 
         // Update stored credentials with new access token
-        $this->update_user_credentials($user_id, $token_data['access_token'], $refresh_token, $token_data['expires_in'] ?? 3600);
+        $this->update_credentials($token_data['access_token'], $refresh_token, $token_data['expires_in'] ?? 3600);
         
-        $logger && $logger->debug('Successfully refreshed Google Sheets access token.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Successfully refreshed Google Sheets access token.');
         return $token_data['access_token'];
     }
 
     /**
-     * Update user credentials with new tokens.
+     * Update credentials with new tokens.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id User ID.
      * @param string $access_token New access token.
      * @param string $refresh_token Refresh token.
      * @param int $expires_in Token expiry time in seconds.
      */
-    private function update_user_credentials(int $user_id, string $access_token, string $refresh_token, int $expires_in) {
+    private function update_credentials(string $access_token, string $refresh_token, int $expires_in) {
         $encryption_helper = $this->get_encryption_helper();
         if (!$encryption_helper) {
             return; // Can't update without encryption
@@ -200,7 +195,7 @@ class GoogleSheetsAuth {
             'last_refreshed_at' => time()
         ];
 
-        update_user_meta($user_id, self::USER_META_KEY, $account_data);
+        update_option('googlesheets_auth_data', $account_data);
     }
 
     /**
@@ -387,13 +382,13 @@ class GoogleSheetsAuth {
     }
 
     /**
-     * Retrieves the stored Google Sheets account details for a user.
+     * Retrieves the stored Google Sheets account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return array|null Account details array or null if not found/invalid.
      */
-    public static function get_account_details(int $user_id): ?array {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_account_details(): ?array {
+        $account = get_option('googlesheets_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['refresh_token'])) {
             return null;
         }
@@ -401,12 +396,12 @@ class GoogleSheetsAuth {
     }
 
     /**
-     * Removes the stored Google Sheets account details for a user.
+     * Removes the stored Google Sheets account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return bool True on success, false on failure.
      */
-    public static function remove_account(int $user_id): bool {
-        return delete_user_meta($user_id, self::USER_META_KEY);
+    public function remove_account(): bool {
+        return delete_option('googlesheets_auth_data');
     }
 }

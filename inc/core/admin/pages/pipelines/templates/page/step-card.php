@@ -171,9 +171,56 @@ if ($context === 'pipeline') {
                             <?php endif; ?>
                         <?php else: ?>
                             <!-- AI steps configuration -->
-                            <div class="dm-no-config">
-                                <span><?php esc_html_e('No AI model configured', 'data-machine'); ?></span>
-                            </div>
+                            <?php
+                            // FAIL FAST - but handle flow context appropriately
+                            $step_id = $step['step_id'] ?? null;
+                            if (!$step_id) {
+                                // For flow context, this might mean unconfigured step
+                                if ($context === 'flow') {
+                                    echo '<div class="dm-no-config"><span>' . esc_html__('Configure step to see AI status', 'data-machine') . '</span></div>';
+                                } else {
+                                    echo '<div class="dm-error">Missing step_id for AI configuration check</div>';
+                                }
+                                return;
+                            }
+                            
+                            // Check AI configuration using AI HTTP Client
+                            $has_ai_config = false;
+                            if (class_exists('AI_HTTP_Options_Manager')) {
+                                $options_manager = new AI_HTTP_Options_Manager('data-machine', 'llm');
+                                $step_config = $options_manager->get_step_configuration($step_id);
+                                $has_ai_config = !empty($step_config['provider']);
+                            } else {
+                                echo '<div class="dm-error">AI HTTP Client not available</div>';
+                                return;
+                            }
+                            ?>
+                            
+                            <?php if ($has_ai_config): ?>
+                                <?php
+                                // Extract configuration details - no fallbacks, fail loud if corrupt
+                                $provider_name = $step_config['provider'] ?? null;
+                                $model_name = $step_config['ai_model'] ?? $step_config['model'] ?? null;
+                                
+                                if (!$provider_name) {
+                                    echo '<div class="dm-error">AI configuration corrupt: missing provider</div>';
+                                    return;
+                                }
+                                ?>
+                                <div class="dm-ai-config-summary">
+                                    <span class="dm-config-status dm-config-status--configured">
+                                        <?php if ($model_name): ?>
+                                            <?php echo esc_html(ucfirst($provider_name) . ': ' . $model_name); ?>
+                                        <?php else: ?>
+                                            <?php echo esc_html(ucfirst($provider_name) . ' (no model specified)'); ?>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                            <?php else: ?>
+                                <div class="dm-no-config">
+                                    <span><?php esc_html_e('No AI model configured', 'data-machine'); ?></span>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

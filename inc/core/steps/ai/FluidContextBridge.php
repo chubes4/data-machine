@@ -111,11 +111,16 @@ class FluidContextBridge {
         // Build enhanced context for ai-http-client
         $context_data = $this->prepare_context_data($aggregated_context);
         
-        // Get step-level prompt configuration from AI step
+        // Get step-level prompt configuration from AI step via discovery
         $step_prompt_config = null;
-        if (class_exists('DataMachine\\Core\\Steps\\AI\\AIStep')) {
-            $ai_step = new \DataMachine\Core\Steps\AI\AIStep();
-            $step_prompt_config = $ai_step->get_step_configuration($job_id, 'ai');
+        $all_steps = apply_filters('dm_get_steps', []);
+        $ai_step_config = $all_steps['ai'] ?? null;
+        if ($ai_step_config && !empty($ai_step_config['class'])) {
+            $ai_step_class = $ai_step_config['class'];
+            if (class_exists($ai_step_class)) {
+                $ai_step = new $ai_step_class();
+                $step_prompt_config = $ai_step->get_step_configuration($job_id, 'ai');
+            }
         }
         
         // Use step-level system prompt if configured, otherwise use base prompt

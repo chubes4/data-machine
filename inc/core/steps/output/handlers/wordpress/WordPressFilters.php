@@ -32,7 +32,7 @@ function dm_register_wordpress_output_filters() {
     
     // Handler registration - WordPress declares itself as output handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
-        $handlers['wordpress'] = [
+        $handlers['wordpress_output'] = [
             'type' => 'output',
             'class' => WordPress::class,
             'label' => __('WordPress', 'data-machine'),
@@ -41,17 +41,15 @@ function dm_register_wordpress_output_filters() {
         return $handlers;
     });
     
-    // Authentication registration - parameter-matched to 'wordpress' handler
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'wordpress') {
-            return new WordPressAuth();
-        }
-        return $auth;
-    }, 10, 2);
+    // Authentication registration - pure discovery mode
+    add_filter('dm_get_auth_providers', function($providers) {
+        $providers['wordpress_output'] = new WordPressAuth();
+        return $providers;
+    });
     
-    // Settings registration - parameter-matched to 'wordpress' handler
+    // Settings registration - parameter-matched to 'wordpress_output' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'wordpress') {
+        if ($handler_slug === 'wordpress_output') {
             return new WordPressSettings();
         }
         return $settings;
@@ -64,27 +62,30 @@ function dm_register_wordpress_output_filters() {
             return $content;
         }
         
-        $context = $_POST['context'] ?? [];
-        $handler_slug = $context['handler_slug'] ?? '';
+        // Properly sanitize context data following WordPress security standards
+        $raw_context = wp_unslash($_POST['context'] ?? '');
+        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
+        $context = is_array($context) ? $context : [];
+        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
         
-        // Only handle wordpress handler (output version)
-        if ($handler_slug !== 'wordpress') {
+        // Only handle wordpress_output handler (output version)
+        if ($handler_slug !== 'wordpress_output') {
             return $content;
         }
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress');
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress_output');
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'wordpress',
+                'handler_slug' => 'wordpress_output',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),
                     'description' => __('Create and update WordPress posts and pages', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'output',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? '',
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'output'),
+                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
+                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);
@@ -93,12 +94,12 @@ function dm_register_wordpress_output_filters() {
         if ($template === 'handler-auth') {
             // Authentication modal template
             return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'wordpress',
+                'handler_slug' => 'wordpress_output',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),
                     'description' => __('Create and update WordPress posts and pages', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'output'
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'output')
             ]);
         }
         

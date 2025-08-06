@@ -201,15 +201,6 @@ class WordPressSettings {
      */
     private static function get_common_fields(): array {
         return [
-            'use_gutenberg_blocks' => [
-                'type' => 'select',
-                'label' => __('Editor Format', 'data-machine'),
-                'description' => __('Choose whether to format content for Gutenberg block editor or classic editor.', 'data-machine'),
-                'options' => [
-                    '1' => __('Gutenberg Block Editor (Recommended)', 'data-machine'),
-                    '0' => __('Classic Editor', 'data-machine'),
-                ],
-            ],
             'post_date_source' => [
                 'type' => 'select',
                 'label' => __('Post Date Setting', 'data-machine'),
@@ -249,11 +240,6 @@ class WordPressSettings {
         }
 
         // Sanitize common fields
-        $gutenberg_blocks = $raw_settings['use_gutenberg_blocks'] ?? '1';
-        if (!in_array($gutenberg_blocks, ['0', '1'])) {
-            throw new Exception(esc_html__('Invalid Gutenberg blocks parameter provided in settings.', 'data-machine'));
-        }
-        $sanitized['use_gutenberg_blocks'] = $gutenberg_blocks;
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
         if (!in_array($date_source, $valid_date_sources)) {
@@ -339,7 +325,6 @@ class WordPressSettings {
             'post_status' => 'draft',
             'selected_local_category_id' => 'instruct_model',
             'selected_local_tag_id' => 'instruct_model',
-            'use_gutenberg_blocks' => '1',
             'post_date_source' => 'current_date',
         ];
     }

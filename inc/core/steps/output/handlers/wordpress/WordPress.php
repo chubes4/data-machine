@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\WordPress;
 
-use DataMachine\Core\Steps\AI\AiResponseParser;
 use DataMachine\Core\Database\RemoteLocations;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,8 +37,11 @@ class WordPress {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Extract content from DataPacket JSON object
-        $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
+        // Access structured content directly from DataPacket (no parsing needed)
+        $content_title = $data_packet->content->title ?? '';
+        $content_body = $data_packet->content->body ?? '';
+        $content_tags = $data_packet->content->tags ?? [];
+        $content_summary = $data_packet->content->summary ?? '';
 
         // Get output config from DataPacket
         $module_job_config = [
@@ -63,12 +65,20 @@ class WordPress {
         // Determine destination type
         $destination_type = $wordpress_config['destination_type'] ?? 'local';
 
+        // Structure content data for handlers
+        $structured_content = [
+            'title' => $content_title,
+            'body' => $content_body,
+            'tags' => $content_tags,
+            'summary' => $content_summary
+        ];
+
         switch ($destination_type) {
             case 'local':
-                return $this->publish_local($ai_output_string, $wordpress_config, $user_id, $input_metadata);
+                return $this->publish_local($structured_content, $wordpress_config, $user_id, $input_metadata);
 
             case 'remote':
-                return $this->publish_remote($ai_output_string, $wordpress_config, $user_id, $input_metadata, $module_job_config);
+                return $this->publish_remote($structured_content, $wordpress_config, $user_id, $input_metadata, $module_job_config);
 
             default:
                 return [
@@ -82,47 +92,37 @@ class WordPress {
     /**
      * Publish content to local WordPress installation.
      *
-     * @param string $ai_output_string AI generated content.
+     * @param array $structured_content Structured content from DataPacket.
      * @param array $config Configuration array.
      * @param int|null $user_id User ID.
      * @param array $input_metadata Input metadata.
      * @return array Result array.
      */
-    private function publish_local(string $ai_output_string, array $config, ?int $user_id, array $input_metadata): array {
+    private function publish_local(array $structured_content, array $config, ?int $user_id, array $input_metadata): array {
         // Get settings from config
         $post_type = $config['post_type'] ?? 'post';
         $post_status = $config['post_status'] ?? 'draft';
         $category_id = $config['selected_local_category_id'] ?? -1;
         $tag_id = $config['selected_local_tag_id'] ?? -1;
 
-        // Parse AI output string
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            return [
-                'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
-            ];
-        }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
+        // Use structured content directly from DataPacket (no parsing needed)
         $parsed_data = [
-            'title' => $parser->get_title(),
-            'content' => $parser->get_content(),
-            'category' => $parser->get_publish_category(),
-            'tags' => $parser->get_publish_tags() ? explode(',', $parser->get_publish_tags()) : []
+            'title' => $structured_content['title'],
+            'content' => $structured_content['body'], 
+            'category' => '', // Category will be determined by AI directives or config
+            'tags' => is_array($structured_content['tags']) ? $structured_content['tags'] : []
         ];
         
-        // Trim tag names
-        $parsed_data['tags'] = array_map('trim', $parsed_data['tags']);
-        $parsed_data['custom_taxonomies'] = $parser->get_custom_taxonomies();
+        // Ensure tags are trimmed strings
+        $parsed_data['tags'] = array_map('trim', array_filter($parsed_data['tags']));
+        $parsed_data['custom_taxonomies'] = []; // Will be populated by AI directives
 
         // Prepare Content: Prepend Image, Append Source
         $final_content = $this->prepend_image_if_available($parsed_data['content'], $input_metadata);
         $final_content = $this->append_source_if_available($final_content, $input_metadata);
 
-        // Use content directly as HTML (AI should output HTML format)
-        $use_gutenberg = ($config['use_gutenberg_blocks'] ?? '1') === '1';
-        $html_content = $this->prepare_html_content($final_content, $use_gutenberg);
+        // Create Gutenberg blocks directly from structured content
+        $block_content = $this->create_gutenberg_blocks_from_content($final_content);
 
         // Determine Post Date
         $post_date_source = $config['post_date_source'] ?? 'current_date';
@@ -142,7 +142,7 @@ class WordPress {
         // Prepare post data
         $post_data = array(
             'post_title' => $parsed_data['title'] ?: __('Untitled Post', 'data-machine'),
-            'post_content' => $html_content,
+            'post_content' => $block_content,
             'post_status' => $post_status,
             'post_author' => $user_id ?: get_current_user_id(),
             'post_type' => $post_type,
@@ -312,14 +312,14 @@ class WordPress {
     /**
      * Publish content to remote WordPress installation via Airdrop.
      *
-     * @param string $ai_output_string AI generated content.
+     * @param array $structured_content Structured content from DataPacket.
      * @param array $config Configuration array.
      * @param int|null $user_id User ID.
      * @param array $input_metadata Input metadata.
      * @param array $module_job_config Module job configuration.
      * @return array Result array.
      */
-    private function publish_remote(string $ai_output_string, array $config, ?int $user_id, array $input_metadata, array $module_job_config): array {
+    private function publish_remote(array $structured_content, array $config, ?int $user_id, array $input_metadata, array $module_job_config): array {
         // Initialize variables to avoid undefined variable warnings
         $assigned_category_name = null;
         $assigned_category_id = null;
@@ -389,31 +389,21 @@ class WordPress {
         $category_id = $config['selected_remote_category_id'] ?? '';
         $tag_id = $config['selected_remote_tag_id'] ?? '';
 
-        // Parse AI output string
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            return [
-                'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
-            ];
-        }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
+        // Use structured content directly from DataPacket (no parsing needed)
         $parsed_data = [
-            'title' => $parser->get_title(),
-            'content' => $parser->get_content(),
-            'category' => $parser->get_publish_category(),
-            'tags' => $parser->get_publish_tags() ? array_map('trim', explode(',', $parser->get_publish_tags())) : [],
-            'custom_taxonomies' => $parser->get_custom_taxonomies()
+            'title' => $structured_content['title'],
+            'content' => $structured_content['body'],
+            'category' => '', // Category will be determined by AI directives or config
+            'tags' => is_array($structured_content['tags']) ? $structured_content['tags'] : [],
+            'custom_taxonomies' => [] // Will be populated by AI directives
         ];
 
         // Prepare Content: Prepend Image, Append Source
         $final_content = $this->prepend_image_if_available($parsed_data['content'], $input_metadata);
         $final_content = $this->append_source_if_available($final_content, $input_metadata);
 
-        // Use content directly as HTML (AI should output HTML format)
-        $use_gutenberg = ($config['use_gutenberg_blocks'] ?? '1') === '1';
-        $html_content = $this->prepare_html_content($final_content, $use_gutenberg);
+        // Create Gutenberg blocks directly from structured content
+        $block_content = $this->create_gutenberg_blocks_from_content($final_content);
 
         // Determine Post Date
         $post_date_source = $config['post_date_source'] ?? 'current_date';
@@ -434,7 +424,7 @@ class WordPress {
         // Prepare data payload for the remote API
         $payload = array(
             'title' => $parsed_data['title'] ?: __('Untitled Airdropped Post', 'data-machine'),
-            'content' => $html_content,
+            'content' => $block_content,
             'post_type' => $post_type,
             'status' => $post_status,
             // Initialize Taxonomy Keys
@@ -788,15 +778,6 @@ class WordPress {
      */
     private static function get_common_fields(): array {
         return [
-            'use_gutenberg_blocks' => [
-                'type' => 'select',
-                'label' => __('Editor Format', 'data-machine'),
-                'description' => __('Choose whether to format content for Gutenberg block editor or classic editor.', 'data-machine'),
-                'options' => [
-                    '1' => __('Gutenberg Block Editor (Recommended)', 'data-machine'),
-                    '0' => __('Classic Editor', 'data-machine'),
-                ],
-            ],
             'post_date_source' => [
                 'type' => 'select',
                 'label' => __('Post Date Setting', 'data-machine'),
@@ -836,11 +817,6 @@ class WordPress {
         }
 
         // Sanitize common fields
-        $gutenberg_blocks = $raw_settings['use_gutenberg_blocks'] ?? '1';
-        if (!in_array($gutenberg_blocks, ['0', '1'])) {
-            throw new Exception(esc_html__('Invalid Gutenberg blocks parameter provided in settings.', 'data-machine'));
-        }
-        $sanitized['use_gutenberg_blocks'] = $gutenberg_blocks;
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
         if (!in_array($date_source, $valid_date_sources)) {
@@ -991,16 +967,15 @@ class WordPress {
     }
 
     /**
-     * Prepare HTML content for WordPress publishing.
+     * Create Gutenberg blocks from structured content.
      * 
-     * Simple replacement for MarkdownConverter that assumes AI outputs HTML.
-     * WordPress expects HTML content for both wp_insert_post and REST API.
+     * Converts structured content to proper Gutenberg blocks using WordPress native functions.
+     * Uses serialize_blocks() to ensure proper block format and compatibility.
      *
-     * @param string $content The content to prepare.
-     * @param bool $use_gutenberg Whether to format for Gutenberg blocks.
-     * @return string Sanitized HTML content ready for WordPress.
+     * @param string $content The content to convert to blocks.
+     * @return string Properly formatted Gutenberg block content.
      */
-    private function prepare_html_content(string $content, bool $use_gutenberg = true): string {
+    private function create_gutenberg_blocks_from_content(string $content): string {
         if (empty($content)) {
             return '';
         }
@@ -1008,34 +983,77 @@ class WordPress {
         // Sanitize HTML content using WordPress KSES
         $sanitized_html = wp_kses_post($content);
 
-        // If Gutenberg blocks are requested and content doesn't already contain blocks
-        if ($use_gutenberg && strpos($sanitized_html, '<!-- wp:') === false) {
-            // Simple conversion to paragraph blocks for basic HTML
-            $paragraphs = preg_split('/\n\s*\n/', trim($sanitized_html));
-            $blocks = [];
-            
-            foreach ($paragraphs as $paragraph) {
-                $paragraph = trim($paragraph);
-                if (!empty($paragraph)) {
-                    // Check for heading tags
-                    if (preg_match('/^<h([1-6])[^>]*>(.*?)<\/h[1-6]>$/is', $paragraph, $matches)) {
-                        $level = $matches[1];
-                        $content_text = $matches[2];
-                        $blocks[] = "<!-- wp:heading {\"level\":$level} -->\n<h$level>$content_text</h$level>\n<!-- /wp:heading -->";
-                    } elseif (preg_match('/^<p[^>]*>(.*?)<\/p>$/is', $paragraph, $matches)) {
-                        $content_text = $matches[1];
-                        $blocks[] = "<!-- wp:paragraph -->\n<p>$content_text</p>\n<!-- /wp:paragraph -->";
-                    } else {
-                        // Wrap other content in paragraph blocks
-                        $blocks[] = "<!-- wp:paragraph -->\n<p>$paragraph</p>\n<!-- /wp:paragraph -->";
-                    }
-                }
-            }
-            
-            return implode("\n\n", $blocks);
+        // Check if content already contains blocks - if so, return as-is
+        if (has_blocks($sanitized_html)) {
+            return $sanitized_html;
         }
 
-        return $sanitized_html;
+        // Convert HTML to WordPress block structure
+        $blocks = $this->convert_html_to_blocks($sanitized_html);
+        
+        // Use WordPress native serialize_blocks() to convert block array to proper HTML
+        return serialize_blocks($blocks);
+    }
+
+    /**
+     * Convert HTML content to WordPress block structure.
+     * 
+     * Creates proper block arrays that WordPress can serialize correctly.
+     *
+     * @param string $html_content The HTML content to convert.
+     * @return array Array of WordPress block structures.
+     */
+    private function convert_html_to_blocks(string $html_content): array {
+        $blocks = [];
+        
+        // Split content by double line breaks to identify separate content blocks
+        $paragraphs = preg_split('/\n\s*\n/', trim($html_content));
+        
+        foreach ($paragraphs as $paragraph) {
+            $paragraph = trim($paragraph);
+            if (empty($paragraph)) {
+                continue;
+            }
+
+            // Check for heading tags
+            if (preg_match('/^<h([1-6])[^>]*>(.*?)<\/h[1-6]>$/is', $paragraph, $matches)) {
+                $level = (int) $matches[1];
+                $content_text = trim($matches[2]);
+                
+                $blocks[] = [
+                    'blockName' => 'core/heading',
+                    'attrs' => [
+                        'level' => $level
+                    ],
+                    'innerBlocks' => [],
+                    'innerHTML' => sprintf('<h%d>%s</h%d>', $level, $content_text, $level),
+                    'innerContent' => [sprintf('<h%d>%s</h%d>', $level, $content_text, $level)]
+                ];
+                
+            } elseif (preg_match('/^<p[^>]*>(.*?)<\/p>$/is', $paragraph, $matches)) {
+                $content_text = trim($matches[1]);
+                
+                $blocks[] = [
+                    'blockName' => 'core/paragraph',
+                    'attrs' => [],
+                    'innerBlocks' => [],
+                    'innerHTML' => sprintf('<p>%s</p>', $content_text),
+                    'innerContent' => [sprintf('<p>%s</p>', $content_text)]
+                ];
+                
+            } else {
+                // Wrap other content in paragraph blocks
+                $blocks[] = [
+                    'blockName' => 'core/paragraph',
+                    'attrs' => [],
+                    'innerBlocks' => [],
+                    'innerHTML' => sprintf('<p>%s</p>', $paragraph),
+                    'innerContent' => [sprintf('<p>%s</p>', $paragraph)]
+                ];
+            }
+        }
+        
+        return $blocks;
     }
 }
 

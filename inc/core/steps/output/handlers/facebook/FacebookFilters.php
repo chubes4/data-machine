@@ -41,13 +41,11 @@ function dm_register_facebook_filters() {
         return $handlers;
     });
     
-    // Authentication registration - parameter-matched to 'facebook' handler
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'facebook') {
-            return new FacebookAuth();
-        }
-        return $auth;
-    }, 10, 2);
+    // Authentication registration - pure discovery mode
+    add_filter('dm_get_auth_providers', function($providers) {
+        $providers['facebook'] = new FacebookAuth();
+        return $providers;
+    });
     
     // Settings registration - parameter-matched to 'facebook' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
@@ -64,8 +62,11 @@ function dm_register_facebook_filters() {
             return $content;
         }
         
-        $context = $_POST['context'] ?? [];
-        $handler_slug = $context['handler_slug'] ?? '';
+        // Properly sanitize context data following WordPress security standards
+        $raw_context = wp_unslash($_POST['context'] ?? '');
+        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
+        $context = is_array($context) ? $context : [];
+        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
         
         // Only handle facebook handler
         if ($handler_slug !== 'facebook') {
@@ -82,9 +83,9 @@ function dm_register_facebook_filters() {
                     'label' => __('Facebook', 'data-machine'),
                     'description' => __('Post content to Facebook pages and profiles', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'output',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? '',
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'output'),
+                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
+                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);
@@ -98,7 +99,7 @@ function dm_register_facebook_filters() {
                     'label' => __('Facebook', 'data-machine'),
                     'description' => __('Post content to Facebook pages and profiles', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'output'
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'output')
             ]);
         }
         

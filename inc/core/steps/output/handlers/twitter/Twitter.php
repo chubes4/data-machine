@@ -30,8 +30,9 @@ class Twitter {
      * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // Use filter-based auth access following architectural standards
-        $this->auth = apply_filters('dm_get_auth', null, 'twitter');
+        // Use filter-based auth access following pure discovery architectural standards
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $this->auth = $all_auth['twitter'] ?? null;
     }
 
     /**
@@ -67,7 +68,7 @@ class Twitter {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Twitter output handling.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Starting Twitter output handling.');
         
         // 1. Get config
         $output_config = $module_job_config['output_config']['twitter'] ?? []; // Use 'twitter' sub-key
@@ -75,22 +76,12 @@ class Twitter {
         $include_source = $output_config['twitter_include_source'] ?? true;
         $enable_images = $output_config['twitter_enable_images'] ?? true;
 
-        // 2. Ensure user_id is provided
-        if (empty($user_id)) {
-            $logger && $logger->error('Twitter Output: User ID context is missing.');
-            return [
-                'success' => false,
-                'error' => __('Cannot post to Twitter without a specified user account.', 'data-machine')
-            ];
-        }
+        // 2. Get authenticated connection using internal TwitterAuth
+        $connection = $this->auth->get_connection();
 
-        // 3. Get authenticated connection using internal TwitterAuth
-        $connection = $this->auth->get_connection($user_id);
-
-        // 4. Handle connection errors
+        // 3. Handle connection errors
         if (is_wp_error($connection)) {
              $logger && $logger->error('Twitter Output Error: Failed to get authenticated connection.', [
-                'user_id' => $user_id,
                 'error_code' => $connection->get_error_code(),
                 'error_message' => $connection->get_error_message(),
              ]);
@@ -115,7 +106,7 @@ class Twitter {
         $content = $parser->get_content(); // Assuming content is the main text for the tweet
 
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Twitter Output: Parsed AI output is empty.', ['user_id' => $user_id]);
+            $logger && $logger->warning('Twitter Output: Parsed AI output is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Twitter.', 'data-machine')
@@ -143,7 +134,7 @@ class Twitter {
         // --- End Formatting ---
 
         if (empty($tweet_text)) {
-             $logger && $logger->error('Twitter Output: Formatted tweet content is empty after processing.', ['user_id' => $user_id]);
+             $logger && $logger->error('Twitter Output: Formatted tweet content is empty after processing.');
              return [
                  'success' => false,
                  'error' => __('Formatted tweet content is empty after processing.', 'data-machine')
@@ -161,7 +152,7 @@ class Twitter {
             $image_alt_text = $parser ? ($parser->get_title() ?: $parser->get_content_summary(50)) : ''; // Use title or summary as alt text
 
             if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_source_url, $logger)) {
-                $logger && $logger->debug('Attempting to upload image to Twitter.', ['image_url' => $image_source_url, 'user_id' => $user_id]);
+                $logger && $logger->debug('Attempting to upload image to Twitter.', ['image_url' => $image_source_url]);
                 
                 if (!function_exists('download_url')) {
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -170,7 +161,7 @@ class Twitter {
                 $temp_image_path = download_url($image_source_url, 15); // 15 second timeout
 
                 if (is_wp_error($temp_image_path)) {
-                    $logger && $logger->warning('Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message(), 'user_id' => $user_id]);
+                    $logger && $logger->warning('Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message()]);
                     $temp_image_path = null; // Ensure path is null on error
                 } else {
                     try {
@@ -180,11 +171,11 @@ class Twitter {
                         finfo_close($finfo);
 
                         if (empty($mime_type) || !preg_match('/^image\/(jpeg|png|gif|webp)$/', $mime_type)) {
-                            $logger && $logger->warning('Could not determine a valid image MIME type for Twitter upload, or type not supported.', ['path' => $temp_image_path, 'detected_mime' => $mime_type ?: 'N/A', 'user_id' => $user_id]);
+                            $logger && $logger->warning('Could not determine a valid image MIME type for Twitter upload, or type not supported.', ['path' => $temp_image_path, 'detected_mime' => $mime_type ?: 'N/A']);
                             throw new \Exception('Invalid or unsupported image type for Twitter.');
                         }
 
-                        $logger && $logger->debug('Attempting chunked media upload to Twitter.', ['path' => $temp_image_path, 'mime_type' => $mime_type, 'user_id' => $user_id]);
+                        $logger && $logger->debug('Attempting chunked media upload to Twitter.', ['path' => $temp_image_path, 'mime_type' => $mime_type]);
 
                         // Pass media_type and media_category directly in the parameters for the upload method.
                         // The library should handle chunking automatically for the media/upload endpoint.
@@ -196,7 +187,6 @@ class Twitter {
                         $media_upload = $connection->upload('media/upload', $media_upload_params);
 
                         $logger && $logger->debug('Twitter chunked media/upload response', [ // Enhanced logging
-                            'user_id' => $user_id,
                             'http_code' => $connection->getLastHttpCode(),
                             'response_body' => $media_upload // Log the entire response object
                         ]);
@@ -207,7 +197,6 @@ class Twitter {
                             // Check for media processing information
                             if (isset($media_upload->processing_info)) {
                                 $logger && $logger->debug('Twitter media/upload processing_info found', [
-                                    'user_id' => $user_id,
                                     'media_id' => $media_id,
                                     'processing_state' => $media_upload->processing_info->state ?? 'N/A',
                                     'check_after_secs' => $media_upload->processing_info->check_after_secs ?? 'N/A',
@@ -219,7 +208,6 @@ class Twitter {
                                         $processing_error_message .= ' Reason: ' . $media_upload->processing_info->error->message;
                                     }
                                     $logger && $logger->error($processing_error_message, [
-                                        'user_id' => $user_id,
                                         'media_id' => $media_id,
                                         'processing_error_details' => $media_upload->processing_info->error ?? null
                                     ]);
@@ -245,7 +233,7 @@ class Twitter {
                                  }
                              }                            
                              // --- End Alt Text --- 
-                            $logger && $logger->debug('Successfully uploaded image to Twitter.', ['media_id' => $media_id, 'user_id' => $user_id]);
+                            $logger && $logger->debug('Successfully uploaded image to Twitter.', ['media_id' => $media_id]);
                         } else {
                              $upload_error_message = 'Twitter API Error: Failed to upload media.';
                              if (isset($media_upload->errors)) {
@@ -253,14 +241,13 @@ class Twitter {
                                  $upload_error_message .= ' Reason: ' . ($first_error->message ?? 'Unknown') . ' (Code: ' . ($first_error->code ?? 'N/A') . ')';
                              }
                             $logger && $logger->error($upload_error_message, [
-                                'user_id' => $user_id,
                                 'http_code' => $connection->getLastHttpCode(),
                                 'api_response' => $media_upload,
                                 'image_url' => $image_source_url
                              ]);
                         }
                     } catch (\Exception $e) {
-                        $logger && $logger->error('Twitter Output Exception during image upload: ' . $e->getMessage(), ['user_id' => $user_id]);
+                        $logger && $logger->error('Twitter Output Exception during image upload: ' . $e->getMessage());
                         $temp_image_path = null; // Ensure path is null on error
                     } finally {
                         if ($temp_image_path && file_exists($temp_image_path)) {
@@ -273,7 +260,7 @@ class Twitter {
             // --- End Image Upload Logic ---
 
             // --- Post tweet using API v2 ---
-            $logger && $logger->debug('Preparing to post tweet via API v2.', ['user_id' => $user_id]);
+            $logger && $logger->debug('Preparing to post tweet via API v2.');
             $v2_payload = [
                 'text' => $tweet_text
             ];
@@ -281,24 +268,28 @@ class Twitter {
                 $v2_payload['media'] = [
                     'media_ids' => [$media_id]
                 ];
-                $logger && $logger->debug('Adding v1.1 media ID to v2 payload.', ['media_id' => $media_id, 'user_id' => $user_id]);
+                $logger && $logger->debug('Adding v1.1 media ID to v2 payload.', ['media_id' => $media_id]);
             } else {
-                 $logger && $logger->debug('No media ID to add to v2 payload.', ['user_id' => $user_id]);
+                 $logger && $logger->debug('No media ID to add to v2 payload.');
             }
 
-            $logger && $logger->debug('Posting tweet to v2 endpoint with payload keys:', ['payload_keys' => array_keys($v2_payload), 'user_id' => $user_id]);
+            $logger && $logger->debug('Posting tweet to v2 endpoint with payload keys:', ['payload_keys' => array_keys($v2_payload)]);
             // Sending Twitter API v2 request
             $response = $connection->post('tweets', $v2_payload, ['json' => true]); // Use JSON payload for V2
 
-            // 8. Check for API errors (V2 response format differs)
+            // 4. Check for API errors (V2 response format differs)
             $http_code = $connection->getLastHttpCode();
-            $logger && $logger->debug('Twitter API v2 response received', ['http_code' => $http_code, 'user_id' => $user_id]);
+            $logger && $logger->debug('Twitter API v2 response received', ['http_code' => $http_code]);
 
             if ($http_code == 201 && isset($response->data->id)) {
                 $tweet_id = $response->data->id;
-                $logger && $logger->debug('Tweet posted successfully (v2).', ['user_id' => $user_id, 'tweet_id' => $tweet_id, 'link' => "https://twitter.com/anyuser/status/".$tweet_id]);
-
-                 $tweet_url = "https://twitter.com/anyuser/status/".$tweet_id;
+                
+                // Get authenticated account details to construct proper tweet URL
+                $account_details = $this->auth->get_account_details();
+                $screen_name = $account_details['screen_name'] ?? 'twitter';
+                $tweet_url = "https://twitter.com/{$screen_name}/status/{$tweet_id}";
+                
+                $logger && $logger->debug('Tweet posted successfully (v2).', ['tweet_id' => $tweet_id, 'link' => $tweet_url]);
 
                  return [
                      'success' => true,
@@ -321,8 +312,7 @@ class Twitter {
                          'title' => $response->title,
                          'detail' => $response->detail,
                          'type' => $response->type ?? 'N/A',
-                         'status' => $response->status ?? $http_code,
-                         'user_id' => $user_id
+                         'status' => $response->status ?? $http_code
                      ]);
                 } 
                 elseif (isset($response->errors) && is_array($response->errors) && !empty($response->errors)) {
@@ -333,8 +323,7 @@ class Twitter {
                         $error_code = 'twitter_api_error_' . $first_error->code;
                     }
                     $logger && $logger->warning('Received V1.1-style API error structure.', [
-                         'errors' => $api_errors,
-                         'user_id' => $user_id
+                         'errors' => $api_errors
                      ]);                    
                 }
                 elseif ($http_code !== 201) {
@@ -343,7 +332,6 @@ class Twitter {
                 }
 
                 $logger && $logger->error($error_message, [
-                    'user_id' => $user_id,
                     'http_code' => $http_code,
                     'api_response' => $response // Log full response on error
                  ]);
@@ -356,7 +344,7 @@ class Twitter {
             }
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Twitter Output Exception: ' . $e->getMessage(), ['user_id' => $user_id]);
+            $logger && $logger->error('Twitter Output Exception: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage()

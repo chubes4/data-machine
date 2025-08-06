@@ -51,13 +51,12 @@ class TwitterAuth {
     }
 
     /**
-     * Checks if a user has valid Twitter authentication
+     * Checks if admin has valid Twitter authentication
      *
-     * @param int $user_id WordPress User ID
      * @return bool True if authenticated, false otherwise
      */
-    public function is_authenticated(int $user_id): bool {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function is_authenticated(): bool {
+        $account = get_option('twitter_auth_data', []);
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -65,47 +64,46 @@ class TwitterAuth {
     }
 
     /**
-     * Gets an authenticated TwitterOAuth connection object for a specific user.
+     * Gets an authenticated TwitterOAuth connection object.
      *
-     * @param int $user_id The user ID.
      * @return TwitterOAuth|\WP_Error Authenticated connection object or WP_Error on failure.
      */
-    public function get_connection(int $user_id) {
-        $this->get_logger() && $this->get_logger()->debug('Attempting to get authenticated Twitter connection for user.', ['user_id' => $user_id]);
+    public function get_connection() {
+        $this->get_logger() && $this->get_logger()->debug('Attempting to get authenticated Twitter connection.');
 
-        $credentials = get_user_meta($user_id, self::USER_META_KEY, true);
+        $credentials = get_option('twitter_auth_data', []);
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
-            $this->get_logger() && $this->get_logger()->error('Missing Twitter credentials in user meta.', ['user_id' => $user_id]);
-            return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found for this user. Please authenticate on the API Keys page.', 'data-machine'));
+            $this->get_logger() && $this->get_logger()->error('Missing Twitter credentials in options.');
+            return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
         // Decrypt the stored tokens
         $encryption_helper = $this->get_encryption_helper();
         if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Encryption helper service unavailable for Twitter connection.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->error('Encryption helper service unavailable for Twitter connection.');
             return new \WP_Error('twitter_service_unavailable', __('Encryption service unavailable for Twitter authentication.', 'data-machine'));
         }
         $decrypted_access_token = $encryption_helper->decrypt($credentials['access_token']);
         $decrypted_access_token_secret = $encryption_helper->decrypt($credentials['access_token_secret']);
         
         if ($decrypted_access_token === false || $decrypted_access_token_secret === false) {
-            $this->get_logger() && $this->get_logger()->error('Failed to decrypt Twitter credentials.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->error('Failed to decrypt Twitter credentials.');
             return new \WP_Error('twitter_decryption_failed', __('Failed to decrypt Twitter credentials. Please re-authenticate.', 'data-machine'));
         }
 
         $consumer_key = get_option('twitter_api_key');
         $consumer_secret = get_option('twitter_api_secret');
         if (empty($consumer_key) || empty($consumer_secret)) {
-            $this->get_logger() && $this->get_logger()->error('Missing Twitter API key/secret in site options.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->error('Missing Twitter API key/secret in site options.');
             return new \WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
         }
 
         try {
             $connection = new TwitterOAuth($consumer_key, $consumer_secret, $decrypted_access_token, $decrypted_access_token_secret);
-            $this->get_logger() && $this->get_logger()->debug('Successfully created authenticated Twitter connection for user.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->debug('Successfully created authenticated Twitter connection.');
             return $connection;
         } catch (\Exception $e) {
-            $this->get_logger() && $this->get_logger()->error('Exception creating TwitterOAuth connection: ' . $e->getMessage(), ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->error('Exception creating TwitterOAuth connection: ' . $e->getMessage());
             return new \WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'data-machine'));
         }
     }
@@ -199,14 +197,14 @@ class TwitterAuth {
             $denied_token = sanitize_text_field($_GET['denied']);
             // Clean up transient if we can identify it (optional)
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
-            $this->get_logger() && $this->get_logger()->warning('Twitter OAuth Warning: User denied access.', ['user_id' => $user_id, 'denied_token' => $denied_token]);
+            $this->get_logger() && $this->get_logger()->warning('Twitter OAuth Warning: User denied access.', ['denied_token' => $denied_token]);
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_access_denied'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['oauth_token']) || !isset($_GET['oauth_verifier'])) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['user_id' => $user_id, 'query_params' => $_GET]);
+            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['query_params' => $_GET]);
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_missing_callback_params'));
             exit;
         }
@@ -220,7 +218,7 @@ class TwitterAuth {
         delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);
 
         if (empty($oauth_token_secret)) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Request token secret missing or expired in transient.', ['user_id' => $user_id, 'oauth_token' => $oauth_token]);
+            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Request token secret missing or expired in transient.', ['oauth_token' => $oauth_token]);
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_token_secret_expired'));
             exit;
         }
@@ -228,7 +226,7 @@ class TwitterAuth {
         $apiKey = get_option('twitter_api_key');
         $apiSecret = get_option('twitter_api_secret');
         if (empty($apiKey) || empty($apiSecret)) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: API Key/Secret missing during callback.', ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: API Key/Secret missing during callback.');
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_missing_app_keys'));
             exit;
         }
@@ -244,7 +242,6 @@ class TwitterAuth {
             // Check for errors during token exchange
             if ($connection->getLastHttpCode() != 200 || !isset($access_token_data['oauth_token']) || !isset($access_token_data['oauth_token_secret'])) {
                 $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to get access token.', [
-                    'user_id' => $user_id,
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
                 ]);
@@ -256,7 +253,7 @@ class TwitterAuth {
             // Encrypt the access tokens before storing
             $encryption_helper = apply_filters('dm_get_encryption_helper', null);
             if (!$encryption_helper) {
-                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
+                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Encryption helper service unavailable.');
                 wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_service_unavailable'));
                 exit;
             }
@@ -264,7 +261,7 @@ class TwitterAuth {
             $encrypted_access_token_secret = $encryption_helper->encrypt($access_token_data['oauth_token_secret']);
             
             if ($encrypted_access_token === false || $encrypted_access_token_secret === false) {
-                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to encrypt access tokens.', ['user_id' => $user_id]);
+                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to encrypt access tokens.');
                 wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_encryption_failed'));
                 exit;
             }
@@ -277,28 +274,28 @@ class TwitterAuth {
                 'last_verified_at'    => time() // Timestamp of this successful auth
             ];
 
-            // Store against the current WP user. Assumes one Twitter auth per WP user.
-            update_user_meta($user_id, self::USER_META_KEY, $account_data);
+            // Store in site options for admin-only authentication
+            update_option('twitter_auth_data', $account_data);
 
             // --- 5. Redirect on Success --- 
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_success=twitter'));
             exit;
 
         } catch (\Exception $e) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Exception during callback: ' . $e->getMessage(), ['user_id' => $user_id]);
+            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Exception during callback: ' . $e->getMessage());
             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=twitter_callback_exception'));
             exit;
         }
     }
 
     /**
-     * Retrieves the stored Twitter account details for a user.
+     * Retrieves the stored Twitter account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return array|null Account details array or null if not found/invalid.
      */
-    public static function get_account_details(int $user_id): ?array {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_account_details(): ?array {
+        $account = get_option('twitter_auth_data', []);
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['access_token_secret'])) {
             return null;
         }
@@ -306,13 +303,13 @@ class TwitterAuth {
     }
 
     /**
-     * Removes the stored Twitter account details for a user.
+     * Removes the stored Twitter account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return bool True on success, false on failure.
      */
-    public static function remove_account(int $user_id): bool {
-        return delete_user_meta($user_id, self::USER_META_KEY);
+    public function remove_account(): bool {
+        return delete_option('twitter_auth_data');
     }
 }
 

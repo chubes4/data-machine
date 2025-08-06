@@ -41,13 +41,11 @@ function dm_register_wordpress_input_filters() {
         return $handlers;
     });
     
-    // Authentication registration - parameter-matched to 'wordpress_input' handler
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'wordpress_input') {
-            return new WordPressAuth();
-        }
-        return $auth;
-    }, 10, 2);
+    // Authentication registration - pure discovery mode
+    add_filter('dm_get_auth_providers', function($providers) {
+        $providers['wordpress_input'] = new WordPressAuth();
+        return $providers;
+    });
     
     // Settings registration - parameter-matched to 'wordpress_input' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
@@ -68,17 +66,17 @@ function dm_register_wordpress_input_filters() {
         $handler_slug = $context['handler_slug'] ?? '';
         $step_type = $context['step_type'] ?? '';
         
-        // Only handle wordpress handler in input context
-        if ($handler_slug !== 'wordpress' || $step_type !== 'input') {
+        // Only handle wordpress_input handler in input context
+        if ($handler_slug !== 'wordpress_input' || $step_type !== 'input') {
             return $content;
         }
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress');
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress_input');
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'wordpress',
+                'handler_slug' => 'wordpress_input',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),
                     'description' => __('Source content from WordPress posts and pages', 'data-machine')
@@ -94,7 +92,7 @@ function dm_register_wordpress_input_filters() {
         if ($template === 'handler-auth') {
             // Authentication modal template
             return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'wordpress',
+                'handler_slug' => 'wordpress_input',
                 'handler_config' => [
                     'label' => __('WordPress', 'data-machine'),
                     'description' => __('Source content from WordPress posts and pages', 'data-machine')

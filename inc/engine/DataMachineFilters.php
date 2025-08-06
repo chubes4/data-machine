@@ -8,7 +8,6 @@
  * Engine Bootstrap Functions (Pure Backend Processing Only):
  * - dm_register_direct_service_filters(): Core orchestration services
  * - dm_register_database_service_system(): Parameter-based database filter hooks  
- * - dm_register_wpdb_service_filter(): WordPress database access
  * - dm_register_context_retrieval_service(): DataPacket context orchestration
  * - dm_register_utility_filters(): Backend utility filter hooks only
  * - dm_register_datapacket_creation_system(): DataPacket creation filter hooks
@@ -151,27 +150,6 @@ function dm_register_core_database_services() {
     }, 5, 2);
 }
 
-/**
- * Register WPDB service filter for WordPress database access.
- * 
- * Provides filter-based access to WordPress global $wpdb object,
- * maintaining architectural consistency across all database components.
- * Enables external plugins to override database connection if needed.
- * 
- * Usage: $wpdb = apply_filters('dm_get_wpdb_service', null);
- * 
- * @since NEXT_VERSION
- */
-function dm_register_wpdb_service_filter() {
-    add_filter('dm_get_wpdb_service', function($wpdb_service) {
-        if ($wpdb_service !== null) {
-            return $wpdb_service; // External override provided
-        }
-        
-        global $wpdb;
-        return $wpdb;
-    }, 10);
-}
 
 /**
  * Register context retrieval service for pipeline DataPackets.
@@ -305,28 +283,28 @@ function dm_register_utility_filters() {
     
     // Admin notices removed - components use WordPress add_action('admin_notices') directly
     
-    // Parameter-based authentication system - auto-links to handlers via matching parameters
-    // Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($auth !== null) {
-            // Auto-register hooks if auth service has register_hooks method
-            if (method_exists($auth, 'register_hooks')) {
-                static $registered_hooks = [];
-                $auth_class = get_class($auth);
+    // Pure discovery authentication system - consistent with handler discovery patterns
+    // Usage: $all_auth = apply_filters('dm_get_auth_providers', []); $twitter_auth = $all_auth['twitter'] ?? null;
+    add_filter('dm_get_auth_providers', function($providers) {
+        // Auto-register hooks for all auth providers
+        static $registered_hooks = [];
+        
+        foreach ($providers as $auth_instance) {
+            if (is_object($auth_instance) && method_exists($auth_instance, 'register_hooks')) {
+                $auth_class = get_class($auth_instance);
                 
                 // Only register hooks once per auth class
                 if (!isset($registered_hooks[$auth_class])) {
-                    $auth->register_hooks();
+                    $auth_instance->register_hooks();
                     $registered_hooks[$auth_class] = true;
                 }
             }
-            return $auth; // External override provided
         }
         
-        // Core returns null - auth components self-register via this same filter
-        // This enables pure parameter-based auto-linking with zero hardcoding
-        return null;
-    }, 5, 2);
+        return $providers; // Return collection unchanged - components self-register via this same filter
+    }, 5, 1);
+    
+    // Legacy dm_get_auth filter removed - authentication now uses pure discovery via dm_get_auth_providers
     
     // Parameter-based handler settings system (2-parameter pattern for consistency)
     // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files

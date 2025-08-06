@@ -156,12 +156,13 @@ class GoogleSheetsInputSettings {
      * @return bool|\WP_Error True if authenticated, WP_Error if not.
      */
     public static function validate_authentication(int $user_id) {
-        $auth_service = apply_filters('dm_get_auth', null, 'googlesheets');
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $auth_service = $all_auth['googlesheets'] ?? null;
         if (!$auth_service) {
             return new \WP_Error('googlesheets_auth_unavailable', __('Google Sheets authentication service not available.', 'data-machine'));
         }
 
-        if (!$auth_service->is_authenticated($user_id)) {
+        if (!$auth_service->is_authenticated()) {
             return new \WP_Error('googlesheets_not_authenticated', __('Google Sheets authentication required. Please authenticate in the API Keys settings.', 'data-machine'));
         }
 

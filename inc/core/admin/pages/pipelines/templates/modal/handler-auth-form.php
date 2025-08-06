@@ -16,8 +16,9 @@ if (!defined('WPINC')) {
 
 $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
 
-// Authentication discovery via filter
-$auth_instance = apply_filters('dm_get_auth', null, $handler_slug);
+// Authentication discovery via pure discovery mode
+$all_auth = apply_filters('dm_get_auth_providers', []);
+$auth_instance = $all_auth[$handler_slug] ?? null;
 $has_auth = ($auth_instance !== null);
 
 if (!$has_auth) {

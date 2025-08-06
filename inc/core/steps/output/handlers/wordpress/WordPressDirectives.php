@@ -28,20 +28,14 @@ class WordPressDirectives {
         }
         
         $wordpress_config = $output_config['wordpress'] ?? [];
-        $use_gutenberg = ($wordpress_config['use_gutenberg_blocks'] ?? '1') === '1';
         $destination_type = $wordpress_config['destination_type'] ?? 'local';
         $post_type = $wordpress_config['post_type'] ?? $wordpress_config['selected_remote_post_type'] ?? 'post';
         $post_status = $wordpress_config['post_status'] ?? $wordpress_config['remote_post_status'] ?? 'draft';
         
         $wordpress_directives = "\n\n## WordPress Publishing Platform Requirements\n\n";
-        if ($use_gutenberg) {
-            $wordpress_directives .= "8. **Gutenberg Block Markup Optimization**: Structure content using proper Gutenberg block markup. ";
-            $wordpress_directives .= "Use semantic blocks like `<!-- wp:paragraph -->`, `<!-- wp:heading -->`, `<!-- wp:list -->`, and `<!-- wp:quote -->` ";
-            $wordpress_directives .= "to create well-structured, accessible content that leverages WordPress's full editing capabilities.\n\n";
-        } else {
-            $wordpress_directives .= "8. **Classic Editor Compatibility**: Format content for the classic WordPress editor using standard HTML markup. ";
-            $wordpress_directives .= "Ensure clean, semantic HTML that works well in both classic and block editors.\n\n";
-        }
+        $wordpress_directives .= "8. **Gutenberg Block Markup Optimization**: Structure content using proper Gutenberg block markup. ";
+        $wordpress_directives .= "Use semantic blocks like `<!-- wp:paragraph -->`, `<!-- wp:heading -->`, `<!-- wp:list -->`, and `<!-- wp:quote -->` ";
+        $wordpress_directives .= "to create well-structured, accessible content that leverages WordPress's full editing capabilities.\n\n";
         
         $wordpress_directives .= "9. **WordPress SEO Excellence**:\n";
         $wordpress_directives .= "   - Create compelling, keyword-focused titles (50-60 characters optimal)\n";

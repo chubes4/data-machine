@@ -121,9 +121,16 @@ class PipelineModalAjax
         }
         
         // For step-card templates in AJAX context, add sensible defaults for UI rendering
-        if ($template === 'page/step-card' && !isset($template_data['is_first_step'])) {
-            // AJAX-rendered steps default to showing arrows (safer for dynamic UI)
-            $template_data['is_first_step'] = false;
+        if ($template === 'page/step-card') {
+            if (!isset($template_data['is_first_step'])) {
+                // AJAX-rendered steps default to showing arrows (safer for dynamic UI)
+                $template_data['is_first_step'] = false;
+            }
+            
+            if (!isset($template_data['step']['is_empty'])) {
+                // AJAX-rendered steps are typically populated (not empty)
+                $template_data['step']['is_empty'] = false;
+            }
         }
 
         // Use universal template rendering system
@@ -230,7 +237,12 @@ class PipelineModalAjax
         
         $context = $_POST['context'] ?? [];
         
-        // Context data should be a native array (jQuery handles JSON automatically)
+        // Handle jQuery's natural JSON string serialization
+        if (is_string($context)) {
+            $context = json_decode(wp_unslash($context), true);
+        }
+        
+        // Context data should be a native array after JSON decoding
         if (!is_array($context)) {
             wp_send_json_error([
                 'message' => __('Invalid context data format - expected array', 'data-machine'),

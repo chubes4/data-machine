@@ -35,7 +35,7 @@ function dm_register_googlesheets_input_filters() {
     
     // Handler registration - Google Sheets Input declares itself as input handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
-        $handlers['googlesheets'] = [
+        $handlers['googlesheets_input'] = [
             'type' => 'input',
             'class' => GoogleSheetsInput::class,
             'label' => __('Google Sheets', 'data-machine'),
@@ -44,9 +44,9 @@ function dm_register_googlesheets_input_filters() {
         return $handlers;
     });
     
-    // Settings registration - parameter-matched to 'googlesheets' handler
+    // Settings registration - parameter-matched to 'googlesheets_input' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'googlesheets') {
+        if ($handler_slug === 'googlesheets_input') {
             return new GoogleSheetsInputSettings();
         }
         return $settings;
@@ -59,11 +59,14 @@ function dm_register_googlesheets_input_filters() {
             return $content;
         }
         
-        $context = $_POST['context'] ?? [];
-        $handler_slug = $context['handler_slug'] ?? '';
+        // Properly sanitize context data following WordPress security standards
+        $raw_context = wp_unslash($_POST['context'] ?? '');
+        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
+        $context = is_array($context) ? $context : [];
+        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
         
-        // Only handle googlesheets handler when step_type is input
-        if ($handler_slug !== 'googlesheets' || ($context['step_type'] ?? '') !== 'input') {
+        // Only handle googlesheets_input handler when step_type is input
+        if ($handler_slug !== 'googlesheets_input' || ($context['step_type'] ?? '') !== 'input') {
             return $content;
         }
         
@@ -77,9 +80,9 @@ function dm_register_googlesheets_input_filters() {
                     'label' => __('Google Sheets', 'data-machine'),
                     'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'input',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? '',
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'input'),
+                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
+                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);
@@ -93,22 +96,20 @@ function dm_register_googlesheets_input_filters() {
                     'label' => __('Google Sheets', 'data-machine'),
                     'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'input'
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'input')
             ]);
         }
         
         return $content;
     }, 10, 2);
     
-    // Authentication registration - reuse existing Google Sheets OAuth infrastructure
+    // Authentication registration - pure discovery mode
     // This creates bi-directional Google Sheets integration by sharing auth with output handler
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'googlesheets') {
-            // Return existing Google Sheets auth instance (shared with output handler)
-            return new \DataMachine\Core\Handlers\Output\GoogleSheets\GoogleSheetsAuth();
-        }
-        return $auth;
-    }, 10, 2);
+    add_filter('dm_get_auth_providers', function($providers) {
+        // Use shared authentication for both input and output Google Sheets handlers
+        $providers['googlesheets'] = new \DataMachine\Core\Handlers\Output\GoogleSheets\GoogleSheetsAuth();
+        return $providers;
+    });
     
     // DataPacket conversion registration - Google Sheets Input handler uses dedicated DataPacket class
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {

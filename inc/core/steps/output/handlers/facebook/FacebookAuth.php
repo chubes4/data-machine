@@ -61,13 +61,12 @@ class FacebookAuth {
     }
 
     /**
-     * Checks if a user has valid Facebook authentication
+     * Checks if admin has valid Facebook authentication
      *
-     * @param int $user_id WordPress User ID
      * @return bool True if authenticated, false otherwise
      */
-    public function is_authenticated(int $user_id): bool {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function is_authenticated(): bool {
+        $account = get_option('facebook_auth_data', []);
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -518,13 +517,13 @@ class FacebookAuth {
     }
 
     /**
-     * Retrieves the stored Facebook account details for a user.
+     * Retrieves the stored Facebook account details.
+     * Uses global site options for admin-global authentication.
      *
-     * @param int $user_id WordPress User ID.
      * @return array|null Account details array or null if not found/invalid.
      */
-    public static function get_account_details(int $user_id): ?array {
-        $account = get_user_meta($user_id, self::USER_META_KEY, true);
+    public function get_account_details(): ?array {
+        $account = get_option('facebook_auth_data', []);
         if (empty($account) || !is_array($account)) {
             return null;
         }

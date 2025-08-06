@@ -30,8 +30,9 @@ class GoogleSheets {
      * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // Use filter-based auth access following architectural standards
-        $this->auth = apply_filters('dm_get_auth', null, 'googlesheets');
+        // Use filter-based auth access following pure discovery architectural standards
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $this->auth = $all_auth['googlesheets_output'] ?? null;
     }
 
     /**

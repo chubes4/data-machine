@@ -32,7 +32,7 @@ function dm_register_googlesheets_filters() {
     
     // Handler registration - Google Sheets declares itself as output handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
-        $handlers['googlesheets'] = [
+        $handlers['googlesheets_output'] = [
             'type' => 'output',
             'class' => GoogleSheets::class,
             'label' => __('Google Sheets', 'data-machine'),
@@ -41,17 +41,15 @@ function dm_register_googlesheets_filters() {
         return $handlers;
     });
     
-    // Authentication registration - parameter-matched to 'googlesheets' handler
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'googlesheets') {
-            return new GoogleSheetsAuth();
-        }
-        return $auth;
-    }, 10, 2);
+    // Authentication registration - pure discovery mode
+    add_filter('dm_get_auth_providers', function($providers) {
+        $providers['googlesheets_output'] = new GoogleSheetsAuth();
+        return $providers;
+    });
     
-    // Settings registration - parameter-matched to 'googlesheets' handler  
+    // Settings registration - parameter-matched to 'googlesheets_output' handler  
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'googlesheets') {
+        if ($handler_slug === 'googlesheets_output') {
             return new GoogleSheetsSettings();
         }
         return $settings;
@@ -64,27 +62,30 @@ function dm_register_googlesheets_filters() {
             return $content;
         }
         
-        $context = $_POST['context'] ?? [];
-        $handler_slug = $context['handler_slug'] ?? '';
+        // Properly sanitize context data following WordPress security standards
+        $raw_context = wp_unslash($_POST['context'] ?? '');
+        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
+        $context = is_array($context) ? $context : [];
+        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
         
-        // Only handle googlesheets handler
-        if ($handler_slug !== 'googlesheets') {
+        // Only handle googlesheets_output handler
+        if ($handler_slug !== 'googlesheets_output') {
             return $content;
         }
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'googlesheets');
+            $settings_instance = apply_filters('dm_get_handler_settings', null, 'googlesheets_output');
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'googlesheets',
+                'handler_slug' => 'googlesheets_output',
                 'handler_config' => [
                     'label' => __('Google Sheets', 'data-machine'),
                     'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'output',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? '',
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'output'),
+                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
+                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
                 'settings_available' => ($settings_instance !== null),
                 'handler_settings' => $settings_instance
             ]);
@@ -93,12 +94,12 @@ function dm_register_googlesheets_filters() {
         if ($template === 'handler-auth') {
             // Authentication modal template
             return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'googlesheets',
+                'handler_slug' => 'googlesheets_output',
                 'handler_config' => [
                     'label' => __('Google Sheets', 'data-machine'),
                     'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'data-machine')
                 ],
-                'step_type' => $context['step_type'] ?? 'output'
+                'step_type' => sanitize_text_field($context['step_type'] ?? 'output')
             ]);
         }
         

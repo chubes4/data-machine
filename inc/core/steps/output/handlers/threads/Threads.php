@@ -29,8 +29,9 @@ class Threads {
      * Constructor - direct auth initialization for security
      */
     public function __construct() {
-        // Use filter-based auth access following architectural standards
-        $this->auth = apply_filters('dm_get_auth', null, 'threads');
+        // Use filter-based auth access following pure discovery architectural standards
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $this->auth = $all_auth['threads'] ?? null;
     }
 
     /**

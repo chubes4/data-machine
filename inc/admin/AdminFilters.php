@@ -85,7 +85,12 @@ function dm_register_admin_filters() {
             }
         }
         
-        return '<div class="dm-error">Template not found: ' . esc_html($template_name) . '</div>';
+        // Log error and return empty string - no user-facing error display
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->error("Template not found: {$template_name}");
+        }
+        return '';
     }, 10, 3);
 }
 

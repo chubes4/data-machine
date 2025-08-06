@@ -75,7 +75,8 @@ class GoogleSheetsInput {
         $process_limit = max(1, absint($config['row_limit'] ?? 100));
 
         // Get Google Sheets authentication service
-        $auth_service = apply_filters('dm_get_auth', null, 'googlesheets');
+        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $auth_service = $all_auth['googlesheets'] ?? null;
         if (!$auth_service) {
             throw new Exception(esc_html__('Google Sheets authentication service not available.', 'data-machine'));
         }

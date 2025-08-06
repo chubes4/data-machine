@@ -323,6 +323,97 @@ function dm_register_pipelines_admin_page_filters() {
         // No configuration modal needed - component handles its own messaging if required
         return '';
     }, 10, 2);
+    
+    // Confirm Delete Modal - Self-registering modal content with flow data enrichment
+    add_filter('dm_get_modal', function($content, $template) {
+        // Return early if content already provided by another component
+        if ($content !== null) {
+            return $content;
+        }
+        
+        if ($template !== 'confirm-delete') {
+            return $content;
+        }
+        
+        // Get context from $_POST directly - jQuery auto-parses JSON data attributes
+        $context = $_POST['context'] ?? [];
+        if (is_string($context)) {
+            $context = json_decode($context, true) ?: [];
+        }
+        
+        $delete_type = $context['delete_type'] ?? 'step';
+        $pipeline_id = $context['pipeline_id'] ?? null;
+        $flow_id = $context['flow_id'] ?? null;
+        $step_id = $context['step_id'] ?? null;
+        
+        // Enhanced logging for modal context
+        $logger = apply_filters('dm_get_logger', null);
+        if ($logger) {
+            $logger->debug('Confirm delete modal context', [
+                'delete_type' => $delete_type,
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id,
+                'step_id' => $step_id
+            ]);
+        }
+        
+        // Enrich context with flow data based on deletion type
+        $affected_flows = [];
+        $affected_jobs = [];
+        
+        if ($delete_type === 'pipeline' && $pipeline_id) {
+            // Get all flows for this pipeline
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_flows = $all_databases['flows'] ?? null;
+            if ($db_flows) {
+                $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+                foreach ($flows as $flow) {
+                    $affected_flows[] = [
+                        'name' => $flow['flow_name'],
+                        'created_at' => $flow['created_at']
+                    ];
+                }
+            }
+            
+            // Get jobs count for this pipeline
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $jobs = $db_jobs->get_jobs_for_pipeline($pipeline_id);
+                $affected_jobs = $jobs; // Count will be used in template
+            }
+            
+        } elseif ($delete_type === 'step' && $pipeline_id) {
+            // For step deletion, get flows for pipeline to show impact
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_flows = $all_databases['flows'] ?? null;
+            if ($db_flows) {
+                $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+                foreach ($flows as $flow) {
+                    $affected_flows[] = [
+                        'name' => $flow['flow_name'],
+                        'created_at' => $flow['created_at']
+                    ];
+                }
+            }
+        }
+        // For flow deletion, no additional flows needed (flows don't have sub-flows)
+        
+        // Log the enriched data
+        if ($logger) {
+            $logger->debug('Delete modal flow enrichment', [
+                'affected_flows_count' => count($affected_flows),
+                'affected_jobs_count' => count($affected_jobs)
+            ]);
+        }
+        
+        // Merge enriched data with context for template
+        $enriched_context = array_merge($context, [
+            'affected_flows' => $affected_flows,
+            'affected_jobs' => $affected_jobs
+        ]);
+        
+        return apply_filters('dm_render_template', '', 'modal/confirm-delete', $enriched_context);
+    }, 10, 2);
 }
 
 /**
