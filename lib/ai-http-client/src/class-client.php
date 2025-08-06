@@ -20,7 +20,6 @@ class AI_HTTP_Client {
     private $response_normalizer;
     private $streaming_normalizer;
     private $tool_results_normalizer;
-    private $connection_test_normalizer;
     
     /**
      * Client configuration
@@ -100,7 +99,6 @@ class AI_HTTP_Client {
                 $this->response_normalizer = new AI_HTTP_Unified_Response_Normalizer();
                 $this->streaming_normalizer = new AI_HTTP_Unified_Streaming_Normalizer();
                 $this->tool_results_normalizer = new AI_HTTP_Unified_Tool_Results_Normalizer();
-                $this->connection_test_normalizer = new AI_HTTP_Unified_Connection_Test_Normalizer();
                 break;
                 
             case 'upscaling':
@@ -109,7 +107,6 @@ class AI_HTTP_Client {
                 $this->response_normalizer = new AI_HTTP_Upscaling_Response_Normalizer();
                 $this->streaming_normalizer = null; // Upscaling typically doesn't use streaming
                 $this->tool_results_normalizer = null; // Upscaling doesn't use tools
-                $this->connection_test_normalizer = new AI_HTTP_Upscaling_Connection_Test_Normalizer();
                 break;
                 
             case 'generative':
@@ -118,7 +115,6 @@ class AI_HTTP_Client {
                 $this->response_normalizer = new AI_HTTP_Generative_Response_Normalizer();
                 $this->streaming_normalizer = null; // May add later for progressive generation
                 $this->tool_results_normalizer = null; // Generative typically doesn't use tools
-                $this->connection_test_normalizer = new AI_HTTP_Generative_Connection_Test_Normalizer();
                 break;
                 
             default:
@@ -292,50 +288,6 @@ class AI_HTTP_Client {
         }
     }
 
-    /**
-     * Test connection to provider using unified architecture
-     *
-     * @param string $provider_name Provider to test
-     * @return array Standardized test result
-     */
-    public function test_connection($provider_name = null) {
-        // Get provider from options if not specified
-        if (!$provider_name) {
-            if (class_exists('AI_HTTP_Options_Manager') && !empty($this->plugin_context)) {
-                $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
-                $provider_name = $options_manager->get_selected_provider();
-            }
-            
-            if (empty($provider_name)) {
-                throw new Exception('No provider configured. Please select a provider in your plugin settings.');
-            }
-        }
-        
-        try {
-            // Step 1: Validate provider configuration
-            $provider_config = $this->get_provider_config($provider_name);
-            $validation = $this->connection_test_normalizer->validate_provider_config($provider_name, $provider_config);
-            
-            if (!$validation['valid']) {
-                return $this->connection_test_normalizer->create_error_response($validation['message'], $provider_name);
-            }
-            
-            // Step 2: Get provider instance
-            $provider = $this->get_provider($provider_name);
-            
-            // Step 3: Create test request
-            $test_request = $this->connection_test_normalizer->create_test_request($provider_name, $provider_config);
-            
-            // Step 4: Send test request
-            $raw_response = $provider->send_raw_request($test_request);
-            
-            // Step 5: Normalize test response
-            return $this->connection_test_normalizer->normalize_test_response($raw_response, $provider_name);
-            
-        } catch (Exception $e) {
-            return $this->connection_test_normalizer->create_error_response($e->getMessage(), $provider_name);
-        }
-    }
 
     /**
      * Get available models for provider

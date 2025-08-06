@@ -104,7 +104,6 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedResponseNormalizer.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedStreamingNormalizer.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedToolResultsNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedConnectionTestNormalizer.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedModelFetcher.php';
         
         // 2.7. LLM Provider Base Class and Providers (NEW ARCHITECTURE)
@@ -128,7 +127,6 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentRegistry.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ProviderSelector.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ApiKeyInput.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/TestConnection.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ModelSelector.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/TemperatureSlider.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/SystemPromptField.php';
@@ -159,7 +157,6 @@ if (!function_exists('ai_http_client_init')) {
         add_action('wp_ajax_ai_http_save_settings', ['AI_HTTP_Ajax_Handler', 'save_settings']);
         add_action('wp_ajax_ai_http_load_provider_settings', ['AI_HTTP_Ajax_Handler', 'load_provider_settings']);
         add_action('wp_ajax_ai_http_get_models', ['AI_HTTP_Ajax_Handler', 'get_models']);
-        add_action('wp_ajax_ai_http_test_connection', ['AI_HTTP_Ajax_Handler', 'test_connection']);
     }
 
     /**

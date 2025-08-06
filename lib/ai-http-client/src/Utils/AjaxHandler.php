@@ -3,7 +3,7 @@
  * AI HTTP Client - AJAX Handler
  * 
  * Provides WordPress AJAX endpoints for dynamic component interactions.
- * Handles provider settings, model fetching, and connection testing.
+ * Handles provider settings and model fetching.
  *
  * @package AIHttpClient\Utils
  * @author Chris Huber <https://chubes.net>
@@ -205,49 +205,4 @@ class AI_HTTP_Ajax_Handler {
         }
     }
     
-    /**
-     * Test connection to AI provider via AJAX
-     */
-    public static function test_connection() {
-        // Security verification
-        if (!check_ajax_referer('ai_http_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security verification failed', 'ai-http-client')]);
-            return;
-        }
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'ai-http-client')]);
-            return;
-        }
-        
-        // Get required parameters
-        $plugin_context = sanitize_text_field(wp_unslash($_POST['plugin_context'] ?? ''));
-        $provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? ''));
-        
-        if (empty($plugin_context) || empty($provider)) {
-            wp_send_json_error(['message' => __('Plugin context and provider are required', 'ai-http-client')]);
-            return;
-        }
-        
-        try {
-            $client = new AI_HTTP_Client([
-                'plugin_context' => $plugin_context,
-                'ai_type' => 'llm'
-            ]);
-            
-            $result = $client->test_connection($provider);
-            
-            if (is_wp_error($result)) {
-                wp_send_json_error(['message' => $result->get_error_message()]);
-            } else {
-                wp_send_json_success([
-                    'message' => __('Connection successful', 'ai-http-client'),
-                    'result' => $result
-                ]);
-            }
-            
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
-        }
-    }
 }

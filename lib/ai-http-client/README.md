@@ -224,7 +224,7 @@ All providers are **fully refactored** with unified architecture and support **d
 ### Key Components
 
 - **AI_HTTP_Client** - Main orchestrator using unified normalizers
-- **Unified Normalizers** - Shared logic for request/response conversion, streaming, tools, and connection testing
+- **Unified Normalizers** - Shared logic for request/response conversion, streaming, and tools
 - **Simple Providers** - Pure API communication classes (one per provider)
 - **Admin UI** - Complete WordPress admin interface with zero styling
 

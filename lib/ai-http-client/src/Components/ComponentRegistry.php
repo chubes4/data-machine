@@ -30,7 +30,6 @@ class AI_HTTP_Component_Registry {
         'system_prompt_field' => 'AI_HTTP_Extended_SystemPromptField',
         'max_tokens_input' => 'AI_HTTP_Extended_MaxTokensInput',
         'streaming_toggle' => 'AI_HTTP_Extended_StreamingToggle',
-        'test_connection' => 'AI_HTTP_Extended_TestConnection'
     ];
     
     /**

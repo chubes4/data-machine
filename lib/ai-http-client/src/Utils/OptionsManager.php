@@ -492,10 +492,10 @@ class AI_HTTP_Options_Manager {
                 // Step-aware form processing
                 $field_prefix = "ai_step_{$step_id}_";
                 
-                $provider = sanitize_text_field($_POST[$field_prefix . 'provider']);
+                $provider = sanitize_text_field(wp_unslash($_POST[$field_prefix . 'provider']));
                 $step_settings = array(
                     'provider' => $provider,
-                    'model' => sanitize_text_field($_POST[$field_prefix . 'model']),
+                    'model' => sanitize_text_field(wp_unslash($_POST[$field_prefix . 'model'])),
                     'temperature' => isset($_POST[$field_prefix . 'temperature']) ? floatval($_POST[$field_prefix . 'temperature']) : null,
                     'system_prompt' => isset($_POST[$field_prefix . 'system_prompt']) ? sanitize_textarea_field($_POST[$field_prefix . 'system_prompt']) : '',
                 );
@@ -514,10 +514,10 @@ class AI_HTTP_Options_Manager {
                 
             } else {
                 // Global form processing (existing behavior)
-                $provider = sanitize_text_field($_POST['ai_provider']);
+                $provider = sanitize_text_field(wp_unslash($_POST['ai_provider']));
                 $settings = array(
-                    'api_key' => sanitize_text_field($_POST['ai_api_key']),
-                    'model' => sanitize_text_field($_POST['ai_model']),
+                    'api_key' => sanitize_text_field(wp_unslash($_POST['ai_api_key'])),
+                    'model' => sanitize_text_field(wp_unslash($_POST['ai_model'])),
                     'temperature' => isset($_POST['ai_temperature']) ? floatval($_POST['ai_temperature']) : null,
                     'system_prompt' => isset($_POST['ai_system_prompt']) ? sanitize_textarea_field($_POST['ai_system_prompt']) : '',
                     'instructions' => isset($_POST['instructions']) ? sanitize_textarea_field($_POST['instructions']) : ''
@@ -562,7 +562,7 @@ class AI_HTTP_Options_Manager {
                 wp_send_json_error('Plugin context is required');
             }
             
-            $provider = sanitize_text_field($_POST['provider']);
+            $provider = sanitize_text_field(wp_unslash($_POST['provider']));
             $step_id = isset($_POST['step_id']) ? sanitize_key($_POST['step_id']) : null;
             
             $options_manager = new self($plugin_context, 'llm');

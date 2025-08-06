@@ -112,7 +112,6 @@ class AI_HTTP_ProviderManager_Component {
                 'core' => array('provider_selector', 'api_key_input', 'model_selector'),
                 'extended' => array()
             ),
-            'show_test_connection' => true,
             'show_save_button' => true, // NEW: Allow hiding save button for custom modal integration
             'allowed_providers' => array(), // Empty = all providers
             'wrapper_class' => 'ai-http-provider-manager',
@@ -352,56 +351,6 @@ class AI_HTTP_ProviderManager_Component {
                 </p>
             <?php endif; ?>
 
-            <?php if ($args['show_test_connection']): ?>
-                <div class="test-connection-section">
-                    <?php
-                    // Render TestConnection component
-                    try {
-                        $component_html = AI_HTTP_Component_Registry::render_component(
-                            'test_connection',
-                            $unique_id,
-                            [],
-                            $current_values
-                        );
-                        
-                        // WordPress-compliant form element escaping for admin interfaces
-                        $allowed_html = [
-                            'select' => [
-                                'id' => true, 'name' => true, 'class' => true, 
-                                'data-*' => true, 'onchange' => true
-                            ],
-                            'option' => ['value' => true, 'selected' => true],
-                            'input' => [
-                                'type' => true, 'id' => true, 'name' => true, 
-                                'class' => true, 'value' => true, 'placeholder' => true,
-                                'data-*' => true
-                            ],
-                            'textarea' => [
-                                'id' => true, 'name' => true, 'class' => true,
-                                'rows' => true, 'cols' => true, 'placeholder' => true,
-                                'data-*' => true
-                            ],
-                            'tr' => ['class' => true],
-                            'th' => ['scope' => true],
-                            'td' => ['colspan' => true],
-                            'label' => ['for' => true],
-                            'small' => ['class' => true],
-                            'br' => [],
-                            'span' => ['style' => true, 'class' => true, 'id' => true],
-                            'div' => ['class' => true, 'id' => true],
-                            'button' => ['type' => true, 'class' => true, 'onclick' => true, 'title' => true],
-                            'img' => ['src' => true, 'alt' => true, 'class' => true, 'draggable' => true, 'role' => true],
-                            'postbox' => ['class' => true],
-                            'inside' => ['class' => true]
-                        ];
-                        
-                        echo wp_kses($component_html, $allowed_html);
-                    } catch (Exception $e) {
-                        echo '<!-- Error rendering test connection component: ' . esc_html($e->getMessage()) . ' -->';
-                    }
-                    ?>
-                </div>
-            <?php endif; ?>
         </div>
 
         <?php
