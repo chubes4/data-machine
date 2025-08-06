@@ -42,12 +42,10 @@ function dm_register_files_input_filters() {
     });
     
     // Settings registration - parameter-matched to 'files' handler
-    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'files') {
-            return new FilesSettings();
-        }
-        return $settings;
-    }, 10, 2);
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        $all_settings['files'] = new FilesSettings();
+        return $all_settings;
+    });
     
     // Modal content registration - Files owns its handler-settings modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -66,7 +64,8 @@ function dm_register_files_input_filters() {
             }
             
             // Use proper filter-based template rendering
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'files');
+            $all_settings = apply_filters('dm_get_handler_settings', []);
+            $settings_instance = $all_settings['files'] ?? null;
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'files',

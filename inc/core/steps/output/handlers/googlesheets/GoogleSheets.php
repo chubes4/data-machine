@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\GoogleSheets;
 
-use DataMachine\Core\Steps\AI\AiResponseParser;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -51,8 +50,9 @@ class GoogleSheets {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Extract content from DataPacket JSON object
-        $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
+        // Access structured content directly from DataPacket (no parsing needed)
+        $title = $data_packet->content->title ?? '';
+        $content = $data_packet->content->body ?? '';
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
@@ -70,7 +70,8 @@ class GoogleSheets {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Google Sheets output handling.', ['user_id' => $user_id]);
+        
+        $logger && $logger->debug('Starting Google Sheets output handling.');
         
         // 1. Get configuration
         $output_config = $module_job_config['output_config']['googlesheets'] ?? [];
@@ -87,22 +88,12 @@ class GoogleSheets {
             ];
         }
 
-        // 3. Ensure user_id is provided
-        if (empty($user_id)) {
-            $logger && $logger->error('Google Sheets Output: User ID context is missing.');
-            return [
-                'success' => false,
-                'error' => __('Cannot access Google Sheets without a specified user account.', 'data-machine')
-            ];
-        }
+        // 3. Get authenticated Google Sheets service
+        $sheets_service = $this->auth->get_service();
 
-        // 4. Get authenticated Google Sheets service
-        $sheets_service = $this->auth->get_service($user_id);
-
-        // 5. Handle authentication errors
+        // 4. Handle authentication errors
         if (is_wp_error($sheets_service)) {
              $logger && $logger->error('Google Sheets Output Error: Failed to get authenticated service.', [
-                'user_id' => $user_id,
                 'error_code' => $sheets_service->get_error_code(),
                 'error_message' => $sheets_service->get_error_message(),
              ]);
@@ -112,29 +103,16 @@ class GoogleSheets {
              ];
         }
 
-        // 6. Parse AI output
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            $logger && $logger->error('Google Sheets Output: AI Response Parser service not available.');
-            return [
-                'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
-            ];
-        }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
-        $title = $parser->get_title();
-        $content = $parser->get_content();
-
+        // 5. Validate content from DataPacket
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Google Sheets Output: Parsed AI output is empty.', ['user_id' => $user_id]);
+            $logger && $logger->warning('Google Sheets Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot append empty content to Google Sheets.', 'data-machine')
             ];
         }
 
-        // 7. Prepare row data based on column mapping
+        // 6. Prepare row data based on column mapping
         $row_data = $this->prepare_row_data($title, $content, $input_metadata, $column_mapping);
 
         if (empty($row_data)) {
@@ -145,7 +123,7 @@ class GoogleSheets {
             ];
         }
 
-        // 8. Append data to Google Sheets
+        // 7. Append data to Google Sheets
         try {
             $result = $this->append_to_sheet($sheets_service, $spreadsheet_id, $worksheet_name, $row_data);
 

@@ -311,7 +311,7 @@ class TestDataFixtures {
     /**
      * Create test flow in mock database
      */
-    public static function createTestFlow(int $pipeline_id = null): int {
+    public static function createTestFlow(?int $pipeline_id = null): int {
         $flow_config = self::getSampleFlowConfig();
         if ($pipeline_id !== null) {
             $flow_config['pipeline_id'] = $pipeline_id;
@@ -325,7 +325,7 @@ class TestDataFixtures {
     /**
      * Create test job in mock database
      */
-    public static function createTestJob(int $pipeline_id = null, int $flow_id = null): int {
+    public static function createTestJob(?int $pipeline_id = null, ?int $flow_id = null): int {
         $job_data = self::getSampleJobData();
         if ($pipeline_id !== null) {
             $job_data['pipeline_id'] = $pipeline_id;

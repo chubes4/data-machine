@@ -47,13 +47,11 @@ function dm_register_wordpress_output_filters() {
         return $providers;
     });
     
-    // Settings registration - parameter-matched to 'wordpress_output' handler
-    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'wordpress_output') {
-            return new WordPressSettings();
-        }
-        return $settings;
-    }, 10, 2);
+    // Settings registration - pure discovery mode
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        $all_settings['wordpress_output'] = new WordPressSettings();
+        return $all_settings;
+    });
     
     // Modal content registration - WordPress owns its handler-settings and handler-auth modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -75,7 +73,8 @@ function dm_register_wordpress_output_filters() {
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'wordpress_output');
+            $all_settings = apply_filters('dm_get_handler_settings', []);
+            $settings_instance = $all_settings['wordpress_output'] ?? null;
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'wordpress_output',

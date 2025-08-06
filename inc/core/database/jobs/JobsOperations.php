@@ -184,7 +184,8 @@ class JobsOperations {
         }
         
         // Get direct database access to pipelines
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         if ( ! $db_pipelines ) {
             return [];
         }
@@ -235,7 +236,7 @@ class JobsOperations {
         }
         
         // Get flows service using filter-based discovery
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             // Fallback to direct pipeline query if flows service unavailable
             global $wpdb;

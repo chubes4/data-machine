@@ -76,12 +76,13 @@ $http_service = apply_filters('dm_get_http_service', null);
 $constants = apply_filters('dm_get_constants', null);
 $pipeline_context = apply_filters('dm_get_pipeline_context', null);
 
-// Database services - Direct discovery with type parameter
-$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-$db_flows = apply_filters('dm_get_database_service', null, 'flows');
-$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
-$db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+// Database services - Pure discovery with filtering
+$all_databases = apply_filters('dm_get_database_services', []);
+$db_jobs = $all_databases['jobs'] ?? null;
+$db_flows = $all_databases['flows'] ?? null;
+$db_pipelines = $all_databases['pipelines'] ?? null;
+$db_processed_items = $all_databases['processed_items'] ?? null;
+$db_remote_locations = $all_databases['remote_locations'] ?? null;
 
 // Handler discovery - Pure discovery with type filtering
 $all_handlers = apply_filters('dm_get_handlers', []);
@@ -92,6 +93,10 @@ $specific_handler = $all_handlers['twitter'] ?? null;
 // Authentication - Pure discovery with filtering
 $all_auth = apply_filters('dm_get_auth_providers', []);
 $twitter_auth = $all_auth['twitter'] ?? null;
+
+// Handler settings - Pure discovery with filtering  
+$all_settings = apply_filters('dm_get_handler_settings', []);
+$twitter_settings = $all_settings['twitter'] ?? null;
 
 // Context services - Pure discovery with filtering
 $all_contexts = apply_filters('dm_get_contexts', []);
@@ -155,6 +160,17 @@ php -l file.php             # Syntax check
 # Service Discovery Validation
 $all_services = apply_filters('dm_get_debug_services', []); # Debug service registration
 define('WP_DEBUG', true) && error_log(print_r($all_services, true)); # Service debugging
+
+# Architectural Compliance Verification
+# Verify zero parameter-based discovery patterns (should return NO RESULTS)
+grep -r "apply_filters.*dm_get_handler_settings.*null.*['\"]" inc/core/steps/
+grep -r "apply_filters.*dm_get_steps.*null.*['\"]" inc/engine/
+grep -r "apply_filters.*dm_get_handlers.*null.*['\"]" inc/engine/
+
+# Verify pure discovery patterns are used correctly
+grep -r "\$all_settings = apply_filters('dm_get_handler_settings'" inc/
+grep -r "\$all_steps = apply_filters('dm_get_steps'" inc/
+grep -r "\$all_handlers = apply_filters('dm_get_handlers'" inc/
 ```
 
 ## Components
@@ -567,7 +583,8 @@ if (in_array($action, $modal_actions)) {
 ## Critical Rules
 
 **Engine Agnosticism**: NEVER hardcode step types in `/inc/engine/` directory  
-**Service Access**: Always use `apply_filters('dm_get_service', null)` - never `new ServiceClass()`  
+**Pure Discovery Pattern**: NEVER use parameter-based filters like `apply_filters('dm_get_service', null, $param)` - always use pure discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;`  
+**Service Access**: Always use pure discovery patterns - never `new ServiceClass()` or parameter-based filters  
 **Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods  
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)  
 **CSS Namespace**: All admin CSS must use `dm-` prefix  

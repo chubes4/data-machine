@@ -75,10 +75,10 @@ class WordPress {
 
         switch ($destination_type) {
             case 'local':
-                return $this->publish_local($structured_content, $wordpress_config, $user_id, $input_metadata);
+                return $this->publish_local($structured_content, $wordpress_config, $input_metadata);
 
             case 'remote':
-                return $this->publish_remote($structured_content, $wordpress_config, $user_id, $input_metadata, $module_job_config);
+                return $this->publish_remote($structured_content, $wordpress_config, $input_metadata, $module_job_config);
 
             default:
                 return [
@@ -94,14 +94,14 @@ class WordPress {
      *
      * @param array $structured_content Structured content from DataPacket.
      * @param array $config Configuration array.
-     * @param int|null $user_id User ID.
      * @param array $input_metadata Input metadata.
      * @return array Result array.
      */
-    private function publish_local(array $structured_content, array $config, ?int $user_id, array $input_metadata): array {
+    private function publish_local(array $structured_content, array $config, array $input_metadata): array {
         // Get settings from config
         $post_type = $config['post_type'] ?? 'post';
         $post_status = $config['post_status'] ?? 'draft';
+        $post_author = $config['post_author'] ?? get_current_user_id();
         $category_id = $config['selected_local_category_id'] ?? -1;
         $tag_id = $config['selected_local_tag_id'] ?? -1;
 
@@ -144,7 +144,7 @@ class WordPress {
             'post_title' => $parsed_data['title'] ?: __('Untitled Post', 'data-machine'),
             'post_content' => $block_content,
             'post_status' => $post_status,
-            'post_author' => $user_id ?: get_current_user_id(),
+            'post_author' => $post_author,
             'post_type' => $post_type,
         );
 
@@ -314,12 +314,11 @@ class WordPress {
      *
      * @param array $structured_content Structured content from DataPacket.
      * @param array $config Configuration array.
-     * @param int|null $user_id User ID.
      * @param array $input_metadata Input metadata.
      * @param array $module_job_config Module job configuration.
      * @return array Result array.
      */
-    private function publish_remote(array $structured_content, array $config, ?int $user_id, array $input_metadata, array $module_job_config): array {
+    private function publish_remote(array $structured_content, array $config, array $input_metadata, array $module_job_config): array {
         // Initialize variables to avoid undefined variable warnings
         $assigned_category_name = null;
         $assigned_category_id = null;
@@ -341,7 +340,8 @@ class WordPress {
         }
 
         // Get remote locations database service
-        $db_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_locations = $all_databases['remote_locations'] ?? null;
         if (!$db_locations) {
             return [
                 'success' => false,
@@ -349,19 +349,13 @@ class WordPress {
             ];
         }
 
-        // Fetch location details (including decrypted password)
-        if (empty($user_id)) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->warning('No user context available for remote publish, attempting system access', ['location_id' => $location_id]);
-            $location = $db_locations->get_location($location_id, null, true, true); // Allow system access
-        } else {
-            $location = $db_locations->get_location($location_id, $user_id, true); // Normal user-verified access
-        }
+        // Fetch location details (using system access for admin-only architecture)
+        $location = $db_locations->get_location($location_id, null, true, true);
 
         if (!$location || empty($location->target_site_url) || empty($location->target_username) || !isset($location->password)) {
             $error_message = __('Could not retrieve details for the selected Remote Location.', 'data-machine');
             $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id, 'user_id' => $user_id]);
+            $logger && $logger->error($error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -371,7 +365,7 @@ class WordPress {
         if ($location->password === false) { // Check decryption failure
             $error_message = __('Failed to decrypt password for the selected Remote Location.', 'data-machine');
             $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id, 'user_id' => $user_id]);
+            $logger && $logger->error($error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -454,8 +448,8 @@ class WordPress {
         $site_supports_categories = false;
         $site_supports_tags = false;
 
-        if (!empty($location_id) && !empty($user_id)) {
-            $location_info = $db_locations->get_location($location_id, $user_id, false);
+        if (!empty($location_id)) {
+            $location_info = $db_locations->get_location($location_id, null, false, true);
             if ($location_info && !empty($location_info->synced_site_info)) {
                 $site_info = json_decode($location_info->synced_site_info, true);
                 $remote_cats = $site_info['taxonomies']['category']['terms'] ?? [];
@@ -717,7 +711,7 @@ class WordPress {
      */
     private static function get_remote_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+        $db_remote_locations = $all_databases['remote_locations'] ?? null;
         if (!$db_remote_locations) {
             throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
         }

@@ -30,22 +30,13 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_pipelines_database_filters() {
     
-    // Database service registration - Pipelines declares itself as 'pipelines' database service
-    add_filter('dm_get_database_service', function($service, $type) {
-        if ($service !== null) {
-            return $service; // External override provided
+    // Database service registration - Pure discovery pattern (collection building)
+    add_filter('dm_get_database_services', function($services) {
+        if (!isset($services['pipelines'])) {
+            $services['pipelines'] = new Pipelines();
         }
-        
-        if ($type === 'pipelines') {
-            static $pipelines_instance = null;
-            if ($pipelines_instance === null) {
-                $pipelines_instance = new Pipelines();
-            }
-            return $pipelines_instance;
-        }
-        
-        return $service;
-    }, 10, 2);
+        return $services;
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

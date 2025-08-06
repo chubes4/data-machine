@@ -179,7 +179,8 @@ class WordPressSettings {
      */
     private static function get_remote_airdrop_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_remote_locations = $all_databases['remote_locations'] ?? null;
         $locations = $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : [];
 
         $options = [0 => __('Select a Remote Location', 'data-machine')];

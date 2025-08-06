@@ -30,22 +30,13 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_processed_items_database_filters() {
     
-    // Database service registration - ProcessedItems declares itself as 'processed_items' database service
-    add_filter('dm_get_database_service', function($service, $type) {
-        if ($service !== null) {
-            return $service; // External override provided
+    // Database service registration - Pure discovery pattern (collection building)
+    add_filter('dm_get_database_services', function($services) {
+        if (!isset($services['processed_items'])) {
+            $services['processed_items'] = new ProcessedItems();
         }
-        
-        if ($type === 'processed_items') {
-            static $processed_items_instance = null;
-            if ($processed_items_instance === null) {
-                $processed_items_instance = new ProcessedItems();
-            }
-            return $processed_items_instance;
-        }
-        
-        return $service;
-    }, 10, 2);
+        return $services;
+    });
     
     // Processed Items Manager service - handles duplicate tracking and item management
     add_filter('dm_get_processed_items_manager', function($service) {

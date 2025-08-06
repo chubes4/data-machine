@@ -106,7 +106,8 @@ class AIStep {
             $aggregated_context = $context_bridge->aggregate_pipeline_context($all_packets);
             
             // Get job and pipeline ID for including pipeline prompts in AI request
-            $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
             if (!$db_jobs) {
                 return $this->fail_job($job_id, 'Database jobs service unavailable');
             }
@@ -255,7 +256,8 @@ class AIStep {
      * @return int|null Pipeline ID or null if not found
      */
     private function get_pipeline_id_from_job_id(int $job_id): ?int {
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         if (!$db_jobs) {
             return null;
         }
@@ -337,7 +339,8 @@ class AIStep {
             return false;
         }
         
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         $json_data = $data_packet->toJson();
         
         return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);

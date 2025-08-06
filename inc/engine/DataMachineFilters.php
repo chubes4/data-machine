@@ -174,7 +174,8 @@ function dm_register_context_retrieval_service() {
         }
         
         // Get Jobs database service
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         if (!$db_jobs) {
             return [];
         }

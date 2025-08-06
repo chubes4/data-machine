@@ -491,8 +491,9 @@ function dm_handle_save_handler_settings() {
     
     $handler_config = $handlers[$handler_slug];
     
-    // Get settings class to process form data
-    $settings_instance = apply_filters('dm_get_handler_settings', null, $handler_slug);
+    // Get settings class to process form data using pure discovery
+    $all_settings = apply_filters('dm_get_handler_settings', []);
+    $settings_instance = $all_settings[$handler_slug] ?? null;
     $handler_settings = [];
     
     // If handler has settings, sanitize the form data
@@ -511,7 +512,8 @@ function dm_handle_save_handler_settings() {
     
     // For flow context, add handler to flow configuration
     if ($flow_id > 0) {
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
             return;

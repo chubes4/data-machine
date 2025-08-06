@@ -115,7 +115,8 @@ class JobsStatus {
         }
 
         // Update flow last_run_at using existing services if available
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         if ($db_flows && !empty($job->flow_id)) {
             // Update flow's last_run_at in scheduling configuration
             $flow_updated = $db_flows->update_flow_last_run($job->flow_id, current_time('mysql', 1));
@@ -176,7 +177,7 @@ class JobsStatus {
      * @param int $exclude_job_id Optional job ID to exclude from the check.
      * @return bool True if there are active jobs, false otherwise.
      */
-    public function has_active_jobs_for_flow( int $flow_id, int $exclude_job_id = null ): bool {
+    public function has_active_jobs_for_flow( int $flow_id, ?int $exclude_job_id = null ): bool {
         global $wpdb;
 
         if ( $exclude_job_id ) {
@@ -204,7 +205,7 @@ class JobsStatus {
      * @param int $exclude_job_id Optional job ID to exclude from the check.
      * @return bool True if there are active jobs, false otherwise.
      */
-    public function has_active_jobs_for_pipeline( int $pipeline_id, int $exclude_job_id = null ): bool {
+    public function has_active_jobs_for_pipeline( int $pipeline_id, ?int $exclude_job_id = null ): bool {
         global $wpdb;
 
         if ( $exclude_job_id ) {

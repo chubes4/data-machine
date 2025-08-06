@@ -48,7 +48,8 @@ class WordPress {
      * @return RemoteLocations The remote locations database service.
      */
     protected function get_db_remote_locations() {
-        return apply_filters('dm_get_database_service', null, 'remote_locations');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        return $all_databases['remote_locations'] ?? null;
     }
 
     /**
@@ -906,7 +907,7 @@ class WordPress {
      */
     private static function get_remote_airdrop_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+        $db_remote_locations = $all_databases['remote_locations'] ?? null;
         if (!$db_remote_locations) {
             throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
         }

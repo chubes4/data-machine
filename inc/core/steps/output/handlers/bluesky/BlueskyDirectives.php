@@ -28,8 +28,17 @@ class BlueskyDirectives {
         }
         
         $bluesky_config = $output_config['bluesky'] ?? [];
-        $include_source = $bluesky_config['bluesky_include_source'] ?? true;
-        $enable_images = $bluesky_config['bluesky_enable_images'] ?? true;
+        
+        if (!isset($bluesky_config['bluesky_include_source'])) {
+            throw new \InvalidArgumentException('Bluesky configuration missing required bluesky_include_source setting.');
+        }
+        
+        if (!isset($bluesky_config['bluesky_enable_images'])) {
+            throw new \InvalidArgumentException('Bluesky configuration missing required bluesky_enable_images setting.');
+        }
+        
+        $include_source = $bluesky_config['bluesky_include_source'];
+        $enable_images = $bluesky_config['bluesky_enable_images'];
         
         // Build handler-specific directive content
         $bluesky_directives = "\n\n## Bluesky Platform Requirements\n\n";

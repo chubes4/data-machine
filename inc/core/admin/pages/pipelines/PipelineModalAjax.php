@@ -168,7 +168,8 @@ class PipelineModalAjax
         }
 
         // Check if this is the first flow step by counting existing steps in flows
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         $flows = $db_flows ? $db_flows->get_flows_by_pipeline($_POST['pipeline_id'] ?? 0) : [];
         $is_first_step = empty($flows) || empty($flows[0]['flow_config'] ?? []);
 
@@ -203,7 +204,8 @@ class PipelineModalAjax
         }
 
         // Get database service
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
             return;
@@ -417,7 +419,7 @@ class PipelineModalAjax
         }
         
         // Get remote locations database service
-        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+        $db_remote_locations = $all_databases['remote_locations'] ?? null;
         if (!$db_remote_locations) {
             wp_send_json_error(['message' => __('Remote locations database service unavailable', 'data-machine')]);
         }
@@ -505,8 +507,9 @@ class PipelineModalAjax
         
         $handler_config = $handlers[$handler_slug];
         
-        // Get settings class to process form data
-        $settings_instance = apply_filters('dm_get_handler_settings', null, $handler_slug);
+        // Get settings class to process form data using pure discovery
+        $all_settings = apply_filters('dm_get_handler_settings', []);
+        $settings_instance = $all_settings[$handler_slug] ?? null;
         $handler_settings = [];
         
         // If handler has settings, sanitize the form data
@@ -525,7 +528,8 @@ class PipelineModalAjax
         
         // For flow context, update or add handler to flow configuration
         if ($flow_id > 0) {
-            $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+            $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
             if (!$db_flows) {
                 wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
             }

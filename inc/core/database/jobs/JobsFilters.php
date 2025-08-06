@@ -30,22 +30,13 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_jobs_database_filters() {
     
-    // Database service registration - Jobs declares itself as 'jobs' database service
-    add_filter('dm_get_database_service', function($service, $type) {
-        if ($service !== null) {
-            return $service; // External override provided
+    // Database service registration - Pure discovery pattern (collection building)
+    add_filter('dm_get_database_services', function($services) {
+        if (!isset($services['jobs'])) {
+            $services['jobs'] = new Jobs();
         }
-        
-        if ($type === 'jobs') {
-            static $jobs_instance = null;
-            if ($jobs_instance === null) {
-                $jobs_instance = new Jobs();
-            }
-            return $jobs_instance;
-        }
-        
-        return $service;
-    }, 10, 2);
+        return $services;
+    });
     
     // Job Status Manager service - handles job state transitions
     add_filter('dm_get_job_status_manager', function($service) {

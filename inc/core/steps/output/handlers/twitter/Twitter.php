@@ -13,8 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\Twitter;
 
-use DataMachine\Core\Steps\AI\AiResponseParser;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
@@ -51,8 +49,9 @@ class Twitter {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Extract content from DataPacket JSON object
-        $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
+        // Access structured content directly from DataPacket (no parsing needed)
+        $title = $data_packet->content->title ?? '';
+        $content = $data_packet->content->body ?? '';
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
@@ -91,22 +90,10 @@ class Twitter {
              ];
         }
 
-        // 5. Parse AI output
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            $logger && $logger->error('Twitter Output: AI Response Parser service not available.');
-            return [
-                'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
-            ];
-        }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
-        $title = $parser->get_title();
-        $content = $parser->get_content(); // Assuming content is the main text for the tweet
+        // 5. Validate content from DataPacket
 
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Twitter Output: Parsed AI output is empty.');
+            $logger && $logger->warning('Twitter Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Twitter.', 'data-machine')
@@ -149,7 +136,7 @@ class Twitter {
 
             // --- Image Upload Logic ---
             $image_source_url = $input_metadata['image_source_url'] ?? null;
-            $image_alt_text = $parser ? ($parser->get_title() ?: $parser->get_content_summary(50)) : ''; // Use title or summary as alt text
+            $image_alt_text = $title ?: substr($content, 0, 50); // Use title or content summary as alt text
 
             if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_source_url, $logger)) {
                 $logger && $logger->debug('Attempting to upload image to Twitter.', ['image_url' => $image_source_url]);

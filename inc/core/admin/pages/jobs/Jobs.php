@@ -59,7 +59,8 @@ class Jobs
      */
     private function get_recent_jobs()
     {
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         if (!$db_jobs) {
             return [];
         }

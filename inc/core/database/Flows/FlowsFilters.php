@@ -30,22 +30,13 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_flows_database_filters() {
     
-    // Database service registration - Flows declares itself as 'flows' database service
-    add_filter('dm_get_database_service', function($service, $type) {
-        if ($service !== null) {
-            return $service; // External override provided
+    // Database service registration - Pure discovery pattern (collection building)
+    add_filter('dm_get_database_services', function($services) {
+        if (!isset($services['flows'])) {
+            $services['flows'] = new Flows();
         }
-        
-        if ($type === 'flows') {
-            static $flows_instance = null;
-            if ($flows_instance === null) {
-                $flows_instance = new Flows();
-            }
-            return $flows_instance;
-        }
-        
-        return $service;
-    }, 10, 2);
+        return $services;
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

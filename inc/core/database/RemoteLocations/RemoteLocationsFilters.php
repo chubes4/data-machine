@@ -30,22 +30,13 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_remote_locations_database_filters() {
     
-    // Database service registration - Remote Locations declares itself as 'remote_locations' database service
-    add_filter('dm_get_database_service', function($service, $type) {
-        if ($service !== null) {
-            return $service; // External override provided
+    // Database service registration - Pure discovery pattern (collection building)
+    add_filter('dm_get_database_services', function($services) {
+        if (!isset($services['remote_locations'])) {
+            $services['remote_locations'] = new RemoteLocations();
         }
-        
-        if ($type === 'remote_locations') {
-            static $remote_locations_instance = null;
-            if ($remote_locations_instance === null) {
-                $remote_locations_instance = new RemoteLocations();
-            }
-            return $remote_locations_instance;
-        }
-        
-        return $service;
-    }, 10, 2);
+        return $services;
+    });
     
     // Modal content registration - Remote Locations modal for pipeline integration
     add_filter('dm_get_modal', function($content, $template) {
@@ -55,8 +46,9 @@ function dm_register_remote_locations_database_filters() {
         }
         
         if ($template === 'remote-locations-manager') {
-            // Get Remote Locations service
-            $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+            // Get Remote Locations service via pure discovery
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_remote_locations = $all_databases['remote_locations'] ?? null;
             
             return apply_filters('dm_render_template', '', 'modal/remote-locations-manager', [
                 'remote_locations_service' => $db_remote_locations,

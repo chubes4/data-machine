@@ -47,13 +47,11 @@ function dm_register_threads_filters() {
         return $providers;
     });
     
-    // Settings registration - parameter-matched to 'threads' handler
-    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'threads') {
-            return new ThreadsSettings();
-        }
-        return $settings;
-    }, 10, 2);
+    // Settings registration - pure discovery mode
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        $all_settings['threads'] = new ThreadsSettings();
+        return $all_settings;
+    });
     
     // Modal content registration - Threads owns its handler-settings and handler-auth modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -75,7 +73,8 @@ function dm_register_threads_filters() {
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'threads');
+            $all_settings = apply_filters('dm_get_handler_settings', []);
+            $settings_instance = $all_settings['threads'] ?? null;
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'threads',

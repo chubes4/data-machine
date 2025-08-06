@@ -48,7 +48,8 @@ class ProcessedItemsManager {
 			return false;
 		}
 
-		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_processed_items = $all_databases['processed_items'] ?? null;
 		$is_processed = $db_processed_items->has_item_been_processed( $flow_id, $source_type, $identifier );
 		
 		if ( $is_processed ) {
@@ -90,7 +91,8 @@ class ProcessedItemsManager {
 			return false;
 		}
 
-		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_processed_items = $all_databases['processed_items'] ?? null;
 		$success = $db_processed_items->add_processed_item( $flow_id, $source_type, $identifier );
 		
 		$logger = apply_filters('dm_get_logger', null);

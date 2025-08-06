@@ -37,7 +37,8 @@ class OutputStep {
      */
     public function execute(int $job_id, array $data_packets = []): bool {
         $logger = apply_filters('dm_get_logger', null);
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
 
         try {
             $logger->debug('Output Step: Starting data publishing (closed-door)', ['job_id' => $job_id]);
@@ -132,7 +133,8 @@ class OutputStep {
      * @return array|null Step configuration or null if not found
      */
     private function get_step_configuration(int $job_id, string $step_name): ?array {
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         
         // Get job to find pipeline configuration
         $job = $db_jobs->get_job($job_id);
@@ -147,7 +149,7 @@ class OutputStep {
         }
 
         // Get pipeline-level flow configuration
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         if ($db_pipelines) {
             $config = $db_pipelines->get_pipeline_flow_configuration($pipeline_id);
             $flow_config = isset($config['steps']) ? $config['steps'] : [];
@@ -407,7 +409,8 @@ class OutputStep {
             return false;
         }
         
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         $json_data = $data_packet->toJson();
         
         return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);

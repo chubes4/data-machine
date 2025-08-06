@@ -76,8 +76,9 @@ class ProcessingOrchestrator {
 		try {
 			// Get services via filters
 			$logger = apply_filters('dm_get_logger', null);
-			$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-			$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+			$all_databases = apply_filters('dm_get_database_services', []);
+			$db_jobs = $all_databases['jobs'] ?? null;
+			$db_pipelines = $all_databases['pipelines'] ?? null;
 			
 			if (!$logger || !$db_jobs) {
 				return false;
@@ -467,7 +468,8 @@ class ProcessingOrchestrator {
 
 		// Get required services
 		$pipeline_context = apply_filters( 'dm_get_pipeline_context', null );
-		$db_jobs = apply_filters( 'dm_get_database_service', null, 'jobs' );
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_jobs = $all_databases['jobs'] ?? null;
 
 		if ( ! $pipeline_context || ! $db_jobs ) {
 			$logger->warning( 'Required services unavailable for all DataPackets retrieval', [

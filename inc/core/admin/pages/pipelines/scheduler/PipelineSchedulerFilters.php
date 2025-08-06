@@ -87,7 +87,8 @@ function dm_register_pipeline_scheduler_filters() {
 function render_flow_schedule_modal(int $flow_id, array $context): string
 {
     // Get flow data
-    $flows_db = apply_filters('dm_get_database_service', null, 'flows');
+    $all_databases = apply_filters('dm_get_database_services', []);
+    $flows_db = $all_databases['flows'] ?? null;
     if (!$flows_db) {
         return '<div class="dm-modal-error"><p>' . esc_html__('Database service unavailable', 'data-machine') . '</p></div>';
     }

@@ -37,7 +37,8 @@ class PipelineContext {
      * @return array Array of step names in execution order.
      */
     public function get_job_step_sequence(int $job_id): array {
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         if (!$db_jobs) {
             return [];
         }
@@ -52,7 +53,8 @@ class PipelineContext {
      * @return string|null Current step name or null if not found.
      */
     public function get_current_step_name(int $job_id): ?string {
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         if (!$db_jobs) {
             return null;
         }

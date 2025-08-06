@@ -37,7 +37,8 @@ class PipelineScheduler
     public function activate_flow(int $flow_id): bool
     {
         // Get flow data via filters
-        $flows_db = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $flows_db = $all_databases['flows'] ?? null;
         if (!$flows_db) {
             return false;
         }
@@ -137,7 +138,8 @@ class PipelineScheduler
         $this->deactivate_flow($flow_id);
 
         // Update database
-        $flows_db = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $flows_db = $all_databases['flows'] ?? null;
         if (!$flows_db) {
             return false;
         }
@@ -227,7 +229,8 @@ class PipelineScheduler
     public function execute_flow(int $flow_id): bool
     {
         // Get flow data
-        $flows_db = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $flows_db = $all_databases['flows'] ?? null;
         if (!$flows_db) {
             return false;
         }

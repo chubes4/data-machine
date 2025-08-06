@@ -47,13 +47,11 @@ function dm_register_twitter_filters() {
         return $providers;
     });
     
-    // Settings registration - parameter-matched to 'twitter' handler  
-    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'twitter') {
-            return new TwitterSettings();
-        }
-        return $settings;
-    }, 10, 2);
+    // Settings registration - pure discovery mode
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        $all_settings['twitter'] = new TwitterSettings();
+        return $all_settings;
+    });
     
     // Modal content registration - Twitter owns its handler-settings and handler-auth modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -75,7 +73,8 @@ function dm_register_twitter_filters() {
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'twitter');
+            $all_settings = apply_filters('dm_get_handler_settings', []);
+            $settings_instance = $all_settings['twitter'] ?? null;
             
             $template_variables = [
                 'handler_slug' => 'twitter',

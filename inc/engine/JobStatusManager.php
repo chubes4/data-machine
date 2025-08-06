@@ -64,7 +64,8 @@ class JobStatusManager {
 	 */
 	public function complete(int $job_id, string $status = 'completed', ?string $error_details = null, ?string $message = null): bool {
 		$logger = apply_filters('dm_get_logger', null);
-		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_jobs = $all_databases['jobs'] ?? null;
 		
 		// Validate it's a valid completion status
 		if (!in_array($status, ['completed', 'completed_with_errors'], true)) {
@@ -102,7 +103,8 @@ class JobStatusManager {
 	 */
 	public function fail(int $job_id, string $error_message): bool {
 		$logger = apply_filters('dm_get_logger', null);
-		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_jobs = $all_databases['jobs'] ?? null;
 		
 		$error_data = wp_json_encode([
 			'error' => $error_message,
@@ -135,7 +137,8 @@ class JobStatusManager {
 	 * @return string|null The current status, or null if job not found.
 	 */
 	public function get_status(int $job_id): ?string {
-		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_jobs = $all_databases['jobs'] ?? null;
 		$job = $db_jobs->get_job($job_id);
 		return $job ? $job->status : null;
 	}
@@ -173,7 +176,8 @@ class JobStatusManager {
 	 */
 	private function transition_status(int $job_id, string $new_status, string $log_message): bool {
 		$logger = apply_filters('dm_get_logger', null);
-		$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_jobs = $all_databases['jobs'] ?? null;
 		
 		// Get current status
 		$current_status = $this->get_status($job_id);

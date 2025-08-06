@@ -45,12 +45,10 @@ function dm_register_googlesheets_input_filters() {
     });
     
     // Settings registration - parameter-matched to 'googlesheets_input' handler
-    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'googlesheets_input') {
-            return new GoogleSheetsInputSettings();
-        }
-        return $settings;
-    }, 10, 2);
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        $all_settings['googlesheets_input'] = new GoogleSheetsInputSettings();
+        return $all_settings;
+    });
     
     // Modal content registration - Google Sheets Input owns its handler-settings and handler-auth modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -72,7 +70,8 @@ function dm_register_googlesheets_input_filters() {
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'googlesheets');
+            $all_settings = apply_filters('dm_get_handler_settings', []);
+            $settings_instance = $all_settings['googlesheets'] ?? null;
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'googlesheets',

@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\Facebook;
 
-use DataMachine\Core\Steps\AI\AiResponseParser;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -52,8 +51,9 @@ class Facebook {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Extract content from DataPacket JSON object
-        $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
+        // Access structured content directly from DataPacket (no parsing needed)
+        $title = $data_packet->content->title ?? '';
+        $content = $data_packet->content->body ?? '';
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
@@ -69,7 +69,7 @@ class Facebook {
         
         // Get logger service via filter
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Facebook output handling.', ['user_id' => $user_id]);
+        $logger && $logger->debug('Starting Facebook output handling.');
 
         // 1. Get config
         $output_config = $module_job_config['output_config']['facebook'] ?? []; // Use 'facebook' sub-key
@@ -81,22 +81,12 @@ class Facebook {
         $include_videos = !empty($output_config['include_videos']);
         $link_handling = $output_config['link_handling'] ?? 'append';
 
-        // 2. Ensure user_id is provided
-        if (empty($user_id)) {
-            $logger && $logger->error('Facebook Output: User ID context is missing.');
-            return [
-                'success' => false,
-                'error' => __('Cannot post to Facebook without a specified user account.', 'data-machine')
-            ];
-        }
-
-        // 3. Get authenticated Page credentials using internal FacebookAuth
-        $page_id = $this->auth->get_page_id($user_id);
-        $page_access_token = $this->auth->get_page_access_token($user_id);
+        // 2. Get authenticated Page credentials using internal FacebookAuth
+        $page_id = $this->auth->get_page_id();
+        $page_access_token = $this->auth->get_page_access_token();
 
         if (empty($page_id) || empty($page_access_token)) {
             $logger && $logger->error('Facebook Output: Failed to get Page ID or Page Access Token.', [
-                'user_id' => $user_id, 
                 'page_id_found' => !empty($page_id), 
                 'token_found' => !empty($page_access_token)
             ]);
@@ -106,24 +96,14 @@ class Facebook {
             ];
         }
         
-        $logger && $logger->debug('Facebook Output: Retrieved Page credentials.', ['user_id' => $user_id, 'page_id' => $page_id]);
+        $logger && $logger->debug('Facebook Output: Retrieved Page credentials.', ['page_id' => $page_id]);
 
-        // 4. Parse AI output
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            $logger && $logger->error('Facebook Output: AI Response Parser service not available.');
-            return [
-                'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
-            ];
-        }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
-        $content = $parser->get_content();
+        // 4. Validate content from DataPacket
         $source_link = $input_metadata['source_url'] ?? null;
+        $post_content = $title ? $title . ": " . $content : $content;
 
-        if (empty($content)) {
-            $logger && $logger->warning('Facebook Output: Parsed AI output content is empty.', ['user_id' => $user_id]);
+        if (empty($title) && empty($content)) {
+            $logger && $logger->warning('Facebook Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Facebook.', 'data-machine')
@@ -155,24 +135,24 @@ class Facebook {
             if ($include_images) {
                 $endpoint = "/{$page_id}/photos";
                 $api_params = [
-                    'caption' => $content,
+                    'caption' => $post_content,
                     'url' => $image_url
                 ];
             } else {
                 // Fallback to text post if images disabled
                 $endpoint = "/{$page_id}/feed";
-                $api_params = ['message' => $content];
+                $api_params = ['message' => $post_content];
             }
         } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL) && $include_videos) {
             // Video Post (Fallback to Text with video link)
-            $logger && $logger->debug('Facebook API: Including video link in text post.', ['video_url' => $video_url, 'user_id' => $user_id]);
-            $content .= "\n\nVideo: " . $video_url;
+            $logger && $logger->debug('Facebook API: Including video link in text post.', ['video_url' => $video_url]);
+            $post_content .= "\n\nVideo: " . $video_url;
             $endpoint = "/{$page_id}/feed";
-            $api_params = ['message' => $content];
+            $api_params = ['message' => $post_content];
         } else {
             // Text-Only Post
             $endpoint = "/{$page_id}/feed";
-            $api_params = ['message' => $content];
+            $api_params = ['message' => $post_content];
         }
 
         // Add the Page Access Token to parameters
@@ -188,7 +168,6 @@ class Facebook {
             if (is_wp_error($http_response)) {
                 $logger && $logger->error('Facebook API Error: HTTP request failed.', [
                     'error' => $http_response->get_error_message(), 
-                    'user_id' => $user_id
                 ]);
                 return [
                     'success' => false,
@@ -216,7 +195,6 @@ class Facebook {
                 $logger && $logger->error('Facebook API Error: Received error response.', [
                     'http_code' => $http_code, 
                     'fb_error' => $data['error'], 
-                    'user_id' => $user_id
                 ]);
                 return [
                     'success' => false,
@@ -253,8 +231,7 @@ class Facebook {
                         $logger && $logger->warning('Facebook API: Failed to post source link comment.', [
                             'post_id' => $post_id,
                             'error' => $comment_response->get_error_message(),
-                            'user_id' => $user_id
-                        ]);
+                                ]);
                     } else {
                         $comment_body = $comment_response['body'];
                         $comment_data = $http_service->parse_json($comment_body, 'Facebook Comments API');
@@ -264,21 +241,18 @@ class Facebook {
                             $logger && $logger->warning('Facebook API: Failed to parse comment response.', [
                                 'post_id' => $post_id,
                                 'error' => $comment_data->get_error_message(),
-                                'user_id' => $user_id
-                            ]);
+                                        ]);
                         } elseif (isset($comment_data['error'])) {
                             $logger && $logger->warning('Facebook API: Failed to post source link comment (API error).', [
                                 'post_id' => $post_id,
                                 'http_code' => $comment_http_code,
                                 'fb_error' => $comment_data['error'],
-                                'user_id' => $user_id
-                            ]);
+                                        ]);
                         } elseif ($comment_http_code >= 200 && $comment_http_code < 300 && isset($comment_data['id'])) {
                             $logger && $logger->debug('Facebook API: Successfully posted source link as comment.', [
                                 'post_id' => $post_id, 
                                 'comment_id' => $comment_data['id'], 
-                                'user_id' => $user_id
-                            ]);
+                                        ]);
                         }
                     }
                 }
@@ -297,7 +271,6 @@ class Facebook {
                 $logger && $logger->error('Facebook API Error: Unexpected response format or missing post ID.', [
                     'http_code' => $http_code, 
                     'response_body' => $body, 
-                    'user_id' => $user_id
                 ]);
                 return [
                     'success' => false,

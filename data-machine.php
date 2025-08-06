@@ -341,30 +341,31 @@ function activate_data_machine() {
 	// Initialize filter systems needed for activation
 	dm_register_database_service_system();
 
-	// Create/Update all database tables using filter-based database service access
+	// Create/Update all database tables using pure discovery pattern
 	// Maintains architectural consistency with filter-based approach
-	$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+	$all_databases = apply_filters('dm_get_database_services', []);
+	$db_pipelines = $all_databases['pipelines'] ?? null;
 	if ($db_pipelines) {
 		$db_pipelines->create_table();
 	}
 
-	$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+	$db_flows = $all_databases['flows'] ?? null;
 	if ($db_flows) {
 		$db_flows->create_table();
 	}
 
-	$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+	$db_jobs = $all_databases['jobs'] ?? null;
 	if ($db_jobs) {
 		$db_jobs->create_table();
 	}
 
-	$db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+	$db_remote_locations = $all_databases['remote_locations'] ?? null;
 	if ($db_remote_locations) {
 		$db_remote_locations->create_table();
 	}
 
-	// ProcessedItems table creation via filter-based database service access
-	$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+	// ProcessedItems table creation via pure discovery pattern
+	$db_processed_items = $all_databases['processed_items'] ?? null;
 	if ($db_processed_items) {
 		$db_processed_items->create_table();
 	}

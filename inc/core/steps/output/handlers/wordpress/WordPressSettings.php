@@ -106,6 +106,14 @@ class WordPressSettings {
             }
         }
 
+        // Get available WordPress users for post authorship
+        $user_options = [];
+        $users = get_users(['fields' => ['ID', 'display_name', 'user_login']]);
+        foreach ($users as $user) {
+            $display_name = !empty($user->display_name) ? $user->display_name : $user->user_login;
+            $user_options[$user->ID] = $display_name;
+        }
+
         return [
             'post_type' => [
                 'type' => 'select',
@@ -123,6 +131,12 @@ class WordPressSettings {
                     'pending' => __('Pending Review', 'data-machine'),
                     'private' => __('Private', 'data-machine'),
                 ],
+            ],
+            'post_author' => [
+                'type' => 'select',
+                'label' => __('Post Author', 'data-machine'),
+                'description' => __('Select which WordPress user to publish posts under.', 'data-machine'),
+                'options' => $user_options,
             ],
             'selected_local_category_id' => [
                 'type' => 'select',
@@ -147,7 +161,8 @@ class WordPressSettings {
      */
     private static function get_remote_fields(array $current_config = []): array {
         // Get remote locations service via filter system
-        $db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_remote_locations = $all_databases['remote_locations'] ?? null;
         $locations = $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : [];
 
         $options = [0 => __('Select a Remote Location', 'data-machine')];
@@ -260,6 +275,7 @@ class WordPressSettings {
         $sanitized = [
             'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
             'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'draft'),
+            'post_author' => absint($raw_settings['post_author'] ?? get_current_user_id()),
         ];
 
         // Sanitize Category ID/Mode
@@ -323,6 +339,7 @@ class WordPressSettings {
             'destination_type' => 'local',
             'post_type' => 'post',
             'post_status' => 'draft',
+            'post_author' => get_current_user_id(),
             'selected_local_category_id' => 'instruct_model',
             'selected_local_tag_id' => 'instruct_model',
             'post_date_source' => 'current_date',

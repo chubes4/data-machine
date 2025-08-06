@@ -47,13 +47,11 @@ function dm_register_reddit_input_filters() {
         return $providers;
     });
     
-    // Settings registration - parameter-matched to 'reddit' handler
-    add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'reddit') {
-            return new RedditSettings();
-        }
-        return $settings;
-    }, 10, 2);
+    // Settings registration - pure discovery mode
+    add_filter('dm_get_handler_settings', function($all_settings) {
+        $all_settings['reddit'] = new RedditSettings();
+        return $all_settings;
+    });
     
     // Modal content registration - Reddit owns its handler-settings and handler-auth modal content
     add_filter('dm_get_modal', function($content, $template) {
@@ -75,7 +73,8 @@ function dm_register_reddit_input_filters() {
         
         if ($template === 'handler-settings') {
             // Settings modal template
-            $settings_instance = apply_filters('dm_get_handler_settings', null, 'reddit');
+            $all_settings = apply_filters('dm_get_handler_settings', []);
+            $settings_instance = $all_settings['reddit'] ?? null;
             
             return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
                 'handler_slug' => 'reddit',

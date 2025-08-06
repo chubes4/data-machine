@@ -109,14 +109,15 @@ class BlueskyAuth {
 
         $access_token = $session_data['accessJwt'] ?? null;
         $did = $session_data['did'] ?? null;
-        $pds_url = $session_data['pds_url'] ?? 'https://bsky.social';
+        $pds_url = $session_data['pds_url'] ?? null;
 
-        if (empty($access_token) || empty($did)) {
+        if (empty($access_token) || empty($did) || empty($pds_url)) {
             $logger && $logger->error('Bluesky session data incomplete after authentication.', [
                 'has_token' => !empty($access_token),
-                'has_did' => !empty($did)
+                'has_did' => !empty($did),
+                'has_pds_url' => !empty($pds_url)
             ]);
-            return new \WP_Error('bluesky_session_incomplete', __('Bluesky authentication succeeded but returned incomplete session data.', 'data-machine'));
+            return new \WP_Error('bluesky_session_incomplete', __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'data-machine'));
         }
 
         // Add handle to session data for URL building
@@ -200,31 +201,26 @@ class BlueskyAuth {
                 sprintf(__('Bluesky authentication failed: %1$s (Code: %2$d)', 'data-machine'), $error_message, $response_code));
         }
 
-        // Add PDS URL to session data
+        // Require PDS URL in session data - no defaults or inference
         if (empty($session_data['pdsUrl'])) {
-            // Infer PDS from handle if it looks like a domain
-            if (strpos($handle, '.') !== false && !str_ends_with($handle, '.bsky.social')) {
-                $pds_domain = $handle; // Assume handle is the PDS domain if it contains dots
-            } else {
-                $pds_domain = 'bsky.social'; // Default PDS
-            }
-            $session_data['pds_url'] = 'https://' . $pds_domain;
-            $logger && $logger->debug('PDS URL not in session response, using inferred/default.', [
+            $logger && $logger->error('Bluesky session response missing required pdsUrl field.', [
                 'handle' => $handle,
-                'pds_url' => $session_data['pds_url']
+                'response_keys' => array_keys($session_data)
             ]);
-        } else {
-            // Ensure it has https:// prefix if returned
-            if (!str_starts_with($session_data['pdsUrl'], 'http')) {
-                $session_data['pds_url'] = 'https://' . ltrim($session_data['pdsUrl'], '/');
-            } else {
-                $session_data['pds_url'] = $session_data['pdsUrl'];
-            }
-            $logger && $logger->debug('Using PDS URL from session response.', [
-                'handle' => $handle,
-                'pds_url' => $session_data['pds_url']
-            ]);
+            return new \WP_Error('bluesky_missing_pds_url', __('Bluesky authentication response missing required PDS URL. Server configuration issue.', 'data-machine'));
         }
+        
+        // Ensure PDS URL has https:// prefix
+        if (!str_starts_with($session_data['pdsUrl'], 'http')) {
+            $session_data['pds_url'] = 'https://' . ltrim($session_data['pdsUrl'], '/');
+        } else {
+            $session_data['pds_url'] = $session_data['pdsUrl'];
+        }
+        
+        $logger && $logger->debug('Using PDS URL from session response.', [
+            'handle' => $handle,
+            'pds_url' => $session_data['pds_url']
+        ]);
 
         return $session_data;
     }

@@ -39,7 +39,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation (flow_id, step_id)
      * @return string Full path to repository directory
      */
-    public function get_repository_path(array $handler_context = null): string {
+    public function get_repository_path(?array $handler_context = null): string {
         $upload_dir = wp_upload_dir();
         $base_path = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
         
@@ -60,7 +60,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation (flow_id, step_id)
      * @return string URL to repository directory
      */
-    public function get_repository_url(array $handler_context = null): string {
+    public function get_repository_url(?array $handler_context = null): string {
         $upload_dir = wp_upload_dir();
         $base_url = trailingslashit($upload_dir['baseurl']) . self::REPOSITORY_DIR;
         
@@ -81,7 +81,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation
      * @return bool True if directory exists or was created
      */
-    public function ensure_repository_exists(array $handler_context = null): bool {
+    public function ensure_repository_exists(?array $handler_context = null): bool {
         $repo_path = $this->get_repository_path($handler_context);
         
         if (!file_exists($repo_path)) {
@@ -109,7 +109,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation
      * @return string|false Repository file path on success, false on failure
      */
-    public function store_file(string $source_path, string $filename, array $handler_context = null) {
+    public function store_file(string $source_path, string $filename, ?array $handler_context = null) {
         if (!$this->ensure_repository_exists($handler_context)) {
             return false;
         }
@@ -152,7 +152,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation
      * @return array Array of file information
      */
-    public function get_all_files(array $handler_context = null): array {
+    public function get_all_files(?array $handler_context = null): array {
         if (!$this->ensure_repository_exists($handler_context)) {
             return [];
         }
@@ -213,7 +213,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation
      * @return bool True on success, false on failure
      */
-    public function delete_file(string $filename, array $handler_context = null): bool {
+    public function delete_file(string $filename, ?array $handler_context = null): bool {
         $safe_filename = $this->sanitize_filename($filename);
         $file_path = $this->get_repository_path($handler_context) . '/' . $safe_filename;
 
@@ -239,7 +239,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation
      * @return int Number of files deleted
      */
-    public function cleanup_old_files(int $days = 7, array $handler_context = null): int {
+    public function cleanup_old_files(int $days = 7, ?array $handler_context = null): int {
         if (!$this->ensure_repository_exists($handler_context)) {
             return 0;
         }
@@ -273,7 +273,7 @@ class FilesRepository {
      * @param array|null $handler_context Handler context for isolation
      * @return array Repository statistics
      */
-    public function get_repository_stats(array $handler_context = null): array {
+    public function get_repository_stats(?array $handler_context = null): array {
         $files = $this->get_all_files($handler_context);
         $total_size = 0;
         $oldest_file = null;

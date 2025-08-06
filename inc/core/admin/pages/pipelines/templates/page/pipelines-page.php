@@ -15,8 +15,9 @@ if (!defined('WPINC')) {
 }
 
 // Get pipelines data directly
-$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+$all_databases = apply_filters('dm_get_database_services', []);
+$db_pipelines = $all_databases['pipelines'] ?? null;
+$db_flows = $all_databases['flows'] ?? null;
 
 $all_pipelines = [];
 if ($db_pipelines) {
@@ -51,7 +52,7 @@ if ($db_pipelines) {
                     <?php 
                     // Load flows for this pipeline
                     $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : $pipeline['pipeline_id'];
-                    $flows_db = apply_filters('dm_get_database_service', null, 'flows');
+                    $flows_db = $all_databases['flows'] ?? null;
                     $existing_flows = $flows_db ? $flows_db->get_flows_for_pipeline($pipeline_id) : [];
                     
                     echo apply_filters('dm_render_template', '', 'page/pipeline-card', [

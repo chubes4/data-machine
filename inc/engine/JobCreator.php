@@ -78,7 +78,8 @@ class JobCreator {
                 'flow_id' => $flow_id,
                 'flow_config' => wp_json_encode( $job_config )
             ];
-            $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
             $job_id = $db_jobs->create_job( $job_data );
 
             if ( ! $job_id ) {
@@ -122,7 +123,8 @@ class JobCreator {
                 ] );
                 
                 // Mark job as failed since scheduling failed
-                $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+                $all_databases = apply_filters('dm_get_database_services', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
                 $db_jobs->complete_job( $job_id, 'failed', wp_json_encode( [
                     'error' => 'Failed to schedule pipeline processing step'
                 ] ) );
@@ -174,14 +176,15 @@ class JobCreator {
      */
     private function validate_pipeline_and_flow( int $pipeline_id, int $flow_id ) {
         // Get pipeline data
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline = $db_pipelines->get_pipeline( $pipeline_id );
         if ( ! $pipeline ) {
             return new \WP_Error( 'pipeline_not_found', 'Pipeline not found in database' );
         }
 
         // Get flow data
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $db_flows = $all_databases['flows'] ?? null;
         $flow = $db_flows->get_flow( $flow_id );
         if ( ! $flow ) {
             return new \WP_Error( 'flow_not_found', 'Flow not found in database' );
@@ -203,16 +206,18 @@ class JobCreator {
             $step_type = $step['type'] ?? '';
             $step_subtype = $step['subtype'] ?? '';
 
-            // Validate step type exists via parameter-based discovery (engine agnostic)
-            $step_config = apply_filters( 'dm_get_steps', null, $step_type );
+            // Validate step type exists via pure discovery (engine agnostic)
+            $all_steps = apply_filters('dm_get_steps', []);
+            $step_config = $all_steps[$step_type] ?? null;
             if ( ! $step_config ) {
                 return new \WP_Error( 'invalid_step_type', sprintf( 'Invalid step type: %s', $step_type ) );
             }
 
             // Validate handlers dynamically if step has subtype (engine agnostic)
             if ( ! empty( $step_subtype ) ) {
-                $handlers = apply_filters( 'dm_get_handlers', null, $step_type );
-                if ( $handlers && ! isset( $handlers[ $step_subtype ] ) ) {
+                $all_handlers = apply_filters('dm_get_handlers', []);
+                $step_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === $step_type);
+                if ( !empty($step_handlers) && ! isset( $step_handlers[ $step_subtype ] ) ) {
                     return new \WP_Error( 'invalid_handler', sprintf( 'Invalid %s handler: %s', $step_type, $step_subtype ) );
                 }
             }
@@ -237,14 +242,15 @@ class JobCreator {
      */
     private function build_pipeline_flow_job_config( int $pipeline_id, int $flow_id, string $context, ?array $optional_data = null ) {
         // Get pipeline data
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline = $db_pipelines->get_pipeline( $pipeline_id );
         if ( ! $pipeline ) {
             return new \WP_Error( 'pipeline_not_found', 'Pipeline not found in database' );
         }
 
         // Get flow data
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $db_flows = $all_databases['flows'] ?? null;
         $flow = $db_flows->get_flow( $flow_id );
         if ( ! $flow ) {
             return new \WP_Error( 'flow_not_found', 'Flow not found in database' );

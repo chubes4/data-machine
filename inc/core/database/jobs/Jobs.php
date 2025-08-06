@@ -109,14 +109,14 @@ class Jobs {
     /**
      * Check if there are any active jobs for a specific flow.
      */
-    public function has_active_jobs_for_flow( int $flow_id, int $exclude_job_id = null ): bool {
+    public function has_active_jobs_for_flow( int $flow_id, ?int $exclude_job_id = null ): bool {
         return $this->status->has_active_jobs_for_flow($flow_id, $exclude_job_id);
     }
 
     /**
      * Check if there are any active jobs for a specific pipeline.
      */
-    public function has_active_jobs_for_pipeline( int $pipeline_id, int $exclude_job_id = null ): bool {
+    public function has_active_jobs_for_pipeline( int $pipeline_id, ?int $exclude_job_id = null ): bool {
         return $this->status->has_active_jobs_for_pipeline($pipeline_id, $exclude_job_id);
     }
 

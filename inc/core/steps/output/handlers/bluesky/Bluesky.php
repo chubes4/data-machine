@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Output\Bluesky;
 
-use DataMachine\Core\Steps\AI\AiResponseParser;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -51,8 +50,9 @@ class Bluesky {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Extract content from DataPacket JSON object
-        $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
+        // Access structured content directly from DataPacket (no parsing needed)
+        $title = $data_packet->content->title ?? '';
+        $content = $data_packet->content->body ?? '';
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
@@ -70,10 +70,27 @@ class Bluesky {
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->debug('Starting Bluesky output handling.');
         
-        // 1. Get config
+        // 1. Get config - require explicit configuration
         $output_config = $module_job_config['output_config']['bluesky'] ?? [];
-        $include_source = $output_config['bluesky_include_source'] ?? true;
-        $enable_images = $output_config['bluesky_enable_images'] ?? true;
+        
+        if (!isset($output_config['bluesky_include_source'])) {
+            $logger && $logger->error('Bluesky output configuration missing required bluesky_include_source setting.');
+            return [
+                'success' => false,
+                'error' => __('Bluesky configuration incomplete: bluesky_include_source setting required.', 'data-machine')
+            ];
+        }
+        
+        if (!isset($output_config['bluesky_enable_images'])) {
+            $logger && $logger->error('Bluesky output configuration missing required bluesky_enable_images setting.');
+            return [
+                'success' => false,
+                'error' => __('Bluesky configuration incomplete: bluesky_enable_images setting required.', 'data-machine')
+            ];
+        }
+        
+        $include_source = $output_config['bluesky_include_source'];
+        $enable_images = $output_config['bluesky_enable_images'];
 
         // 2. Get authenticated session using internal BlueskyAuth
         $session = $this->auth->get_session();
@@ -92,39 +109,26 @@ class Bluesky {
 
         $access_token = $session['accessJwt'] ?? null;
         $did = $session['did'] ?? null;
-        $pds_url = $session['pds_url'] ?? 'https://bsky.social';
+        $pds_url = $session['pds_url'] ?? null;
 
-        if (empty($access_token) || empty($did)) {
+        if (empty($access_token) || empty($did) || empty($pds_url)) {
             $logger && $logger->error('Bluesky session data incomplete after authentication.');
             return [
                 'success' => false,
-                'error' => __('Bluesky authentication succeeded but returned incomplete session data.', 'data-machine')
+                'error' => __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'data-machine')
             ];
         }
 
-        // 5. Parse AI output
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            $logger && $logger->error('Bluesky Output: AI Response Parser service not available.');
-            return [
-                'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
-            ];
-        }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
-        $title = $parser->get_title();
-        $content = $parser->get_content();
-
+        // Validate content from DataPacket
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Bluesky Output: Parsed AI output is empty.');
+            $logger && $logger->warning('Bluesky Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Bluesky.', 'data-machine')
             ];
         }
 
-        // 6. Format post content
+        // 5. Format post content
         $post_text = $title ? $title . ": " . $content : $content;
         $source_url = $input_metadata['source_url'] ?? null;
         $bluesky_char_limit = 300;
@@ -169,13 +173,13 @@ class Bluesky {
              ];
         }
 
-        // 7. Detect link facets
+        // 6. Detect link facets
         $facets = $this->detect_link_facets($final_post_text);
 
-        // 8. Handle image upload (optional)
+        // 7. Handle image upload (optional)
         $embed_data = null;
         $image_source_url = $input_metadata['image_source_url'] ?? null;
-        $image_alt_text = $parser ? ($parser->get_title() ?: $parser->get_content_summary(50)) : '';
+        $image_alt_text = $title ?: substr($content, 0, 50); // Use title or content summary as alt text
 
         if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL)) {
             $logger && $logger->debug('Attempting to upload image to Bluesky.', ['image_url' => $image_source_url]);
@@ -201,7 +205,7 @@ class Bluesky {
             }
         }
 
-        // 9. Create post record
+        // 8. Create post record
         $current_time = gmdate("Y-m-d\TH:i:s.v\Z");
         $record = [
             '$type'     => 'app.bsky.feed.post',
@@ -220,7 +224,7 @@ class Bluesky {
             $record['embed'] = $embed_data;
         }
 
-        // 10. Post to Bluesky
+        // 9. Post to Bluesky
         try {
             $post_result = $this->create_bluesky_post($pds_url, $access_token, $did, $record);
 

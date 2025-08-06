@@ -569,7 +569,7 @@ class Flows {
      * @param string $timestamp Timestamp (defaults to current time)
      * @return bool True on success, false on failure
      */
-    public function update_flow_last_run(int $flow_id, string $timestamp = null): bool {
+    public function update_flow_last_run(int $flow_id, ?string $timestamp = null): bool {
         if ($timestamp === null) {
             $timestamp = current_time('mysql');
         }

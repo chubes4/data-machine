@@ -61,7 +61,8 @@ class Reddit {
 
 		// Get services via filter-based access (current architecture)
 		$oauth_reddit = $this->oauth_reddit; // Internal auth instance
-		$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+		$all_databases = apply_filters('dm_get_database_services', []);
+		$db_processed_items = $all_databases['processed_items'] ?? null;
 
 		// Check if essential dependencies are available
 		if (!$db_processed_items) {

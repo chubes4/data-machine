@@ -25,8 +25,9 @@ $has_auth_system = ($auth_instance !== null);
 // For WordPress handlers, check if authentication is required based on configuration
 $requires_auth = false;
 if ($handler_slug === 'wordpress' && $has_auth_system) {
-    // Get settings class to check authentication requirements
-    $settings_instance = apply_filters('dm_get_handler_settings', null, $handler_slug);
+    // Get settings class to check authentication requirements using pure discovery
+    $all_settings = apply_filters('dm_get_handler_settings', []);
+    $settings_instance = $all_settings[$handler_slug] ?? null;
     if ($settings_instance && method_exists($settings_instance, 'requires_authentication')) {
         // Check with empty config (defaults) - WordPress defaults to 'local' which doesn't need auth
         $requires_auth = $settings_instance->requires_authentication([]);

@@ -10,8 +10,6 @@
  */
 
 namespace DataMachine\Core\Handlers\Output\Threads;
-
-use DataMachine\Core\Steps\AI\AiResponseParser;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -41,8 +39,9 @@ class Threads {
      * @return array Result array on success or failure.
      */
     public function handle_output($data_packet): array {
-        // Extract content from DataPacket JSON object
-        $ai_output_string = $data_packet->content->body ?? $data_packet->content->title ?? '';
+        // Access structured content directly from DataPacket (no parsing needed)
+        $title = $data_packet->content->title ?? '';
+        $content = $data_packet->content->body ?? '';
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
@@ -57,14 +56,10 @@ class Threads {
         ];
         
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('Threads Output: Starting Threads publication.', ['user_id' => $user_id]);
+        $logger?->debug('Threads Output: Starting Threads publication.');
 
-        if (empty($user_id)) {
-            return [
-                'success' => false,
-                'error' => __('User ID is required for Threads publishing.', 'data-machine')
-            ];
-        }
+        // For admin-only architecture, use current user (temporary fix until auth is globalized)
+        $user_id = get_current_user_id();
 
         // Get output config from the job config array
         $config = $module_job_config['output_config'] ?? [];
@@ -73,20 +68,14 @@ class Threads {
         // Access config from nested structure
         $threads_config = $config['threads'] ?? [];
 
-        // Parse AI output
-        $parser = apply_filters('dm_get_ai_response_parser', null);
-        if (!$parser) {
-            $logger?->error('Threads Output: AI Response Parser service not available.');
+        // Validate content from DataPacket
+        if (empty($title) && empty($content)) {
+            $logger?->error('Threads Output: DataPacket content is empty.');
             return [
                 'success' => false,
-                'error' => __('AI Response Parser service not available.', 'data-machine')
+                'error' => __('Cannot post empty content to Threads.', 'data-machine')
             ];
         }
-        $parser->set_raw_output($ai_output_string);
-        $parser->parse();
-        
-        $content = $parser->get_content();
-        $title = $parser->get_title();
         
         // Prepare post content
         $post_content = $content;
