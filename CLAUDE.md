@@ -74,16 +74,14 @@ $encryption = apply_filters('dm_get_encryption_helper', null);
 $scheduler = apply_filters('dm_get_action_scheduler', null);
 $http_service = apply_filters('dm_get_http_service', null);
 $constants = apply_filters('dm_get_constants', null);
-$wpdb = apply_filters('dm_get_wpdb_service', null);
 $pipeline_context = apply_filters('dm_get_pipeline_context', null);
 
-// Database services - Pure discovery with filtering
-$all_databases = apply_filters('dm_get_database_services', []);
-$db_jobs = $all_databases['jobs'] ?? null;
-$db_flows = $all_databases['flows'] ?? null;
-$db_pipelines = $all_databases['pipelines'] ?? null;
-$db_processed_items = $all_databases['processed_items'] ?? null;
-$db_remote_locations = $all_databases['remote_locations'] ?? null;
+// Database services - Direct discovery with type parameter
+$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+$db_flows = apply_filters('dm_get_database_service', null, 'flows');
+$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
+$db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
 
 // Handler discovery - Pure discovery with type filtering
 $all_handlers = apply_filters('dm_get_handlers', []);
