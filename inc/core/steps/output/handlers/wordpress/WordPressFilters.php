@@ -30,17 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_wordpress_output_filters() {
     
-    // Handler registration - WordPress declares itself as output handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            $handlers['wordpress'] = [
-                'class' => WordPress::class,
-                'label' => __('WordPress', 'data-machine'),
-                'description' => __('Create and update WordPress posts and pages', 'data-machine')
-            ];
-        }
+    // Handler registration - WordPress declares itself as output handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['wordpress'] = [
+            'type' => 'output',
+            'class' => WordPress::class,
+            'label' => __('WordPress', 'data-machine'),
+            'description' => __('Create and update WordPress posts and pages', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'wordpress' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

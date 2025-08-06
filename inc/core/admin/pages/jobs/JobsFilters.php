@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_jobs_admin_page_filters() {
     
-    // Discovery mode registration - allows dynamic admin page discovery
+    // Pure discovery mode - matches actual system usage
     add_filter('dm_get_admin_pages', function($pages) {
         $pages['jobs'] = [
             'page_title' => __('Jobs', 'data-machine'),

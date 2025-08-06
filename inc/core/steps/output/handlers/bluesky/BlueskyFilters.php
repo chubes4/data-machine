@@ -30,22 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_bluesky_filters() {
     
-    // Handler registration - Bluesky declares itself as output handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            // Initialize handlers array if null
-            if ($handlers === null) {
-                $handlers = [];
-            }
-            
-            $handlers['bluesky'] = [
-                'class' => Bluesky::class,
-                'label' => __('Bluesky', 'data-machine'),
-                'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'data-machine')
-            ];
-        }
+    // Handler registration - Bluesky declares itself as output handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['bluesky'] = [
+            'type' => 'output',
+            'class' => Bluesky::class,
+            'label' => __('Bluesky', 'data-machine'),
+            'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'bluesky' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

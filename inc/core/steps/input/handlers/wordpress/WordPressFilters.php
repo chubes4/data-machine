@@ -30,29 +30,28 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_wordpress_input_filters() {
     
-    // Handler registration - WordPress declares itself as input handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'input') {
-            $handlers['wordpress'] = [
-                'class' => WordPress::class,
-                'label' => __('WordPress', 'data-machine'),
-                'description' => __('Source content from WordPress posts and pages', 'data-machine')
-            ];
-        }
+    // Handler registration - WordPress declares itself as input handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['wordpress_input'] = [
+            'type' => 'input',
+            'class' => WordPress::class,
+            'label' => __('WordPress', 'data-machine'),
+            'description' => __('Source content from WordPress posts and pages', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
-    // Authentication registration - parameter-matched to 'wordpress' handler
+    // Authentication registration - parameter-matched to 'wordpress_input' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($handler_slug === 'wordpress') {
+        if ($handler_slug === 'wordpress_input') {
             return new WordPressAuth();
         }
         return $auth;
     }, 10, 2);
     
-    // Settings registration - parameter-matched to 'wordpress' handler
+    // Settings registration - parameter-matched to 'wordpress_input' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
-        if ($handler_slug === 'wordpress') {
+        if ($handler_slug === 'wordpress_input') {
             return new WordPressSettings();
         }
         return $settings;

@@ -60,17 +60,6 @@ function dm_register_admin_filters() {
         return $config;
     }, 5, 3);
     
-    // Parameter-based admin page resolution - routes discovery data for parameter access
-    add_filter('dm_get_admin_page', function($config, $page_slug) {
-        if ($config !== null) {
-            return $config; // Direct registration takes priority
-        }
-        
-        // Route to discovery data for parameter-based access
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        return $all_pages[$page_slug] ?? null;
-    }, 5, 2);
-    
     // Parameter-based modal content system for admin interface
     add_filter('dm_get_modal', function($content, $template) {
         // Pure parameter-based system - admin modal templates register their content generation logic
@@ -80,12 +69,11 @@ function dm_register_admin_filters() {
     
     // Universal template rendering filter - discovers templates from admin page registration
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
-        // Discover all registered admin pages and their template directories
-        $page_slugs = ['pipelines', 'jobs', 'logs'];
+        // Dynamic discovery of all registered admin pages and their template directories
+        $all_pages = apply_filters('dm_get_admin_pages', []);
         
-        foreach ($page_slugs as $slug) {
-            $page_config = apply_filters('dm_get_admin_page', null, $slug);
-            if ($page_config && !empty($page_config['templates'])) {
+        foreach ($all_pages as $slug => $page_config) {
+            if (!empty($page_config['templates'])) {
                 $template_path = $page_config['templates'] . $template_name . '.php';
                 if (file_exists($template_path)) {
                     // Extract data variables for template use

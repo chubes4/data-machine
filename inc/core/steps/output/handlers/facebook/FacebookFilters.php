@@ -30,17 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_facebook_filters() {
     
-    // Handler registration - Facebook declares itself as output handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            $handlers['facebook'] = [
-                'class' => Facebook::class,
-                'label' => __('Facebook', 'data-machine'),
-                'description' => __('Post content to Facebook pages and profiles', 'data-machine')
-            ];
-        }
+    // Handler registration - Facebook declares itself as output handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['facebook'] = [
+            'type' => 'output',
+            'class' => Facebook::class,
+            'label' => __('Facebook', 'data-machine'),
+            'description' => __('Post content to Facebook pages and profiles', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'facebook' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

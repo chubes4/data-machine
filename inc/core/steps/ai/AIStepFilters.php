@@ -48,38 +48,22 @@ function dm_register_ai_step_filters() {
     /**
      * AI Step Registration
      * 
-     * Register the AI step type for pipeline discovery via parameter-based filter system.
+     * Register the AI step type for pipeline discovery via pure discovery mode.
      * This enables the AI step to be discovered and used in pipelines.
      * 
-     * @param mixed $step_config Current step configuration (null if none)
-     * @param string $step_type Step type being requested
-     * @return array|mixed Step configuration or original value
+     * @param array $steps Current steps array
+     * @return array Updated steps array
      */
-    add_filter('dm_get_steps', function($step_config, $step_type = null) {
-        // Discovery mode: return all steps when no type specified
-        if (empty($step_type)) {
-            return array_merge($step_config ?: [], [
-                'ai' => [
-                    'label' => __('AI Processing', 'data-machine'),
-                    'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
-                    'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
-                    'consume_all_packets' => true,
-                    'position' => 20
-                ]
-            ]);
-        }
-        
-        // Specific mode: return step config for matching type
-        if ($step_type === 'ai') {
-            return [
-                'label' => __('AI Processing', 'data-machine'),
-                'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
-                'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
-                'consume_all_packets' => true
-            ];
-        }
-        return $step_config;
-    }, 10, 2);
+    add_filter('dm_get_steps', function($steps) {
+        $steps['ai'] = [
+            'label' => __('AI Processing', 'data-machine'),
+            'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
+            'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
+            'consume_all_packets' => true,
+            'position' => 20
+        ];
+        return $steps;
+    });
     
     
     // DataPacket conversion registration - AI step uses dedicated DataPacket class

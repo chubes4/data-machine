@@ -246,59 +246,50 @@ class MockErrorHandler {
  * Register mock handlers for testing
  */
 function register_mock_handlers() {
-    // Register mock input handlers
-    \add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'input') {
-            $handlers['mock_input'] = [
-                'class' => MockInputHandler::class,
-                'label' => 'Mock Input',
-                'description' => 'Mock input handler for testing'
-            ];
-            $handlers['mock_error_input'] = [
-                'class' => MockErrorHandler::class,
-                'label' => 'Mock Error Input',
-                'description' => 'Mock error input handler for testing'
-            ];
-        }
+    // Register mock handlers using pure discovery mode
+    \add_filter('dm_get_handlers', function($handlers) {
+        $handlers['mock_input'] = [
+            'type' => 'input',
+            'class' => MockInputHandler::class,
+            'label' => 'Mock Input',
+            'description' => 'Mock input handler for testing'
+        ];
+        $handlers['mock_error_input'] = [
+            'type' => 'input',
+            'class' => MockErrorHandler::class,
+            'label' => 'Mock Error Input',
+            'description' => 'Mock error input handler for testing'
+        ];
+        $handlers['mock_output'] = [
+            'type' => 'output',
+            'class' => MockOutputHandler::class,
+            'label' => 'Mock Output', 
+            'description' => 'Mock output handler for testing'
+        ];
+        $handlers['mock_error_output'] = [
+            'type' => 'output',
+            'class' => MockErrorHandler::class,
+            'label' => 'Mock Error Output',
+            'description' => 'Mock error output handler for testing'
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
-    // Register mock output handlers  
-    \add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            $handlers['mock_output'] = [
-                'class' => MockOutputHandler::class,
-                'label' => 'Mock Output', 
-                'description' => 'Mock output handler for testing'
-            ];
-            $handlers['mock_error_output'] = [
-                'class' => MockErrorHandler::class,
-                'label' => 'Mock Error Output',
-                'description' => 'Mock error output handler for testing'
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-    
-    // Register mock AI step
-    \add_filter('dm_get_steps', function($step_config, $step_type) {
-        if ($step_type === 'ai') {
-            return [
-                'label' => 'Mock AI Processing',
-                'description' => 'Mock AI processing for testing',
-                'class' => MockAIHandler::class,
-                'consume_all_packets' => true
-            ];
-        }
-        if ($step_type === 'mock_error_ai') {
-            return [
-                'label' => 'Mock Error AI',
-                'description' => 'Mock error AI for testing',
-                'class' => MockErrorHandler::class
-            ];
-        }
-        return $step_config;
-    }, 10, 2);
+    // Register mock steps using pure discovery mode
+    \add_filter('dm_get_steps', function($steps) {
+        $steps['ai'] = [
+            'label' => 'Mock AI Processing',
+            'description' => 'Mock AI processing for testing',
+            'class' => MockAIHandler::class,
+            'consume_all_packets' => true
+        ];
+        $steps['mock_error_ai'] = [
+            'label' => 'Mock Error AI',
+            'description' => 'Mock error AI for testing',
+            'class' => MockErrorHandler::class
+        ];
+        return $steps;
+    });
 }
 
 // Auto-register mock handlers when this file is loaded

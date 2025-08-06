@@ -30,17 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_twitter_filters() {
     
-    // Handler registration - Twitter declares itself as output handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            $handlers['twitter'] = [
-                'class' => Twitter::class,
-                'label' => __('Twitter', 'data-machine'),
-                'description' => __('Post content to Twitter with media support', 'data-machine')
-            ];
-        }
+    // Handler registration - Twitter declares itself as output handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['twitter'] = [
+            'type' => 'output',
+            'class' => Twitter::class,
+            'label' => __('Twitter', 'data-machine'),
+            'description' => __('Post content to Twitter with media support', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'twitter' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

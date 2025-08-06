@@ -8,7 +8,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 **Pipeline+Flow System**: Pipelines define reusable workflow templates, Flows execute configured instances with handler settings and scheduling.
 
-**Filter-Based Design**: Every service uses `apply_filters()` with parameter-based discovery. Components self-register via dedicated `*Filters.php` files.
+**Filter-Based Design**: Every service uses `apply_filters()` with pure discovery patterns. Components self-register via dedicated `*Filters.php` files.
 
 **Architectural Consistency**: Comprehensive cleanup eliminated legacy patterns, user-scoped code, and mixed architectural approaches. All components follow consistent admin-only patterns aligned with established standards.
 
@@ -66,7 +66,7 @@ if (in_array($action, $modal_actions)) {
 ## Filter Reference
 
 ```php
-// Core services
+// Core services - Direct discovery
 $logger = apply_filters('dm_get_logger', null);
 $ai_client = apply_filters('dm_get_ai_http_client', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
@@ -77,31 +77,48 @@ $constants = apply_filters('dm_get_constants', null);
 $wpdb = apply_filters('dm_get_wpdb_service', null);
 $pipeline_context = apply_filters('dm_get_pipeline_context', null);
 
-// Parameter-based services
-$db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-$db_flows = apply_filters('dm_get_database_service', null, 'flows');
-$db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
-$db_processed_items = apply_filters('dm_get_database_service', null, 'processed_items');
-$db_remote_locations = apply_filters('dm_get_database_service', null, 'remote_locations');
+// Database services - Pure discovery with filtering
+$all_databases = apply_filters('dm_get_database_services', []);
+$db_jobs = $all_databases['jobs'] ?? null;
+$db_flows = $all_databases['flows'] ?? null;
+$db_pipelines = $all_databases['pipelines'] ?? null;
+$db_processed_items = $all_databases['processed_items'] ?? null;
+$db_remote_locations = $all_databases['remote_locations'] ?? null;
 
-$handlers = apply_filters('dm_get_handlers', null, 'output');
-$auth = apply_filters('dm_get_auth', null, 'twitter');
-$context = apply_filters('dm_get_context', null, $job_id);
+// Handler discovery - Pure discovery with type filtering
+$all_handlers = apply_filters('dm_get_handlers', []);
+$input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
+$output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+$specific_handler = $all_handlers['twitter'] ?? null;
 
-// Step discovery (dual-mode)
-$all_steps = apply_filters('dm_get_steps', []);              // All step types
-$step_config = apply_filters('dm_get_steps', null, 'input'); // Specific type
-$step_config_info = apply_filters('dm_get_step_config', null, $step_type, $context);
+// Authentication - Pure discovery with filtering
+$all_auth = apply_filters('dm_get_auth_providers', []);
+$twitter_auth = $all_auth['twitter'] ?? null;
+
+// Context services - Pure discovery with filtering
+$all_contexts = apply_filters('dm_get_contexts', []);
+$job_context = $all_contexts[$job_id] ?? null;
+
+// Step discovery - Pure discovery only
+$all_steps = apply_filters('dm_get_steps', []);
+$ai_step = $all_steps['ai'] ?? null;
+$input_step = $all_steps['input'] ?? null;
+
+// Step configuration - Pure discovery with context
+$step_configs = apply_filters('dm_get_step_configs', []);
+$step_config = $step_configs[$step_type] ?? null;
 
 // DataPacket creation
 $datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
 
-// Modal system
-$modal_content = apply_filters('dm_get_modal', null, 'step-selection');
+// Modal system - Pure discovery
+$all_modals = apply_filters('dm_get_modals', []);
+$step_selection_modal = $all_modals['step-selection'] ?? null;
 
-// Admin page discovery
-$admin_pages = apply_filters('dm_get_admin_pages', []); // All registered admin pages
-$specific_page = apply_filters('dm_get_admin_page', null, 'jobs'); // Specific page
+// Admin page discovery - Pure discovery
+$admin_pages = apply_filters('dm_get_admin_pages', []);
+$jobs_page = $admin_pages['jobs'] ?? null;
+$pipelines_page = $admin_pages['pipelines'] ?? null;
 
 // Universal template rendering
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
@@ -111,7 +128,6 @@ $template_html = apply_filters('dm_get_template', '', 'page/step-card', $data);
 
 // Admin page template rendering
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
-$admin_page_config = apply_filters('dm_get_admin_page', null, 'pipelines');
 $admin_menu_assets = apply_filters('dm_get_admin_menu_assets', null);
 ```
 
@@ -250,7 +266,7 @@ $content = apply_filters('dm_render_template', '', 'page/step-card', [
 
 **Universal Container Architecture**: Uses `dm-step-container` wrapper with consistent data attributes and internal `dm-step-card` structure that adapts content based on context while maintaining identical arrow and layout logic.
 
-**Handler Discovery Integration**: Flow context uses parameter-based filter discovery (`apply_filters('dm_get_handlers', null, $step_type)`) for dynamic handler availability, while pipeline context focuses on step configuration discovery.
+**Handler Discovery Integration**: Flow context uses pure discovery filtering (`$all_handlers = apply_filters('dm_get_handlers', []); $handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === $step_type)`) for dynamic handler availability, while pipeline context focuses on step configuration discovery.
 
 ## Arrow Rendering Architecture
 
@@ -573,20 +589,23 @@ if (in_array($action, $modal_actions)) {
 
 ## Component Registration
 
-**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files:
+**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using pure discovery patterns:
 
 ```php
 function dm_register_twitter_filters() {
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            $handlers['twitter'] = ['class' => Twitter::class, 'label' => __('Twitter', 'data-machine')];
-        }
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['twitter'] = [
+            'type' => 'output',
+            'class' => Twitter::class,
+            'label' => __('Twitter', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        return ($handler_slug === 'twitter') ? new TwitterAuth() : $auth;
-    }, 10, 2);
+    add_filter('dm_get_auth_providers', function($providers) {
+        $providers['twitter'] = new TwitterAuth();
+        return $providers;
+    });
 }
 dm_register_twitter_filters();
 ```
@@ -650,9 +669,9 @@ uasort($registered_pages, function($a, $b) {
 });
 ```
 
-**Pure Discovery Registration**: Components use single registration pattern with central parameter resolution:
+**Pure Discovery Registration**: Components use unified registration pattern with consistent discovery access:
 ```php
-// Single discovery mode registration - zero redundancy
+// Unified discovery registration - complete architectural consistency
 add_filter('dm_get_admin_pages', function($pages) {
     $pages['jobs'] = [
         'page_title' => __('Jobs', 'data-machine'),
@@ -664,20 +683,30 @@ add_filter('dm_get_admin_pages', function($pages) {
     ];
     return $pages;
 });
+
+// Consistent discovery access pattern throughout plugin
+$all_pages = apply_filters('dm_get_admin_pages', []);
+$specific_page = $all_pages[$page_slug] ?? null;
 ```
 
-**Central Parameter Resolution**: AdminFilters.php provides parameter-based access via discovery routing:
+**Pure Discovery Architecture**: AdminFilters.php implements consistent pure discovery patterns throughout:
 ```php
-// Parameter-based access routes to discovery data automatically
-add_filter('dm_get_admin_page', function($config, $page_slug) {
-    if ($config !== null) {
-        return $config; // Direct registration takes priority
-    }
-    
-    // Route to discovery data for parameter-based access
-    $all_pages = apply_filters('dm_get_admin_pages', []);
-    return $all_pages[$page_slug] ?? null;
-}, 5, 2);
+// Pure discovery pattern - all data accessed through collection filtering
+add_filter('dm_get_admin_pages', function($pages) {
+    $pages['jobs'] = [
+        'page_title' => __('Jobs', 'data-machine'),
+        'menu_title' => __('Jobs', 'data-machine'),
+        'capability' => 'manage_options',
+        'position' => 20,
+        'templates' => __DIR__ . '/templates/',
+        'assets' => [/* asset configuration */]
+    ];
+    return $pages;
+});
+
+// Access specific pages through discovery filtering
+$all_pages = apply_filters('dm_get_admin_pages', []);
+$jobs_page = $all_pages['jobs'] ?? null;
 ```
 
 ## Universal Template Rendering
@@ -794,24 +823,26 @@ class MyInputHandler {
     }
 }
 
-// Registration with configuration array
-add_filter('dm_get_handlers', function($handlers, $type) {
-    if ($type === 'input') {
-        if ($handlers === null) {
-            $handlers = [];
-        }
-        $handlers['my_handler'] = [
-            'class' => \MyPlugin\MyInputHandler::class,
-            'label' => __('My Handler', 'my-plugin'),
-            'description' => __('Custom input handler', 'my-plugin')
-        ];
-    }
+// Pure discovery registration
+add_filter('dm_get_handlers', function($handlers) {
+    $handlers['my_handler'] = [
+        'type' => 'input',
+        'class' => \MyPlugin\MyInputHandler::class,
+        'label' => __('My Handler', 'my-plugin'),
+        'description' => __('Custom input handler', 'my-plugin')
+    ];
     return $handlers;
-}, 10, 2);
+});
 
-add_filter('dm_get_auth', function($auth, $handler_slug) {
-    return ($handler_slug === 'my_handler') ? new \MyPlugin\MyAuth() : $auth;
-}, 10, 2);
+add_filter('dm_get_auth_providers', function($providers) {
+    $providers['my_handler'] = new \MyPlugin\MyAuth();
+    return $providers;
+});
+
+// Access handler through pure discovery
+$all_handlers = apply_filters('dm_get_handlers', []);
+$my_handler = $all_handlers['my_handler'] ?? null;
+$input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
 ```
 
 **Custom Step**:
@@ -823,39 +854,60 @@ class MyStep {
     }
 }
 
-add_filter('dm_get_steps', function($config, $step_type) {
-    if ($step_type === 'my_step') {
-        return ['label' => __('My Step'), 'class' => '\MyPlugin\MyStep'];
-    }
-    return $config;
-}, 10, 2);
+// Pure discovery registration
+add_filter('dm_get_steps', function($steps) {
+    $steps['my_step'] = [
+        'label' => __('My Step', 'my-plugin'),
+        'class' => '\MyPlugin\MyStep'
+    ];
+    return $steps;
+});
+
+// Access step through pure discovery
+$all_steps = apply_filters('dm_get_steps', []);
+$my_step = $all_steps['my_step'] ?? null;
 ```
 
 **Admin Page**:
 ```php
-add_filter('dm_get_admin_page', function($config, $page_slug) {
-    if ($page_slug === 'my_page') {
-        return [
-            'page_title' => __('My Page'),
-            'templates' => __DIR__ . '/templates/', // Required for template rendering
-            'assets' => [
-                'css' => ['my-css' => ['file' => 'path/to/style.css']],
-                'js' => ['my-js' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
-            ]
-        ];
-    }
-    return $config;
-}, 10, 2);
+// Pure discovery registration
+add_filter('dm_get_admin_pages', function($pages) {
+    $pages['my_page'] = [
+        'page_title' => __('My Page', 'my-plugin'),
+        'menu_title' => __('My Page', 'my-plugin'),
+        'capability' => 'manage_options',
+        'position' => 30,
+        'templates' => __DIR__ . '/templates/', // Required for template rendering
+        'assets' => [
+            'css' => ['my-css' => ['file' => 'path/to/style.css']],
+            'js' => ['my-js' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
+        ]
+    ];
+    return $pages;
+});
+
+// Access page through pure discovery
+$all_pages = apply_filters('dm_get_admin_pages', []);
+$my_page = $all_pages['my_page'] ?? null;
 ```
 
 **Modal Content**:
 ```php
-add_filter('dm_get_modal', function($content, $template) {
-    if ($template === 'my-modal') {
-        return apply_filters('dm_render_template', '', 'modal/my-modal', $context);
-    }
-    return $content;
-}, 10, 2);
+// Pure discovery registration
+add_filter('dm_get_modals', function($modals) {
+    $modals['my-modal'] = [
+        'template' => 'modal/my-modal',
+        'title' => __('My Modal', 'my-plugin')
+    ];
+    return $modals;
+});
+
+// Access modal through pure discovery
+$all_modals = apply_filters('dm_get_modals', []);
+$my_modal = $all_modals['my-modal'] ?? null;
+if ($my_modal) {
+    $content = apply_filters('dm_render_template', '', $my_modal['template'], $context);
+}
 ```
 
 **Modal Trigger in PHP Template**:

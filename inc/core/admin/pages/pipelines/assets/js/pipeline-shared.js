@@ -190,7 +190,96 @@
                     dmPipelineBuilder.strings.configureHandlers || 'Configure handlers for each step above'
                 );
             }
+        },
+
+        /**
+         * Handle configure step action - saves step configuration at pipeline level
+         * Pipeline-level configuration applies to all flows using that pipeline
+         */
+        handleConfigureStepAction: function(e) {
+            const $button = $(e.currentTarget);
+            const contextData = $button.data('context');
+            
+            if (!contextData) {
+                console.error('Configure step action: Missing context data');
+                return;
+            }
+            
+            const { step_type, pipeline_id, step_id } = contextData;
+            
+            if (!step_type || !pipeline_id || !step_id) {
+                console.error('Configure step action: Missing required context fields', contextData);
+                return;
+            }
+            
+            // Collect form data from the modal
+            const $modal = $('#dm-modal');
+            const formData = new FormData();
+            
+            // Add base parameters
+            formData.append('action', 'dm_pipeline_ajax');
+            formData.append('pipeline_action', 'configure-step-action');
+            formData.append('nonce', dmPipelineBuilder.pipeline_ajax_nonce);
+            
+            // Add context data
+            formData.append('context', JSON.stringify(contextData));
+            
+            // Collect all form inputs from the modal
+            $modal.find('input, select, textarea').each(function() {
+                const $input = $(this);
+                const name = $input.attr('name');
+                const value = $input.val();
+                
+                if (name && value !== undefined) {
+                    formData.append(name, value);
+                }
+            });
+            
+            // Show loading state
+            const originalText = $button.text();
+            $button.text(dmPipelineBuilder.strings.saving || 'Saving...');
+            $button.prop('disabled', true);
+            
+            // Send AJAX request to configure step action endpoint
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: (response) => {
+                    if (response.success) {
+                        console.log('Step configuration saved successfully:', response.data);
+                        
+                        // Close the modal
+                        if (window.dmCoreModal && window.dmCoreModal.closeModal) {
+                            window.dmCoreModal.closeModal();
+                        }
+                        
+                        // Optional: Emit event for any page updates needed
+                        $(document).trigger('dm-step-configured', [contextData, response.data]);
+                        
+                    } else {
+                        console.error('Configure step action failed:', response.data);
+                        alert(response.data.message || 'Failed to save step configuration');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('Configure step action AJAX error:', error);
+                    alert('Error saving step configuration: ' + error);
+                },
+                complete: () => {
+                    // Restore button state
+                    $button.text(originalText);
+                    $button.prop('disabled', false);
+                }
+            });
         }
     };
+
+    // Bind the configure step action handler to the page-level
+    $(document).on('click', '[data-template="configure-step-action"]', function(e) {
+        window.PipelineShared.handleConfigureStepAction(e);
+    });
 
 })(jQuery);

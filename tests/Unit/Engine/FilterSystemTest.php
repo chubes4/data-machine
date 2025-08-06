@@ -76,25 +76,21 @@ class FilterSystemTest extends TestCase {
     }
     
     /**
-     * Test parameter-based service discovery
+     * Test pure discovery service system
      */
-    public function testParameterBasedServiceDiscovery(): void {
-        // Register mock database services with parameter-based discovery
-        add_filter('dm_get_database_service', function($service, $type) {
-            switch ($type) {
-                case 'jobs':
-                    return new MockJobsDatabase();
-                case 'test_type':
-                    return 'test_service_instance';
-                default:
-                    return $service;
-            }
-        }, 10, 2);
+    public function testPureDiscoveryServiceSystem(): void {
+        // Register mock database services with pure discovery
+        add_filter('dm_get_database_services', function($services) {
+            $services['jobs'] = new MockJobsDatabase();
+            $services['test_type'] = 'test_service_instance';
+            return $services;
+        });
         
-        // Test parameter-based discovery
-        $jobs_service = apply_filters('dm_get_database_service', null, 'jobs');
-        $test_service = apply_filters('dm_get_database_service', null, 'test_type');
-        $unknown_service = apply_filters('dm_get_database_service', null, 'unknown');
+        // Test pure discovery access
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $jobs_service = $all_databases['jobs'] ?? null;
+        $test_service = $all_databases['test_type'] ?? null;
+        $unknown_service = $all_databases['unknown'] ?? null;
         
         $this->assertInstanceOf(MockJobsDatabase::class, $jobs_service);
         $this->assertEquals('test_service_instance', $test_service);
@@ -124,10 +120,11 @@ class FilterSystemTest extends TestCase {
             return $handlers;
         }, 10, 2);
         
-        // Test handler discovery
-        $input_handlers = apply_filters('dm_get_handlers', [], 'input');
-        $output_handlers = apply_filters('dm_get_handlers', [], 'output');
-        $unknown_handlers = apply_filters('dm_get_handlers', [], 'unknown');
+        // Test pure discovery handler system
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
+        $output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+        $unknown_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'unknown');
         
         $this->assertArrayHasKey('mock_input', $input_handlers);
         $this->assertArrayHasKey('mock_output', $output_handlers);
@@ -320,8 +317,10 @@ class FilterSystemTest extends TestCase {
         
         // Test that all services are discoverable
         $logger = apply_filters('dm_get_logger', null);
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
-        $input_handlers = apply_filters('dm_get_handlers', [], 'input');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
         
         $this->assertInstanceOf(MockLogger::class, $logger);
         $this->assertInstanceOf(MockJobsDatabase::class, $db_jobs);

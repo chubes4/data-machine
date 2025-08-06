@@ -580,18 +580,20 @@ class DatabaseInputStep {
     }
 }
 
-// Register the custom step
-add_filter('dm_get_steps', function($config, $step_type) {
-    if ($step_type === 'database_input') {
-        return [
-            'label' => __('Database Input', 'my-plugin'),
-            'description' => __('Read data from custom database tables', 'my-plugin'),
-            'class' => '\MyPlugin\Steps\DatabaseInputStep',
-            'type' => 'input'
-        ];
-    }
-    return $config;
-}, 10, 2);
+// Pure discovery step registration
+add_filter('dm_get_steps', function($steps) {
+    $steps['database_input'] = [
+        'label' => __('Database Input', 'my-plugin'),
+        'description' => __('Read data from custom database tables', 'my-plugin'),
+        'class' => '\MyPlugin\Steps\DatabaseInputStep',
+        'type' => 'input'
+    ];
+    return $steps;
+});
+
+// Access through pure discovery
+$all_steps = apply_filters('dm_get_steps', []);
+$database_step = $all_steps['database_input'] ?? null;
 ```
 
 **Custom AI Processing Step**:

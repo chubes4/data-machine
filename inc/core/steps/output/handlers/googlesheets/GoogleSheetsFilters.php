@@ -30,22 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_googlesheets_filters() {
     
-    // Handler registration - Google Sheets declares itself as output handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            // Initialize handlers array if null
-            if ($handlers === null) {
-                $handlers = [];
-            }
-            
-            $handlers['googlesheets'] = [
-                'class' => GoogleSheets::class,
-                'label' => __('Google Sheets', 'data-machine'),
-                'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'data-machine')
-            ];
-        }
+    // Handler registration - Google Sheets declares itself as output handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['googlesheets'] = [
+            'type' => 'output',
+            'class' => GoogleSheets::class,
+            'label' => __('Google Sheets', 'data-machine'),
+            'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'googlesheets' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

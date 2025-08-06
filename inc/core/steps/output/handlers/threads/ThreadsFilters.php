@@ -30,17 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_threads_filters() {
     
-    // Handler registration - Threads declares itself as output handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'output') {
-            $handlers['threads'] = [
-                'class' => Threads::class,
-                'label' => __('Threads', 'data-machine'),
-                'description' => __('Publish content to Threads (Meta\'s Twitter alternative)', 'data-machine')
-            ];
-        }
+    // Handler registration - Threads declares itself as output handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['threads'] = [
+            'type' => 'output',
+            'class' => Threads::class,
+            'label' => __('Threads', 'data-machine'),
+            'description' => __('Publish content to Threads (Meta\'s Twitter alternative)', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'threads' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

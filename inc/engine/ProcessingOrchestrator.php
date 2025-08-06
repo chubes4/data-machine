@@ -383,13 +383,15 @@ class ProcessingOrchestrator {
 	}
 
 	/**
-	 * Get step configuration by type using parameter-based discovery.
+	 * Get step configuration by type using pure discovery mode.
 	 *
 	 * @param string $step_type The step type to discover ('input', 'output', 'ai', etc.)
 	 * @return array|null Step configuration array or null if not found.
 	 */
 	private function get_step_config_by_type( string $step_type ): ?array {
-		return apply_filters('dm_get_steps', null, $step_type);
+		// Use pure discovery mode - get all steps and find matching type
+		$all_steps = apply_filters('dm_get_steps', []);
+		return $all_steps[$step_type] ?? null;
 	}
 
 	/**

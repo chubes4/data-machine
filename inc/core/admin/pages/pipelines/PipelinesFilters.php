@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_pipelines_admin_page_filters() {
     
-    // Discovery mode registration - allows dynamic admin page discovery  
+    // Pure discovery mode - matches actual system usage
     add_filter('dm_get_admin_pages', function($pages) {
         $pages['pipelines'] = [
             'page_title' => __('Pipelines', 'data-machine'),
@@ -261,8 +261,11 @@ function dm_register_pipelines_admin_page_filters() {
             ]);
         }
         
-        // Get available handlers using parameter-based filter discovery
-        $available_handlers = apply_filters('dm_get_handlers', null, $step_type);
+        // Get available handlers using pure discovery
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $available_handlers = array_filter($all_handlers, function($handler) use ($step_type) {
+            return ($handler['type'] ?? '') === $step_type;
+        });
         
         if (empty($available_handlers)) {
             $logger && $logger->warning('No handlers found for step type', ['step_type' => $step_type]);
@@ -384,8 +387,11 @@ function dm_handle_save_handler_settings() {
         return;
     }
     
-    // Get handler configuration via filter system
-    $handlers = apply_filters('dm_get_handlers', null, $step_type);
+    // Get handler configuration via pure discovery
+    $all_handlers = apply_filters('dm_get_handlers', []);
+    $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
+        return ($handler['type'] ?? '') === $step_type;
+    });
     
     if (!isset($handlers[$handler_slug])) {
         wp_send_json_error(['message' => __('Invalid handler for this step type.', 'data-machine')]);

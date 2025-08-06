@@ -26,7 +26,7 @@ $is_empty = $step['is_empty'];
 $step_type = $step['step_type'];
 $step_position = $step['position'];
 $step_id = $step['step_id'] ?? null;
-$step_data = $step['step_data'] ?? [];
+$step_data = $step; // Database format: step IS the step data
 
 // Context-specific variables
 if ($context === 'pipeline') {
@@ -49,8 +49,15 @@ if ($context === 'pipeline') {
     $step_title = $is_empty ? '' : ucfirst(str_replace('_', ' ', $step_type));
     $step_handlers = $flow_config['steps'][$step_type]['handlers'] ?? [];
     
-    // Dynamic handler discovery using parameter-based filter system (only for non-empty steps)
-    $available_handlers = $is_empty ? [] : apply_filters('dm_get_handlers', null, $step_type);
+    // Dynamic handler discovery using pure discovery (only for non-empty steps)
+    if ($is_empty) {
+        $available_handlers = [];
+    } else {
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $available_handlers = array_filter($all_handlers, function($handler) use ($step_type) {
+            return ($handler['type'] ?? '') === $step_type;
+        });
+    }
     $has_handlers = !empty($available_handlers);
     
     // AI steps don't use traditional handlers - they use internal multi-provider client

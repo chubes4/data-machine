@@ -64,9 +64,9 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Types: 'jobs', 'pipelines', 'flows', 'processed_items', 'remote_locations'
  * 
  * @filter dm_get_handlers
- * Retrieves handler instances by type parameter.
- * Usage: $handlers = apply_filters('dm_get_handlers', null, 'output');
- * Types: 'input', 'output', 'receiver'
+ * Retrieves all handler instances via pure discovery mode.
+ * Usage: $all_handlers = apply_filters('dm_get_handlers', []);
+ * Filter by type: array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output')
  * 
  * @filter dm_get_auth
  * Retrieves authentication instances by handler slug parameter.
@@ -77,9 +77,9 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Usage: $context = apply_filters('dm_get_context', null, $job_id);
  * 
  * @filter dm_get_steps
- * Retrieves step configurations by type parameter.
+ * Retrieves all step configurations via pure discovery mode.
  * Usage: $all_steps = apply_filters('dm_get_steps', []);
- * Usage: $step_config = apply_filters('dm_get_steps', null, 'input');
+ * Access specific: $step_config = $all_steps['input'] ?? null;
  * 
  * @filter dm_get_step_config
  * Retrieves detailed step configuration for UI rendering.
@@ -162,14 +162,8 @@ function run_data_machine() {
     // Register context retrieval service for pipeline DataPackets
     dm_register_context_retrieval_service();
     
-    // Register universal handler system with clean parameter-based architecture
-    dm_register_universal_handler_system();
-    
     // Register utility filters for external handlers
     dm_register_utility_filters();
-    
-    // Register parameter-based step auto-discovery system
-    dm_register_step_auto_discovery_system();
     
     // Register universal DataPacket creation system
     dm_register_datapacket_creation_system();

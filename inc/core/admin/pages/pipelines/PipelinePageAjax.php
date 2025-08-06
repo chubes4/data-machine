@@ -96,7 +96,8 @@ class PipelinePageAjax
         }
 
         // Validate step type exists
-        $step_config = apply_filters('dm_get_steps', null, $step_type);
+        $all_steps = apply_filters('dm_get_steps', []);
+        $step_config = $all_steps[$step_type] ?? null;
         if (!$step_config) {
             wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
         }
@@ -180,8 +181,9 @@ class PipelinePageAjax
                     wp_send_json_error(['message' => __('All steps must have a step type', 'data-machine')]);
                 }
                 
-                // Validate step type exists using filter system
-                $step_config = apply_filters('dm_get_steps', null, $step['step_type']);
+                // Validate step type exists using pure discovery
+                $all_steps = apply_filters('dm_get_steps', []);
+                $step_config = $all_steps[$step['step_type']] ?? null;
                 if (!$step_config) {
                     wp_send_json_error(['message' => sprintf(__('Invalid step type: %s', 'data-machine'), $step['step_type'])]);
                 }

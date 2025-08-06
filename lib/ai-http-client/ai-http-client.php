@@ -120,6 +120,7 @@ if (!function_exists('ai_http_client_init')) {
         
         // 4.5. WordPress management components
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/OptionsManager.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/AjaxHandler.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PromptManager.php';
         
         // 4.6. UI Components system (shared components moved to top-level)
@@ -140,10 +141,27 @@ if (!function_exists('ai_http_client_init')) {
             do_action('ai_http_client_loaded');
         }
         
+        // Auto-register AJAX actions for admin context
+        if (is_admin() && function_exists('add_action')) {
+            ai_http_client_register_ajax_actions();
+        }
+        
         // Auto-register provider configuration filters from OptionsManager
         ai_http_client_register_options_filters();
     }
     
+    /**
+     * Register AJAX actions for dynamic component interactions
+     * Only registers in admin context to avoid unnecessary overhead
+     */
+    function ai_http_client_register_ajax_actions() {
+        // Register AJAX endpoints for dynamic component features
+        add_action('wp_ajax_ai_http_save_settings', ['AI_HTTP_Ajax_Handler', 'save_settings']);
+        add_action('wp_ajax_ai_http_load_provider_settings', ['AI_HTTP_Ajax_Handler', 'load_provider_settings']);
+        add_action('wp_ajax_ai_http_get_models', ['AI_HTTP_Ajax_Handler', 'get_models']);
+        add_action('wp_ajax_ai_http_test_connection', ['AI_HTTP_Ajax_Handler', 'test_connection']);
+    }
+
     /**
      * Register WordPress filters to provide configuration from OptionsManager
      */

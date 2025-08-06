@@ -340,7 +340,10 @@ class OutputStep {
      * @return object|null Handler object or null if not found
      */
     private function get_handler_object(string $handler_name, string $handler_type): ?object {
-        $handlers = apply_filters('dm_get_handlers', null, $handler_type);
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $handlers = array_filter($all_handlers, function($handler) use ($handler_type) {
+            return ($handler['type'] ?? '') === $handler_type;
+        });
         return $handlers[$handler_name] ?? null;
     }
 
@@ -356,8 +359,11 @@ class OutputStep {
      * @return array Configuration field definitions for UI
      */
     public static function get_prompt_fields(): array {
-        // Get available output handlers via pure filter system
-        $output_handlers = apply_filters('dm_get_handlers', null, 'output');
+        // Get available output handlers via pure discovery
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $output_handlers = array_filter($all_handlers, function($handler) {
+            return ($handler['type'] ?? '') === 'output';
+        });
         $handler_options = [];
         
         foreach ($output_handlers as $slug => $handler_info) {

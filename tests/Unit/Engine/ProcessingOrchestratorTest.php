@@ -102,7 +102,8 @@ class ProcessingOrchestratorTest extends TestCase {
     public function testPositionBasedStepExecution(): void {
         // Create test pipeline with out-of-order positions
         $pipeline_config = TestDataFixtures::getOutOfOrderPipelineConfig();
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);
@@ -177,7 +178,8 @@ class ProcessingOrchestratorTest extends TestCase {
     public function testErrorHandlingInStepExecution(): void {
         // Create pipeline with error handler
         $pipeline_config = TestDataFixtures::getErrorPipelineConfig();
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);
@@ -208,7 +210,8 @@ class ProcessingOrchestratorTest extends TestCase {
         MockInputHandler::setTestData(TestDataFixtures::getSampleInputDataPackets());
         
         // Get initial job state
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         $initial_job = $db_jobs->get_job_by_id($job_id);
         $this->assertEquals('pending', $initial_job['status'], 'Job should start in pending state');
         
@@ -228,7 +231,8 @@ class ProcessingOrchestratorTest extends TestCase {
         $job_data = TestDataFixtures::getSampleJobData();
         $job_data['pipeline_id'] = 999; // Non-existent pipeline
         
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         $job_id = $db_jobs->create_job($job_data);
         
         // Execute step - should fail gracefully
@@ -246,7 +250,8 @@ class ProcessingOrchestratorTest extends TestCase {
     public function testComplexPipelineWithMultipleStepsOfSameType(): void {
         // Create complex pipeline
         $pipeline_config = TestDataFixtures::getComplexPipelineConfig();
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);
@@ -296,7 +301,8 @@ class ProcessingOrchestratorTest extends TestCase {
         $pipeline_config = TestDataFixtures::getSamplePipelineConfig();
         $pipeline_config['step_configuration'][0]['class'] = 'NonExistentClass';
         
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);

@@ -118,7 +118,8 @@ class PipelineExecutionTest extends TestCase {
     public function testComplexPipelineWithMultipleStepsOfSameType(): void {
         // Create complex pipeline
         $pipeline_config = TestDataFixtures::getComplexPipelineConfig();
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);
@@ -163,7 +164,8 @@ class PipelineExecutionTest extends TestCase {
         $flow_2_config['flow_name'] = 'Flow 2';
         $flow_2_config['pipeline_id'] = $pipeline_id;
         
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         $flow_1_id = $db_flows->create_flow($flow_1_config);
         $flow_2_id = $db_flows->create_flow($flow_2_config);
         
@@ -236,7 +238,8 @@ class PipelineExecutionTest extends TestCase {
             ]
         ];
         
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);
@@ -282,7 +285,8 @@ class PipelineExecutionTest extends TestCase {
     public function testErrorHandlingAndRecoveryInPipelineExecution(): void {
         // Create pipeline with error handler
         $pipeline_config = TestDataFixtures::getErrorPipelineConfig();
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);
@@ -316,7 +320,8 @@ class PipelineExecutionTest extends TestCase {
         MockInputHandler::setTestData(TestDataFixtures::getSampleInputDataPackets());
         
         // Get initial job state
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         $initial_job = $db_jobs->get_job_by_id($job_id);
         
         $this->assertNotNull($initial_job, 'Job should exist in database');
@@ -401,7 +406,8 @@ class PipelineExecutionTest extends TestCase {
     public function testPipelineExecutionWithEmptyInvalidConfigurations(): void {
         // Create pipeline with invalid configuration
         $invalid_config = TestDataFixtures::getInvalidPipelineConfig();
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         $pipeline_id = $db_pipelines->create_pipeline($invalid_config);
         
         $flow_id = TestDataFixtures::createTestFlow($pipeline_id);

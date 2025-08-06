@@ -30,30 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_output_step_filters() {
     
-    // Step registration - Output declares itself as 'output' step type
-    add_filter('dm_get_steps', function($step_config, $step_type = null) {
-        // Discovery mode: return all steps when no type specified
-        if (empty($step_type)) {
-            return array_merge($step_config ?: [], [
-                'output' => [
-                    'label' => __('Output', 'data-machine'),
-                    'description' => __('Publish to target destinations', 'data-machine'),
-                    'class' => OutputStep::class,
-                    'position' => 30
-                ]
-            ]);
-        }
-        
-        // Specific mode: return step config for matching type
-        if ($step_type === 'output') {
-            return [
-                'label' => __('Output', 'data-machine'),
-                'description' => __('Publish to target destinations', 'data-machine'),
-                'class' => OutputStep::class
-            ];
-        }
-        return $step_config;
-    }, 10, 2);
+    // Step registration - Output declares itself as 'output' step type (pure discovery mode)
+    add_filter('dm_get_steps', function($steps) {
+        $steps['output'] = [
+            'label' => __('Output', 'data-machine'),
+            'description' => __('Publish to target destinations', 'data-machine'),
+            'class' => OutputStep::class,
+            'position' => 30
+        ];
+        return $steps;
+    });
     
     // DataPacket conversion registration - parameter-based self-registration
     add_filter('dm_create_datapacket', function($datapacket, $source_data, $source_type, $context) {

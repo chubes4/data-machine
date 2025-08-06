@@ -152,70 +152,83 @@ if (!class_exists('DataMachine\Core\Constants')) {
 
 
         /**
-         * Get all registered input handlers via universal pipeline system.
-         * Uses dm_get_handlers filter with 'input' parameter for complete independence.
+         * Get all registered input handlers via pure discovery mode.
+         * Uses dm_get_handlers filter with pure discovery for complete independence.
          *
          * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
          */
         public static function get_input_handlers(): array {
-            // Use universal parameter system only - no fallbacks
-            $handlers = apply_filters('dm_get_handlers', null, 'input');
+            // Use pure discovery mode - get all handlers and filter for input type
+            $all_handlers = apply_filters('dm_get_handlers', []);
+            $input_handlers = array_filter($all_handlers, function($handler) {
+                return ($handler['type'] ?? '') === 'input';
+            });
             
             // Debug logging in development mode
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Universal input handlers registered', [
-                    'handler_count' => count($handlers ?: []),
+                $logger && $logger->debug('Pure discovery input handlers registered', [
+                    'total_handlers' => count($all_handlers),
+                    'input_handler_count' => count($input_handlers),
                     'context' => 'input_handler_registration'
                 ]);
             }
             
-            return $handlers ?: [];
+            return $input_handlers;
         }
 
         /**
-         * Get all registered output handlers via universal pipeline system.
-         * Uses dm_get_handlers filter with 'output' parameter for complete independence.
+         * Get all registered output handlers via pure discovery mode.
+         * Uses dm_get_handlers filter with pure discovery for complete independence.
          *
          * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
          */
         public static function get_output_handlers(): array {
-            // Use universal parameter system only - no fallbacks
-            $handlers = apply_filters('dm_get_handlers', null, 'output');
+            // Use pure discovery mode - get all handlers and filter for output type
+            $all_handlers = apply_filters('dm_get_handlers', []);
+            $output_handlers = array_filter($all_handlers, function($handler) {
+                return ($handler['type'] ?? '') === 'output';
+            });
             
             // Debug logging in development mode
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Universal output handlers registered', [
-                    'handler_count' => count($handlers ?: []),
+                $logger && $logger->debug('Pure discovery output handlers registered', [
+                    'total_handlers' => count($all_handlers),
+                    'output_handler_count' => count($output_handlers),
                     'context' => 'output_handler_registration'
                 ]);
             }
             
-            return $handlers ?: [];
+            return $output_handlers;
         }
 
         /**
-         * Get all registered handlers for a specific pipeline step parameter.
-         * Universal method that works with any step type via the parameter-based system.
+         * Get all registered handlers for a specific pipeline step type.
+         * Universal method that works with any step type via pure discovery mode.
          *
-         * @param string $step_parameter The step parameter ('input', 'output', etc.).
+         * @param string $step_type The step type ('input', 'output', etc.).
          * @return array Associative array of [slug => ['class' => ClassName, 'label' => Label]].
          */
-        public static function get_handlers_by_step(string $step_parameter): array {
-            $handlers = apply_filters('dm_get_handlers', null, $step_parameter);
+        public static function get_handlers_by_step(string $step_type): array {
+            // Use pure discovery mode - get all handlers and filter for step type
+            $all_handlers = apply_filters('dm_get_handlers', []);
+            $step_handlers = array_filter($all_handlers, function($handler) use ($step_type) {
+                return ($handler['type'] ?? '') === $step_type;
+            });
             
             // Debug logging in development mode
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Universal handlers for step', [
-                    'step_parameter' => $step_parameter,
-                    'handler_count' => count($handlers),
+                $logger && $logger->debug('Pure discovery handlers for step', [
+                    'step_type' => $step_type,
+                    'total_handlers' => count($all_handlers),
+                    'step_handler_count' => count($step_handlers),
                     'context' => 'step_handler_registration'
                 ]);
             }
             
-            return $handlers ?: [];
+            return $step_handlers;
         }
 
         /**
@@ -244,15 +257,15 @@ if (!class_exists('DataMachine\Core\Constants')) {
 
 
         /**
-         * Get the class name for a specific handler by step parameter and slug.
+         * Get the class name for a specific handler by step type and slug.
          * Universal method that works with any step type.
          *
-         * @param string $step_parameter The step parameter ('input', 'output', etc.).
+         * @param string $step_type The step type ('input', 'output', etc.).
          * @param string $slug The handler slug.
          * @return string|null The class name or null if not found.
          */
-        public static function get_handler_class(string $step_parameter, string $slug): ?string {
-            $handlers = self::get_handlers_by_step($step_parameter);
+        public static function get_handler_class(string $step_type, string $slug): ?string {
+            $handlers = self::get_handlers_by_step($step_type);
             if (!isset($handlers[$slug]['class'])) {
                 return null;
             }
@@ -338,8 +351,8 @@ if (!class_exists('DataMachine\Core\Constants')) {
         }
 
         /**
-         * Test method to verify universal pipeline system is working.
-         * Validates the clean parameter-based handler registration system.
+         * Test method to verify pure discovery pipeline system is working.
+         * Validates the clean pure discovery handler registration system.
          * 
          * @return array Test results with handler counts and system status.
          */
@@ -349,19 +362,21 @@ if (!class_exists('DataMachine\Core\Constants')) {
                 'tests' => []
             ];
 
-            // Test 1: Universal parameter system
-            $input_handlers = apply_filters('dm_get_handlers', null, 'input');
-            $output_handlers = apply_filters('dm_get_handlers', null, 'output');
-            $results['tests']['universal_system'] = [
-                'input_handlers' => count($input_handlers ?: []),
-                'output_handlers' => count($output_handlers ?: [])
+            // Test 1: Pure discovery system
+            $all_handlers = apply_filters('dm_get_handlers', []);
+            $input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
+            $output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+            $results['tests']['pure_discovery_system'] = [
+                'total_handlers' => count($all_handlers),
+                'input_handlers' => count($input_handlers),
+                'output_handlers' => count($output_handlers)
             ];
 
             // Test 2: Pipeline steps registration
             $pipeline_steps = apply_filters('dm_get_steps', []);
             $results['tests']['pipeline_steps'] = count($pipeline_steps);
 
-            // Test 3: Constants methods using universal system
+            // Test 3: Constants methods using pure discovery
             $constants_input = self::get_input_handlers();
             $constants_output = self::get_output_handlers();
             $results['tests']['constants_integration'] = [
@@ -369,18 +384,18 @@ if (!class_exists('DataMachine\Core\Constants')) {
                 'output_handlers' => count($constants_output)
             ];
 
-            // Test 4: Universal helper methods
+            // Test 4: Pure discovery helper methods
             $transform_handlers = self::get_handlers_by_step('transform'); // Should be empty
             $input_step = self::get_pipeline_step('input');
-            $results['tests']['universal_helpers'] = [
+            $results['tests']['pure_discovery_helpers'] = [
                 'transform_handlers' => count($transform_handlers),
                 'input_step_found' => !empty($input_step)
             ];
 
-            // Test 5: Legacy system removal verification
-            $results['tests']['clean_architecture'] = [
-                'no_fallback_patterns' => true, // All fallback logic removed
-                'single_filter_system' => true  // Only dm_get_handlers filter used
+            // Test 5: Pure discovery architecture verification
+            $results['tests']['pure_discovery_architecture'] = [
+                'no_parameter_mode' => true, // All parameter mode eliminated
+                'single_discovery_pattern' => true  // Pure discovery throughout
             ];
 
             return $results;

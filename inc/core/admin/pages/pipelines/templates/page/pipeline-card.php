@@ -92,13 +92,9 @@ $is_new_pipeline = empty($pipeline_id);
                     }
                 }
                 
-                // Transform to template expected format
-                $display_steps[] = [
-                    'step_type' => $step['step_type'],
-                    'position' => $step['position'],
-                    'is_empty' => false,
-                    'step_data' => $step // Pass full step data as step_data
-                ];
+                // Use database format directly - no transformation needed
+                $step['is_empty'] = false; // Add template flag to database object
+                $display_steps[] = $step;
             }
             
             // Always append an empty step for "Add Step" functionality

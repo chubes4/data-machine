@@ -10,9 +10,7 @@
  * - dm_register_database_service_system(): Parameter-based database filter hooks  
  * - dm_register_wpdb_service_filter(): WordPress database access
  * - dm_register_context_retrieval_service(): DataPacket context orchestration
- * - dm_register_universal_handler_system(): Handler registration filter hooks
  * - dm_register_utility_filters(): Backend utility filter hooks only
- * - dm_register_step_auto_discovery_system(): Step registration filter hooks
  * - dm_register_datapacket_creation_system(): DataPacket creation filter hooks
  * 
  * Architectural Separation:
@@ -270,79 +268,6 @@ function dm_register_context_retrieval_service() {
     }, 10, 3);
 }
 
-/**
- * Register universal handler system via dm_get_handlers filter.
- * 
- * Provides pure filter-based handler registration with parameter-based discovery.
- * Components self-register via *Filters.php files following "plugins within plugins" architecture.
- * 
- * Usage: $handlers = apply_filters('dm_get_handlers', null, 'input');
- * 
- * @since NEXT_VERSION
- */
-function dm_register_universal_handler_system() {
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($handlers !== null) {
-            return $handlers; // External override provided
-        }
-        
-        $handlers = [];
-        
-        // Pure parameter-based system - handlers self-register via this same filter
-        // Complete architectural purity - single filter pattern throughout
-        
-        // Debug logging in development mode
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->debug('Universal handlers initialized for type', [
-                'type' => $type,
-                'handler_count' => count($handlers),
-                'context' => 'handler_registration'
-            ]);
-        }
-        
-        return $handlers;
-    }, 50, 2); // Priority 50 ensures individual handlers register first at priority 10
-    
-    // Parameter-based handler settings system (2-parameter pattern for consistency)
-    // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files
-    // Bootstrap provides pure filter hook - components add their own registration logic
-    add_filter('dm_get_handler_settings', function($service, $handler_key) {
-        if ($service !== null) {
-            return $service; // Component self-registration provided
-        }
-        
-        // ARCHITECTURAL COMPLIANCE COMPLETE - Pure filter hook only
-        // Components self-register via *Filters.php files following established patterns
-        //
-        // Bootstrap provides only pure filter hook - components add their own logic
-        
-        return null; // Components self-register via filters
-    }, 10, 2);
-    
-    // Parameter-based authentication system - auto-links to handlers via matching parameters
-    // Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
-    add_filter('dm_get_auth', function($auth, $handler_slug) {
-        if ($auth !== null) {
-            // Auto-register hooks if auth service has register_hooks method
-            if (method_exists($auth, 'register_hooks')) {
-                static $registered_hooks = [];
-                $auth_class = get_class($auth);
-                
-                // Only register hooks once per auth class
-                if (!isset($registered_hooks[$auth_class])) {
-                    $auth->register_hooks();
-                    $registered_hooks[$auth_class] = true;
-                }
-            }
-            return $auth; // External override provided
-        }
-        
-        // Core returns null - auth components self-register via this same filter
-        // This enables pure parameter-based auto-linking with zero hardcoding
-        return null;
-    }, 5, 2);
-}
 
 /**
  * Register backend utility filters for data processing.
@@ -380,37 +305,47 @@ function dm_register_utility_filters() {
     
     // Admin notices removed - components use WordPress add_action('admin_notices') directly
     
+    // Parameter-based authentication system - auto-links to handlers via matching parameters
+    // Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
+    add_filter('dm_get_auth', function($auth, $handler_slug) {
+        if ($auth !== null) {
+            // Auto-register hooks if auth service has register_hooks method
+            if (method_exists($auth, 'register_hooks')) {
+                static $registered_hooks = [];
+                $auth_class = get_class($auth);
+                
+                // Only register hooks once per auth class
+                if (!isset($registered_hooks[$auth_class])) {
+                    $auth->register_hooks();
+                    $registered_hooks[$auth_class] = true;
+                }
+            }
+            return $auth; // External override provided
+        }
+        
+        // Core returns null - auth components self-register via this same filter
+        // This enables pure parameter-based auto-linking with zero hardcoding
+        return null;
+    }, 5, 2);
+    
+    // Parameter-based handler settings system (2-parameter pattern for consistency)
+    // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files
+    // Bootstrap provides pure filter hook - components add their own registration logic
+    add_filter('dm_get_handler_settings', function($service, $handler_key) {
+        if ($service !== null) {
+            return $service; // Component self-registration provided
+        }
+        
+        // ARCHITECTURAL COMPLIANCE COMPLETE - Pure filter hook only
+        // Components self-register via *Filters.php files following established patterns
+        //
+        // Bootstrap provides only pure filter hook - components add their own logic
+        
+        return null; // Components self-register via filters
+    }, 10, 2);
+    
 }
 
-/**
- * Register parameter-based step self-registration system.
- * 
- * ARCHITECTURAL COMPLIANCE: Provides pure filter hook for step self-registration.
- * Steps MUST register in their own class files via *Filters.php following the
- * modular "plugins within plugins" architecture pattern.
- * 
- * Usage: $step_config = apply_filters('dm_get_steps', null, 'input');
- * 
- * @since NEXT_VERSION
- */
-function dm_register_step_auto_discovery_system() {
-    
-    /**
-     * Parameter-based step registration filter.
-     * 
-     * Pure filter hook with no core implementation. Steps self-register 
-     * in their own class files following modular architecture.
-     * 
-     * @param mixed $step_config Existing step configuration (null if not found)
-     * @param string $step_type Step type to register ('input', 'ai', 'output', etc.)
-     * @return array|null Step configuration array or null if not found
-     */
-    add_filter('dm_get_steps', function($step_config, $step_type = null) {
-        // Pure filter hook - steps self-register in their own class files
-        // No centralized registration - follows modular architecture
-        return $step_config;
-    }, 5, 2);
-}
 
 /**
  * Register universal DataPacket creation system.

@@ -303,7 +303,8 @@ class TestDataFixtures {
      * Create test pipeline in mock database
      */
     public static function createTestPipeline(): int {
-        $db_pipelines = apply_filters('dm_get_database_service', null, 'pipelines');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
         return $db_pipelines->create_pipeline(self::getSamplePipelineConfig());
     }
     
@@ -316,7 +317,8 @@ class TestDataFixtures {
             $flow_config['pipeline_id'] = $pipeline_id;
         }
         
-        $db_flows = apply_filters('dm_get_database_service', null, 'flows');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_flows = $all_databases['flows'] ?? null;
         return $db_flows->create_flow($flow_config);
     }
     
@@ -332,7 +334,8 @@ class TestDataFixtures {
             $job_data['flow_id'] = $flow_id;
         }
         
-        $db_jobs = apply_filters('dm_get_database_service', null, 'jobs');
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
         return $db_jobs->create_job($job_data);
     }
 }

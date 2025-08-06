@@ -341,6 +341,7 @@ class AI_HTTP_ProviderManager_Component {
                 </table>
             </div>
 
+            <!-- Debug: show_save_button value = <?php echo var_export($args['show_save_button'], true); ?> -->
             <?php if ($args['show_save_button']): ?>
                 <!-- Save Button -->
                 <p class="submit">

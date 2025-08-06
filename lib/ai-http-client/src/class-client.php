@@ -544,11 +544,11 @@ class AI_HTTP_Client {
      * This convenience method automatically loads the step configuration
      * and merges it with the provided request parameters.
      *
-     * @param string $step_key Step identifier
+     * @param string $step_id Step identifier
      * @param array $request Base request parameters
      * @return array Standardized response
      */
-    public function send_step_request($step_key, $request) {
+    public function send_step_request($step_id, $request) {
         // Return error if client is not properly configured
         if (!$this->is_configured) {
             return $this->create_error_response('AI HTTP Client is not properly configured - plugin context is required');
@@ -557,10 +557,10 @@ class AI_HTTP_Client {
         try {
             // Load step configuration
             $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
-            $step_config = $options_manager->get_step_configuration($step_key);
+            $step_config = $options_manager->get_step_configuration($step_id);
             
             if (empty($step_config)) {
-                return $this->create_error_response("No configuration found for step: {$step_key}");
+                return $this->create_error_response("No configuration found for step: {$step_id}");
             }
             
             // Merge step configuration with request
@@ -569,45 +569,45 @@ class AI_HTTP_Client {
             // Get provider from step config
             $provider = $step_config['provider'] ?? null;
             if (!$provider) {
-                return $this->create_error_response("No provider configured for step: {$step_key}");
+                return $this->create_error_response("No provider configured for step: {$step_id}");
             }
             
             // Send request using step-configured provider  
             return $this->send_request($enhanced_request, $provider);
             
         } catch (Exception $e) {
-            return $this->create_error_response("Step request failed: " . $e->getMessage(), $step_key);
+            return $this->create_error_response("Step request failed: " . $e->getMessage(), $step_id);
         }
     }
     
     /**
      * Get step configuration for debugging/inspection
      *
-     * @param string $step_key Step identifier
+     * @param string $step_id Step identifier
      * @return array Step configuration
      */
-    public function get_step_configuration($step_key) {
+    public function get_step_configuration($step_id) {
         if (!$this->is_configured) {
             return array();
         }
         
         $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
-        return $options_manager->get_step_configuration($step_key);
+        return $options_manager->get_step_configuration($step_id);
     }
     
     /**
      * Check if a step has configuration
      *
-     * @param string $step_key Step identifier
+     * @param string $step_id Step identifier
      * @return bool True if step is configured
      */
-    public function has_step_configuration($step_key) {
+    public function has_step_configuration($step_id) {
         if (!$this->is_configured) {
             return false;
         }
         
         $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
-        return $options_manager->has_step_configuration($step_key);
+        return $options_manager->has_step_configuration($step_id);
     }
     
     /**

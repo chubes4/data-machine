@@ -30,30 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_receiver_step_filters() {
     
-    // Step registration - Receiver declares itself as 'receiver' step type
-    add_filter('dm_get_steps', function($step_config, $step_type = null) {
-        // Discovery mode: return all steps when no type specified
-        if (empty($step_type)) {
-            return array_merge($step_config ?: [], [
-                'receiver' => [
-                    'label' => __('Receiver', 'data-machine'),
-                    'description' => __('Accept webhooks from external platforms (framework implementation - coming soon)', 'data-machine'),
-                    'class' => ReceiverStep::class,
-                    'position' => 40
-                ]
-            ]);
-        }
-        
-        // Specific mode: return step config for matching type
-        if ($step_type === 'receiver') {
-            return [
-                'label' => __('Receiver', 'data-machine'),
-                'description' => __('Accept webhooks from external platforms (framework implementation - coming soon)', 'data-machine'),
-                'class' => ReceiverStep::class
-            ];
-        }
-        return $step_config;
-    }, 10, 2);
+    // Step registration - Receiver declares itself as 'receiver' step type (pure discovery mode)
+    add_filter('dm_get_steps', function($steps) {
+        $steps['receiver'] = [
+            'label' => __('Receiver', 'data-machine'),
+            'description' => __('Accept webhooks from external platforms (framework implementation - coming soon)', 'data-machine'),
+            'class' => ReceiverStep::class,
+            'position' => 40
+        ];
+        return $steps;
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

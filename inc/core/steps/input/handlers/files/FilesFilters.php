@@ -30,22 +30,16 @@ if (!defined('ABSPATH')) {
  * @since 0.1.0
  */
 function dm_register_files_input_filters() {
-    // Handler registration - Files declares itself as input handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'input') {
-            // Initialize handlers array if null
-            if ($handlers === null) {
-                $handlers = [];
-            }
-            
-            $handlers['files'] = [
-                'class' => Files::class,
-                'label' => __('Files', 'data-machine'),
-                'description' => __('Process local files and uploads', 'data-machine')
-            ];
-        }
+    // Handler registration - Files declares itself as input handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['files'] = [
+            'type' => 'input',
+            'class' => Files::class,
+            'label' => __('Files', 'data-machine'),
+            'description' => __('Process local files and uploads', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Settings registration - parameter-matched to 'files' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {

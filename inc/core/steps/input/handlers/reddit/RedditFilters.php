@@ -30,17 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_reddit_input_filters() {
     
-    // Handler registration - Reddit declares itself as input handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'input') {
-            $handlers['reddit'] = [
-                'class' => Reddit::class,
-                'label' => __('Reddit', 'data-machine'),
-                'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
-            ];
-        }
+    // Handler registration - Reddit declares itself as input handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['reddit'] = [
+            'type' => 'input',
+            'class' => Reddit::class,
+            'label' => __('Reddit', 'data-machine'),
+            'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Authentication registration - parameter-matched to 'reddit' handler
     add_filter('dm_get_auth', function($auth, $handler_slug) {

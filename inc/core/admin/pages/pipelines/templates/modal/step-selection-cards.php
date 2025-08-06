@@ -29,9 +29,12 @@ if (!defined('WPINC')) {
             $label = $step_config['label'] ?? ucfirst($step_type);
             $description = $step_config['description'] ?? '';
             
-            // Get available handlers for this step type using pure filter-based discovery
+            // Get available handlers for this step type using pure discovery
             $handlers_list = '';
-            $handlers = apply_filters('dm_get_handlers', null, $step_type);
+            $all_handlers = apply_filters('dm_get_handlers', []);
+            $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
+                return ($handler['type'] ?? '') === $step_type;
+            });
             
             if (!empty($handlers)) {
                 $handler_labels = [];

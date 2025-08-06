@@ -485,12 +485,12 @@ class AI_HTTP_Options_Manager {
                 wp_send_json_error('Plugin context is required');
             }
             
-            $step_key = isset($_POST['step_key']) ? sanitize_key($_POST['step_key']) : null;
+            $step_id = isset($_POST['step_id']) ? sanitize_key($_POST['step_id']) : null;
             $options_manager = new self($plugin_context, 'llm');
             
-            if ($step_key) {
+            if ($step_id) {
                 // Step-aware form processing
-                $field_prefix = "ai_step_{$step_key}_";
+                $field_prefix = "ai_step_{$step_id}_";
                 
                 $provider = sanitize_text_field($_POST[$field_prefix . 'provider']);
                 $step_settings = array(
@@ -509,7 +509,7 @@ class AI_HTTP_Options_Manager {
                 }
                 
                 // Save step configuration
-                $options_manager->save_step_configuration($step_key, $step_settings);
+                $options_manager->save_step_configuration($step_id, $step_settings);
                 wp_send_json_success('Step settings saved');
                 
             } else {
@@ -563,13 +563,13 @@ class AI_HTTP_Options_Manager {
             }
             
             $provider = sanitize_text_field($_POST['provider']);
-            $step_key = isset($_POST['step_key']) ? sanitize_key($_POST['step_key']) : null;
+            $step_id = isset($_POST['step_id']) ? sanitize_key($_POST['step_id']) : null;
             
             $options_manager = new self($plugin_context, 'llm');
             
-            // Use step-aware method if step_key is provided
-            if ($step_key) {
-                $settings = $options_manager->get_provider_settings_with_step($provider, $step_key);
+            // Use step-aware method if step_id is provided
+            if ($step_id) {
+                $settings = $options_manager->get_provider_settings_with_step($provider, $step_id);
             } else {
                 $settings = $options_manager->get_provider_settings($provider);  
             }
@@ -601,32 +601,32 @@ class AI_HTTP_Options_Manager {
     /**
      * Get configuration for a specific step
      *
-     * @param string $step_key Step identifier
+     * @param string $step_id Step identifier
      * @return array Step configuration
      */
-    public function get_step_configuration($step_key) {
+    public function get_step_configuration($step_id) {
         if (!$this->is_configured) {
             return array();
         }
         
         $step_configs = get_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), array());
-        return isset($step_configs[$step_key]) ? $step_configs[$step_key] : array();
+        return isset($step_configs[$step_id]) ? $step_configs[$step_id] : array();
     }
 
     /**
      * Save configuration for a specific step
      *
-     * @param string $step_key Step identifier  
+     * @param string $step_id Step identifier  
      * @param array $config Step configuration
      * @return bool True if saved successfully
      */
-    public function save_step_configuration($step_key, $config) {
+    public function save_step_configuration($step_id, $config) {
         if (!$this->is_configured) {
             return false;
         }
         
         $step_configs = get_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), array());
-        $step_configs[$step_key] = $this->sanitize_step_settings($config);
+        $step_configs[$step_id] = $this->sanitize_step_settings($config);
         
         return update_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), $step_configs);
     }
@@ -648,16 +648,16 @@ class AI_HTTP_Options_Manager {
      * Get provider settings with step context (step-specific settings take priority)
      *
      * @param string $provider_name Provider name
-     * @param string $step_key Optional step identifier for step-specific settings
+     * @param string $step_id Optional step identifier for step-specific settings
      * @return array Provider settings with merged API key and step-specific overrides
      */
-    public function get_provider_settings_with_step($provider_name, $step_key = null) {
+    public function get_provider_settings_with_step($provider_name, $step_id = null) {
         // Start with global provider settings
         $provider_settings = $this->get_provider_settings($provider_name);
         
-        // If step_key provided, merge with step-specific configuration
-        if ($step_key) {
-            $step_config = $this->get_step_configuration($step_key);
+        // If step_id provided, merge with step-specific configuration
+        if ($step_id) {
+            $step_config = $this->get_step_configuration($step_id);
             
             // If this step is configured for the specified provider, merge step settings
             if (isset($step_config['provider']) && $step_config['provider'] === $provider_name) {
@@ -671,18 +671,18 @@ class AI_HTTP_Options_Manager {
     /**
      * Delete configuration for a specific step
      *
-     * @param string $step_key Step identifier
+     * @param string $step_id Step identifier
      * @return bool True if deleted successfully
      */
-    public function delete_step_configuration($step_key) {
+    public function delete_step_configuration($step_id) {
         if (!$this->is_configured) {
             return false;
         }
         
         $step_configs = get_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), array());
         
-        if (isset($step_configs[$step_key])) {
-            unset($step_configs[$step_key]);
+        if (isset($step_configs[$step_id])) {
+            unset($step_configs[$step_id]);
             return update_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), $step_configs);
         }
         
@@ -692,11 +692,11 @@ class AI_HTTP_Options_Manager {
     /**
      * Check if a step has configuration
      *
-     * @param string $step_key Step identifier
+     * @param string $step_id Step identifier
      * @return bool True if step has configuration
      */
-    public function has_step_configuration($step_key) {
-        $step_config = $this->get_step_configuration($step_key);
+    public function has_step_configuration($step_id) {
+        $step_config = $this->get_step_configuration($step_id);
         return !empty($step_config);
     }
 

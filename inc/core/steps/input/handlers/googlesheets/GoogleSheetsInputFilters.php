@@ -33,17 +33,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_googlesheets_input_filters() {
     
-    // Handler registration - Google Sheets Input declares itself as input handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'input') {
-            $handlers['googlesheets'] = [
-                'class' => GoogleSheetsInput::class,
-                'label' => __('Google Sheets', 'data-machine'),
-                'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
-            ];
-        }
+    // Handler registration - Google Sheets Input declares itself as input handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['googlesheets'] = [
+            'type' => 'input',
+            'class' => GoogleSheetsInput::class,
+            'label' => __('Google Sheets', 'data-machine'),
+            'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Settings registration - parameter-matched to 'googlesheets' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {

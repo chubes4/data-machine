@@ -30,17 +30,16 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_rss_input_filters() {
     
-    // Handler registration - RSS declares itself as input handler
-    add_filter('dm_get_handlers', function($handlers, $type) {
-        if ($type === 'input') {
-            $handlers['rss'] = [
-                'class' => Rss::class,
-                'label' => __('RSS', 'data-machine'),
-                'description' => __('Monitor and process RSS feeds', 'data-machine')
-            ];
-        }
+    // Handler registration - RSS declares itself as input handler (pure discovery mode)
+    add_filter('dm_get_handlers', function($handlers) {
+        $handlers['rss'] = [
+            'type' => 'input',
+            'class' => Rss::class,
+            'label' => __('RSS', 'data-machine'),
+            'description' => __('Monitor and process RSS feeds', 'data-machine')
+        ];
         return $handlers;
-    }, 10, 2);
+    });
     
     // Settings registration - parameter-matched to 'rss' handler
     add_filter('dm_get_handler_settings', function($settings, $handler_slug) {
