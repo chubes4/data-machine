@@ -38,18 +38,6 @@ function dm_register_jobs_database_filters() {
         return $services;
     });
     
-    // Job Status Manager service - handles job state transitions
-    add_filter('dm_get_job_status_manager', function($service) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        static $status_manager_instance = null;
-        if ($status_manager_instance === null) {
-            $status_manager_instance = new \DataMachine\Core\Database\Jobs\JobStatusManager();
-        }
-        return $status_manager_instance;
-    }, 10);
     
     // Job Creator service - handles job creation logic
     add_filter('dm_get_job_creator', function($service) {

@@ -52,7 +52,7 @@ function dm_register_remote_locations_database_filters() {
             
             return apply_filters('dm_render_template', '', 'modal/remote-locations-manager', [
                 'remote_locations_service' => $db_remote_locations,
-                'existing_locations' => $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : []
+                'existing_locations' => $db_remote_locations ? $db_remote_locations->get_all_locations() : []
             ]);
         }
         

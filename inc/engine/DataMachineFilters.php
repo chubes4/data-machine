@@ -35,9 +35,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Engine services registered:
  * - dm_get_ai_http_client: External AI library integration
  * - dm_get_orchestrator: Core pipeline processing orchestration
- * - dm_get_constants: System constants and configuration
  * - dm_get_http_service: Generic HTTP utility service
- * - dm_get_pipeline_context: Pipeline sequence management
  * 
  * Business logic services (moved to core components):
  * - Logger → Admin component
@@ -68,12 +66,6 @@ function dm_register_direct_service_filters() {
         return new \DataMachine\Engine\ProcessingOrchestrator();
     }, 10);
     
-    add_filter('dm_get_constants', function($service) {
-        if ($service !== null) {
-            return $service;
-        }
-        return new \DataMachine\Engine\Constants();
-    }, 10);
     
     add_filter('dm_get_http_service', function($service) {
         if ($service !== null) {
@@ -82,12 +74,6 @@ function dm_register_direct_service_filters() {
         return new \DataMachine\Engine\HttpService();
     }, 10);
     
-    add_filter('dm_get_pipeline_context', function($service) {
-        if ($service !== null) {
-            return $service;
-        }
-        return new \DataMachine\Engine\PipelineContext();
-    }, 10);
     
     add_filter('dm_get_action_scheduler', function($service) {
         if ($service !== null) {

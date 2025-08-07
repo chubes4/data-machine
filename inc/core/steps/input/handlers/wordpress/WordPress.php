@@ -175,8 +175,9 @@ class WordPress {
             }
 
             $post_id = $post->ID;
-            $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-            if ($processed_items_manager && $processed_items_manager->is_item_processed($pipeline_id, 'wordpress_local', $post_id)) {
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_processed_items = $all_databases['processed_items'] ?? null;
+            if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'wordpress_local', $post_id)) {
                 continue;
             }
 
@@ -346,8 +347,9 @@ class WordPress {
                     continue;
                 }
                 
-                $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-                if ($processed_items_manager && $processed_items_manager->is_item_processed($pipeline_id, 'wordpress_remote_rest', $current_item_id)) {
+                $all_databases = apply_filters('dm_get_database_services', []);
+                $db_processed_items = $all_databases['processed_items'] ?? null;
+                if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'wordpress_remote_rest', $current_item_id)) {
                     continue;
                 }
                 
@@ -548,8 +550,9 @@ class WordPress {
                 }
 
                 $current_item_id = $post['ID'];
-                $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-                if ($processed_items_manager && $processed_items_manager->is_item_processed($pipeline_id, 'wordpress_remote_airdrop', $current_item_id)) {
+                $all_databases = apply_filters('dm_get_database_services', []);
+                $db_processed_items = $all_databases['processed_items'] ?? null;
+                if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'wordpress_remote_airdrop', $current_item_id)) {
                     continue;
                 }
 

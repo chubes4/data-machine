@@ -36,8 +36,7 @@ class EncryptionHelper {
 			return ''; // Return empty string if input is empty
 		}
 
-		$constants = apply_filters('dm_get_constants', null);
-		$key = $constants->get_encryption_key(); // Get the key from Constants
+		$key = hash('sha256', AUTH_KEY, true); // Generate 32-byte encryption key from WordPress AUTH_KEY
 		$iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
 		if (false === $iv_length) {
 			return false;
@@ -79,8 +78,7 @@ class EncryptionHelper {
 			return false; // Invalid Base64 string
 		}
 
-		$constants = apply_filters('dm_get_constants', null);
-		$key = $constants->get_encryption_key(); // Get the key from Constants
+		$key = hash('sha256', AUTH_KEY, true); // Generate 32-byte encryption key from WordPress AUTH_KEY
 		$iv_length = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
 		if (false === $iv_length) {
 			return false;

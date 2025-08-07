@@ -161,7 +161,7 @@ class Files {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            if (!$db_processed_items->is_processed($pipeline_id, 'files', $file_identifier)) {
+            if (!$db_processed_items->has_item_been_processed($pipeline_id, 'files', $file_identifier)) {
                 return $file;
             }
         }

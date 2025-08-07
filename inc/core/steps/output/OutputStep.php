@@ -33,9 +33,10 @@ class OutputStep {
      * 
      * @param int $job_id The job ID to process
      * @param array $data_packets Array of DataPackets from previous steps
+     * @param array $job_config Complete job configuration from JobCreator
      * @return array Array of output DataPackets for next step
      */
-    public function execute(int $job_id, array $data_packets = []): array {
+    public function execute(int $job_id, array $data_packets = [], array $job_config = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;

@@ -117,7 +117,7 @@ class JobCreator {
                     'pipeline_config' => $job_config,
                     'previous_data_packets' => [] // First step has no previous data
                 ],
-                \DataMachine\Engine\Constants::ACTION_GROUP
+                'data-machine'
             );
 
             if ( $action_id === false || $action_id === 0 ) {

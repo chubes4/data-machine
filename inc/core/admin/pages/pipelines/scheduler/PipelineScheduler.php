@@ -34,7 +34,40 @@ class PipelineScheduler
      */
     public function get_intervals(): array
     {
-        return \DataMachine\Engine\Constants::get_scheduler_intervals();
+        return [
+            'every_5_minutes' => [
+                'label'    => __('Every 5 Minutes', 'data-machine'),
+                'interval' => 300 // 5 * 60
+            ],
+            'hourly'          => [
+                'label'    => __('Hourly', 'data-machine'),
+                'interval' => HOUR_IN_SECONDS
+            ],
+            'every_2_hours'   => [
+                'label'    => __('Every 2 Hours', 'data-machine'),
+                'interval' => HOUR_IN_SECONDS * 2
+            ],
+            'every_4_hours'   => [
+                'label'    => __('Every 4 Hours', 'data-machine'),
+                'interval' => HOUR_IN_SECONDS * 4
+            ],
+            'qtrdaily'        => [
+                'label'    => __('Every 6 Hours', 'data-machine'),
+                'interval' => HOUR_IN_SECONDS * 6
+            ],
+            'twicedaily'      => [
+                'label'    => __('Twice Daily', 'data-machine'),
+                'interval' => HOUR_IN_SECONDS * 12
+            ],
+            'daily'           => [
+                'label'    => __('Daily', 'data-machine'),
+                'interval' => DAY_IN_SECONDS
+            ],
+            'weekly'          => [
+                'label'    => __('Weekly', 'data-machine'),
+                'interval' => WEEK_IN_SECONDS
+            ],
+        ];
     }
 
     /**

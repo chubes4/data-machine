@@ -1,20 +1,25 @@
 <?php
 /**
- * Orchestrates the extensible multi-step data processing pipeline.
+ * Pure execution engine for data processing pipelines.
  *
- * Uses pure position-based execution with pipeline configuration as the single source of truth.
- * Supports drag-and-drop pipeline ordering with multiple steps of the same type.
+ * LEAN ARCHITECTURE:
+ * - JobCreator builds complete pipeline configuration
+ * - Orchestrator receives pre-built config and executes steps
+ * - Zero database dependencies or redundant data preparation
+ * - Pure pipeline execution with DataPacket flow
  *
- * POSITION-BASED EXECUTION:
- * - Linear pipeline execution using pipeline configuration
- * - User-controlled step ordering through visual pipeline builder
- * - Multiple steps of the same type supported (multiple AI steps, etc.)
+ * EXECUTION FLOW:
+ * - Receives pre-built configuration from JobCreator via Action Scheduler
+ * - Gets step data directly from provided pipeline_config array
+ * - Instantiates step classes via filter-based discovery
+ * - Passes complete job config to steps for self-configuration
+ * - Schedules next step with output DataPackets
  *
  * STEP REQUIREMENTS:
  * - Parameter-less constructor only
- * - Single execute(int $job_id, array $data_packets = []): array method required
+ * - execute(int $job_id, array $data_packets = [], array $job_config = []): array method required
  * - Must return array of DataPackets for next step
- * - Pure filter-based service access
+ * - Steps extract needed configuration from job_config themselves
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/includes
@@ -78,12 +83,15 @@ class ProcessingOrchestrator {
 		}
 	}
 	/**
-	 * Execute a pipeline step at the specified position using pure stateless execution.
+	 * Execute a pipeline step using pre-built configuration from JobCreator.
 	 * 
-	 * Ultra-lean execution engine with zero database dependencies. All required data
-	 * is passed as parameters from JobCreator/ActionScheduler.
+	 * PURE EXECUTION ENGINE:
+	 * - Uses pre-built pipeline configuration (no database lookups)
+	 * - Gets step data directly from pipeline_config array
+	 * - Instantiates step and passes complete job configuration
+	 * - Steps handle their own configuration extraction
 	 *
-	 * @param int $step_position The step position in pipeline (0-based).
+	 * @param int $step_position The step position in pipeline_config array (0-based index).
 	 * @param int $job_id The job ID.
 	 * @param int $pipeline_id The pipeline ID.
 	 * @param int $flow_id The flow ID.
@@ -117,11 +125,12 @@ class ProcessingOrchestrator {
 				return false;
 			}
 			
-			// Find step configuration by position
+			// Use pre-built pipeline configuration from JobCreator (no database lookups)
 			$pipeline_steps = $pipeline_config['pipeline_step_config'] ?? [];
-			$step_config = $this->find_step_config_by_position( $step_position, $pipeline_steps, $logger );
-			if ( ! $step_config ) {
-				$logger->error( 'Pipeline step configuration not found at position', [
+			
+			// Validate we have steps in pre-built configuration
+			if ( empty( $pipeline_steps ) ) {
+				$logger->error( 'Pipeline configuration contains no steps', [
 					'step_position' => $step_position,
 					'job_id' => $job_id,
 					'pipeline_id' => $pipeline_id
@@ -129,12 +138,38 @@ class ProcessingOrchestrator {
 				return false;
 			}
 			
-			$next_step_position = $this->get_next_step_position( $step_position, $pipeline_steps );
+			// Get step directly from pre-built array by position index
+			if ( ! isset( $pipeline_steps[$step_position] ) ) {
+				$logger->error( 'Step not found at position in pre-built configuration', [
+					'step_position' => $step_position,
+					'available_steps' => count( $pipeline_steps ),
+					'job_id' => $job_id
+				] );
+				return false;
+			}
+			
+			$step_config = $pipeline_steps[$step_position];
+			$next_step_exists = isset( $pipeline_steps[$step_position + 1] );
 
-			$step_class = $step_config['class'];
+			// Get step class via direct discovery - no mapping needed
+			$step_type = $step_config['step_type'] ?? '';
+			$all_steps = apply_filters('dm_get_steps', []);
+			$step_definition = $all_steps[$step_type] ?? null;
+			
+			if ( ! $step_definition ) {
+				$logger->error( 'Step type not found in registry', [
+					'step_position' => $step_position,
+					'step_type' => $step_type,
+					'job_id' => $job_id
+				] );
+				return false;
+			}
+			
+			$step_class = $step_definition['class'] ?? '';
 			if ( ! class_exists( $step_class ) ) {
 				$logger->error( 'Pipeline step class not found', [
 					'step_position' => $step_position,
+					'step_type' => $step_type,
 					'class' => $step_class,
 					'job_id' => $job_id
 				] );
@@ -157,8 +192,8 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Execute step and capture DataPacket returns (pure engine flow)
-			$output_data_packets = $step_instance->execute( $job_id, $previous_data_packets );
+			// Execute step with job configuration - steps access data directly from job_config
+			$output_data_packets = $step_instance->execute( $job_id, $previous_data_packets, $pipeline_config );
 			
 			// Validate step return - must be array of DataPackets
 			if ( ! is_array( $output_data_packets ) ) {
@@ -184,7 +219,8 @@ class ProcessingOrchestrator {
 			
 			// Handle pipeline flow based on step success
 			if ( $step_success ) {
-				if ( $next_step_position !== null ) {
+				if ( $next_step_exists ) {
+					$next_step_position = $step_position + 1;
 					// Pass output DataPackets to next step (pure engine flow)
 					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $pipeline_config, $output_data_packets ) ) {
 						$logger->error( 'Failed to schedule next step', [
@@ -266,7 +302,7 @@ class ProcessingOrchestrator {
 				'pipeline_config' => $pipeline_config,
 				'previous_data_packets' => $previous_data_packets
 			],
-			\DataMachine\Engine\Constants::ACTION_GROUP
+			'data-machine'
 		);
 
 		$success = $action_id !== false && $action_id !== 0;
@@ -281,92 +317,5 @@ class ProcessingOrchestrator {
 		
 		return $success;
 	}
-
-
-	/**
-	 * Find step configuration by position in pipeline configuration.
-	 *
-	 * @param int $step_position The step position to find.
-	 * @param array $pipeline_steps Pipeline steps array.
-	 * @param object $logger The logger instance.
-	 * @return array|null Step configuration or null if not found.
-	 */
-	private function find_step_config_by_position( int $step_position, array $pipeline_steps, object $logger ): ?array {
-		foreach ( $pipeline_steps as $step ) {
-			if ( isset( $step['position'] ) && (int) $step['position'] === $step_position ) {
-				// Map pipeline step config to expected format using parameter-based discovery
-				return $this->map_pipeline_step_to_execution_format( $step, $logger );
-			}
-		}
-		
-		return null;
-	}
-
-	/**
-	 * Get step configuration by type using pure discovery mode.
-	 *
-	 * @param string $step_type The step type to discover ('input', 'output', 'ai', etc.)
-	 * @return array|null Step configuration array or null if not found.
-	 */
-	private function get_step_config_by_type( string $step_type ): ?array {
-		// Use pure discovery mode - get all steps and find matching type
-		$all_steps = apply_filters('dm_get_steps', []);
-		return $all_steps[$step_type] ?? null;
-	}
-
-	/**
-	 * Map pipeline step configuration to execution format expected by orchestrator.
-	 *
-	 * @param array $pipeline_step Pipeline-specific step configuration.
-	 * @param object $logger The logger instance.
-	 * @return array|null Mapped step configuration or null if mapping fails.
-	 */
-	private function map_pipeline_step_to_execution_format( array $pipeline_step, object $logger ): ?array {
-		$step_type = $pipeline_step['step_type'] ?? '';
-		
-		// Get step config via pure discovery
-		$step_config = $this->get_step_config_by_type( $step_type );
-		
-		if ( $step_config ) {
-			return [
-				'class' => $step_config['class'],
-				'type' => $step_type,
-				'handler' => $pipeline_step['slug'] ?? '',
-				'config' => $pipeline_step['config'] ?? [],
-				'position' => $pipeline_step['position'] ?? 0
-			];
-		}
-		
-		$logger->warning( 'Unable to map pipeline step to execution format - step type not found', [
-			'step_type' => $step_type,
-			'pipeline_step' => $pipeline_step
-		] );
-		
-		return null;
-	}
-
-	/**
-	 * Get the next step position from pipeline configuration.
-	 *
-	 * @param int $current_position The current step position.
-	 * @param array $pipeline_steps Pipeline steps array.
-	 * @return int|null The next step position or null if this is the final step.
-	 */
-	private function get_next_step_position( int $current_position, array $pipeline_steps ): ?int {
-		$next_position = $current_position + 1;
-		
-		// Check if next position exists in pipeline
-		foreach ( $pipeline_steps as $step ) {
-			if ( isset( $step['position'] ) && (int) $step['position'] === $next_position ) {
-				return $next_position;
-			}
-		}
-		
-		return null; // No next step - pipeline complete
-	}
-
-
-
-
 
 } // End class

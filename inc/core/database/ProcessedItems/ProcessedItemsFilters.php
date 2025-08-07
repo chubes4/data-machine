@@ -38,18 +38,6 @@ function dm_register_processed_items_database_filters() {
         return $services;
     });
     
-    // Processed Items Manager service - handles duplicate tracking and item management
-    add_filter('dm_get_processed_items_manager', function($service) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        static $manager_instance = null;
-        if ($manager_instance === null) {
-            $manager_instance = new ProcessedItemsManager();
-        }
-        return $manager_instance;
-    }, 10);
 }
 
 // Auto-register when file loads - achieving complete self-containment

@@ -159,7 +159,8 @@ class GoogleSheetsInput {
 
         // Process data rows
         $eligible_items_packets = [];
-        $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_processed_items = $all_databases['processed_items'] ?? null;
         $rows_processed = 0;
 
         for ($i = $data_start_index; $i < count($rows) && $rows_processed < $process_limit; $i++) {
@@ -174,7 +175,7 @@ class GoogleSheetsInput {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
-            if ($processed_items_manager && $processed_items_manager->is_processed($pipeline_id, $row_identifier, 'googlesheets_input')) {
+            if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'googlesheets_input', $row_identifier)) {
                 $logger?->debug('Google Sheets Input: Skipping already processed row.', [
                     'row_identifier' => $row_identifier,
                     'pipeline_id' => $pipeline_id

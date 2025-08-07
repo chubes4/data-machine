@@ -165,7 +165,8 @@ class Rss {
         // Process items
         $eligible_items_packets = [];
         $total_checked = 0;
-        $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_processed_items = $all_databases['processed_items'] ?? null;
 
         foreach ($items as $item) {
             $total_checked++;
@@ -183,7 +184,7 @@ class Rss {
             }
 
             // Check if already processed
-            if ($processed_items_manager && $processed_items_manager->is_processed($pipeline_id, $guid, 'rss')) {
+            if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'rss', $guid)) {
                 $logger?->debug('RSS Input: Skipping already processed item.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                 continue;
             }

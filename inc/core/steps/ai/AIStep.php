@@ -45,14 +45,15 @@ class AIStep {
      * 
      * PURE ENGINE FLOW:
      * - Receives all DataPackets from previous steps via engine
-     * - AI steps consume all packets for complete pipeline context
+     * - Engine provides complete job configuration for data extraction
      * - Returns processed DataPackets to engine for next step
      * 
      * @param int $job_id The job ID to process
      * @param array $data_packets Array of DataPackets from previous steps
+     * @param array $job_config Complete job configuration from JobCreator
      * @return array Array of output DataPackets for next step
      */
-    public function execute(int $job_id, array $data_packets = []): array {
+    public function execute(int $job_id, array $data_packets = [], array $job_config = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $ai_http_client = apply_filters('dm_get_ai_http_client', null);
 
@@ -70,14 +71,21 @@ class AIStep {
 
             $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
 
-            // Get step configuration from pipeline-level data
+            // Get step configuration from job configuration
             // ARCHITECTURE: AI steps have pipeline-level configuration (prompts, models)
-            // that remains stable across all flows using this pipeline. Handler selection
-            // (for input/output steps) varies per flow, but AI steps don't use handlers.
-            $step_config = $this->get_pipeline_step_config($job_id);
+            // Get current step by finding the AI step in pipeline steps array
+            $pipeline_steps = $job_config['pipeline_step_config'] ?? [];
+            $step_config = null;
+            foreach ($pipeline_steps as $step) {
+                if (($step['step_type'] ?? '') === 'ai') {
+                    $step_config = $step;
+                    break;
+                }
+            }
+            
             if (!$step_config) {
-                $logger->error('AI Step: AI step configuration not found', ['job_id' => $job_id]);
-                return false;
+                $logger->error('AI Step: AI step configuration not found in job config', ['job_id' => $job_id]);
+                return [];
             }
 
             // Validate required configuration
@@ -141,15 +149,16 @@ class AIStep {
             // Use the most recent packet as the primary input for output processing
             $input_packet = end($all_packets);
 
-            // Generate proper step key for AI HTTP Client step-aware configuration
-            $step_key = $this->generate_step_key($job_id);
+            // Use existing step ID from pipeline configuration for AI HTTP Client step-aware configuration
+            // Pipeline steps already have stable UUID4 step_ids for consistent AI settings
+            $step_id = $step_config['step_id'] ?? "fallback_{$job_id}_ai";
             
             // Prepare AI request with messages for step-aware processing
             $ai_request = ['messages' => $messages];
             
             // Execute AI request using AI HTTP Client's step-aware method
             // This automatically uses step-specific configuration (provider, model, temperature, etc.)
-            $ai_response = $ai_http_client->send_step_request($step_key, $ai_request);
+            $ai_response = $ai_http_client->send_step_request($step_id, $ai_request);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
@@ -243,98 +252,7 @@ class AIStep {
         }
     }
 
-    /**
-     * Get pipeline step configuration from pipeline-level data (NOT flow-level)
-     * 
-     * ARCHITECTURE: Step configuration is pipeline-level (stable across flows),
-     * Handler configuration is flow-level (varies per flow instance)
-     * 
-     * @param int $job_id Job ID
-     * @return array|null Step configuration or null if not found
-     */
-    private function get_pipeline_step_config(int $job_id): ?array {
-        // Get pipeline step configuration (NOT flow configuration)
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_jobs || !$db_pipelines) {
-            return null;
-        }
-        
-        $job = $db_jobs->get_job($job_id);
-        if (!$job) {
-            return null;
-        }
-        
-        // Get pipeline-level step configuration
-        $pipeline_id = $job->pipeline_id;
-        $pipeline_step_config = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
-        
-        if (empty($pipeline_step_config)) {
-            return null;
-        }
-        
-        // Get current step position from pipeline context
-        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-        if (!$pipeline_context) {
-            return null;
-        }
-        
-        $current_position = $pipeline_context->get_current_step_position($job_id);
-        if ($current_position === null) {
-            return null;
-        }
-        
-        // Find AI step configuration by position in pipeline config
-        foreach ($pipeline_step_config as $step) {
-            if (isset($step['position']) && (int) $step['position'] === $current_position) {
-                if (($step['step_type'] ?? '') === 'ai') {
-                    return $step;
-                }
-            }
-        }
-        
-        return null;
-    }
 
-    /**
-     * Generate step key for AI HTTP Client step-aware configuration
-     * 
-     * @param int $job_id Job ID
-     * @return string Step key for configuration scoping
-     */
-    private function generate_step_key(int $job_id): string {
-        // Get pipeline context for proper step identification
-        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-        if (!$pipeline_context) {
-            // Fallback to job-based key if pipeline context unavailable
-            return "job_{$job_id}_ai_step";
-        }
-        
-        $current_step = $pipeline_context->get_current_step_name($job_id);
-        $pipeline_id = $this->get_pipeline_id_from_job_id($job_id);
-        
-        // Generate step key: pipeline_123_step_ai_processing_position_2
-        return "pipeline_{$pipeline_id}_step_{$current_step}";
-    }
-
-    /**
-     * Get pipeline ID from job ID
-     * 
-     * @param int $job_id Job ID
-     * @return int|null Pipeline ID or null if not found
-     */
-    private function get_pipeline_id_from_job_id(int $job_id): ?int {
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        if (!$db_jobs) {
-            return null;
-        }
-        
-        $job = $db_jobs->get_job($job_id);
-        return $job ? ($job->pipeline_id ?? null) : null;
-    }
 
     /**
      * Get pipeline ID from job context
