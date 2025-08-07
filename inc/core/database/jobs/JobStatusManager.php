@@ -6,11 +6,11 @@
  * Replaces scattered status update calls throughout the codebase.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/engine
+ * @subpackage Data_Machine/includes/core/database/Jobs
  * @since      0.17.0
  */
 
-namespace DataMachine\Engine;
+namespace DataMachine\Core\Database\Jobs;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.

@@ -32,28 +32,32 @@ Step 5: Output (Social Media)        → Publishes enhanced content
 **Flow Instances** (Configured Executions of Pipeline):
 ```
 Flow A: Tech News Processing (Daily)
-├── RSS: TechCrunch feed
-├── Reddit: r/technology posts
-├── AI: GPT-4 analysis
-├── AI: Claude creative writing
-└── Output: Twitter @tech_account
+├── RSS: TechCrunch handler
+├── Reddit: r/technology handler  
+├── AI: [pipeline-level config: GPT-4 analysis prompt]
+├── AI: [pipeline-level config: Claude creative prompt]
+└── Output: Twitter handler
 
 Flow B: Gaming Content (Weekly)
-├── RSS: Gaming news feeds
-├── Reddit: r/gaming posts
-├── AI: Gemini analysis
-├── AI: GPT-4 summary
-└── Output: Facebook gaming page
+├── RSS: Gaming news handler
+├── Reddit: r/gaming handler
+├── AI: [same pipeline config: GPT-4 analysis prompt]
+├── AI: [same pipeline config: Claude creative prompt]
+└── Output: Facebook handler
 
 Flow C: Manual Content (On-demand)
-├── RSS: Custom feed URLs
-├── Reddit: User-selected subreddits
-├── AI: User-selected models
-├── AI: Custom prompts
-└── Output: Multiple platforms
+├── RSS: Custom feed handler
+├── Reddit: Custom subreddit handler
+├── AI: [same pipeline config: GPT-4 analysis prompt]
+├── AI: [same pipeline config: Claude creative prompt]
+└── Output: Multiple platforms handler
 ```
 
-**Two-Layer Architecture**: Pipelines define step sequences, Flows configure specific handlers and scheduling for each pipeline instance.
+**Two-Layer Architecture**: 
+- **Pipeline Level**: Step configuration (AI prompts, models, step behavior) - stable across all flows
+- **Flow Level**: Handler configuration (which handlers to use, handler settings) - varies per flow
+- **AI Steps**: Configured at pipeline level only (no handlers), same prompts/models for all flows
+- **Input/Output Steps**: Use handlers configured at flow level (RSS, Twitter, etc.)
 
 ## Quick Start
 

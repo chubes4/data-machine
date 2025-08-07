@@ -46,7 +46,7 @@ function dm_register_jobs_database_filters() {
         
         static $status_manager_instance = null;
         if ($status_manager_instance === null) {
-            $status_manager_instance = new \DataMachine\Engine\JobStatusManager();
+            $status_manager_instance = new \DataMachine\Core\Database\Jobs\JobStatusManager();
         }
         return $status_manager_instance;
     }, 10);

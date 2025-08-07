@@ -18,6 +18,11 @@ if (!defined('ABSPATH')) {
  * - AI steps consume all packets for complete pipeline awareness
  * - No manual DataPacket retrieval or storage needed
  * 
+ * CONFIGURATION ARCHITECTURE:
+ * - Step Config: Pipeline-level configuration (AI prompts, models, step behavior)
+ * - Handler Config: Flow-level configuration (AI steps don't use handlers)
+ * - AI configuration is stable across all flows using the same pipeline
+ * 
  * PURE CAPABILITY-BASED ARCHITECTURE:
  * - No interface implementation required
  * - No inheritance requirements (completely self-contained)
@@ -65,7 +70,10 @@ class AIStep {
 
             $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
 
-            // Get step configuration from pipeline/flow context  
+            // Get step configuration from pipeline-level data
+            // ARCHITECTURE: AI steps have pipeline-level configuration (prompts, models)
+            // that remains stable across all flows using this pipeline. Handler selection
+            // (for input/output steps) varies per flow, but AI steps don't use handlers.
             $step_config = $this->get_pipeline_step_config($job_id);
             if (!$step_config) {
                 $logger->error('AI Step: AI step configuration not found', ['job_id' => $job_id]);
@@ -236,41 +244,58 @@ class AIStep {
     }
 
     /**
-     * Get pipeline step configuration from job and flow context
+     * Get pipeline step configuration from pipeline-level data (NOT flow-level)
+     * 
+     * ARCHITECTURE: Step configuration is pipeline-level (stable across flows),
+     * Handler configuration is flow-level (varies per flow instance)
      * 
      * @param int $job_id Job ID
      * @return array|null Step configuration or null if not found
      */
     private function get_pipeline_step_config(int $job_id): ?array {
-        // Get step configuration from job and flow configuration
+        // Get pipeline step configuration (NOT flow configuration)
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
-        if (!$db_jobs) {
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_jobs || !$db_pipelines) {
             return null;
         }
         
         $job = $db_jobs->get_job($job_id);
-        if (!$job || !$job->flow_config) {
+        if (!$job) {
             return null;
         }
         
-        $flow_config = json_decode($job->flow_config, true);
-        if (!$flow_config) {
+        // Get pipeline-level step configuration
+        $pipeline_id = $job->pipeline_id;
+        $pipeline_step_config = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        
+        if (empty($pipeline_step_config)) {
             return null;
         }
         
-        // Get current step configuration from pipeline context service
+        // Get current step position from pipeline context
         $pipeline_context = apply_filters('dm_get_pipeline_context', null);
         if (!$pipeline_context) {
             return null;
         }
         
-        $current_step_name = $pipeline_context->get_current_step_name($job_id);
-        if (!$current_step_name || !isset($flow_config['steps'][$current_step_name])) {
+        $current_position = $pipeline_context->get_current_step_position($job_id);
+        if ($current_position === null) {
             return null;
         }
         
-        return $flow_config['steps'][$current_step_name];
+        // Find AI step configuration by position in pipeline config
+        foreach ($pipeline_step_config as $step) {
+            if (isset($step['position']) && (int) $step['position'] === $current_position) {
+                if (($step['step_type'] ?? '') === 'ai') {
+                    return $step;
+                }
+            }
+        }
+        
+        return null;
     }
 
     /**

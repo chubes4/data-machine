@@ -41,7 +41,7 @@ if ( ! defined( 'WPINC' ) ) {
  * 
  * Business logic services (moved to core components):
  * - Logger → Admin component
- * - JobStatusManager → Jobs component  
+  
  * - JobCreator → Jobs component
  * - ProcessedItemsManager → ProcessedItems component
  * - AI services → AI step component
