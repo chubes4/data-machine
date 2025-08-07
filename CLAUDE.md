@@ -52,7 +52,7 @@ if (in_array($action, $modal_actions)) {
 ## Database Schema
 
 **Core Tables**:
-- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, current_step_name, step_sequence (JSON), flow_config (JSON), step_data (JSON), cleanup_scheduled, created_at, started_at, completed_at
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, current_step_name, step_sequence (JSON), flow_config (JSON), step_data (JSON), cleanup_scheduled, error_details (longtext NULL), created_at, started_at, completed_at
 - **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (JSON), created_at, updated_at
 - **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (JSON), scheduling_config (JSON), created_at, updated_at
 - **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
@@ -98,9 +98,8 @@ $twitter_auth = $all_auth['twitter'] ?? null;
 $all_settings = apply_filters('dm_get_handler_settings', []);
 $twitter_settings = $all_settings['twitter'] ?? null;
 
-// Context services - Pure discovery with filtering
-$all_contexts = apply_filters('dm_get_contexts', []);
-$job_context = $all_contexts[$job_id] ?? null;
+// Context services - Parameter-based discovery
+$job_context = apply_filters('dm_get_context', null, $job_id);
 
 // Step discovery - Pure discovery only
 $all_steps = apply_filters('dm_get_steps', []);
@@ -141,9 +140,8 @@ $pipelines_page = $admin_pages['pipelines'] ?? null;
 // Universal template rendering
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
 
-// Template requesting via AJAX - Uses get_template action, not dm_get_template filter
-// JavaScript: action: 'dm_pipeline_ajax', pipeline_action: 'get_template'
-$template_html = 'Requested via AJAX, not direct filter access';
+// Template requesting via AJAX - Uses dm_pipeline_ajax action with get_template sub-action
+$template_html = apply_filters('dm_render_template', '', $template, $data);
 
 // Admin page template rendering
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
@@ -438,7 +436,7 @@ public function get_template() {
 
 **core-modal.js**: Universal modal lifecycle management only
 - Modal open/close/loading states
-- AJAX content loading via `dm_get_modal_content` action
+- AJAX content loading via `wp_ajax_dm_get_modal_content` action
 - Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes (uses `dm-modal-active` CSS class for state management)
 - Focus management and accessibility
 - Provides `dmCoreModal` API for programmatic modal operations
@@ -509,12 +507,13 @@ Automatic modal triggers using data attributes - no JavaScript required:
 ### Modal Content Registration
 
 ```php
-add_filter('dm_get_modal', function($content, $template) {
-    if ($template === 'my-modal') {
-        return apply_filters('dm_render_template', '', 'modal/my-modal', $context);
-    }
-    return $content;
-}, 10, 2);
+add_filter('dm_get_modals', function($modals) {
+    $modals['my-modal'] = [
+        'content' => apply_filters('dm_render_template', '', 'modal/my-modal', $context),
+        'title' => __('My Modal', 'my-plugin')
+    ];
+    return $modals;
+});
 ```
 
 ### Modal Lifecycle Improvements
@@ -593,8 +592,8 @@ if (in_array($action, $modal_actions)) {
 ## Critical Rules
 
 **Engine Agnosticism**: NEVER hardcode step types in `/inc/engine/` directory  
-**Pure Discovery Pattern**: NEVER use parameter-based filters like `apply_filters('dm_get_service', null, $param)` - always use pure discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;` - This migration eliminates over-engineered parameter passing in favor of simple collection-based discovery  
-**Service Access**: Always use pure discovery patterns - never `new ServiceClass()` or parameter-based filters  
+**Discovery Pattern**: Prefer collection-based discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;` for most services. Parameter-based filters are acceptable for context-specific services like `dm_get_context` which requires job_id parameter  
+**Service Access**: Always use filter-based discovery patterns - never `new ServiceClass()` direct instantiation  
 **Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods  
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)  
 **CSS Namespace**: All admin CSS must use `dm-` prefix  
@@ -611,12 +610,12 @@ if (in_array($action, $modal_actions)) {
 **Components**:
 - **ProcessedItems.php**: Core database operations and table management
 - **ProcessedItemsManager.php**: Business logic and duplicate tracking services
-- **ProcessedItemsFilters.php**: Self-registration via pure discovery patterns
+- **ProcessedItemsFilters.php**: Self-registration via filter-based discovery patterns
 - **ProcessedItemsOperations.php**: CRUD operations and data manipulation
 - **ProcessedItemsQueries.php**: Query builders and data retrieval logic
 - **ProcessedItemsCleanup.php**: Automated maintenance and cleanup operations
 
-**Pure Discovery Registration**: Uses standard database service pattern with manager service for business operations:
+**Discovery Registration**: Uses standard database service pattern with manager service for business operations:
 ```php
 // ProcessedItems discovery pattern
 $all_databases = apply_filters('dm_get_database_services', []);
@@ -634,9 +633,9 @@ $processed_items_manager = apply_filters('dm_get_processed_items_manager', null)
 
 ## Component Registration
 
-**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using pure discovery patterns.
+**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using consistent filter-based discovery patterns.
 
-**Critical Architecture Rule**: All services use pure discovery filters - never parameter-based filters. Components register collections, not individual services:
+**Critical Architecture Rule**: Components primarily use collection-based discovery patterns. Most services register as collections, with specific exceptions for context-specific services:
 
 ```php
 function dm_register_twitter_filters() {
@@ -663,9 +662,9 @@ function dm_register_twitter_filters() {
 }
 dm_register_twitter_filters();
 
-// NEVER use parameter-based filters - INCORRECT:
-// add_filter('dm_get_handler', function($handler, $type) { return $handler; }, 10, 2);
-// add_filter('dm_get_database_service', function($service, $type) { return $service; }, 10, 2);
+// Avoid over-engineered parameter filters - use collection-based patterns instead:
+// Prefer: $all_handlers = apply_filters('dm_get_handlers', []); $handler = $all_handlers['twitter'] ?? null;
+// Over: $handler = apply_filters('dm_get_handler', null, 'twitter');
 ```
 
 
@@ -692,9 +691,10 @@ private function render_admin_page_content($page_config, $page_slug) {
 }
 ```
 
-**Unified Asset Management**: Admin pages register assets directly in their filter configuration, eliminating separate asset management systems:
+**Unified Registration and Discovery**: Admin pages register with assets, templates, and configuration in a single filter, providing complete self-contained page definitions:
+
 ```php
-// Note: Uses dm_get_admin_pages filter (plural), not dm_get_admin_page (singular)
+// Complete admin page registration with all components
 add_filter('dm_get_admin_pages', function($pages) {
     $pages['jobs'] = [
         'page_title' => __('Jobs', 'data-machine'),
@@ -709,86 +709,20 @@ add_filter('dm_get_admin_pages', function($pages) {
     ];
     return $pages;
 });
-```
 
-**Dynamic Discovery System**: AdminMenuAssets uses pure discovery mode for extensible admin page registration, eliminating hardcoded limitations:
-```php
-// Discovery mode - get all registered admin pages dynamically
-$registered_pages = apply_filters('dm_get_admin_pages', []);
-
-// Only create Data Machine menu if pages are available
-if (empty($registered_pages)) {
-    return;
-}
-
-// Pages sorted by position, then alphabetically
-uasort($registered_pages, function($a, $b) {
-    $pos_a = $a['position'] ?? 50;
-    $pos_b = $b['position'] ?? 50;
-    return ($pos_a === $pos_b) ? strcasecmp($a['menu_title'] ?? '', $b['menu_title'] ?? '') : $pos_a <=> $pos_b;
-});
-```
-
-**Pure Discovery Registration**: Components use unified registration pattern with consistent discovery access:
-```php
-// Unified discovery registration - complete architectural consistency
-add_filter('dm_get_admin_pages', function($pages) {
-    $pages['jobs'] = [
-        'page_title' => __('Jobs', 'data-machine'),
-        'menu_title' => __('Jobs', 'data-machine'),
-        'capability' => 'manage_options',
-        'position' => 20,
-        'templates' => __DIR__ . '/templates/',
-        'assets' => [/* asset configuration */]
-    ];
-    return $pages;
-});
-
-// Consistent discovery access pattern throughout plugin
+// Discovery and access pattern throughout plugin
 $all_pages = apply_filters('dm_get_admin_pages', []);
 $specific_page = $all_pages[$page_slug] ?? null;
-```
 
-**Pure Discovery Architecture**: AdminFilters.php implements consistent pure discovery patterns throughout:
-```php
-// Pure discovery pattern - all data accessed through collection filtering
-add_filter('dm_get_admin_pages', function($pages) {
-    $pages['jobs'] = [
-        'page_title' => __('Jobs', 'data-machine'),
-        'menu_title' => __('Jobs', 'data-machine'),
-        'capability' => 'manage_options',
-        'position' => 20,
-        'templates' => __DIR__ . '/templates/',
-        'assets' => [/* asset configuration */]
-    ];
-    return $pages;
-});
-
-// Access specific pages through discovery filtering
-$all_pages = apply_filters('dm_get_admin_pages', []);
-$jobs_page = $all_pages['jobs'] ?? null;
+// AdminMenuAssets automatically discovers and processes all registered pages
+// Pages sorted by position, then alphabetically for consistent menu order
 ```
 
 ## Universal Template Rendering
 
 **Filter-Based Template Discovery**: Templates are discovered from admin page registration and rendered through the universal `dm_render_template` filter system.
 
-**Template Registration**: Admin pages register template directories through the `dm_get_admin_pages` filter:
-
-```php
-// Note: Uses dm_get_admin_pages filter (plural)
-add_filter('dm_get_admin_pages', function($pages) {
-    $pages['my_page'] = [
-        'page_title' => __('My Page'),
-        'menu_title' => __('My Page'),
-        'capability' => 'manage_options',
-        'position' => 50,
-        'templates' => __DIR__ . '/templates/', // Template directory registration
-        'assets' => [...]
-    ];
-    return $pages;
-});
-```
+**Template Registration**: Admin pages register template directories via their `dm_get_admin_pages` filter configuration (see Admin Page Architecture section for complete registration examples).
 
 **Template Usage**: Components use the universal filter for all template rendering:
 
@@ -823,10 +757,11 @@ class PipelineBuilder {
             url: ajaxurl,
             method: 'POST', 
             data: {
-                action: 'dm_get_template',
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'get_template',
                 template: template,
-                data: JSON.stringify(data),
-                _ajax_nonce: this.nonce
+                template_data: JSON.stringify(data),
+                nonce: this.nonce
             }
         }).then(response => response.data.html);
     }
@@ -930,28 +865,7 @@ $all_steps = apply_filters('dm_get_steps', []);
 $my_step = $all_steps['my_step'] ?? null;
 ```
 
-**Admin Page**:
-```php
-// Pure discovery registration
-add_filter('dm_get_admin_pages', function($pages) {
-    $pages['my_page'] = [
-        'page_title' => __('My Page', 'my-plugin'),
-        'menu_title' => __('My Page', 'my-plugin'),
-        'capability' => 'manage_options',
-        'position' => 30,
-        'templates' => __DIR__ . '/templates/', // Required for template rendering
-        'assets' => [
-            'css' => ['my-css' => ['file' => 'path/to/style.css']],
-            'js' => ['my-js' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
-        ]
-    ];
-    return $pages;
-});
-
-// Access page through pure discovery
-$all_pages = apply_filters('dm_get_admin_pages', []);
-$my_page = $all_pages['my_page'] ?? null;
-```
+**Admin Page**: See Admin Page Architecture section for complete registration and discovery patterns.
 
 **Modal Content**:
 ```php
