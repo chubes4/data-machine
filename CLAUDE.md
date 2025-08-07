@@ -319,10 +319,10 @@ if (!$is_first_step): ?>
 const nonEmptySteps = $container.find('.dm-step:not(.dm-step-card--empty)').length;
 const isFirstRealStep = nonEmptySteps === 0;
 
-this.requestTemplate('page/step-card', {
+this.requestTemplate('page/pipeline-step-card', {
     step: stepData,
     is_first_step: isFirstRealStep,
-    context: 'pipeline'
+    pipeline_id: this.pipelineId
 });
 ```
 
@@ -772,10 +772,9 @@ class PipelineBuilder {
         const nonEmptySteps = $('.dm-pipeline-steps').find('.dm-step:not(.dm-step-card--empty)').length;
         const isFirstRealStep = nonEmptySteps === 0;
         
-        // Universal step card template with context parameter
-        this.requestTemplate('page/step-card', {
+        // Context-specific step card template
+        this.requestTemplate('page/pipeline-step-card', {
             step: stepData,
-            context: 'pipeline',
             pipeline_id: this.pipelineId,
             is_first_step: isFirstRealStep  // Critical for arrow consistency
         }).then(stepHtml => {
