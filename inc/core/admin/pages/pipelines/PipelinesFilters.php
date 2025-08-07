@@ -79,8 +79,8 @@ function dm_register_pipelines_admin_page_filters() {
                             ]
                         ]
                     ],
-                    'dm-pipeline-shared' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-shared.js',
+                    'dm-pipelines-page' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-page.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
                         'localize' => [
@@ -110,12 +110,12 @@ function dm_register_pipelines_admin_page_filters() {
                     ],
                     'dm-pipeline-builder' => [
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
-                        'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipeline-shared'],
+                        'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipelines-page'],
                         'in_footer' => true
                     ],
                     'dm-flow-builder' => [
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/flow-builder.js',
-                        'deps' => ['jquery', 'dm-pipeline-shared'],
+                        'deps' => ['jquery', 'dm-pipelines-page'],
                         'in_footer' => true
                     ],
                     'dm-pipelines-modal' => [
@@ -152,6 +152,10 @@ function dm_register_pipelines_admin_page_filters() {
                         'in_footer' => true
                     ]
                 ]
+            ],
+            'ajax_handlers' => [
+                'modal' => new PipelineModalAjax(),
+                'page' => new PipelinePageAjax()
             ]
         ];
         return $pages;
@@ -161,20 +165,27 @@ function dm_register_pipelines_admin_page_filters() {
     add_action('wp_ajax_dm_pipeline_ajax', function() {
         $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
         
+        // Get admin page configuration with AJAX handlers
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $pipeline_page = $all_pages['pipelines'] ?? null;
+        $ajax_handlers = $pipeline_page['ajax_handlers'] ?? [];
+        
         // Define modal actions (UI/template operations)
         $modal_actions = [
             'get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config',
             'configure-step-action', 'add-location-action', 'add-handler-action'
         ];
         
-        // Route to appropriate specialized handler
-        if (in_array($action, $modal_actions)) {
-            $ajax_handler = new PipelineModalAjax();
-            $ajax_handler->handle_pipeline_modal_ajax();
+        // Route using discovered handlers
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        $page_handler = $ajax_handlers['page'] ?? null;
+        
+        if (in_array($action, $modal_actions) && $modal_handler) {
+            $modal_handler->handle_pipeline_modal_ajax();
+        } else if ($page_handler) {
+            $page_handler->handle_pipeline_page_ajax();
         } else {
-            // All other actions are page/business logic operations
-            $ajax_handler = new PipelinePageAjax();
-            $ajax_handler->handle_pipeline_page_ajax();
+            wp_send_json_error(['message' => __('AJAX handler not found', 'data-machine')]);
         }
     });
     
@@ -261,27 +272,30 @@ function dm_handle_save_handler_settings() {
     // Get form data
     $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
     $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+    $step_id = sanitize_text_field(wp_unslash($_POST['step_id'] ?? ''));
     $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
     $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
     
     $logger && $logger->debug('Handler settings extracted parameters', [
         'handler_slug' => $handler_slug,
         'step_type' => $step_type,
+        'step_id' => $step_id,
         'flow_id' => $flow_id,
         'pipeline_id' => $pipeline_id
     ]);
     
-    if (empty($handler_slug) || empty($step_type)) {
+    if (empty($handler_slug) || empty($step_type) || empty($step_id)) {
         $error_details = [
             'handler_slug_empty' => empty($handler_slug),
             'step_type_empty' => empty($step_type),
+            'step_id_empty' => empty($step_id),
             'post_keys' => array_keys($_POST)
         ];
         
-        $logger && $logger->error('Handler slug and step type validation failed', $error_details);
+        $logger && $logger->error('Handler slug, step type, and step ID validation failed', $error_details);
         
         wp_send_json_error([
-            'message' => __('Handler slug and step type are required.', 'data-machine'),
+            'message' => __('Handler slug, step type, and step ID are required.', 'data-machine'),
             'debug_info' => $error_details
         ]);
         return;
@@ -345,25 +359,24 @@ function dm_handle_save_handler_settings() {
             $flow_config['steps'] = [];
         }
         
-        // Find or create step configuration
-        $step_key = $step_type;
-        if (!isset($flow_config['steps'][$step_key])) {
-            $flow_config['steps'][$step_key] = [
+        // Find or create step configuration using step_id
+        if (!isset($flow_config['steps'][$step_id])) {
+            $flow_config['steps'][$step_id] = [
                 'step_type' => $step_type,
                 'handlers' => []
             ];
         }
         
         // Initialize handlers array if it doesn't exist
-        if (!isset($flow_config['steps'][$step_key]['handlers'])) {
-            $flow_config['steps'][$step_key]['handlers'] = [];
+        if (!isset($flow_config['steps'][$step_id]['handlers'])) {
+            $flow_config['steps'][$step_id]['handlers'] = [];
         }
         
         // Check if handler already exists
-        $handler_exists = isset($flow_config['steps'][$step_key]['handlers'][$handler_slug]);
+        $handler_exists = isset($flow_config['steps'][$step_id]['handlers'][$handler_slug]);
         
         // UPDATE existing handler settings OR ADD new handler (no replacement)
-        $flow_config['steps'][$step_key]['handlers'][$handler_slug] = [
+        $flow_config['steps'][$step_id]['handlers'][$handler_slug] = [
             'handler_slug' => $handler_slug,
             'settings' => $handler_settings,
             'enabled' => true

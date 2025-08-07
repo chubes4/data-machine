@@ -12,8 +12,8 @@
  *
  * STEP REQUIREMENTS:
  * - Parameter-less constructor only
- * - Single execute(int $job_id): bool method required
- * - No interface or inheritance requirements
+ * - Single execute(int $job_id, array $data_packets = []): array method required
+ * - Must return array of DataPackets for next step
  * - Pure filter-based service access
  *
  * @package    Data_Machine
@@ -157,21 +157,36 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Use pre-passed data packets - no database queries needed
-			// Steps self-select what they need based on their consume_all_packets flag
-			$result = $step_instance->execute( $job_id, $previous_data_packets );
+			// Execute step and capture DataPacket returns (pure engine flow)
+			$output_data_packets = $step_instance->execute( $job_id, $previous_data_packets );
 			
-			$logger->debug( 'Step executed with pre-passed data packets', [
+			// Validate step return - must be array of DataPackets
+			if ( ! is_array( $output_data_packets ) ) {
+				$logger->error( 'Step must return array of DataPackets', [
+					'job_id' => $job_id,
+					'step_position' => $step_position,
+					'class' => $step_class,
+					'returned_type' => gettype( $output_data_packets )
+				] );
+				return false;
+			}
+			
+			$logger->debug( 'Step executed with DataPacket flow', [
 				'job_id' => $job_id,
 				'step_position' => $step_position,
 				'class' => $step_class,
-				'packets_count' => count( $previous_data_packets )
+				'input_packets' => count( $previous_data_packets ),
+				'output_packets' => count( $output_data_packets )
 			] );
 
-			// Handle job status based on step execution result
-			if ( $result ) {
+			// Success = non-empty DataPacket array, failure = empty array
+			$step_success = ! empty( $output_data_packets );
+			
+			// Handle pipeline flow based on step success
+			if ( $step_success ) {
 				if ( $next_step_position !== null ) {
-					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $pipeline_config, [] ) ) {
+					// Pass output DataPackets to next step (pure engine flow)
+					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $pipeline_config, $output_data_packets ) ) {
 						$logger->error( 'Failed to schedule next step', [
 							'current_position' => $step_position,
 							'next_position' => $next_step_position,
@@ -180,27 +195,30 @@ class ProcessingOrchestrator {
 						return false;
 					}
 					
-					$logger->debug( 'Scheduled next step', [
+					$logger->debug( 'Scheduled next step with DataPackets', [
 						'current_position' => $step_position,
 						'next_position' => $next_step_position,
-						'job_id' => $job_id
+						'job_id' => $job_id,
+						'packets_passed' => count( $output_data_packets )
 					] );
 				} else {
-					// Final step completed successfully - job status handled by ActionScheduler
-					$logger->debug( 'Pipeline execution completed', [
+					// Final step completed successfully with output
+					$logger->debug( 'Pipeline execution completed successfully', [
 						'final_position' => $step_position,
-						'job_id' => $job_id
+						'job_id' => $job_id,
+						'final_packets' => count( $output_data_packets )
 					] );
 				}
 			} else {
-				// Step execution failed - job status handled by ActionScheduler
-				$logger->debug( 'Step execution failed', [
+				// Step failed - returned empty DataPackets
+				$logger->error( 'Step execution failed - no output DataPackets', [
 					'job_id' => $job_id,
-					'failed_step' => $step_position
+					'failed_step' => $step_position,
+					'class' => $step_class
 				] );
 			}
 
-			return $result;
+			return $step_success;
 
 		} catch ( \Exception $e ) {
 			$logger = apply_filters('dm_get_logger', null);

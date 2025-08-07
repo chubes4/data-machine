@@ -185,7 +185,6 @@
         
         // Modal close trigger - clean, direct class-based trigger
         $(document).on('click', '.dm-modal-close, .dm-modal-overlay, .dm-cancel-settings', function(e) {
-            e.preventDefault();
             dmCoreModal.close();
         });
 

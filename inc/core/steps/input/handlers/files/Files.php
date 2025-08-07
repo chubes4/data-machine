@@ -45,16 +45,15 @@ class Files {
 	/**
 	 * Processes uploaded files and prepares input data.
 	 *
-     * @param object $module The full module object containing configuration and context.
-     * @param array  $source_config Decoded data_source_config specific to this handler (flat array, not sub-array).
+     * @param int $pipeline_id Pipeline ID for context.
+     * @param array  $handler_config Handler configuration array.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_input_data(object $module, array $source_config): array {
-        // Direct filter-based validation
-        $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-        if (empty($module_id)) {
-            throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
+	public function get_input_data(int $pipeline_id, array $handler_config): array {
+        // Validate pipeline ID
+        if (empty($pipeline_id)) {
+            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
         }
         
         $logger = apply_filters('dm_get_logger', null);
@@ -64,27 +63,14 @@ class Files {
             throw new Exception(esc_html__('Files repository service not available.', 'data-machine'));
         }
 
-        // Create handler context for file isolation
-        $flow_id = isset($module->flow_id) ? absint($module->flow_id) : 0;
-        $step_id = isset($module->step_id) ? sanitize_text_field($module->step_id) : null;
-        
-        if (!$flow_id || !$step_id) {
-            throw new Exception(esc_html__('Missing flow_id or step_id for file isolation.', 'data-machine'));
-        }
-        
-        $handler_context = [
-            'flow_id' => $flow_id,
-            'step_id' => $step_id
-        ];
-        
-        // Get uploaded files from repository or config
-        $uploaded_files = $source_config['uploaded_files'] ?? [];
+        // Get uploaded files from handler config
+        $uploaded_files = $handler_config['uploaded_files'] ?? [];
         
         // If no uploaded files in config, check repository for available files
         if (empty($uploaded_files)) {
-            $repo_files = $repository->get_all_files($handler_context);
+            $repo_files = $repository->get_all_files();
             if (empty($repo_files)) {
-                $logger?->debug('Files Input: No files available in repository.', ['module_id' => $module_id, 'handler_context' => $handler_context]);
+                $logger?->debug('Files Input: No files available in repository.', ['pipeline_id' => $pipeline_id]);
                 return ['processed_items' => []];
             }
             
@@ -101,10 +87,10 @@ class Files {
         }
         
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($module_id, ['uploaded_files' => $uploaded_files]);
+        $next_file = $this->find_next_unprocessed_file($pipeline_id, ['uploaded_files' => $uploaded_files]);
         
         if (!$next_file) {
-            $logger?->debug('Files Input: No unprocessed files available.', ['module_id' => $module_id]);
+            $logger?->debug('Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
@@ -140,7 +126,7 @@ class Files {
         ];
 
         $logger?->debug('Files Input: Found unprocessed file for processing.', [
-            'module_id' => $module_id,
+            'pipeline_id' => $pipeline_id,
             'file_path' => $file_identifier
         ]);
 
@@ -149,13 +135,13 @@ class Files {
 	}
 
     /**
-     * Find the next unprocessed file for a module.
+     * Find the next unprocessed file for a pipeline.
      *
-     * @param int $module_id Module ID.
+     * @param int $pipeline_id Pipeline ID.
      * @param array $config Files configuration.
      * @return array|null File info or null if no unprocessed files.
      */
-    private function find_next_unprocessed_file(int $module_id, array $config): ?array {
+    private function find_next_unprocessed_file(int $pipeline_id, array $config): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
         
         if (empty($uploaded_files)) {
@@ -175,7 +161,7 @@ class Files {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            if (!$db_processed_items->is_processed($module_id, 'files', $file_identifier)) {
+            if (!$db_processed_items->is_processed($pipeline_id, 'files', $file_identifier)) {
                 return $file;
             }
         }

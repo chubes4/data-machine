@@ -62,7 +62,7 @@ class Facebook {
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
-        $module_job_config = [
+        $flow_job_config = [
             'output_config' => $output_config
         ];
         
@@ -77,7 +77,7 @@ class Facebook {
         $logger && $logger->debug('Starting Facebook output handling.');
 
         // 1. Validate configuration - no defaults allowed
-        $output_config = $module_job_config['output_config']['facebook'] ?? [];
+        $output_config = $flow_job_config['output_config']['facebook'] ?? [];
         
         if (!isset($output_config['facebook_target_id'])) {
             return [

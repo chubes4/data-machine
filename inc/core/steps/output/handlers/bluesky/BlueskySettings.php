@@ -1,6 +1,6 @@
 <?php
 /**
- * Bluesky Output Handler Settings Module
+ * Bluesky Output Handler Settings
  *
  * Defines settings fields and sanitization for Bluesky output handler.
  * Part of the modular handler architecture.

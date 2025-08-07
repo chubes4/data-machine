@@ -47,41 +47,7 @@ function dm_register_files_input_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Files owns its handler-settings modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        if ($template === 'handler-settings') {
-            // Return early if content already provided by another handler
-            if ($content !== null) {
-                return $content;
-            }
-            
-            $context = $_POST['context'] ?? [];
-            $handler_slug = $context['handler_slug'] ?? '';
-            
-            // Only handle files handler
-            if ($handler_slug !== 'files') {
-                return $content;
-            }
-            
-            // Use proper filter-based template rendering
-            $all_settings = apply_filters('dm_get_handler_settings', []);
-            $settings_instance = $all_settings['files'] ?? null;
-            
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'files',
-                'handler_config' => [
-                    'label' => __('Files', 'data-machine'),
-                    'description' => __('Process uploaded files and documents', 'data-machine')
-                ],
-                'step_type' => $context['step_type'] ?? 'input',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? '',
-                'settings_available' => ($settings_instance !== null),
-                'handler_settings' => $settings_instance
-            ]);
-        }
-        return $content;
-    }, 10, 2);
+    // Modal registrations removed - now handled by generic modal system via pure discovery
     
     // DataPacket creation removed - engine uses universal DataPacket constructor
     // Files handler returns properly formatted data for direct constructor usage
@@ -211,6 +177,7 @@ function dm_handle_file_upload() {
         wp_send_json_error(['message' => $e->getMessage()]);
     }
 }
+
 
 /**
  * Check if cleanup should be scheduled based on settings

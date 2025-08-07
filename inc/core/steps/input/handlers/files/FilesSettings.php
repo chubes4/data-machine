@@ -1,6 +1,6 @@
 <?php
 /**
- * Files Input Handler Settings Module
+ * Files Input Handler Settings
  *
  * Defines settings fields and sanitization for Files input handler.
  * Part of the modular handler architecture.

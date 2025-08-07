@@ -69,7 +69,7 @@
          * Delegates to shared utility for AI component initialization
          */
         handleConfigureStep: function(e) {
-            PipelineShared.handleConfigureStep(e);
+            PipelinesPage.handleConfigureStep(e);
         },
 
         /**
@@ -103,25 +103,26 @@
                 return;
             }
             
-            // Collect form data from the modal
+            // Collect form data from the modal for dm_save_handler_settings endpoint
             const $modal = $('#dm-modal');
             const formData = {
-                action: 'dm_pipeline_ajax',
-                pipeline_action: 'add-handler-action',
-                context: contextData,
-                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                action: 'dm_save_handler_settings'
             };
             
-            console.log('Form data being sent:', formData);
-            
-            // Add all form inputs from the modal
+            // Add all form inputs from the modal (including hidden fields)
             $modal.find('input, select, textarea').each(function() {
                 const $input = $(this);
                 const name = $input.attr('name');
-                if (name && name !== 'nonce') {
-                    formData[name] = $input.val();
+                if (name) {
+                    if ($input.attr('type') === 'checkbox') {
+                        formData[name] = $input.is(':checked') ? '1' : '';
+                    } else {
+                        formData[name] = $input.val();
+                    }
                 }
             });
+            
+            console.log('Form data being sent:', formData);
             
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
@@ -169,15 +170,15 @@
             
             console.log('Using actual Draft Flow ID:', actualFlowId, 'for pipeline:', pipelineId);
             
-            // Use identical logic to pipeline steps with universal template
-            PipelineShared.requestTemplate('page/step-card', {
-                context: 'flow',
+            // Use flow-step-card template for flow steps
+            PipelinesPage.requestTemplate('page/flow-step-card', {
                 step: stepData.step_data,
                 flow_config: [],
                 flow_id: actualFlowId,
+                pipeline_id: pipelineId,
                 is_first_step: isFirstRealFlowStep
             }).then((flowStepHtml) => {
-                PipelineShared.addStepToInterface({
+                PipelinesPage.addStepToInterface({
                     html: flowStepHtml,
                     step_type: stepData.step_type,
                     flow_id: actualFlowId
@@ -249,9 +250,27 @@
                 $noFlows.remove();
             }
 
-            // Request flow instance card template
-            PipelineShared.requestTemplate('page/flow-instance-card', {
-                flow: flowData.flow_data
+            // Collect pipeline steps from DOM (required by flow-instance-card template)
+            const pipelineSteps = [];
+            $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
+                const $step = $(this);
+                const stepType = $step.data('step-type');
+                
+                if (stepType) {
+                    pipelineSteps.push({
+                        step_type: stepType,
+                        position: index,
+                        step_config: {},
+                        is_empty: false,  // Required by step-card template
+                        step_id: null     // Optional, but template checks for it
+                    });
+                }
+            });
+
+            // Request flow instance card template with required pipeline_steps parameter
+            PipelinesPage.requestTemplate('page/flow-instance-card', {
+                flow: flowData.flow_data,
+                pipeline_steps: pipelineSteps
             }).then((flowCardHtml) => {
                 $flowsList.append(flowCardHtml);
                 
@@ -355,8 +374,7 @@
                         const isFirstStep = $parentContainer.children('.dm-step-container').first().is($flowStepContainer);
                         
                         // Request updated step card template with new flow configuration
-                        PipelineShared.requestTemplate('page/step-card', {
-                            context: 'flow',
+                        PipelinesPage.requestTemplate('page/flow-step-card', {
                             step: {
                                 step_type: step_type,
                                 position: $flowStepContainer.data('step-position') || 0,
@@ -503,6 +521,18 @@
             setTimeout(() => {
                 $flowCountElement.removeClass('dm-count-updated');
             }, 1000);
+        },
+
+        /**
+         * Append step directly to flow container (flows don't have empty steps)
+         */
+        appendStepToFlow: function($container, stepData, config) {
+            // Remove empty state message when adding first step
+            $container.find('.dm-no-steps').remove();
+            
+            const stepHtml = stepData.step_html || stepData.html;
+            $container.append(stepHtml);
+            return Promise.resolve();
         }
     };
 

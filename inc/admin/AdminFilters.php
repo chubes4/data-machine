@@ -60,12 +60,7 @@ function dm_register_admin_filters() {
         return $configs;
     }, 5);
     
-    // Parameter-based modal content system for admin interface
-    add_filter('dm_get_modal', function($content, $template) {
-        // Pure parameter-based system - admin modal templates register their content generation logic
-        // Admin layer returns null to allow UI components to handle their own templates
-        return $content;
-    }, 5, 2);
+    // Obsolete dm_get_modal filter system removed - now using modern dm_get_modals + dynamic rendering
     
     // Universal template rendering filter - discovers templates from admin page registration
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
@@ -86,7 +81,14 @@ function dm_register_admin_filters() {
         }
         
         // Fallback: Search core modal templates directory
-        $core_modal_template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/' . $template_name . '.php';
+        // Handle modal/ prefix in template names correctly
+        if (strpos($template_name, 'modal/') === 0) {
+            $modal_template_name = substr($template_name, 6); // Remove 'modal/' prefix
+            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/' . $modal_template_name . '.php';
+        } else {
+            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/' . $template_name . '.php';
+        }
+        
         if (file_exists($core_modal_template_path)) {
             // Extract data variables for template use
             extract($data);

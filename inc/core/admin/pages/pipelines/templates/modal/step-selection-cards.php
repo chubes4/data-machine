@@ -24,7 +24,16 @@ if (!defined('WPINC')) {
     </div>
     
     <div class="dm-step-cards">
-        <?php foreach ($all_steps as $step_type => $step_config): ?>
+        <?php 
+        // Template self-discovery - get all registered steps
+        $all_steps = apply_filters('dm_get_steps', []);
+        uasort($all_steps, function($a, $b) {
+            $pos_a = $a['position'] ?? 999;
+            $pos_b = $b['position'] ?? 999;
+            return $pos_a <=> $pos_b;
+        });
+        
+        foreach ($all_steps as $step_type => $step_config): ?>
             <?php
             $label = $step_config['label'] ?? ucfirst($step_type);
             $description = $step_config['description'] ?? '';

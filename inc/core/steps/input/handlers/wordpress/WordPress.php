@@ -55,36 +55,35 @@ class WordPress {
     /**
      * Fetches and prepares WordPress input data from various sources into a standardized format.
      *
-     * @param object $module The full module object containing configuration and context.
-     * @param array  $source_config Decoded data_source_config for the specific module run.
+     * @param int $pipeline_id The pipeline ID for this execution context.
+     * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If input data is invalid or cannot be retrieved.
      */
-    public function get_input_data(object $module, array $source_config): array {
-        // Direct filter-based validation
-        $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-        if (empty($module_id)) {
-            throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
+    public function get_input_data(int $pipeline_id, array $handler_config): array {
+        if (empty($pipeline_id)) {
+            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
         }
         
+        $user_id = get_current_user_id();
 
-        // Access config from nested structure
-        $config = $source_config['wordpress'] ?? [];
+        // Access config from handler config structure
+        $config = $handler_config['wordpress'] ?? [];
         
         // Determine source type
         $source_type = $config['source_type'] ?? 'local';
         
         switch ($source_type) {
             case 'local':
-                $items = $this->fetch_local_data($module_id, $config, $user_id);
+                $items = $this->fetch_local_data($pipeline_id, $config, $user_id);
                 break;
             
             case 'remote_rest':
-                $items = $this->fetch_remote_rest_data($module_id, $config, $user_id);
+                $items = $this->fetch_remote_rest_data($pipeline_id, $config, $user_id);
                 break;
             
             case 'remote_airdrop':
-                $items = $this->fetch_remote_airdrop_data($module_id, $config, $user_id);
+                $items = $this->fetch_remote_airdrop_data($pipeline_id, $config, $user_id);
                 break;
             
             default:
@@ -97,13 +96,13 @@ class WordPress {
     /**
      * Fetch data from local WordPress installation.
      *
-     * @param int   $module_id Module ID for tracking processed items.
+     * @param int   $pipeline_id Module ID for tracking processed items.
      * @param array $config Configuration array.
      * @param int   $user_id User ID for context.
      * @return array Array of item data packets.
      * @throws Exception If data cannot be retrieved.
      */
-    private function fetch_local_data(int $module_id, array $config, int $user_id): array {
+    private function fetch_local_data(int $pipeline_id, array $config, int $user_id): array {
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
         $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
         $category_id = absint($config['category_id'] ?? 0);
@@ -177,7 +176,7 @@ class WordPress {
 
             $post_id = $post->ID;
             $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-            if ($processed_items_manager && $processed_items_manager->is_item_processed($module_id, 'wordpress_local', $post_id)) {
+            if ($processed_items_manager && $processed_items_manager->is_item_processed($pipeline_id, 'wordpress_local', $post_id)) {
                 continue;
             }
 
@@ -221,13 +220,13 @@ class WordPress {
     /**
      * Fetch data from remote WordPress via standard REST API.
      *
-     * @param int   $module_id Module ID for tracking processed items.
+     * @param int   $pipeline_id Module ID for tracking processed items.
      * @param array $config Configuration array.
      * @param int   $user_id User ID for context.
      * @return array Array of item data packets.
      * @throws Exception If data cannot be retrieved.
      */
-    private function fetch_remote_rest_data(int $module_id, array $config, int $user_id): array {
+    private function fetch_remote_rest_data(int $pipeline_id, array $config, int $user_id): array {
         $api_endpoint_url = $config['api_endpoint_url'] ?? '';
         $data_path = $config['data_path'] ?? '';
         
@@ -271,11 +270,11 @@ class WordPress {
         $hit_time_limit_boundary = false;
 
         $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $module_id]);
+        $logger && $logger->debug('WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $pipeline_id]);
 
         while ($next_page_url && count($eligible_items_packets) < $process_limit && $pages_fetched < $max_pages) {
             $pages_fetched++;
-            $logger && $logger->debug('WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $module_id]);
+            $logger && $logger->debug('WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $pipeline_id]);
 
             // Use HTTP service via filter
             $http_service = apply_filters('dm_get_http_service', null);
@@ -348,7 +347,7 @@ class WordPress {
                 }
                 
                 $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-                if ($processed_items_manager && $processed_items_manager->is_item_processed($module_id, 'wordpress_remote_rest', $current_item_id)) {
+                if ($processed_items_manager && $processed_items_manager->is_item_processed($pipeline_id, 'wordpress_remote_rest', $current_item_id)) {
                     continue;
                 }
                 
@@ -390,7 +389,7 @@ class WordPress {
                         'original_date_gmt' => $original_date_string_for_meta,
                     ]
                 ];
-                $logger && $logger->debug('WordPress REST Input: Adding eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $module_id]);
+                $logger && $logger->debug('WordPress REST Input: Adding eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $pipeline_id]);
                 array_push($eligible_items_packets, $input_data_packet);
                 if (count($eligible_items_packets) >= $process_limit) {
                     break;
@@ -424,13 +423,13 @@ class WordPress {
     /**
      * Fetch data from remote WordPress via Airdrop helper plugin.
      *
-     * @param int   $module_id Module ID for tracking processed items.
+     * @param int   $pipeline_id Module ID for tracking processed items.
      * @param array $config Configuration array.
      * @param int   $user_id User ID for context.
      * @return array Array of item data packets.
      * @throws Exception If data cannot be retrieved.
      */
-    private function fetch_remote_airdrop_data(int $module_id, array $config, int $user_id): array {
+    private function fetch_remote_airdrop_data(int $pipeline_id, array $config, int $user_id): array {
         $location_id = absint($config['location_id'] ?? 0);
         if (empty($location_id)) {
             throw new Exception(esc_html__('No Remote Location selected for Airdrop REST API.', 'data-machine'));
@@ -550,7 +549,7 @@ class WordPress {
 
                 $current_item_id = $post['ID'];
                 $processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
-                if ($processed_items_manager && $processed_items_manager->is_item_processed($module_id, 'wordpress_remote_airdrop', $current_item_id)) {
+                if ($processed_items_manager && $processed_items_manager->is_item_processed($pipeline_id, 'wordpress_remote_airdrop', $current_item_id)) {
                     continue;
                 }
 

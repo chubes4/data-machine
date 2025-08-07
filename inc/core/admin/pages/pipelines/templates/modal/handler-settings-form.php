@@ -14,28 +14,32 @@ if (!defined('WPINC')) {
     die;
 }
 
+// Extract context data passed through modal system
+$handler_slug = $context['handler_slug'] ?? ($handler_slug ?? null);
+$step_type = $context['step_type'] ?? ($step_type ?? null);
+$step_id = $context['step_id'] ?? ($step_id ?? null);
+$flow_id = $context['flow_id'] ?? ($flow_id ?? null);
+$pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
+
+// Template self-discovery - get handler configuration and settings
+$handler_config = [];
+$settings_instance = null;
+
+if ($handler_slug) {
+    // Get handler configuration via pure discovery
+    $all_handlers = apply_filters('dm_get_handlers', []);
+    $handler_config = $all_handlers[$handler_slug] ?? [];
+    
+    // Get handler settings instance via pure discovery
+    $all_settings = apply_filters('dm_get_handler_settings', []);
+    $settings_instance = $all_settings[$handler_slug] ?? null;
+}
 
 $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
 
 // Authentication discovery via pure discovery mode
 $all_auth = apply_filters('dm_get_auth_providers', []);
-$auth_instance = $all_auth[$handler_slug] ?? null;
-$has_auth_system = ($auth_instance !== null);
-
-// For WordPress handlers, check if authentication is required based on configuration
-$requires_auth = false;
-if ($handler_slug === 'wordpress' && $has_auth_system) {
-    // Get settings class to check authentication requirements using pure discovery
-    $all_settings = apply_filters('dm_get_handler_settings', []);
-    $settings_instance = $all_settings[$handler_slug] ?? null;
-    if ($settings_instance && method_exists($settings_instance, 'requires_authentication')) {
-        // Check with empty config (defaults) - WordPress defaults to 'local' which doesn't need auth
-        $requires_auth = $settings_instance->requires_authentication([]);
-    }
-} else {
-    // For non-WordPress handlers, use existing logic
-    $requires_auth = $has_auth_system;
-}
+$has_auth_system = isset($all_auth[$handler_slug]);
 
 ?>
 <div class="dm-handler-settings-container">
@@ -46,7 +50,7 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
     
     <!-- Authentication Link Section -->
     <?php if ($has_auth_system): ?>
-        <div class="dm-auth-link-section" <?php echo $requires_auth ? '' : 'style="display: none;"'; ?>>
+        <div class="dm-auth-link-section">
             <div class="dm-auth-link-info">
                 <span class="dashicons dashicons-admin-network"></span>
                 <span><?php echo esc_html(sprintf(__('%s requires authentication to function properly.', 'data-machine'), $handler_label)); ?></span>
@@ -67,12 +71,20 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
     
     <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
-        <?php if ($settings_available && $handler_settings): ?>
+        <!-- Hidden fields for handler settings form - populated from context -->
+        <input type="hidden" name="handler_settings_nonce" value="<?php echo wp_create_nonce('dm_save_handler_settings'); ?>" />
+        <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
+        <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
+        <input type="hidden" name="step_id" value="<?php echo esc_attr($step_id); ?>" />
+        <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>" />
+        <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id); ?>" />
+        
+        <?php if ($settings_instance): ?>
             <div class="dm-settings-fields">
                 <?php
                 // Use get_fields() method to get field definitions and render dynamically
-                if (method_exists($handler_settings, 'get_fields')) {
-                    $fields = $handler_settings->get_fields();
+                if (method_exists($settings_instance, 'get_fields')) {
+                    $fields = $settings_instance->get_fields();
                     
                     foreach ($fields as $field_key => $field_config) {
                         $field_type = $field_config['type'] ?? 'text';
@@ -94,8 +106,14 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
                                         <p class="description"><?php echo esc_html($field_description); ?></p>
                                     <?php endif; ?>
                                     
-                                    <?php if ($field_key === 'file_upload_section' && $handler_slug === 'files'): ?>
-                                        <!-- Simple File Upload for Files Handler -->
+                                    <?php
+                                    // Section content discovery - allows handlers to provide custom section content
+                                    $section_content = apply_filters('dm_render_handler_section_content', '', $handler_slug, $field_key, $field_config);
+                                    if (!empty($section_content)) {
+                                        echo $section_content;
+                                    } elseif ($field_key === 'file_upload_section') {
+                                        // Default file upload interface for any handler using file_upload_section
+                                        ?>
                                         <div class="dm-file-upload-container">
                                             <input type="file" id="dm-file-upload" multiple />
                                             <button type="button" class="button" id="dm-upload-files">
@@ -105,44 +123,9 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
                                                 <!-- Uploaded files will appear here -->
                                             </div>
                                         </div>
-                                        
-                                        <style>
-                                        .dm-file-upload-container {
-                                            margin-top: 10px;
-                                        }
-                                        .dm-file-upload-container input[type="file"] {
-                                            margin-bottom: 10px;
-                                        }
-                                        .dm-file-list {
-                                            margin-top: 15px;
-                                            max-height: 200px;
-                                            overflow-y: auto;
-                                        }
-                                        .dm-file-item {
-                                            display: flex;
-                                            align-items: center;
-                                            padding: 8px 12px;
-                                            border: 1px solid #ddd;
-                                            border-radius: 4px;
-                                            margin-bottom: 5px;
-                                            background: #fff;
-                                        }
-                                        .dm-file-item .dashicons {
-                                            margin-right: 8px;
-                                            color: #666;
-                                        }
-                                        .dm-file-info {
-                                            flex: 1;
-                                        }
-                                        .dm-file-name {
-                                            font-weight: 500;
-                                        }
-                                        .dm-file-size {
-                                            font-size: 12px;
-                                            color: #666;
-                                        }
-                                        </style>
-                                    <?php endif; ?>
+                                        <?php
+                                    }
+                                    ?>
                                 </div>
                             <?php elseif ($field_type === 'number'): ?>
                                 <input type="number" 
@@ -215,46 +198,11 @@ if ($handler_slug === 'wordpress' && $has_auth_system) {
             </button>
             <button type="button" class="button button-primary dm-modal-close" 
                     data-template="add-handler-action"
-                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
+                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
                 <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
             </button>
         </div>
     </div>
 </div>
 
-<?php if ($handler_slug === 'wordpress' && $has_auth_system): ?>
-<script type="text/javascript">
-jQuery(document).ready(function($) {
-    // Handle WordPress authentication visibility based on source/destination type
-    function updateWordPressAuthVisibility() {
-        var $authSection = $('.dm-auth-link-section');
-        var showAuth = false;
-        
-        // Check input source type
-        var sourceType = $('#source_type').val();
-        if (sourceType === 'remote_airdrop') {
-            showAuth = true;
-        }
-        
-        // Check output destination type
-        var destinationType = $('#destination_type').val();
-        if (destinationType === 'remote') {
-            showAuth = true;
-        }
-        
-        if (showAuth) {
-            $authSection.slideDown(200);
-        } else {
-            $authSection.slideUp(200);
-        }
-    }
-    
-    // Bind to dropdown changes
-    $(document).on('change', '#source_type, #destination_type', updateWordPressAuthVisibility);
-    
-    // Initial check on page load
-    setTimeout(updateWordPressAuthVisibility, 100);
-});
-</script>
-<?php endif; ?>
 

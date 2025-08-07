@@ -53,29 +53,7 @@ function dm_register_threads_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Pure discovery mode
-    add_filter('dm_get_modals', function($modals) {
-        // Get Threads settings for modal content
-        $all_settings = apply_filters('dm_get_handler_settings', []);
-        $settings_instance = $all_settings['threads'] ?? null;
-        
-        // Handler-specific modal removed - core modal handles generic 'handler-settings'
-        
-        // Handler authentication modal
-        $modals['threads-handler-auth'] = [
-            'content' => apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'threads',
-                'handler_config' => [
-                    'label' => __('Threads', 'data-machine'),
-                    'description' => __('Publish content to Threads (Meta\'s Twitter alternative)', 'data-machine')
-                ],
-                'step_type' => 'output'
-            ]),
-            'title' => __('Threads Authentication', 'data-machine')
-        ];
-        
-        return $modals;
-    });
+    // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 
 // Auto-register when file loads - achieving complete self-containment

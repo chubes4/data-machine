@@ -60,7 +60,7 @@ class Bluesky {
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
-        $module_job_config = [
+        $flow_job_config = [
             'output_config' => $output_config
         ];
         
@@ -75,7 +75,7 @@ class Bluesky {
         $logger && $logger->debug('Starting Bluesky output handling.');
         
         // 1. Get config - require explicit configuration
-        $output_config = $module_job_config['output_config']['bluesky'] ?? [];
+        $output_config = $flow_job_config['output_config']['bluesky'] ?? [];
         
         if (!isset($output_config['bluesky_include_source'])) {
             $logger && $logger->error('Bluesky output configuration missing required bluesky_include_source setting.');

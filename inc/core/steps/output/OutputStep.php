@@ -24,18 +24,18 @@ if (!defined('ABSPATH')) {
 class OutputStep {
 
     /**
-     * Execute output publishing with uniform array approach
+     * Execute output publishing with engine DataPacket flow
      * 
-     * UNIFORM ARRAY APPROACH:
-     * - Engine provides array of DataPackets (most recent first)
-     * - Output steps use latest packet by default (data_packets[0])
-     * - Self-selects most recent packet for publishing
+     * PURE ENGINE FLOW:
+     * - Receives DataPackets from previous steps via engine
+     * - Uses latest packet for publishing (data_packets[0])
+     * - Returns result DataPackets to engine for next step
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packets Array of DataPackets (uses first/latest by default)
-     * @return bool True on success, false on failure
+     * @param array $data_packets Array of DataPackets from previous steps
+     * @return array Array of output DataPackets for next step
      */
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $data_packets = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
@@ -52,44 +52,44 @@ class OutputStep {
 
             // Get step configuration
             $step_config = $this->get_step_configuration($job_id, 'output');
-            if (!$step_config || empty($step_config['handlers']) || !is_array($step_config['handlers'])) {
-                $logger->error('Output Step: Output step requires handlers array configuration', ['job_id' => $job_id]);
+            if (!$step_config || empty($step_config['handler'])) {
+                $logger->error('Output Step: Output step requires handler configuration', ['job_id' => $job_id]);
                 return false;
             }
 
-            $handlers = $step_config['handlers'];
+            $handler = $step_config['handler'];
             $handler_config = $step_config['config'] ?? [];
 
             // Output steps use latest DataPacket (first in array)
             $data_packet = $data_packets[0] ?? null;
             if (!$data_packet) {
                 $logger->error('Output Step: No DataPacket available from previous step', ['job_id' => $job_id]);
-                return false;
+                return [];
             }
 
-            // Execute multiple output handlers in batch
-            $batch_results = $this->execute_multiple_output_handlers($handlers, $data_packet, $job, $handler_config);
+            // Execute single output handler - one step, one handler, per flow
+            $handler_result = $this->execute_output_handler_direct($handler, $data_packet, $job, $handler_config);
 
-            if (!$batch_results['overall_success']) {
-                $error_message = 'Multi-output publishing failed: ' . $batch_results['summary'];
-                $logger->error('Output Step: ' . $error_message, ['job_id' => $job_id]);
-                return false;
+            if (!$handler_result) {
+                $logger->error('Output Step: Handler execution failed', [
+                    'job_id' => $job_id,
+                    'handler' => $handler
+                ]);
+                return [];
             }
 
             // Create result DataPacket using filter system
             $output_data = [
-                'content' => json_encode($batch_results, JSON_PRETTY_PRINT),
+                'content' => json_encode($handler_result, JSON_PRETTY_PRINT),
                 'metadata' => [
-                    'handlers_used' => $handlers,
-                    'output_success' => $batch_results['overall_success'],
-                    'successful_handlers' => $batch_results['successful_handlers'],
-                    'failed_handlers' => $batch_results['failed_handlers'],
+                    'handler_used' => $handler,
+                    'output_success' => true,
                     'processing_time' => time()
                 ]
             ];
             $context = [
                 'job_id' => $job_id,
-                'handlers' => $handlers
+                'handler' => $handler
             ];
             
             // Create DataPacket using universal constructor
@@ -103,10 +103,8 @@ class OutputStep {
                 // Add output-specific metadata
                 if (isset($output_data['metadata'])) {
                     $metadata = $output_data['metadata'];
-                    $result_packet->metadata['handlers_used'] = $metadata['handlers_used'] ?? null;
+                    $result_packet->metadata['handler_used'] = $metadata['handler_used'] ?? $handler;
                     $result_packet->metadata['output_success'] = $metadata['output_success'] ?? true;
-                    $result_packet->metadata['successful_handlers'] = $metadata['successful_handlers'] ?? [];
-                    $result_packet->metadata['failed_handlers'] = $metadata['failed_handlers'] ?? [];
                     $result_packet->metadata['processing_time'] = $metadata['processing_time'] ?? time();
                 }
                 
@@ -114,8 +112,8 @@ class OutputStep {
                 if (isset($context['job_id'])) {
                     $result_packet->metadata['job_id'] = $context['job_id'];
                 }
-                if (isset($context['handlers'])) {
-                    $result_packet->metadata['handlers'] = $context['handlers'];
+                if (isset($context['handler'])) {
+                    $result_packet->metadata['handler'] = $context['handler'];
                 }
                 
                 $result_packet->processing['steps_completed'][] = 'output';
@@ -125,24 +123,17 @@ class OutputStep {
                     'job_id' => $job_id,
                     'error' => $e->getMessage()
                 ]);
-                return false;
+                return [];
             }
             
-            // Store result DataPacket
-            $success = $this->store_step_data_packet($job_id, $result_packet);
+            // Return result DataPackets to engine (pure engine flow)
+            $logger->debug('Output Step: Publishing completed successfully', [
+                'job_id' => $job_id,
+                'handler' => $handler,
+                'handler_result' => $handler_result ? 'success' : 'failed'
+            ]);
 
-            if ($success) {
-                $logger->debug('Output Step: Multi-handler publishing completed', [
-                    'job_id' => $job_id,
-                    'handlers' => $handlers,
-                    'handler_count' => count($handlers),
-                    'successful_handlers' => $batch_results['successful_handlers'],
-                    'failed_handlers' => $batch_results['failed_handlers'],
-                    'overall_success' => $batch_results['overall_success']
-                ]);
-            }
-
-            return $success;
+            return [$result_packet];
 
         } catch (\Exception $e) {
             $logger->error('Output Step: Exception during publishing', [
@@ -150,7 +141,8 @@ class OutputStep {
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return false;
+            // Return empty array on failure (engine interprets as step failure)
+            return [];
         }
     }
 
@@ -164,33 +156,40 @@ class OutputStep {
     private function get_step_configuration(int $job_id, string $step_name): ?array {
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
+        $db_flows = $all_databases['flows'] ?? null;
         
-        // Get job to find pipeline configuration
+        if (!$db_jobs || !$db_flows) {
+            return null;
+        }
+        
+        // Get job to find flow_id
         $job = $db_jobs->get_job($job_id);
         if (!$job) {
             return null;
         }
 
-        // Get pipeline-based configuration only
-        $pipeline_id = $this->get_pipeline_id_from_job($job);
-        if (!$pipeline_id) {
+        // Get flow_id from job
+        $flow_id = is_object($job) ? $job->flow_id : ($job['flow_id'] ?? null);
+        if (!$flow_id) {
             return null;
         }
 
-        // Get pipeline-level flow configuration
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        if ($db_pipelines) {
-            $config = $db_pipelines->get_pipeline_configuration($pipeline_id);
-            $flow_config = isset($config['steps']) ? $config['steps'] : [];
-            // Find output step configuration in flow
-            foreach ($flow_config as $step) {
-                if ($step['slug'] === 'output_step' || $step['slug'] === 'output') {
-                    return $step;
-                }
-            }
+        // Get flow record from flows database
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            return null;
         }
 
-        return null;
+        // Parse flow's flow_config to find step configuration
+        $flow_config_json = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? '{}');
+        $flow_config = json_decode($flow_config_json, true);
+        
+        if (!is_array($flow_config)) {
+            return null;
+        }
+
+        // Return step configuration for the specified step
+        return $flow_config[$step_name] ?? null;
     }
 
 
@@ -249,100 +248,6 @@ class OutputStep {
         }
     }
 
-    /**
-     * Execute multiple output handlers in batch and coordinate results
-     * 
-     * @param array $handlers Array of handler names to execute
-     * @param DataPacket $data_packet DataPacket to publish
-     * @param object $job Job object
-     * @param array $handler_config Handler configuration
-     * @return array Batch execution results
-     */
-    private function execute_multiple_output_handlers(array $handlers, DataPacket $data_packet, object $job, array $handler_config): array {
-        $logger = apply_filters('dm_get_logger', null);
-        $successful_handlers = [];
-        $failed_handlers = [];
-        $handler_results = [];
-        
-        $logger->debug('Output Step: Starting multi-handler publishing', [
-            'job_id' => $job->job_id,
-            'handlers' => $handlers,
-            'handler_count' => count($handlers)
-        ]);
-        
-        // Execute each handler individually
-        foreach ($handlers as $handler_name) {
-            try {
-                $result = $this->execute_output_handler_direct($handler_name, $data_packet, $job, $handler_config);
-                
-                if ($result && (isset($result['success']) ? $result['success'] : true)) {
-                    $successful_handlers[] = $handler_name;
-                    $handler_results[$handler_name] = $result;
-                    
-                    $logger->debug('Output Step: Handler published successfully', [
-                        'job_id' => $job->job_id,
-                        'handler' => $handler_name,
-                        'result' => $result
-                    ]);
-                } else {
-                    $failed_handlers[] = $handler_name;
-                    $handler_results[$handler_name] = $result;
-                    
-                    $logger->warning('Output Step: Handler publishing failed', [
-                        'job_id' => $job->job_id,
-                        'handler' => $handler_name,
-                        'error' => $result['error'] ?? 'Unknown error'
-                    ]);
-                }
-                
-            } catch (\Exception $e) {
-                $failed_handlers[] = $handler_name;
-                $handler_results[$handler_name] = ['success' => false, 'error' => $e->getMessage()];
-                
-                $logger->error('Output Step: Handler execution exception', [
-                    'job_id' => $job->job_id,
-                    'handler' => $handler_name,
-                    'exception' => $e->getMessage()
-                ]);
-            }
-        }
-        
-        // Determine overall success (at least one handler succeeded)
-        $overall_success = !empty($successful_handlers);
-        
-        // Create summary
-        $total_handlers = count($handlers);
-        $successful_count = count($successful_handlers);
-        $failed_count = count($failed_handlers);
-        
-        $summary = "{$successful_count}/{$total_handlers} handlers succeeded";
-        if ($failed_count > 0) {
-            $summary .= ", {$failed_count} failed: " . implode(', ', $failed_handlers);
-        }
-        
-        $batch_results = [
-            'overall_success' => $overall_success,
-            'successful_handlers' => $successful_handlers,
-            'failed_handlers' => $failed_handlers,
-            'handler_results' => $handler_results,
-            'summary' => $summary,
-            'counts' => [
-                'total' => $total_handlers,
-                'successful' => $successful_count,
-                'failed' => $failed_count
-            ]
-        ];
-        
-        $logger->debug('Output Step: Multi-handler publishing completed', [
-            'job_id' => $job->job_id,
-            'overall_success' => $overall_success,
-            'summary' => $summary,
-            'successful_handlers' => $successful_handlers,
-            'failed_handlers' => $failed_handlers
-        ]);
-        
-        return $batch_results;
-    }
 
     /**
      * Get pipeline ID from job context
@@ -355,11 +260,6 @@ class OutputStep {
     }
 
     /**
-     * Auto-discover handler class from registration context
-     * 
-     * This method examines the handler registration information to auto-discover
-     * which class registered itself, eliminating the need for explicit class parameters.
-     * 
      * Get handler object directly from the handler system.
      * 
      * Uses the object-based handler registration to get
@@ -370,11 +270,21 @@ class OutputStep {
      * @return object|null Handler object or null if not found
      */
     private function get_handler_object(string $handler_name, string $handler_type): ?object {
+        // Direct handler discovery - no redundant filtering needed
         $all_handlers = apply_filters('dm_get_handlers', []);
-        $handlers = array_filter($all_handlers, function($handler) use ($handler_type) {
-            return ($handler['type'] ?? '') === $handler_type;
-        });
-        return $handlers[$handler_name] ?? null;
+        $handler_config = $all_handlers[$handler_name] ?? null;
+        
+        if (!$handler_config || !isset($handler_config['class'])) {
+            return null;
+        }
+        
+        // Verify handler type matches
+        if (($handler_config['type'] ?? '') !== $handler_type) {
+            return null;
+        }
+        
+        $class_name = $handler_config['class'];
+        return class_exists($class_name) ? new $class_name() : null;
     }
 
     /**
@@ -401,17 +311,17 @@ class OutputStep {
         }
 
         return [
-            'handlers' => [
-                'type' => 'multiselect',
-                'label' => 'Output Destinations',
-                'description' => 'Choose one or more output handlers to publish data (executed in batch)',
+            'handler' => [
+                'type' => 'select',
+                'label' => 'Output Destination',
+                'description' => 'Choose one output handler to publish data (single handler per step)',
                 'options' => $handler_options,
                 'required' => true
             ],
             'config' => [
                 'type' => 'json',
                 'label' => 'Handler Configuration',
-                'description' => 'JSON configuration applied to all selected output handlers',
+                'description' => 'JSON configuration for the selected output handler',
                 'placeholder' => '{"post_title": "Auto-generated Post"}'
             ]
         ];
@@ -419,30 +329,6 @@ class OutputStep {
 
     // OutputStep receives DataPackets from engine via $data_packets parameter
 
-    /**
-     * Store data packet for current step.
-     *
-     * @param int $job_id The job ID.
-     * @param object $data_packet The data packet object to store.
-     * @return bool True on success, false on failure.
-     */
-    private function store_step_data_packet(int $job_id, object $data_packet): bool {
-        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-        if (!$pipeline_context) {
-            return false;
-        }
-        
-        $current_step = $pipeline_context->get_current_step_name($job_id);
-        if (!$current_step) {
-            return false;
-        }
-        
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        $json_data = $data_packet->toJson();
-        
-        return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);
-    }
 
 }
 

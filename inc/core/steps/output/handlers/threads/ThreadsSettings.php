@@ -1,6 +1,6 @@
 <?php
 /**
- * Threads Output Handler Settings Module
+ * Threads Output Handler Settings
  *
  * Defines settings fields and sanitization for Threads output handler.
  * Part of the modular handler architecture.

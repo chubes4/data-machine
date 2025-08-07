@@ -1,6 +1,6 @@
 <?php
 /**
- * Google Sheets Output Handler Settings Module
+ * Google Sheets Output Handler Settings
  *
  * Defines settings fields and sanitization for Google Sheets output handler.
  * Part of the modular handler architecture.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Reddit Input Handler Settings Module
+ * Reddit Input Handler Settings
  *
  * Defines settings fields and sanitization for Reddit input handler.
  * Part of the modular handler architecture.

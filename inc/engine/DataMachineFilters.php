@@ -8,7 +8,6 @@
  * Engine Bootstrap Functions (Pure Backend Processing Only):
  * - dm_register_direct_service_filters(): Core orchestration services
  * - dm_register_database_service_system(): Pure discovery database service hooks
- * - dm_register_context_retrieval_service(): DataPacket context orchestration (dependency injection)
  * - dm_register_utility_filters(): Pure discovery utility filter hooks
  * 
  * Architectural Separation:
@@ -96,13 +95,7 @@ function dm_register_direct_service_filters() {
         }
         return new \DataMachine\Engine\ActionSchedulerService();
     }, 10);
-    
-    // Note: Business logic services moved to appropriate core component *Filters.php files:
-    // - Logger → Admin component
-    // - FluidContextBridge → AI step component  
-    // - JobStatusManager → Jobs component
-    // - JobCreator → Jobs component
-    // - ProcessedItemsManager → ProcessedItems component
+
 }
 
 /**
@@ -133,7 +126,7 @@ function dm_register_database_service_system() {
  * @since NEXT_VERSION
  */
 function dm_register_core_database_services() {
-    // ARCHITECTURAL COMPLIANCE COMPLETE - Database services self-register via *Filters.php files
+    // Database services self-register via *Filters.php files
     // Bootstrap provides pure filter hook - components add their own registration logic
     // Required component *Filters.php files:
     // - JobsFilters.php
@@ -150,101 +143,6 @@ function dm_register_core_database_services() {
 }
 
 
-/**
- * Register context retrieval service for pipeline DataPackets.
- * 
- * PURE ENGINE SERVICE: Context retrieval is a core orchestration function
- * that belongs in the engine layer as it deals with DataPacket orchestration.
- * 
- * Usage: $context = apply_filters('dm_get_context', null, $job_id);
- * 
- * @since 0.1.0
- */
-function dm_register_context_retrieval_service() {
-    // Add context retrieval filter for pipeline DataPackets
-    // Returns all DataPackets from the current pipeline job as an array
-    add_filter('dm_get_context', function($context, $job_id, $filter_type = 'all') {
-        if ($context !== null) {
-            return $context; // External override provided
-        }
-        
-        if (empty($job_id)) {
-            return [];
-        }
-        
-        // Get Jobs database service
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        if (!$db_jobs) {
-            return [];
-        }
-        
-        // Retrieve all step data for the job
-        $step_data = $db_jobs->get_job_step_data($job_id);
-        if (empty($step_data)) {
-            return [];
-        }
-        
-        $context_packets = [];
-        
-        // Convert stored JSON step data back to DataPacket objects
-        foreach ($step_data as $step_name => $step_data_array) {
-            if (!is_array($step_data_array) || empty($step_data_array['packets'])) {
-                continue;
-            }
-            
-            // Each step can have multiple DataPackets
-            foreach ($step_data_array['packets'] as $packet_data) {
-                if (is_array($packet_data)) {
-                    try {
-                        $data_packet = \DataMachine\Engine\DataPacket::fromArray($packet_data);
-                        
-                        // Apply filter type using packet metadata (completely engine agnostic)
-                        if ($filter_type === 'all') {
-                            $context_packets[] = $data_packet;
-                        } else {
-                            // Use source_type from packet metadata for dynamic filtering
-                            $source_type = $data_packet->metadata['source_type'] ?? 'unknown';
-                            
-                            // Direct source type matching - simplified without unused filter
-                            if ($filter_type === $source_type) {
-                                $context_packets[] = $data_packet;
-                            }
-                        }
-                        
-                    } catch (\Exception $e) {
-                        // Log conversion error but continue processing other packets
-                        $logger = apply_filters('dm_get_logger', null);
-                        if ($logger) {
-                            $logger->warning('Failed to convert step data to DataPacket', [
-                                'job_id' => $job_id,
-                                'step_name' => $step_name,
-                                'error' => $e->getMessage(),
-                                'context' => 'dm_get_context_filter'
-                            ]);
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Debug logging in development mode
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->debug('Context retrieved for job', [
-                    'job_id' => $job_id,
-                    'filter_type' => $filter_type,
-                    'packet_count' => count($context_packets),
-                    'steps_processed' => array_keys($step_data),
-                    'context' => 'dm_get_context_filter'
-                ]);
-            }
-        }
-        
-        return $context_packets;
-    }, 10, 3);
-}
 
 
 /**

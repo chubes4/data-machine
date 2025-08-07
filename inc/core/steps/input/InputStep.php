@@ -24,19 +24,18 @@ if (!defined('ABSPATH')) {
 class InputStep {
 
     /**
-     * Execute input data collection with uniform array approach
+     * Execute input data collection with engine DataPacket flow
      * 
-     * UNIFORM ARRAY APPROACH:
-     * - Engine provides array of DataPackets (most recent first)
-     * - Input steps typically ignore array (closed-door philosophy)
-     * - Collects data from external sources only, returns DataPacket format
-     * - Self-selects no packets (generates new data)
+     * PURE ENGINE FLOW:
+     * - Input steps generate new data from external sources
+     * - Ignores provided DataPackets (closed-door philosophy)
+     * - Returns output DataPackets to engine for next step
      * 
      * @param int $job_id The job ID to process
      * @param array $data_packets Array of DataPackets (ignored by input steps)
-     * @return bool True on success, false on failure
+     * @return array Array of output DataPackets for next step
      */
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $data_packets = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
@@ -48,15 +47,7 @@ class InputStep {
                 'data_packet_ignored' => $data_packets !== null ? 'yes' : 'n/a'
             ]);
             
-            // Context awareness: Get pipeline position if available
-            $context = apply_filters('dm_get_context', null, $job_id);
-            if ($context) {
-                $logger->debug('Input Step: Pipeline context available', [
-                    'job_id' => $job_id,
-                    'step_position' => $context['current_step_position'] ?? 'unknown',
-                    'is_first_step' => $context['pipeline_summary']['is_first_step'] ?? false
-                ]);
-            }
+            // Input steps ignore pipeline context - pure data generation
 
             // Get job and pipeline configuration
             $job = $db_jobs->get_job($job_id);
@@ -89,7 +80,7 @@ class InputStep {
                 if ($logger) {
                     $logger->error('Failed to create DataPacket from input handler', ['job_id' => $job_id]);
                 }
-                return false;
+                return [];
             }
 
             if (!$data_packet->hasContent()) {
@@ -97,23 +88,18 @@ class InputStep {
                 if ($logger) {
                     $logger->error('Input handler returned empty content', ['job_id' => $job_id]);
                 }
-                return false;
+                return [];
             }
 
+            // Return DataPackets to engine (pure engine flow)
+            $logger->debug('Input Step: Data collection completed', [
+                'job_id' => $job_id,
+                'handler' => $handler,
+                'content_length' => $data_packet->getContentLength(),
+                'source_type' => $data_packet->metadata['source_type'] ?? ''
+            ]);
 
-            // Store DataPacket for next step (closed-door: only forward data flow)
-            $success = $this->store_step_data_packet($job_id, $data_packet);
-
-            if ($success) {
-                $logger->debug('Input Step: Data collection completed', [
-                    'job_id' => $job_id,
-                    'handler' => $handler,
-                    'content_length' => $data_packet->getContentLength(),
-                    'source_type' => $data_packet->metadata['source_type'] ?? ''
-                ]);
-            }
-
-            return $success;
+            return [$data_packet];
 
         } catch (\Exception $e) {
             $logger->error('Input Step: Exception during data collection', [
@@ -121,11 +107,8 @@ class InputStep {
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->error('Input step failed: ' . $e->getMessage(), ['job_id' => $job_id]);
-            }
-            return false;
+            // Return empty array on failure (engine interprets as step failure)
+            return [];
         }
     }
 
@@ -139,33 +122,40 @@ class InputStep {
     private function get_step_configuration(int $job_id, string $step_name): ?array {
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
+        $db_flows = $all_databases['flows'] ?? null;
         
-        // Get job to find pipeline configuration
+        if (!$db_jobs || !$db_flows) {
+            return null;
+        }
+        
+        // Get job to find flow_id
         $job = $db_jobs->get_job($job_id);
         if (!$job) {
             return null;
         }
 
-        // Get pipeline-based configuration only
-        $pipeline_id = $this->get_pipeline_id_from_job($job);
-        if (!$pipeline_id) {
+        // Get flow_id from job
+        $flow_id = is_object($job) ? $job->flow_id : ($job['flow_id'] ?? null);
+        if (!$flow_id) {
             return null;
         }
 
-        // Get pipeline-level flow configuration
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        if ($db_pipelines) {
-            $config = $db_pipelines->get_pipeline_configuration($pipeline_id);
-            $flow_config = isset($config['steps']) ? $config['steps'] : [];
-            // Find input step configuration in flow
-            foreach ($flow_config as $step) {
-                if ($step['slug'] === 'input_step' || $step['slug'] === 'input') {
-                    return $step;
-                }
-            }
+        // Get flow record from flows database
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            return null;
         }
 
-        return null;
+        // Parse flow's flow_config to find step configuration
+        $flow_config_json = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? '{}');
+        $flow_config = json_decode($flow_config_json, true);
+        
+        if (!is_array($flow_config)) {
+            return null;
+        }
+
+        // Return step configuration for the specified step
+        return $flow_config[$step_name] ?? null;
     }
 
     /**
@@ -332,30 +322,6 @@ class InputStep {
         ];
     }
 
-    /**
-     * Store data packet for current step.
-     *
-     * @param int $job_id The job ID.
-     * @param object $data_packet The data packet object to store.
-     * @return bool True on success, false on failure.
-     */
-    private function store_step_data_packet(int $job_id, object $data_packet): bool {
-        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-        if (!$pipeline_context) {
-            return false;
-        }
-        
-        $current_step = $pipeline_context->get_current_step_name($job_id);
-        if (!$current_step) {
-            return false;
-        }
-        
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        $json_data = $data_packet->toJson();
-        
-        return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);
-    }
 
     /**
      * Fail a job with an error message.

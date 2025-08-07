@@ -36,45 +36,13 @@ class PipelinePageAjax
         // Get action from POST data - support both 'pipeline_action' and 'operation' for modal system
         $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
 
-        switch ($action) {
-            case 'add_step':
-                $this->add_step_to_pipeline();
-                break;
-            
-            case 'save_pipeline':
-                $this->save_pipeline();
-                break;
-            
-            case 'delete_step':
-                $this->delete_step_from_pipeline();
-                break;
-            
-            case 'delete_pipeline':
-                $this->delete_pipeline();
-                break;
-            
-            case 'create_draft_pipeline':
-                $this->create_draft_pipeline();
-                break;
-            
-            case 'add_flow':
-                $this->add_flow_to_pipeline();
-                break;
-            
-            case 'delete_flow':
-                $this->delete_flow_from_pipeline();
-                break;
-            
-            case 'save_flow_schedule':
-                $this->save_flow_schedule();
-                break;
-            
-            case 'run_flow_now':
-                $this->run_flow_now();
-                break;
-            
-            default:
-                wp_send_json_error(['message' => __('Invalid page action', 'data-machine')]);
+        // Use method discovery pattern instead of hardcoded switch
+        $method_name = "handle_{$action}";
+
+        if (method_exists($this, $method_name) && is_callable([$this, $method_name])) {
+            $this->$method_name();
+        } else {
+            wp_send_json_error(['message' => __('Invalid page action', 'data-machine')]);
         }
     }
 
@@ -82,7 +50,7 @@ class PipelinePageAjax
     /**
      * Add step to pipeline
      */
-    private function add_step_to_pipeline()
+    private function handle_add_step()
     {
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
@@ -158,7 +126,7 @@ class PipelinePageAjax
     /**
      * Save pipeline (create new or update existing)
      */
-    private function save_pipeline()
+    private function handle_save_pipeline()
     {
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         $pipeline_name = sanitize_text_field(wp_unslash($_POST['pipeline_name'] ?? ''));
@@ -244,7 +212,7 @@ class PipelinePageAjax
     /**
      * Delete step from pipeline with cascade handling
      */
-    private function delete_step_from_pipeline()
+    private function handle_delete_step()
     {
         $step_id = sanitize_text_field(wp_unslash($_POST['step_id'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
@@ -329,10 +297,10 @@ class PipelinePageAjax
     }
 
     /**
-     * Delete pipeline with cascade deletion logic
-     * Deletes flows first, then jobs, then the pipeline itself
+     * Delete pipeline with flow cascade deletion
+     * Deletes flows first, then the pipeline itself. Jobs are left intact as historical records.
      */
-    private function delete_pipeline()
+    private function handle_delete_pipeline()
     {
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
@@ -344,9 +312,8 @@ class PipelinePageAjax
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
-        $db_jobs = $all_databases['jobs'] ?? null;
         
-        if (!$db_pipelines || !$db_flows || !$db_jobs) {
+        if (!$db_pipelines || !$db_flows) {
             $logger = apply_filters('dm_get_logger', null);
             $logger && $logger->error('Database services unavailable in delete_pipeline');
             wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
@@ -360,25 +327,11 @@ class PipelinePageAjax
         
         $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
         
-        // Get affected flows and jobs for cascade deletion and reporting
+        // Get affected flows for cascade deletion and reporting
         $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-        $affected_jobs = $db_jobs->get_jobs_for_pipeline($pipeline_id);
-        
         $flow_count = count($affected_flows);
-        $job_count = count($affected_jobs);
 
-        // Cascade deletion: jobs → flows → pipeline
-        // Delete all jobs associated with this pipeline first
-        if (!empty($affected_jobs)) {
-            foreach ($affected_jobs as $job) {
-                $job_id = is_object($job) ? $job->job_id : $job['job_id'];
-                $success = $db_jobs->delete_job($job_id);
-                if (!$success) {
-                    wp_send_json_error(['message' => sprintf(__('Failed to delete job %d during cascade deletion', 'data-machine'), $job_id)]);
-                }
-            }
-        }
-
+        // Cascade deletion: flows → pipeline (jobs remain as historical records)
         // Delete all flows associated with this pipeline
         if (!empty($affected_flows)) {
             foreach ($affected_flows as $flow) {
@@ -400,27 +353,25 @@ class PipelinePageAjax
         // Log the deletion
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
-            $logger->debug("Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows and {$job_count} jobs.");
+            $logger->debug("Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows. Job records preserved as historical data.");
         }
 
         wp_send_json_success([
             'message' => sprintf(
-                __('Pipeline "%s" deleted successfully. %d flows and %d jobs were also deleted.', 'data-machine'),
+                __('Pipeline "%s" deleted successfully. %d flows were also deleted. Associated job records are preserved as historical data.', 'data-machine'),
                 $pipeline_name,
-                $flow_count,
-                $job_count
+                $flow_count
             ),
             'pipeline_id' => $pipeline_id,
             'pipeline_name' => $pipeline_name,
-            'deleted_flows' => $flow_count,
-            'deleted_jobs' => $job_count
+            'deleted_flows' => $flow_count
         ]);
     }
 
     /**
      * Create a new draft pipeline in the database
      */
-    private function create_draft_pipeline()
+    private function handle_create_draft_pipeline()
     {
         // Get database service
         $all_databases = apply_filters('dm_get_database_services', []);
@@ -447,7 +398,10 @@ class PipelinePageAjax
             $flow_data = [
                 'pipeline_id' => $pipeline_id,
                 'flow_name' => __('Draft Flow', 'data-machine'),
-                'flow_config' => json_encode([]),
+                'flow_config' => json_encode([
+                    // Template structure for handler configuration - populated via UI
+                    // Each step will have one handler configured through the admin interface
+                ]),
                 'scheduling_config' => json_encode([
                     'status' => 'inactive',
                     'interval' => 'manual'
@@ -479,7 +433,7 @@ class PipelinePageAjax
     /**
      * Add flow to pipeline
      */
-    private function add_flow_to_pipeline()
+    private function handle_add_flow()
     {
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
@@ -514,7 +468,10 @@ class PipelinePageAjax
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
-            'flow_config' => json_encode([]), // Empty config initially
+            'flow_config' => json_encode([
+                // Template structure for handler configuration - populated via UI
+                // Each step will have one handler configured through the admin interface
+            ]), // Empty config initially
             'scheduling_config' => json_encode([
                 'status' => 'inactive',
                 'interval' => 'manual'
@@ -544,9 +501,9 @@ class PipelinePageAjax
 
     /**
      * Delete flow from pipeline
-     * Deletes the flow instance and any associated jobs
+     * Deletes the flow instance only. Associated jobs are left intact as historical records.
      */
-    private function delete_flow_from_pipeline()
+    private function handle_delete_flow()
     {
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
         
@@ -557,9 +514,8 @@ class PipelinePageAjax
         // Get database services using filter-based discovery
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_flows = $all_databases['flows'] ?? null;
-        $db_jobs = $all_databases['jobs'] ?? null;
         
-        if (!$db_flows || !$db_jobs) {
+        if (!$db_flows) {
             $logger = apply_filters('dm_get_logger', null);
             $logger && $logger->error('Database services unavailable in delete_flow_from_pipeline');
             wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
@@ -573,24 +529,8 @@ class PipelinePageAjax
         
         $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
         $pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
-        
-        // Get affected jobs for cascade deletion
-        $affected_jobs = $db_jobs->get_jobs_for_flow($flow_id);
-        $job_count = count($affected_jobs);
 
-        // Cascade deletion: jobs → flow
-        // Delete all jobs associated with this flow first
-        if (!empty($affected_jobs)) {
-            foreach ($affected_jobs as $job) {
-                $job_id = is_object($job) ? $job->job_id : $job['job_id'];
-                $success = $db_jobs->delete_job($job_id);
-                if (!$success) {
-                    wp_send_json_error(['message' => sprintf(__('Failed to delete job %d during flow deletion', 'data-machine'), $job_id)]);
-                }
-            }
-        }
-
-        // Delete the flow itself
+        // Delete the flow itself (jobs remain as historical records)
         $success = $db_flows->delete_flow($flow_id);
         
         if (!$success) {
@@ -600,26 +540,24 @@ class PipelinePageAjax
         // Log the deletion
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
-            $logger->debug("Deleted flow '{$flow_name}' (ID: {$flow_id}) with cascade deletion of {$job_count} jobs.");
+            $logger->debug("Deleted flow '{$flow_name}' (ID: {$flow_id}). Associated job records preserved as historical data.");
         }
 
         wp_send_json_success([
             'message' => sprintf(
-                __('Flow "%s" deleted successfully. %d associated jobs were also deleted.', 'data-machine'),
-                $flow_name,
-                $job_count
+                __('Flow "%s" deleted successfully. Associated job records are preserved as historical data.', 'data-machine'),
+                $flow_name
             ),
             'flow_id' => $flow_id,
             'flow_name' => $flow_name,
-            'pipeline_id' => $pipeline_id,
-            'deleted_jobs' => $job_count
+            'pipeline_id' => $pipeline_id
         ]);
     }
 
     /**
      * Save flow schedule configuration
      */
-    private function save_flow_schedule()
+    private function handle_save_flow_schedule()
     {
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
         $schedule_status = sanitize_text_field(wp_unslash($_POST['schedule_status'] ?? 'inactive'));
@@ -682,7 +620,7 @@ class PipelinePageAjax
     /**
      * Run flow immediately
      */
-    private function run_flow_now()
+    private function handle_run_flow_now()
     {
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 

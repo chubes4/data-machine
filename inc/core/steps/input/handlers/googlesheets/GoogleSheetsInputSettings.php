@@ -1,6 +1,6 @@
 <?php
 /**
- * Google Sheets Input Handler Settings Module
+ * Google Sheets Input Handler Settings
  *
  * Defines settings fields and sanitization for Google Sheets input handler.
  * Part of the modular handler architecture.

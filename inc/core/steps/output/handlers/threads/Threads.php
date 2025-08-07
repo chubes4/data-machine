@@ -45,7 +45,7 @@ class Threads {
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
-        $module_job_config = [
+        $flow_job_config = [
             'output_config' => $output_config
         ];
         
@@ -59,7 +59,7 @@ class Threads {
         $logger && $logger->debug('Threads Output: Starting Threads publication.');
 
         // Get output config from the job config array
-        $config = $module_job_config['output_config'] ?? [];
+        $config = $flow_job_config['output_config'] ?? [];
         if (!is_array($config)) $config = [];
 
         // Access config from nested structure

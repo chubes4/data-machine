@@ -55,7 +55,7 @@ class Twitter {
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
-        $module_job_config = [
+        $flow_job_config = [
             'output_config' => $output_config
         ];
         
@@ -70,7 +70,7 @@ class Twitter {
         $logger && $logger->debug('Starting Twitter output handling.');
         
         // 1. Get config
-        $output_config = $module_job_config['output_config']['twitter'] ?? []; // Use 'twitter' sub-key
+        $output_config = $flow_job_config['output_config']['twitter'] ?? []; // Use 'twitter' sub-key
         $char_limit = $output_config['twitter_char_limit'] ?? 280;
         $include_source = $output_config['twitter_include_source'] ?? true;
         $enable_images = $output_config['twitter_enable_images'] ?? true;

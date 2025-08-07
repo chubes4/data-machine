@@ -44,24 +44,21 @@ class GoogleSheetsInput {
     /**
      * Fetches and prepares input data packets from a Google Sheets spreadsheet.
      *
-     * @param object $module The full module object containing configuration and context.
-     * @param array  $source_config Decoded data_source_config specific to this handler.
+     * @param int $pipeline_id The pipeline ID for this execution context.
+     * @param array  $handler_config Decoded handler configuration specific to this handler.
      * @return array Array containing 'processed_items' key with standardized data packets for sheet rows.
      * @throws Exception If data cannot be retrieved or is invalid.
      */
-    public function get_input_data(object $module, array $source_config): array {
-        // Direct filter-based validation
-        $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-        if (empty($module_id)) {
-            throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
-        }
-        
-
+    public function get_input_data(int $pipeline_id, array $handler_config): array {
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('Google Sheets Input: Starting Google Sheets data processing.', ['module_id' => $module_id]);
+        $logger?->debug('Google Sheets Input: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
 
-        // Access config from nested structure
-        $config = $source_config['googlesheets_input'] ?? [];
+        if (empty($pipeline_id)) {
+            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+        }
+
+        // Access config from handler config structure
+        $config = $handler_config['googlesheets_input'] ?? [];
         
         // Configuration validation
         $spreadsheet_id = trim($config['spreadsheet_id'] ?? '');
@@ -99,7 +96,7 @@ class GoogleSheetsInput {
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
             'range' => $cell_range,
-            'module_id' => $module_id
+            'pipeline_id' => $pipeline_id
         ]);
 
         // Make API request
@@ -137,14 +134,14 @@ class GoogleSheetsInput {
 
         $sheet_data = json_decode($response_body, true);
         if (empty($sheet_data['values'])) {
-            $logger?->debug('Google Sheets Input: No data found in specified range.', ['module_id' => $module_id]);
+            $logger?->debug('Google Sheets Input: No data found in specified range.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
         $rows = $sheet_data['values'];
         $logger?->debug('Google Sheets Input: Retrieved spreadsheet data.', [
             'total_rows' => count($rows),
-            'module_id' => $module_id
+            'pipeline_id' => $pipeline_id
         ]);
 
         // Process header row if present
@@ -156,7 +153,7 @@ class GoogleSheetsInput {
             $data_start_index = 1;
             $logger?->debug('Google Sheets Input: Using header row.', [
                 'headers' => $headers,
-                'module_id' => $module_id
+                'pipeline_id' => $pipeline_id
             ]);
         }
 
@@ -177,10 +174,10 @@ class GoogleSheetsInput {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
-            if ($processed_items_manager && $processed_items_manager->is_processed($module_id, $row_identifier, 'googlesheets_input')) {
+            if ($processed_items_manager && $processed_items_manager->is_processed($pipeline_id, $row_identifier, 'googlesheets_input')) {
                 $logger?->debug('Google Sheets Input: Skipping already processed row.', [
                     'row_identifier' => $row_identifier,
-                    'module_id' => $module_id
+                    'pipeline_id' => $pipeline_id
                 ]);
                 continue;
             }
@@ -240,7 +237,7 @@ class GoogleSheetsInput {
             $logger?->debug('Google Sheets Input: Processed spreadsheet row.', [
                 'row_identifier' => $row_identifier,
                 'row_number' => $i + 1,
-                'module_id' => $module_id
+                'pipeline_id' => $pipeline_id
             ]);
         }
 
@@ -248,7 +245,7 @@ class GoogleSheetsInput {
         $logger?->debug('Google Sheets Input: Finished processing Google Sheets data.', [
             'found_count' => $found_count,
             'total_rows' => count($rows),
-            'module_id' => $module_id
+            'pipeline_id' => $pipeline_id
         ]);
 
         return ['processed_items' => $eligible_items_packets];

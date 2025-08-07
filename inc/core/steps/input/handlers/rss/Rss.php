@@ -41,24 +41,21 @@ class Rss {
     /**
      * Fetches and prepares input data packets from an RSS feed.
      *
-     * @param object $module The full module object containing configuration and context.
-     * @param array  $source_config Decoded data_source_config specific to this handler.
+     * @param int $pipeline_id The pipeline ID for this execution context.
+     * @param array  $handler_config Decoded handler configuration specific to this handler.
      * @return array Array containing 'processed_items' key with standardized data packets for RSS items.
      * @throws Exception If data cannot be retrieved or is invalid.
      */
-    public function get_input_data(object $module, array $source_config): array {
-        // Direct filter-based validation
-        $module_id = isset($module->module_id) ? absint($module->module_id) : 0;
-        if (empty($module_id)) {
-            throw new Exception(esc_html__('Missing module ID.', 'data-machine'));
-        }
-        
-
+    public function get_input_data(int $pipeline_id, array $handler_config): array {
         $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('RSS Input: Starting RSS feed processing.', ['module_id' => $module_id]);
+        $logger?->debug('RSS Input: Starting RSS feed processing.', ['pipeline_id' => $pipeline_id]);
 
-        // Access config from nested structure
-        $config = $source_config['rss'] ?? [];
+        if (empty($pipeline_id)) {
+            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+        }
+
+        // Access config from handler config structure
+        $config = $handler_config['rss'] ?? [];
         
         // Configuration validation
         $feed_url = trim($config['feed_url'] ?? '');
@@ -94,7 +91,7 @@ class Rss {
         }
 
         // Fetch the RSS feed
-        $logger?->debug('RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'module_id' => $module_id]);
+        $logger?->debug('RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'pipeline_id' => $pipeline_id]);
         
         // Use HTTP service for feed fetching
         $http_service = apply_filters('dm_get_http_service', null);
@@ -122,7 +119,7 @@ class Rss {
         }
 
         // Parse the RSS feed
-        $logger?->debug('RSS Input: Parsing RSS feed content.', ['module_id' => $module_id]);
+        $logger?->debug('RSS Input: Parsing RSS feed content.', ['pipeline_id' => $pipeline_id]);
         
         // Disable WordPress automatic feed parsing errors
         libxml_use_internal_errors(true);
@@ -147,21 +144,21 @@ class Rss {
         if (isset($xml->channel->item)) {
             // RSS 2.0 format
             $items = $xml->channel->item;
-            $logger?->debug('RSS Input: Detected RSS 2.0 format.', ['item_count' => count($items), 'module_id' => $module_id]);
+            $logger?->debug('RSS Input: Detected RSS 2.0 format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } elseif (isset($xml->item)) {
             // RSS 1.0 format
             $items = $xml->item;
-            $logger?->debug('RSS Input: Detected RSS 1.0 format.', ['item_count' => count($items), 'module_id' => $module_id]);
+            $logger?->debug('RSS Input: Detected RSS 1.0 format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } elseif (isset($xml->entry)) {
             // Atom format
             $items = $xml->entry;
-            $logger?->debug('RSS Input: Detected Atom format.', ['item_count' => count($items), 'module_id' => $module_id]);
+            $logger?->debug('RSS Input: Detected Atom format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } else {
             throw new Exception(esc_html__('Unsupported feed format or no items found in feed.', 'data-machine'));
         }
 
         if (empty($items)) {
-            $logger?->debug('RSS Input: No items found in RSS feed.', ['module_id' => $module_id]);
+            $logger?->debug('RSS Input: No items found in RSS feed.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
@@ -181,13 +178,13 @@ class Rss {
             $guid = $this->extract_item_guid($item, $link);
             
             if (empty($guid)) {
-                $logger?->warning('RSS Input: Skipping item without GUID.', ['title' => $title, 'module_id' => $module_id]);
+                $logger?->warning('RSS Input: Skipping item without GUID.', ['title' => $title, 'pipeline_id' => $pipeline_id]);
                 continue;
             }
 
             // Check if already processed
-            if ($processed_items_manager && $processed_items_manager->is_processed($module_id, $guid, 'rss')) {
-                $logger?->debug('RSS Input: Skipping already processed item.', ['guid' => $guid, 'module_id' => $module_id]);
+            if ($processed_items_manager && $processed_items_manager->is_processed($pipeline_id, $guid, 'rss')) {
+                $logger?->debug('RSS Input: Skipping already processed item.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                 continue;
             }
 
@@ -199,7 +196,7 @@ class Rss {
                         'guid' => $guid,
                         'pub_date' => $pub_date,
                         'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp),
-                        'module_id' => $module_id
+                        'pipeline_id' => $pipeline_id
                     ]);
                     continue;
                 }
@@ -216,13 +213,13 @@ class Rss {
                     }
                 }
                 if (!$found_keyword) {
-                    $logger?->debug('RSS Input: Skipping item not matching search keywords.', ['guid' => $guid, 'module_id' => $module_id]);
+                    $logger?->debug('RSS Input: Skipping item not matching search keywords.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                     continue;
                 }
             }
 
             // Item is eligible - create standardized packet
-            $logger?->debug('RSS Input: Found eligible RSS item.', ['guid' => $guid, 'title' => $title, 'module_id' => $module_id]);
+            $logger?->debug('RSS Input: Found eligible RSS item.', ['guid' => $guid, 'title' => $title, 'pipeline_id' => $pipeline_id]);
             
             // Extract additional metadata
             $author = $this->extract_item_author($item);
@@ -273,7 +270,7 @@ class Rss {
             $eligible_items_packets[] = $input_data_packet;
             
             if (count($eligible_items_packets) >= $process_limit) {
-                $logger?->debug('RSS Input: Reached process limit.', ['limit' => $process_limit, 'module_id' => $module_id]);
+                $logger?->debug('RSS Input: Reached process limit.', ['limit' => $process_limit, 'pipeline_id' => $pipeline_id]);
                 break;
             }
         }
@@ -282,7 +279,7 @@ class Rss {
         $logger?->debug('RSS Input: Finished processing RSS feed.', [
             'found_count' => $found_count,
             'total_checked' => $total_checked,
-            'module_id' => $module_id
+            'pipeline_id' => $pipeline_id
         ]);
 
         return ['processed_items' => $eligible_items_packets];

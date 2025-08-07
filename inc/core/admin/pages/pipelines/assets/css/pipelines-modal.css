@@ -758,6 +758,50 @@
     }
 }
 
+/* ===== FILES HANDLER MODAL STYLES ===== */
+
+.dm-file-upload-container {
+    margin-top: 10px;
+}
+
+.dm-file-upload-container input[type="file"] {
+    margin-bottom: 10px;
+}
+
+.dm-file-list {
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dm-file-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    background: #fff;
+}
+
+.dm-file-item .dashicons {
+    margin-right: 8px;
+    color: #666;
+}
+
+.dm-file-info {
+    flex: 1;
+}
+
+.dm-file-name {
+    font-weight: 500;
+}
+
+.dm-file-size {
+    font-size: 12px;
+    color: #666;
+}
+
 /* ===== UTILITY CLASSES ===== */
 
 .dm-no-handlers {

@@ -25,7 +25,7 @@ class MockInputHandler {
     /**
      * Generate mock input data
      */
-    public function get_input_data(object $module, array $source_config): array {
+    public function get_input_data(int $pipeline_id, array $handler_config): array {
         self::$call_count++;
         
         if (self::$should_fail) {
@@ -229,7 +229,7 @@ class MockErrorHandler {
     /**
      * Always fails to test error handling for input
      */
-    public function get_input_data(object $module, array $source_config): array {
+    public function get_input_data(int $pipeline_id, array $handler_config): array {
         self::$call_count++;
         throw new \Exception('Mock error input handler always fails');
     }

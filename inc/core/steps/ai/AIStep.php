@@ -11,14 +11,12 @@ if (!defined('ABSPATH')) {
 // DataPacket is engine-only - steps work with simple arrays provided by engine
 
 /**
- * Universal AI Step - Fluid-by-default AI processing with full pipeline context
+ * Universal AI Step - AI processing with full pipeline context
  * 
- * NATURAL DATA FLOW SUPPORT:
- * - Uses execute(int $job_id, ?DataPacket $data_packet = null) signature
- * - Natural flow eliminates manual DataPacket retrieval from database
- * 
- * CONTEXT ACCESS:
- * - Use dm_get_context filter for full pipeline context
+ * ENGINE DATA FLOW:
+ * - Engine passes all DataPackets to every step via execute() method
+ * - AI steps consume all packets for complete pipeline awareness
+ * - No manual DataPacket retrieval or storage needed
  * 
  * PURE CAPABILITY-BASED ARCHITECTURE:
  * - No interface implementation required
@@ -29,7 +27,7 @@ if (!defined('ABSPATH')) {
  * 
  * EXTERNAL PLUGIN REQUIREMENTS (minimum):
  * - Class with parameter-less constructor
- * - execute(int $job_id, ?DataPacket $data_packet = null): bool method
+ * - execute(int $job_id, array $data_packets = []): bool method
  * - get_prompt_fields(): array static method for UI configuration (optional)
  * 
  * Supports any AI operation: summarization, fact-checking, enhancement, translation,
@@ -38,18 +36,18 @@ if (!defined('ABSPATH')) {
 class AIStep {
 
     /**
-     * Execute AI processing with uniform array of data packets
+     * Execute AI processing with engine DataPacket flow
      * 
-     * UNIFORM ARRAY APPROACH:
-     * - Engine always provides array of DataPackets (most recent first)
-     * - AI steps consume all packets due to consume_all_packets: true flag
-     * - Self-selects all packets from array for complete pipeline context
+     * PURE ENGINE FLOW:
+     * - Receives all DataPackets from previous steps via engine
+     * - AI steps consume all packets for complete pipeline context
+     * - Returns processed DataPackets to engine for next step
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packets Array of DataPackets from pipeline (newest first)
-     * @return bool True on success, false on failure
+     * @param array $data_packets Array of DataPackets from previous steps
+     * @return array Array of output DataPackets for next step
      */
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $data_packets = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $ai_http_client = apply_filters('dm_get_ai_http_client', null);
 
@@ -213,21 +211,16 @@ class AIStep {
                 return false;
             }
 
-            // Store transformed DataPacket for next step (maintains fluid context chain)
-            $success = $this->store_step_data_packet($job_id, $ai_output_packet);
-
-            if ($success) {
-                $logger->debug('AI Step: Processing completed successfully', [
-                    'job_id' => $job_id,
-                    'content_length' => strlen($ai_content),
-                    'model' => $ai_response['data']['model'] ?? 'unknown',
-                    'provider' => $ai_response['provider'] ?? 'unknown'
-                ]);
-                return true;
-            } else {
-                $logger->error('AI Step: Failed to store output DataPacket', ['job_id' => $job_id]);
-                return false;
-            }
+            // Return DataPackets to engine (pure engine flow)
+            $logger->debug('AI Step: Processing completed successfully', [
+                'job_id' => $job_id,
+                'content_length' => strlen($ai_content),
+                'model' => $ai_response['data']['model'] ?? 'unknown',
+                'provider' => $ai_response['provider'] ?? 'unknown'
+            ]);
+            
+            // Return output DataPackets to engine for next step
+            return [$ai_output_packet];
 
         } catch (\Exception $e) {
             if ($logger) {
@@ -236,30 +229,48 @@ class AIStep {
                     'exception' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
-            } else {
-                // Logger unavailable - fail gracefully with no logging
             }
-            return false;
+            // Return empty array on failure (engine interprets as step failure)
+            return [];
         }
     }
 
     /**
-     * Get pipeline step configuration from pipeline/flow context
+     * Get pipeline step configuration from job and flow context
      * 
      * @param int $job_id Job ID
      * @return array|null Step configuration or null if not found
      */
     private function get_pipeline_step_config(int $job_id): ?array {
-        // Get step configuration from pipeline context service
-        $context = apply_filters('dm_get_context', null, $job_id);
-        if (!$context) {
+        // Get step configuration from job and flow configuration
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
+        if (!$db_jobs) {
             return null;
         }
         
-        // Get step data from pipeline context - this contains prompt, title, etc.
-        $step_data = $context->get_current_step_data();
+        $job = $db_jobs->get_job($job_id);
+        if (!$job || !$job->flow_config) {
+            return null;
+        }
         
-        return $step_data;
+        $flow_config = json_decode($job->flow_config, true);
+        if (!$flow_config) {
+            return null;
+        }
+        
+        // Get current step configuration from pipeline context service
+        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
+        if (!$pipeline_context) {
+            return null;
+        }
+        
+        $current_step_name = $pipeline_context->get_current_step_name($job_id);
+        if (!$current_step_name || !isset($flow_config['steps'][$current_step_name])) {
+            return null;
+        }
+        
+        return $flow_config['steps'][$current_step_name];
     }
 
     /**
@@ -316,69 +327,19 @@ class AIStep {
 
 
     /**
-     * Define prompt fields for AI step configuration
+     * AI Step Configuration handled by AI HTTP Client Library
      * 
-     * Fluid context is enabled by default - AI steps automatically receive
-     * full pipeline context for powerful agentic workflows.
+     * Configuration UI is provided by AI_HTTP_ProviderManager_Component via:
+     * - Provider selection (OpenAI, Anthropic, etc.)
+     * - API key management
+     * - Model selection
+     * - Temperature/creativity settings
+     * - AI processing instructions (system prompt)
      * 
-     * PURE CAPABILITY-BASED: External AI step classes only need:
-     * - execute(int $job_id): bool method
-     * - get_prompt_fields(): array static method (optional)
-     * - Parameter-less constructor
-     * - No interface implementation required
-     * 
-     * @return array Prompt field definitions for UI
+     * All configuration is step-aware via step_id parameter for unique
+     * per-step AI settings within pipelines.
      */
-    public static function get_prompt_fields(): array {
-        return [
-            'handlers' => [
-                'type' => 'hidden',
-                'default' => ['ai'],
-                'description' => 'AI processing handlers (defaults to ai handler for consistency)'
-            ],
-            'title' => [
-                'type' => 'text',
-                'label' => 'Step Title',
-                'description' => 'A descriptive name for this AI processing step (e.g., "Content Summarizer", "Fact Checker", "Content Refiner")',
-                'required' => true,
-                'placeholder' => 'e.g., "Content Summarizer", "SEO Optimizer", "Language Translator"'
-            ],
-            'prompt' => [
-                'type' => 'textarea',
-                'label' => 'AI Prompt',
-                'description' => 'Define what you want the AI to do. Fluid context automatically provides ALL previous pipeline data. Use variables: {{packet_count}}, {{source_types}}, {{all_titles}}, {{content_previews}}, {{processing_steps}}',
-                'required' => true,
-                'placeholder' => 'Example: Analyze the {{packet_count}} content sources from {{source_types}}. Create a comprehensive summary highlighting key insights from all sources...',
-                'rows' => 8
-            ]
-        ];
-    }
 
-
-    /**
-     * Store data packet for current step.
-     *
-     * @param int $job_id The job ID.
-     * @param object $data_packet The data packet object to store.
-     * @return bool True on success, false on failure.
-     */
-    private function store_step_data_packet(int $job_id, object $data_packet): bool {
-        $pipeline_context = apply_filters('dm_get_pipeline_context', null);
-        if (!$pipeline_context) {
-            return false;
-        }
-        
-        $current_step = $pipeline_context->get_current_step_name($job_id);
-        if (!$current_step) {
-            return false;
-        }
-        
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        $json_data = $data_packet->toJson();
-        
-        return $db_jobs->update_step_data_by_name($job_id, $current_step, $json_data);
-    }
 
 }
 

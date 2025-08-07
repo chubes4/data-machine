@@ -100,13 +100,13 @@
             const isFirstRealStep = nonEmptySteps === 0;
             
             // Request universal step template with pipeline context
-            PipelineShared.requestTemplate('page/step-card', {
+            PipelinesPage.requestTemplate('page/pipeline-step-card', {
                 context: 'pipeline',
                 step: stepData.step_data,
                 pipeline_id: pipelineId,
                 is_first_step: isFirstRealStep
             }).then((stepHtml) => {
-                PipelineShared.addStepToInterface({
+                PipelinesPage.addStepToInterface({
                     step_html: stepHtml,
                     step_data: stepData.step_data
                 }, pipelineId, 'pipeline');
@@ -316,7 +316,7 @@
             const $pipelinesList = $('.dm-pipelines-list');
             
             // Request pipeline card template
-            PipelineShared.requestTemplate('page/pipeline-card', {
+            PipelinesPage.requestTemplate('page/pipeline-card', {
                 pipeline: pipelineData.pipeline_data,
                 existing_flows: pipelineData.existing_flows
             }).then((pipelineCardHtml) => {
@@ -422,7 +422,7 @@
                                 $(this).remove();
                                 
                                 // Update step count for this specific pipeline
-                                PipelineShared.updateStepCount($pipelineCard);
+                                PipelinesPage.updateStepCount($pipelineCard);
                                 
                                 // Check if only empty step remains and remove its arrow
                                 const remainingSteps = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
@@ -444,6 +444,31 @@
                     alert(`Error deleting ${errorType}`);
                     $button.text(originalText).prop('disabled', false);
                 }
+            });
+        },
+
+        /**
+         * Replace empty step container (pipelines only)
+         */
+        replaceEmptyStepContainer: function($container, stepData, config) {
+            const $emptyStepContainer = $container.find('.dm-step-container:has(.dm-step-card--empty)').first();
+            
+            if (!$emptyStepContainer.length) {
+                console.error('No empty step container found to replace');
+                return Promise.reject('No empty container');
+            }
+            
+            const stepHtml = stepData.step_html || stepData.html;
+            $emptyStepContainer.replaceWith(stepHtml);
+            
+            // Add new empty step container
+            return PipelinesPage.requestTemplate('page/pipeline-step-card', {
+                context: config.context,
+                step: { is_empty: true, step_type: '', position: '' },
+                ...config.templateData
+            }).then((emptyStepHtml) => {
+                $container.append(emptyStepHtml);
+                return Promise.resolve();
             });
         }
     };

@@ -112,40 +112,21 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         </div>
     </div>
     
-    <!-- Authentication Help -->
-    <div class="dm-auth-help">
-        <h4><?php esc_html_e('Authentication Information', 'data-machine'); ?></h4>
-        <?php
-        // Get handler-specific auth help text
-        $help_text = '';
-        if (method_exists($auth_instance, 'get_auth_help_text')) {
-            $help_text = $auth_instance->get_auth_help_text();
-        } else {
-            // Fallback help text based on handler type
-            switch ($handler_slug) {
-                case 'twitter':
-                    $help_text = __('Twitter uses OAuth 1.0a authentication. You will be redirected to Twitter to authorize the application, then redirected back to complete the connection.', 'data-machine');
-                    break;
-                case 'reddit':
-                case 'facebook':
-                case 'threads':
-                case 'googlesheets':
-                    $help_text = sprintf(__('%s uses OAuth 2.0 authentication. You will be redirected to authorize the application and grant necessary permissions.', 'data-machine'), $handler_label);
-                    break;
-                case 'bluesky':
-                    $help_text = __('Bluesky uses App Password authentication. You will need to create an App Password in your Bluesky account settings and enter it here.', 'data-machine');
-                    break;
-                case 'wordpress':
-                    $help_text = __('WordPress authentication may use API keys or basic authentication depending on your site configuration.', 'data-machine');
-                    break;
-                default:
-                    $help_text = sprintf(__('This handler requires authentication to connect to your %s account.', 'data-machine'), $handler_label);
-                    break;
-            }
-        }
-        ?>
-        <p><?php echo esc_html($help_text); ?></p>
-    </div>
+    <?php
+    // Get handler-specific auth help text via method discovery only  
+    $help_text = '';
+    if (method_exists($auth_instance, 'get_auth_help_text')) {
+        $help_text = $auth_instance->get_auth_help_text();
+    }
+
+    // Only display help section if auth provider provides help text
+    if (!empty($help_text)): ?>
+        <!-- Authentication Help -->
+        <div class="dm-auth-help">
+            <h4><?php esc_html_e('Authentication Information', 'data-machine'); ?></h4>
+            <p><?php echo esc_html($help_text); ?></p>
+        </div>
+    <?php endif; ?>
     
     <!-- Modal Navigation -->
     <div class="dm-modal-navigation">

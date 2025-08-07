@@ -53,29 +53,7 @@ function dm_register_bluesky_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Pure discovery mode
-    add_filter('dm_get_modals', function($modals) {
-        // Get Bluesky settings for modal content
-        $all_settings = apply_filters('dm_get_handler_settings', []);
-        $settings_instance = $all_settings['bluesky'] ?? null;
-        
-        // Handler-specific modal removed - core modal handles generic 'handler-settings'
-        
-        // Handler authentication modal
-        $modals['bluesky-handler-auth'] = [
-            'content' => apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'bluesky',
-                'handler_config' => [
-                    'label' => __('Bluesky', 'data-machine'),
-                    'description' => __('Post content to Bluesky using AT Protocol', 'data-machine')
-                ],
-                'step_type' => 'output'
-            ]),
-            'title' => __('Bluesky Authentication', 'data-machine')
-        ];
-        
-        return $modals;
-    });
+    // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 
 // Auto-register when file loads - achieving complete self-containment

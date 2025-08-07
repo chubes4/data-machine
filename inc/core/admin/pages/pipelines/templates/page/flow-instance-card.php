@@ -76,50 +76,20 @@ if (is_object($flow)) {
             <?php if (!empty($pipeline_steps)): ?>
                 <?php foreach ($pipeline_steps as $index => $step): ?>
                     <?php 
-                    // Add template flag to database object (consistent with pipeline pattern)
-                    $step['is_empty'] = false;
-                    
-                    // Direct step usage - let template fail loud if data is invalid
-                    echo apply_filters('dm_render_template', '', 'page/step-card', [
-                        'context' => 'flow',
+                    // Simple flow step card - no context complexity
+                    echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
                         'step' => $step,
                         'flow_config' => $flow_config,
                         'flow_id' => $flow_id,
+                        'pipeline_id' => $pipeline_id,
                         'is_first_step' => ($index === 0)
                     ]);
                     ?>
                 <?php endforeach; ?>
-                
-                <!-- Always add empty flow step at the end (identical to pipeline pattern) -->
-                <?php 
-                echo apply_filters('dm_render_template', '', 'page/step-card', [
-                    'context' => 'flow',
-                    'step' => [
-                        'is_empty' => true,
-                        'step_type' => '',
-                        'position' => '',
-                        'step_data' => []
-                    ],
-                    'flow_config' => [],
-                    'flow_id' => $flow_id,
-                    'is_first_step' => false // Empty step at end always gets arrow
-                ]);
-                ?>
             <?php else: ?>
-                <!-- When no pipeline steps exist, show empty flow step (not placeholder) -->
-                <?php 
-                echo apply_filters('dm_render_template', '', 'page/step-card', [
-                    'context' => 'flow',
-                    'step' => [
-                        'is_empty' => true,
-                        'step_type' => '',
-                        'position' => ''
-                    ],
-                    'flow_config' => [],
-                    'flow_id' => $flow_id,
-                    'is_first_step' => true // No arrow when it's the only step
-                ]);
-                ?>
+                <div class="dm-no-steps">
+                    <p><?php esc_html_e('No steps configured in this pipeline.', 'data-machine'); ?></p>
+                </div>
             <?php endif; ?>
         </div>
     </div>

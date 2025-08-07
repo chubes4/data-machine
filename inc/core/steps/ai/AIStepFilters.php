@@ -133,34 +133,8 @@ function dm_register_ai_step_filters() {
         return $configs;
     });
     
-    /**
-     * AI Step Configuration Modal Content Registration
-     * 
-     * Register modal content for configure-step template using the universal template system.
-     * This provides a complete AI configuration interface with proper modal action buttons.
-     * 
-     * @param mixed $content Current modal content (null if none)
-     * @param string $template Modal template being requested
-     * @return string|mixed Modal HTML content or original value
-     */
-    add_filter('dm_get_modal', function($content, $template) {
-        if ($template === 'configure-step') {
-            // Get context from $_POST directly - jQuery auto-parses JSON data attributes
-            $context = $_POST['context'] ?? [];
-            $step_type = $context['step_type'] ?? 'unknown';
-            
-            // Handle all step types, but currently only AI is implemented
-            $template_data = [
-                'step_type' => $step_type,  
-                'pipeline_id' => $context['pipeline_id'] ?? null,
-                'step_id' => $context['step_id'] ?? null
-            ];
-            
-            // Use universal template rendering system
-            return apply_filters('dm_render_template', '', 'modal/configure-step', $template_data);
-        }
-        return $content;
-    }, 10, 2);
+    // Modal registration removed - configure-step modal already registered in PipelinesFilters.php
+    // The shared configure-step modal handles all step types via template switching
     
     // Future AI-specific filters can be added here following the same pattern
     // Examples:

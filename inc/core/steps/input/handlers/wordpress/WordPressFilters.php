@@ -53,55 +53,7 @@ function dm_register_wordpress_input_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - WordPress Input owns its handler-settings and handler-auth modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another handler
-        if ($content !== null) {
-            return $content;
-        }
-        
-        $context = $_POST['context'] ?? [];
-        $handler_slug = $context['handler_slug'] ?? '';
-        $step_type = $context['step_type'] ?? '';
-        
-        // Only handle wordpress_input handler in input context
-        if ($handler_slug !== 'wordpress_input' || $step_type !== 'input') {
-            return $content;
-        }
-        
-        if ($template === 'handler-settings') {
-            // Settings modal template
-            $all_settings = apply_filters('dm_get_handler_settings', []);
-            $settings_instance = $all_settings['wordpress_input'] ?? null;
-            
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'wordpress_input',
-                'handler_config' => [
-                    'label' => __('WordPress', 'data-machine'),
-                    'description' => __('Source content from WordPress posts and pages', 'data-machine')
-                ],
-                'step_type' => $context['step_type'] ?? 'input',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? '',
-                'settings_available' => ($settings_instance !== null),
-                'handler_settings' => $settings_instance
-            ]);
-        }
-        
-        if ($template === 'handler-auth') {
-            // Authentication modal template
-            return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'wordpress_input',
-                'handler_config' => [
-                    'label' => __('WordPress', 'data-machine'),
-                    'description' => __('Source content from WordPress posts and pages', 'data-machine')
-                ],
-                'step_type' => $context['step_type'] ?? 'input'
-            ]);
-        }
-        
-        return $content;
-    }, 10, 2);
+    // Modal registrations removed - now handled by generic modal system via pure discovery
     
     // DataPacket creation removed - engine uses universal DataPacket constructor
     // WordPress handler returns properly formatted data for direct constructor usage

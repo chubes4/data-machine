@@ -53,14 +53,16 @@ $step_id = $step_id ?? null;
                 'step_id' => $step_id, // Unique step-aware configuration
                 'component_configs' => [
                     'temperature_slider' => [
-                        'min' => 0,
-                        'max' => 1,
-                        'step' => 0.1,
-                        'default_value' => 0.7
+                        // KISS: Only customize what Data Machine specifically needs
+                        'label' => __('AI Creativity Level', 'data-machine'),
+                        'help_text' => __('Controls randomness in AI responses. Higher values = more creative, lower values = more focused.', 'data-machine')
                     ],
                     'system_prompt_field' => [
-                        'placeholder' => __('Enter system prompt for this AI step...', 'data-machine'),
-                        'rows' => 4
+                        'label' => __('AI Processing Instructions', 'data-machine'),
+                        'placeholder' => __('Define how the AI should process data from previous pipeline steps...', 'data-machine'),
+                        'help_text' => __('Instructions that guide AI behavior for this pipeline step. The AI will receive data from all previous steps automatically.', 'data-machine'),
+                        'rows' => 6,
+                        'default_value' => ''
                     ]
                 ]
             ]);

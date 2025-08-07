@@ -56,7 +56,7 @@ class GoogleSheets {
         
         // Get output config from DataPacket (set by OutputStep)
         $output_config = $data_packet->output_config ?? [];
-        $module_job_config = [
+        $flow_job_config = [
             'output_config' => $output_config
         ];
         
@@ -74,7 +74,7 @@ class GoogleSheets {
         $logger && $logger->debug('Starting Google Sheets output handling.');
         
         // 1. Get configuration
-        $output_config = $module_job_config['output_config']['googlesheets'] ?? [];
+        $output_config = $flow_job_config['output_config']['googlesheets'] ?? [];
         $spreadsheet_id = $output_config['googlesheets_spreadsheet_id'] ?? '';
         $worksheet_name = $output_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
         $column_mapping = $output_config['googlesheets_column_mapping'] ?? $this->get_default_column_mapping();

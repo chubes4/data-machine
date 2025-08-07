@@ -1,6 +1,6 @@
 <?php
 /**
- * WordPress Input Handler Settings Module
+ * WordPress Input Handler Settings
  *
  * Defines settings fields and sanitization for WordPress input handler.
  * Part of the modular handler architecture.

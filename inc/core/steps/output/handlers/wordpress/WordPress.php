@@ -58,7 +58,7 @@ class WordPress {
         }
         
         // Get output config from DataPacket
-        $module_job_config = [
+        $flow_job_config = [
             'output_config' => $data_packet->output_config
         ];
 
@@ -75,7 +75,7 @@ class WordPress {
         ];
 
         // Get output config directly from the job config array - guaranteed by validation above
-        $config = $module_job_config['output_config'];
+        $config = $flow_job_config['output_config'];
         if (!is_array($config)) {
             return ['success' => false, 'error' => 'Invalid output_config format - array required'];
         }
@@ -107,7 +107,7 @@ class WordPress {
                 return $this->publish_local($structured_content, $wordpress_config, $input_metadata);
 
             case 'remote':
-                return $this->publish_remote($structured_content, $wordpress_config, $input_metadata, $module_job_config);
+                return $this->publish_remote($structured_content, $wordpress_config, $input_metadata, $flow_job_config);
 
             default:
                 return [
@@ -364,10 +364,10 @@ class WordPress {
      * @param array $structured_content Structured content from DataPacket.
      * @param array $config Configuration array.
      * @param array $input_metadata Input metadata.
-     * @param array $module_job_config Module job configuration.
+     * @param array $flow_job_config Module job configuration.
      * @return array Result array.
      */
-    private function publish_remote(array $structured_content, array $config, array $input_metadata, array $module_job_config): array {
+    private function publish_remote(array $structured_content, array $config, array $input_metadata, array $flow_job_config): array {
         // Initialize variables to avoid undefined variable warnings
         $assigned_category_name = null;
         $assigned_category_id = null;
@@ -484,8 +484,8 @@ class WordPress {
         );
 
         // Add module_id for tracking
-        if (!empty($module_job_config['module_id'])) {
-            $payload['dm_module_id'] = intval($module_job_config['module_id']);
+        if (!empty($flow_job_config['module_id'])) {
+            $payload['dm_module_id'] = intval($flow_job_config['module_id']);
         }
 
         // Add date to payload if determined from source

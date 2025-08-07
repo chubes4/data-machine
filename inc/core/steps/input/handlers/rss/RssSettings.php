@@ -1,6 +1,6 @@
 <?php
 /**
- * RSS Input Handler Settings Module
+ * RSS Input Handler Settings
  *
  * Defines settings fields and sanitization for RSS input handler.
  * Part of the modular handler architecture.
@@ -64,19 +64,6 @@ class RssSettings {
                 'label' => __('Search Term Filter', 'data-machine'),
                 'description' => __('Filter RSS items by keywords (comma-separated). Only items containing at least one keyword in their title or content will be processed.', 'data-machine'),
             ],
-            'rss_refresh_interval' => [
-                'type' => 'select',
-                'label' => __('Feed Refresh Interval', 'data-machine'),
-                'description' => __('How often to check the RSS feed for new items.', 'data-machine'),
-                'options' => [
-                    '15_minutes' => __('Every 15 Minutes', 'data-machine'),
-                    '30_minutes' => __('Every 30 Minutes', 'data-machine'),
-                    '1_hour' => __('Every Hour', 'data-machine'),
-                    '6_hours' => __('Every 6 Hours', 'data-machine'),
-                    '12_hours' => __('Every 12 Hours', 'data-machine'),
-                    '24_hours' => __('Daily', 'data-machine'),
-                ],
-            ],
         ];
     }
 
@@ -110,13 +97,6 @@ class RssSettings {
         // Search terms
         $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
         
-        // Refresh interval
-        $valid_intervals = ['15_minutes', '30_minutes', '1_hour', '6_hours', '12_hours', '24_hours'];
-        $interval = sanitize_text_field($raw_settings['rss_refresh_interval'] ?? '1_hour');
-        if (!in_array($interval, $valid_intervals)) {
-            throw new Exception(esc_html__('Invalid refresh interval parameter provided in settings.', 'data-machine'));
-        }
-        $sanitized['rss_refresh_interval'] = $interval;
         
         return $sanitized;
     }
@@ -132,7 +112,6 @@ class RssSettings {
             'item_count' => 1,
             'timeframe_limit' => 'all_time',
             'search' => '',
-            'rss_refresh_interval' => '1_hour',
         ];
     }
 }

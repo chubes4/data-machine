@@ -226,7 +226,7 @@ class GoogleSheetsAuth {
         $client_secret = get_option('googlesheets_client_secret');
         
         if (empty($client_id) || empty($client_secret)) {
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_missing_oauth_config'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_missing_oauth_config'));
             exit;
         }
 
@@ -268,7 +268,7 @@ class GoogleSheetsAuth {
         
         // 1. Initial checks
         if (!is_user_logged_in()) {
-             wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_not_logged_in'));
+             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_not_logged_in'));
              exit;
         }
 
@@ -276,14 +276,14 @@ class GoogleSheetsAuth {
         if (isset($_GET['error'])) {
             $error = sanitize_text_field($_GET['error']);
             $logger && $logger->warning('Google OAuth error returned.', ['error' => $error]);
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_oauth_error'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_oauth_error'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
             $logger && $logger->error('Missing code or state parameter in Google OAuth callback.');
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_missing_callback_params'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_missing_callback_params'));
             exit;
         }
 
@@ -296,7 +296,7 @@ class GoogleSheetsAuth {
 
         if (empty($stored_user_id) || $stored_user_id != get_current_user_id()) {
             $logger && $logger->error('Invalid or expired state parameter in Google OAuth callback.');
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_invalid_state'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_invalid_state'));
             exit;
         }
 
@@ -321,7 +321,7 @@ class GoogleSheetsAuth {
             $logger && $logger->error('Google token exchange request failed.', [
                 'error' => $response->get_error_message()
             ]);
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_token_exchange_failed'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_token_exchange_failed'));
             exit;
         }
 
@@ -333,14 +333,14 @@ class GoogleSheetsAuth {
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_token_exchange_error'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_token_exchange_error'));
             exit;
         }
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token']) || empty($token_data['refresh_token'])) {
             $logger && $logger->error('Invalid token response from Google.');
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_invalid_token_response'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_invalid_token_response'));
             exit;
         }
 
@@ -348,7 +348,7 @@ class GoogleSheetsAuth {
         $encryption_helper = $this->get_encryption_helper();
         if (!$encryption_helper) {
             $logger && $logger->error('Encryption helper service unavailable during OAuth callback.');
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_service_unavailable'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_service_unavailable'));
             exit;
         }
 
@@ -357,7 +357,7 @@ class GoogleSheetsAuth {
         
         if ($encrypted_access_token === false || $encrypted_refresh_token === false) {
             $logger && $logger->error('Failed to encrypt Google Sheets tokens.');
-            wp_redirect(admin_url('admin.php?page=dm-project-management&auth_error=googlesheets_encryption_failed'));
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_encryption_failed'));
             exit;
         }
         
@@ -374,7 +374,7 @@ class GoogleSheetsAuth {
         $logger && $logger->debug('Successfully completed Google Sheets OAuth flow.');
 
         // 5. Redirect on success
-        wp_redirect(admin_url('admin.php?page=dm-project-management&auth_success=googlesheets'));
+        wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=googlesheets'));
         exit;
     }
 

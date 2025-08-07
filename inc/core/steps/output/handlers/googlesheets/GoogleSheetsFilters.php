@@ -53,29 +53,7 @@ function dm_register_googlesheets_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Pure discovery mode
-    add_filter('dm_get_modals', function($modals) {
-        // Get GoogleSheets settings for modal content
-        $all_settings = apply_filters('dm_get_handler_settings', []);
-        $settings_instance = $all_settings['googlesheets_output'] ?? null;
-        
-        // Handler-specific modal removed - core modal handles generic 'handler-settings'
-        
-        // Handler authentication modal
-        $modals['googlesheets_output-handler-auth'] = [
-            'content' => apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'googlesheets_output',
-                'handler_config' => [
-                    'label' => __('Google Sheets', 'data-machine'),
-                    'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'data-machine')
-                ],
-                'step_type' => 'output'
-            ]),
-            'title' => __('Google Sheets Authentication', 'data-machine')
-        ];
-        
-        return $modals;
-    });
+    // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 
 // Auto-register when file loads - achieving complete self-containment

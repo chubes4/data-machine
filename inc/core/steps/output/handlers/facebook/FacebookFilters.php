@@ -53,29 +53,7 @@ function dm_register_facebook_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Pure discovery mode
-    add_filter('dm_get_modals', function($modals) {
-        // Get Facebook settings for modal content
-        $all_settings = apply_filters('dm_get_handler_settings', []);
-        $settings_instance = $all_settings['facebook'] ?? null;
-        
-        // Handler-specific modal removed - core modal handles generic 'handler-settings'
-        
-        // Handler authentication modal
-        $modals['facebook-handler-auth'] = [
-            'content' => apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'facebook',
-                'handler_config' => [
-                    'label' => __('Facebook', 'data-machine'),
-                    'description' => __('Post content to Facebook pages and profiles', 'data-machine')
-                ],
-                'step_type' => 'output'
-            ]),
-            'title' => __('Facebook Authentication', 'data-machine')
-        ];
-        
-        return $modals;
-    });
+    // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 
 // Auto-register when file loads - achieving complete self-containment

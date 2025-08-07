@@ -26,7 +26,15 @@ if (!defined('WPINC')) {
     </div>
     
     <div class="dm-handler-cards">
-        <?php foreach ($handlers as $handler_slug => $handler_config): ?>
+        <?php 
+        // Template self-discovery - get handlers for this step type
+        $step_type = $step_type ?? 'unknown';
+        $all_handlers = apply_filters('dm_get_handlers', []);
+        $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
+            return ($handler['type'] ?? '') === $step_type;
+        });
+        
+        foreach ($handlers as $handler_slug => $handler_config): ?>
             <div class="dm-handler-selection-card dm-modal-content" 
                  data-template="handler-settings"
                  data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'

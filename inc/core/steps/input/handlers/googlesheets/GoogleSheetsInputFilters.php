@@ -50,57 +50,7 @@ function dm_register_googlesheets_input_filters() {
         return $all_settings;
     });
     
-    // Modal content registration - Google Sheets Input owns its handler-settings and handler-auth modal content
-    add_filter('dm_get_modal', function($content, $template) {
-        // Return early if content already provided by another handler
-        if ($content !== null) {
-            return $content;
-        }
-        
-        // Properly sanitize context data following WordPress security standards
-        $raw_context = wp_unslash($_POST['context'] ?? '');
-        $context = is_string($raw_context) ? json_decode($raw_context, true) : [];
-        $context = is_array($context) ? $context : [];
-        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
-        
-        // Only handle googlesheets_input handler when step_type is input
-        if ($handler_slug !== 'googlesheets_input' || ($context['step_type'] ?? '') !== 'input') {
-            return $content;
-        }
-        
-        if ($template === 'handler-settings') {
-            // Settings modal template
-            $all_settings = apply_filters('dm_get_handler_settings', []);
-            $settings_instance = $all_settings['googlesheets'] ?? null;
-            
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'googlesheets',
-                'handler_config' => [
-                    'label' => __('Google Sheets', 'data-machine'),
-                    'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
-                ],
-                'step_type' => sanitize_text_field($context['step_type'] ?? 'input'),
-                'flow_id' => sanitize_text_field($context['flow_id'] ?? ''),
-                'pipeline_id' => sanitize_text_field($context['pipeline_id'] ?? ''),
-                'settings_available' => ($settings_instance !== null),
-                'handler_settings' => $settings_instance
-            ]);
-        }
-        
-        if ($template === 'handler-auth') {
-            // Authentication modal template
-            return apply_filters('dm_render_template', '', 'modal/handler-auth-form', [
-                'handler_slug' => 'googlesheets',
-                'handler_config' => [
-                    'label' => __('Google Sheets', 'data-machine'),
-                    'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
-                ],
-                'step_type' => sanitize_text_field($context['step_type'] ?? 'input')
-            ]);
-        }
-        
-        return $content;
-    }, 10, 2);
+    // Modal registrations removed - now handled by generic modal system via pure discovery
     
     // Authentication registration - pure discovery mode
     // This creates bi-directional Google Sheets integration by sharing auth with output handler

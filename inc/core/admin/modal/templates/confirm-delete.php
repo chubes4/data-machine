@@ -50,9 +50,29 @@ if ($delete_type === 'pipeline') {
     $step_label = $step_label ?? ucfirst(str_replace('_', ' ', $step_type));
 }
 
-// Optional parameters with sensible handling
-$affected_flows = $affected_flows ?? [];
-$affected_jobs = $affected_jobs ?? [];
+// Template self-discovery - fetch affected flows and jobs data via filter-based discovery
+$all_databases = apply_filters('dm_get_database_services', []);
+$db_flows = $all_databases['flows'] ?? null;
+$db_jobs = $all_databases['jobs'] ?? null;
+
+$affected_flows = [];
+$affected_jobs = [];
+
+// Fetch affected data based on deletion type and available database services
+if ($delete_type === 'pipeline' && $db_flows && isset($pipeline_id)) {
+    // Pipeline deletion affects all flows in that pipeline
+    $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+    
+    // Get job count for this pipeline if jobs service available
+    if ($db_jobs && method_exists($db_jobs, 'get_jobs_for_pipeline')) {
+        $jobs_for_pipeline = $db_jobs->get_jobs_for_pipeline($pipeline_id);
+        $affected_jobs = is_array($jobs_for_pipeline) ? $jobs_for_pipeline : [];
+    }
+} elseif ($delete_type === 'step' && $db_flows && isset($pipeline_id)) {
+    // Step deletion affects all flows using this pipeline (same as pipeline impact)
+    $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+}
+// Flow deletion doesn't have sub-dependencies, so affected_flows stays empty
 
 ?>
 <div class="dm-delete-warning-modal">
@@ -103,9 +123,9 @@ $affected_jobs = $affected_jobs ?? [];
                 </ul>
                 <p class="dm-cascade-warning">
                     <?php if ($delete_type === 'pipeline'): ?>
-                        <strong><?php esc_html_e('All flows, their configurations, and associated job history will be permanently deleted.', 'data-machine'); ?></strong>
+                        <strong><?php esc_html_e('All flows and their configurations will be permanently deleted. Associated job records will be preserved as historical data.', 'data-machine'); ?></strong>
                     <?php elseif ($delete_type === 'flow'): ?>
-                        <strong><?php esc_html_e('The flow configuration and any associated job history will be permanently deleted.', 'data-machine'); ?></strong>
+                        <strong><?php esc_html_e('The flow configuration will be permanently deleted. Associated job records will be preserved as historical data.', 'data-machine'); ?></strong>
                     <?php else: ?>
                         <strong><?php esc_html_e('All step instances and their configurations will be removed from these flows.', 'data-machine'); ?></strong>
                     <?php endif; ?>
@@ -125,11 +145,11 @@ $affected_jobs = $affected_jobs ?? [];
         
         <?php if ($delete_type === 'pipeline' && !empty($affected_jobs)): ?>
             <div class="dm-affected-jobs">
-                <h4><?php esc_html_e('Associated job history:', 'data-machine'); ?></h4>
+                <h4><?php esc_html_e('Associated job history (will be preserved):', 'data-machine'); ?></h4>
                 <p class="dm-job-count">
                     <?php echo esc_html(sprintf(_n(
-                        '%d job record will be deleted',
-                        '%d job records will be deleted',
+                        '%d job record will be preserved as historical data',
+                        '%d job records will be preserved as historical data',
                         count($affected_jobs),
                         'data-machine'
                     ), count($affected_jobs))); ?>

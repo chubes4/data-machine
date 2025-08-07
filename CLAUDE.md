@@ -258,37 +258,38 @@ class MyStep {
 }
 ```
 
-## Universal Step Card Template System
+## Context-Specific Step Card Templates
 
-**Single Template Architecture**: Consolidated step card rendering using one template (`step-card.php`) that handles both pipeline and flow contexts through a `context` parameter, eliminating template duplication and ensuring consistency.
+**Dedicated Template Architecture**: Step card rendering uses context-specific templates that provide specialized functionality for pipeline and flow contexts.
 
-**Context-Aware Rendering**: Template dynamically adapts UI elements, actions, and content based on context:
-- **Pipeline Context**: Shows "Add Step" buttons, delete/configure actions, structural-only display
-- **Flow Context**: Shows "Add Handler" buttons, handler management UI, configuration details
+**Template Structure**:
+- **Pipeline Context**: `pipeline-step-card.php` - Shows "Add Step" buttons, delete/configure actions, structural-only display
+- **Flow Context**: `flow-step-card.php` - Shows "Add Handler" buttons, handler management UI, configuration details
 
 **Template Usage Pattern**:
 ```php
 // Pipeline step card
-$content = apply_filters('dm_render_template', '', 'page/step-card', [
+$content = apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
     'step' => $step_data,
-    'context' => 'pipeline',
     'pipeline_id' => $pipeline_id,
     'is_first_step' => $is_first_step
 ]);
 
 // Flow step card  
-$content = apply_filters('dm_render_template', '', 'page/step-card', [
+$content = apply_filters('dm_render_template', '', 'page/flow-step-card', [
     'step' => $step_data,
-    'context' => 'flow', 
     'flow_id' => $flow_id,
     'flow_config' => $flow_config,
     'is_first_step' => $is_first_step
 ]);
 ```
 
-**Universal Container Architecture**: Uses `dm-step-container` wrapper with consistent data attributes and internal `dm-step-card` structure that adapts content based on context while maintaining identical arrow and layout logic.
+**Consistent Container Architecture**: Both templates use `dm-step-container` wrapper with consistent data attributes and internal `dm-step-card` structure while providing context-specific functionality.
 
-**Handler Discovery Integration**: Flow context uses pure discovery filtering (`$all_handlers = apply_filters('dm_get_handlers', []); $handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === $step_type)`) for dynamic handler availability, while pipeline context focuses on step configuration discovery.
+**Step Type Architecture**: 
+- **AI Steps** (`'ai'`): No handlers, pipeline-level configuration only, `consume_all_packets: true`
+- **Input/Output Steps** (`'input'`, `'output'`): Use handlers, flow-level handler selection and configuration
+- **Handler Logic**: `$step_uses_handlers = ($step_type !== 'ai')` determines whether step shows handler management UI
 
 ## Arrow Rendering Architecture
 
@@ -303,7 +304,7 @@ if (!isset($is_first_step)) {
         $is_first_step = false;
     } else {
         // Populated steps require proper arrow logic
-        throw new \InvalidArgumentException('step-card template requires is_first_step parameter for populated steps');
+        throw new \InvalidArgumentException('Step card template requires is_first_step parameter for populated steps');
     }
 }
 if (!$is_first_step): ?>

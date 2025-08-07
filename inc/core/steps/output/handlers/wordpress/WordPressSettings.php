@@ -1,6 +1,6 @@
 <?php
 /**
- * WordPress Output Handler Settings Module
+ * WordPress Output Handler Settings
  *
  * Defines settings fields and sanitization for WordPress output handler.
  * Part of the modular handler architecture.

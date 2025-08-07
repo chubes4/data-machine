@@ -37,26 +37,15 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
         $html .= '<label for="' . esc_attr($unique_id) . '_temperature">' . esc_html($config['label']) . '</label>';
         $html .= '</th>';
         $html .= '<td>';
-        $html .= '<div class="ai-temperature-slider">';
-        $html .= '<div class="ai-slider-container">';
-        $html .= '<input type="range" ';
+        $html .= '<input type="text" ';
         $html .= 'id="' . esc_attr($unique_id) . '_temperature" ';
         $html .= 'name="' . esc_attr($field_name) . '" ';
-        $html .= 'min="' . esc_attr($config['min']) . '" ';
-        $html .= 'max="' . esc_attr($config['max']) . '" ';
-        $html .= 'step="' . esc_attr($config['step']) . '" ';
         $html .= 'value="' . esc_attr($temperature) . '" ';
+        $html .= 'placeholder="0.7" ';
         $html .= 'data-component-id="' . esc_attr($unique_id) . '" ';
-        $html .= 'data-component-type="temperature_slider" ';
-        $html .= 'class="ai-temperature-range" />';
-        
-        $html .= '<div class="ai-slider-labels">';
-        $html .= '<span class="ai-slider-label-left">' . esc_html($config['labels']['focused']) . '</span>';
-        $html .= '<span class="ai-slider-value" id="' . esc_attr($unique_id) . '_temperature_value">' . esc_html($temperature) . '</span>';
-        $html .= '<span class="ai-slider-label-right">' . esc_html($config['labels']['creative']) . '</span>';
-        $html .= '</div>';
-        
-        $html .= '</div>';
+        $html .= 'data-component-type="temperature_input" ';
+        $html .= 'class="ai-temperature-input" ';
+        $html .= 'style="width: 80px;" />';
         
         if ($config['show_help']) {
             $html .= '<br><small class="description">' . esc_html($config['help_text']) . '</small>';
@@ -88,7 +77,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
             ],
             'max' => [
                 'type' => 'number',
-                'default' => 2,
+                'default' => 1,
                 'description' => 'Maximum temperature value'
             ],
             'step' => [
@@ -116,7 +105,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
             ],
             'help_text' => [
                 'type' => 'string',
-                'default' => 'Controls response randomness. Lower values = more focused, higher values = more creative.',
+                'default' => 'Enter a value between 0 and 1. Lower values = more focused, higher values = more creative.',
                 'description' => 'Help text displayed below slider'
             ]
         ];
@@ -139,7 +128,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
                 'focused' => 'Focused'
             ],
             'show_help' => true,
-            'help_text' => 'Controls response randomness. Lower values = more focused, higher values = more creative.'
+            'help_text' => 'Enter a value between 0 and 1. Lower values = more focused, higher values = more creative.'
         ];
     }
     

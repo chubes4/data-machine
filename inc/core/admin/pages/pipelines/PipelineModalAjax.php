@@ -36,37 +36,15 @@ class PipelineModalAjax
         // Get action from POST data - support both 'pipeline_action' and 'operation' for modal system
         $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
 
-        switch ($action) {
-            case 'get_modal':
-                $this->get_modal();
-                break;
-            
-            case 'get_template':
-                $this->get_template();
-                break;
-            
-            case 'get_flow_step_card':
-                $this->get_flow_step_card();
-                break;
-            
-            case 'get_flow_config':
-                $this->get_flow_config();
-                break;
-            
-            case 'configure-step-action':
-                $this->configure_step_action();
-                break;
-                
-            case 'add-location-action':
-                $this->add_location_action();
-                break;
-                
-            case 'add-handler-action':
-                $this->add_handler_action();
-                break;
-            
-            default:
-                wp_send_json_error(['message' => __('Invalid modal action', 'data-machine')]);
+        // Use method discovery pattern instead of hardcoded switch
+        // Convert action name from kebab-case to snake_case for method names
+        $method_action = str_replace('-', '_', $action);
+        $method_name = "handle_{$method_action}";
+
+        if (method_exists($this, $method_name) && is_callable([$this, $method_name])) {
+            $this->$method_name();
+        } else {
+            wp_send_json_error(['message' => __('Invalid modal action', 'data-machine')]);
         }
     }
 
@@ -75,7 +53,7 @@ class PipelineModalAjax
      * Get modal based on template and context
      * Routes to appropriate content generation method
      */
-    private function get_modal()
+    private function handle_get_modal()
     {
         $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
         $context = $_POST['context'] ?? [];
@@ -103,7 +81,7 @@ class PipelineModalAjax
      * Get rendered template with provided data
      * Dedicated endpoint for template rendering to maintain architecture consistency
      */
-    private function get_template()
+    private function handle_get_template()
     {
         // Remove fallbacks - require explicit data
         if (!isset($_POST['template'])) {
@@ -125,7 +103,7 @@ class PipelineModalAjax
         }
         
         // For step-card templates in AJAX context, add sensible defaults for UI rendering
-        if ($template === 'page/step-card') {
+        if ($template === 'page/pipeline-step-card' || $template === 'page/flow-step-card') {
             if (!isset($template_data['is_first_step'])) {
                 // AJAX-rendered steps default to showing arrows (safer for dynamic UI)
                 $template_data['is_first_step'] = false;
@@ -155,7 +133,7 @@ class PipelineModalAjax
     /**
      * Get flow step card data for template rendering
      */
-    private function get_flow_step_card()
+    private function handle_get_flow_step_card()
     {
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
@@ -198,7 +176,7 @@ class PipelineModalAjax
     /**
      * Get flow configuration for step card updates
      */
-    private function get_flow_config()
+    private function handle_get_flow_config()
     {
         $flow_id = (int) sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 
@@ -234,7 +212,7 @@ class PipelineModalAjax
     /**
      * Handle step configuration save action
      */
-    private function configure_step_action()
+    private function handle_configure_step_action()
     {
         // Get context data from AJAX request - no fallbacks
         if (!isset($_POST['context'])) {
@@ -389,7 +367,7 @@ class PipelineModalAjax
     /**
      * Handle add location action for remote locations manager
      */
-    private function add_location_action()
+    private function handle_add_location_action()
     {
         // Get context data from AJAX request - jQuery auto-parses JSON data attributes
         $context = $_POST['context'] ?? [];
@@ -456,7 +434,7 @@ class PipelineModalAjax
     /**
      * Handle add handler action with proper update vs replace logic
      */
-    private function add_handler_action()
+    private function handle_add_handler_action()
     {
         // Get context data from AJAX request - handle both JSON string and array formats
         $context = $_POST['context'] ?? [];

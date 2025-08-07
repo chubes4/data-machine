@@ -342,8 +342,8 @@ $flow_config_a = [
         0 => ['handler' => 'rss', 'config' => ['feed_url' => 'https://techcrunch.com/feed/']],
         1 => ['handler' => 'reddit', 'config' => ['subreddit' => 'technology', 'limit' => 10]],
         2 => ['handler' => 'wordpress', 'config' => ['post_type' => 'post', 'category' => 'tech']],
-        3 => ['handler' => 'ai', 'config' => ['model' => 'gpt-4', 'prompt' => 'Analyze correlations']],
-        4 => ['handler' => 'ai', 'config' => ['model' => 'claude-3-5-sonnet', 'prompt' => 'Create summary']],
+        3 => ['step_type' => 'ai'], // AI step configured at pipeline level
+        4 => ['step_type' => 'ai'], // AI step configured at pipeline level
         5 => ['handler' => 'twitter', 'config' => ['account' => '@tech_insights']],
         6 => ['handler' => 'wordpress', 'config' => ['post_type' => 'post', 'status' => 'publish']]
     ]
@@ -356,8 +356,8 @@ $flow_config_b = [
         0 => ['handler' => 'rss', 'config' => ['feed_url' => 'https://feeds.feedburner.com/oreilly/radar']],
         1 => ['handler' => 'reddit', 'config' => ['subreddit' => 'programming', 'limit' => 20]],
         2 => ['handler' => 'wordpress', 'config' => ['post_type' => 'case_study']],
-        3 => ['handler' => 'ai', 'config' => ['model' => 'gemini-pro', 'prompt' => 'Industry trend analysis']],
-        4 => ['handler' => 'ai', 'config' => ['model' => 'gpt-4', 'prompt' => 'Executive summary']],
+        3 => ['step_type' => 'ai'], // AI step configured at pipeline level  
+        4 => ['step_type' => 'ai'], // AI step configured at pipeline level
         5 => ['handler' => 'facebook', 'config' => ['page_id' => 'industry_reports']],
         6 => ['handler' => 'google_sheets', 'config' => ['sheet_id' => 'analytics_data']]
     ]
@@ -1104,7 +1104,7 @@ class MyInputHandler {
     }
     
     // Required method for input handlers
-    public function get_input_data(object $module, array $source_config): array {
+    public function get_input_data(int $pipeline_id, array $handler_config): array {
         $logger = apply_filters('dm_get_logger', null);
         
         // Process input data and return array of data packets

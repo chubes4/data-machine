@@ -66,14 +66,11 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Usage: $all_handlers = apply_filters('dm_get_handlers', []);
  * Filter by type: array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output')
  * 
- * @filter dm_get_auth
- * Retrieves authentication instances by handler slug parameter.
- * Usage: $auth = apply_filters('dm_get_auth', null, 'twitter');
+ * @filter dm_get_auth_providers
+ * Authentication provider registration and retrieval system.
+ * Usage: $all_auth = apply_filters('dm_get_auth_providers', []); $twitter_auth = $all_auth['twitter'] ?? null;
  * 
- * @filter dm_get_context
- * Retrieves pipeline context data for job processing.
- * Usage: $context = apply_filters('dm_get_context', null, $job_id);
- * 
+ 
  * @filter dm_get_steps
  * Retrieves all step configurations via pure discovery mode.
  * Usage: $all_steps = apply_filters('dm_get_steps', []);
@@ -87,21 +84,21 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * 
  * @filter dm_render_template
  * Universal template rendering system for all UI components.
- * Usage: $html = apply_filters('dm_render_template', '', 'page/step-card', $data);
+ * Usage: $html = apply_filters('dm_render_template', '', 'page/pipeline-step-card', $data);
  * 
- * @filter dm_get_template
- * AJAX template requesting for dynamic UI updates.
- * Usage: $html = apply_filters('dm_get_template', '', 'modal/handler-settings', $data);
+ * @filter dm_render_template
+ * Universal template rendering for all UI components.
+ * Usage: $html = apply_filters('dm_render_template', '', 'modal/handler-settings', $data);
  * 
- * @filter dm_get_modal
+ * @filter dm_get_modals
  * Modal content registration and retrieval system.
- * Usage: $content = apply_filters('dm_get_modal', null, 'step-selection');
+ * Usage: $all_modals = apply_filters('dm_get_modals', []); $modal = $all_modals['step-selection'] ?? null;
  * 
  * ADMIN SYSTEM FILTERS:
  * 
- * @filter dm_get_admin_page
+ * @filter dm_get_admin_pages
  * Admin page registration and configuration system.
- * Usage: $config = apply_filters('dm_get_admin_page', null, 'pipelines');
+ * Usage: $all_pages = apply_filters('dm_get_admin_pages', []);
  * 
  * @filter dm_get_admin_menu_assets
  * Admin menu and asset management system.
@@ -156,8 +153,6 @@ function run_data_machine() {
     // Register parameter-based database service system
     dm_register_database_service_system();
     
-    // Register context retrieval service for pipeline DataPackets
-    dm_register_context_retrieval_service();
     
     // Register utility filters for external handlers
     dm_register_utility_filters();
@@ -198,16 +193,21 @@ function run_data_machine() {
         $logger = apply_filters('dm_get_logger', null);
         
         try {
-            $orchestrator = apply_filters('dm_get_orchestrator', null);
-            if ($orchestrator && is_object($orchestrator) && method_exists($orchestrator, 'execute_step_callback')) {
-                $result = $orchestrator->execute_step_callback( $job_id, $step_position, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets );
+            // Call static method directly - ProcessingOrchestrator::execute_step_callback is static
+            $result = \DataMachine\Engine\ProcessingOrchestrator::execute_step_callback( $job_id, $step_position, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets );
+            
+            $logger && $logger->debug('Action Scheduler hook executed step', [
+                'job_id' => $job_id,
+                'step_position' => $step_position,
+                'result' => $result ? 'success' : 'failed'
+            ]);
                 
                 // If step execution failed, mark job as failed
                 if (!$result) {
                     $all_databases = apply_filters('dm_get_database_services', []);
                     $db_jobs = $all_databases['jobs'] ?? null;
                     if ($db_jobs) {
-                        $db_jobs->update_status($job_id, 'failed');
+                        $db_jobs->update_job_status($job_id, 'failed');
                         $logger && $logger->error('Job marked as failed due to step execution failure', [
                             'job_id' => $job_id,
                             'step_position' => $step_position
@@ -216,27 +216,12 @@ function run_data_machine() {
                 }
                 
                 return $result;
-            } else {
-                // Mark job as failed if orchestrator unavailable
-                $all_databases = apply_filters('dm_get_database_services', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->update_status($job_id, 'failed');
-                }
-                
-                $logger && $logger->error('Job failed - orchestrator unavailable', [
-                    'job_id' => $job_id,
-                    'step_position' => $step_position
-                ]);
-                
-                return false;
-            }
         } catch (Exception $e) {
             // Mark job as failed on any exception
             $all_databases = apply_filters('dm_get_database_services', []);
             $db_jobs = $all_databases['jobs'] ?? null;
             if ($db_jobs) {
-                $db_jobs->update_status($job_id, 'failed');
+                $db_jobs->update_job_status($job_id, 'failed');
             }
             
             $logger && $logger->error('Job failed due to exception in Action Scheduler hook', [
@@ -252,7 +237,7 @@ function run_data_machine() {
             $all_databases = apply_filters('dm_get_database_services', []);
             $db_jobs = $all_databases['jobs'] ?? null;
             if ($db_jobs) {
-                $db_jobs->update_status($job_id, 'failed');
+                $db_jobs->update_job_status($job_id, 'failed');
             }
             
             $logger && $logger->error('Job failed due to fatal error in Action Scheduler hook', [

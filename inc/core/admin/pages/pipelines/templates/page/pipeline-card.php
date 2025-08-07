@@ -107,8 +107,7 @@ $is_new_pipeline = empty($pipeline_id);
             
             foreach ($display_steps as $index => $step): 
             ?>
-                <?php echo apply_filters('dm_render_template', '', 'page/step-card', [
-                    'context' => 'pipeline',
+                <?php echo apply_filters('dm_render_template', '', 'page/pipeline-step-card', [
                     'step' => $step,
                     'pipeline_id' => $pipeline_id,
                     'is_first_step' => ($index === 0)

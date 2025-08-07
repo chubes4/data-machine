@@ -1,6 +1,6 @@
 <?php
 /**
- * Facebook Output Handler Settings Module
+ * Facebook Output Handler Settings
  *
  * Defines settings fields and sanitization for Facebook output handler.
  * Part of the modular handler architecture.
