@@ -1108,7 +1108,7 @@ class MyInputHandler {
     }
     
     // Required method for input handlers
-    public function get_input_data(int $pipeline_id, array $handler_config): array {
+    public function get_input_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         $logger = apply_filters('dm_get_logger', null);
         
         // Process input data and return array of data packets
@@ -1348,9 +1348,9 @@ testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 ```
 
 **Database Schema**:
-- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, current_step_name, step_sequence (JSON), flow_config (JSON), step_data (JSON), cleanup_scheduled, error_details, created_at, started_at, completed_at
-- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (JSON), created_at, updated_at
-- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (JSON), scheduling_config (JSON), created_at, updated_at
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, flow_config (longtext NULL), error_details (longtext NULL), created_at, started_at, completed_at
+- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
+- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL), created_at, updated_at
 - **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
 - **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, encrypted_password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 

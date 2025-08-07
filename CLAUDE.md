@@ -52,9 +52,9 @@ if (in_array($action, $modal_actions)) {
 ## Database Schema
 
 **Core Tables**:
-- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, current_step_name, step_sequence (JSON), flow_config (JSON), step_data (JSON), cleanup_scheduled, error_details (longtext NULL), created_at, started_at, completed_at
-- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (JSON), created_at, updated_at
-- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (JSON), scheduling_config (JSON), created_at, updated_at
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, flow_config (longtext NULL), error_details (longtext NULL), created_at, started_at, completed_at
+- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
+- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL), created_at, updated_at
 - **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
 - **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, encrypted_password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 
@@ -431,7 +431,7 @@ public function get_template() {
 
 ## Modal System
 
-**Three-File Architecture**: Clean separation between universal modal lifecycle, content-specific interactions, and page content management.
+**Four-File Architecture**: Clean separation between universal modal lifecycle, content-specific interactions, page content management, and flow-specific operations.
 
 ### Core Components
 
@@ -449,14 +449,23 @@ public function get_template() {
 - Triggers `dm-pipeline-modal-saved` events for page updates
 - No modal opening/closing - only content interaction
 
-**pipeline-builder.js**: Page content management only
-- Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="add-handler-action"`, `data-template="delete-action"`)
+**pipeline-builder.js**: Page content management for pipeline operations
+- Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="delete-action"`)
 - **Direct Handler Action Pattern**: Handler configuration uses direct AJAX calls eliminating form submission complexity
 - Manages pipeline state and UI updates via template requesting pattern
 - Direct AJAX operations return data only - HTML via `requestTemplate()` method
 - Arrow rendering handled by PHP templates with universal `is_first_step` logic
 - Never calls modal APIs directly - clean separation maintained
 - Pure DOM manipulation layer - zero HTML generation
+
+**flow-builder.js**: Flow-specific operations and handler management
+- Handles flow configuration management (`data-template="add-handler-action"`, `data-template="configure-step"`)
+- Manages flow instances, handler configuration, and flow execution
+- Direct data attribute handler for adding handlers to flow steps
+- Add Flow button click handler and Run now button operations
+- Flow deletion operations (`data-template="delete-action"`)
+- Listens for handler saving events to refresh UI
+- Specialized for flow-level operations while maintaining architectural consistency
 
 ### Data-Attribute Communication
 
@@ -634,39 +643,7 @@ $processed_items_manager = apply_filters('dm_get_processed_items_manager', null)
 
 ## Component Registration
 
-**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using consistent filter-based discovery patterns.
-
-**Critical Architecture Rule**: Components primarily use collection-based discovery patterns. Most services register as collections, with specific exceptions for context-specific services:
-
-```php
-function dm_register_twitter_filters() {
-    // Collection-based registration - CORRECT
-    add_filter('dm_get_handlers', function($handlers) {
-        $handlers['twitter'] = [
-            'type' => 'output',
-            'class' => Twitter::class,
-            'label' => __('Twitter', 'data-machine')
-        ];
-        return $handlers;
-    });
-    
-    add_filter('dm_get_auth_providers', function($providers) {
-        $providers['twitter'] = new TwitterAuth();
-        return $providers;
-    });
-    
-    // Database service registration - Pure discovery pattern
-    add_filter('dm_get_database_services', function($services) {
-        $services['processed_items'] = new ProcessedItems();
-        return $services;
-    });
-}
-dm_register_twitter_filters();
-
-// Avoid over-engineered parameter filters - use collection-based patterns instead:
-// Prefer: $all_handlers = apply_filters('dm_get_handlers', []); $handler = $all_handlers['twitter'] ?? null;
-// Over: $handler = apply_filters('dm_get_handler', null, 'twitter');
-```
+**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using consistent filter-based discovery patterns. See Critical Rules section for complete collection-based discovery guidelines.
 
 
 ## Admin Page Architecture
@@ -803,130 +780,3 @@ public function ajax_handler() {
 }
 ```
 
-## Extension Examples
-
-**Custom Handler**:
-```php
-// Handler class with required methods
-class MyInputHandler {
-    public function __construct() {
-        // Filter-based service access only
-    }
-    
-    public function get_input_data(object $module, array $source_config): array {
-        $logger = apply_filters('dm_get_logger', null);
-        // Process input and return data packets array
-        return [];
-    }
-}
-
-// Pure discovery registration
-add_filter('dm_get_handlers', function($handlers) {
-    $handlers['my_handler'] = [
-        'type' => 'input',
-        'class' => \MyPlugin\MyInputHandler::class,
-        'label' => __('My Handler', 'my-plugin'),
-        'description' => __('Custom input handler', 'my-plugin')
-    ];
-    return $handlers;
-});
-
-add_filter('dm_get_auth_providers', function($providers) {
-    $providers['my_handler'] = new \MyPlugin\MyAuth();
-    return $providers;
-});
-
-// Access handler through pure discovery
-$all_handlers = apply_filters('dm_get_handlers', []);
-$my_handler = $all_handlers['my_handler'] ?? null;
-$input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
-```
-
-**Custom Step**:
-```php
-class MyStep {
-    public function execute(int $job_id, array $data_arrays = []): bool {
-        // Process data
-        return true;
-    }
-}
-
-// Pure discovery registration
-add_filter('dm_get_steps', function($steps) {
-    $steps['my_step'] = [
-        'label' => __('My Step', 'my-plugin'),
-        'class' => '\MyPlugin\MyStep'
-    ];
-    return $steps;
-});
-
-// Access step through pure discovery
-$all_steps = apply_filters('dm_get_steps', []);
-$my_step = $all_steps['my_step'] ?? null;
-```
-
-**Admin Page**: See Admin Page Architecture section for complete registration and discovery patterns.
-
-**Modal Content**:
-```php
-// Pure discovery registration
-add_filter('dm_get_modals', function($modals) {
-    $modals['my-modal'] = [
-        'template' => 'modal/my-modal',
-        'title' => __('My Modal', 'my-plugin')
-    ];
-    return $modals;
-});
-
-// Access modal through pure discovery
-$all_modals = apply_filters('dm_get_modals', []);
-$my_modal = $all_modals['my-modal'] ?? null;
-if ($my_modal) {
-    $content = apply_filters('dm_render_template', '', $my_modal['template'], $context);
-}
-```
-
-**Modal Trigger in PHP Template**:
-```php
-<button type="button" class="button dm-modal-open" 
-        data-template="my-modal"
-        data-context='{"item_id":"<?php echo esc_attr($item_id); ?>"}'>
-    <?php esc_html_e('Open Modal', 'my-plugin'); ?>
-</button>
-```
-
-**Page-Modal Communication**:
-```javascript
-// Modal content with data attributes triggers page actions
-<div class="dm-selection-card dm-modal-close" 
-     data-template="my-action"
-     data-context='{"item_id":"123","action_type":"process"}'>
-
-// Page script listens for data-attribute actions
-$(document).on('click', '[data-template="my-action"]', function(e) {
-    const contextData = $(e.currentTarget).data('context');
-    
-    // Process action and request template for UI update
-    $.ajax({
-        url: ajaxurl,
-        method: 'POST',
-        data: { action: 'my_action', context: contextData }
-    }).then(response => {
-        // Request template with response data
-        return this.requestTemplate('page/result-card', response.data);
-    }).then(html => {
-        // Insert rendered template
-        $(container).append(html);
-    });
-});
-
-// Optional: Modal form events for complex interactions
-$(document).trigger('dm-pipeline-modal-saved', [responseData]);
-```
-
-**Service Override**:
-```php
-add_filter('dm_get_orchestrator', function($service) {
-    return new MyPlugin\CustomOrchestrator();
-}, 20);
-```
