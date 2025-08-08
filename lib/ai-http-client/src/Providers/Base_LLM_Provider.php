@@ -165,6 +165,20 @@ class Base_LLM_Provider {
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
 
+        // Debug logging - capture request details
+        $provider_name = $this->get_provider_name();
+        error_log("[{$provider_name} Debug] API Request URL: " . $url);
+        
+        // Log headers (sanitize API key)
+        $sanitized_headers = $headers;
+        if (isset($sanitized_headers['Authorization'])) {
+            $sanitized_headers['Authorization'] = 'Bearer [REDACTED]';
+        }
+        error_log("[{$provider_name} Debug] Request Headers: " . json_encode($sanitized_headers));
+        
+        // Log request payload
+        error_log("[{$provider_name} Debug] Request Payload: " . wp_json_encode($request_data));
+
         $response = wp_remote_post($url, array(
             'headers' => $headers,
             'body' => wp_json_encode($request_data),
@@ -174,11 +188,16 @@ class Base_LLM_Provider {
 
         if (is_wp_error($response)) {
             $provider_name = $this->get_provider_name();
+            error_log("[{$provider_name} Debug] WP Error: " . $response->get_error_message());
             throw new Exception('API request failed');
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
+
+        // Debug logging - capture response details
+        error_log("[{$provider_name} Debug] Response Status: " . $status_code);
+        error_log("[{$provider_name} Debug] Response Body: " . $body);
 
         return $this->validate_json_response($body, $status_code);
     }

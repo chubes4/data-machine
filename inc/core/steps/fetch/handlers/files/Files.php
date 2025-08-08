@@ -3,10 +3,10 @@
  * Handles file uploads as a data source.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/input
+ * @subpackage Data_Machine/core/handlers/fetch
  * @since      0.7.0
  */
-namespace DataMachine\Core\Handlers\Input\Files;
+namespace DataMachine\Core\Handlers\Fetch\Files;
 
 use Exception;
 
@@ -187,7 +187,7 @@ class Files {
 
     
     /**
-     * Sanitize settings for the Files input handler.
+     * Sanitize settings for the Files fetch handler.
      * This handler currently has no specific settings.
      *
      * @param array $raw_settings

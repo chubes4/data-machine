@@ -1,16 +1,16 @@
 <?php
 /**
- * WordPress Output Handler Settings
+ * WordPress Publish Handler Settings
  *
- * Defines settings fields and sanitization for WordPress output handler.
+ * Defines settings fields and sanitization for WordPress publish handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/output/wordpress
+ * @subpackage Data_Machine/handlers/publish/wordpress
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\WordPress;
+namespace DataMachine\Core\Handlers\Publish\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class WordPressSettings {
     }
 
     /**
-     * Get settings fields for WordPress output handler.
+     * Get settings fields for WordPress publish handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
@@ -230,7 +230,7 @@ class WordPressSettings {
     }
 
     /**
-     * Sanitize WordPress output handler settings.
+     * Sanitize WordPress publish handler settings.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.

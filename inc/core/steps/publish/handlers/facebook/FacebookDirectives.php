@@ -3,7 +3,7 @@
  * Facebook-specific AI directive system.
  */
 
-namespace DataMachine\Core\Handlers\Output\Facebook;
+namespace DataMachine\Core\Handlers\Publish\Facebook;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

@@ -1,17 +1,17 @@
 <?php
 /**
- * Handles Twitter OAuth 1.0a authentication for the Twitter output handler.
+ * Handles Twitter OAuth 1.0a authentication for the Twitter publish handler.
  *
  * Self-contained authentication system that provides all OAuth functionality
- * needed by the Twitter output handler including credential management,
+ * needed by the Twitter publish handler including credential management,
  * OAuth flow handling, and authenticated connection creation.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/twitter
+ * @subpackage Data_Machine/core/handlers/publish/twitter
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Twitter;
+namespace DataMachine\Core\Handlers\Publish\Twitter;
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 

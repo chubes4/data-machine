@@ -239,6 +239,62 @@
                             window.dmCoreModal.closeModal();
                         }
                         
+                        // Update flow step cards to show new AI configuration
+                        // This matches the pattern from flow-builder.js for handler updates
+                        const pipeline_id = contextData.pipeline_id;
+                        const step_id = contextData.step_id;
+                        
+                        // Find all flow step cards for this pipeline step
+                        $(`.dm-step-container[data-pipeline-step-id="${step_id}"]`).each(function() {
+                            const $flowStepContainer = $(this);
+                            const flow_id = $flowStepContainer.closest('.dm-flow-instance-card').data('flow-id');
+                            const step_type = contextData.step_type;
+                            
+                            if (flow_id) {
+                                // Get updated flow configuration to ensure fresh data
+                                $.ajax({
+                                    url: dmPipelineBuilder.ajax_url,
+                                    type: 'POST',
+                                    data: {
+                                        action: 'dm_pipeline_ajax',
+                                        pipeline_action: 'get_flow_config',
+                                        flow_id: flow_id,
+                                        nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                                    },
+                                    success: (flowResponse) => {
+                                        if (flowResponse.success && flowResponse.data.flow_config) {
+                                            // Calculate is_first_step for consistent arrow rendering
+                                            const $parentContainer = $flowStepContainer.parent();
+                                            const isFirstStep = $parentContainer.children('.dm-step-container').first().is($flowStepContainer);
+                                            
+                                            // Request updated step card template with fresh configuration
+                                            PipelinesPage.requestTemplate('page/flow-step-card', {
+                                                step: {
+                                                    step_type: step_type,
+                                                    position: $flowStepContainer.data('step-position') || 0,
+                                                    step_id: step_id,
+                                                    is_empty: false
+                                                },
+                                                flow_config: flowResponse.data.flow_config,
+                                                flow_id: flow_id,
+                                                is_first_step: isFirstStep
+                                            }).then((updatedStepHtml) => {
+                                                // Replace the existing step container with updated version
+                                                $flowStepContainer.replaceWith(updatedStepHtml);
+                                                
+                                                console.log('AI configuration updated in flow step card:', step_id);
+                                            }).catch((error) => {
+                                                console.error('Failed to update flow step card after AI config save:', error);
+                                            });
+                                        }
+                                    },
+                                    error: (xhr, status, error) => {
+                                        console.error('Failed to get flow configuration for step card update:', error);
+                                    }
+                                });
+                            }
+                        });
+                        
                         // Optional: Emit event for any page updates needed
                         $(document).trigger('dm-step-configured', [contextData, response.data]);
                         

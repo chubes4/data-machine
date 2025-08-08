@@ -3,7 +3,7 @@
  * Twitter-specific AI directive system.
  */
 
-namespace DataMachine\Core\Handlers\Output\Twitter;
+namespace DataMachine\Core\Handlers\Publish\Twitter;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

@@ -3,11 +3,11 @@
  * Handles WordPress API key authentication for output.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/wordpress
+ * @subpackage Data_Machine/core/handlers/publish/wordpress
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Output\WordPress;
+namespace DataMachine\Core\Handlers\Publish\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;

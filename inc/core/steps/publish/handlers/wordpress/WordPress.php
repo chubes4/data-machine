@@ -1,6 +1,6 @@
 <?php
 /**
- * Unified WordPress output handler.
+ * Unified WordPress publish handler.
  *
  * Handles WordPress publishing to multiple destinations:
  * - Local WordPress (wp_insert_post)
@@ -11,7 +11,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Output\WordPress;
+namespace DataMachine\Core\Handlers\Publish\WordPress;
 
 use DataMachine\Core\Database\RemoteLocations;
 
@@ -847,7 +847,7 @@ class WordPress {
     }
 
     /**
-     * Sanitize settings for the unified WordPress output handler.
+     * Sanitize settings for the unified WordPress publish handler.
      *
      * @param array $raw_settings Raw settings array.
      * @return array Sanitized settings.

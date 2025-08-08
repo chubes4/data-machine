@@ -1,16 +1,16 @@
 <?php
 /**
- * Bluesky Output Handler Settings
+ * Bluesky Publish Handler Settings
  *
- * Defines settings fields and sanitization for Bluesky output handler.
+ * Defines settings fields and sanitization for Bluesky publish handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/output/bluesky
+ * @subpackage Data_Machine/handlers/publish/bluesky
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Bluesky;
+namespace DataMachine\Core\Handlers\Publish\Bluesky;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class BlueskySettings {
     }
 
     /**
-     * Get settings fields for Bluesky output handler.
+     * Get settings fields for Bluesky publish handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.

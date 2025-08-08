@@ -11,7 +11,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Input\Files;
+namespace DataMachine\Core\Handlers\Fetch\Files;
 
 use Exception;
 

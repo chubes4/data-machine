@@ -1,17 +1,17 @@
 <?php
 /**
- * Modular Facebook output handler.
+ * Modular Facebook publish handler.
  *
  * Posts content to a specified Facebook Page using the self-contained
  * FacebookAuth class for authentication. This modular approach separates
  * concerns between main handler logic and authentication functionality.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/facebook
+ * @subpackage Data_Machine/core/handlers/publish/facebook
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Facebook;
+namespace DataMachine\Core\Handlers\Publish\Facebook;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -378,7 +378,7 @@ class Facebook {
 
 
     /**
-     * Returns the user-friendly label for this output handler.
+     * Returns the user-friendly label for this publish handler.
      *
      * @return string The label.
      */
@@ -387,7 +387,7 @@ class Facebook {
     }
 
     /**
-     * Sanitizes the settings specific to the Facebook output handler.
+     * Sanitizes the settings specific to the Facebook publish handler.
      * No defaults allowed - all settings must be explicitly provided.
      *
      * @param array $raw_settings Raw settings input.

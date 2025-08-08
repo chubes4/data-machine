@@ -1,17 +1,17 @@
 <?php
 /**
- * Modular Bluesky output handler.
+ * Modular Bluesky publish handler.
  *
  * Posts content to a specified Bluesky account using the self-contained
  * BlueskyAuth class for authentication. This modular approach separates
  * concerns between main handler logic and authentication functionality.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/bluesky
+ * @subpackage Data_Machine/core/handlers/publish/bluesky
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Bluesky;
+namespace DataMachine\Core\Handlers\Publish\Bluesky;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -283,7 +283,7 @@ class Bluesky {
     }
 
     /**
-     * Returns the user-friendly label for this output handler.
+     * Returns the user-friendly label for this publish handler.
      *
      * @return string The label.
      */
@@ -292,7 +292,7 @@ class Bluesky {
     }
 
     /**
-     * Sanitizes the settings specific to the Bluesky output handler.
+     * Sanitizes the settings specific to the Bluesky publish handler.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.

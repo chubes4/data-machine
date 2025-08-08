@@ -3,7 +3,7 @@
  * Google Sheets-specific AI directive system.
  */
 
-namespace DataMachine\Core\Handlers\Output\GoogleSheets;
+namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

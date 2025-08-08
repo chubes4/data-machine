@@ -1,17 +1,17 @@
 <?php
 /**
- * Modular Twitter output handler.
+ * Modular Twitter publish handler.
  *
  * Posts content to a specified Twitter account using the self-contained
  * TwitterAuth class for authentication. This modular approach separates
  * concerns between main handler logic and authentication functionality.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/twitter
+ * @subpackage Data_Machine/core/handlers/publish/twitter
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Twitter;
+namespace DataMachine\Core\Handlers\Publish\Twitter;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -342,7 +342,7 @@ class Twitter {
 
 
     /**
-     * Returns the user-friendly label for this output handler.
+     * Returns the user-friendly label for this publish handler.
      *
      * @return string The label.
      */
@@ -351,7 +351,7 @@ class Twitter {
     }
 
     /**
-     * Sanitizes the settings specific to the Twitter output handler.
+     * Sanitizes the settings specific to the Twitter publish handler.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.

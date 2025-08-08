@@ -3,7 +3,7 @@
  * Threads-specific AI directive system.
  */
 
-namespace DataMachine\Core\Handlers\Output\Threads;
+namespace DataMachine\Core\Handlers\Publish\Threads;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly

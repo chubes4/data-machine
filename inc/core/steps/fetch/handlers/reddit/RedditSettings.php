@@ -1,16 +1,16 @@
 <?php
 /**
- * Reddit Input Handler Settings
+ * Reddit Fetch Handler Settings
  *
- * Defines settings fields and sanitization for Reddit input handler.
+ * Defines settings fields and sanitization for Reddit fetch handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/input/reddit
+ * @subpackage Data_Machine/handlers/fetch/reddit
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Input\Reddit;
+namespace DataMachine\Core\Handlers\Fetch\Reddit;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class RedditSettings {
     }
 
     /**
-     * Get settings fields for Reddit input handler.
+     * Get settings fields for Reddit fetch handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
@@ -100,7 +100,7 @@ class RedditSettings {
     }
 
     /**
-     * Sanitize Reddit input handler settings.
+     * Sanitize Reddit fetch handler settings.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.

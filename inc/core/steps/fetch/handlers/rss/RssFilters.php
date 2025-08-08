@@ -1,19 +1,19 @@
 <?php
 /**
- * RSS Input Handler Component Filter Registration
+ * RSS Fetch Handler Component Filter Registration
  * 
  * "Plugins Within Plugins" Architecture Implementation
  * 
- * This file serves as RSS Input Handler's complete interface contract with the engine,
+ * This file serves as RSS Fetch Handler's complete interface contract with the engine,
  * demonstrating complete self-containment and zero bootstrap dependencies.
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Input\Rss
+ * @subpackage Core\Handlers\Fetch\Rss
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Input\Rss;
+namespace DataMachine\Core\Handlers\Fetch\Rss;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -21,16 +21,16 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register all RSS Input Handler component filters
+ * Register all RSS Fetch Handler component filters
  * 
  * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers RSS Input Handler capabilities purely through filter-based discovery.
+ * Engine discovers RSS Fetch Handler capabilities purely through filter-based discovery.
  * 
  * @since 0.1.0
  */
-function dm_register_rss_input_filters() {
+function dm_register_rss_fetch_filters() {
     
-    // Handler registration - RSS declares itself as input handler (pure discovery mode)
+    // Handler registration - RSS declares itself as fetch handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['rss'] = [
             'type' => 'fetch',
@@ -54,4 +54,4 @@ function dm_register_rss_input_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_rss_input_filters();
+dm_register_rss_fetch_filters();

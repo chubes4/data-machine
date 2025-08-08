@@ -9,11 +9,11 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Output\Facebook
+ * @subpackage Core\Handlers\Publish\Facebook
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Output\Facebook;
+namespace DataMachine\Core\Handlers\Publish\Facebook;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_facebook_filters() {
     
-    // Handler registration - Facebook declares itself as output handler (pure discovery mode)
+    // Handler registration - Facebook declares itself as publish handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['facebook'] = [
             'type' => 'publish',

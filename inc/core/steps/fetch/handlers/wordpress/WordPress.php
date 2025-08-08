@@ -1,6 +1,6 @@
 <?php
 /**
- * Unified WordPress input handler.
+ * Unified WordPress fetch handler.
  *
  * Handles WordPress content from multiple sources:
  * - Local WordPress (WP_Query)
@@ -12,7 +12,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Input\WordPress;
+namespace DataMachine\Core\Handlers\Fetch\WordPress;
 
 use DataMachine\Core\Database\RemoteLocations;
 use Exception;
@@ -1035,7 +1035,7 @@ class WordPress {
     }
 
     /**
-     * Sanitize settings for the unified WordPress input handler.
+     * Sanitize settings for the unified WordPress fetch handler.
      *
      * @param array $raw_settings Raw settings array.
      * @return array Sanitized settings.

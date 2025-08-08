@@ -1,16 +1,16 @@
 <?php
 /**
- * Facebook Output Handler Settings
+ * Facebook Publish Handler Settings
  *
- * Defines settings fields and sanitization for Facebook output handler.
+ * Defines settings fields and sanitization for Facebook publish handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/output/facebook
+ * @subpackage Data_Machine/handlers/publish/facebook
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Facebook;
+namespace DataMachine\Core\Handlers\Publish\Facebook;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class FacebookSettings {
     }
 
     /**
-     * Get settings fields for Facebook output handler.
+     * Get settings fields for Facebook publish handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.

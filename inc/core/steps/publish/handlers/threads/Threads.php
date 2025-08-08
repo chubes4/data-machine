@@ -1,6 +1,6 @@
 <?php
 /**
- * Threads output handler.
+ * Threads publish handler.
  *
  * Handles publishing content to Meta's Threads platform.
  *
@@ -9,7 +9,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Output\Threads;
+namespace DataMachine\Core\Handlers\Publish\Threads;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -271,7 +271,7 @@ class Threads {
 
 
     /**
-     * Sanitize settings for the Threads output handler.
+     * Sanitize settings for the Threads publish handler.
      *
      * @param array $raw_settings Raw settings array.
      * @return array Sanitized settings.

@@ -1,19 +1,19 @@
 <?php
 /**
- * Reddit Input Handler Component Filter Registration
+ * Reddit Fetch Handler Component Filter Registration
  * 
  * "Plugins Within Plugins" Architecture Implementation
  * 
- * This file serves as Reddit Input Handler's complete interface contract with the engine,
+ * This file serves as Reddit Fetch Handler's complete interface contract with the engine,
  * demonstrating complete self-containment and zero bootstrap dependencies.
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Input\Reddit
+ * @subpackage Core\Handlers\Fetch\Reddit
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Input\Reddit;
+namespace DataMachine\Core\Handlers\Fetch\Reddit;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -21,16 +21,16 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register all Reddit Input Handler component filters
+ * Register all Reddit Fetch Handler component filters
  * 
  * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers Reddit Input Handler capabilities purely through filter-based discovery.
+ * Engine discovers Reddit Fetch Handler capabilities purely through filter-based discovery.
  * 
  * @since 0.1.0
  */
-function dm_register_reddit_input_filters() {
+function dm_register_reddit_fetch_filters() {
     
-    // Handler registration - Reddit declares itself as input handler (pure discovery mode)
+    // Handler registration - Reddit declares itself as fetch handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['reddit'] = [
             'type' => 'fetch',
@@ -60,4 +60,4 @@ function dm_register_reddit_input_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_reddit_input_filters();
+dm_register_reddit_fetch_filters();

@@ -1,16 +1,16 @@
 <?php
 /**
- * Twitter Output Handler Settings
+ * Twitter Publish Handler Settings
  *
- * Defines settings fields and sanitization for Twitter output handler.
+ * Defines settings fields and sanitization for Twitter publish handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/output/twitter
+ * @subpackage Data_Machine/handlers/publish/twitter
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Twitter;
+namespace DataMachine\Core\Handlers\Publish\Twitter;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class TwitterSettings {
     }
 
     /**
-     * Get settings fields for Twitter output handler.
+     * Get settings fields for Twitter publish handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.

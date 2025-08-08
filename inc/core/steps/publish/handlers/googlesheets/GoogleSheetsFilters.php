@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Output\GoogleSheets;
+namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_googlesheets_filters() {
     
-    // Handler registration - Google Sheets declares itself as output handler (pure discovery mode)
+    // Handler registration - Google Sheets declares itself as publish handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['googlesheets_output'] = [
             'type' => 'publish',

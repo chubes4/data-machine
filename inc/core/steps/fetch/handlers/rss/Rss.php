@@ -1,17 +1,17 @@
 <?php
 /**
- * RSS Input Handler
+ * RSS Fetch Handler
  *
  * Fetches and processes RSS feed data for the Data Machine pipeline.
  * This handler is responsible for fetching RSS/Atom feeds, parsing them,
  * and converting them into standardized DataPackets for processing.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/input
+ * @subpackage Data_Machine/core/handlers/fetch
  * @since      0.11.0
  */
 
-namespace DataMachine\Core\Handlers\Input\Rss;
+namespace DataMachine\Core\Handlers\Fetch\Rss;
 
 use Exception;
 
@@ -471,7 +471,7 @@ class Rss {
 
 
     /**
-     * Sanitize settings for the RSS input handler.
+     * Sanitize settings for the RSS fetch handler.
      *
      * @param array $raw_settings Raw settings array.
      * @return array Sanitized settings.

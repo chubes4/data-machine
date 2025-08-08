@@ -9,11 +9,11 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Output\Twitter
+ * @subpackage Core\Handlers\Publish\Twitter
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Output\Twitter;
+namespace DataMachine\Core\Handlers\Publish\Twitter;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_twitter_filters() {
     
-    // Handler registration - Twitter declares itself as output handler (pure discovery mode)
+    // Handler registration - Twitter declares itself as publish handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'publish',

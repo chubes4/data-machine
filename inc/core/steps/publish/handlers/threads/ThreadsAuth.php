@@ -1,17 +1,17 @@
 <?php
 /**
- * Handles Threads OAuth 2.0 authentication for the Threads output handler.
+ * Handles Threads OAuth 2.0 authentication for the Threads publish handler.
  *
  * Self-contained authentication system that provides all OAuth functionality
- * needed by the Threads output handler including credential management,
+ * needed by the Threads publish handler including credential management,
  * OAuth flow handling, and access token management.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/threads
+ * @subpackage Data_Machine/core/handlers/publish/threads
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Threads;
+namespace DataMachine\Core\Handlers\Publish\Threads;
 
 
 if ( ! defined( 'ABSPATH' ) ) {

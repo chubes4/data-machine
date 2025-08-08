@@ -7,7 +7,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Input\Reddit;
+namespace DataMachine\Core\Handlers\Fetch\Reddit;
 
 use DataMachine\Admin\Logger;
 

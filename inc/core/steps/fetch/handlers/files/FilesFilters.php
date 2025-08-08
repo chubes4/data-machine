@@ -1,19 +1,19 @@
 <?php
 /**
- * Files Input Handler Component Filter Registration
+ * Files Fetch Handler Component Filter Registration
  * 
  * Modular Component System Implementation
  * 
- * This file serves as Files Input Handler's complete interface contract with the engine,
+ * This file serves as Files Fetch Handler's complete interface contract with the engine,
  * demonstrating comprehensive self-containment and systematic organization.
  * Each handler component manages its own filter registration for AI workflow integration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Input\Files
+ * @subpackage Core\Handlers\Fetch\Files
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Input\Files;
+namespace DataMachine\Core\Handlers\Fetch\Files;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -22,15 +22,15 @@ if (!defined('ABSPATH')) {
 
 
 /**
- * Register all Files Input Handler component filters
+ * Register all Files Fetch Handler component filters
  * 
  * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers Files Input Handler capabilities purely through filter-based discovery.
+ * Engine discovers Files Fetch Handler capabilities purely through filter-based discovery.
  * 
  * @since 0.1.0
  */
-function dm_register_files_input_filters() {
-    // Handler registration - Files declares itself as input handler (pure discovery mode)
+function dm_register_files_fetch_filters() {
+    // Handler registration - Files declares itself as fetch handler (pure discovery mode)
     add_filter('dm_get_handlers', function($handlers) {
         $handlers['files'] = [
             'type' => 'fetch',
@@ -308,4 +308,4 @@ function dm_files_should_schedule_cleanup(): bool {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_files_input_filters();
+dm_register_files_fetch_filters();

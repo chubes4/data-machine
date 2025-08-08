@@ -5,11 +5,11 @@
  * Fetches posts from a subreddit using the public Reddit JSON API.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/input
+ * @subpackage Data_Machine/core/handlers/fetch
  * @since      0.15.0
  */
 
-namespace DataMachine\Core\Handlers\Input\Reddit;
+namespace DataMachine\Core\Handlers\Fetch\Reddit;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -541,7 +541,7 @@ class Reddit {
 
 
 	/**
-	 * Sanitize settings for the Reddit input handler.
+	 * Sanitize settings for the Reddit fetch handler.
 	 *
 	 * @param array $raw_settings
 	 * @return array

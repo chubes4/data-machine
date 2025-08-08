@@ -1,17 +1,17 @@
 <?php
 /**
- * Handles Facebook OAuth 2.0 authentication for the Facebook output handler.
+ * Handles Facebook OAuth 2.0 authentication for the Facebook publish handler.
  *
  * Self-contained authentication system that provides all OAuth functionality
- * needed by the Facebook output handler including credential management,
+ * needed by the Facebook publish handler including credential management,
  * OAuth flow handling, and page token management.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/facebook
+ * @subpackage Data_Machine/core/handlers/publish/facebook
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Facebook;
+namespace DataMachine\Core\Handlers\Publish\Facebook;
 
 
 if ( ! defined( 'ABSPATH' ) ) {

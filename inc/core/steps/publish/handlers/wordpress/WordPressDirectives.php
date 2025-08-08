@@ -3,7 +3,7 @@
  * WordPress-specific AI directive system.
  */
 
-namespace DataMachine\Core\Handlers\Output\WordPress;
+namespace DataMachine\Core\Handlers\Publish\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

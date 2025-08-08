@@ -3,7 +3,7 @@
  * Bluesky-specific AI directive system.
  */
 
-namespace DataMachine\Core\Handlers\Output\Bluesky;
+namespace DataMachine\Core\Handlers\Publish\Bluesky;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly

@@ -1,17 +1,17 @@
 <?php
 /**
- * Handles Google Sheets OAuth 2.0 authentication for the Google Sheets output handler.
+ * Handles Google Sheets OAuth 2.0 authentication for the Google Sheets publish handler.
  *
  * Self-contained authentication system that provides all OAuth functionality
- * needed by the Google Sheets output handler including credential management,
+ * needed by the Google Sheets publish handler including credential management,
  * OAuth flow handling, and authenticated API access.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/googlesheets
+ * @subpackage Data_Machine/core/handlers/publish/googlesheets
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\GoogleSheets;
+namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly

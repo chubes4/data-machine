@@ -1,17 +1,17 @@
 <?php
 /**
- * Modular Google Sheets output handler.
+ * Modular Google Sheets publish handler.
  *
  * Appends structured data to specified Google Sheets for analytics, reporting,
  * and data collection workflows. This modular approach separates concerns
  * between main handler logic and authentication functionality.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/output/googlesheets
+ * @subpackage Data_Machine/core/handlers/publish/googlesheets
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\GoogleSheets;
+namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -163,7 +163,7 @@ class GoogleSheets {
     }
 
     /**
-     * Returns the user-friendly label for this output handler.
+     * Returns the user-friendly label for this publish handler.
      *
      * @return string The label.
      */
@@ -172,7 +172,7 @@ class GoogleSheets {
     }
 
     /**
-     * Sanitizes the settings specific to the Google Sheets output handler.
+     * Sanitizes the settings specific to the Google Sheets publish handler.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.

@@ -1,16 +1,16 @@
 <?php
 /**
- * Threads Output Handler Settings
+ * Threads Publish Handler Settings
  *
- * Defines settings fields and sanitization for Threads output handler.
+ * Defines settings fields and sanitization for Threads publish handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/output/threads
+ * @subpackage Data_Machine/handlers/publish/threads
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\Threads;
+namespace DataMachine\Core\Handlers\Publish\Threads;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class ThreadsSettings {
     }
 
     /**
-     * Get settings fields for Threads output handler.
+     * Get settings fields for Threads publish handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.

@@ -1,16 +1,16 @@
 <?php
 /**
- * Google Sheets Output Handler Settings
+ * Google Sheets Publish Handler Settings
  *
- * Defines settings fields and sanitization for Google Sheets output handler.
+ * Defines settings fields and sanitization for Google Sheets publish handler.
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/output/googlesheets
+ * @subpackage Data_Machine/handlers/publish/googlesheets
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Output\GoogleSheets;
+namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class GoogleSheetsSettings {
     }
 
     /**
-     * Get settings fields for Google Sheets output handler.
+     * Get settings fields for Google Sheets publish handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.

@@ -7,7 +7,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Input\WordPress;
+namespace DataMachine\Core\Handlers\Fetch\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
