@@ -18,28 +18,35 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## AJAX Handler Architecture
 
-**Specialized Handler Separation**: Clean separation between modal UI operations and page business logic:
+**Specialized Handler Separation**: Clean separation between modal UI operations and page business logic with filter-based discovery:
 
 - **PipelinePageAjax.php**: Business logic operations (add_step, delete_step, save_pipeline, delete_pipeline, delete_flow)
-- **PipelineModalAjax.php**: UI/template operations (get_modal, get_template, configure-step-action, add-handler-action)
+- **PipelineModalAjax.php**: UI/template operations (get_template, configure-step-action, add-handler-action)
 
-**Routing Logic**: PipelinesFilters.php routes based on action type:
+**Handler Registration**: Admin pages register specialized handlers:
 ```php
-// Modal actions route to PipelineModalAjax
-$modal_actions = ['get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config', 
-                  'configure-step-action', 'add-location-action', 'add-handler-action'];
-
-if (in_array($action, $modal_actions)) {
-    $ajax_handler = new PipelineModalAjax();
-} else {
-    $ajax_handler = new PipelinePageAjax();
-}
+'ajax_handlers' => [
+    'modal' => new PipelineModalAjax(),
+    'page' => new PipelinePageAjax()
+]
 ```
 
-**Benefits**:
-- Clear separation between UI and business logic
-- No method duplication across handlers
-- Predictable routing based on action type
+**Dynamic Routing**: PipelinesFilters.php routes based on action type using discovered handlers:
+```php
+$modal_actions = [
+    'get_template', 'get_flow_step_card', 'get_flow_config',
+    'configure-step-action', 'add-location-action', 'add-handler-action'
+];
+
+$all_pages = apply_filters('dm_get_admin_pages', []);
+$ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+
+if (in_array($action, $modal_actions)) {
+    $ajax_handlers['modal']->handle_pipeline_modal_ajax();
+} else {
+    $ajax_handlers['page']->handle_pipeline_page_ajax();
+}
+```
 
 ## Current Status
 
@@ -86,8 +93,8 @@ $db_remote_locations = $all_databases['remote_locations'] ?? null;
 
 // Handler discovery - Pure discovery with type filtering
 $all_handlers = apply_filters('dm_get_handlers', []);
-$input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
-$output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+$fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
+$publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
 $specific_handler = $all_handlers['twitter'] ?? null;
 
 // Authentication - Pure discovery with filtering
@@ -104,7 +111,8 @@ $job_context = apply_filters('dm_get_context', null, $job_id);
 // Step discovery - Pure discovery only
 $all_steps = apply_filters('dm_get_steps', []);
 $ai_step = $all_steps['ai'] ?? null;
-$input_step = $all_steps['input'] ?? null;
+$fetch_step = $all_steps['fetch'] ?? null;
+$publish_step = $all_steps['publish'] ?? null;
 
 // Step configuration - Pure discovery with context
 $step_configs = apply_filters('dm_get_step_configs', []);
@@ -137,15 +145,7 @@ $pipelines_page = $admin_pages['pipelines'] ?? null;
 
 // Universal template rendering
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
-
-// Template requesting via AJAX - Uses dm_pipeline_ajax action with get_template sub-action
-$template_html = apply_filters('dm_render_template', '', $template, $data);
-
-// Admin page template rendering
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
-
-// Admin pages discovered and managed by AdminMenuAssets.php
-$all_pages = apply_filters('dm_get_admin_pages', []);
 ```
 
 ## Development Commands
@@ -183,8 +183,8 @@ error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 **Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration), ActionScheduler
 
 **Handlers**:
-- Input: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
-- Output: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (6 handlers)
+- Fetch: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
+- Publish: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (6 handlers)
 - Receiver: Webhook framework (stub implementation)
 - Total: 11 active handlers with unified authentication and settings patterns
 
@@ -286,7 +286,7 @@ $content = apply_filters('dm_render_template', '', 'page/flow-step-card', [
 
 **Step Type Architecture**: 
 - **AI Steps** (`'ai'`): No handlers, pipeline-level configuration only, `consume_all_packets: true`
-- **Input/Output Steps** (`'input'`, `'output'`): Use handlers, flow-level handler selection and configuration
+- **Fetch/Publish Steps** (`'fetch'`, `'publish'`): Use handlers, flow-level handler selection and configuration
 - **Handler Logic**: `$step_uses_handlers = ($step_type !== 'ai')` determines whether step shows handler management UI
 
 ## Arrow Rendering Architecture
@@ -467,12 +467,12 @@ Pipeline system uses data attributes for clean separation between modal content 
 // Modal content cards with data attributes trigger page actions
 <div class="dm-step-selection-card dm-modal-close" 
      data-template="add-step-action"
-     data-context='{"step_type":"input","pipeline_id":"123"}'>
+     data-context='{"step_type":"fetch","pipeline_id":"123"}'>
 
 // Direct handler action pattern - no form submission
 <button class="button button-primary dm-modal-close" 
         data-template="add-handler-action"
-        data-context='{"handler_slug":"twitter","step_type":"output","flow_id":"123"}'>
+        data-context='{"handler_slug":"twitter","step_type":"publish","flow_id":"123"}'>
 
 // Pipeline-builder.js listens for data-attribute clicks
 $(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
@@ -550,7 +550,8 @@ $content = apply_filters('dm_render_template', '', 'modal/handler-settings', $co
 ├── handler-settings.php          # Universal fallback template
 ├── handler-settings/
 │   ├── files.php                 # Files handler specific
-│   ├── wordpress_input.php       # WordPress input specific
+│   ├── wordpress_fetch.php       # WordPress fetch specific
+│   ├── wordpress_publish.php     # WordPress publish specific
 │   └── twitter.php               # Twitter handler specific
 ```
 
@@ -634,30 +635,93 @@ $.ajax({
 });
 ```
 
-### AJAX Handler Routing
 
-**Specialized Handler Selection**: PipelinesFilters.php implements clean routing logic based on action type for optimal separation of concerns:
+## Template Context Resolution System
 
+**Sophisticated Template Requirements**: PipelinesFilters.php implements comprehensive template context resolution with automatic field generation and data extraction.
+
+**Template Requirements Definition**:
 ```php
-// Modal actions route to PipelineModalAjax
-$modal_actions = [
-    'get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config',
-    'configure-step-action', 'add-location-action', 'add-handler-action'
+$pipeline_template_requirements = [
+    // Modal templates with automatic context resolution
+    'modal/configure-step' => [
+        'required' => ['step_type', 'pipeline_id', 'step_id'],
+        'optional' => ['flow_id'],
+        'auto_generate' => ['flow_step_id' => '{step_id}_{flow_id}']
+    ],
+    'modal/handler-selection-cards' => [
+        'required' => ['pipeline_id', 'flow_id', 'step_type']
+    ],
+    
+    // Handler-specific settings templates - all handlers supported
+    'modal/handler-settings/files' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/wordpress_fetch' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/wordpress_publish' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+    ],
+    
+    // Page templates with data extraction
+    'page/flow-step-card' => [
+        'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
+        'extract_from_step' => ['step_id', 'step_type'],
+        'auto_generate' => [
+            'pipeline_step_id' => '{step.step_id}',
+            'flow_step_id' => '{step.step_id}_{flow_id}'
+        ]
+    ]
 ];
-
-// Business logic actions route to PipelinePageAjax
-if (in_array($action, $modal_actions)) {
-    $ajax_handler = new PipelineModalAjax();
-} else {
-    $ajax_handler = new PipelinePageAjax();
-}
 ```
 
-**Architecture Benefits**:
-- **Clear Separation**: Modal UI operations isolated from business logic
-- **Predictable Routing**: Action type determines handler selection
-- **No Method Duplication**: Each method exists in only one handler
-- **Maintainability**: Changes scoped to appropriate handler context
+**Context Resolution Features**:
+- **Required Field Validation**: Ensures critical context data is present
+- **Auto-Generated Composite IDs**: Creates flow_step_id patterns automatically
+- **Data Extraction**: Extracts nested data from step, flow, and pipeline objects
+- **Logging**: Missing context fields logged for debugging
+
+## Files Handler Repository System
+
+**Singleton Repository Pattern**: Files handler implements dedicated repository for file management with flow-specific isolation.
+
+**Repository Service Discovery**:
+```php
+// Singleton pattern for Files repository
+add_filter('dm_get_files_repository', function($repository) {
+    static $instance = null;
+    if ($instance === null) {
+        $instance = new FilesRepository();
+    }
+    return $instance;
+}, 10, 1);
+
+// Usage pattern
+$repository = apply_filters('dm_get_files_repository', null);
+```
+
+**Key Features**:
+- **Flow-Specific Isolation**: Files stored with `flow_step_id` context (`{step_id}_{flow_id}`)
+- **Automatic Cleanup**: Weekly scheduled cleanup of old files via ActionScheduler
+- **Security Validation**: File size limits (32MB) and dangerous extension blocking
+- **Processing Status Integration**: Files marked as processed via ProcessedItems service
+- **AJAX File Upload**: Secure upload handling with nonce verification
+
+**File Management Operations**:
+```php
+// Store file with handler context
+$stored_path = $repository->store_file($tmp_name, $filename, $flow_step_id);
+
+// Get all files for specific flow step
+$files = $repository->get_all_files($flow_step_id);
+
+// Cleanup old files
+$deleted_count = $repository->cleanup_old_files(7); // 7 days
+```
 
 
 ## Critical Rules

@@ -22,11 +22,11 @@ WordPress plugin for AI content processing workflows. Built with WordPress-nativ
 **Pipeline Template** (Reusable Workflow Definition):
 ```
 Pipeline: "Multi-Source Content Processing"
-Step 1: Input (RSS Feed Handler)     → Fetches RSS content
-Step 2: Input (Reddit Handler)       → Adds Reddit posts to context  
+Step 1: Fetch (RSS Feed Handler)     → Fetches RSS content
+Step 2: Fetch (Reddit Handler)       → Adds Reddit posts to context  
 Step 3: AI (Analysis)                → Analyzes ALL previous inputs
 Step 4: AI (Summary)                 → Creates summary with full context
-Step 5: Output (Social Media)        → Publishes enhanced content
+Step 5: Publish (Social Media)       → Publishes enhanced content
 ```
 
 **Flow Instances** (Configured Executions of Pipeline):
@@ -36,28 +36,28 @@ Flow A: Tech News Processing (Daily)
 ├── Reddit: r/technology handler  
 ├── AI: [pipeline-level config: GPT-4 analysis prompt]
 ├── AI: [pipeline-level config: Claude creative prompt]
-└── Output: Twitter handler
+└── Publish: Twitter handler
 
 Flow B: Gaming Content (Weekly)
 ├── RSS: Gaming news handler
 ├── Reddit: r/gaming handler
 ├── AI: [same pipeline config: GPT-4 analysis prompt]
 ├── AI: [same pipeline config: Claude creative prompt]
-└── Output: Facebook handler
+└── Publish: Facebook handler
 
 Flow C: Manual Content (On-demand)
 ├── RSS: Custom feed handler
 ├── Reddit: Custom subreddit handler
 ├── AI: [same pipeline config: GPT-4 analysis prompt]
 ├── AI: [same pipeline config: Claude creative prompt]
-└── Output: Multiple platforms handler
+└── Publish: Multiple platforms handler
 ```
 
 **Two-Layer Architecture**: 
 - **Pipeline Level**: Step configuration (AI prompts, models, step behavior) - stable across all flows
 - **Flow Level**: Handler configuration (which handlers to use, handler settings) - varies per flow
 - **AI Steps**: Configured at pipeline level only (no handlers), same prompts/models for all flows
-- **Input/Output Steps**: Use handlers configured at flow level (RSS, Twitter, etc.)
+- **Fetch/Publish Steps**: Use handlers configured at flow level (RSS, Twitter, etc.)
 
 ## Quick Start
 
@@ -71,7 +71,7 @@ Flow C: Manual Content (On-demand)
 1. **Create Pipeline Template**: Data Machine → Pipelines → Create New
    - System automatically creates "Draft Flow" instance for immediate use
    - Click "Add Step" to open the dynamic step selection modal
-   - Select step type from the visual interface (Input, AI, Output, etc.)
+   - Select step type from the visual interface (Fetch, AI, Publish, etc.)
    - Choose specific handler from automatically discovered options
    - Configure step settings through the AJAX-driven interface
 2. **Configure Your Draft Flow**: Customize the auto-created flow instance
@@ -103,7 +103,7 @@ Flow C: Manual Content (On-demand)
 - **Position-Based Execution**: Steps run in order 0-99 within each flow
 - **Context Accumulation**: Each step receives ALL previous step data
 - **Sequential Flow**: Step N+1 can access data from steps 0 through N
-- **Multi-Input Pattern**: Add multiple input steps in sequence, not parallel
+- **Multi-Fetch Pattern**: Add multiple fetch steps in sequence, not parallel
 - **No Parallel Processing**: Steps execute one after another, never simultaneously
 
 ### Multiple Workflow Example
@@ -157,8 +157,8 @@ $db_analytics = $all_databases['analytics'] ?? null; // External
 
 // Handler discovery - pure discovery with type filtering
 $all_handlers = apply_filters('dm_get_handlers', []);
-$input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
-$output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+$fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
+$publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
 $custom_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'my_custom_type');
 
 // Step system - configuration arrays with implicit behavior
@@ -208,7 +208,7 @@ Two-layer system enabling template reuse and independent workflow execution:
 
 ### Multi-Source Context Collection
 Collect data from multiple sources sequentially within each flow:
-- **Sequential Input Steps**: RSS feeds → Reddit posts → WordPress content → Local files
+- **Sequential Fetch Steps**: RSS feeds → Reddit posts → WordPress content → Local files
 - **Cumulative Context**: Each step builds on previous data for rich analysis
 - **Cross-reference capabilities** across different data sources through context accumulation
 - **Content correlation** via step-by-step processing
@@ -221,14 +221,14 @@ Chain different AI providers in sequential pipeline steps:
 
 ### Core Handlers Included
 
-**Input Handlers (Gather Data)** - Located in `/inc/core/steps/input/handlers/`:
+**Fetch Handlers (Gather Data)** - Located in `/inc/core/steps/fetch/handlers/`:
 - **Files**: Process local files and uploads with drag-and-drop support
 - **Reddit**: Fetch posts from subreddits via Reddit API with OAuth authentication
 - **RSS**: Monitor and process RSS feeds with automatic feed validation
 - **WordPress**: Source content from WordPress posts/pages with query builder interface
 - **Google Sheets**: Read data from Google Sheets spreadsheets with OAuth 2.0 and range selection
 
-**Output Handlers (Publish Content)** - Located in `/inc/core/steps/output/handlers/`:
+**Publish Handlers (Publish Content)** - Located in `/inc/core/steps/publish/handlers/`:
 - **Facebook**: Post to Facebook pages/profiles with media attachment support
 - **Threads**: Publish to Threads (Meta's Twitter alternative) with automatic formatting
 - **Twitter**: Tweet content with media support and thread creation capabilities
@@ -286,8 +286,8 @@ $db_flows = $all_databases['flows'] ?? null;
 
 // Handler discovery - pure discovery with filtering
 $all_handlers = apply_filters('dm_get_handlers', []);
-$input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
-$output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+$fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
+$publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
 $all_auth = apply_filters('dm_get_auth_providers', []);
 $twitter_auth = $all_auth['twitter'] ?? null;
 
@@ -331,13 +331,13 @@ class MyCustomHandler {
 **Multi-Source News Analysis Pipeline**:
 ```php
 // Pipeline Template: "Comprehensive News Analysis"
-// Step 0: RSS Feed Input
-// Step 1: Reddit Posts Input 
-// Step 2: WordPress Content Input
+// Step 0: RSS Feed Fetch
+// Step 1: Reddit Posts Fetch 
+// Step 2: WordPress Content Fetch
 // Step 3: AI Cross-Reference Analysis
 // Step 4: AI Summary Generation
-// Step 5: Social Media Output
-// Step 6: WordPress Blog Output
+// Step 5: Social Media Publish
+// Step 6: WordPress Blog Publish
 
 // Flow A: Daily Tech News (Automated)
 $flow_config_a = [
@@ -371,8 +371,8 @@ $flow_config_b = [
 **E-commerce Product Analysis Pipeline**:
 ```php
 // Pipeline Template: "Product Research & Marketing"
-// Step 0: Google Sheets Product Data
-// Step 1: Reddit Market Research 
+// Step 0: Google Sheets Product Data Fetch
+// Step 1: Reddit Market Research Fetch
 // Step 2: AI Competitive Analysis
 // Step 3: AI Marketing Copy Generation
 // Step 4: Multi-Platform Publishing
@@ -402,11 +402,11 @@ class ProductAnalysisStep {
 
 ### 3. Handler Diversity Examples
 
-**Input Handlers - Data Collection**:
+**Fetch Handlers - Data Collection**:
 ```php
 // RSS Feed Handler
 class RSSContentPipeline {
-    public function setup_rss_input() {
+    public function setup_rss_fetch() {
         return [
             'handler' => 'rss',
             'config' => [
@@ -420,7 +420,7 @@ class RSSContentPipeline {
 
 // Reddit Handler with OAuth
 class RedditResearchPipeline {
-    public function setup_reddit_input() {
+    public function setup_reddit_fetch() {
         return [
             'handler' => 'reddit',
             'config' => [
@@ -435,7 +435,7 @@ class RedditResearchPipeline {
 
 // Google Sheets Handler
 class SheetsDataPipeline {
-    public function setup_sheets_input() {
+    public function setup_sheets_fetch() {
         return [
             'handler' => 'google_sheets',
             'config' => [
@@ -449,7 +449,7 @@ class SheetsDataPipeline {
 
 // WordPress Content Handler
 class WordPressContentPipeline {
-    public function setup_wp_input() {
+    public function setup_wp_fetch() {
         return [
             'handler' => 'wordpress',
             'config' => [
@@ -469,7 +469,7 @@ class WordPressContentPipeline {
 
 // File Upload Handler
 class FileProcessingPipeline {
-    public function setup_file_input() {
+    public function setup_file_fetch() {
         return [
             'handler' => 'files',
             'config' => [
@@ -482,11 +482,11 @@ class FileProcessingPipeline {
 }
 ```
 
-**Output Handlers - Content Distribution**:
+**Publish Handlers - Content Distribution**:
 ```php
 // Social Media Distribution
 class SocialMediaPipeline {
-    public function setup_twitter_output() {
+    public function setup_twitter_publish() {
         return [
             'handler' => 'twitter',
             'config' => [
@@ -498,7 +498,7 @@ class SocialMediaPipeline {
         ];
     }
     
-    public function setup_facebook_output() {
+    public function setup_facebook_publish() {
         return [
             'handler' => 'facebook',
             'config' => [
@@ -509,7 +509,7 @@ class SocialMediaPipeline {
         ];
     }
     
-    public function setup_threads_output() {
+    public function setup_threads_publish() {
         return [
             'handler' => 'threads',
             'config' => [
@@ -520,7 +520,7 @@ class SocialMediaPipeline {
         ];
     }
     
-    public function setup_bluesky_output() {
+    public function setup_bluesky_publish() {
         return [
             'handler' => 'bluesky',
             'config' => [
@@ -532,9 +532,9 @@ class SocialMediaPipeline {
     }
 }
 
-// Content Management Output
+// Content Management Publish
 class ContentManagementPipeline {
-    public function setup_wordpress_output() {
+    public function setup_wordpress_publish() {
         return [
             'handler' => 'wordpress',
             'config' => [
@@ -549,7 +549,7 @@ class ContentManagementPipeline {
         ];
     }
     
-    public function setup_sheets_output() {
+    public function setup_sheets_publish() {
         return [
             'handler' => 'google_sheets',
             'config' => [
@@ -565,9 +565,9 @@ class ContentManagementPipeline {
 
 ### 4. Advanced Step Types Examples
 
-**Custom Input Step**:
+**Custom Fetch Step**:
 ```php
-class DatabaseInputStep {
+class DatabaseFetchStep {
     public function execute(int $job_id, array $data_packets = []): bool {
         $logger = apply_filters('dm_get_logger', null);
         
@@ -591,18 +591,18 @@ class DatabaseInputStep {
 
 // Pure discovery step registration
 add_filter('dm_get_steps', function($steps) {
-    $steps['database_input'] = [
-        'label' => __('Database Input', 'my-plugin'),
+    $steps['database_fetch'] = [
+        'label' => __('Database Fetch', 'my-plugin'),
         'description' => __('Read data from custom database tables', 'my-plugin'),
-        'class' => '\MyPlugin\Steps\DatabaseInputStep',
-        'type' => 'input'
+        'class' => '\MyPlugin\Steps\DatabaseFetchStep',
+        'type' => 'fetch'
     ];
     return $steps;
 });
 
 // Access through pure discovery
 $all_steps = apply_filters('dm_get_steps', []);
-$database_step = $all_steps['database_input'] ?? null;
+$database_step = $all_steps['database_fetch'] ?? null;
 ```
 
 **Custom AI Processing Step**:
@@ -655,13 +655,13 @@ class SentimentAnalysisStep {
 }
 ```
 
-**Custom Output Step**:
+**Custom Publish Step**:
 ```php
 class SlackNotificationStep {
     public function execute(int $job_id, array $data_packets = []): bool {
         $logger = apply_filters('dm_get_logger', null);
         
-        // Output steps typically use latest packet
+        // Publish steps typically use latest packet
         $latest_packet = $data_packets[0] ?? null;
         if (!$latest_packet) {
             $logger->error('No data packet available for Slack notification');
@@ -1101,37 +1101,37 @@ class CustomPageAjax {
 **Configuration Array Registration** (matches core handler pattern):
 
 ```php
-// Input Handler Implementation
-class MyInputHandler {
+// Fetch Handler Implementation
+class MyFetchHandler {
     public function __construct() {
         // Filter-based service access only
     }
     
-    // Required method for input handlers
-    public function get_input_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+    // Required method for fetch handlers
+    public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         $logger = apply_filters('dm_get_logger', null);
         
-        // Process input data and return array of data packets
+        // Process fetch data and return array of data packets
         $data_packets = [];
         
-        // Your custom input logic here
+        // Your custom fetch logic here
         
         return $data_packets;
     }
 }
 
-// Output Handler Implementation
-class MyOutputHandler {
+// Publish Handler Implementation
+class MyPublishHandler {
     public function __construct() {
         // Filter-based service access only
     }
     
-    // Required method for output handlers
-    public function handle_output($data_packet): array {
+    // Required method for publish handlers
+    public function handle_publish($data_packet): array {
         $logger = apply_filters('dm_get_logger', null);
         
-        // Process output data
-        // Your custom output logic here
+        // Process publish data
+        // Your custom publish logic here
         
         return ['success' => true, 'message' => 'Data sent successfully'];
     }
@@ -1140,8 +1140,8 @@ class MyOutputHandler {
 // Pure discovery registration - collection-based
 add_filter('dm_get_handlers', function($handlers) {
     $handlers['my_handler'] = [
-        'type' => 'input',
-        'class' => \MyPlugin\Handlers\MyInputHandler::class,
+        'type' => 'fetch',
+        'class' => \MyPlugin\Handlers\MyFetchHandler::class,
         'label' => __('My Handler', 'my-plugin'),
         'description' => __('Custom handler description', 'my-plugin')
     ];
@@ -1225,11 +1225,11 @@ class CustomProcessingStep {
 ### Step-Specific AI Configuration
 ```php
 // Sequential AI processing with different models per step
-// Step 1: Input (RSS Handler) - position 0
+// Step 1: Fetch (RSS Handler) - position 0
 // Step 2: AI (GPT-4 Analysis) - position 1 - complex analysis of RSS data
 // Step 3: AI (Claude Writing) - position 2 - creative writing using GPT-4 + RSS data
 // Step 4: AI (Gemini Translation) - position 3 - multilingual using all previous data
-// Step 5: Output (WordPress Handler) - position 4 - publish using complete context
+// Step 5: Publish (WordPress Handler) - position 4 - publish using complete context
 
 // At Step 4 (Gemini AI) - uses entire array for multi-model context:
 public function execute(int $job_id, array $data_packets = []): bool {
