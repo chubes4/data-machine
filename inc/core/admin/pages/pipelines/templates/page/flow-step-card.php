@@ -87,10 +87,10 @@ $handler_configured = !empty($current_handler);
                         <?php
                         $handler_slug = $current_handler['handler_slug'] ?? '';
                         
-                        // Determine correct handler settings template - WordPress needs input/output distinction
+                        // Determine correct handler settings template - WordPress needs fetch/publish distinction
                         $template_slug = $handler_slug;
                         if ($handler_slug === 'wordpress') {
-                            $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+                            $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
                         }
                         ?>
                         <button type="button" class="button button-small dm-modal-open" 

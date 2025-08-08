@@ -13,12 +13,12 @@
  * - Gets step data directly from provided pipeline_config array
  * - Instantiates step classes via filter-based discovery
  * - Passes complete job config to steps for self-configuration
- * - Schedules next step with output DataPackets
+ * - Schedules next step with updated data packet array
  *
  * STEP REQUIREMENTS:
  * - Parameter-less constructor only
- * - execute(int $job_id, array $data_packets = [], array $job_config = []): array method required
- * - Must return array of DataPackets for next step
+ * - execute(int $job_id, array $data_packet = [], array $job_config = []): array method required
+ * - Must return updated data packet array for next step
  * - Steps extract needed configuration from job_config themselves
  *
  * @package    Data_Machine
@@ -51,10 +51,10 @@ class ProcessingOrchestrator {
 	 * @param int|null $pipeline_id The pipeline ID.
 	 * @param int|null $flow_id The flow ID.
 	 * @param array|null $job_config Pre-built job configuration.
-	 * @param array|null $previous_data_packets Previous step data packets.
+	 * @param array|null $data_packet Previous step data packet array.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function execute_step_callback( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $job_config = null, $previous_data_packets = null ): bool {
+	public static function execute_step_callback( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $job_config = null, $data_packet = null ): bool {
 		$orchestrator = apply_filters('dm_get_orchestrator', null);
 		if ( ! $orchestrator ) {
 			$logger = apply_filters('dm_get_logger', null);
@@ -69,7 +69,7 @@ class ProcessingOrchestrator {
 		
 		// Call execute_step with complete parameter set
 		if ( $pipeline_id && $flow_id && $job_config ) {
-			return $orchestrator->execute_step( $step_position, $job_id, $pipeline_id, $flow_id, $job_config, $previous_data_packets ?: [] );
+			return $orchestrator->execute_step( $step_position, $job_id, $pipeline_id, $flow_id, $job_config, $data_packet ?: [] );
 		} else {
 			// Legacy fallback - should not occur with new JobCreator
 			$logger = apply_filters('dm_get_logger', null);
@@ -96,10 +96,10 @@ class ProcessingOrchestrator {
 	 * @param int $pipeline_id The pipeline ID.
 	 * @param int $flow_id The flow ID.
 	 * @param array $job_config Pre-built job configuration from JobCreator.
-	 * @param array $previous_data_packets Previous step data packets for execution.
+	 * @param array $data_packet Previous step data packet array for execution.
 	 * @return bool True on success, false on failure.
 	 */
-	public function execute_step( int $step_position, int $job_id, int $pipeline_id, int $flow_id, array $job_config, array $previous_data_packets = [] ): bool {
+	public function execute_step( int $step_position, int $job_id, int $pipeline_id, int $flow_id, array $job_config, array $data_packet = [] ): bool {
 		try {
 			// Get services via filters
 			$logger = apply_filters('dm_get_logger', null);
@@ -196,36 +196,35 @@ class ProcessingOrchestrator {
 			$job_config['current_step_position'] = $step_position;
 			
 			// Execute step with job configuration - steps access data directly from job_config
-			$output_data_packets = $step_instance->execute( $job_id, $previous_data_packets, $job_config );
+			$data_packet = $step_instance->execute( $job_id, $data_packet, $job_config );
 			
-			// Validate step return - must be array of DataPackets
-			if ( ! is_array( $output_data_packets ) ) {
-				$logger->error( 'Step must return array of DataPackets', [
+			// Validate step return - must be data packet array
+			if ( ! is_array( $data_packet ) ) {
+				$logger->error( 'Step must return data packet array', [
 					'job_id' => $job_id,
 					'step_position' => $step_position,
 					'class' => $step_class,
-					'returned_type' => gettype( $output_data_packets )
+					'returned_type' => gettype( $data_packet )
 				] );
 				return false;
 			}
 			
-			$logger->debug( 'Step executed with DataPacket flow', [
+			$logger->debug( 'Step executed with data packet array', [
 				'job_id' => $job_id,
 				'step_position' => $step_position,
 				'class' => $step_class,
-				'input_packets' => count( $previous_data_packets ),
-				'output_packets' => count( $output_data_packets )
+				'final_items' => count( $data_packet )
 			] );
 
-			// Success = non-empty DataPacket array, failure = empty array
-			$step_success = ! empty( $output_data_packets );
+			// Success = non-empty data packet array, failure = empty array
+			$step_success = ! empty( $data_packet );
 			
 			// Handle pipeline flow based on step success
 			if ( $step_success ) {
 				if ( $next_step_exists ) {
 					$next_step_position = $step_position + 1;
-					// Pass output DataPackets to next step (pure engine flow)
-					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $job_config, $output_data_packets ) ) {
+					// Pass data packet array to next step (pure engine flow)
+					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $job_config, $data_packet ) ) {
 						$logger->error( 'Failed to schedule next step', [
 							'current_position' => $step_position,
 							'next_position' => $next_step_position,
@@ -234,23 +233,23 @@ class ProcessingOrchestrator {
 						return false;
 					}
 					
-					$logger->debug( 'Scheduled next step with DataPackets', [
+					$logger->debug( 'Scheduled next step with data packet array', [
 						'current_position' => $step_position,
 						'next_position' => $next_step_position,
 						'job_id' => $job_id,
-						'packets_passed' => count( $output_data_packets )
+						'items_passed' => count( $data_packet )
 					] );
 				} else {
 					// Final step completed successfully with output
 					$logger->debug( 'Pipeline execution completed successfully', [
 						'final_position' => $step_position,
 						'job_id' => $job_id,
-						'final_packets' => count( $output_data_packets )
+						'final_items' => count( $data_packet )
 					] );
 				}
 			} else {
-				// Step failed - returned empty DataPackets
-				$logger->error( 'Step execution failed - no output DataPackets', [
+				// Step failed - returned empty data packet array
+				$logger->error( 'Step execution failed - no output data', [
 					'job_id' => $job_id,
 					'failed_step' => $step_position,
 					'class' => $step_class
@@ -282,10 +281,10 @@ class ProcessingOrchestrator {
 	 * @param int $pipeline_id The pipeline ID.
 	 * @param int $flow_id The flow ID.
 	 * @param array $job_config Pre-built job configuration.
-	 * @param array $previous_data_packets Previous step data for next execution.
+	 * @param array $data_packet Previous step data packet array for next execution.
 	 * @return bool True on success, false on failure.
 	 */
-	private function schedule_next_step( int $job_id, int $step_position, int $pipeline_id, int $flow_id, array $job_config, array $previous_data_packets = [] ): bool {
+	private function schedule_next_step( int $job_id, int $step_position, int $pipeline_id, int $flow_id, array $job_config, array $data_packet = [] ): bool {
 		$logger = apply_filters('dm_get_logger', null);
 		
 		$scheduler = apply_filters('dm_get_action_scheduler', null);
@@ -303,7 +302,7 @@ class ProcessingOrchestrator {
 				'pipeline_id' => $pipeline_id,
 				'flow_id' => $flow_id,
 				'pipeline_config' => $job_config,
-				'previous_data_packets' => $previous_data_packets
+				'previous_data_packets' => $data_packet
 			],
 			'data-machine'
 		);

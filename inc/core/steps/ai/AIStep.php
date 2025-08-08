@@ -2,21 +2,19 @@
 
 namespace DataMachine\Core\Steps\AI;
 
-use DataMachine\Engine\DataPacket;
-
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// DataPacket is engine-only - steps work with simple arrays provided by engine
+// Pure array-based data packet system - no object dependencies
 
 /**
  * Universal AI Step - AI processing with full pipeline context
  * 
  * ENGINE DATA FLOW:
- * - Engine passes all DataPackets to every step via execute() method
- * - AI steps consume all packets for complete pipeline awareness
- * - No manual DataPacket retrieval or storage needed
+ * - Engine passes cumulative data packet array to every step via execute() method
+ * - AI steps process all data entries for complete pipeline awareness
+ * - Pure array-based system with no object creation needed
  * 
  * CONFIGURATION ARCHITECTURE:
  * - Step Config: Pipeline-level configuration (AI prompts, models, step behavior)
@@ -32,7 +30,7 @@ if (!defined('ABSPATH')) {
  * 
  * EXTERNAL PLUGIN REQUIREMENTS (minimum):
  * - Class with parameter-less constructor
- * - execute(int $job_id, array $data_packets = []): bool method
+ * - execute(int $job_id, array $data_packet = [], array $job_config = []): array method
  * - get_prompt_fields(): array static method for UI configuration (optional)
  * 
  * Supports any AI operation: summarization, fact-checking, enhancement, translation,
@@ -41,19 +39,19 @@ if (!defined('ABSPATH')) {
 class AIStep {
 
     /**
-     * Execute AI processing with engine DataPacket flow
+     * Execute AI processing with pure array data packet system
      * 
-     * PURE ENGINE FLOW:
-     * - Receives all DataPackets from previous steps via engine
-     * - Engine provides complete job configuration for data extraction
-     * - Returns processed DataPackets to engine for next step
+     * PURE ARRAY SYSTEM:
+     * - Receives the whole data packet array (cumulative job data)
+     * - Processes latest input and adds AI response to the array
+     * - Returns updated array with AI output added
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packets Array of DataPackets from previous steps
+     * @param array $data_packet The cumulative data packet array for this job
      * @param array $job_config Complete job configuration from JobCreator
-     * @return array Array of output DataPackets for next step
+     * @return array Updated data packet array with AI output added
      */
-    public function execute(int $job_id, array $data_packets = [], array $job_config = []): array {
+    public function execute(int $job_id, array $data_packet = [], array $job_config = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $ai_http_client = apply_filters('dm_get_ai_http_client', null);
 
@@ -61,12 +59,12 @@ class AIStep {
             // Validate required services
             if (!$logger) {
                 // Logger service unavailable - fail gracefully
-                return false;
+                return [];
             }
             
             if (!$ai_http_client) {
                 $logger->error('AI Step: AI HTTP client service unavailable', ['job_id' => $job_id]);
-                return false;
+                return [];
             }
 
             $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
@@ -88,73 +86,58 @@ class AIStep {
                 return [];
             }
 
-            // Validate required configuration
-            $prompt = $step_config['prompt'] ?? '';
+            // AI configuration managed by AI HTTP Client - no validation needed here
             $title = $step_config['title'] ?? 'AI Processing';
+
+            // Get the latest input from data packet array (newest first)
+            $latest_input = $data_packet[0] ?? null;
             
-            if (empty($prompt)) {
-                $logger->error('AI Step: AI step requires prompt configuration', ['job_id' => $job_id]);
-                return false;
+            if (!$latest_input) {
+                $logger->error('AI Step: No data found in data packet array', ['job_id' => $job_id]);
+                return $data_packet; // Return unchanged array
+            }
+            
+            $logger->debug('AI Step: Processing latest input', [
+                'job_id' => $job_id,
+                'total_items' => count($data_packet),
+                'latest_type' => $latest_input['type'] ?? 'unknown'
+            ]);
+
+
+            // Extract content from the latest input for AI processing
+            $content = '';
+            if (isset($latest_input['content'])) {
+                if (!empty($latest_input['content']['title'])) {
+                    $content .= "Title: " . $latest_input['content']['title'] . "\n\n";
+                }
+                if (!empty($latest_input['content']['body'])) {
+                    $content .= $latest_input['content']['body'];
+                }
             }
 
-            // AI steps consume all packets from the provided array
-            $all_packets = $data_packets;
-            
-            if (!empty($all_packets)) {
-                $logger->debug('AI Step: Processing with all data packets', [
+            if (empty($content)) {
+                $logger->error('AI Step: No content found in latest input', [
                     'job_id' => $job_id,
-                    'packets_count' => count($all_packets)
+                    'latest_input_keys' => array_keys($latest_input)
                 ]);
-            } else {
-                // First step in pipeline - no previous DataPackets
-                $logger->debug('AI Step: First step - no previous data packets available', [
-                    'job_id' => $job_id
-                ]);
+                return $data_packet; // Return unchanged array
             }
 
-
-            // Use FluidContextBridge for enhanced AI request
-            $context_bridge = apply_filters('dm_get_fluid_context_bridge', null);
-            if (!$context_bridge) {
-                $logger->error('AI Step: Fluid context bridge service unavailable', ['job_id' => $job_id]);
-                return false;
-            }
+            // Build AI messages array
+            $messages = [
+                [
+                    'role' => 'user',
+                    'content' => trim($content)
+                ]
+            ];
             
-            $aggregated_context = $context_bridge->aggregate_pipeline_context($all_packets);
-            
-            // Get job and pipeline ID for including pipeline prompts in AI request
-            $all_databases = apply_filters('dm_get_database_services', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if (!$db_jobs) {
-                $logger->error('AI Step: Database jobs service unavailable', ['job_id' => $job_id]);
-                return false;
-            }
-            
-            $job = $db_jobs->get_job($job_id);
-            if (!$job) {
-                $logger->error('AI Step: Job not found in database', ['job_id' => $job_id]);
-                return false;
-            }
-            
-            $pipeline_id = $job_config['pipeline_id'] ?? null;
-            $enhanced_request = $context_bridge->build_ai_request($aggregated_context, $step_config, $pipeline_id);
-            
-            if (empty($enhanced_request['messages'])) {
-                $logger->error('AI Step: Failed to build enhanced AI request from fluid context', ['job_id' => $job_id]);
-                return false;
-            }
-            
-            $messages = $enhanced_request['messages'];
-            
-            // Use the most recent packet as the primary input for output processing
-            $input_packet = end($all_packets);
+            // Get step_id for AI HTTP Client step-aware processing
 
             // Use step ID from pipeline configuration - required for AI HTTP Client step-aware configuration
             // Pipeline steps must have stable UUID4 step_ids for consistent AI settings
             if (empty($step_config['step_id'])) {
                 $logger->error('AI Step: Missing required step_id from pipeline configuration', [
                     'job_id' => $job_id,
-                    'pipeline_id' => $pipeline_id,
                     'step_config' => $step_config
                 ]);
                 throw new \RuntimeException("AI Step requires step_id from pipeline configuration for step-aware AI client operation");
@@ -175,77 +158,46 @@ class AIStep {
                     'error' => $ai_response['error'] ?? 'Unknown error',
                     'provider' => $ai_response['provider'] ?? 'Unknown'
                 ]);
-                return false;
+                return [];
             }
 
-            // Create output DataPacket from AI response using filter system
+
+            // Extract AI content and add to data packet array
             $ai_content = $ai_response['data']['content'] ?? '';
-            $ai_data = [
-                'content' => $ai_content,
+            
+            // Create AI response entry
+            $content_lines = explode("\n", trim($ai_content), 2);
+            $ai_title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : 'AI Generated Content';
+            
+            $ai_entry = [
+                'type' => 'ai',
+                'content' => [
+                    'title' => $ai_title,
+                    'body' => $ai_content
+                ],
                 'metadata' => [
                     'model' => $ai_response['data']['model'] ?? 'unknown',
                     'provider' => $ai_response['provider'] ?? 'unknown',
                     'usage' => $ai_response['data']['usage'] ?? [],
-                    'prompt_used' => $prompt,
                     'step_title' => $title,
-                    'processing_time' => time()
-                ]
+                    'source_type' => $latest_input['metadata']['source_type'] ?? 'unknown'
+                ],
+                'timestamp' => time()
             ];
             
-            $context = [
-                'original_packet' => $input_packet,
-                'job_id' => $job_id
-            ];
-            
-            // Create DataPacket using universal constructor
-            try {
-                // Simple heuristic: first line as title if it's short
-                $content_lines = explode("\n", trim($ai_content), 2);
-                $title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : 'AI Generated Content';
-                $body = $ai_content;
-                
-                $ai_output_packet = new DataPacket($title, $body, 'ai');
-                
-                // Add AI-specific metadata
-                $ai_output_packet->metadata = array_merge($ai_output_packet->metadata, [
-                    'model' => $ai_data['metadata']['model'],
-                    'provider' => $ai_data['metadata']['provider'],
-                    'usage' => $ai_data['metadata']['usage'],
-                    'prompt_used' => $ai_data['metadata']['prompt_used'],
-                    'step_title' => $ai_data['metadata']['step_title'],
-                    'processing_time' => $ai_data['metadata']['processing_time']
-                ]);
-                
-                // Copy context from original packet if available
-                if (isset($context['original_packet']) && $context['original_packet'] instanceof DataPacket) {
-                    $original = $context['original_packet'];
-                    $ai_output_packet->metadata['source_type'] = $original->metadata['source_type'] ?? 'unknown';
-                    if (!empty($original->attachments)) {
-                        $ai_output_packet->attachments = $original->attachments;
-                    }
-                }
-                
-                $ai_output_packet->processing['steps_completed'][] = 'ai';
-                
-            } catch (\Exception $e) {
-                $logger->error('AI Step: Failed to create DataPacket from AI output', [
-                    'job_id' => $job_id,
-                    'ai_content_length' => strlen($ai_content),
-                    'error' => $e->getMessage()
-                ]);
-                return false;
-            }
+            // Add AI response to front of data packet array (newest first)
+            array_unshift($data_packet, $ai_entry);
 
-            // Return DataPackets to engine (pure engine flow)
             $logger->debug('AI Step: Processing completed successfully', [
                 'job_id' => $job_id,
-                'content_length' => strlen($ai_content),
+                'ai_content_length' => strlen($ai_content),
                 'model' => $ai_response['data']['model'] ?? 'unknown',
-                'provider' => $ai_response['provider'] ?? 'unknown'
+                'provider' => $ai_response['provider'] ?? 'unknown',
+                'total_items_in_packet' => count($data_packet)
             ]);
             
-            // Return output DataPackets to engine for next step
-            return [$ai_output_packet];
+            // Return updated data packet array
+            return $data_packet;
 
         } catch (\Exception $e) {
             if ($logger) {
@@ -255,8 +207,8 @@ class AIStep {
                     'trace' => $e->getTraceAsString()
                 ]);
             }
-            // Return empty array on failure (engine interprets as step failure)
-            return [];
+            // Return unchanged data packet on failure  
+            return $data_packet;
         }
     }
 

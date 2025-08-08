@@ -296,11 +296,7 @@
             const flowId = $button.data('flow-id');
             
             if (!flowId) {
-                alert('Flow ID is required');
-                return;
-            }
-            
-            if (!confirm('Run this flow now?')) {
+                console.error('Flow ID is required');
                 return;
             }
             
@@ -318,19 +314,54 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        alert(response.data.message || 'Flow started successfully');
+                        // Show inline success message
+                        this.showInlineMessage($button, 'Job Created', 'success');
                     } else {
-                        alert(response.data.message || 'Error starting flow');
+                        this.showInlineMessage($button, 'Error: ' + (response.data.message || 'Unknown error'), 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
+                    this.showInlineMessage($button, 'Connection Error', 'error');
                 },
                 complete: () => {
                     $button.text(originalText).prop('disabled', false);
                 }
             });
+        },
+
+        /**
+         * Show inline success/error message next to button
+         */
+        showInlineMessage: function($button, message, type) {
+            // Remove any existing inline messages
+            $button.siblings('.dm-inline-message').remove();
+            
+            // Create inline message element
+            const messageClass = type === 'success' ? 'dm-inline-message dm-inline-success' : 'dm-inline-message dm-inline-error';
+            const $message = $('<span>', {
+                class: messageClass,
+                text: message,
+                style: 'margin-left: 10px; font-weight: 500;'
+            });
+            
+            // Add success/error styling
+            if (type === 'success') {
+                $message.css('color', '#28a745');
+            } else {
+                $message.css('color', '#dc3545');
+            }
+            
+            // Insert message after button and fade it in
+            $button.after($message);
+            $message.hide().fadeIn(300);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                $message.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 3000);
         },
 
         /**

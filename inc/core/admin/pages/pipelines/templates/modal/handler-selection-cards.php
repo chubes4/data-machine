@@ -35,10 +35,10 @@ if (!defined('WPINC')) {
         });
         
         foreach ($handlers as $handler_slug => $handler_config): 
-            // Determine correct template for handler - WordPress needs input/output distinction
+            // Determine correct template for handler - WordPress needs fetch/publish distinction
             $template_slug = $handler_slug;
             if ($handler_slug === 'wordpress') {
-                $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+                $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
             }
             ?>
             <div class="dm-handler-selection-card dm-modal-content" 

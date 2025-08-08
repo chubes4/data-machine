@@ -43,10 +43,10 @@ if ($handler_slug) {
     $handler_config = $all_handlers[$handler_slug] ?? [];
     
     // Get handler settings instance via pure discovery 
-    // Handle special cases like WordPress input/output distinction
+    // Handle special cases like WordPress fetch/publish distinction
     $settings_key = $handler_slug;
     if ($handler_slug === 'wordpress' && $step_type) {
-        $settings_key = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+        $settings_key = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
     }
     
     $all_settings = apply_filters('dm_get_handler_settings', []);
@@ -82,7 +82,7 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
             <?php 
             // Determine auth template based on handler type
             $auth_template = 'handler-auth';
-            if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_output') {
+            if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
                 $auth_template = 'remote-locations-manager';
             }
             ?>

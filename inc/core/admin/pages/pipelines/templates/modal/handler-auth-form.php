@@ -33,10 +33,10 @@ if (!$has_auth) {
         </div>
         <div class="dm-auth-actions">
             <?php 
-            // Determine correct handler settings template - WordPress needs input/output distinction
+            // Determine correct handler settings template - WordPress needs fetch/publish distinction
             $template_slug = $handler_slug;
             if ($handler_slug === 'wordpress' && isset($step_type)) {
-                $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+                $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
             }
             ?>
             <button type="button" class="button button-secondary dm-modal-content" 
@@ -138,10 +138,10 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
     <!-- Modal Navigation -->
     <div class="dm-modal-navigation">
         <?php 
-        // Determine correct handler settings template - WordPress needs input/output distinction
+        // Determine correct handler settings template - WordPress needs fetch/publish distinction
         $template_slug = $handler_slug;
         if ($handler_slug === 'wordpress' && isset($step_type)) {
-            $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+            $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
         }
         ?>
         <button type="button" class="button button-secondary dm-modal-content" 

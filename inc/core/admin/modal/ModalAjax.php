@@ -140,7 +140,7 @@ class ModalAjax
     private function render_dynamic_modal_content(string $template, array $context): string {
         // Check if this is a handler-specific template (starts with 'handler-settings/')
         if (strpos($template, 'handler-settings/') === 0) {
-            // Extract handler template slug (e.g., 'files', 'wordpress_input', etc.)
+            // Extract handler template slug (e.g., 'files', 'wordpress_fetch', etc.)
             $handler_template_slug = substr($template, strlen('handler-settings/'));
             
             // Try handler-specific template first via dm_render_template filter

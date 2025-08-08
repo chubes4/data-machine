@@ -478,19 +478,19 @@ add_filter('dm_render_template', function($content, $template_name, $data = []) 
             'required' => ['handler_slug', 'step_type'],
             'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
         ],
-        'modal/handler-settings/googlesheets_input' => [
+        'modal/handler-settings/googlesheets_fetch' => [
             'required' => ['handler_slug', 'step_type'],
             'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
         ],
-        'modal/handler-settings/googlesheets_output' => [
+        'modal/handler-settings/googlesheets_publish' => [
             'required' => ['handler_slug', 'step_type'],
             'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
         ],
-        'modal/handler-settings/wordpress_input' => [
+        'modal/handler-settings/wordpress_fetch' => [
             'required' => ['handler_slug', 'step_type'],
             'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
         ],
-        'modal/handler-settings/wordpress_output' => [
+        'modal/handler-settings/wordpress_publish' => [
             'required' => ['handler_slug', 'step_type'],
             'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
         ],

@@ -2,7 +2,7 @@
 /**
  * AI Step Filters Registration
  *
- * GROUNDBREAKING AI INTEGRATION: WordPress-Native AI Processing
+ * WordPress-Native AI Processing
  * 
  * This file enables sophisticated AI workflows through comprehensive self-registration,
  * making AI step functionality completely modular and WordPress-native.
@@ -37,10 +37,7 @@ if (!defined('ABSPATH')) {
  * This maintains the self-registration pattern and keeps AI functionality self-contained.
  * 
  * Registered Filters:
- * - dm_get_steps: Register AI step for pipeline discovery
- * - dm_get_step_configs: AI step configuration for UI rendering
- * - Service filters: FluidContextBridge, AiResponseParser, PromptBuilder
- * 
+ * - dm_get_steps: Register AI step for pipeline discovery * 
  * @since 1.0.0
  */
 function dm_register_ai_step_filters() {
@@ -70,47 +67,7 @@ function dm_register_ai_step_filters() {
     // DataPacket creation removed - engine uses universal DataPacket constructor
     // AI steps return properly formatted data for direct constructor usage
     
-    // AI service registrations - components that belong with AI step logic
-    
-    // Fluid Context Bridge service - AI context management
-    add_filter('dm_get_fluid_context_bridge', function($service) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        static $bridge_instance = null;
-        if ($bridge_instance === null) {
-            $bridge_instance = new FluidContextBridge();
-        }
-        return $bridge_instance;
-    }, 10);
-    
-    // AI Response Parser service - AI response processing
-    add_filter('dm_get_ai_response_parser', function($service) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        static $parser_instance = null;
-        if ($parser_instance === null) {
-            $parser_instance = new AiResponseParser();
-        }
-        return $parser_instance;
-    }, 10);
-    
-    // Prompt Builder service - AI prompt construction
-    add_filter('dm_get_prompt_builder', function($service) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        static $builder_instance = null;
-        if ($builder_instance === null) {
-            $builder_instance = new PromptBuilder();
-            $builder_instance->register_all_sections();
-        }
-        return $builder_instance;
-    }, 10);
+    // AI service registrations removed - AIStep now works directly with AI HTTP Client
     
     /**
      * AI Step Configuration Registration

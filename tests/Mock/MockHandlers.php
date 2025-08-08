@@ -40,7 +40,7 @@ class MockInputHandler {
                     'file_info' => null
                 ],
                 'metadata' => [
-                    'source_type' => 'mock_input',
+                    'source_type' => 'mock_fetch',
                     'item_identifier_to_log' => 'mock_item_1',
                     'original_id' => 'mock_1',
                     'source_url' => 'https://test.example.com',
@@ -248,29 +248,29 @@ class MockErrorHandler {
 function register_mock_handlers() {
     // Register mock handlers using pure discovery mode
     \add_filter('dm_get_handlers', function($handlers) {
-        $handlers['mock_input'] = [
-            'type' => 'input',
+        $handlers['mock_fetch'] = [
+            'type' => 'fetch',
             'class' => MockInputHandler::class,
-            'label' => 'Mock Input',
-            'description' => 'Mock input handler for testing'
+            'label' => 'Mock Fetch',
+            'description' => 'Mock fetch handler for testing'
         ];
-        $handlers['mock_error_input'] = [
-            'type' => 'input',
+        $handlers['mock_error_fetch'] = [
+            'type' => 'fetch',
             'class' => MockErrorHandler::class,
-            'label' => 'Mock Error Input',
-            'description' => 'Mock error input handler for testing'
+            'label' => 'Mock Error Fetch',
+            'description' => 'Mock error fetch handler for testing'
         ];
-        $handlers['mock_output'] = [
-            'type' => 'output',
+        $handlers['mock_publish'] = [
+            'type' => 'publish',
             'class' => MockOutputHandler::class,
-            'label' => 'Mock Output', 
-            'description' => 'Mock output handler for testing'
+            'label' => 'Mock Publish', 
+            'description' => 'Mock publish handler for testing'
         ];
-        $handlers['mock_error_output'] = [
-            'type' => 'output',
+        $handlers['mock_error_publish'] = [
+            'type' => 'publish',
             'class' => MockErrorHandler::class,
-            'label' => 'Mock Error Output',
-            'description' => 'Mock error output handler for testing'
+            'label' => 'Mock Error Publish',
+            'description' => 'Mock error publish handler for testing'
         ];
         return $handlers;
     });

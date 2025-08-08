@@ -103,18 +103,18 @@ class FilterSystemTest extends TestCase {
     public function testHandlerRegistrationAndDiscovery(): void {
         // Register mock handlers
         add_filter('dm_get_handlers', function($handlers, $type) {
-            if ($type === 'input') {
-                $handlers['mock_input'] = [
+            if ($type === 'fetch') {
+                $handlers['mock_fetch'] = [
                     'class' => MockInputHandler::class,
-                    'label' => 'Mock Input',
-                    'description' => 'Mock input handler for testing'
+                    'label' => 'Mock Fetch',
+                    'description' => 'Mock fetch handler for testing'
                 ];
             }
-            if ($type === 'output') {
-                $handlers['mock_output'] = [
+            if ($type === 'publish') {
+                $handlers['mock_publish'] = [
                     'class' => MockOutputHandler::class,
-                    'label' => 'Mock Output',
-                    'description' => 'Mock output handler for testing'
+                    'label' => 'Mock Publish',
+                    'description' => 'Mock publish handler for testing'
                 ];
             }
             return $handlers;
@@ -122,17 +122,17 @@ class FilterSystemTest extends TestCase {
         
         // Test pure discovery handler system
         $all_handlers = apply_filters('dm_get_handlers', []);
-        $input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
-        $output_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output');
+        $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
+        $publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
         $unknown_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'unknown');
         
-        $this->assertArrayHasKey('mock_input', $input_handlers);
-        $this->assertArrayHasKey('mock_output', $output_handlers);
+        $this->assertArrayHasKey('mock_fetch', $fetch_handlers);
+        $this->assertArrayHasKey('mock_publish', $publish_handlers);
         $this->assertEmpty($unknown_handlers);
         
         // Verify handler structure
-        $this->assertEquals(MockInputHandler::class, $input_handlers['mock_input']['class']);
-        $this->assertEquals('Mock Input', $input_handlers['mock_input']['label']);
+        $this->assertEquals(MockInputHandler::class, $fetch_handlers['mock_fetch']['class']);
+        $this->assertEquals('Mock Fetch', $fetch_handlers['mock_fetch']['label']);
     }
     
     /**
@@ -320,11 +320,11 @@ class FilterSystemTest extends TestCase {
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
         $all_handlers = apply_filters('dm_get_handlers', []);
-        $input_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'input');
+        $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
         
         $this->assertInstanceOf(MockLogger::class, $logger);
         $this->assertInstanceOf(MockJobsDatabase::class, $db_jobs);
-        $this->assertArrayHasKey('mock_input', $input_handlers);
+        $this->assertArrayHasKey('mock_fetch', $fetch_handlers);
         
         // Test service functionality
         $logger->debug('Test log message');

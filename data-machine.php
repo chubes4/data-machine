@@ -64,7 +64,7 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * @filter dm_get_handlers
  * Retrieves all handler instances via pure discovery mode.
  * Usage: $all_handlers = apply_filters('dm_get_handlers', []);
- * Filter by type: array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'output')
+ * Filter by type: array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish')
  * 
  * @filter dm_get_auth_providers
  * Authentication provider registration and retrieval system.
