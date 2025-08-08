@@ -34,11 +34,11 @@ class JobCreator {
      * Create and schedule a job for the async pipeline+flow architecture.
      *
      * This is the single entry point for all job creation using pipeline+flow-based architecture.
-     * Always schedules dm_execute_step with position 0 to start the async pipeline.
+     * Always schedules dm_execute_step with execution_order 0 to start the async pipeline.
      *
      * @param int         $pipeline_id Pipeline ID defining the workflow steps.
      * @param int         $flow_id Flow ID with configured handlers and scheduling.
-     * @param string      $context Context describing job source ('run_now', 'file_upload', 'single_module', 'scheduled').
+     * @param string      $context Context describing job source ('run_now', 'scheduled').
      * @param array|null  $optional_data Input data for file-based jobs.
      * @return array Result array with 'success' boolean and 'message' string.
      */
@@ -75,16 +75,14 @@ class JobCreator {
             // Create job record in database using pipeline+flow-based format
             $job_data = [
                 'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'flow_config' => wp_json_encode( $job_config )
+                'flow_id' => $flow_id
             ];
             $all_databases = apply_filters('dm_get_database_services', []);
             $db_jobs = $all_databases['jobs'] ?? null;
             $job_id = $db_jobs->create_job( $job_data );
 
             if ( ! $job_id ) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger->error( 'Failed to create job record', [
+                do_action('dm_log', 'error', 'Failed to create job record', [
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,
                     'context' => $context
@@ -98,8 +96,7 @@ class JobCreator {
             // Schedule Step 1: Pipeline Processing (starts async pipeline at position 0)
             $scheduler = apply_filters('dm_get_action_scheduler', null);
             if (!$scheduler) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger->error('ActionScheduler service not available');
+                do_action('dm_log', 'error', 'ActionScheduler service not available');
                 return [
                     'success' => false,
                     'message' => 'ActionScheduler service not available'
@@ -111,7 +108,7 @@ class JobCreator {
                 'dm_execute_step',
                 [
                     'job_id' => $job_id,
-                    'step_position' => 0,
+                    'execution_order' => 0,
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,
                     'pipeline_config' => $job_config,
@@ -121,8 +118,7 @@ class JobCreator {
             );
 
             if ( $action_id === false || $action_id === 0 ) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger->error( 'Failed to schedule pipeline+flow job', [
+                do_action('dm_log', 'error', 'Failed to schedule pipeline+flow job', [
                     'job_id' => $job_id,
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,
@@ -130,11 +126,7 @@ class JobCreator {
                 ] );
                 
                 // Mark job as failed since scheduling failed
-                $all_databases = apply_filters('dm_get_database_services', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                $db_jobs->complete_job( $job_id, 'failed', wp_json_encode( [
-                    'error' => 'Failed to schedule pipeline processing step'
-                ] ) );
+                do_action('dm_update_job_status', $job_id, 'failed', 'complete');
                 
                 return [
                     'success' => false,
@@ -142,8 +134,7 @@ class JobCreator {
                 ];
             }
 
-            $logger = apply_filters('dm_get_logger', null);
-            $logger->debug( 'Job created and scheduled successfully', [
+            do_action('dm_log', 'debug', 'Job created and scheduled successfully', [
                 'job_id' => $job_id,
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
@@ -159,8 +150,7 @@ class JobCreator {
             ];
 
         } catch ( Exception $e ) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger->error( 'Exception in job creation', [
+            do_action('dm_log', 'error', 'Exception in job creation', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
                 'context' => $context,
@@ -258,12 +248,12 @@ class JobCreator {
             return new \WP_Error( 'no_executable_steps', 'Pipeline has no executable steps after filtering empty placeholders' );
         }
 
-        // Sort pipeline steps by position for position-based execution
+        // Sort pipeline steps by execution_order for execution-order-based execution
         usort( $pipeline_step_config, function( $a, $b ) {
-            return ( $a['position'] ?? 0 ) <=> ( $b['position'] ?? 0 );
+            return ( $a['execution_order'] ?? 0 ) <=> ( $b['execution_order'] ?? 0 );
         });
 
-        // Build pipeline+flow-based job configuration
+        // Build pipeline-based job configuration (flow config accessed at runtime)
         $job_config = [
             'pipeline_id' => $pipeline_id,
             'flow_id' => $flow_id,
@@ -271,7 +261,6 @@ class JobCreator {
             'pipeline_name' => $pipeline->pipeline_name ?? 'Unknown Pipeline',
             'flow_name' => $flow['flow_name'] ?? 'Unknown Flow',
             'pipeline_step_config' => $pipeline_step_config,
-            'flow_config' => $flow['flow_config'] ?? [],
             'created_at' => current_time( 'mysql' )
         ];
 
@@ -281,16 +270,13 @@ class JobCreator {
         }
 
         // Log pipeline+flow configuration for debugging
-        $logger = apply_filters('dm_get_logger', null);
-        if ( $logger ) {
-            $logger->debug( 'Built pipeline+flow job configuration', [
-                'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'context' => $context,
-                'pipeline_steps_count' => count( $pipeline_step_config ),
-                'has_optional_data' => ! empty( $optional_data )
-            ] );
-        }
+        do_action('dm_log', 'debug', 'Built pipeline+flow job configuration', [
+            'pipeline_id' => $pipeline_id,
+            'flow_id' => $flow_id,
+            'context' => $context,
+            'pipeline_steps_count' => count( $pipeline_step_config ),
+            'has_optional_data' => ! empty( $optional_data )
+        ]);
 
         return $job_config;
     }

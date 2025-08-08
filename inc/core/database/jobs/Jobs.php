@@ -91,15 +91,15 @@ class Jobs {
     /**
      * Update the status and completed_at time for a job.
      */
-    public function complete_job( int $job_id, string $status, ?string $error_details = null ): bool {
-        return $this->status->complete_job($job_id, $status, $error_details);
+    public function complete_job( int $job_id, string $status ): bool {
+        return $this->status->complete_job($job_id, $status);
     }
 
     /**
      * Update job status.
      */
-    public function update_job_status(int $job_id, string $status, ?string $error_details = null): bool {
-        return $this->status->update_job_status($job_id, $status, $error_details);
+    public function update_job_status(int $job_id, string $status): bool {
+        return $this->status->update_job_status($job_id, $status);
     }
 
     /**
@@ -151,8 +151,6 @@ class Jobs {
             pipeline_id bigint(20) unsigned NOT NULL,
             flow_id bigint(20) unsigned NOT NULL,
             status varchar(20) NOT NULL,
-            flow_config longtext NULL,
-            error_details longtext NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,
@@ -165,13 +163,10 @@ class Jobs {
         dbDelta( $sql );
 
         // Log table creation
-        $logger = apply_filters('dm_get_logger', null);
-        if ( $logger ) {
-            $logger->debug( 'Created jobs database table with pipeline+flow architecture', [
-                'table_name' => $table_name,
-                'action' => 'create_table'
-            ] );
-        }
+        do_action('dm_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
+            'table_name' => $table_name,
+            'action' => 'create_table'
+        ]);
     }
 
 }

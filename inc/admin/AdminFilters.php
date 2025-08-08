@@ -91,10 +91,7 @@ function dm_register_admin_filters() {
         }
         
         // Log error and return empty string - no user-facing error display
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->error("Template not found: {$template_name}");
-        }
+        do_action('dm_log', 'error', "Template not found: {$template_name}");
         return '';
     }, 10, 3);
 }

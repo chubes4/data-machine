@@ -401,3 +401,32 @@
 .dm-add-pipeline-section{
     margin: 15px 0;
 }
+
+/* Auto-save status indicator */
+.dm-auto-save-status {
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    display: inline-block;
+    font-weight: 500;
+    min-width: 120px;
+    text-align: center;
+}
+
+.dm-auto-save-status.dm-status-saving {
+    background-color: #f0f8ff;
+    color: #0073aa;
+    border: 1px solid #b5d7ff;
+}
+
+.dm-auto-save-status.dm-status-saved {
+    background-color: #f0fff0;
+    color: #2e8b57;
+    border: 1px solid #90ee90;
+}
+
+.dm-auto-save-status.dm-status-error {
+    background-color: #fff0f0;
+    color: #dc3232;
+    border: 1px solid #ffb5b5;
+}

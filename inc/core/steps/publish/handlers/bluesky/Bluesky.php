@@ -67,9 +67,7 @@ class Bluesky {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        // Get logger service via filter
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Bluesky output handling.');
+        do_action('dm_log', 'debug', 'Starting Bluesky output handling.');
         
         // 1. Get config - publish_config is the handler_config directly
         $include_source = $publish_config['bluesky_include_source'] ?? true;
@@ -80,7 +78,7 @@ class Bluesky {
 
         // 3. Handle authentication errors
         if (is_wp_error($session)) {
-             $logger && $logger->error('Bluesky Output Error: Failed to get authenticated session.', [
+             do_action('dm_log', 'error', 'Bluesky Output Error: Failed to get authenticated session.', [
                 'error_code' => $session->get_error_code(),
                 'error_message' => $session->get_error_message(),
              ]);
@@ -95,7 +93,7 @@ class Bluesky {
         $pds_url = $session['pds_url'] ?? null;
 
         if (empty($access_token) || empty($did) || empty($pds_url)) {
-            $logger && $logger->error('Bluesky session data incomplete after authentication.');
+            do_action('dm_log', 'error', 'Bluesky session data incomplete after authentication.');
             return [
                 'success' => false,
                 'error' => __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'data-machine')
@@ -104,7 +102,7 @@ class Bluesky {
 
         // Validate content from DataPacket
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Bluesky Output: DataPacket content is empty.');
+            do_action('dm_log', 'warning', 'Bluesky Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Bluesky.', 'data-machine')
@@ -149,7 +147,7 @@ class Bluesky {
         $final_post_text = trim($final_post_text);
 
         if (empty($final_post_text)) {
-             $logger && $logger->error('Bluesky Output: Formatted post content is empty after processing.');
+             do_action('dm_log', 'error', 'Bluesky Output: Formatted post content is empty after processing.');
              return [
                  'success' => false,
                  'error' => __('Formatted post content is empty after processing.', 'data-machine')
@@ -165,12 +163,12 @@ class Bluesky {
         $image_alt_text = $title ?: substr($content, 0, 50); // Use title or content summary as alt text
 
         if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL)) {
-            $logger && $logger->debug('Attempting to upload image to Bluesky.', ['image_url' => $image_source_url]);
+            do_action('dm_log', 'debug', 'Attempting to upload image to Bluesky.', ['image_url' => $image_source_url]);
             
             $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_source_url, $image_alt_text);
             
             if (!is_wp_error($uploaded_image_blob) && isset($uploaded_image_blob['blob'])) {
-                $logger && $logger->debug('Bluesky image uploaded successfully.');
+                do_action('dm_log', 'debug', 'Bluesky image uploaded successfully.');
                 $embed_data = [
                     '$type' => 'app.bsky.embed.images',
                     'images' => [
@@ -183,7 +181,7 @@ class Bluesky {
             } else {
                 // Fail immediately if image upload fails when images are enabled
                 $error_message = is_wp_error($uploaded_image_blob) ? $uploaded_image_blob->get_error_message() : 'Image upload failed with unknown error.';
-                $logger && $logger->error('Bluesky image upload failed when images are enabled.', [
+                do_action('dm_log', 'error', 'Bluesky image upload failed when images are enabled.', [
                     'error_message' => $error_message,
                     'image_url' => $image_source_url
                 ]);
@@ -218,7 +216,7 @@ class Bluesky {
             $post_result = $this->create_bluesky_post($pds_url, $access_token, $did, $record);
 
             if (is_wp_error($post_result)) {
-                $logger && $logger->error('Failed to create Bluesky post.', [
+                do_action('dm_log', 'error', 'Failed to create Bluesky post.', [
                     'error_code' => $post_result->get_error_code(),
                     'error_message' => $post_result->get_error_message()
                 ]);
@@ -232,7 +230,7 @@ class Bluesky {
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
             
             if (is_wp_error($post_url)) {
-                $logger && $logger->error('Failed to build post URL.', [
+                do_action('dm_log', 'error', 'Failed to build post URL.', [
                     'error_code' => $post_url->get_error_code(),
                     'error_message' => $post_url->get_error_message()
                 ]);
@@ -242,7 +240,7 @@ class Bluesky {
                 ];
             }
 
-            $logger && $logger->debug('Successfully posted to Bluesky.', ['post_uri' => $post_uri]);
+            do_action('dm_log', 'debug', 'Successfully posted to Bluesky.', ['post_uri' => $post_uri]);
 
             return [
                 'success' => true,
@@ -253,7 +251,7 @@ class Bluesky {
             ];
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Bluesky Output Exception: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Bluesky Output Exception: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -330,7 +328,6 @@ class Bluesky {
      * @return array|WP_Error Upload result or error
      */
     private function upload_bluesky_image(string $pds_url, string $access_token, string $did, string $image_url, string $alt_text) {
-        $logger = apply_filters('dm_get_logger', null);
         
         // Download image temporarily
         if (!function_exists('download_url')) {
@@ -339,7 +336,7 @@ class Bluesky {
         
         $temp_file_path = download_url($image_url, 30);
         if (is_wp_error($temp_file_path)) {
-            $logger && $logger->error('Failed to download image for Bluesky upload.', ['url' => $image_url]);
+            do_action('dm_log', 'error', 'Failed to download image for Bluesky upload.', ['url' => $image_url]);
             return $temp_file_path;
         }
 
@@ -452,8 +449,7 @@ class Bluesky {
             return "https://bsky.app/profile/{$handle}/post/{$post_id}";
         }
         
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->error('Failed to extract post ID from AT Protocol URI.', [
+        do_action('dm_log', 'error', 'Failed to extract post ID from AT Protocol URI.', [
             'uri' => $uri,
             'handle' => $handle
         ]);

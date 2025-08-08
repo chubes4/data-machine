@@ -21,32 +21,7 @@ class PipelineModalAjax
     /**
      * Handle pipeline modal AJAX requests (UI support)
      */
-    public function handle_pipeline_modal_ajax()
-    {
-        // Verify nonce
-        if (!check_ajax_referer('dm_pipeline_ajax', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
-        }
-
-        // Verify user capabilities
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-        }
-
-        // Get action from POST data - support both 'pipeline_action' and 'operation' for modal system
-        $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
-
-        // Use method discovery pattern instead of hardcoded switch
-        // Convert action name from kebab-case to snake_case for method names
-        $method_action = str_replace('-', '_', $action);
-        $method_name = "handle_{$method_action}";
-
-        if (method_exists($this, $method_name) && is_callable([$this, $method_name])) {
-            $this->$method_name();
-        } else {
-            wp_send_json_error(['message' => __('Invalid modal action', 'data-machine')]);
-        }
-    }
+    // Routing wrapper method removed - individual WordPress action hooks call methods directly
 
 
 
@@ -54,7 +29,7 @@ class PipelineModalAjax
      * Get rendered template with provided data
      * Dedicated endpoint for template rendering to maintain architecture consistency
      */
-    private function handle_get_template()
+    public function handle_get_template()
     {
         // Remove fallbacks - require explicit data
         if (!isset($_POST['template'])) {
@@ -106,7 +81,7 @@ class PipelineModalAjax
     /**
      * Get flow step card data for template rendering
      */
-    private function handle_get_flow_step_card()
+    public function handle_get_flow_step_card()
     {
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
@@ -149,7 +124,7 @@ class PipelineModalAjax
     /**
      * Get flow configuration for step card updates
      */
-    private function handle_get_flow_config()
+    public function handle_get_flow_config()
     {
         $flow_id = (int) sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 
@@ -191,7 +166,7 @@ class PipelineModalAjax
     /**
      * Handle step configuration save action
      */
-    private function handle_configure_step_action()
+    public function handle_configure_step_action()
     {
         // Get context data from AJAX request - no fallbacks
         if (!isset($_POST['context'])) {
@@ -215,7 +190,7 @@ class PipelineModalAjax
         }
         
         // Validate required context fields with enhanced debugging
-        $required_fields = ['step_type', 'pipeline_id', 'step_id'];
+        $required_fields = ['step_type', 'pipeline_id', 'pipeline_step_id'];
         $missing_fields = [];
         
         foreach ($required_fields as $field) {
@@ -239,7 +214,7 @@ class PipelineModalAjax
         
         $step_type = sanitize_text_field($context['step_type']);
         $pipeline_id = sanitize_text_field($context['pipeline_id']);
-        $step_id = sanitize_text_field($context['step_id']);
+        $pipeline_step_id = sanitize_text_field($context['pipeline_step_id']);
         
         if (empty($step_type)) {
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
@@ -247,23 +222,23 @@ class PipelineModalAjax
         
         // Handle AI step configuration
         if ($step_type === 'ai') {
-            // FAIL FAST - require step_id for unique configuration
-            if (empty($step_id)) {
+            // FAIL FAST - require pipeline_step_id for unique configuration
+            if (empty($pipeline_step_id)) {
                 wp_send_json_error([
-                    'message' => __('Step ID is required for AI configuration', 'data-machine'),
+                    'message' => __('Pipeline step ID is required for AI configuration', 'data-machine'),
                     'missing_data' => [
-                        'step_id' => empty($step_id),
+                        'pipeline_step_id' => empty($pipeline_step_id),
                         'step_type' => $step_type,
                         'pipeline_id' => $pipeline_id
                     ]
                 ]);
             }
             
-            // Validate step_id format (should be UUID4)
-            if (!wp_is_uuid($step_id)) {
+            // Validate pipeline_step_id format (should be UUID4)
+            if (!wp_is_uuid($pipeline_step_id)) {
                 wp_send_json_error([
-                    'message' => __('Step ID format invalid - expected UUID', 'data-machine'),
-                    'received' => $step_id
+                    'message' => __('Pipeline step ID format invalid - expected UUID', 'data-machine'),
+                    'received' => $pipeline_step_id
                 ]);
             }
             
@@ -275,7 +250,11 @@ class PipelineModalAjax
                     // Get form data using step-aware field names (no fallbacks)
                     $form_data = [];
                     
-                    // Field names are prefixed with step_id for step-aware configuration
+                    // Convert pipeline_step_id to step_id for AI HTTP Client interface boundary
+                    // AI HTTP Client expects step_id for field names and configuration storage
+                    $step_id = $pipeline_step_id;
+                    
+                    // Field names are prefixed with step_id for AI HTTP Client step-aware configuration
                     $provider_field = "ai_step_{$step_id}_provider";
                     $api_key_field = 'ai_api_key';  // API key uses generic name
                     $model_field = "ai_step_{$step_id}_model";
@@ -283,8 +262,8 @@ class PipelineModalAjax
                     $system_prompt_field = "ai_step_{$step_id}_system_prompt";
                     
                     // Log received field names for debugging
-                    $logger = apply_filters('dm_get_logger', null);
-                    $logger?->debug('AI step configuration field mapping', [
+                    do_action('dm_log', 'debug', 'AI step configuration field mapping', [
+                        'pipeline_step_id' => $pipeline_step_id,
                         'step_id' => $step_id,
                         'expected_fields' => [
                             'provider' => $provider_field,
@@ -325,7 +304,7 @@ class PipelineModalAjax
                     $api_key_success = true;
                     if (!empty($api_key) && !empty($provider)) {
                         $api_key_success = $options_manager->set_api_key($provider, $api_key);
-                        $logger?->debug('API key save attempt', [
+                        do_action('dm_log', 'debug', 'API key save attempt', [
                             'provider' => $provider,
                             'api_key_length' => strlen($api_key),
                             'save_success' => $api_key_success
@@ -333,7 +312,8 @@ class PipelineModalAjax
                     }
                     
                     // Save step-specific configuration (without API key)
-                    $logger?->debug('Before step config save', [
+                    do_action('dm_log', 'debug', 'Before step config save', [
+                        'pipeline_step_id' => $pipeline_step_id,
                         'step_id' => $step_id,
                         'config_data' => $step_config_data,
                         'options_manager_configured' => $options_manager->is_configured()
@@ -341,7 +321,8 @@ class PipelineModalAjax
                     
                     $step_config_success = $options_manager->save_step_configuration($step_id, $step_config_data);
                     
-                    $logger?->debug('Step config save attempt', [
+                    do_action('dm_log', 'debug', 'Step config save attempt', [
+                        'pipeline_step_id' => $pipeline_step_id,
                         'step_id' => $step_id,
                         'config_keys' => array_keys($step_config_data),
                         'save_success' => $step_config_success,
@@ -353,7 +334,7 @@ class PipelineModalAjax
                     if ($success) {
                         wp_send_json_success([
                             'message' => __('AI step configuration saved successfully', 'data-machine'),
-                            'step_id' => $step_id,
+                            'pipeline_step_id' => $pipeline_step_id,
                             'debug_info' => [
                                 'api_key_saved' => $api_key_success,
                                 'step_config_saved' => $step_config_success,
@@ -383,10 +364,7 @@ class PipelineModalAjax
                     }
                     
                 } catch (Exception $e) {
-                    $logger = apply_filters('dm_get_logger', null);
-                    if ($logger) {
-                        $logger->error('AI step configuration save error: ' . $e->getMessage());
-                    }
+                    do_action('dm_log', 'error', 'AI step configuration save error: ' . $e->getMessage());
                     wp_send_json_error(['message' => __('Error saving AI configuration', 'data-machine')]);
                 }
             } else {
@@ -401,9 +379,9 @@ class PipelineModalAjax
     /**
      * Handle add location action for remote locations manager
      */
-    private function handle_add_location_action()
+    public function handle_add_location_action()
     {
-        // Get context data from AJAX request - jQuery auto-parses JSON data attributes
+        // Get context data from AJAX request
         $context = $_POST['context'] ?? [];
         
         $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
@@ -435,6 +413,7 @@ class PipelineModalAjax
         }
         
         // Get remote locations database service
+        $all_databases = apply_filters('dm_get_database_services', []);
         $db_remote_locations = $all_databases['remote_locations'] ?? null;
         if (!$db_remote_locations) {
             wp_send_json_error(['message' => __('Remote locations database service unavailable', 'data-machine')]);
@@ -452,10 +431,7 @@ class PipelineModalAjax
         }
         
         // Log the creation
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug("Created remote location '{$location_data['location_name']}' for handler '{$handler_slug}' (ID: {$location_id})");
-        }
+        do_action('dm_log', 'debug', "Created remote location '{$location_data['location_name']}' for handler '{$handler_slug}' (ID: {$location_id})");
         
         wp_send_json_success([
             'message' => sprintf(__('Remote location "%s" saved successfully', 'data-machine'), $location_data['location_name']),
@@ -468,7 +444,7 @@ class PipelineModalAjax
     /**
      * Handle add handler action with proper update vs replace logic
      */
-    private function handle_add_handler_action()
+    public function handle_add_handler_action()
     {
         // Get context data from AJAX request - handle both JSON string and array formats
         $context = $_POST['context'] ?? [];
@@ -479,30 +455,41 @@ class PipelineModalAjax
         }
         
         // Enhanced error logging to debug data flow
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug('Handler save context received', [
-                'context_type' => gettype($_POST['context'] ?? null),
-                'context_content' => $context,
-                'post_keys' => array_keys($_POST),
-                'received_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id']))
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Handler save context received', [
+            'context_type' => gettype($_POST['context'] ?? null),
+            'context_content' => $context,
+            'post_keys' => array_keys($_POST),
+            'received_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id']))
+        ]);
         
-        // Try to get parameters from context first, then fallback to direct POST parameters
-        $handler_slug = sanitize_text_field($context['handler_slug'] ?? $_POST['handler_slug'] ?? '');
-        $step_type = sanitize_text_field($context['step_type'] ?? $_POST['step_type'] ?? '');
-        $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? $_POST['flow_step_id'] ?? '');
-        $pipeline_id = (int)sanitize_text_field($context['pipeline_id'] ?? $_POST['pipeline_id'] ?? '');
+        // Get required parameters from context - no fallbacks
+        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
+        $step_type = sanitize_text_field($context['step_type'] ?? '');
+        $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? '');
+        $pipeline_id = (int)sanitize_text_field($context['pipeline_id'] ?? '');
         
-        // Extract flow_id and step_id from flow_step_id for backward compatibility and validation
-        $flow_id = null;
-        $step_id = null;
-        if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
-            $parts = explode('_', $flow_step_id, 2);
-            if (count($parts) === 2) {
-                $step_id = $parts[0];
-                $flow_id = (int)$parts[1];
+        // Get flow_id and pipeline_step_id from context - should be available directly
+        $flow_id = (int)sanitize_text_field($context['flow_id'] ?? '');
+        $pipeline_step_id = sanitize_text_field($context['pipeline_step_id'] ?? '');
+        
+        // Fallback: if not in context, get from flow_config lookup
+        if (!$flow_id || !$pipeline_step_id) {
+            // Get database service to lookup flow config
+            $all_databases = apply_filters('dm_get_database_services', []);
+            $db_flows = $all_databases['flows'] ?? null;
+            
+            if ($db_flows && $flow_step_id) {
+                // Find the flow that contains this flow_step_id
+                $flows = $db_flows->get_all_flows();
+                foreach ($flows as $flow) {
+                    $flow_config = json_decode($flow['flow_config'] ?? '{}', true);
+                    if (isset($flow_config[$flow_step_id])) {
+                        $flow_step_data = $flow_config[$flow_step_id];
+                        $flow_id = $flow_step_data['flow_id'] ?? $flow['flow_id'];
+                        $pipeline_step_id = $flow_step_data['pipeline_step_id'] ?? '';
+                        break;
+                    }
+                }
             }
         }
         
@@ -515,7 +502,7 @@ class PipelineModalAjax
                 'post_keys' => array_keys($_POST)
             ];
             
-            $logger && $logger->error('Handler slug, step type, and flow step ID validation failed', $error_details);
+            do_action('dm_log', 'error', 'Handler slug, step type, and flow step ID validation failed', $error_details);
             
             wp_send_json_error([
                 'message' => __('Handler slug, step type, and flow step ID are required', 'data-machine'),
@@ -577,39 +564,22 @@ class PipelineModalAjax
                 return;
             }
             
-            // Find step position by searching existing flow_config for matching flow_step_id
-            // This eliminates the need to lookup pipeline step configuration
-            $step_position = null;
-            
-            // First, check if this flow_step_id already exists in flow_config
-            foreach ($flow_config as $position => $flow_step) {
-                if (($flow_step['flow_step_id'] ?? '') === $flow_step_id) {
-                    $step_position = $position;
-                    break;
-                }
-            }
-            
-            // If not found, assign the next available position
-            if ($step_position === null) {
-                $step_position = count($flow_config);
-            }
-            
-            // Initialize position-based step configuration if it doesn't exist
-            if (!isset($flow_config[$step_position])) {
-                $flow_config[$step_position] = [
+            // Initialize flow_step_id-based step configuration if it doesn't exist
+            if (!isset($flow_config[$flow_step_id])) {
+                $flow_config[$flow_step_id] = [
                     'flow_step_id' => $flow_step_id,
                     'step_type' => $step_type,
-                    'pipeline_step_id' => $step_id,
+                    'pipeline_step_id' => $pipeline_step_id,
                     'handler' => null
                 ];
             }
             
             // Check if handler already exists
-            $handler_exists = isset($flow_config[$step_position]['handler']) && 
-                             ($flow_config[$step_position]['handler']['handler_slug'] ?? '') === $handler_slug;
+            $handler_exists = isset($flow_config[$flow_step_id]['handler']) && 
+                             ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
             
             // UPDATE existing handler settings OR ADD new handler (single handler per step)
-            $flow_config[$step_position]['handler'] = [
+            $flow_config[$flow_step_id]['handler'] = [
                 'handler_slug' => $handler_slug,
                 'settings' => $handler_settings,
                 'enabled' => true
@@ -625,11 +595,8 @@ class PipelineModalAjax
             }
             
             // Log the action
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $action_type = $handler_exists ? 'updated' : 'added';
-                $logger->debug("Handler '{$handler_slug}' {$action_type} for step position {$step_position} in flow {$flow_id}");
-            }
+            $action_type = $handler_exists ? 'updated' : 'added';
+            do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
             
             $action_message = $handler_exists 
                 ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug)
@@ -640,6 +607,8 @@ class PipelineModalAjax
                 'handler_slug' => $handler_slug,
                 'step_type' => $step_type,
                 'flow_step_id' => $flow_step_id,
+                'flow_id' => $flow_id,
+                'pipeline_step_id' => $pipeline_step_id,
                 'pipeline_id' => $pipeline_id,
                 'handler_config' => $handler_config,
                 'handler_settings' => $handler_settings,

@@ -386,9 +386,9 @@
                 formData.append('nonce', dmPipelineModal.upload_file_nonce || wp.ajax.settings.nonce);
                 
                 // Add handler context if available
-                if (handlerContext && handlerContext.flow_id && handlerContext.step_position) {
+                if (handlerContext && handlerContext.flow_id && handlerContext.pipeline_step_id) {
                     formData.append('flow_id', handlerContext.flow_id);
-                    formData.append('step_position', handlerContext.step_position);
+                    formData.append('pipeline_step_id', handlerContext.pipeline_step_id);
                 }
                 
                 $.ajax({
@@ -426,16 +426,15 @@
             const $form = $('.dm-handler-settings-form');
             if ($form.length === 0) return null;
             
-            // Extract flow_id and step_position from flow_step_id
-            const flow_step_id = $form.find('input[name="flow_step_id"]').val();
-            if (!flow_step_id || flow_step_id.indexOf('_') === -1) return null;
+            // Get individual IDs directly from form fields
+            const pipeline_step_id = $form.find('input[name="pipeline_step_id"]').val();
+            const flow_id = $form.find('input[name="flow_id"]').val();
             
-            const parts = flow_step_id.split('_', 2);
-            if (parts.length !== 2) return null;
+            if (!pipeline_step_id || !flow_id) return null;
             
             return {
-                step_position: parts[0],
-                flow_id: parts[1]
+                pipeline_step_id: pipeline_step_id,
+                flow_id: flow_id
             };
         },
 
@@ -450,16 +449,16 @@
             }
             
             const flowId = $container.data('flow-id');
-            const stepPosition = $container.data('step-position');
+            const pipelineStepId = $container.data('pipeline-step-id');
             
-            if (!flowId || !stepPosition) {
-                console.error('DM Pipeline Modal: Missing flow-id or step-position data attributes');
+            if (!flowId || !pipelineStepId) {
+                console.error('DM Pipeline Modal: Missing flow-id or pipeline-step-id data attributes');
                 return null;
             }
             
             return {
                 flow_id: flowId,
-                step_position: stepPosition
+                pipeline_step_id: pipelineStepId
             };
         },
 
@@ -493,7 +492,7 @@
                 data: {
                     action: 'dm_get_handler_files',
                     flow_id: handlerContext.flow_id,
-                    step_position: handlerContext.step_position,
+                    pipeline_step_id: handlerContext.pipeline_step_id,
                     nonce: dmPipelineModal.upload_file_nonce || wp.ajax.settings.nonce
                 }
             }).then((response) => {

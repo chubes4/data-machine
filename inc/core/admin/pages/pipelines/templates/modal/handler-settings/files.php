@@ -20,16 +20,9 @@ $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
 $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
-// Extract flow_id and step_id from flow_step_id if needed
-$flow_id = null;
-$step_id = null;
-if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
-    $parts = explode('_', $flow_step_id, 2);
-    if (count($parts) === 2) {
-        $step_id = $parts[0];
-        $flow_id = $parts[1];
-    }
-}
+// Get individual IDs directly from context
+$flow_id = $context['flow_id'] ?? null;
+$pipeline_step_id = $context['pipeline_step_id'] ?? null;
 
 // Template self-discovery - get handler configuration and settings
 $handler_config = [];
@@ -56,7 +49,7 @@ $has_auth_system = isset($all_auth[$handler_slug]);
      data-handler-slug="<?php echo esc_attr($handler_slug); ?>" 
      data-step-type="<?php echo esc_attr($step_type); ?>"
      data-flow-id="<?php echo esc_attr($flow_id); ?>"
-     data-step-position="<?php echo esc_attr($step_id); ?>"
+     data-step-execution-order="<?php echo esc_attr($pipeline_step_id); ?>"
      data-flow-step-id="<?php echo esc_attr($flow_step_id); ?>"
      data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
     <div class="dm-handler-settings-header">
@@ -71,6 +64,8 @@ $has_auth_system = isset($all_auth[$handler_slug]);
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />
+        <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>" />
+        <input type="hidden" name="pipeline_step_id" value="<?php echo esc_attr($pipeline_step_id); ?>" />
         <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id); ?>" />
         
         <div class="dm-settings-fields">
@@ -82,8 +77,8 @@ $has_auth_system = isset($all_auth[$handler_slug]);
                 
                 <div class="dm-file-upload-container" 
                      data-flow-id="<?php echo esc_attr($flow_id); ?>" 
-                     data-step-position="<?php echo esc_attr($step_id); ?>"
-                     data-handler-context="<?php echo esc_attr(json_encode(['flow_id' => $flow_id, 'step_position' => $step_id, 'handler_slug' => $handler_slug])); ?>">
+                     data-step-execution-order="<?php echo esc_attr($pipeline_step_id); ?>"
+                     data-handler-context="<?php echo esc_attr(json_encode(['flow_id' => $flow_id, 'pipeline_step_id' => $pipeline_step_id, 'handler_slug' => $handler_slug])); ?>">
                     
                     <div class="dm-file-selection-area" id="dm-file-drop-zone">
                         <div class="dm-file-upload-interface">

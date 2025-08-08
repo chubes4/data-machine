@@ -36,23 +36,22 @@ class PublishStep {
      * @return array Updated data packet array with publish result added
      */
     public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
-        $logger = apply_filters('dm_get_logger', null);
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
         try {
-            $logger->debug('Publish Step: Starting data publishing', ['job_id' => $job_id]);
+            do_action('dm_log', 'debug', 'Publish Step: Starting data publishing', ['job_id' => $job_id]);
 
             // Use step configuration directly - no job config introspection needed
             if (empty($step_config)) {
-                $logger->error('Publish Step: No step configuration provided', ['job_id' => $job_id]);
+                do_action('dm_log', 'error', 'Publish Step: No step configuration provided', ['job_id' => $job_id]);
                 return [];
             }
 
             $handler_data = $step_config['handler'] ?? null;
             
             if (!$handler_data || empty($handler_data['handler_slug'])) {
-                $logger->error('Publish Step: Publish step requires handler configuration', [
+                do_action('dm_log', 'error', 'Publish Step: Publish step requires handler configuration', [
                     'job_id' => $job_id,
                     'available_step_config' => array_keys($step_config),
                     'handler_data' => $handler_data
@@ -66,7 +65,7 @@ class PublishStep {
             // Publish steps use latest data entry (first in array)
             $latest_data = $data_packet[0] ?? null;
             if (!$latest_data) {
-                $logger->error('Publish Step: No data available from previous step', ['job_id' => $job_id]);
+                do_action('dm_log', 'error', 'Publish Step: No data available from previous step', ['job_id' => $job_id]);
                 return $data_packet; // Return unchanged array
             }
 
@@ -74,7 +73,7 @@ class PublishStep {
             $handler_result = $this->execute_publish_handler_direct($handler, $latest_data, $step_config, $handler_config);
 
             if (!$handler_result) {
-                $logger->error('Publish Step: Handler execution failed', [
+                do_action('dm_log', 'error', 'Publish Step: Handler execution failed', [
                     'job_id' => $job_id,
                     'handler' => $handler
                 ]);
@@ -102,7 +101,7 @@ class PublishStep {
             // Add publish entry to front of data packet array (newest first)
             array_unshift($data_packet, $publish_entry);
             
-            $logger->debug('Publish Step: Publishing completed successfully', [
+            do_action('dm_log', 'debug', 'Publish Step: Publishing completed successfully', [
                 'job_id' => $job_id,
                 'handler' => $handler,
                 'total_items' => count($data_packet)
@@ -111,7 +110,7 @@ class PublishStep {
             return $data_packet;
 
         } catch (\Exception $e) {
-            $logger->error('Publish Step: Exception during publishing', [
+            do_action('dm_log', 'error', 'Publish Step: Exception during publishing', [
                 'job_id' => $job_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -133,12 +132,10 @@ class PublishStep {
      * @return array|null Publish result or null on failure
      */
     private function execute_publish_handler_direct(string $handler_name, array $data_entry, array $step_config, array $handler_config): ?array {
-        $logger = apply_filters('dm_get_logger', null);
-
         // Get handler object directly from handler system
         $handler = $this->get_handler_object($handler_name, 'publish');
         if (!$handler) {
-            $logger->error('Publish Step: Handler not found or invalid', [
+            do_action('dm_log', 'error', 'Publish Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'step_config' => array_keys($step_config)
             ]);
@@ -153,7 +150,7 @@ class PublishStep {
             $flow_id = $step_config['flow_id'] ?? null;
             
             if (!$pipeline_id) {
-                $logger->error('Publish Step: Pipeline ID not found in step config', [
+                do_action('dm_log', 'error', 'Publish Step: Pipeline ID not found in step config', [
                     'step_config_keys' => array_keys($step_config)
                 ]);
                 return null;
@@ -171,7 +168,7 @@ class PublishStep {
             return $publish_result;
 
         } catch (\Exception $e) {
-            $logger->error('Publish Step: Handler execution failed', [
+            do_action('dm_log', 'error', 'Publish Step: Handler execution failed', [
                 'handler' => $handler_name,
                 'pipeline_id' => $pipeline_id ?? 'unknown',
                 'flow_id' => $flow_id ?? 'unknown',

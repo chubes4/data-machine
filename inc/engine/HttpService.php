@@ -10,7 +10,6 @@
 
 namespace DataMachine\Engine;
 
-use DataMachine\Admin\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -33,14 +32,6 @@ class HttpService {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return Logger|null
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
     /**
      * Make an HTTP GET request with standardized error handling.
@@ -52,7 +43,7 @@ class HttpService {
      * @return array|WP_Error Parsed response data or WP_Error on failure.
      */
     public function get($url, $args = [], $context = 'API Request') {
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Making GET request to {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Making GET request to {$context}.", [
             'url' => $url
         ]);
 
@@ -69,7 +60,7 @@ class HttpService {
             );
             
             // Log raw server response for timeout and connection issues
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: Connection failed.", [
+            do_action('dm_log', 'error', "Handler HTTP: Connection failed.", [
                 'context' => $context,
                 'url' => $url,
                 'error' => $response->get_error_message(),
@@ -101,7 +92,7 @@ class HttpService {
                 $error_message .= ': ' . $error_details;
             }
 
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: HTTP error response.", [
+            do_action('dm_log', 'error', "Handler HTTP: HTTP error response.", [
                 'context' => $context,
                 'url' => $url,
                 'status_code' => $status_code,
@@ -116,7 +107,7 @@ class HttpService {
             ]);
         }
 
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successful response from {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Successful response from {$context}.", [
             'url' => $url,
             'status_code' => $status_code,
             'content_length' => strlen($body)
@@ -147,7 +138,7 @@ class HttpService {
             $args['body'] = $data;
         }
 
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Making POST request to {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Making POST request to {$context}.", [
             'url' => $url,
             'data_size' => is_array($data) ? count($data) : strlen($data)
         ]);
@@ -165,7 +156,7 @@ class HttpService {
             );
             
             // Log raw server response for timeout and connection issues
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: POST connection failed.", [
+            do_action('dm_log', 'error', "Handler HTTP: POST connection failed.", [
                 'context' => $context,
                 'url' => $url,
                 'error' => $response->get_error_message(),
@@ -196,7 +187,7 @@ class HttpService {
                 $error_message .= ': ' . $error_details;
             }
 
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: POST error response.", [
+            do_action('dm_log', 'error', "Handler HTTP: POST error response.", [
                 'context' => $context,
                 'url' => $url,
                 'status_code' => $status_code,
@@ -211,7 +202,7 @@ class HttpService {
             ]);
         }
 
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successful POST to {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Successful POST to {$context}.", [
             'url' => $url,
             'status_code' => $status_code
         ]);
@@ -234,7 +225,7 @@ class HttpService {
      */
     public function parse_json($json_string, $context = 'API Response') {
         if (empty($json_string)) {
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: Empty JSON response from {$context}.");
+            do_action('dm_log', 'error', "Handler HTTP: Empty JSON response from {$context}.");
             return new WP_Error('empty_json_response', sprintf(
                 /* translators: %s: context/service name */
                 __('Empty response from %s', 'data-machine'),
@@ -246,7 +237,7 @@ class HttpService {
         
         if (json_last_error() !== JSON_ERROR_NONE) {
             $json_error = json_last_error_msg();
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: JSON decode error from {$context}.", [
+            do_action('dm_log', 'error', "Handler HTTP: JSON decode error from {$context}.", [
                 'error' => $json_error,
                 'json_preview' => substr($json_string, 0, 200)
             ]);
@@ -260,7 +251,7 @@ class HttpService {
         }
 
         if (!is_array($decoded)) {
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: Non-array JSON response from {$context}.");
+            do_action('dm_log', 'error', "Handler HTTP: Non-array JSON response from {$context}.");
             return new WP_Error('invalid_json_structure', sprintf(
                 /* translators: %s: context/service name */
                 __('Unexpected JSON structure from %s', 'data-machine'),
@@ -268,7 +259,7 @@ class HttpService {
             ));
         }
 
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successfully parsed JSON from {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Successfully parsed JSON from {$context}.", [
             'item_count' => count($decoded)
         ]);
 
@@ -296,7 +287,7 @@ class HttpService {
                 $pagination['next_url'] = $matches[1];
                 $pagination['has_more'] = true;
                 
-                $this->get_logger() && $this->get_logger()->debug('Handler HTTP: Found pagination link.', [
+                do_action('dm_log', 'debug', 'Handler HTTP: Found pagination link.', [
                     'next_url' => $pagination['next_url']
                 ]);
             }
@@ -401,7 +392,7 @@ class HttpService {
     private function make_request($url, $args, $context) {
         $method = $args['method'] ?? 'REQUEST';
         
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Making {$method} request to {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Making {$method} request to {$context}.", [
             'url' => $url,
             'method' => $method
         ]);
@@ -419,7 +410,7 @@ class HttpService {
                 $response->get_error_message()
             );
             
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: {$method} connection failed.", [
+            do_action('dm_log', 'error', "Handler HTTP: {$method} connection failed.", [
                 'context' => $context,
                 'url' => $url,
                 'method' => $method,
@@ -453,7 +444,7 @@ class HttpService {
                 $error_message .= ': ' . $error_details;
             }
 
-            $this->get_logger() && $this->get_logger()->error("Handler HTTP: {$method} error response.", [
+            do_action('dm_log', 'error', "Handler HTTP: {$method} error response.", [
                 'context' => $context,
                 'url' => $url,
                 'method' => $method,
@@ -470,7 +461,7 @@ class HttpService {
             ]);
         }
 
-        $this->get_logger() && $this->get_logger()->debug("Handler HTTP: Successful {$method} to {$context}.", [
+        do_action('dm_log', 'debug', "Handler HTTP: Successful {$method} to {$context}.", [
             'url' => $url,
             'method' => $method,
             'status_code' => $status_code

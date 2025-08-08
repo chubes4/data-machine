@@ -26,14 +26,10 @@ class ReceiverStep {
      * @return array Returns empty array - no handlers implemented yet
      */
     public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
-        $logger = apply_filters('dm_get_logger', null);
-        
-        if ($logger) {
-            $logger->error('Receiver Step: No handlers implemented yet', [
-                'job_id' => $job_id,
-                'step_type' => 'receiver'
-            ]);
-        }
+        do_action('dm_log', 'error', 'Receiver Step: No handlers implemented yet', [
+            'job_id' => $job_id,
+            'step_type' => 'receiver'
+        ]);
         
         // Return empty array - step cannot complete without handlers
         return [];

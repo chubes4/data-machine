@@ -139,10 +139,7 @@ class ActionSchedulerService {
      * @param string $message Debug message to log
      */
     private function log_debug($message) {
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug("[ActionSchedulerService] {$message}");
-        }
+        do_action('dm_log', 'debug', "[ActionSchedulerService] {$message}");
     }
 
     /**
@@ -151,9 +148,6 @@ class ActionSchedulerService {
      * @param string $message Error message to log
      */
     private function log_error($message) {
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->error("[ActionSchedulerService] {$message}");
-        }
+        do_action('dm_log', 'error', "[ActionSchedulerService] {$message}");
     }
 }

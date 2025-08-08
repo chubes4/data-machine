@@ -63,33 +63,25 @@ class Flows {
             flow_name varchar(255) NOT NULL,
             flow_config longtext NOT NULL,
             scheduling_config longtext NOT NULL,
-            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (flow_id),
-            KEY pipeline_id (pipeline_id),
-            KEY created_at (created_at)
+            KEY pipeline_id (pipeline_id)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         
         $result = dbDelta($sql);
         
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $logger->debug('Flows table creation attempted', [
-                'table_name' => $table_name,
-                'result' => $result
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Flows table creation attempted', [
+            'table_name' => $table_name,
+            'result' => $result
+        ]);
         
         // Verify table exists
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name;
         
-        if ($logger) {
-            $logger->debug('Flows table creation verified', [
-                'table_exists' => $table_exists
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Flows table creation verified', [
+            'table_exists' => $table_exists
+        ]);
         
         return $table_exists;
     }
@@ -101,18 +93,15 @@ class Flows {
      * @return int|false Flow ID on success, false on failure
      */
     public function create_flow(array $flow_data) {
-        $logger = apply_filters('dm_get_logger', null);
         
         // Validate required fields (user_id removed - admin-only plugin)
         $required_fields = ['pipeline_id', 'flow_name', 'flow_config', 'scheduling_config'];
         foreach ($required_fields as $field) {
             if (!isset($flow_data[$field])) {
-                if ($logger) {
-                    $logger->error('Missing required field for flow creation', [
-                        'missing_field' => $field,
-                        'provided_data' => array_keys($flow_data)
-                    ]);
-                }
+                do_action('dm_log', 'error', 'Missing required field for flow creation', [
+                    'missing_field' => $field,
+                    'provided_data' => array_keys($flow_data)
+                ]);
                 return false;
             }
         }
@@ -143,24 +132,20 @@ class Flows {
         );
         
         if ($result === false) {
-            if ($logger) {
-                $logger->error('Failed to create flow', [
-                    'wpdb_error' => $this->wpdb->last_error,
-                    'flow_data' => $flow_data
-                ]);
-            }
+            do_action('dm_log', 'error', 'Failed to create flow', [
+                'wpdb_error' => $this->wpdb->last_error,
+                'flow_data' => $flow_data
+            ]);
             return false;
         }
         
         $flow_id = $this->wpdb->insert_id;
         
-        if ($logger) {
-            $logger->debug('Flow created successfully', [
-                'flow_id' => $flow_id,
-                'pipeline_id' => $flow_data['pipeline_id'],
-                'flow_name' => $flow_data['flow_name']
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Flow created successfully', [
+            'flow_id' => $flow_id,
+            'pipeline_id' => $flow_data['pipeline_id'],
+            'flow_name' => $flow_data['flow_name']
+        ]);
         
         return $flow_id;
     }
@@ -172,7 +157,6 @@ class Flows {
      * @return array|null Flow data or null if not found
      */
     public function get_flow(int $flow_id): ?array {
-        $logger = apply_filters('dm_get_logger', null);
         
         $flow = $this->wpdb->get_row(
             $this->wpdb->prepare(
@@ -183,11 +167,9 @@ class Flows {
         );
         
         if ($flow === null) {
-            if ($logger) {
-                $logger->warning('Flow not found', [
-                    'flow_id' => $flow_id
-                ]);
-            }
+            do_action('dm_log', 'warning', 'Flow not found', [
+                'flow_id' => $flow_id
+            ]);
             return null;
         }
         
@@ -205,22 +187,19 @@ class Flows {
      * @return array Array of flows
      */
     public function get_flows_for_pipeline(int $pipeline_id): array {
-        $logger = apply_filters('dm_get_logger', null);
         
         $flows = $this->wpdb->get_results(
             $this->wpdb->prepare(
-                "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY created_at DESC",
+                "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY flow_id DESC",
                 $pipeline_id
             ),
             ARRAY_A
         );
         
         if ($flows === null) {
-            if ($logger) {
-                $logger->warning('No flows found for pipeline', [
-                    'pipeline_id' => $pipeline_id
-                ]);
-            }
+            do_action('dm_log', 'warning', 'No flows found for pipeline', [
+                'pipeline_id' => $pipeline_id
+            ]);
             return [];
         }
         
@@ -230,12 +209,10 @@ class Flows {
             $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true);
         }
         
-        if ($logger) {
-            $logger->debug('Retrieved flows for pipeline', [
-                'pipeline_id' => $pipeline_id,
-                'flow_count' => count($flows)
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Retrieved flows for pipeline', [
+            'pipeline_id' => $pipeline_id,
+            'flow_count' => count($flows)
+        ]);
         
         return $flows;
     }
@@ -246,19 +223,16 @@ class Flows {
      * @return array Array of active flows
      */
     public function get_all_active_flows(): array {
-        $logger = apply_filters('dm_get_logger', null);
         
         $flows = $this->wpdb->get_results(
             "SELECT * FROM {$this->table_name} 
              WHERE JSON_EXTRACT(scheduling_config, '$.status') = 'active' 
-             ORDER BY created_at DESC",
+             ORDER BY flow_id DESC",
             ARRAY_A
         );
         
         if ($flows === null) {
-            if ($logger) {
-                $logger->debug('No active flows found');
-            }
+            do_action('dm_log', 'debug', 'No active flows found');
             return [];
         }
         
@@ -268,11 +242,9 @@ class Flows {
             $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true);
         }
         
-        if ($logger) {
-            $logger->debug('Retrieved active flows', [
-                'active_flow_count' => count($flows)
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Retrieved active flows', [
+            'active_flow_count' => count($flows)
+        ]);
         
         return $flows;
     }
@@ -285,7 +257,6 @@ class Flows {
      * @return bool True on success, false on failure
      */
     public function update_flow(int $flow_id, array $flow_data): bool {
-        $logger = apply_filters('dm_get_logger', null);
         
         // Build update data and format arrays
         $update_data = [];
@@ -311,11 +282,9 @@ class Flows {
         }
         
         if (empty($update_data)) {
-            if ($logger) {
-                $logger->warning('No valid update data provided for flow', [
-                    'flow_id' => $flow_id
-                ]);
-            }
+            do_action('dm_log', 'warning', 'No valid update data provided for flow', [
+                'flow_id' => $flow_id
+            ]);
             return false;
         }
         
@@ -328,23 +297,19 @@ class Flows {
         );
         
         if ($result === false) {
-            if ($logger) {
-                $logger->error('Failed to update flow', [
-                    'flow_id' => $flow_id,
-                    'wpdb_error' => $this->wpdb->last_error,
-                    'update_data' => array_keys($update_data)
-                ]);
-            }
+            do_action('dm_log', 'error', 'Failed to update flow', [
+                'flow_id' => $flow_id,
+                'wpdb_error' => $this->wpdb->last_error,
+                'update_data' => array_keys($update_data)
+            ]);
             return false;
         }
         
-        if ($logger) {
-            $logger->debug('Flow updated successfully', [
-                'flow_id' => $flow_id,
-                'updated_fields' => array_keys($update_data),
-                'rows_affected' => $result
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Flow updated successfully', [
+            'flow_id' => $flow_id,
+            'updated_fields' => array_keys($update_data),
+            'rows_affected' => $result
+        ]);
         
         return true;
     }
@@ -356,7 +321,6 @@ class Flows {
      * @return bool True on success, false on failure
      */
     public function delete_flow(int $flow_id): bool {
-        $logger = apply_filters('dm_get_logger', null);
         
         $result = $this->wpdb->delete(
             $this->table_name,
@@ -365,29 +329,23 @@ class Flows {
         );
         
         if ($result === false) {
-            if ($logger) {
-                $logger->error('Failed to delete flow', [
-                    'flow_id' => $flow_id,
-                    'wpdb_error' => $this->wpdb->last_error
-                ]);
-            }
+            do_action('dm_log', 'error', 'Failed to delete flow', [
+                'flow_id' => $flow_id,
+                'wpdb_error' => $this->wpdb->last_error
+            ]);
             return false;
         }
         
         if ($result === 0) {
-            if ($logger) {
-                $logger->warning('Flow not found for deletion', [
-                    'flow_id' => $flow_id
-                ]);
-            }
+            do_action('dm_log', 'warning', 'Flow not found for deletion', [
+                'flow_id' => $flow_id
+            ]);
             return false;
         }
         
-        if ($logger) {
-            $logger->debug('Flow deleted successfully', [
-                'flow_id' => $flow_id
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Flow deleted successfully', [
+            'flow_id' => $flow_id
+        ]);
         
         return true;
     }
@@ -400,7 +358,6 @@ class Flows {
      * @return bool True on success, false on failure
      */
     public function update_flow_scheduling(int $flow_id, array $scheduling_config): bool {
-        $logger = apply_filters('dm_get_logger', null);
         
         $result = $this->wpdb->update(
             $this->table_name,
@@ -411,23 +368,19 @@ class Flows {
         );
         
         if ($result === false) {
-            if ($logger) {
-                $logger->error('Failed to update flow scheduling', [
-                    'flow_id' => $flow_id,
-                    'wpdb_error' => $this->wpdb->last_error,
-                    'scheduling_config' => $scheduling_config
-                ]);
-            }
+            do_action('dm_log', 'error', 'Failed to update flow scheduling', [
+                'flow_id' => $flow_id,
+                'wpdb_error' => $this->wpdb->last_error,
+                'scheduling_config' => $scheduling_config
+            ]);
             return false;
         }
         
-        if ($logger) {
-            $logger->debug('Flow scheduling updated successfully', [
-                'flow_id' => $flow_id,
-                'scheduling_config' => $scheduling_config,
-                'rows_affected' => $result
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Flow scheduling updated successfully', [
+            'flow_id' => $flow_id,
+            'scheduling_config' => $scheduling_config,
+            'rows_affected' => $result
+        ]);
         
         return true;
     }
@@ -439,7 +392,6 @@ class Flows {
      * @return array|null Scheduling configuration or null if not found
      */
     public function get_flow_scheduling(int $flow_id): ?array {
-        $logger = apply_filters('dm_get_logger', null);
         
         $scheduling_config = $this->wpdb->get_var(
             $this->wpdb->prepare(
@@ -449,23 +401,19 @@ class Flows {
         );
         
         if ($scheduling_config === null) {
-            if ($logger) {
-                $logger->warning('Flow scheduling configuration not found', [
-                    'flow_id' => $flow_id
-                ]);
-            }
+            do_action('dm_log', 'warning', 'Flow scheduling configuration not found', [
+                'flow_id' => $flow_id
+            ]);
             return null;
         }
         
         $decoded_config = json_decode($scheduling_config, true);
         
         if ($decoded_config === null) {
-            if ($logger) {
-                $logger->error('Failed to decode flow scheduling configuration', [
-                    'flow_id' => $flow_id,
-                    'raw_config' => $scheduling_config
-                ]);
-            }
+            do_action('dm_log', 'error', 'Failed to decode flow scheduling configuration', [
+                'flow_id' => $flow_id,
+                'raw_config' => $scheduling_config
+            ]);
             return null;
         }
         
@@ -478,7 +426,6 @@ class Flows {
      * @return array Array of flows ready for execution
      */
     public function get_flows_ready_for_execution(): array {
-        $logger = apply_filters('dm_get_logger', null);
         
         $current_time = current_time('mysql');
         
@@ -490,7 +437,7 @@ class Flows {
                      JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL
                      OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s
                  )
-                 ORDER BY created_at ASC",
+                 ORDER BY flow_id ASC",
                 $current_time
             ),
             ARRAY_A
@@ -512,12 +459,10 @@ class Flows {
             }
         }
         
-        if ($logger) {
-            $logger->debug('Retrieved flows ready for execution', [
-                'ready_flow_count' => count($ready_flows),
-                'current_time' => $current_time
-            ]);
-        }
+        do_action('dm_log', 'debug', 'Retrieved flows ready for execution', [
+            'ready_flow_count' => count($ready_flows),
+            'current_time' => $current_time
+        ]);
         
         return $ready_flows;
     }
@@ -574,7 +519,6 @@ class Flows {
             $timestamp = current_time('mysql');
         }
         
-        $logger = apply_filters('dm_get_logger', null);
         
         // Get current scheduling config
         $current_config = $this->get_flow_scheduling($flow_id);

@@ -130,18 +130,20 @@ function dm_register_core_database_services() {
 
 
 /**
- * Register backend utility filters for data processing.
+ * Register core filter hooks for data discovery and transformation.
  * 
- * BACKEND-ONLY FILTERS: Provides pure discovery filter hooks for backend
- * service registration. Admin/UI filters have been moved to AdminFilters.php
- * to maintain clear architectural separation between engine and admin layers.
+ * FILTER-ONLY REGISTRATION: Provides pure discovery filter hooks for service
+ * registration and data transformation. Action hooks have been moved to 
+ * DataMachineActions.php to maintain clear architectural separation.
+ * 
+ * Filters registered:
+ * - dm_get_auth_providers: Authentication provider discovery
+ * - dm_get_handler_settings: Handler configuration discovery  
+ * - dm_get_handler_directives: AI directive discovery for handlers
  * 
  * @since 0.1.0
  */
 function dm_register_utility_filters() {
-    // Bridge system, configuration parsing, duplicate checking, search/timeframe filtering, 
-    // and admin notices all removed - components now use direct WordPress patterns 
-    // or dedicated service discovery for proper separation of concerns
     
     // Pure discovery authentication system - consistent with handler discovery patterns
     // Usage: $all_auth = apply_filters('dm_get_auth_providers', []); $twitter_auth = $all_auth['twitter'] ?? null;
@@ -164,17 +166,11 @@ function dm_register_utility_filters() {
         return $providers; // Return collection unchanged - components self-register via this same filter
     }, 5, 1);
     
-    // Legacy dm_get_auth filter removed - authentication now uses pure discovery via dm_get_auth_providers
-    
-    // Pure discovery handler settings system (consistent with all other filters)
-    // ARCHITECTURAL EXPECTATION: Components self-register via *Filters.php files
-    // Bootstrap provides pure filter hook - components add their own registration logic
+    // Pure discovery handler settings system - consistent with all other discovery filters
+    // Usage: $all_settings = apply_filters('dm_get_handler_settings', []); $settings = $all_settings[$handler_slug] ?? null;
     add_filter('dm_get_handler_settings', function($all_settings) {
-        // ARCHITECTURAL COMPLIANCE COMPLETE - Pure discovery pattern
         // Components self-register via *Filters.php files following established patterns
-        //
         // Bootstrap provides only pure filter hook - components add their own logic
-        
         return $all_settings; // Components self-register via filters
     }, 10, 1);
     

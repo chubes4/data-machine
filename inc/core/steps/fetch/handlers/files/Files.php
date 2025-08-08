@@ -57,7 +57,6 @@ class Files {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
         }
         
-        $logger = apply_filters('dm_get_logger', null);
         $repository = $this->get_repository();
         
         if (!$repository) {
@@ -74,7 +73,7 @@ class Files {
         if (empty($uploaded_files)) {
             $repo_files = $repository->get_all_files($flow_step_id);
             if (empty($repo_files)) {
-                $logger?->debug('Files Input: No files available in repository.', [
+                do_action('dm_log', 'debug', 'Files Input: No files available in repository.', [
                     'pipeline_id' => $pipeline_id,
                     'flow_step_id' => $flow_step_id
                 ]);
@@ -97,7 +96,7 @@ class Files {
         $next_file = $this->find_next_unprocessed_file($flow_id, ['uploaded_files' => $uploaded_files]);
         
         if (!$next_file) {
-            $logger?->debug('Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
+            do_action('dm_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
@@ -125,7 +124,7 @@ class Files {
             'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
         ];
 
-        $logger?->debug('Files Input: Found unprocessed file for processing.', [
+        do_action('dm_log', 'debug', 'Files Input: Found unprocessed file for processing.', [
             'pipeline_id' => $pipeline_id,
             'flow_step_id' => $flow_step_id,
             'file_path' => $file_identifier
@@ -149,20 +148,14 @@ class Files {
             return null;
         }
 
-        // Get processed items service
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_processed_items = $all_databases['processed_items'] ?? null;
-        
-        // If we don't have processed items service, return the first file
-        if (!$db_processed_items) {
-            return $uploaded_files[0];
-        }
-
-        // Find first file that hasn't been processed
+        // Find first file that hasn't been processed using centralized hook
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            if (!$db_processed_items->has_item_been_processed($flow_id, 'files', $file_identifier)) {
+            $is_processed = false;
+            do_action('dm_is_item_processed', $flow_id, 'files', $file_identifier, &$is_processed);
+            
+            if (!$is_processed) {
                 return $file;
             }
         }

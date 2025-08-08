@@ -88,6 +88,7 @@ function dm_register_pipelines_admin_page_filters() {
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                'pipeline_auto_save_nonce' => wp_create_nonce('dm_pipeline_auto_save_nonce'),
                                 'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
                                 'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                 'strings' => [
@@ -163,30 +164,161 @@ function dm_register_pipelines_admin_page_filters() {
     });
     
     // AJAX handler registration - Route to specialized page or modal handlers
-    add_action('wp_ajax_dm_pipeline_ajax', function() {
-        $action = sanitize_text_field(wp_unslash($_POST['pipeline_action'] ?? $_POST['operation'] ?? ''));
-        
-        // Get admin page configuration with AJAX handlers
+    // Individual WordPress action hooks - replacing central router
+    
+    // Page actions (business logic operations)
+    add_action('wp_ajax_dm_add_step', function() {
         $all_pages = apply_filters('dm_get_admin_pages', []);
-        $pipeline_page = $all_pages['pipelines'] ?? null;
-        $ajax_handlers = $pipeline_page['ajax_handlers'] ?? [];
-        
-        // Define modal actions (UI/template operations)
-        $modal_actions = [
-            'get_template', 'get_flow_step_card', 'get_flow_config',
-            'configure-step-action', 'add-location-action', 'add-handler-action'
-        ];
-        
-        // Route using discovered handlers
-        $modal_handler = $ajax_handlers['modal'] ?? null;
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
         $page_handler = $ajax_handlers['page'] ?? null;
-        
-        if (in_array($action, $modal_actions) && $modal_handler) {
-            $modal_handler->handle_pipeline_modal_ajax();
-        } else if ($page_handler) {
-            $page_handler->handle_pipeline_page_ajax();
+        if ($page_handler && method_exists($page_handler, 'handle_add_step')) {
+            $page_handler->handle_add_step();
         } else {
-            wp_send_json_error(['message' => __('AJAX handler not found', 'data-machine')]);
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_delete_step', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_delete_step')) {
+            $page_handler->handle_delete_step();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_delete_pipeline', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_delete_pipeline')) {
+            $page_handler->handle_delete_pipeline();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_create_pipeline', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_create_pipeline')) {
+            $page_handler->handle_create_pipeline();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_add_flow', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_add_flow')) {
+            $page_handler->handle_add_flow();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_delete_flow', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_delete_flow')) {
+            $page_handler->handle_delete_flow();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_save_flow_schedule', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_save_flow_schedule')) {
+            $page_handler->handle_save_flow_schedule();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_run_flow_now', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        if ($page_handler && method_exists($page_handler, 'handle_run_flow_now')) {
+            $page_handler->handle_run_flow_now();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    // Modal actions (UI/template operations)  
+    add_action('wp_ajax_dm_get_template', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        if ($modal_handler && method_exists($modal_handler, 'handle_get_template')) {
+            $modal_handler->handle_get_template();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_get_flow_step_card', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        if ($modal_handler && method_exists($modal_handler, 'handle_get_flow_step_card')) {
+            $modal_handler->handle_get_flow_step_card();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_get_flow_config', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        if ($modal_handler && method_exists($modal_handler, 'handle_get_flow_config')) {
+            $modal_handler->handle_get_flow_config();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_configure_step_action', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        if ($modal_handler && method_exists($modal_handler, 'handle_configure_step_action')) {
+            $modal_handler->handle_configure_step_action();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_add_location_action', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        if ($modal_handler && method_exists($modal_handler, 'handle_add_location_action')) {
+            $modal_handler->handle_add_location_action();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
+        }
+    });
+    
+    add_action('wp_ajax_dm_add_handler_action', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
+        $modal_handler = $ajax_handlers['modal'] ?? null;
+        if ($modal_handler && method_exists($modal_handler, 'handle_add_handler_action')) {
+            $modal_handler->handle_add_handler_action();
+        } else {
+            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
         }
     });
     
@@ -194,6 +326,22 @@ function dm_register_pipelines_admin_page_filters() {
     add_action('wp_ajax_dm_save_handler_settings', function() {
         dm_handle_save_handler_settings();
     });
+    
+    // Auto-save AJAX endpoint - routes to PipelinePageAjax for processing
+    add_action('wp_ajax_dm_pipeline_auto_save', function() {
+        $all_pages = apply_filters('dm_get_admin_pages', []);
+        $pipeline_page = $all_pages['pipelines'] ?? null;
+        $ajax_handlers = $pipeline_page['ajax_handlers'] ?? [];
+        $page_handler = $ajax_handlers['page'] ?? null;
+        
+        if ($page_handler && method_exists($page_handler, 'handle_auto_save')) {
+            $page_handler->handle_auto_save();
+        } else {
+            wp_send_json_error(['message' => __('Auto-save handler not available', 'data-machine')]);
+        }
+    });
+    
+    // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     
     // Universal modal AJAX integration - no component-specific handlers needed
     // All modal content routed through unified ModalAjax.php endpoint
@@ -247,26 +395,23 @@ function dm_register_pipelines_admin_page_filters() {
 function dm_handle_save_handler_settings() {
     
     // Enhanced debugging for save handler process
-    $logger = apply_filters('dm_get_logger', null);
-    if ($logger) {
-        $logger->debug('Save handler settings request received', [
-            'post_keys' => array_keys($_POST),
-            'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action'])),
-            'has_nonce' => isset($_POST['handler_settings_nonce']),
-            'user_can_manage' => current_user_can('manage_options')
-        ]);
-    }
+    do_action('dm_log', 'debug', 'Save handler settings request received', [
+        'post_keys' => array_keys($_POST),
+        'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action'])),
+        'has_nonce' => isset($_POST['handler_settings_nonce']),
+        'user_can_manage' => current_user_can('manage_options')
+    ]);
     
     // Verify nonce
     if (!wp_verify_nonce($_POST['handler_settings_nonce'] ?? '', 'dm_save_handler_settings')) {
-        $logger && $logger->error('Handler settings nonce verification failed');
+        do_action('dm_log', 'error', 'Handler settings nonce verification failed');
         wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
         return;
     }
     
     // Verify user capabilities
     if (!current_user_can('manage_options')) {
-        $logger && $logger->error('Handler settings insufficient permissions');
+        do_action('dm_log', 'error', 'Handler settings insufficient permissions');
         wp_send_json_error(['message' => __('Insufficient permissions.', 'data-machine')]);
         return;
     }
@@ -277,22 +422,22 @@ function dm_handle_save_handler_settings() {
     $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
     $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
     
-    // Extract flow_id and step_id from flow_step_id for backward compatibility
+    // Extract flow_id and pipeline_step_id from flow_step_id for backward compatibility
     $flow_id = null;
-    $step_id = null;
+    $pipeline_step_id = null;
     if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
         $parts = explode('_', $flow_step_id, 2);
         if (count($parts) === 2) {
-            $step_id = $parts[0];
+            $pipeline_step_id = $parts[0];
             $flow_id = (int)$parts[1];
         }
     }
     
-    $logger && $logger->debug('Handler settings extracted parameters', [
+    do_action('dm_log', 'debug', 'Handler settings extracted parameters', [
         'handler_slug' => $handler_slug,
         'step_type' => $step_type,
         'flow_step_id' => $flow_step_id,
-        'step_id' => $step_id,
+        'pipeline_step_id' => $pipeline_step_id,
         'flow_id' => $flow_id,
         'pipeline_id' => $pipeline_id
     ]);
@@ -305,7 +450,7 @@ function dm_handle_save_handler_settings() {
             'post_keys' => array_keys($_POST)
         ];
         
-        $logger && $logger->error('Handler slug, step type, and flow step ID validation failed', $error_details);
+        do_action('dm_log', 'error', 'Handler slug, step type, and flow step ID validation failed', $error_details);
         
         wp_send_json_error([
             'message' => __('Handler slug, step type, and flow step ID are required.', 'data-machine'),
@@ -372,30 +517,23 @@ function dm_handle_save_handler_settings() {
         }
         
         // Initialize step configuration if it doesn't exist
-        if (!isset($flow_config['steps'])) {
-            $flow_config['steps'] = [];
-        }
-        
-        // Use the provided flow step ID directly (already in step_id_flow_id format)
-        // Find or create step configuration using flow step ID
-        if (!isset($flow_config['steps'][$flow_step_id])) {
-            $flow_config['steps'][$flow_step_id] = [
+        // Use standard flow_config structure: direct flow_step_id key
+        if (!isset($flow_config[$flow_step_id])) {
+            $flow_config[$flow_step_id] = [
+                'flow_step_id' => $flow_step_id,
                 'step_type' => $step_type,
-                'pipeline_step_id' => $step_id,
-                'handlers' => []
+                'pipeline_step_id' => $pipeline_step_id,
+                'flow_id' => $flow_id,
+                'handler' => null
             ];
         }
         
-        // Initialize handlers array if it doesn't exist
-        if (!isset($flow_config['steps'][$flow_step_id]['handlers'])) {
-            $flow_config['steps'][$flow_step_id]['handlers'] = [];
-        }
-        
         // Check if handler already exists
-        $handler_exists = isset($flow_config['steps'][$flow_step_id]['handlers'][$handler_slug]);
+        $handler_exists = isset($flow_config[$flow_step_id]['handler']) && 
+                         ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
         
-        // UPDATE existing handler settings OR ADD new handler (no replacement)
-        $flow_config['steps'][$flow_step_id]['handlers'][$handler_slug] = [
+        // UPDATE existing handler settings OR ADD new handler (single handler per step)
+        $flow_config[$flow_step_id]['handler'] = [
             'handler_slug' => $handler_slug,
             'settings' => $handler_settings,
             'enabled' => true
@@ -412,11 +550,8 @@ function dm_handle_save_handler_settings() {
         }
         
         // Log the action
-        $logger = apply_filters('dm_get_logger', null);
-        if ($logger) {
-            $action_type = $handler_exists ? 'updated' : 'added';
-            $logger->debug("Handler '{$handler_slug}' {$action_type} for flow step '{$flow_step_id}' in flow {$flow_id}");
-        }
+        $action_type = $handler_exists ? 'updated' : 'added';
+        do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow step '{$flow_step_id}' in flow {$flow_id}");
         
         $action_message = $handler_exists 
             ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug)
@@ -458,9 +593,9 @@ add_filter('dm_render_template', function($content, $template_name, $data = []) 
     $pipeline_template_requirements = [
         // Modal templates
         'modal/configure-step' => [
-            'required' => ['step_type', 'pipeline_id', 'step_id'],
+            'required' => ['step_type', 'pipeline_id', 'pipeline_step_id'],
             'optional' => ['flow_id'],
-            'auto_generate' => ['flow_step_id' => '{step_id}_{flow_id}']
+            'auto_generate' => ['flow_step_id' => '{pipeline_step_id}_{flow_id}']
         ],
         'modal/handler-selection-cards' => [
             'required' => ['pipeline_id', 'flow_id', 'step_type']
@@ -468,47 +603,47 @@ add_filter('dm_render_template', function($content, $template_name, $data = []) 
         // Handler-specific settings templates - support all handlers with WordPress input/output variants
         'modal/handler-settings/files' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/rss' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/reddit' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/googlesheets_fetch' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/googlesheets_publish' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/wordpress_fetch' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/wordpress_publish' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/twitter' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/facebook' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/threads' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/handler-settings/bluesky' => [
             'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
         ],
         'modal/step-selection-cards' => [
             'required' => ['pipeline_id']
@@ -520,14 +655,13 @@ add_filter('dm_render_template', function($content, $template_name, $data = []) 
         // Page templates
         'page/pipeline-step-card' => [
             'required' => ['pipeline_id', 'step', 'is_first_step'],
-            'extract_from_step' => ['step_id', 'step_type']
+            'extract_from_step' => ['pipeline_step_id', 'step_type']
         ],
         'page/flow-step-card' => [
             'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
-            'extract_from_step' => ['step_id', 'step_type'],
+            'extract_from_step' => ['pipeline_step_id', 'step_type'],
             'auto_generate' => [
-                'pipeline_step_id' => '{step.step_id}',
-                'flow_step_id' => '{step.step_id}_{flow_id}'
+                'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
             ]
         ],
         'page/flow-instance-card' => [
@@ -562,13 +696,10 @@ function dm_resolve_pipeline_context($requirements, $data) {
         foreach ($requirements['required'] as $field) {
             if (!dm_has_context_field($field, $data)) {
                 // Log missing required context
-                $logger = apply_filters('dm_get_logger', null);
-                if ($logger) {
-                    $logger->error("Pipeline template context missing required field: {$field}", [
-                        'requirements' => $requirements,
-                        'available_data_keys' => array_keys($data)
-                    ]);
-                }
+                do_action('dm_log', 'error', "Pipeline template context missing required field: {$field}", [
+                    'requirements' => $requirements,
+                    'available_data_keys' => array_keys($data)
+                ]);
             }
         }
     }
@@ -734,5 +865,30 @@ function dm_extract_pipeline_data($data, $fields) {
     return $data;
 }
 
+/**
+ * Central Flow Step ID Generation Utility
+ * 
+ * Provides consistent flow_step_id generation across all system components.
+ * Flow step IDs use the pattern: {pipeline_step_id}_{flow_id}
+ * 
+ * @since 0.1.0
+ */
+function dm_register_flow_step_id_utility() {
+    add_filter('dm_generate_flow_step_id', function($existing_id, $pipeline_step_id, $flow_id) {
+        // Validate required parameters
+        if (empty($pipeline_step_id) || empty($flow_id)) {
+            do_action('dm_log', 'error', 'Invalid flow step ID generation parameters', [
+                'pipeline_step_id' => $pipeline_step_id,
+                'flow_id' => $flow_id
+            ]);
+            return '';
+        }
+        
+        // Generate consistent flow_step_id using established pattern
+        return $pipeline_step_id . '_' . $flow_id;
+    }, 10, 3);
+}
+
 // Auto-register when file loads - achieving complete self-containment
 dm_register_pipelines_admin_page_filters();
+dm_register_flow_step_id_utility();

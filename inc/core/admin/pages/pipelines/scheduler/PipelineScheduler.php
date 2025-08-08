@@ -123,14 +123,11 @@ class PipelineScheduler
 
         if ($action_id) {
             // Log successful scheduling
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->debug('Flow scheduled successfully', [
-                    'flow_id' => $flow_id,
-                    'interval' => $interval,
-                    'action_id' => $action_id
-                ]);
-            }
+            do_action('dm_log', 'debug', 'Flow scheduled successfully', [
+                'flow_id' => $flow_id,
+                'interval' => $interval,
+                'action_id' => $action_id
+            ]);
         }
 
         return $action_id !== false;
@@ -157,12 +154,9 @@ class PipelineScheduler
         );
 
         if ($result) {
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->debug('Flow unscheduled successfully', [
-                    'flow_id' => $flow_id
-                ]);
-            }
+            do_action('dm_log', 'debug', 'Flow unscheduled successfully', [
+                'flow_id' => $flow_id
+            ]);
         }
 
         return $result !== false;
@@ -283,28 +277,17 @@ class PipelineScheduler
             return false;
         }
 
-        // Use existing JobCreator - no wrapper needed
-        $job_creator = apply_filters('dm_get_job_creator', null);
-        if (!$job_creator) {
-            return false;
-        }
+        // Trigger central flow execution hook - "button press" for scheduled execution
+        do_action('dm_run_flow_now', $flow_id, 'scheduled');
 
-        $result = $job_creator->create_and_schedule_job(
-            (int)$flow['pipeline_id'],
-            $flow_id,
-            'scheduled'
-        );
+        // Update last run timestamp for scheduling (always update for scheduled flows)
+        $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
+        $scheduling_config['last_run_at'] = current_time('mysql');
+        
+        $flows_db->update_flow($flow_id, [
+            'scheduling_config' => wp_json_encode($scheduling_config)
+        ]);
 
-        // Update last run timestamp
-        if ($result['success'] ?? false) {
-            $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
-            $scheduling_config['last_run_at'] = current_time('mysql');
-            
-            $flows_db->update_flow($flow_id, [
-                'scheduling_config' => wp_json_encode($scheduling_config)
-            ]);
-        }
-
-        return $result['success'] ?? false;
+        return true; // Hook handler logs any failures
     }
 }

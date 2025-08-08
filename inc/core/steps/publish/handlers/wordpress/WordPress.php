@@ -97,7 +97,7 @@ class WordPress {
                 return $this->publish_local($structured_content, $wordpress_config, $input_metadata);
 
             case 'remote':
-                return $this->publish_remote($structured_content, $wordpress_config, $input_metadata, $flow_job_config);
+                return $this->publish_remote($structured_content, $wordpress_config, $input_metadata);
 
             default:
                 return [
@@ -354,10 +354,9 @@ class WordPress {
      * @param array $structured_content Structured content from data entry.
      * @param array $config Configuration array.
      * @param array $input_metadata Input metadata.
-     * @param array $flow_job_config Module job configuration.
      * @return array Result array.
      */
-    private function publish_remote(array $structured_content, array $config, array $input_metadata, array $flow_job_config): array {
+    private function publish_remote(array $structured_content, array $config, array $input_metadata): array {
         // Initialize variables to avoid undefined variable warnings
         $assigned_category_name = null;
         $assigned_category_id = null;
@@ -473,10 +472,6 @@ class WordPress {
             'custom_taxonomies' => [],
         );
 
-        // Add module_id for tracking
-        if (!empty($flow_job_config['module_id'])) {
-            $payload['dm_module_id'] = intval($flow_job_config['module_id']);
-        }
 
         // Add date to payload if determined from source
         if ($post_date_iso) {
@@ -679,80 +674,6 @@ class WordPress {
     }
 
 
-    /**
-     * Get settings fields specific to local WordPress publishing.
-     *
-     * @return array Settings fields.
-     */
-    private static function get_local_fields(): array {
-        // Get available post types
-        $post_type_options = [];
-        $post_types = get_post_types(array('public' => true), 'objects');
-        $common_types = ['post' => 'Post', 'page' => 'Page'];
-        foreach ($common_types as $slug => $label) {
-            if (isset($post_types[$slug])) {
-                $post_type_options[$slug] = $label;
-                unset($post_types[$slug]);
-            }
-        }
-        foreach ($post_types as $pt) {
-            $post_type_options[$pt->name] = $pt->label;
-        }
-
-        // Get available categories
-        $category_options = [
-            'instruct_model' => '-- Instruct Model --'
-        ];
-        $local_categories = get_terms(array('taxonomy' => 'category', 'hide_empty' => false));
-        if (!is_wp_error($local_categories)) {
-            foreach ($local_categories as $cat) {
-                $category_options[$cat->term_id] = $cat->name;
-            }
-        }
-
-        // Get available tags
-        $tag_options = [
-            'instruct_model' => '-- Instruct Model --'
-        ];
-        $local_tags = get_terms(array('taxonomy' => 'post_tag', 'hide_empty' => false));
-        if (!is_wp_error($local_tags)) {
-            foreach ($local_tags as $tag) {
-                $tag_options[$tag->term_id] = $tag->name;
-            }
-        }
-
-        return [
-            'post_type' => [
-                'type' => 'select',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type for published content.', 'data-machine'),
-                'options' => $post_type_options,
-            ],
-            'post_status' => [
-                'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the status for the newly created post.', 'data-machine'),
-                'options' => [
-                    'draft' => __('Draft', 'data-machine'),
-                    'publish' => __('Publish', 'data-machine'),
-                    'pending' => __('Pending Review', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                ],
-            ],
-            'selected_local_category_id' => [
-                'type' => 'select',
-                'label' => __('Category', 'data-machine'),
-                'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
-                'options' => $category_options,
-            ],
-            'selected_local_tag_id' => [
-                'type' => 'select',
-                'label' => __('Tag', 'data-machine'),
-                'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
-                'options' => $tag_options,
-            ],
-        ];
-    }
 
     /**
      * Get settings fields specific to remote WordPress publishing.
@@ -817,157 +738,9 @@ class WordPress {
         ];
     }
 
-    /**
-     * Get common settings fields for all destination types.
-     *
-     * @return array Settings fields.
-     */
-    private static function get_common_fields(): array {
-        return [
-            'post_date_source' => [
-                'type' => 'select',
-                'label' => __('Post Date Setting', 'data-machine'),
-                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'data-machine'),
-                'options' => [
-                    'current_date' => __('Use Current Date', 'data-machine'),
-                    'source_date' => __('Use Source Date (if available)', 'data-machine'),
-                ],
-            ],
-        ];
-    }
 
-    /**
-     * Sanitize settings for the unified WordPress publish handler.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
 
-        // Destination type is required
-        $sanitized['destination_type'] = sanitize_text_field($raw_settings['destination_type'] ?? 'local');
-        if (!in_array($sanitized['destination_type'], ['local', 'remote'])) {
-            throw new InvalidArgumentException(esc_html__('Invalid destination type specified for WordPress handler.', 'data-machine'));
-        }
 
-        // Sanitize based on destination type
-        switch ($sanitized['destination_type']) {
-            case 'local':
-                $sanitized = array_merge($sanitized, $this->sanitize_local_settings($raw_settings));
-                break;
-
-            case 'remote':
-                $sanitized = array_merge($sanitized, $this->sanitize_remote_settings($raw_settings));
-                break;
-        }
-
-        // Sanitize common fields
-        $valid_date_sources = ['current_date', 'source_date'];
-        $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
-        if (!in_array($date_source, $valid_date_sources)) {
-            throw new Exception(esc_html__('Invalid post date source parameter provided in settings.', 'data-machine'));
-        }
-        $sanitized['post_date_source'] = $date_source;
-
-        return $sanitized;
-    }
-
-    /**
-     * Sanitize local WordPress settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     */
-    private function sanitize_local_settings(array $raw_settings): array {
-        $sanitized = [
-            'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
-            'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'draft'),
-        ];
-
-        // Sanitize Category ID/Mode
-        $cat_val = $raw_settings['selected_local_category_id'] ?? 'model_decides';
-        if ($cat_val === 'model_decides' || $cat_val === 'instruct_model') {
-            $sanitized['selected_local_category_id'] = $cat_val;
-        } else {
-            $sanitized['selected_local_category_id'] = intval($cat_val);
-        }
-
-        // Sanitize Tag ID/Mode
-        $tag_val = $raw_settings['selected_local_tag_id'] ?? 'model_decides';
-        if ($tag_val === 'model_decides' || $tag_val === 'instruct_model') {
-            $sanitized['selected_local_tag_id'] = $tag_val;
-        } else {
-            $sanitized['selected_local_tag_id'] = intval($tag_val);
-        }
-
-        // Sanitize custom taxonomy fields (fields starting with 'rest_')
-        foreach ($raw_settings as $key => $value) {
-            if (strpos($key, 'rest_') === 0) {
-                $tax_slug = substr($key, 5);
-                if (taxonomy_exists($tax_slug)) {
-                    $sanitized_value = sanitize_text_field($value);
-                    if ($sanitized_value === 'instruct_model' || $sanitized_value === '') {
-                        $sanitized[$key] = $sanitized_value;
-                    } else {
-                        $sanitized[$key] = intval($sanitized_value);
-                    }
-                }
-            }
-        }
-
-        return $sanitized;
-    }
-
-    /**
-     * Sanitize remote WordPress settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     * @throws InvalidArgumentException If location ID is missing.
-     */
-    private function sanitize_remote_settings(array $raw_settings): array {
-        $location_id = absint($raw_settings['location_id'] ?? 0);
-        if (empty($location_id)) {
-            throw new InvalidArgumentException(esc_html__('Remote Location is required for remote destination type.', 'data-machine'));
-        }
-
-        $sanitized = [
-            'location_id' => $location_id,
-            'selected_remote_post_type' => sanitize_text_field($raw_settings['selected_remote_post_type'] ?? 'post'),
-            'remote_post_status' => sanitize_text_field($raw_settings['remote_post_status'] ?? 'draft'),
-        ];
-
-        // Sanitize Remote Category ID/Mode
-        $cat_val = $raw_settings['selected_remote_category_id'] ?? 'instruct_model';
-        if ($cat_val === 'instruct_model' || $cat_val === '') {
-            $sanitized['selected_remote_category_id'] = $cat_val;
-        } else {
-            $sanitized['selected_remote_category_id'] = intval($cat_val);
-        }
-
-        // Sanitize Remote Tag ID/Mode
-        $tag_val = $raw_settings['selected_remote_tag_id'] ?? 'instruct_model';
-        if ($tag_val === 'instruct_model' || $tag_val === '') {
-            $sanitized['selected_remote_tag_id'] = $tag_val;
-        } else {
-            $sanitized['selected_remote_tag_id'] = intval($tag_val);
-        }
-
-        // Sanitize custom taxonomy fields for remote
-        foreach ($raw_settings as $key => $value) {
-            if (strpos($key, 'rest_') === 0) {
-                $sanitized_value = sanitize_text_field($value);
-                if ($sanitized_value === 'instruct_model' || $sanitized_value === '') {
-                    $sanitized[$key] = $sanitized_value;
-                } else {
-                    $sanitized[$key] = intval($sanitized_value);
-                }
-            }
-        }
-
-        return $sanitized;
-    }
 
     /**
      * Prepend image to content if available in metadata.

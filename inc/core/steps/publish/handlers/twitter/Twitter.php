@@ -62,9 +62,7 @@ class Twitter {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        // Get logger service via filter
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Twitter output handling.');
+        do_action('dm_log', 'debug', 'Starting Twitter output handling.');
         
         // 1. Get config - publish_config is the handler_config directly
         $char_limit = $publish_config['twitter_char_limit'] ?? 280;
@@ -76,7 +74,7 @@ class Twitter {
 
         // 3. Handle connection errors
         if (is_wp_error($connection)) {
-             $logger && $logger->error('Twitter Output Error: Failed to get authenticated connection.', [
+             do_action('dm_log', 'error', 'Twitter Output Error: Failed to get authenticated connection.', [
                 'error_code' => $connection->get_error_code(),
                 'error_message' => $connection->get_error_message(),
              ]);
@@ -89,7 +87,7 @@ class Twitter {
         // 5. Validate content from DataPacket
 
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Twitter Output: DataPacket content is empty.');
+            do_action('dm_log', 'warning', 'Twitter Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Twitter.', 'data-machine')
@@ -117,7 +115,7 @@ class Twitter {
         // --- End Formatting ---
 
         if (empty($tweet_text)) {
-             $logger && $logger->error('Twitter Output: Formatted tweet content is empty after processing.');
+             do_action('dm_log', 'error', 'Twitter Output: Formatted tweet content is empty after processing.');
              return [
                  'success' => false,
                  'error' => __('Formatted tweet content is empty after processing.', 'data-machine')
@@ -134,8 +132,8 @@ class Twitter {
             $image_source_url = $input_metadata['image_source_url'] ?? null;
             $image_alt_text = $title ?: substr($content, 0, 50); // Use title or content summary as alt text
 
-            if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_source_url, $logger)) {
-                $logger && $logger->debug('Attempting to upload image to Twitter.', ['image_url' => $image_source_url]);
+            if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_source_url)) {
+                do_action('dm_log', 'debug', 'Attempting to upload image to Twitter.', ['image_url' => $image_source_url]);
                 
                 if (!function_exists('download_url')) {
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -144,7 +142,7 @@ class Twitter {
                 $temp_image_path = download_url($image_source_url, 15); // 15 second timeout
 
                 if (is_wp_error($temp_image_path)) {
-                    $logger && $logger->warning('Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message()]);
+                    do_action('dm_log', 'warning', 'Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message()]);
                     $temp_image_path = null; // Ensure path is null on error
                 } else {
                     try {
@@ -154,11 +152,11 @@ class Twitter {
                         finfo_close($finfo);
 
                         if (empty($mime_type) || !preg_match('/^image\/(jpeg|png|gif|webp)$/', $mime_type)) {
-                            $logger && $logger->warning('Could not determine a valid image MIME type for Twitter upload, or type not supported.', ['path' => $temp_image_path, 'detected_mime' => $mime_type ?: 'N/A']);
+                            do_action('dm_log', 'warning', 'Could not determine a valid image MIME type for Twitter upload, or type not supported.', ['path' => $temp_image_path, 'detected_mime' => $mime_type ?: 'N/A']);
                             throw new \Exception('Invalid or unsupported image type for Twitter.');
                         }
 
-                        $logger && $logger->debug('Attempting chunked media upload to Twitter.', ['path' => $temp_image_path, 'mime_type' => $mime_type]);
+                        do_action('dm_log', 'debug', 'Attempting chunked media upload to Twitter.', ['path' => $temp_image_path, 'mime_type' => $mime_type]);
 
                         // Pass media_type and media_category directly in the parameters for the upload method.
                         // The library should handle chunking automatically for the media/upload endpoint.
@@ -169,7 +167,7 @@ class Twitter {
                         ];
                         $media_upload = $connection->upload('media/upload', $media_upload_params);
 
-                        $logger && $logger->debug('Twitter chunked media/upload response', [ // Enhanced logging
+                        do_action('dm_log', 'debug', 'Twitter chunked media/upload response', [ // Enhanced logging
                             'http_code' => $connection->getLastHttpCode(),
                             'response_body' => $media_upload // Log the entire response object
                         ]);
@@ -179,7 +177,7 @@ class Twitter {
 
                             // Check for media processing information
                             if (isset($media_upload->processing_info)) {
-                                $logger && $logger->debug('Twitter media/upload processing_info found', [
+                                do_action('dm_log', 'debug', 'Twitter media/upload processing_info found', [
                                     'media_id' => $media_id,
                                     'processing_state' => $media_upload->processing_info->state ?? 'N/A',
                                     'check_after_secs' => $media_upload->processing_info->check_after_secs ?? 'N/A',
@@ -190,7 +188,7 @@ class Twitter {
                                     if (!empty($media_upload->processing_info->error->message)) {
                                         $processing_error_message .= ' Reason: ' . $media_upload->processing_info->error->message;
                                     }
-                                    $logger && $logger->error($processing_error_message, [
+                                    do_action('dm_log', 'error', $processing_error_message, [
                                         'media_id' => $media_id,
                                         'processing_error_details' => $media_upload->processing_info->error ?? null
                                     ]);
@@ -206,36 +204,36 @@ class Twitter {
                                  $alt_text_params = ['media_id' => $media_id, 'alt_text' => ['text' => mb_substr($image_alt_text, 0, 1000)]];
                                  $alt_response = $connection->post('media/metadata/create', wp_json_encode($alt_text_params), true); // Use JSON payload
                                  if ($connection->getLastHttpCode() !== 200) {
-                                     $logger && $logger->warning('Failed to add alt text to Twitter image.', [
+                                     do_action('dm_log', 'warning', 'Failed to add alt text to Twitter image.', [
                                          'media_id' => $media_id,
                                          'http_code' => $connection->getLastHttpCode(),
                                          'response' => $alt_response
                                      ]);
                                  } else {
-                                     $logger && $logger->debug('Successfully added alt text to Twitter image.', ['media_id' => $media_id]);
+                                     do_action('dm_log', 'debug', 'Successfully added alt text to Twitter image.', ['media_id' => $media_id]);
                                  }
                              }                            
                              // --- End Alt Text --- 
-                            $logger && $logger->debug('Successfully uploaded image to Twitter.', ['media_id' => $media_id]);
+                            do_action('dm_log', 'debug', 'Successfully uploaded image to Twitter.', ['media_id' => $media_id]);
                         } else {
                              $upload_error_message = 'Twitter API Error: Failed to upload media.';
                              if (isset($media_upload->errors)) {
                                  $first_error = reset($media_upload->errors);
                                  $upload_error_message .= ' Reason: ' . ($first_error->message ?? 'Unknown') . ' (Code: ' . ($first_error->code ?? 'N/A') . ')';
                              }
-                            $logger && $logger->error($upload_error_message, [
+                            do_action('dm_log', 'error', $upload_error_message, [
                                 'http_code' => $connection->getLastHttpCode(),
                                 'api_response' => $media_upload,
                                 'image_url' => $image_source_url
                              ]);
                         }
                     } catch (\Exception $e) {
-                        $logger && $logger->error('Twitter Output Exception during image upload: ' . $e->getMessage());
+                        do_action('dm_log', 'error', 'Twitter Output Exception during image upload: ' . $e->getMessage());
                         $temp_image_path = null; // Ensure path is null on error
                     } finally {
                         if ($temp_image_path && file_exists($temp_image_path)) {
                             wp_delete_file($temp_image_path);
-                            $logger && $logger->debug('Temporary image file cleaned up.', ['image_url' => $image_source_url]);
+                            do_action('dm_log', 'debug', 'Temporary image file cleaned up.', ['image_url' => $image_source_url]);
                         }
                     }
                 }
@@ -243,7 +241,7 @@ class Twitter {
             // --- End Image Upload Logic ---
 
             // --- Post tweet using API v2 ---
-            $logger && $logger->debug('Preparing to post tweet via API v2.');
+            do_action('dm_log', 'debug', 'Preparing to post tweet via API v2.');
             $v2_payload = [
                 'text' => $tweet_text
             ];
@@ -251,18 +249,18 @@ class Twitter {
                 $v2_payload['media'] = [
                     'media_ids' => [$media_id]
                 ];
-                $logger && $logger->debug('Adding v1.1 media ID to v2 payload.', ['media_id' => $media_id]);
+                do_action('dm_log', 'debug', 'Adding v1.1 media ID to v2 payload.', ['media_id' => $media_id]);
             } else {
-                 $logger && $logger->debug('No media ID to add to v2 payload.');
+                 do_action('dm_log', 'debug', 'No media ID to add to v2 payload.');
             }
 
-            $logger && $logger->debug('Posting tweet to v2 endpoint with payload keys:', ['payload_keys' => array_keys($v2_payload)]);
+            do_action('dm_log', 'debug', 'Posting tweet to v2 endpoint with payload keys:', ['payload_keys' => array_keys($v2_payload)]);
             // Sending Twitter API v2 request
             $response = $connection->post('tweets', $v2_payload, ['json' => true]); // Use JSON payload for V2
 
             // 4. Check for API errors (V2 response format differs)
             $http_code = $connection->getLastHttpCode();
-            $logger && $logger->debug('Twitter API v2 response received', ['http_code' => $http_code]);
+            do_action('dm_log', 'debug', 'Twitter API v2 response received', ['http_code' => $http_code]);
 
             if ($http_code == 201 && isset($response->data->id)) {
                 $tweet_id = $response->data->id;
@@ -272,7 +270,7 @@ class Twitter {
                 $screen_name = $account_details['screen_name'] ?? 'twitter';
                 $tweet_url = "https://twitter.com/{$screen_name}/status/{$tweet_id}";
                 
-                $logger && $logger->debug('Tweet posted successfully (v2).', ['tweet_id' => $tweet_id, 'link' => $tweet_url]);
+                do_action('dm_log', 'debug', 'Tweet posted successfully (v2).', ['tweet_id' => $tweet_id, 'link' => $tweet_url]);
 
                  return [
                      'success' => true,
@@ -291,7 +289,7 @@ class Twitter {
                 if (isset($response->title) && isset($response->detail)) { 
                     $error_message = "Twitter API v2 Error: {$response->title} - {$response->detail}";
                     $error_code = $response->type ?? 'twitter_v2_error';
-                     $logger && $logger->warning('Received structured V2 API error.', [
+                     do_action('dm_log', 'warning', 'Received structured V2 API error.', [
                          'title' => $response->title,
                          'detail' => $response->detail,
                          'type' => $response->type ?? 'N/A',
@@ -305,7 +303,7 @@ class Twitter {
                     if (isset($first_error->code)) {
                         $error_code = 'twitter_api_error_' . $first_error->code;
                     }
-                    $logger && $logger->warning('Received V1.1-style API error structure.', [
+                    do_action('dm_log', 'warning', 'Received V1.1-style API error structure.', [
                          'errors' => $api_errors
                      ]);                    
                 }
@@ -314,7 +312,7 @@ class Twitter {
                      $error_code = 'twitter_http_error_' . $http_code;
                 }
 
-                $logger && $logger->error($error_message, [
+                do_action('dm_log', 'error', $error_message, [
                     'http_code' => $http_code,
                     'api_response' => $response // Log full response on error
                  ]);
@@ -327,7 +325,7 @@ class Twitter {
             }
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Twitter Output Exception: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Twitter Output Exception: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -367,7 +365,7 @@ class Twitter {
      * @param object|null $logger Logger instance
      * @return bool True if accessible, false otherwise
      */
-    private function is_image_accessible(string $image_url, $logger = null): bool {
+    private function is_image_accessible(string $image_url): bool {
         // Skip certain problematic domains/patterns
         $problematic_patterns = [
             'preview.redd.it', // Reddit preview URLs often have access restrictions
@@ -376,7 +374,7 @@ class Twitter {
         
         foreach ($problematic_patterns as $pattern) {
             if (strpos($image_url, $pattern) !== false) {
-                $logger && $logger->warning('Twitter: Skipping problematic image URL pattern', ['url' => $image_url, 'pattern' => $pattern]);
+                do_action('dm_log', 'warning', 'Twitter: Skipping problematic image URL pattern', ['url' => $image_url, 'pattern' => $pattern]);
                 return false;
             }
         }
@@ -388,7 +386,7 @@ class Twitter {
         ]);
 
         if (is_wp_error($response)) {
-            $logger && $logger->warning('Twitter: Image URL not accessible', ['url' => $image_url, 'error' => $response->get_error_message()]);
+            do_action('dm_log', 'warning', 'Twitter: Image URL not accessible', ['url' => $image_url, 'error' => $response->get_error_message()]);
             return false;
         }
 
@@ -400,7 +398,7 @@ class Twitter {
             return true;
         }
 
-        $logger && $logger->warning('Twitter: Image URL validation failed', [
+        do_action('dm_log', 'warning', 'Twitter: Image URL validation failed', [
             'url' => $image_url, 
             'http_code' => $http_code, 
             'content_type' => $content_type

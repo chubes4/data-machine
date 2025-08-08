@@ -26,16 +26,16 @@ if (isset($pipeline) && !empty($pipeline)) {
     $pipeline_steps = !empty($step_config) ? json_decode($step_config, true) : [];
     $pipeline_steps = is_array($pipeline_steps) ? $pipeline_steps : [];
     
-    // Validate all pipeline steps have required step_id - fail fast if missing
+    // Validate all pipeline steps have required pipeline_step_id - fail fast if missing
     foreach ($pipeline_steps as $key => $step) {
-        if (empty($step['step_id'])) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('Pipeline step missing required step_id - data corruption detected', [
+        if (empty($step['pipeline_step_id'])) {
+            do_action('dm_log', 'error', 'Pipeline step missing required pipeline_step_id - data corruption detected', [
                 'pipeline_id' => $pipeline_id,
-                'step_position' => $key,
+                'step_index' => $key,
+                'execution_order' => $step['execution_order'] ?? $key,
                 'step_data' => $step
             ]);
-            throw new \RuntimeException("Pipeline {$pipeline_id} step at position {$key} missing required step_id - cannot render pipeline");
+            throw new \RuntimeException("Pipeline {$pipeline_id} step at index {$key} missing required pipeline_step_id - cannot render pipeline");
         }
     }
 }
@@ -57,9 +57,9 @@ $is_new_pipeline = empty($pipeline_id);
             </div>
         </div>
         <div class="dm-pipeline-actions">
-            <button type="button" class="button button-primary dm-save-pipeline-btn" disabled>
-                <?php esc_html_e('Save Pipeline', 'data-machine'); ?>
-            </button>
+            <div class="dm-auto-save-status" style="display: none;">
+                <?php esc_html_e('Ready to auto-save', 'data-machine'); ?>
+            </div>
             <?php if (!$is_new_pipeline): ?>
                 <button type="button" class="button button-secondary dm-modal-open" 
                         data-template="confirm-delete"
@@ -83,8 +83,7 @@ $is_new_pipeline = empty($pipeline_id);
             foreach ($pipeline_steps as $step) {
                 // Database structure validation - fail fast if corrupt
                 if (!is_array($step)) {
-                    $logger = apply_filters('dm_get_logger', null);
-                    $logger?->error('Pipeline data corruption: non-array step data', [
+                    do_action('dm_log', 'error', 'Pipeline data corruption: non-array step data', [
                         'pipeline_id' => $pipeline_id,
                         'step_data' => $step
                     ]);
@@ -92,11 +91,10 @@ $is_new_pipeline = empty($pipeline_id);
                 }
                 
                 // Validate required fields exist
-                $required_fields = ['step_type', 'position'];
+                $required_fields = ['step_type', 'execution_order'];
                 foreach ($required_fields as $field) {
                     if (!isset($step[$field])) {
-                        $logger = apply_filters('dm_get_logger', null);
-                        $logger?->error('Pipeline step missing required field', [
+                        do_action('dm_log', 'error', 'Pipeline step missing required field', [
                             'pipeline_id' => $pipeline_id,
                             'missing_field' => $field,
                             'step_data' => $step
@@ -113,7 +111,7 @@ $is_new_pipeline = empty($pipeline_id);
             // Always append an empty step for "Add Step" functionality
             $display_steps[] = [
                 'step_type' => '',
-                'position' => count($pipeline_steps),
+                'execution_order' => count($pipeline_steps),
                 'is_empty' => true,
                 'step_data' => []
             ];
@@ -140,7 +138,7 @@ $is_new_pipeline = empty($pipeline_id);
             <div class="dm-flows-header-actions">
                 <button type="button" class="button button-primary dm-add-flow-btn" 
                         data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>"
-                        <?php echo $is_new_pipeline ? 'disabled title="' . esc_attr__('Save pipeline first to add flows', 'data-machine') . '"' : ''; ?>>
+                        <?php echo ($is_new_pipeline || empty($pipeline_name) || $step_count === 0) ? 'disabled title="' . esc_attr__('Pipeline needs name and steps to add flows', 'data-machine') . '"' : ''; ?>>
                     <?php esc_html_e('Add Flow', 'data-machine'); ?>
                 </button>
             </div>

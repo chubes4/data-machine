@@ -83,8 +83,7 @@ class FilesRepository {
         if (!file_exists($repo_path)) {
             $created = wp_mkdir_p($repo_path);
             if (!$created) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('FilesRepository: Failed to create repository directory.', [
+                do_action('dm_log', 'error', 'FilesRepository: Failed to create repository directory.', [
                     'path' => $repo_path
                 ]);
                 return false;
@@ -111,8 +110,7 @@ class FilesRepository {
         }
 
         if (!file_exists($source_path)) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('FilesRepository: Source file not found.', [
+            do_action('dm_log', 'error', 'FilesRepository: Source file not found.', [
                 'source_path' => $source_path
             ]);
             return false;
@@ -125,16 +123,14 @@ class FilesRepository {
         // Copy file to repository
         $copied = copy($source_path, $destination_path);
         if (!$copied) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('FilesRepository: Failed to copy file to repository.', [
+            do_action('dm_log', 'error', 'FilesRepository: Failed to copy file to repository.', [
                 'source' => $source_path,
                 'destination' => $destination_path
             ]);
             return false;
         }
 
-        $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('FilesRepository: File stored successfully.', [
+        do_action('dm_log', 'debug', 'FilesRepository: File stored successfully.', [
             'filename' => $safe_filename,
             'size' => filesize($destination_path)
         ]);
@@ -219,8 +215,7 @@ class FilesRepository {
 
         $deleted = unlink($file_path);
         if ($deleted) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->debug('FilesRepository: File deleted successfully.', [
+            do_action('dm_log', 'debug', 'FilesRepository: File deleted successfully.', [
                 'filename' => $safe_filename
             ]);
         }
@@ -253,8 +248,7 @@ class FilesRepository {
         }
 
         if ($deleted_count > 0) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->debug('FilesRepository: Cleanup completed.', [
+            do_action('dm_log', 'debug', 'FilesRepository: Cleanup completed.', [
                 'deleted_count' => $deleted_count,
                 'cutoff_days' => $days
             ]);

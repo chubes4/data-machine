@@ -25,8 +25,7 @@
                     url: dmPipelineBuilder.ajax_url,
                     type: 'POST',
                     data: {
-                        action: 'dm_pipeline_ajax',
-                        pipeline_action: 'get_template',
+                        action: 'dm_get_template',
                         template: templateName,
                         template_data: JSON.stringify(templateData),
                         nonce: dmPipelineBuilder.pipeline_ajax_nonce
@@ -188,9 +187,9 @@
                 return;
             }
             
-            const { step_type, pipeline_id, step_id } = contextData;
+            const { step_type, pipeline_id, pipeline_step_id } = contextData;
             
-            if (!step_type || !pipeline_id || !step_id) {
+            if (!step_type || !pipeline_id || !pipeline_step_id) {
                 console.error('Configure step action: Missing required context fields', contextData);
                 return;
             }
@@ -200,8 +199,7 @@
             const formData = new FormData();
             
             // Add base parameters
-            formData.append('action', 'dm_pipeline_ajax');
-            formData.append('pipeline_action', 'configure-step-action');
+            formData.append('action', 'dm_configure_step_action');
             formData.append('nonce', dmPipelineBuilder.pipeline_ajax_nonce);
             
             // Add context data
@@ -242,10 +240,10 @@
                         // Update flow step cards to show new AI configuration
                         // This matches the pattern from flow-builder.js for handler updates
                         const pipeline_id = contextData.pipeline_id;
-                        const step_id = contextData.step_id;
+                        const pipeline_step_id = contextData.pipeline_step_id;
                         
                         // Find all flow step cards for this pipeline step
-                        $(`.dm-step-container[data-pipeline-step-id="${step_id}"]`).each(function() {
+                        $(`.dm-step-container[data-pipeline-step-id="${pipeline_step_id}"]`).each(function() {
                             const $flowStepContainer = $(this);
                             const flow_id = $flowStepContainer.closest('.dm-flow-instance-card').data('flow-id');
                             const step_type = contextData.step_type;
@@ -256,8 +254,7 @@
                                     url: dmPipelineBuilder.ajax_url,
                                     type: 'POST',
                                     data: {
-                                        action: 'dm_pipeline_ajax',
-                                        pipeline_action: 'get_flow_config',
+                                        action: 'dm_get_flow_config',
                                         flow_id: flow_id,
                                         nonce: dmPipelineBuilder.pipeline_ajax_nonce
                                     },
@@ -271,8 +268,8 @@
                                             PipelinesPage.requestTemplate('page/flow-step-card', {
                                                 step: {
                                                     step_type: step_type,
-                                                    position: $flowStepContainer.data('step-position') || 0,
-                                                    step_id: step_id,
+                                                    execution_order: $flowStepContainer.data('step-execution-order') || 0,
+                                                    step_id: pipeline_step_id,
                                                     is_empty: false
                                                 },
                                                 flow_config: flowResponse.data.flow_config,
@@ -282,7 +279,7 @@
                                                 // Replace the existing step container with updated version
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
                                                 
-                                                console.log('AI configuration updated in flow step card:', step_id);
+                                                console.log('AI configuration updated in flow step card:', pipeline_step_id);
                                             }).catch((error) => {
                                                 console.error('Failed to update flow step card after AI config save:', error);
                                             });

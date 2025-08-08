@@ -39,16 +39,8 @@ function dm_register_pipeline_scheduler_filters() {
     
     // Scheduler integration removed - flow-schedule modal now uses clean template architecture
     
-    // Register flow execution hooks dynamically
-    add_action('init', function() {
-        // Register master hook for flow execution
-        add_action('dm_execute_flow', function($flow_id) {
-            $scheduler = apply_filters('dm_get_scheduler', null);
-            if ($scheduler) {
-                $scheduler->execute_flow($flow_id);
-            }
-        });
-    });
+    // Legacy dm_execute_flow hook removed - now using dm_run_flow_now for consistent architecture
+    // PipelineScheduler.php directly uses do_action('dm_run_flow_now', $flow_id, 'scheduled')
 }
 
 // Hardcoded modal function removed - flow-schedule now uses clean template architecture

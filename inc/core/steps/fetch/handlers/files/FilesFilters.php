@@ -86,8 +86,7 @@ function dm_register_files_fetch_filters() {
         if ($repository) {
             $deleted_count = $repository->cleanup_old_files(7); // Delete files older than 7 days
             
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->debug('FilesRepository: Scheduled cleanup completed.', [
+            do_action('dm_log', 'debug', 'FilesRepository: Scheduled cleanup completed.', [
                 'deleted_files' => $deleted_count
             ]);
         }
@@ -105,8 +104,7 @@ function dm_register_files_fetch_filters() {
                 'data-machine-files'
             );
             
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->debug('FilesRepository: Weekly cleanup scheduled.');
+            do_action('dm_log', 'debug', 'FilesRepository: Weekly cleanup scheduled.');
         }
     });
     
@@ -138,14 +136,14 @@ function dm_handle_file_upload() {
     }
     
     $file = $_FILES['file'];
-    $logger = apply_filters('dm_get_logger', null);
     
     // Extract flow_step_id from request for proper file isolation
-    $flow_step_id = null;
-    if (!empty($_POST['flow_id']) && !empty($_POST['step_position'])) {
-        $step_id = sanitize_text_field($_POST['step_position']);
-        $flow_id = absint($_POST['flow_id']);
-        $flow_step_id = $step_id . '_' . $flow_id;
+    // Use the flow_step_id provided by the frontend form
+    $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');
+    
+    if (empty($flow_step_id)) {
+        wp_send_json_error(['message' => __('Missing flow step ID from form data.', 'data-machine')]);
+        return;
     }
     
     try {
@@ -190,7 +188,7 @@ function dm_handle_file_upload() {
         // Get file info for response
         $file_info = $repository->get_file_info(basename($stored_path));
         
-        $logger?->debug('File uploaded successfully via AJAX.', [
+        do_action('dm_log', 'debug', 'File uploaded successfully via AJAX.', [
             'filename' => $file['name'],
             'stored_path' => $stored_path,
             'flow_step_id' => $flow_step_id
@@ -202,7 +200,7 @@ function dm_handle_file_upload() {
         ]);
         
     } catch (Exception $e) {
-        $logger?->error('File upload failed.', [
+        do_action('dm_log', 'error', 'File upload failed.', [
             'filename' => $file['name'],
             'error' => $e->getMessage(),
             'flow_step_id' => $flow_step_id
@@ -222,15 +220,11 @@ function dm_get_handler_files() {
         return;
     }
     
-    // Extract flow_step_id from request for proper file isolation
-    $flow_step_id = null;
-    $flow_id = null;
-    if (!empty($_POST['flow_id']) && !empty($_POST['step_position'])) {
-        $step_id = sanitize_text_field($_POST['step_position']);
-        $flow_id = absint($_POST['flow_id']);
-        $flow_step_id = $step_id . '_' . $flow_id;
-    } else {
-        wp_send_json_error(['message' => __('Missing handler context parameters.', 'data-machine')]);
+    // Use the flow_step_id provided by the frontend
+    $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');
+    
+    if (empty($flow_step_id)) {
+        wp_send_json_error(['message' => __('Missing flow step ID from request.', 'data-machine')]);
         return;
     }
     
@@ -256,11 +250,8 @@ function dm_get_handler_files() {
         // Enhance files with processing status
         $files_with_status = [];
         foreach ($files as $file) {
-            $is_processed = $processed_items_service->has_item_been_processed(
-                $flow_id,
-                'files',
-                $file['path']
-            );
+            $is_processed = false;
+            do_action('dm_is_item_processed', $flow_id, 'files', $file['path'], &$is_processed);
             
             $files_with_status[] = [
                 'filename' => $file['filename'],
@@ -281,8 +272,7 @@ function dm_get_handler_files() {
         ]);
         
     } catch (Exception $e) {
-        $logger = apply_filters('dm_get_logger', null);
-        $logger?->error('Failed to get handler files.', [
+        do_action('dm_log', 'error', 'Failed to get handler files.', [
             'error' => $e->getMessage(),
             'flow_step_id' => $flow_step_id
         ]);

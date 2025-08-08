@@ -21,16 +21,9 @@ $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
 $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
-// Extract flow_id and step_id from flow_step_id if needed
-$flow_id = null;
-$step_id = null;
-if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
-    $parts = explode('_', $flow_step_id, 2);
-    if (count($parts) === 2) {
-        $step_id = $parts[0];
-        $flow_id = $parts[1];
-    }
-}
+// Get individual IDs directly from context
+$flow_id = $context['flow_id'] ?? null;
+$pipeline_step_id = $context['pipeline_step_id'] ?? null;
 
 // Template self-discovery - get handler configuration and settings
 $handler_config = [];
@@ -107,6 +100,8 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />
+        <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>" />
+        <input type="hidden" name="pipeline_step_id" value="<?php echo esc_attr($pipeline_step_id); ?>" />
         <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id); ?>" />
         
         <div class="dm-settings-fields">
@@ -114,18 +109,8 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
             // Direct flow_config access for settings persistence
             $current_settings = [];
             
-            // If we have a flow_step_id, get the flow_config and find the settings
-            if (!empty($flow_step_id)) {
-                // Extract flow_id from flow_step_id (step_id_flow_id format)
-                $flow_id = null;
-                if (strpos($flow_step_id, '_') !== false) {
-                    $parts = explode('_', $flow_step_id, 2);
-                    if (count($parts) === 2) {
-                        $flow_id = (int)$parts[1];
-                    }
-                }
-                
-                if ($flow_id) {
+            // If we have a flow_step_id and flow_id, get the settings from flow_config
+            if (!empty($flow_step_id) && !empty($flow_id)) {
                     // Get flow configuration directly
                     $all_databases = apply_filters('dm_get_database_services', []);
                     $db_flows = $all_databases['flows'] ?? null;
@@ -133,19 +118,16 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
                     if ($db_flows) {
                         $flow = $db_flows->get_flow($flow_id);
                         if ($flow && !empty($flow['flow_config'])) {
-                            $flow_config = $flow['flow_config'];
+                            $flow_config = json_decode($flow['flow_config'], true) ?: [];
                             
-                            // Find settings by flow_step_id in the position-based array
-                            foreach ($flow_config as $step) {
-                                if (($step['flow_step_id'] ?? '') === $flow_step_id) {
-                                    $current_settings = $step['handler']['settings'] ?? [];
-                                    break;
-                                }
+                            // Direct access using flow_step_id as key
+                            if (isset($flow_config[$flow_step_id])) {
+                                $current_settings = $flow_config[$flow_step_id]['handler']['settings'] ?? [];
                             }
                         }
                     }
                 }
-            }
+            
             
             // Render settings fields using the Settings class and field renderer
             if (!empty($settings_fields)) {

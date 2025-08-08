@@ -128,8 +128,9 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 // Load AI HTTP Client library for unified multi-provider AI integration
 require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
 
-// Load centralized service filter registration
+// Load centralized filter and action registration
 require_once __DIR__ . '/inc/engine/DataMachineFilters.php';
+require_once __DIR__ . '/inc/engine/DataMachineActions.php';
 
 // PSR-4 Autoloading - no manual includes needed
 
@@ -150,8 +151,11 @@ function run_data_machine() {
     dm_register_database_service_system();
     
     
-    // Register utility filters for external handlers
+    // Register utility filters for data discovery and transformation
     dm_register_utility_filters();
+    
+    // Register core action hooks for centralized operations
+    dm_register_core_actions();
     
     // DataPacket creation system removed - engine uses universal DataPacket constructor
     
@@ -180,72 +184,8 @@ function run_data_machine() {
         $admin_menu_assets->init_hooks();
     }
 
-    // Register hooks for AJAX handlers - dashboard functionality handled by project management AJAX
-
-    // Register single Action Scheduler hook for direct pipeline execution
-    // Eliminates 100 WordPress hook registrations in favor of direct Action Scheduler callbacks
-    // Use filter-based orchestrator access for consistency with pure architecture
-    add_action( 'dm_execute_step', function( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $pipeline_config = null, $previous_data_packets = null ) {
-        $logger = apply_filters('dm_get_logger', null);
-        
-        try {
-            // Call static method directly - ProcessingOrchestrator::execute_step_callback is static
-            $result = \DataMachine\Engine\ProcessingOrchestrator::execute_step_callback( $job_id, $step_position, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets );
-            
-            $logger && $logger->debug('Action Scheduler hook executed step', [
-                'job_id' => $job_id,
-                'step_position' => $step_position,
-                'result' => $result ? 'success' : 'failed'
-            ]);
-                
-                // If step execution failed, mark job as failed
-                if (!$result) {
-                    $all_databases = apply_filters('dm_get_database_services', []);
-                    $db_jobs = $all_databases['jobs'] ?? null;
-                    if ($db_jobs) {
-                        $db_jobs->update_job_status($job_id, 'failed');
-                        $logger && $logger->error('Job marked as failed due to step execution failure', [
-                            'job_id' => $job_id,
-                            'step_position' => $step_position
-                        ]);
-                    }
-                }
-                
-                return $result;
-        } catch (Exception $e) {
-            // Mark job as failed on any exception
-            $all_databases = apply_filters('dm_get_database_services', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->update_job_status($job_id, 'failed');
-            }
-            
-            $logger && $logger->error('Job failed due to exception in Action Scheduler hook', [
-                'job_id' => $job_id,
-                'step_position' => $step_position,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return false;
-        } catch (Throwable $e) {
-            // Catch any fatal errors or other throwables
-            $all_databases = apply_filters('dm_get_database_services', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->update_job_status($job_id, 'failed');
-            }
-            
-            $logger && $logger->error('Job failed due to fatal error in Action Scheduler hook', [
-                'job_id' => $job_id,
-                'step_position' => $step_position,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return false;
-        }
-    }, 10, 6 );
+    // Action Scheduler hook registration moved to DataMachineActions.php for architectural consistency
+    // dm_execute_step hook serves as the core step execution engine for the entire pipeline system
 
 
 }

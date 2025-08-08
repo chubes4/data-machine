@@ -176,9 +176,9 @@ class WordPress {
             }
 
             $post_id = $post->ID;
-            $all_databases = apply_filters('dm_get_database_services', []);
-            $db_processed_items = $all_databases['processed_items'] ?? null;
-            if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'wordpress_local', $post_id)) {
+            $is_processed = false;
+            do_action('dm_is_item_processed', $flow_id, 'wordpress_local', $post_id, &$is_processed);
+            if ($is_processed) {
                 continue;
             }
 
@@ -271,12 +271,11 @@ class WordPress {
         $max_pages = 10;
         $hit_time_limit_boundary = false;
 
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $pipeline_id]);
+        do_action('dm_log', 'debug', 'WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $pipeline_id]);
 
         while ($next_page_url && count($eligible_items_packets) < $process_limit && $pages_fetched < $max_pages) {
             $pages_fetched++;
-            $logger && $logger->debug('WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $pipeline_id]);
+            do_action('dm_log', 'debug', 'WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $pipeline_id]);
 
             // Use HTTP service via filter
             $http_service = apply_filters('dm_get_http_service', null);
@@ -348,9 +347,9 @@ class WordPress {
                     continue;
                 }
                 
-                $all_databases = apply_filters('dm_get_database_services', []);
-                $db_processed_items = $all_databases['processed_items'] ?? null;
-                if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'wordpress_remote_rest', $current_item_id)) {
+                $is_processed = false;
+                do_action('dm_is_item_processed', $flow_id, 'wordpress_remote_rest', $current_item_id, &$is_processed);
+                if ($is_processed) {
                     continue;
                 }
                 
@@ -551,9 +550,9 @@ class WordPress {
                 }
 
                 $current_item_id = $post['ID'];
-                $all_databases = apply_filters('dm_get_database_services', []);
-                $db_processed_items = $all_databases['processed_items'] ?? null;
-                if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'wordpress_remote_airdrop', $current_item_id)) {
+                $is_processed = false;
+                do_action('dm_is_item_processed', $flow_id, 'wordpress_remote_airdrop', $current_item_id, &$is_processed);
+                if ($is_processed) {
                     continue;
                 }
 
@@ -569,8 +568,7 @@ class WordPress {
                         // Basic validation - check if it looks like a URL
                         if (filter_var($first_image_src, FILTER_VALIDATE_URL)) {
                             $image_url = $first_image_src;
-                            $logger = apply_filters('dm_get_logger', null);
-                            $logger && $logger->debug('WordPress Airdrop Input: Using first image from content as fallback.', ['found_url' => $image_url, 'item_id' => $current_item_id]);
+                            do_action('dm_log', 'debug', 'WordPress Airdrop Input: Using first image from content as fallback.', ['found_url' => $image_url, 'item_id' => $current_item_id]);
                         }
                     }
                 }
@@ -607,8 +605,7 @@ class WordPress {
             // Check if we should stop pagination early
             $total_pages = $response_data['max_num_pages'] ?? ($response_headers['x-wp-totalpages'] ?? null);
             if ($total_pages !== null && $current_page >= (int)$total_pages) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
+                do_action('dm_log', 'debug', 'Handler: Reached max pages from API response', ['current_page' => $current_page, 'max_pages' => $total_pages]);
                 break;
             }
 
@@ -619,8 +616,7 @@ class WordPress {
 
             // Stop after 1 empty page (no new items added) for efficiency
             if ($items_added_this_page === 0) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->debug('Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
+                do_action('dm_log', 'debug', 'Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
                 break;
             }
 
@@ -653,8 +649,7 @@ class WordPress {
                 // Basic validation - check if it looks like a URL
                 if (filter_var($first_image_src, FILTER_VALIDATE_URL)) {
                     $image_url = $first_image_src;
-                    $logger = apply_filters('dm_get_logger', null);
-                    $logger && $logger->debug('WordPress Input: Using first image from content as fallback.', ['found_url' => $image_url, 'post_id' => $post_id]);
+                    do_action('dm_log', 'debug', 'WordPress Input: Using first image from content as fallback.', ['found_url' => $image_url, 'post_id' => $post_id]);
                 }
             }
         }
@@ -800,349 +795,10 @@ class WordPress {
     }
 
 
-    /**
-     * Get settings fields specific to local WordPress.
-     *
-     * @return array Settings fields.
-     */
-    private static function get_local_fields(): array {
-        // Get available post types
-        $post_types = get_post_types(['public' => true], 'objects');
-        $post_type_options = [];
-        foreach ($post_types as $post_type) {
-            $post_type_options[$post_type->name] = $post_type->label;
-        }
 
-        // Get categories
-        $categories = get_categories(['hide_empty' => false]);
-        $category_options = [0 => __('All Categories', 'data-machine')];
-        foreach ($categories as $category) {
-            $category_options[$category->term_id] = $category->name;
-        }
 
-        // Get tags
-        $tags = get_tags(['hide_empty' => false]);
-        $tag_options = [0 => __('All Tags', 'data-machine')];
-        foreach ($tags as $tag) {
-            $tag_options[$tag->term_id] = $tag->name;
-        }
 
-        return [
-            'post_type' => [
-                'type' => 'select',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type to fetch from the local site.', 'data-machine'),
-                'options' => $post_type_options,
-            ],
-            'post_status' => [
-                'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the post status to fetch.', 'data-machine'),
-                'options' => [
-                    'publish' => __('Published', 'data-machine'),
-                    'draft' => __('Draft', 'data-machine'),
-                    'pending' => __('Pending', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                    'any' => __('Any', 'data-machine'),
-                ],
-            ],
-            'category_id' => [
-                'type' => 'select',
-                'label' => __('Category', 'data-machine'),
-                'description' => __('Filter by a specific category.', 'data-machine'),
-                'options' => $category_options,
-            ],
-            'tag_id' => [
-                'type' => 'select',
-                'label' => __('Tag', 'data-machine'),
-                'description' => __('Filter by a specific tag.', 'data-machine'),
-                'options' => $tag_options,
-            ],
-            'orderby' => [
-                'type' => 'select',
-                'label' => __('Order By', 'data-machine'),
-                'description' => __('Select the field to order results by.', 'data-machine'),
-                'options' => [
-                    'date' => __('Date', 'data-machine'),
-                    'modified' => __('Modified Date', 'data-machine'),
-                    'title' => __('Title', 'data-machine'),
-                    'ID' => __('ID', 'data-machine'),
-                ],
-            ],
-            'order' => [
-                'type' => 'select',
-                'label' => __('Order', 'data-machine'),
-                'description' => __('Select the order direction.', 'data-machine'),
-                'options' => [
-                    'DESC' => __('Descending', 'data-machine'),
-                    'ASC' => __('Ascending', 'data-machine'),
-                ],
-            ],
-        ];
-    }
 
-    /**
-     * Get settings fields specific to remote REST API.
-     *
-     * @return array Settings fields.
-     */
-    private static function get_remote_rest_fields(): array {
-        return [
-            'api_endpoint_url' => [
-                'type' => 'url',
-                'label' => __('API Endpoint URL', 'data-machine'),
-                'description' => __('Enter the full URL of the WordPress REST API endpoint (e.g., https://example.com/wp-json/wp/v2/posts).', 'data-machine'),
-                'required' => true,
-            ],
-            'data_path' => [
-                'type' => 'text',
-                'label' => __('Data Path (Optional)', 'data-machine'),
-                'description' => __('If the items are nested within the JSON response, specify the path using dot notation (e.g., `data.items`). Leave empty to auto-detect the first array of objects.', 'data-machine'),
-            ],
-        ];
-    }
-
-    /**
-     * Get settings fields specific to remote Airdrop.
-     *
-     * @param array $current_config Current configuration.
-     * @return array Settings fields.
-     */
-    private static function get_remote_airdrop_fields(array $current_config = []): array {
-        // Get remote locations service via filter system
-        $db_remote_locations = $all_databases['remote_locations'] ?? null;
-        if (!$db_remote_locations) {
-            throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
-        }
-        $locations = $db_remote_locations->get_locations_for_current_user();
-
-        $options = [0 => __('Select a Remote Location', 'data-machine')];
-        foreach ($locations as $loc) {
-            $options[$loc->location_id] = $loc->location_name . ' (' . $loc->target_site_url . ')';
-        }
-
-        $remote_post_types = ['post' => 'Posts', 'page' => 'Pages'];
-        $remote_categories = [0 => __('All Categories', 'data-machine')];
-        $remote_tags = [0 => __('All Tags', 'data-machine')];
-
-        $selected_location_id = $current_config['location_id'] ?? 0;
-        $sync_button_disabled = empty($selected_location_id);
-
-        return [
-            'location_id' => [
-                'type' => 'select',
-                'label' => __('Remote Location', 'data-machine'),
-                'description' => __('Select the pre-configured remote WordPress site (using the Data Machine Airdrop helper plugin) to fetch data from.', 'data-machine'),
-                'options' => $options,
-            ],
-            'sync_details' => [
-                'type' => 'button',
-                'label' => __('Sync Remote Details', 'data-machine'),
-                'description' => __('Click to fetch available Post Types, Categories, and Tags from the selected remote location. Save settings after syncing.', 'data-machine'),
-                'button_id' => 'dm-sync-airdrop-details-button',
-                'button_text' => __('Sync Now', 'data-machine'),
-                'button_class' => 'button dm-sync-button' . ($sync_button_disabled ? ' disabled' : ''),
-                'feedback_id' => 'dm-sync-airdrop-feedback'
-            ],
-            'rest_post_type' => [
-                'type' => 'select',
-                'wrapper_id' => 'dm-airdrop-post-type-wrapper',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type to fetch from the remote site.', 'data-machine'),
-                'options' => $remote_post_types,
-            ],
-            'rest_post_status' => [
-                'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the post status to fetch.', 'data-machine'),
-                'options' => [
-                    'publish' => __('Published', 'data-machine'),
-                    'draft' => __('Draft', 'data-machine'),
-                    'pending' => __('Pending', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                    'any' => __('Any', 'data-machine'),
-                ],
-            ],
-            'rest_category' => [
-                'type' => 'select',
-                'wrapper_id' => 'dm-airdrop-category-wrapper',
-                'label' => __('Category', 'data-machine'),
-                'description' => __('Filter by a specific category ID from the remote site.', 'data-machine'),
-                'options' => $remote_categories,
-            ],
-            'rest_tag' => [
-                'type' => 'select',
-                'wrapper_id' => 'dm-airdrop-tag-wrapper',
-                'label' => __('Tag', 'data-machine'),
-                'description' => __('Filter by a specific tag ID from the remote site.', 'data-machine'),
-                'options' => $remote_tags,
-            ],
-            'rest_orderby' => [
-                'type' => 'select',
-                'label' => __('Order By', 'data-machine'),
-                'description' => __('Select the field to order results by.', 'data-machine'),
-                'options' => [
-                    'date' => __('Date', 'data-machine'),
-                    'modified' => __('Modified Date', 'data-machine'),
-                    'title' => __('Title', 'data-machine'),
-                    'ID' => __('ID', 'data-machine'),
-                ],
-            ],
-            'rest_order' => [
-                'type' => 'select',
-                'label' => __('Order', 'data-machine'),
-                'description' => __('Select the order direction.', 'data-machine'),
-                'options' => [
-                    'DESC' => __('Descending', 'data-machine'),
-                    'ASC' => __('Ascending', 'data-machine'),
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Get common settings fields for all source types.
-     *
-     * @return array Settings fields.
-     */
-    private static function get_common_fields(): array {
-        return [
-            'item_count' => [
-                'type' => 'number',
-                'label' => __('Items to Process', 'data-machine'),
-                'description' => __('Maximum number of *new* items to process per run.', 'data-machine'),
-                'min' => 1,
-                'max' => 100,
-            ],
-            'timeframe_limit' => [
-                'type' => 'select',
-                'label' => __('Process Items Within', 'data-machine'),
-                'description' => __('Only consider items published within this timeframe.', 'data-machine'),
-                'options' => [
-                    'all_time' => __('All Time', 'data-machine'),
-                    '24_hours' => __('Last 24 Hours', 'data-machine'),
-                    '72_hours' => __('Last 72 Hours', 'data-machine'),
-                    '7_days'   => __('Last 7 Days', 'data-machine'),
-                    '30_days'  => __('Last 30 Days', 'data-machine'),
-                ],
-            ],
-            'search' => [
-                'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items using a search term.', 'data-machine'),
-            ],
-        ];
-    }
-
-    /**
-     * Sanitize settings for the unified WordPress fetch handler.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     * @throws InvalidArgumentException If validation fails.
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Source type is required
-        $sanitized['source_type'] = sanitize_text_field($raw_settings['source_type'] ?? 'local');
-        if (!in_array($sanitized['source_type'], ['local', 'remote_rest', 'remote_airdrop'])) {
-            throw new InvalidArgumentException(esc_html__('Invalid source type specified for WordPress handler.', 'data-machine'));
-        }
-
-        // Sanitize based on source type
-        switch ($sanitized['source_type']) {
-            case 'local':
-                $sanitized = array_merge($sanitized, $this->sanitize_local_settings($raw_settings));
-                break;
-                
-            case 'remote_rest':
-                $sanitized = array_merge($sanitized, $this->sanitize_remote_rest_settings($raw_settings));
-                break;
-                
-            case 'remote_airdrop':
-                $sanitized = array_merge($sanitized, $this->sanitize_remote_airdrop_settings($raw_settings));
-                break;
-        }
-
-        // Sanitize common fields
-        $sanitized['item_count'] = max(1, absint($raw_settings['item_count'] ?? 1));
-        $sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
-
-        return $sanitized;
-    }
-
-    /**
-     * Sanitize local WordPress settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     */
-    private function sanitize_local_settings(array $raw_settings): array {
-        return [
-            'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
-            'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'publish'),
-            'category_id' => absint($raw_settings['category_id'] ?? 0),
-            'tag_id' => absint($raw_settings['tag_id'] ?? 0),
-            'orderby' => sanitize_text_field($raw_settings['orderby'] ?? 'date'),
-            'order' => sanitize_text_field($raw_settings['order'] ?? 'DESC'),
-        ];
-    }
-
-    /**
-     * Sanitize remote REST API settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     * @throws InvalidArgumentException If API endpoint URL is missing.
-     */
-    private function sanitize_remote_rest_settings(array $raw_settings): array {
-        $api_endpoint_url = esc_url_raw($raw_settings['api_endpoint_url'] ?? '');
-        if (empty($api_endpoint_url)) {
-            throw new InvalidArgumentException(esc_html__('API Endpoint URL is required for Remote REST API source type.', 'data-machine'));
-        }
-
-        return [
-            'api_endpoint_url' => $api_endpoint_url,
-            'data_path' => sanitize_text_field($raw_settings['data_path'] ?? ''),
-        ];
-    }
-
-    /**
-     * Sanitize remote Airdrop settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     * @throws InvalidArgumentException If location ID is missing.
-     */
-    private function sanitize_remote_airdrop_settings(array $raw_settings): array {
-        $location_id = absint($raw_settings['location_id'] ?? 0);
-        if (empty($location_id)) {
-            throw new InvalidArgumentException(esc_html__('Remote Location is required for Airdrop source type.', 'data-machine'));
-        }
-
-        $sanitized = [
-            'location_id' => $location_id,
-            'rest_post_type' => sanitize_text_field($raw_settings['rest_post_type'] ?? 'post'),
-            'rest_post_status' => sanitize_text_field($raw_settings['rest_post_status'] ?? 'publish'),
-            'rest_category' => absint($raw_settings['rest_category'] ?? 0),
-            'rest_tag' => absint($raw_settings['rest_tag'] ?? 0),
-            'rest_orderby' => sanitize_text_field($raw_settings['rest_orderby'] ?? 'date'),
-            'rest_order' => sanitize_text_field($raw_settings['rest_order'] ?? 'DESC'),
-        ];
-
-        // Sanitize custom_taxonomies if present
-        if (!empty($raw_settings['custom_taxonomies']) && is_array($raw_settings['custom_taxonomies'])) {
-            $sanitized_custom_taxonomies = [];
-            foreach ($raw_settings['custom_taxonomies'] as $tax_slug => $term_id) {
-                $sanitized_custom_taxonomies[sanitize_key($tax_slug)] = absint($term_id);
-            }
-            $sanitized['custom_taxonomies'] = $sanitized_custom_taxonomies;
-        }
-
-        return $sanitized;
-    }
 
     /**
      * Calculate cutoff timestamp based on timeframe limit.

@@ -55,7 +55,6 @@ if (in_array($action, $modal_actions)) {
 **Completed Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, specialized AJAX handlers, handler directive system.
 
 **Current Implementation Limitations**:
-- Authentication: Only Twitter has complete OAuth implementation
 - WordPress Formatting: AI outputs markdown format, WordPress handler needs HTML/blocks conversion
 - Handler Testing: ProcessedItems system needs comprehensive testing across all handlers
 
@@ -64,9 +63,9 @@ if (in_array($action, $modal_actions)) {
 ## Database Schema
 
 **Core Tables**:
-- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, flow_config (longtext NULL), error_details (longtext NULL), created_at, started_at, completed_at
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, created_at, started_at, completed_at
 - **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
-- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL), created_at, updated_at
+- **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL)
 - **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
 - **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 
@@ -159,14 +158,14 @@ $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data)
 ## Development Priorities
 
 **Immediate Tasks**:
-1. Complete authentication implementations for social media handlers (Facebook, Threads, Bluesky)
+1. Complete authentication implementations for social media handlers (Threads, Bluesky, Google Sheets, Reddit)
 2. Implement WordPress format conversion (markdown → HTML/blocks) in publish handler
 3. Expand handler directive system to remaining handlers (Twitter, Facebook, etc.)
 4. Comprehensive testing of ProcessedItems system across all handlers
 
 **Working Systems Ready for Extension**:
 - Handler directive framework (WordPress implementation complete)
-- Filter-based authentication system (Twitter implementation complete)
+- Filter-based authentication system (Twitter and Facebook implementations complete)
 - Pipeline execution engine with DataPacket flow
 - Universal modal and template rendering systems
 
@@ -212,7 +211,8 @@ error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 
 **Authentication Implementation Status**:
 - Twitter: ✅ Complete OAuth 1.0a implementation with full workflow
-- Facebook, Threads, Bluesky, Google Sheets, Reddit: ⚠️ Stub implementations with OAuth framework structure
+- Facebook: ✅ Complete OAuth 2.0 implementation with full workflow and page management
+- Threads, Bluesky, Google Sheets, Reddit: ⚠️ Stub implementations with OAuth framework structure
 - WordPress: Uses Remote Locations (site-to-site authentication)
 - Files, RSS: No authentication required
 
@@ -274,12 +274,12 @@ Universal data contract between pipeline steps:
 **Step Implementation**:
 ```php
 class MyStep {
-    public function execute(int $job_id, array $data_arrays = []): bool {
-        foreach ($data_arrays as $data) {
+    public function execute(int $job_id, array $data_packet, array $step_config): array {
+        foreach ($data_packet as $data) {
             $content = $data['content']['body'] ?? '';
             // Process content
         }
-        return true;
+        return $data_packet; // Return updated data packet array
     }
 }
 ```
@@ -313,7 +313,7 @@ $content = apply_filters('dm_render_template', '', 'page/flow-step-card', [
 **Consistent Container Architecture**: Both templates use `dm-step-container` wrapper with consistent data attributes and internal `dm-step-card` structure while providing context-specific functionality.
 
 **Step Type Architecture**: 
-- **AI Steps** (`'ai'`): No handlers, pipeline-level configuration only, `consume_all_packets: true`
+- **AI Steps** (`'ai'`): No handlers, pipeline-level configuration only, process all data packets
 - **Fetch/Publish Steps** (`'fetch'`, `'publish'`): Use handlers, flow-level handler selection and configuration
 - **Handler Logic**: `$step_uses_handlers = ($step_type !== 'ai')` determines whether step shows handler management UI
 

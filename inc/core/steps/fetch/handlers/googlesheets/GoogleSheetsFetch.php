@@ -51,8 +51,7 @@ class GoogleSheetsFetch {
      * @throws Exception If data cannot be retrieved or is invalid.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
-        $logger = apply_filters('dm_get_logger', null);
-        $logger?->debug('Google Sheets Fetch: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
@@ -80,7 +79,7 @@ class GoogleSheetsFetch {
         }
 
         // Get authenticated access token
-        $access_token = $auth_service->get_service($user_id);
+        $access_token = $auth_service->get_service();
         if (is_wp_error($access_token)) {
             throw new Exception(sprintf(
                 /* translators: %s: error message */
@@ -93,7 +92,7 @@ class GoogleSheetsFetch {
         $range_param = urlencode($worksheet_name . '!' . $cell_range);
         $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
         
-        $logger?->debug('Google Sheets Fetch: Fetching spreadsheet data.', [
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: Fetching spreadsheet data.', [
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
             'range' => $cell_range,
@@ -135,12 +134,12 @@ class GoogleSheetsFetch {
 
         $sheet_data = json_decode($response_body, true);
         if (empty($sheet_data['values'])) {
-            $logger?->debug('Google Sheets Fetch: No data found in specified range.', ['pipeline_id' => $pipeline_id]);
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: No data found in specified range.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
         $rows = $sheet_data['values'];
-        $logger?->debug('Google Sheets Fetch: Retrieved spreadsheet data.', [
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: Retrieved spreadsheet data.', [
             'total_rows' => count($rows),
             'pipeline_id' => $pipeline_id
         ]);
@@ -152,7 +151,7 @@ class GoogleSheetsFetch {
         if ($has_header_row && !empty($rows)) {
             $headers = array_map('trim', $rows[0]);
             $data_start_index = 1;
-            $logger?->debug('Google Sheets Fetch: Using header row.', [
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: Using header row.', [
                 'headers' => $headers,
                 'pipeline_id' => $pipeline_id
             ]);
@@ -160,8 +159,6 @@ class GoogleSheetsFetch {
 
         // Process data rows
         $eligible_items_packets = [];
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_processed_items = $all_databases['processed_items'] ?? null;
         $rows_processed = 0;
 
         for ($i = $data_start_index; $i < count($rows) && $rows_processed < $process_limit; $i++) {
@@ -176,8 +173,10 @@ class GoogleSheetsFetch {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
-            if ($db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'googlesheets_fetch', $row_identifier)) {
-                $logger?->debug('Google Sheets Fetch: Skipping already processed row.', [
+            $is_processed = false;
+            do_action('dm_is_item_processed', $flow_id, 'googlesheets_fetch', $row_identifier, &$is_processed);
+            if ($is_processed) {
+                do_action('dm_log', 'debug', 'Google Sheets Fetch: Skipping already processed row.', [
                     'row_identifier' => $row_identifier,
                     'pipeline_id' => $pipeline_id
                 ]);
@@ -236,7 +235,7 @@ class GoogleSheetsFetch {
             $eligible_items_packets[] = $fetch_data_packet;
             $rows_processed++;
             
-            $logger?->debug('Google Sheets Fetch: Processed spreadsheet row.', [
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed spreadsheet row.', [
                 'row_identifier' => $row_identifier,
                 'row_number' => $i + 1,
                 'pipeline_id' => $pipeline_id
@@ -244,7 +243,7 @@ class GoogleSheetsFetch {
         }
 
         $found_count = count($eligible_items_packets);
-        $logger?->debug('Google Sheets Fetch: Finished processing Google Sheets data.', [
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: Finished processing Google Sheets data.', [
             'found_count' => $found_count,
             'total_rows' => count($rows),
             'pipeline_id' => $pipeline_id

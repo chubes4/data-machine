@@ -29,9 +29,6 @@
             // Direct data attribute handler for step selection
             $(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
             
-            // Save Pipeline button click handler
-            $(document).on('click', '.dm-save-pipeline-btn', this.handleSavePipelineClick.bind(this));
-            
             // Pipeline name input change handler for validation
             $(document).on('input', '.dm-pipeline-title-input', this.handlePipelineNameChange.bind(this));
             
@@ -69,8 +66,7 @@
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'add_step',
+                    action: 'dm_add_step',
                     step_type: stepType,
                     pipeline_id: pipelineId,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
@@ -116,64 +112,14 @@
                     FlowBuilder.updateFlowSteps(stepData, pipelineId);
                 }
                 
-                // Update save button state after adding step
-                this.updateSaveButtonState();
+                // Update flow button validation after adding step
+                this.updateFlowButtonState();
             }).catch((error) => {
                 console.error('Failed to render pipeline step template:', error);
                 alert('Error rendering step template');
             });
         },
 
-        /**
-         * Handle Save Pipeline button click
-         */
-        handleSavePipelineClick: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const $pipelineCard = $button.closest('.dm-pipeline-card');
-            const pipelineId = $pipelineCard.data('pipeline-id') || 'new';
-            
-            // Collect pipeline data from UI
-            const pipelineData = this.collectPipelineData($pipelineCard);
-            
-            // Validate data
-            const validation = this.validatePipelineData(pipelineData);
-            if (!validation.isValid) {
-                alert(validation.message);
-                return;
-            }
-            
-            const originalText = $button.text();
-            $button.text(dmPipelineBuilder.strings.saving || 'Saving...').prop('disabled', true);
-            
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'save_pipeline',
-                    pipeline_id: pipelineId,
-                    pipeline_name: pipelineData.pipeline_name,
-                    step_configuration: JSON.stringify(pipelineData.step_configuration),
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.handleSaveSuccess(response.data, $pipelineCard);
-                    } else {
-                        alert(response.data.message || 'Error saving pipeline');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
-                    alert('Error connecting to server');
-                },
-                complete: () => {
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
-        },
 
         /**
          * Collect pipeline data from the UI
@@ -186,18 +132,18 @@
             $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
                 const $step = $(this);
                 const stepType = $step.data('step-type');
-                const stepId = $step.data('step-id'); // Read step_id from DOM
+                const pipelineStepId = $step.data('pipeline-step-id'); // Read pipeline_step_id from DOM
                 const stepLabel = $step.find('.dm-step-title').text().trim(); // Read label from DOM
                 
                 if (stepType) {
                     const stepData = {
                         step_type: stepType,
-                        position: index
+                        execution_order: index
                     };
                     
-                    // Include step_id if available (required for existing steps)
-                    if (stepId) {
-                        stepData.step_id = stepId;
+                    // Include pipeline_step_id if available (required for existing steps)
+                    if (pipelineStepId) {
+                        stepData.step_id = pipelineStepId;
                     }
                     
                     // Include label if available
@@ -236,51 +182,167 @@
             return { isValid: true };
         },
 
-        /**
-         * Handle successful pipeline save
-         */
-        handleSaveSuccess: function(data, $pipelineCard) {
-            // Update UI elements for both new and existing pipelines
-            $pipelineCard.find('.dm-pipeline-title').text(data.pipeline_name);
-            $pipelineCard.find('.dm-step-count').text(data.step_count + ' step' + (data.step_count > 1 ? 's' : ''));
-            $pipelineCard.attr('data-pipeline-id', data.pipeline_id);
-            
-            // Update save button state
-            this.updateSaveButtonState();
-        },
 
         /**
          * Handle pipeline name input change for validation
          */
         handlePipelineNameChange: function(e) {
             const $input = $(e.currentTarget);
+            const $pipelineCard = $input.closest('.dm-pipeline-card');
+            const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
+            
             this.updateSaveButtonState();
             
             // Add visual feedback
             const pipelineName = $input.val().trim();
             if (pipelineName.length > 0) {
                 $input.removeClass('dm-invalid');
+                
+                // Trigger auto-save with debouncing if pipeline has ID
+                if (pipelineId > 0) {
+                    this.debouncedAutoSave(pipelineId);
+                }
             } else {
                 $input.addClass('dm-invalid');
             }
         },
 
         /**
-         * Update save button state based on current form validation
+         * Debounced auto-save for pipeline data
+         * Always performs full pipeline save
          */
-        updateSaveButtonState: function() {
+        debouncedAutoSave: function(pipelineId) {
+            // Clear existing timeout for this pipeline
+            if (this.autoSaveTimeouts && this.autoSaveTimeouts[pipelineId]) {
+                clearTimeout(this.autoSaveTimeouts[pipelineId]);
+            }
+            
+            // Initialize timeouts object if needed
+            if (!this.autoSaveTimeouts) {
+                this.autoSaveTimeouts = {};
+            }
+            
+            // Set new timeout with 2-second debounce
+            this.autoSaveTimeouts[pipelineId] = setTimeout(() => {
+                this.performAutoSave(pipelineId);
+            }, 2000);
+        },
+
+        /**
+         * Perform auto-save AJAX request
+         * Always performs full pipeline save
+         */
+        performAutoSave: function(pipelineId) {
+            // Show saving indicator
+            this.showAutoSaveStatus(pipelineId, 'saving');
+            
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_pipeline_auto_save',
+                    pipeline_id: pipelineId,
+                    nonce: dmPipelineBuilder.pipeline_auto_save_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        if (response.data.debounced) {
+                            // Auto-save was debounced, don't show status
+                            return;
+                        }
+                        
+                        this.showAutoSaveStatus(pipelineId, 'saved', response.data.timestamp);
+                        
+                        // Hide status after 3 seconds
+                        setTimeout(() => {
+                            this.hideAutoSaveStatus(pipelineId);
+                        }, 3000);
+                    } else {
+                        this.showAutoSaveStatus(pipelineId, 'error', null, response.data.message);
+                        console.error('Auto-save failed:', response.data.message);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    this.showAutoSaveStatus(pipelineId, 'error', null, 'Auto-save request failed');
+                    console.error('Auto-save AJAX error:', error);
+                }
+            });
+        },
+
+        /**
+         * Show auto-save status indicator
+         */
+        showAutoSaveStatus: function(pipelineId, status, timestamp = null, message = null) {
+            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+            let $statusIndicator = $pipelineCard.find('.dm-auto-save-status');
+            
+            // Create status indicator if it doesn't exist
+            if ($statusIndicator.length === 0) {
+                $statusIndicator = $('<div class="dm-auto-save-status"></div>');
+                $pipelineCard.find('.dm-pipeline-header').append($statusIndicator);
+            }
+            
+            // Set status content based on type
+            let statusText = '';
+            let statusClass = '';
+            
+            switch (status) {
+                case 'saving':
+                    statusText = 'Saving...';
+                    statusClass = 'dm-status-saving';
+                    break;
+                case 'saved':
+                    const timeAgo = timestamp ? Math.floor((Date.now() / 1000) - timestamp) : 0;
+                    statusText = timeAgo <= 1 ? 'Saved ✓' : `Auto-saved ${timeAgo}s ago`;
+                    statusClass = 'dm-status-saved';
+                    break;
+                case 'error':
+                    statusText = message || 'Auto-save failed';
+                    statusClass = 'dm-status-error';
+                    break;
+            }
+            
+            $statusIndicator
+                .removeClass('dm-status-saving dm-status-saved dm-status-error')
+                .addClass(statusClass)
+                .text(statusText)
+                .show();
+        },
+
+        /**
+         * Hide auto-save status indicator
+         */
+        hideAutoSaveStatus: function(pipelineId) {
+            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+            $pipelineCard.find('.dm-auto-save-status').hide();
+        },
+
+        /**
+         * Update flow button state based on pipeline validation
+         */
+        updateFlowButtonState: function() {
             $('.dm-pipeline-card').each(function() {
                 const $pipelineCard = $(this);
-                const $saveButton = $pipelineCard.find('.dm-save-pipeline-btn');
                 const $nameInput = $pipelineCard.find('.dm-pipeline-title-input');
+                const $flowButton = $pipelineCard.find('.dm-add-flow-btn');
                 
                 // Get current values
                 const pipelineName = $nameInput.val() ? $nameInput.val().trim() : '';
                 const stepCount = $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').length;
+                const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
                 
-                // Enable/disable save button based on validation
-                const isValid = pipelineName.length > 0 && stepCount > 0;
-                $saveButton.prop('disabled', !isValid);
+                // Enable/disable flow button based on validation (name + steps + valid pipeline ID)
+                const canAddFlows = pipelineName.length > 0 && stepCount > 0 && pipelineId > 0;
+                
+                if ($flowButton.length > 0) {
+                    $flowButton.prop('disabled', !canAddFlows);
+                    
+                    if (canAddFlows) {
+                        $flowButton.attr('title', '');
+                    } else {
+                        $flowButton.attr('title', 'Pipeline needs name and steps to add flows');
+                    }
+                }
             });
         },
 
@@ -300,8 +362,7 @@
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'create_draft_pipeline',
+                    action: 'dm_create_pipeline',
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },
                 success: (response) => {
@@ -370,7 +431,7 @@
             }
             
             const deleteType = contextData.delete_type || 'step';
-            const stepId = contextData.step_id;
+            const pipelineStepId = contextData.pipeline_step_id;
             const pipelineId = contextData.pipeline_id;
             
             // Only handle pipeline and step deletions in pipeline builder
@@ -385,8 +446,8 @@
                     return;
                 }
             } else {
-                if (!stepId || !pipelineId) {
-                    console.error('Missing step ID or pipeline ID for step deletion');
+                if (!pipelineStepId || !pipelineId) {
+                    console.error('Missing pipeline step ID or pipeline ID for step deletion');
                     return;
                 }
             }
@@ -396,18 +457,17 @@
             
             // Prepare AJAX data based on deletion type
             const ajaxData = {
-                action: 'dm_pipeline_ajax',
                 nonce: dmPipelineBuilder.pipeline_ajax_nonce
             };
             
             // Set action and parameters based on deletion type
             if (deleteType === 'pipeline') {
-                ajaxData.pipeline_action = 'delete_pipeline';
+                ajaxData.action = 'dm_delete_pipeline';
                 ajaxData.pipeline_id = pipelineId;
             } else {
-                ajaxData.pipeline_action = 'delete_step';
+                ajaxData.action = 'dm_delete_step';
                 ajaxData.pipeline_id = pipelineId;
-                ajaxData.step_id = stepId;
+                ajaxData.step_id = pipelineStepId;
             }
             
             // AJAX call to appropriate endpoint
@@ -428,7 +488,7 @@
                             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
                             
                             // Find step container by step ID for precise targeting
-                            const $stepContainer = $pipelineCard.find(`.dm-step-container[data-step-id="${stepId}"]`);
+                            const $stepContainer = $pipelineCard.find(`.dm-step-container[data-pipeline-step-id="${pipelineStepId}"]`);
                             
                             // Remove step container (includes arrow + card)  
                             $stepContainer.fadeOut(300, function() {
@@ -477,7 +537,7 @@
             // Add new empty step container
             return PipelinesPage.requestTemplate('page/pipeline-step-card', {
                 context: config.context,
-                step: { is_empty: true, step_type: '', position: '' },
+                step: { is_empty: true, step_type: '', execution_order: '' },
                 ...config.templateData
             }).then((emptyStepHtml) => {
                 $container.append(emptyStepHtml);

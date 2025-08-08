@@ -63,22 +63,19 @@ class Reddit {
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
-		$logger = apply_filters('dm_get_logger', null);
-		$logger?->debug('Reddit Fetch: Entering get_fetch_data.', ['pipeline_id' => $pipeline_id]);
+		do_action('dm_log', 'debug', 'Reddit Fetch: Entering get_fetch_data.', ['pipeline_id' => $pipeline_id]);
 
 		if ( empty( $pipeline_id ) ) {
-			$logger?->error('Reddit Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+			do_action('dm_log', 'error', 'Reddit Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
 			throw new Exception(esc_html__( 'Missing pipeline ID provided to Reddit handler.', 'data-machine' ));
 		}
 
 		// Get services via filter-based access (current architecture)
 		$oauth_reddit = $this->oauth_reddit; // Internal auth instance
-		$all_databases = apply_filters('dm_get_database_services', []);
-		$db_processed_items = $all_databases['processed_items'] ?? null;
 
 		// Validate authentication service availability
 		if (!$oauth_reddit) {
-			$logger?->error('Reddit Input: Authentication service not available.', [
+			do_action('dm_log', 'error', 'Reddit Input: Authentication service not available.', [
 				'pipeline_id' => $pipeline_id
 			]);
 			throw new Exception(esc_html__( 'Reddit authentication service not available. Please check system configuration.', 'data-machine' ));
@@ -90,7 +87,7 @@ class Reddit {
 		$flow_id = $current_job ? ($current_job['flow_id'] ?? null) : null;
 		
 		if (!$flow_id) {
-			$logger?->error('Reddit Input: Could not determine flow context for processed items tracking.', [
+			do_action('dm_log', 'error', 'Reddit Input: Could not determine flow context for processed items tracking.', [
 				'pipeline_id' => $pipeline_id
 			]);
 			// Continue without processed items tracking rather than fail completely
@@ -98,7 +95,7 @@ class Reddit {
 
 		// Check if essential dependencies are available
 		if (!$db_processed_items) {
-			$logger?->error('Reddit Input: Required service dependency missing.', [
+			do_action('dm_log', 'error', 'Reddit Input: Required service dependency missing.', [
 				'pipeline_id' => $pipeline_id,
 				'processed_items_missing' => !$db_processed_items
 			]);
@@ -110,49 +107,49 @@ class Reddit {
 		$needs_refresh = false;
 		if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['access_token'])) {
 			 if (!empty($reddit_account['refresh_token'])) {
-				$logger?->debug('Reddit Input: Token missing or empty, refresh needed.', ['pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'debug', 'Reddit Input: Token missing or empty, refresh needed.', ['pipeline_id' => $pipeline_id]);
 				  $needs_refresh = true;
 			 } else {
-				$logger?->error('Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'error', 'Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['pipeline_id' => $pipeline_id]);
 				throw new Exception(esc_html__( 'Reddit account not authenticated or token missing. Please authenticate on the API Keys page.', 'data-machine' ));
 			}
 		} else {
 			 $token_expires_at = $reddit_account['token_expires_at'] ?? 0;
 			if (time() >= ($token_expires_at - 300)) { // Check if expired or within 5 mins
-				$logger?->debug('Reddit Input: Token expired or expiring soon, refresh needed.', ['pipeline_id' => $pipeline_id, 'expiry' => $token_expires_at]);
+				do_action('dm_log', 'debug', 'Reddit Input: Token expired or expiring soon, refresh needed.', ['pipeline_id' => $pipeline_id, 'expiry' => $token_expires_at]);
 				$needs_refresh = true;
 			 }
 		}
 
 		if ($needs_refresh) {
-			$logger?->debug('Reddit Input: Attempting token refresh.', ['pipeline_id' => $pipeline_id]);
+			do_action('dm_log', 'debug', 'Reddit Input: Attempting token refresh.', ['pipeline_id' => $pipeline_id]);
 			// Use the OAuth service
 			$refreshed = $oauth_reddit->refresh_token();
 
 			if (!$refreshed) {
 				// Error already logged by refresh_token method
-				$logger?->error('Reddit Input: Token refresh failed.', ['pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'error', 'Reddit Input: Token refresh failed.', ['pipeline_id' => $pipeline_id]);
 				throw new Exception(esc_html__( 'Failed to refresh expired Reddit access token. Please re-authenticate the Reddit account on the API Keys page.', 'data-machine' ));
 			}
 
 			// Re-fetch updated account data after successful refresh
 			$reddit_account = get_option('dm_reddit_auth_data', []);
 			if (empty($reddit_account['access_token'])) {
-				$logger?->error('Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'error', 'Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
 				 throw new Exception(esc_html__( 'Reddit token refresh seemed successful, but failed to retrieve new token data.', 'data-machine' ));
 			}
-			$logger?->debug('Reddit Input: Token refresh successful.', ['pipeline_id' => $pipeline_id]);
+			do_action('dm_log', 'debug', 'Reddit Input: Token refresh successful.', ['pipeline_id' => $pipeline_id]);
 		}
 
 		// Get the access token directly
 		$access_token = $reddit_account['access_token'] ?? null;
 		if (empty($access_token)) {
-			$logger?->error('Reddit Input: Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
+			do_action('dm_log', 'error', 'Reddit Input: Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
 			throw new Exception(esc_html__( 'Could not obtain valid Reddit access token.', 'data-machine' ));
 		}
 		// --- End Token Retrieval & Refresh ---
 
-		$logger?->debug('Reddit Input: Token check complete.', [
+		do_action('dm_log', 'debug', 'Reddit Input: Token check complete.', [
 			'pipeline_id' => $pipeline_id,
 			'token_present' => !empty($access_token),
 			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
@@ -179,16 +176,16 @@ class Reddit {
 		}
 
 		if ( empty( $subreddit ) ) {
-			$logger?->error('Reddit Input: Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
+			do_action('dm_log', 'error', 'Reddit Input: Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
 			throw new Exception(esc_html__( 'Subreddit name is not configured.', 'data-machine' ));
 		}
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
-			$logger?->error('Reddit Input: Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
+			do_action('dm_log', 'error', 'Reddit Input: Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
 			throw new Exception(esc_html__( 'Invalid subreddit name format.', 'data-machine' ));
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		if (!in_array($sort, $valid_sorts)) {
-			$logger?->error('Reddit Input: Invalid sort parameter.', ['pipeline_id' => $pipeline_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
+			do_action('dm_log', 'error', 'Reddit Input: Invalid sort parameter.', ['pipeline_id' => $pipeline_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
 			throw new Exception(esc_html__('Invalid sort parameter provided. Please check configuration.', 'data-machine'));
 		}
 
@@ -236,7 +233,7 @@ class Reddit {
 			if (isset($log_headers['Authorization'])) {
 				$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
 			}
-			$logger?->debug('Reddit Input: Making API call.', [
+			do_action('dm_log', 'debug', 'Reddit Input: Making API call.', [
 				'pipeline_id' => $pipeline_id,
 				'page' => $pages_fetched,
 				'url' => $reddit_url,
@@ -252,7 +249,7 @@ class Reddit {
 			}
 
 			$body = $http_response['body'];
-			$logger?->debug('Reddit Input: API Response Code', ['code' => $http_response['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
+			do_action('dm_log', 'debug', 'Reddit Input: API Response Code', ['code' => $http_response['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
 
 			// Parse JSON response with error handling
 			$response_data = $http_service->parse_json($body, 'Reddit API');
@@ -261,7 +258,7 @@ class Reddit {
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
-				$logger?->debug('Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'debug', 'Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
 				break; // Stop fetching
 			}
 			// --- End API Response Handling ---
@@ -271,7 +268,7 @@ class Reddit {
 			foreach ($response_data['data']['children'] as $post_wrapper) {
 				$total_checked++;
 				if (empty($post_wrapper['data']) || empty($post_wrapper['data']['id']) || empty($post_wrapper['kind'])) {
-					$logger?->warning('Reddit Input: Skipping post with missing data.', ['subreddit' => $subreddit, 'pipeline_id' => $pipeline_id]);
+					do_action('dm_log', 'warning', 'Reddit Input: Skipping post with missing data.', ['subreddit' => $subreddit, 'pipeline_id' => $pipeline_id]);
 					continue; // Skip malformed posts
 				}
 				$item_data = $post_wrapper['data'];
@@ -280,12 +277,12 @@ class Reddit {
 				// 1. Check timeframe limit first
 				if ($cutoff_timestamp !== null) {
 					if (empty($item_data['created_utc'])) {
-						$logger?->debug('Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 						continue; // Skip if no creation time available
 					}
 					$item_timestamp = (int) $item_data['created_utc'];
 					if ($item_timestamp < $cutoff_timestamp) {
-						$logger?->debug('Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'pipeline_id' => $pipeline_id]);
+						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'pipeline_id' => $pipeline_id]);
 						$batch_hit_time_limit = true;
 						continue; // Skip item if it's too old
 					}
@@ -294,22 +291,26 @@ class Reddit {
 				// 2. Check minimum upvotes (score)
 				if ($min_upvotes > 0) {
 					if (!isset($item_data['score']) || $item_data['score'] < $min_upvotes) {
-						$logger?->debug('Reddit Input: Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'pipeline_id' => $pipeline_id]);
+						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'pipeline_id' => $pipeline_id]);
 						continue; // Skip if not enough upvotes
 					}
 				}
 
 				// 3. Check if already processed
 				// Skip processed items tracking if flow_id not available
-				if ($flow_id && $db_processed_items && $db_processed_items->has_item_been_processed($flow_id, 'reddit', $current_item_id)) {
-					$logger?->debug('Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
-					continue; // Skip if already processed
+				if ($flow_id) {
+					$is_processed = false;
+					do_action('dm_is_item_processed', $flow_id, 'reddit', $current_item_id, &$is_processed);
+					if ($is_processed) {
+						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+						continue; // Skip if already processed
+					}
 				}
 
 				// 4. Check minimum comment count
 				if ($min_comment_count > 0) {
 					if (!isset($item_data['num_comments']) || $item_data['num_comments'] < $min_comment_count) {
-						$logger?->debug('Reddit Input: Skipping item (min comment count).', [
+						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (min comment count).', [
 							'item_id' => $current_item_id,
 							'comments' => $item_data['num_comments'] ?? 'N/A',
 							'min_required' => $min_comment_count,
@@ -332,13 +333,13 @@ class Reddit {
 						}
 					}
 					if (!$found_keyword) {
-						$logger?->debug('Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 						continue; // Skip if no keyword found
 					}
 				}
 
 				// --- Item is ELIGIBLE! ---
-				$logger?->debug('Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'debug', 'Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 
 				// Prepare content string (Title and selftext/body)
 				$title = $item_data['title'] ?? '';
@@ -390,7 +391,7 @@ class Reddit {
 								}
 							}
 							} else {
-								$logger?->warning('Reddit Input: Failed to parse comments JSON.', [
+								do_action('dm_log', 'warning', 'Reddit Input: Failed to parse comments JSON.', [
 									'item_id' => $current_item_id,
 									'comments_url' => $comments_url,
 									'error' => $comments_data->get_error_message(),
@@ -398,7 +399,7 @@ class Reddit {
 								]);
 							}
 						} else {
-							$logger?->warning('Reddit Input: Failed to fetch comments for post.', [
+							do_action('dm_log', 'warning', 'Reddit Input: Failed to fetch comments for post.', [
 								'item_id' => $current_item_id,
 								'comments_url' => $comments_url,
 								'error' => $comments_response->get_error_message(),
@@ -406,7 +407,7 @@ class Reddit {
 							]);
 						}
 					} catch (Exception $e) {
-						$logger?->error('Reddit Input: Exception while fetching comments.', [
+						do_action('dm_log', 'error', 'Reddit Input: Exception while fetching comments.', [
 							'item_id' => $current_item_id,
 							'comments_url' => $comments_url,
 							'exception' => $e->getMessage(),
@@ -497,28 +498,28 @@ class Reddit {
 				array_push($eligible_items_packets, $input_data_packet);
 
 				if (count($eligible_items_packets) >= $process_limit) {
-					$logger?->debug('Reddit Input: Reached process limit.', ['limit' => $process_limit, 'pipeline_id' => $pipeline_id]);
+					do_action('dm_log', 'debug', 'Reddit Input: Reached process limit.', ['limit' => $process_limit, 'pipeline_id' => $pipeline_id]);
 					break; // Stop processing this batch
 				}
 			} // End foreach ($response_data...)
 
 			// Stop pagination if we hit the time limit boundary in the batch
 			if ($batch_hit_time_limit) {
-				$logger?->debug('Reddit Input: Stopping pagination due to hitting time limit within batch.', ['pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'debug', 'Reddit Input: Stopping pagination due to hitting time limit within batch.', ['pipeline_id' => $pipeline_id]);
 				break;
 			}
 
 			// Prepare for the next page fetch
 			$after_param = $response_data['data']['after'] ?? null;
 			if (!$after_param) {
-				$logger?->debug("Reddit Input: No 'after' parameter found, ending pagination.", ['pipeline_id' => $pipeline_id]);
+				do_action('dm_log', 'debug', "Reddit Input: No 'after' parameter found, ending pagination.", ['pipeline_id' => $pipeline_id]);
 				break; // No more pages indicated by Reddit
 			}
 
 		} // End while loop
 
 		$found_count = count($eligible_items_packets);
-		$logger?->debug('Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'pipeline_id' => $pipeline_id]);
+		do_action('dm_log', 'debug', 'Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'pipeline_id' => $pipeline_id]);
 
 		if (empty($eligible_items_packets)) {
 			return [

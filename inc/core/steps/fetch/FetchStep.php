@@ -35,27 +35,26 @@ class FetchStep {
      * @return array Updated data packet array with fetch data added
      */
     public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
-        $logger = apply_filters('dm_get_logger', null);
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
         try {
             // Fetch steps generate data from external sources 
-            $logger->debug('Fetch Step: Starting data collection', [
+            do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [
                 'job_id' => $job_id,
                 'existing_items' => count($data_packet)
             ]);
             
             // Use step configuration directly - no job config introspection needed
             if (empty($step_config)) {
-                $logger->error('Fetch Step: No step configuration provided', ['job_id' => $job_id]);
+                do_action('dm_log', 'error', 'Fetch Step: No step configuration provided', ['job_id' => $job_id]);
                 return [];
             }
 
             $handler_data = $step_config['handler'] ?? null;
             
             if (!$handler_data || empty($handler_data['handler_slug'])) {
-                $logger->error('Fetch Step: Fetch step requires handler configuration', [
+                do_action('dm_log', 'error', 'Fetch Step: Fetch step requires handler configuration', [
                     'job_id' => $job_id,
                     'available_step_config' => array_keys($step_config),
                     'handler_data' => $handler_data
@@ -73,14 +72,14 @@ class FetchStep {
             $fetch_entry = $this->execute_handler($handler, $step_config, $handler_config);
 
             if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
-                $logger->error('Fetch handler returned no content', ['job_id' => $job_id]);
+                do_action('dm_log', 'error', 'Fetch handler returned no content', ['job_id' => $job_id]);
                 return $data_packet; // Return unchanged array
             }
 
             // Add fetch entry to front of data packet array (newest first)
             array_unshift($data_packet, $fetch_entry);
 
-            $logger->debug('Fetch Step: Data collection completed', [
+            do_action('dm_log', 'debug', 'Fetch Step: Data collection completed', [
                 'job_id' => $job_id,
                 'handler' => $handler,
                 'content_length' => strlen($fetch_entry['content']['body'] ?? '') + strlen($fetch_entry['content']['title'] ?? ''),
@@ -91,7 +90,7 @@ class FetchStep {
             return $data_packet;
 
         } catch (\Exception $e) {
-            $logger->error('Fetch Step: Exception during data collection', [
+            do_action('dm_log', 'error', 'Fetch Step: Exception during data collection', [
                 'job_id' => $job_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -111,12 +110,10 @@ class FetchStep {
      * @return array|null Fetch entry array or null on failure
      */
     private function execute_handler(string $handler_name, array $step_config, array $handler_config): ?array {
-        $logger = apply_filters('dm_get_logger', null);
-
         // Get handler object directly from handler system
         $handler = $this->get_handler_object($handler_name);
         if (!$handler) {
-            $logger->error('Fetch Step: Handler not found or invalid', [
+            do_action('dm_log', 'error', 'Fetch Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'step_config' => array_keys($step_config)
             ]);
@@ -131,7 +128,7 @@ class FetchStep {
             $flow_id = $step_config['flow_id'] ?? null;
             
             if (!$pipeline_id) {
-                $logger->error('Fetch Step: Pipeline ID not found in step config', [
+                do_action('dm_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
                     'step_config_keys' => array_keys($step_config)
                 ]);
                 return null;
@@ -190,7 +187,7 @@ class FetchStep {
                 ];
                 
             } catch (\Exception $e) {
-                $logger->error('Fetch Step: Failed to create data entry from handler output', [
+                do_action('dm_log', 'error', 'Fetch Step: Failed to create data entry from handler output', [
                     'handler' => $handler_name,
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,
@@ -203,7 +200,7 @@ class FetchStep {
             return $fetch_entry;
 
         } catch (\Exception $e) {
-            $logger->error('Fetch Step: Handler execution failed', [
+            do_action('dm_log', 'error', 'Fetch Step: Handler execution failed', [
                 'handler' => $handler_name,
                 'pipeline_id' => $pipeline_id ?? 'unknown',
                 'flow_id' => $flow_id ?? 'unknown',

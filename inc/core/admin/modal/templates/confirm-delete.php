@@ -36,8 +36,8 @@ if ($delete_type === 'pipeline') {
     }
 } else {
     // Step deletion - default case
-    if (!isset($step_id) || empty($step_id)) {
-        throw new \InvalidArgumentException('Step deletion requires step_id parameter');
+    if (!isset($pipeline_step_id) || empty($pipeline_step_id)) {
+        throw new \InvalidArgumentException('Step deletion requires pipeline_step_id parameter');
     }
     if (!isset($pipeline_id) || empty($pipeline_id)) {
         throw new \InvalidArgumentException('Step deletion requires pipeline_id parameter');
@@ -165,7 +165,7 @@ if ($delete_type === 'pipeline' && $db_flows && isset($pipeline_id)) {
     <div class="dm-modal-actions">
         <button type="button" class="button button-primary button-large dm-modal-close" 
                 data-template="delete-action"
-                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'>
+                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'>
             <?php if ($delete_type === 'pipeline'): ?>
                 <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
             <?php elseif ($delete_type === 'flow'): ?>

@@ -65,10 +65,9 @@ class JobsStatus {
      *
      * @param int    $job_id       The job ID.
      * @param string $status       The final status ('complete' or 'failed').
-     * @param string|null $error_details Optional error details for logging.
      * @return bool True on success, false on failure.
      */
-    public function complete_job( int $job_id, string $status, ?string $error_details = null ): bool {
+    public function complete_job( int $job_id, string $status ): bool {
         global $wpdb;
         // Update validation to include all final statuses
         $valid_statuses = ['completed', 'failed', 'completed_with_errors', 'completed_no_items'];
@@ -89,18 +88,6 @@ class JobsStatus {
             'completed_at' => current_time( 'mysql', 1 ), // GMT time
         ];
         $format = ['%s', '%s'];
-        
-        // Log error details if provided
-        if ($error_details) {
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->error('Job completed with error details', [
-                    'job_id' => $job_id,
-                    'status' => $status,
-                    'error_details' => $error_details
-                ]);
-            }
-        }
         
         $updated = $wpdb->update(
             $this->table_name,
@@ -123,13 +110,10 @@ class JobsStatus {
             
             // Log flow update failure if logger available
             if (!$flow_updated) {
-                $logger = apply_filters('dm_get_logger', null);
-                if ($logger) {
-                    $logger->warning('Failed to update flow last_run_at', [
-                        'job_id' => $job_id,
-                        'flow_id' => $job->flow_id
-                    ]);
-                }
+                do_action('dm_log', 'warning', 'Failed to update flow last_run_at', [
+                    'job_id' => $job_id,
+                    'flow_id' => $job->flow_id
+                ]);
             }
         }
 
@@ -141,10 +125,9 @@ class JobsStatus {
      *
      * @param int $job_id The job ID.
      * @param string $status The new status.
-     * @param string|null $error_details Optional error details.
      * @return bool True on success, false on failure.
      */
-    public function update_job_status(int $job_id, string $status, ?string $error_details = null): bool {
+    public function update_job_status(int $job_id, string $status): bool {
         global $wpdb;
         
         if (empty($job_id)) {
@@ -153,11 +136,6 @@ class JobsStatus {
         
         $update_data = ['status' => $status];
         $format = ['%s'];
-        
-        if ($error_details !== null) {
-            $update_data['error_details'] = $error_details;
-            $format[] = '%s';
-        }
         
         $updated = $wpdb->update(
             $this->table_name,

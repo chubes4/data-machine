@@ -28,14 +28,6 @@ class BlueskyAuth {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return object|null Logger instance or null if not available
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
 
     /**

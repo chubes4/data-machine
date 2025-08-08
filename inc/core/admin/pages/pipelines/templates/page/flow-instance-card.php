@@ -18,11 +18,26 @@ if (!defined('WPINC')) {
 $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
 $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
 $pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
-$created_at = is_object($flow) ? $flow->created_at : $flow['created_at'];
 
 // Get scheduling info (already decoded by database service)
 $scheduling_config = is_object($flow) ? $flow->scheduling_config : $flow['scheduling_config'];
 $schedule_interval = $scheduling_config['interval'] ?? 'manual';
+
+// Get last run time
+$last_run = $scheduling_config['last_run_at'] ?? null;
+if (!$last_run) {
+    // Fallback: Get latest job for this flow
+    $all_databases = apply_filters('dm_get_database_services', []);
+    $jobs_db = $all_databases['jobs'] ?? null;
+    if ($jobs_db) {
+        $jobs = $jobs_db->get_jobs_for_flow($flow_id);
+        $last_run = !empty($jobs) ? ($jobs[0]['completed_at'] ?? $jobs[0]['started_at']) : null;
+    }
+}
+
+// Get next scheduled run
+$scheduler = apply_filters('dm_get_pipeline_scheduler', null);
+$next_run = $scheduler ? $scheduler->get_next_run_time($flow_id) : null;
 
 // Validate required data - no fallbacks
 if (!isset($pipeline_steps)) {
@@ -95,6 +110,11 @@ if (is_object($flow)) {
     </div>
     
     <div class="dm-flow-meta">
-        <small><?php echo esc_html(sprintf(__('Created %s', 'data-machine'), date('M j, Y', strtotime($created_at)))); ?></small>
+        <small>
+            <?php echo esc_html(sprintf(__('Last: %s | Next: %s', 'data-machine'), 
+                $last_run ? date('M j, Y g:i a', strtotime($last_run)) : __('Never', 'data-machine'),
+                $next_run ? date('M j, Y g:i a', strtotime($next_run)) : __('Manual', 'data-machine')
+            )); ?>
+        </small>
     </div>
 </div>

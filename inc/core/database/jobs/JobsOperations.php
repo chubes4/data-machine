@@ -37,31 +37,18 @@ class JobsOperations {
     /**
      * Create a new pipeline+flow-based job record.
      *
-     * @param array $job_data Job data with pipeline_id, flow_id, flow_config.
+     * @param array $job_data Job data with pipeline_id, flow_id.
      * @return int|false The job ID on success, false on failure.
      */
     public function create_job(array $job_data): int|false {
         global $wpdb;
-        $logger = apply_filters('dm_get_logger', null);
         
         $pipeline_id = absint($job_data['pipeline_id'] ?? 0);
         $flow_id = absint($job_data['flow_id'] ?? 0);
-        $flow_config_json = $job_data['flow_config'] ?? '{}';
         
         // Validate required fields
-        if (empty($pipeline_id) || empty($flow_id) || !is_string($flow_config_json)) {
-            $logger && $logger->error('Invalid pipeline+flow-based job data', [
-                'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'flow_config_type' => gettype($flow_config_json)
-            ]);
-            return false;
-        }
-        
-        // Build step sequence from pipeline configuration
-        $step_sequence = $this->build_step_sequence_for_pipeline($pipeline_id);
-        if (empty($step_sequence)) {
-            $logger && $logger->warning('Cannot create pipeline+flow-based job - no pipeline configuration found', [
+        if (empty($pipeline_id) || empty($flow_id)) {
+            do_action('dm_log', 'error', 'Invalid pipeline+flow-based job data', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id
             ]);
@@ -71,19 +58,15 @@ class JobsOperations {
         $data = [
             'pipeline_id' => $pipeline_id,
             'flow_id' => $flow_id,
-            'status' => 'pending',
-            'flow_config' => $flow_config_json,
-            'step_sequence' => wp_json_encode($step_sequence),
-            'current_step_name' => $step_sequence[0],
-            'created_at' => current_time('mysql', 1)
+            'status' => 'pending'
         ];
         
-        $format = ['%d', '%d', '%s', '%s', '%s', '%s', '%s'];
+        $format = ['%d', '%d', '%s'];
         
         $inserted = $wpdb->insert($this->table_name, $data, $format);
         
         if (false === $inserted) {
-            $logger && $logger->error('Failed to insert pipeline+flow-based job', [
+            do_action('dm_log', 'error', 'Failed to insert pipeline+flow-based job', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
                 'db_error' => $wpdb->last_error
@@ -92,7 +75,7 @@ class JobsOperations {
         }
         
         $job_id = $wpdb->insert_id;
-        $logger && $logger->debug('Successfully created pipeline+flow-based job', [
+        do_action('dm_log', 'debug', 'Successfully created pipeline+flow-based job', [
             'job_id' => $job_id,
             'pipeline_id' => $pipeline_id,
             'flow_id' => $flow_id
@@ -170,58 +153,6 @@ class JobsOperations {
         );
         
         return $wpdb->get_results($sql, ARRAY_A);
-    }
-
-    /**
-     * Build step sequence for a pipeline based on its step configuration.
-     *
-     * @param int|null $pipeline_id The pipeline ID.
-     * @return array Array of step names in execution order.
-     */
-    private function build_step_sequence_for_pipeline( ?int $pipeline_id ): array {
-        if ( ! $pipeline_id ) {
-            return [];
-        }
-        
-        // Get direct database access to pipelines
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        if ( ! $db_pipelines ) {
-            return [];
-        }
-        
-        try {
-            $step_configuration = $db_pipelines->get_pipeline_step_configuration( $pipeline_id );
-            
-            if ( empty( $step_configuration ) ) {
-                return [];
-            }
-            
-            // Build sequence from pipeline step configuration
-            $sequence = [];
-            foreach ( $step_configuration as $step ) {
-                if ( isset( $step['step_type'] ) && isset( $step['position'] ) ) {
-                    $sequence[ $step['position'] ] = $step['step_type'];
-                }
-            }
-            
-            // Sort by position and extract step names
-            ksort( $sequence );
-            $sequence = array_values( $sequence );
-            
-            return $sequence;
-            
-        } catch ( \Exception $e ) {
-            // Log error and return empty array
-            $logger = apply_filters('dm_get_logger', null);
-            if ( $logger ) {
-                $logger->warning( 'Error building step sequence for pipeline', [
-                    'pipeline_id' => $pipeline_id,
-                    'error' => $e->getMessage()
-                ] );
-            }
-            return [];
-        }
     }
 
     /**

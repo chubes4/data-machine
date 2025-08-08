@@ -121,21 +121,21 @@ Pipeline: "Blog Publishing"
 ### Uniform Array Processing Example
 ```php
 // ALL steps receive array of DataPackets (most recent first)
-public function execute(int $job_id, array $data_packets = []): bool {
-    // AI steps (consume_all_packets: true) - use entire array
-    foreach ($data_packets as $packet) {
+public function execute(int $job_id, array $data_packet, array $step_config): array {
+    // AI steps process entire array for complete context
+    foreach ($data_packet as $packet) {
         $content = $packet->content['body'];
         // Process all packets for complete context
     }
     
-    // Most other steps (consume_all_packets: false) - use latest only
-    $latest_packet = $data_packets[0] ?? null;
+    // Most other steps use latest only
+    $latest_packet = $data_packet[0] ?? null;
     if ($latest_packet) {
         $content = $latest_packet->content['body'];
         // Process only most recent data
     }
     
-    return true;
+    return $data_packet; // Return updated data packet array
 }
 ```
 
@@ -1105,7 +1105,7 @@ class MyFetchHandler {
     }
     
     // Required method for fetch handlers
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+    public function fetch_data(array $step_config): array {
         $logger = apply_filters('dm_get_logger', null);
         
         // Process fetch data and return array of data packets
@@ -1124,13 +1124,13 @@ class MyPublishHandler {
     }
     
     // Required method for publish handlers
-    public function handle_publish($data_packet): array {
+    public function publish_data(array $data_packet, array $step_config): bool {
         $logger = apply_filters('dm_get_logger', null);
         
         // Process publish data
         // Your custom publish logic here
         
-        return ['success' => true, 'message' => 'Data sent successfully'];
+        return true;
     }
 }
 
@@ -1188,24 +1188,24 @@ add_filter('dm_get_steps', function($steps) {
 });
 
 class CustomProcessingStep {
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $data_packet, array $step_config): array {
         // Access all services via filters
         $logger = apply_filters('dm_get_logger', null);
         $ai_client = apply_filters('dm_get_ai_http_client', null);
         
         // ALL steps receive uniform array of DataPackets (most recent first)
-        // Steps self-select based on their consume_all_packets flag:
-        // - false (default): use data_packets[0] only
-        // - true: use entire data_packets array
+        // Steps self-select data processing approach:
+        // - Most steps: use data_packet[0] only
+        // - AI steps: use entire data_packet array
         
-        $latest_packet = $data_packets[0] ?? null;
+        $latest_packet = $data_packet[0] ?? null;
         if ($latest_packet) {
             $content = $latest_packet->content['body'];
             // Process latest data for most steps
         }
         
         // Your custom processing logic here
-        return true;
+        return $data_packet; // Return updated data packet array
     }
 }
 ```

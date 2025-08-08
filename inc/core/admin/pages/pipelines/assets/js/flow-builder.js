@@ -106,8 +106,7 @@
             // Collect form data from the modal for add-handler-action endpoint
             const $modal = $('#dm-modal');
             const formData = {
-                action: 'dm_pipeline_ajax',
-                pipeline_action: 'add-handler-action',
+                action: 'dm_add_handler_action',
                 context: JSON.stringify(contextData),
                 nonce: dmPipelineBuilder.pipeline_ajax_nonce
             };
@@ -212,8 +211,7 @@
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'add_flow',
+                    action: 'dm_add_flow',
                     pipeline_id: pipelineId,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },
@@ -258,15 +256,15 @@
             $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
                 const $step = $(this);
                 const stepType = $step.data('step-type');
-                const stepId = $step.data('step-id'); // Read actual step_id from DOM
+                const stepId = $step.data('pipeline-step-id'); // Read actual pipeline_step_id from DOM
                 
                 if (stepType) {
                     pipelineSteps.push({
                         step_type: stepType,
-                        position: index,
+                        execution_order: index,
                         step_config: {},
                         is_empty: false,  // Required by step-card template
-                        step_id: stepId   // Use actual step_id from DOM data attribute
+                        step_id: stepId   // Use actual pipeline_step_id from DOM data attribute
                     });
                 }
             });
@@ -307,8 +305,7 @@
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'run_flow_now',
+                    action: 'dm_run_flow_now',
                     flow_id: flowId,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },
@@ -380,10 +377,7 @@
          * Update specific flow step card after handler configuration
          */
         updateFlowStepCard: function(handlerData) {
-            const { flow_step_id, step_type, handler_slug } = handlerData;
-            
-            // Extract flow_id from flow_step_id (step_id_flow_id format)
-            const flow_id = flow_step_id.split('_').slice(-1)[0];
+            const { flow_step_id, step_type, handler_slug, flow_id } = handlerData;
             
             // Find the specific flow step card to update
             const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
@@ -398,8 +392,7 @@
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'get_flow_config',
+                    action: 'dm_get_flow_config',
                     flow_id: flow_id,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },
@@ -413,7 +406,7 @@
                         PipelinesPage.requestTemplate('page/flow-step-card', {
                             step: {
                                 step_type: step_type,
-                                position: $flowStepContainer.data('step-position') || 0,
+                                execution_order: $flowStepContainer.data('step-execution-order') || 0,
                                 step_id: $flowStepContainer.data('pipeline-step-id'),
                                 is_empty: false
                             },
@@ -477,8 +470,7 @@
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_pipeline_ajax',
-                    pipeline_action: 'delete_flow',
+                    action: 'dm_delete_flow',
                     flow_id: flowId,
                     nonce: dmPipelineBuilder.pipeline_ajax_nonce
                 },

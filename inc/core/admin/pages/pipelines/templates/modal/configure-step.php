@@ -15,7 +15,7 @@ if (!defined('WPINC')) {
 }
 
 // Context auto-resolved by PipelineContextManager filter before template renders
-// All required context variables are available: $step_type, $pipeline_id, $step_id
+// All required context variables are available: $step_type, $pipeline_id, $pipeline_step_id
 
 ?>
 <div class="dm-configure-step-container">
@@ -26,12 +26,12 @@ if (!defined('WPINC')) {
     
     <?php if ($step_type === 'ai'): ?>
         <?php
-        // FAIL FAST - require step_id for unique AI step configuration
-        if (!$step_id) {
+        // FAIL FAST - require pipeline_step_id for unique AI step configuration
+        if (!$pipeline_step_id) {
             echo '<div class="dm-error">
                 <h4>' . __('Configuration Error', 'data-machine') . '</h4>
-                <p>' . __('Step ID is required for AI step configuration.', 'data-machine') . '</p>
-                <p><em>' . __('Missing: step_id', 'data-machine') . '</em></p>
+                <p>' . __('Pipeline Step ID is required for AI step configuration.', 'data-machine') . '</p>
+                <p><em>' . __('Missing: pipeline_step_id', 'data-machine') . '</em></p>
             </div>';
             return;
         }
@@ -49,7 +49,7 @@ if (!defined('WPINC')) {
                 'show_test_connection' => false,
                 'show_save_button' => false, // Hide built-in save button - we provide our own
                 'wrapper_class' => 'ai-http-provider-manager dm-ai-step-config',
-                'step_id' => $step_id, // Unique step-aware configuration
+                'step_id' => $pipeline_step_id, // Unique step-aware configuration
                 'component_configs' => [
                     'temperature_slider' => [
                         // KISS: Only customize what Data Machine specifically needs
@@ -86,7 +86,7 @@ if (!defined('WPINC')) {
         </button>
         <button type="button" class="button button-primary dm-modal-close" 
                 data-template="configure-step-action"
-                data-context='{"step_type":"<?php echo esc_attr($step_type ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>"}'>
+                data-context='{"step_type":"<?php echo esc_attr($step_type ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id ?? ''); ?>"}'>
             <?php esc_html_e('Save Step Configuration', 'data-machine'); ?>
         </button>
     </div>

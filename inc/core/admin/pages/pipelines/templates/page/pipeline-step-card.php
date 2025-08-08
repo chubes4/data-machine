@@ -24,8 +24,8 @@ if (!isset($pipeline_id)) {
 
 $is_empty = $step['is_empty'];
 $step_type = $step['step_type'];
-$step_position = $step['position'];
-$step_id = $step['step_id'] ?? null;
+$step_execution_order = $step['execution_order'];
+$pipeline_step_id = $step['pipeline_step_id'] ?? null;
 $step_data = $step; // Database format: step IS the step data
 
 // Pipeline-specific variables (from original pipeline context branch)
@@ -42,9 +42,9 @@ $has_step_config = !$is_empty && !empty($step_config_info);
 
 ?>
 <div class="dm-step-container" 
-     data-step-position="<?php echo esc_attr($step_position); ?>"
+     data-step-execution-order="<?php echo esc_attr($step_execution_order); ?>"
      data-step-type="<?php echo esc_attr($step_type); ?>"
-     <?php if (!empty($step_id)): ?>data-step-id="<?php echo esc_attr($step_id); ?>"<?php endif; ?>
+     <?php if (!empty($pipeline_step_id)): ?>data-pipeline-step-id="<?php echo esc_attr($pipeline_step_id); ?>"<?php endif; ?>
      data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
 
     <?php
@@ -83,13 +83,13 @@ $has_step_config = !$is_empty && !empty($step_config_info);
                     <!-- Pipeline actions: Delete + Configure -->
                     <button type="button" class="button button-small button-link-delete dm-modal-open" 
                             data-template="confirm-delete"
-                            data-context='{"delete_type":"step","step_type":"<?php echo esc_attr($step_type); ?>","step_id":"<?php echo esc_attr($step_id); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+                            data-context='{"delete_type":"step","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"},'>
                         <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>
                     <?php if ($has_step_config): ?>
                         <button type="button" class="button button-small button-link-configure dm-modal-open" 
                                 data-template="configure-step"
-                                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","step_id":"<?php echo esc_attr($step_id); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"}'>
+                                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"},'>
                             <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>
                         </button>
                     <?php endif; ?>

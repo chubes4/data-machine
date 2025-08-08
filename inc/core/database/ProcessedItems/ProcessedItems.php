@@ -72,14 +72,11 @@ class ProcessedItems {
         // Check if it exists first to avoid unnecessary insert attempts and duplicate key errors
         if ($this->has_item_been_processed($flow_id, $source_type, $item_identifier)) {
             // Item already processed - return true to indicate success (idempotent behavior)
-            $logger = apply_filters('dm_get_logger', null);
-            if ($logger) {
-                $logger->debug("Item already processed, skipping duplicate insert.", [
-                    'flow_id' => $flow_id,
-                    'source_type' => $source_type,
-                    'item_identifier' => substr($item_identifier, 0, 100) . '...'
-                ]);
-            }
+            do_action('dm_log', 'debug', "Item already processed, skipping duplicate insert.", [
+                'flow_id' => $flow_id,
+                'source_type' => $source_type,
+                'item_identifier' => substr($item_identifier, 0, 100) . '...'
+            ]);
             return true;
         }
 
@@ -104,27 +101,21 @@ class ProcessedItems {
              
              // If it's a duplicate key error, treat as success (race condition handling)
              if (strpos($db_error, 'Duplicate entry') !== false) {
-                 $logger = apply_filters('dm_get_logger', null);
-                 if ($logger) {
-                     $logger->debug("Duplicate key detected during insert - item already processed by another process.", [
-                         'flow_id' => $flow_id,
-                         'source_type' => $source_type,
-                         'item_identifier' => substr($item_identifier, 0, 100) . '...'
-                     ]);
-                 }
+                 do_action('dm_log', 'debug', "Duplicate key detected during insert - item already processed by another process.", [
+                     'flow_id' => $flow_id,
+                     'source_type' => $source_type,
+                     'item_identifier' => substr($item_identifier, 0, 100) . '...'
+                 ]);
                  return true; // Treat duplicate as success
              }
              
              // Use Logger Service if available for actual errors
-             $logger = apply_filters('dm_get_logger', null);
-             if ($logger) {
-                 $logger->error("Failed to insert processed item.", [
-                     'flow_id' => $flow_id,
-                     'source_type' => $source_type,
-                     'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
-                     'db_error' => $db_error
-                 ]);
-             }
+             do_action('dm_log', 'error', "Failed to insert processed item.", [
+                 'flow_id' => $flow_id,
+                 'source_type' => $source_type,
+                 'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
+                 'db_error' => $db_error
+             ]);
              return false;
         }
 
@@ -160,12 +151,9 @@ class ProcessedItems {
         dbDelta( $sql );
         
         // Log table creation
-        $logger = apply_filters('dm_get_logger', null);
-        if ( $logger ) {
-            $logger->debug( 'Created processed items database table', [
-                'table_name' => $this->table_name,
-                'action' => 'create_table'
-            ] );
-        }
+        do_action('dm_log', 'debug', 'Created processed items database table', [
+            'table_name' => $this->table_name,
+            'action' => 'create_table'
+        ]);
     }
 }

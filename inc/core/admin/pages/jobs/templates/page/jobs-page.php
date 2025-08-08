@@ -42,7 +42,6 @@ function dm_render_job_row($job) {
     $created_at = is_array($job) ? $job['created_at'] : $job->created_at;
     $started_at = is_array($job) ? ($job['started_at'] ?: '') : ($job->started_at ?: '');
     $completed_at = is_array($job) ? ($job['completed_at'] ?: '') : ($job->completed_at ?: '');
-    $error_details = is_array($job) ? ($job['error_details'] ?? '') : ($job->error_details ?? '');
 
     // Format status display
     $status_display = ucfirst(str_replace('_', ' ', $status));
@@ -52,20 +51,6 @@ function dm_render_job_row($job) {
     $started_display = $started_at ? gmdate('M j, Y g:i a', strtotime($started_at)) : '';
     $completed_display = $completed_at ? gmdate('M j, Y g:i a', strtotime($completed_at)) : '';
     
-    // Determine result/error display
-    $result_display = '';
-    if ($status === 'failed' && $error_details) {
-        $result_display = esc_html($error_details);
-    } elseif ($status === 'completed_with_errors' && $error_details) {
-        $result_display = esc_html($error_details);
-    } elseif ($status === 'completed') {
-        $result_display = 'No new items found to process.';
-    } elseif ($status === 'running') {
-        $current_step = is_array($job) ? ($job['current_step_name'] ?? '') : ($job->current_step_name ?? '');
-        $result_display = $current_step ? "Processing: {$current_step}" : 'Processing...';
-    } elseif ($status === 'pending') {
-        $result_display = 'Waiting to start';
-    }
 
     ?>
     <tr>
@@ -75,7 +60,6 @@ function dm_render_job_row($job) {
         <td><?php echo esc_html($created_display); ?></td>
         <td><?php echo esc_html($started_display); ?></td>
         <td><?php echo esc_html($completed_display); ?></td>
-        <td class="dm-job-result"><?php echo esc_html($result_display); ?></td>
     </tr>
     <?php
 }
@@ -103,7 +87,6 @@ function dm_render_job_row($job) {
                         <th class="dm-col-created"><?php esc_html_e('Created At', 'data-machine'); ?></th>
                         <th class="dm-col-started"><?php esc_html_e('Started At', 'data-machine'); ?></th>
                         <th class="dm-col-completed"><?php esc_html_e('Completed At', 'data-machine'); ?></th>
-                        <th><?php esc_html_e('Result / Error', 'data-machine'); ?></th>
                     </tr>
                 </thead>
                 <tbody>

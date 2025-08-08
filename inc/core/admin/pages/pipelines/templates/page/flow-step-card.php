@@ -16,33 +16,33 @@ if (!defined('WPINC')) {
 
 // Extract required data
 $step_type = $step['step_type'] ?? '';
-$step_position = $step['position'] ?? 0;
+$step_execution_order = $step['execution_order'] ?? 0;
 $flow_id = $flow_id ?? 0;
 $pipeline_id = $pipeline_id ?? 0;
 $is_first_step = $is_first_step ?? false;
 
-// Generate flow-specific step_id using step_id_flow_id pattern
-$pipeline_step_id = $step['step_id'] ?? null;
+// Find flow_step_id from existing flow_config (stored data)
+$pipeline_step_id = $step['pipeline_step_id'] ?? null;
 if (!$pipeline_step_id) {
-    throw new \InvalidArgumentException('flow-step-card template requires step_id from pipeline level to generate flow step ID.');
+    throw new \InvalidArgumentException('flow-step-card template requires pipeline_step_id from step data.');
 }
 
-// Create flow step ID: step_id_flow_id
-$flow_step_id = $pipeline_step_id . '_' . $flow_id;
-
-// Get handler configuration from flow config using position-based access
-// with fallback to flow_step_id search for robustness
-$current_handler = null;
-if (!empty($flow_config[$step_position]['handler'])) {
-    $current_handler = $flow_config[$step_position]['handler'];
-} else {
-    // Fallback: search flow_config for matching flow_step_id
-    foreach ($flow_config as $flow_step) {
-        if (($flow_step['flow_step_id'] ?? '') === $flow_step_id && !empty($flow_step['handler'])) {
-            $current_handler = $flow_step['handler'];
-            break;
-        }
+$flow_step_id = null;
+foreach ($flow_config as $existing_flow_step_id => $step_data) {
+    if (isset($step_data['pipeline_step_id']) && $step_data['pipeline_step_id'] === $pipeline_step_id) {
+        $flow_step_id = $existing_flow_step_id;
+        break;
     }
+}
+
+if (!$flow_step_id) {
+    throw new \InvalidArgumentException('Template bug: flow_step_id not found in flow_config. Calling code must provide proper data.');
+}
+
+// Get handler configuration from flow config using direct flow_step_id lookup
+$current_handler = null;
+if (!empty($flow_config[$flow_step_id]['handler'])) {
+    $current_handler = $flow_config[$flow_step_id]['handler'];
 }
 
 // Get available handlers for this step type
@@ -58,7 +58,7 @@ $handler_configured = !empty($current_handler);
 
 ?>
 <div class="dm-step-container" 
-     data-step-position="<?php echo esc_attr($step_position); ?>"
+     data-step-execution-order="<?php echo esc_attr($step_execution_order); ?>"
      data-step-type="<?php echo esc_attr($step_type); ?>"
      data-flow-id="<?php echo esc_attr($flow_id); ?>"
      data-pipeline-step-id="<?php echo esc_attr($pipeline_step_id); ?>"
@@ -122,7 +122,9 @@ $handler_configured = !empty($current_handler);
                     if ($pipeline_step_id) {
                         $ai_client = apply_filters('dm_get_ai_http_client', null);
                         if ($ai_client) {
-                            $ai_config = $ai_client->get_step_configuration($pipeline_step_id);
+                            // Convert pipeline_step_id to step_id for AI HTTP Client interface boundary
+                            $step_id = $pipeline_step_id;
+                            $ai_config = $ai_client->get_step_configuration($step_id);
                         }
                     }
                     
