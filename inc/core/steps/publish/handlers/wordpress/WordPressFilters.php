@@ -53,6 +53,12 @@ function dm_register_wordpress_publish_filters() {
         return $all_settings;
     });
     
+    // Handler directive registration - pure discovery mode
+    add_filter('dm_get_handler_directives', function($directives) {
+        $directives['wordpress_publish'] = 'When publishing to WordPress, format your response as:\nTITLE: [compelling post title]\nCATEGORY: [single category name]\nTAGS: [comma,separated,tags]\nCONTENT:\n[your content here]';
+        return $directives;
+    });
+    
     // Modal content registration - Pure discovery mode
     add_filter('dm_get_modals', function($modals) {
         // Get WordPress settings for modal content

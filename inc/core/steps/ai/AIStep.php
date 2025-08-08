@@ -78,91 +78,106 @@ class AIStep {
             // AI configuration managed by AI HTTP Client - no validation needed here
             $title = $step_config['title'] ?? 'AI Processing';
 
-            // Get the latest input from data packet array (newest first)
-            $latest_input = $data_packet[0] ?? null;
-            
-            if (!$latest_input) {
+            // Process ALL data packet entries (oldest to newest for logical message flow)
+            if (empty($data_packet)) {
                 $logger->error('AI Step: No data found in data packet array', ['job_id' => $job_id]);
-                return $data_packet; // Return unchanged array
+                return $data_packet;
             }
             
-            $logger->debug('AI Step: Processing latest input', [
+            $logger->debug('AI Step: Processing all data packet inputs', [
                 'job_id' => $job_id,
-                'total_items' => count($data_packet),
-                'latest_type' => $latest_input['type'] ?? 'unknown'
+                'total_inputs' => count($data_packet)
             ]);
 
-
-            // Extract content or file data from the latest input for AI processing
-            $metadata = $latest_input['metadata'] ?? [];
-            $file_path = $metadata['file_path'] ?? '';
+            // Build messages from all data packet entries (reverse order for oldest-to-newest)
+            $messages = [];
+            $data_packet_reversed = array_reverse($data_packet);
             
-            // Check if we have a file to process
-            if ($file_path && file_exists($file_path)) {
-                $logger->debug('AI Step: Processing file input', [
+            foreach ($data_packet_reversed as $index => $input) {
+                $input_type = $input['type'] ?? 'unknown';
+                $metadata = $input['metadata'] ?? [];
+                
+                $logger->debug('AI Step: Processing data packet input', [
                     'job_id' => $job_id,
-                    'file_path' => $file_path,
-                    'mime_type' => $metadata['mime_type'] ?? 'unknown'
+                    'index' => $index,
+                    'input_type' => $input_type,
+                    'has_file_path' => !empty($metadata['file_path'])
                 ]);
                 
-                // DIRECT FILE UPLOAD - NO BASE64 ENCODING
-                $system_prompt = $step_config['system_prompt'] ?? 'Analyze this file and provide insights.';
-                
-                $messages = [
-                    [
+                // Check if this input has a file to process
+                $file_path = $metadata['file_path'] ?? '';
+                if ($file_path && file_exists($file_path)) {
+                    $logger->debug('AI Step: Adding file message', [
+                        'job_id' => $job_id,
+                        'file_path' => $file_path,
+                        'mime_type' => $metadata['mime_type'] ?? 'unknown'
+                    ]);
+                    
+                    // Add file as user message
+                    $messages[] = [
                         'role' => 'user',
                         'content' => [
                             [
                                 'type' => 'file',
                                 'file_path' => $file_path,
                                 'mime_type' => $metadata['mime_type'] ?? ''
-                            ],
-                            [
-                                'type' => 'text',
-                                'text' => $system_prompt
                             ]
                         ]
-                    ]
-                ];
-                
-                $logger->debug('AI Step: File prepared for direct upload processing', [
-                    'job_id' => $job_id,
-                    'file_type' => $metadata['mime_type'] ?? 'unknown'
-                ]);
-                
-            } else {
-                // Process text content using existing logic
-                $content = '';
-                if (isset($latest_input['content'])) {
-                    if (!empty($latest_input['content']['title'])) {
-                        $content .= "Title: " . $latest_input['content']['title'] . "\n\n";
+                    ];
+                    
+                } else {
+                    // Process text content
+                    $content = '';
+                    if (isset($input['content'])) {
+                        if (!empty($input['content']['title'])) {
+                            $content .= "Title: " . $input['content']['title'] . "\n\n";
+                        }
+                        if (!empty($input['content']['body'])) {
+                            $content .= $input['content']['body'];
+                        }
                     }
-                    if (!empty($latest_input['content']['body'])) {
-                        $content .= $latest_input['content']['body'];
+
+                    if (!empty($content)) {
+                        $enhanced_content = trim($content);
+                        
+                        // Add source information for multi-source context
+                        $source_type = $metadata['source_type'] ?? 'unknown';
+                        if ($source_type !== 'unknown') {
+                            $enhanced_content = "Source ({$source_type}):\n{$enhanced_content}";
+                        }
+                        
+                        $messages[] = [
+                            'role' => 'user',
+                            'content' => $enhanced_content
+                        ];
+                        
+                        $logger->debug('AI Step: Added text message', [
+                            'job_id' => $job_id,
+                            'source_type' => $source_type,
+                            'content_length' => strlen($enhanced_content)
+                        ]);
+                    } else {
+                        $logger->debug('AI Step: Skipping empty content input', [
+                            'job_id' => $job_id,
+                            'input_type' => $input_type
+                        ]);
                     }
                 }
-
-                if (empty($content)) {
-                    $logger->error('AI Step: No content or file data found in latest input', [
-                        'job_id' => $job_id,
-                        'latest_input_keys' => array_keys($latest_input),
-                        'has_file_path' => !empty($file_path),
-                        'file_exists' => $file_path ? file_exists($file_path) : false
-                    ]);
-                    return $data_packet; // Return unchanged array
-                }
-
-                // Use content directly without cross-step awareness
-                $enhanced_content = trim($content);
-                
-                // Build AI messages array for text content
-                $messages = [
-                    [
-                        'role' => 'user',
-                        'content' => $enhanced_content
-                    ]
-                ];
             }
+            
+            // Ensure we have at least one message
+            if (empty($messages)) {
+                $logger->error('AI Step: No processable content found in any data packet inputs', [
+                    'job_id' => $job_id,
+                    'total_inputs' => count($data_packet)
+                ]);
+                return $data_packet;
+            }
+            
+            $logger->debug('AI Step: All inputs processed into messages', [
+                'job_id' => $job_id,
+                'total_messages' => count($messages)
+            ]);
             
             // Get step_id for AI HTTP Client step-aware processing
 
@@ -177,8 +192,37 @@ class AIStep {
             }
             $step_id = $step_config['step_id'];
             
+            // Add handler directive for next step if available
+            $handler_directive = $this->get_next_step_directive($step_config, $logger, $job_id);
+            if (!empty($handler_directive)) {
+                // Add directive to system message or create one if none exists
+                $system_message_found = false;
+                foreach ($messages as &$message) {
+                    if ($message['role'] === 'system') {
+                        $message['content'] .= "\n\n" . $handler_directive;
+                        $system_message_found = true;
+                        break;
+                    }
+                }
+                
+                // If no system message exists, create one with the directive
+                if (!$system_message_found) {
+                    array_unshift($messages, [
+                        'role' => 'system',
+                        'content' => $handler_directive
+                    ]);
+                }
+                
+                $logger->debug('AI Step: Handler directive added', [
+                    'job_id' => $job_id,
+                    'directive_length' => strlen($handler_directive)
+                ]);
+            }
+            
             // Prepare AI request with messages for step-aware processing
-            $ai_request = ['messages' => $messages];
+            $ai_request = [
+                'messages' => $messages
+            ];
             
             // Debug: Log step configuration details before AI request
             $step_debug_config = $ai_http_client->get_step_configuration($step_id);
@@ -255,11 +299,73 @@ class AIStep {
             return $data_packet;
         }
     }
-
-
-
-
-
+    
+    /**
+     * Get handler directive for the next step in the pipeline
+     * 
+     * @param array $step_config Step configuration containing pipeline info
+     * @param object $logger Logger instance
+     * @param int $job_id Job ID for logging
+     * @return string Handler directive or empty string
+     */
+    private function get_next_step_directive(array $step_config, $logger, int $job_id): string {
+        // Get pipeline step configuration
+        $pipeline_steps = $step_config['pipeline_step_config'] ?? [];
+        $current_position = $step_config['current_step_position'] ?? -1;
+        
+        // Find next step in pipeline
+        $next_step = null;
+        foreach ($pipeline_steps as $step) {
+            if (($step['position'] ?? 0) > $current_position) {
+                if ($next_step === null || ($step['position'] ?? 0) < ($next_step['position'] ?? 0)) {
+                    $next_step = $step;
+                }
+            }
+        }
+        
+        if (!$next_step) {
+            $logger->debug('AI Step: No next step found for directive', ['job_id' => $job_id]);
+            return '';
+        }
+        
+        // For publish/fetch steps, get handler from flow config
+        if (in_array($next_step['step_type'], ['publish', 'fetch'])) {
+            $flow_config = $step_config['flow_config'] ?? [];
+            $next_step_config = $flow_config['steps'][$next_step['step_type']] ?? [];
+            $handlers = $next_step_config['handlers'] ?? [];
+            
+            // Find enabled handler
+            $enabled_handler = null;
+            foreach ($handlers as $handler_slug => $handler_config) {
+                if (!empty($handler_config['enabled'])) {
+                    $enabled_handler = $handler_slug;
+                    break;
+                }
+            }
+            
+            if ($enabled_handler) {
+                // Get handler directive via filter discovery
+                $all_directives = apply_filters('dm_get_handler_directives', []);
+                $directive = $all_directives[$enabled_handler] ?? '';
+                
+                if (!empty($directive)) {
+                    $logger->debug('AI Step: Found handler directive', [
+                        'job_id' => $job_id,
+                        'next_step_type' => $next_step['step_type'],
+                        'handler' => $enabled_handler,
+                        'directive_preview' => substr($directive, 0, 100) . '...'
+                    ]);
+                    return $directive;
+                }
+            }
+        }
+        
+        $logger->debug('AI Step: No directive found for next step', [
+            'job_id' => $job_id,
+            'next_step_type' => $next_step['step_type'] ?? 'unknown'
+        ]);
+        return '';
+    }
 
     /**
      * AI Step Configuration handled by AI HTTP Client Library

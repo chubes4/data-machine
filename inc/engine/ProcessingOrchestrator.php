@@ -206,6 +206,12 @@ class ProcessingOrchestrator {
 			$merged_step_config['pipeline_id'] = $pipeline_id;
 			$merged_step_config['flow_id'] = $flow_id;
 			
+			// Add pipeline context for AI steps only (for directive discovery)
+			if ($step_type === 'ai') {
+				$merged_step_config['pipeline_step_config'] = $pipeline_steps;
+				$merged_step_config['current_step_position'] = $step_position;
+			}
+			
 			// Pass merged step configuration directly - steps should not introspect job config
 			// Steps receive only their own configuration, not entire pipeline or flow config
 			$data_packet = $step_instance->execute( $job_id, $data_packet, $merged_step_config );

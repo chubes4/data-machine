@@ -178,6 +178,10 @@ function dm_register_utility_filters() {
         return $all_settings; // Components self-register via filters
     }, 10, 1);
     
+    // Pure discovery handler directives system - cross-component AI directive discovery
+    // Usage: $all_directives = apply_filters('dm_get_handler_directives', []); $directive = $all_directives[$handler_slug] ?? '';
+    add_filter('dm_get_handler_directives', '__return_empty_array');
+    
 }
 
 

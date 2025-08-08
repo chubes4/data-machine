@@ -93,10 +93,6 @@ function dm_register_ai_step_filters() {
     // Modal registration removed - configure-step modal already registered in PipelinesFilters.php
     // The shared configure-step modal handles all step types via template switching
     
-    // Future AI-specific filters can be added here following the same pattern
-    // Examples:
-    // - dm_validate_ai_output (for AI response validation)
-    // - dm_process_ai_context (for context preprocessing)
 }
 
 /**
