@@ -50,11 +50,16 @@ if (in_array($action, $modal_actions)) {
 
 ## Current Status
 
-**Production Ready**: All core systems operational and validated.
+**Core Systems Status**: Production ready with complete filter-based architecture, pipeline execution, AI integration, and handler framework.
 
-**Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, specialized AJAX handlers.
+**Completed Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, specialized AJAX handlers, handler directive system.
 
-**Quality**: Zero known critical issues, robust security patterns, consistent architecture throughout.
+**Current Implementation Limitations**:
+- Authentication: Only Twitter has complete OAuth implementation
+- WordPress Formatting: AI outputs markdown format, WordPress handler needs HTML/blocks conversion
+- Handler Testing: ProcessedItems system needs comprehensive testing across all handlers
+
+**Architecture Quality**: Zero known critical architectural issues, robust security patterns, consistent filter-based design throughout.
 
 ## Database Schema
 
@@ -104,6 +109,10 @@ $twitter_auth = $all_auth['twitter'] ?? null;
 $all_settings = apply_filters('dm_get_handler_settings', []);
 $twitter_settings = $all_settings['twitter'] ?? null;
 
+// Handler directives - Pure discovery with filtering
+$all_directives = apply_filters('dm_get_handler_directives', []);
+$wordpress_directive = $all_directives['wordpress_publish'] ?? null;
+
 // Context services - Parameter-based discovery
 $job_context = apply_filters('dm_get_context', null, $job_id);
 
@@ -147,6 +156,20 @@ $template_content = apply_filters('dm_render_template', '', 'modal/handler-setti
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
 ```
 
+## Development Priorities
+
+**Immediate Tasks**:
+1. Complete authentication implementations for social media handlers (Facebook, Threads, Bluesky)
+2. Implement WordPress format conversion (markdown → HTML/blocks) in publish handler
+3. Expand handler directive system to remaining handlers (Twitter, Facebook, etc.)
+4. Comprehensive testing of ProcessedItems system across all handlers
+
+**Working Systems Ready for Extension**:
+- Handler directive framework (WordPress implementation complete)
+- Filter-based authentication system (Twitter implementation complete)
+- Pipeline execution engine with DataPacket flow
+- Universal modal and template rendering systems
+
 ## Development Commands
 
 ```bash
@@ -185,7 +208,13 @@ error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 - Fetch: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
 - Publish: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (6 handlers)
 - Receiver: Webhook framework (stub implementation)
-- Total: 11 active handlers with unified authentication and settings patterns
+- Total: 11 active handlers
+
+**Authentication Implementation Status**:
+- Twitter: ✅ Complete OAuth 1.0a implementation with full workflow
+- Facebook, Threads, Bluesky, Google Sheets, Reddit: ⚠️ Stub implementations with OAuth framework structure
+- WordPress: Uses Remote Locations (site-to-site authentication)
+- Files, RSS: No authentication required
 
 **Admin**: AJAX pipeline builder, job management, universal modal system, universal template rendering
 
@@ -287,6 +316,39 @@ $content = apply_filters('dm_render_template', '', 'page/flow-step-card', [
 - **AI Steps** (`'ai'`): No handlers, pipeline-level configuration only, `consume_all_packets: true`
 - **Fetch/Publish Steps** (`'fetch'`, `'publish'`): Use handlers, flow-level handler selection and configuration
 - **Handler Logic**: `$step_uses_handlers = ($step_type !== 'ai')` determines whether step shows handler management UI
+
+## Handler Directive System
+
+**Elegant Filter-Based Architecture**: Handlers register AI-specific directives via `dm_get_handler_directives` filter that AI steps automatically inject into system prompts.
+
+**Implementation Pattern**:
+```php
+// Handler registration in handler filters file
+add_filter('dm_get_handler_directives', function($directives) {
+    $directives['wordpress_publish'] = 'When publishing to WordPress, format your response as:\nTITLE: [compelling post title]\nCATEGORY: [single category name]\nTAGS: [comma,separated,tags]\nCONTENT:\n[your content here]';
+    return $directives;
+});
+
+// Automatic injection in AI step processing
+$all_directives = apply_filters('dm_get_handler_directives', []);
+$handler_directive = $all_directives[$next_step['handler']['handler_slug']] ?? '';
+if (!empty($handler_directive)) {
+    $system_prompt .= "\n\n" . $handler_directive;
+}
+```
+
+**Current Working Implementation**:
+- WordPress handler: Complete directive for structured content formatting
+- Framework supports all handlers via consistent registration pattern
+- AI steps automatically discover and inject appropriate directives based on pipeline step sequence
+- Zero configuration required - handlers self-register directives via filter system
+
+**Architecture Benefits**:
+- **Contextual AI Guidance**: AI receives specific formatting instructions for target platforms
+- **Self-Registering**: Handlers declare their own AI requirements via filters
+- **Pipeline-Aware**: AI steps automatically detect next step handler and apply appropriate directive
+- **Extensible**: Any handler can register custom AI directives following the same pattern
+- **Zero Configuration**: Works automatically when handlers register directives - no manual setup required
 
 ## Arrow Rendering Architecture
 
