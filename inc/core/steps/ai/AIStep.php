@@ -136,7 +136,7 @@ class AIStep {
                 return false;
             }
             
-            $pipeline_id = $this->get_pipeline_id_from_job($job);
+            $pipeline_id = $job_config['pipeline_id'] ?? null;
             $enhanced_request = $context_bridge->build_ai_request($aggregated_context, $step_config, $pipeline_id);
             
             if (empty($enhanced_request['messages'])) {
@@ -149,9 +149,17 @@ class AIStep {
             // Use the most recent packet as the primary input for output processing
             $input_packet = end($all_packets);
 
-            // Use existing step ID from pipeline configuration for AI HTTP Client step-aware configuration
-            // Pipeline steps already have stable UUID4 step_ids for consistent AI settings
-            $step_id = $step_config['step_id'] ?? "fallback_{$job_id}_ai";
+            // Use step ID from pipeline configuration - required for AI HTTP Client step-aware configuration
+            // Pipeline steps must have stable UUID4 step_ids for consistent AI settings
+            if (empty($step_config['step_id'])) {
+                $logger->error('AI Step: Missing required step_id from pipeline configuration', [
+                    'job_id' => $job_id,
+                    'pipeline_id' => $pipeline_id,
+                    'step_config' => $step_config
+                ]);
+                throw new \RuntimeException("AI Step requires step_id from pipeline configuration for step-aware AI client operation");
+            }
+            $step_id = $step_config['step_id'];
             
             // Prepare AI request with messages for step-aware processing
             $ai_request = ['messages' => $messages];
@@ -254,19 +262,6 @@ class AIStep {
 
 
 
-    /**
-     * Get pipeline ID from job context
-     * 
-     * @param object|null $job Job object
-     * @return int|null Pipeline ID or null if not found
-     */
-    private function get_pipeline_id_from_job(?object $job): ?int {
-        if (!$job) {
-            return null;
-        }
-        
-        return $job->pipeline_id ?? null;
-    }
 
 
     /**

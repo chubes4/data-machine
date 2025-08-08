@@ -8,6 +8,225 @@
  * @since 1.0.0
  */
 
+/* ===== FILES HANDLER MODAL STYLES ===== */
+
+/* Drag and drop zone */
+#dm-file-drop-zone {
+    border: 2px dashed #c3c4c7;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+#dm-file-drop-zone:hover {
+    border-color: #0073aa;
+    background: #f6f9fc;
+}
+
+#dm-file-drop-zone.dm-drag-over {
+    border-color: #00a32a;
+    background: #f0f8f0;
+    border-style: solid;
+}
+
+/* File upload interface */
+.dm-file-upload-interface {
+    padding: 20px;
+}
+
+.dm-file-upload-label {
+    display: block;
+    cursor: pointer;
+    text-align: center;
+}
+
+.dm-file-upload-icon {
+    font-size: 48px;
+    color: #0073aa;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.dm-file-upload-text {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #1d2327;
+}
+
+.dm-file-upload-hint {
+    display: block;
+    font-size: 12px;
+    color: #646970;
+    margin-bottom: 12px;
+}
+
+.dm-file-upload-formats {
+    display: block;
+    font-size: 11px;
+    color: #8c8f94;
+    font-style: italic;
+}
+
+.dm-file-input {
+    display: none;
+}
+
+/* Upload progress */
+.dm-file-upload-progress {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f0f8f0;
+    border-radius: 4px;
+}
+
+.dm-upload-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e1e1e1;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.dm-upload-progress-fill {
+    height: 100%;
+    background: #00a32a;
+    width: 0%;
+    animation: progress-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+    0%, 100% { width: 0%; }
+    50% { width: 100%; }
+}
+
+.dm-upload-progress-text {
+    font-size: 12px;
+    color: #135e96;
+    text-align: center;
+    display: block;
+}
+
+/* File status section */
+.dm-uploaded-files-section {
+    margin-top: 20px;
+    border-top: 1px solid #e1e1e1;
+    padding-top: 20px;
+}
+
+.dm-files-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dm-files-section-header h5 {
+    margin: 0;
+    color: #1d2327;
+}
+
+.dm-refresh-files .dashicons {
+    font-size: 14px;
+    line-height: 1;
+    margin-right: 4px;
+}
+
+/* File states */
+.dm-files-state {
+    padding: 20px;
+    text-align: center;
+    color: #646970;
+}
+
+.dm-loading-files .dashicons {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.dm-empty-files {
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.dm-empty-icon {
+    font-size: 48px;
+    color: #c3c4c7;
+    margin-bottom: 10px;
+}
+
+.dm-empty-message {
+    margin: 0 0 8px 0;
+    color: #50575e;
+    font-weight: 500;
+}
+
+.dm-empty-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #8c8f94;
+}
+
+/* File status table */
+.dm-file-status-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dm-file-status-table th,
+.dm-file-status-table td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.dm-file-status-table th {
+    background: #f6f7f7;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.dm-file-row.dm-file-status-processed {
+    background: #f8fff8;
+}
+
+.dm-file-row.dm-file-status-pending {
+    background: #fffef7;
+}
+
+.dm-file-name {
+    font-weight: 500;
+}
+
+.dm-file-actions-col {
+    width: 60px;
+    text-align: center;
+}
+
+.dm-delete-file {
+    padding: 4px 6px;
+    min-height: unset;
+    line-height: 1;
+}
+
+.dm-delete-file .dashicons {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* Utility classes */
+.dm-spin {
+    animation: spin 1s linear infinite;
+}
+
 /* ===== STEP SELECTION MODAL ===== */
 
 /* Step selection container */
@@ -800,6 +1019,423 @@
 .dm-file-size {
     font-size: 12px;
     color: #666;
+}
+
+/* ===== ENHANCED FILES HANDLER MODAL STYLES ===== */
+
+/* Main file upload interface */
+.dm-file-upload-interface {
+    margin-top: 20px;
+}
+
+/* Drag and drop zone */
+.dm-file-drop-zone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafafa;
+    position: relative;
+}
+
+.dm-file-drop-zone:hover {
+    border-color: #0073aa;
+    background: #f0f8ff;
+    transform: translateY(-1px);
+}
+
+.dm-file-drop-zone.dragover {
+    border-color: #0073aa;
+    background: #e8f4ff;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.1);
+}
+
+/* Upload icon */
+.dm-file-upload-icon {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 15px;
+    display: block;
+    transition: color 0.3s ease;
+}
+
+.dm-file-drop-zone:hover .dm-file-upload-icon {
+    color: #0073aa;
+}
+
+/* Upload instructions */
+.dm-file-upload-hint {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.dm-file-upload-formats {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+}
+
+/* Progress indicators */
+.dm-upload-progress {
+    margin-top: 20px;
+    display: none;
+}
+
+.dm-upload-progress.active {
+    display: block;
+}
+
+.dm-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e1e1e1;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.dm-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0073aa, #005a87);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.dm-progress-text {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin: 0;
+}
+
+/* File status section */
+.dm-file-status-section {
+    margin-top: 30px;
+    border-top: 1px solid #e1e1e1;
+    padding-top: 20px;
+}
+
+.dm-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.dm-section-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+}
+
+.dm-refresh-files {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dm-refresh-files:hover {
+    border-color: #0073aa;
+    color: #0073aa;
+    background: #f8f9fa;
+}
+
+.dm-refresh-files .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+/* Loading and empty states */
+.dm-loading-files {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+}
+
+.dm-loading-files .dashicons {
+    font-size: 24px;
+    margin-bottom: 10px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.dm-empty-files {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+    background: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+}
+
+.dm-empty-files .dashicons {
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: #ccc;
+    display: block;
+}
+
+.dm-empty-files p {
+    margin: 0;
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* File status table */
+.dm-files-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.dm-files-table thead {
+    background: #f8f9fa;
+}
+
+.dm-files-table th,
+.dm-files-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e1e1e1;
+    font-size: 14px;
+}
+
+.dm-files-table th {
+    font-weight: 600;
+    color: #333;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dm-files-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dm-files-table tbody tr:hover {
+    background: #fafafa;
+}
+
+/* File list body and rows */
+.dm-file-list-body {
+    /* Inherits table styling */
+}
+
+.dm-file-row {
+    transition: background-color 0.2s ease;
+}
+
+/* File status indicators */
+.dm-file--pending {
+    border-left: 4px solid #f39c12;
+}
+
+.dm-file--pending .dm-file-status {
+    color: #f39c12;
+    font-weight: 600;
+}
+
+.dm-file--processed {
+    border-left: 4px solid #27ae60;
+}
+
+.dm-file--processed .dm-file-status {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+/* File actions */
+.dm-file-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.dm-file-actions .button {
+    font-size: 12px;
+    padding: 4px 8px;
+    height: auto;
+    line-height: 1.2;
+}
+
+.dm-file-actions .button-small {
+    min-height: 26px;
+}
+
+/* Processing options section */
+.dm-processing-options {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e1e1;
+}
+
+.dm-processing-options h4 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+}
+
+.dm-processing-field {
+    margin-bottom: 15px;
+}
+
+.dm-processing-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.dm-processing-field input,
+.dm-processing-field select,
+.dm-processing-field textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.dm-processing-field input:focus,
+.dm-processing-field select:focus,
+.dm-processing-field textarea:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+.dm-processing-field .description {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+/* File size formatting */
+.dm-file-size {
+    color: #888;
+    font-size: 13px;
+}
+
+/* File name styling */
+.dm-file-name {
+    font-weight: 500;
+    color: #333;
+    max-width: 200px;
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    line-height: 1.3;
+}
+
+/* File type icons in table */
+.dm-files-table .dashicons {
+    margin-right: 8px;
+    color: #666;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Status badges */
+.dm-file-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #f8f9fa;
+}
+
+.dm-file--pending .dm-file-status {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.dm-file--processed .dm-file-status {
+    background: #d4edda;
+    color: #155724;
+}
+
+.dm-file-status .dashicons {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    margin-right: 0;
+}
+
+/* Responsive adjustments for files interface */
+@media (max-width: 768px) {
+    .dm-file-drop-zone {
+        padding: 30px 15px;
+    }
+    
+    .dm-file-upload-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+    
+    .dm-file-upload-hint {
+        font-size: 15px;
+    }
+    
+    .dm-files-table {
+        font-size: 13px;
+    }
+    
+    .dm-files-table th,
+    .dm-files-table td {
+        padding: 10px 12px;
+    }
+    
+    .dm-section-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .dm-refresh-files {
+        align-self: flex-start;
+    }
+    
+    /* Stack file actions vertically on mobile */
+    .dm-file-actions {
+        flex-direction: column;
+        gap: 5px;
+        align-items: stretch;
+    }
+    
+    .dm-file-actions .button {
+        width: 100%;
+        text-align: center;
+    }
 }
 
 /* ===== UTILITY CLASSES ===== */

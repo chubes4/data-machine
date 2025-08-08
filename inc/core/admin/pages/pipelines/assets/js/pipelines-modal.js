@@ -19,7 +19,10 @@
      * Handles business logic for pipeline-specific modal interactions.
      * Works with buttons and content created by PHP modal templates.
      */
-    window.dmPipelineModal = {
+    
+    // Preserve WordPress-localized data and extend with methods
+    window.dmPipelineModal = window.dmPipelineModal || {};
+    Object.assign(window.dmPipelineModal, {
 
         /**
          * Initialize pipeline modal content handlers
@@ -48,8 +51,17 @@
             // Schedule form interactions within modal content
             $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
             
-            // Files handler upload functionality
-            $(document).on('click', '#dm-upload-files', this.handleFileUpload.bind(this));
+            // Files handler auto-upload functionality
+            $(document).on('change', '#dm-file-upload', this.handleFileAutoUpload.bind(this));
+            $(document).on('click', '.dm-refresh-files', this.handleRefreshFiles.bind(this));
+            
+            // Drag and drop functionality
+            $(document).on('dragover', '#dm-file-drop-zone', this.handleDragOver.bind(this));
+            $(document).on('dragleave', '#dm-file-drop-zone', this.handleDragLeave.bind(this));
+            $(document).on('drop', '#dm-file-drop-zone', this.handleFileDrop.bind(this));
+            
+            // Load existing files when modal opens for files handler
+            $(document).on('dm-core-modal-content-loaded', this.handleModalOpened.bind(this));
         },
 
         /**
@@ -231,69 +243,156 @@
         },
 
         /**
-         * Handle file upload for Files handler
+         * Handle modal content loaded event to load existing files  
+         * Triggered by dm-core-modal-content-loaded event from core modal system
          */
-        handleFileUpload: function(e) {
+        handleModalOpened: function(e, title, content) {
+            // Check if this is a files handler modal
+            if ($('#dm-file-upload').length > 0) {
+                // Small delay to ensure template is fully rendered
+                setTimeout(() => {
+                    this.loadExistingFiles();
+                }, 100);
+            }
+        },
+
+        /**
+         * Handle refresh files button click
+         */
+        handleRefreshFiles: function(e) {
             e.preventDefault();
-            
             const $button = $(e.currentTarget);
-            const $fileInput = $('#dm-file-upload');
-            const $fileList = $('#dm-uploaded-files-list');
+            
+            // Show loading state on button
+            const originalText = $button.html();
+            $button.html('<span class="dashicons dashicons-update-alt dm-spin"></span> Refreshing...');
+            $button.prop('disabled', true);
+            
+            this.loadExistingFiles().then(() => {
+                // Restore button
+                $button.html(originalText);
+                $button.prop('disabled', false);
+            });
+        },
+
+        /**
+         * Handle drag over event
+         */
+        handleDragOver: function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(e.currentTarget).addClass('dm-drag-over');
+        },
+
+        /**
+         * Handle drag leave event
+         */
+        handleDragLeave: function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(e.currentTarget).removeClass('dm-drag-over');
+        },
+
+        /**
+         * Handle file drop event
+         */
+        handleFileDrop: function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(e.currentTarget).removeClass('dm-drag-over');
+            
+            const files = e.originalEvent.dataTransfer.files;
+            if (files && files.length > 0) {
+                this.uploadFiles(files);
+            }
+        },
+
+        /**
+         * Handle auto file upload when files are selected
+         */
+        handleFileAutoUpload: function(e) {
+            const $fileInput = $(e.currentTarget);
             const files = $fileInput[0].files;
             
             if (!files || files.length === 0) {
-                alert('Please select files to upload.');
                 return;
             }
             
-            // Show loading state
-            const originalText = $button.text();
-            $button.text('Uploading...').prop('disabled', true);
+            this.uploadFiles(files);
+            
+            // Reset file input
+            $fileInput.val('');
+        },
+
+        /**
+         * Upload multiple files with progress tracking
+         */
+        uploadFiles: function(files) {
+            if (!files || files.length === 0) {
+                return;
+            }
+            
+            // Get handler context from container data attributes
+            const handlerContext = this.getHandlerContextFromContainer();
+            if (!handlerContext) {
+                console.error('DM Pipeline Modal: No handler context available for file upload');
+                return;
+            }
+            
+            // Show upload progress
+            this.showUploadProgress(true);
             
             // Upload each file
             const uploadPromises = [];
             for (let i = 0; i < files.length; i++) {
-                uploadPromises.push(this.uploadSingleFile(files[i]));
+                uploadPromises.push(this.uploadSingleFile(files[i], handlerContext));
             }
             
             Promise.all(uploadPromises)
                 .then(results => {
-                    // Add successful uploads to the list
-                    results.forEach(result => {
-                        if (result.success) {
-                            this.addFileToList(result.data.file_info);
-                        }
-                    });
-                    
-                    // Reset form
-                    $fileInput.val('');
-                    $button.text(originalText).prop('disabled', false);
+                    // Hide progress
+                    this.showUploadProgress(false);
                     
                     // Show success message
                     const successCount = results.filter(r => r.success).length;
+                    const failedCount = results.length - successCount;
+                    
                     if (successCount > 0) {
-                        alert(`${successCount} file(s) uploaded successfully.`);
+                        this.showMessage(`${successCount} file(s) uploaded successfully.`, 'success');
                     }
+                    
+                    if (failedCount > 0) {
+                        this.showMessage(`${failedCount} file(s) failed to upload.`, 'error');
+                    }
+                    
+                    // Refresh file list
+                    this.loadExistingFiles();
                 })
                 .catch(error => {
                     console.error('File upload error:', error);
-                    $button.text(originalText).prop('disabled', false);
-                    alert('File upload failed. Please try again.');
+                    this.showUploadProgress(false);
+                    this.showMessage('File upload failed. Please try again.', 'error');
                 });
         },
 
         /**
-         * Upload a single file via AJAX
+         * Upload a single file via AJAX with handler context
          */
-        uploadSingleFile: function(file) {
+        uploadSingleFile: function(file, handlerContext) {
             return new Promise((resolve, reject) => {
                 const formData = new FormData();
                 formData.append('action', 'dm_upload_file');
                 formData.append('file', file);
-                formData.append('nonce', dmPipelineBuilder.upload_file_nonce || wp.ajax.settings.nonce);
+                formData.append('nonce', dmPipelineModal.upload_file_nonce || wp.ajax.settings.nonce);
+                
+                // Add handler context if available
+                if (handlerContext && handlerContext.flow_id && handlerContext.step_position) {
+                    formData.append('flow_id', handlerContext.flow_id);
+                    formData.append('step_position', handlerContext.step_position);
+                }
                 
                 $.ajax({
-                    url: dmPipelineBuilder.ajax_url || ajaxurl,
+                    url: dmPipelineModal.ajax_url || ajaxurl,
                     type: 'POST',
                     data: formData,
                     processData: false,
@@ -308,26 +407,6 @@
             });
         },
 
-        /**
-         * Add uploaded file to the display list
-         */
-        addFileToList: function(fileInfo) {
-            const $fileList = $('#dm-uploaded-files-list');
-            const sizeFormatted = this.formatFileSize(fileInfo.size);
-            
-            const fileHtml = `
-                <div class="dm-file-item" data-filename="${fileInfo.filename}">
-                    <span class="dashicons dashicons-media-default"></span>
-                    <div class="dm-file-info">
-                        <div class="dm-file-name">${fileInfo.filename}</div>
-                        <div class="dm-file-size">${sizeFormatted}</div>
-                    </div>
-                    <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
-                </div>
-            `;
-            
-            $fileList.append(fileHtml);
-        },
 
         /**
          * Format file size for display
@@ -338,9 +417,215 @@
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
+        /**
+         * Get handler context from current form
+         */
+        getHandlerContext: function() {
+            const $form = $('.dm-handler-settings-form');
+            if ($form.length === 0) return null;
+            
+            // Extract flow_id and step_position from flow_step_id
+            const flow_step_id = $form.find('input[name="flow_step_id"]').val();
+            if (!flow_step_id || flow_step_id.indexOf('_') === -1) return null;
+            
+            const parts = flow_step_id.split('_', 2);
+            if (parts.length !== 2) return null;
+            
+            return {
+                step_position: parts[0],
+                flow_id: parts[1]
+            };
+        },
+
+        /**
+         * Get handler context from container data attributes (new template structure)
+         */
+        getHandlerContextFromContainer: function() {
+            const $container = $('.dm-file-upload-container');
+            if ($container.length === 0) {
+                // Fallback to form method
+                return this.getHandlerContext();
+            }
+            
+            const flowId = $container.data('flow-id');
+            const stepPosition = $container.data('step-position');
+            
+            if (!flowId || !stepPosition) {
+                console.error('DM Pipeline Modal: Missing flow-id or step-position data attributes');
+                return null;
+            }
+            
+            return {
+                flow_id: flowId,
+                step_position: stepPosition
+            };
+        },
+
+        /**
+         * Load existing files for current handler context
+         */
+        loadExistingFiles: function() {
+            const handlerContext = this.getHandlerContextFromContainer();
+            if (!handlerContext) {
+                console.warn('DM Pipeline Modal: No handler context available for loading files');
+                this.showFileState('empty');
+                return Promise.resolve();
+            }
+            
+            // Validate required variables are available
+            if (!dmPipelineModal || !dmPipelineModal.ajax_url) {
+                console.error('DM Pipeline Modal: dmPipelineModal object or ajax_url not available');
+                this.showFileState('empty');
+                this.showMessage('Configuration error: Unable to load files.', 'error');
+                return Promise.reject('Missing configuration');
+            }
+            
+            // Show loading state
+            this.showFileState('loading');
+            
+            console.debug('DM Pipeline Modal: Loading files for context:', handlerContext);
+            
+            return $.ajax({
+                url: dmPipelineModal.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_get_handler_files',
+                    flow_id: handlerContext.flow_id,
+                    step_position: handlerContext.step_position,
+                    nonce: dmPipelineModal.upload_file_nonce || wp.ajax.settings.nonce
+                }
+            }).then((response) => {
+                console.debug('DM Pipeline Modal: Files load response:', response);
+                if (response.success) {
+                    this.displayFileStatusTable(response.data);
+                } else {
+                    this.showFileState('empty');
+                    const errorMsg = response.data?.message || 'Unknown error loading files';
+                    console.error('DM Pipeline Modal: Error loading files:', errorMsg);
+                    this.showMessage('Failed to load files: ' + errorMsg, 'error');
+                }
+            }).catch((xhr, status, error) => {
+                this.showFileState('empty');
+                console.error('DM Pipeline Modal: AJAX error loading files:', {xhr, status, error});
+                this.showMessage('Network error: Unable to load files.', 'error');
+            });
+        },
+
+        /**
+         * Display file status table with new template structure
+         */
+        displayFileStatusTable: function(data) {
+            if (!data.files || data.files.length === 0) {
+                this.showFileState('empty');
+                return;
+            }
+            
+            // Show the populated state with table
+            this.showFileState('populated');
+            
+            // Populate the table body
+            const $tableBody = $('#dm-file-list-body');
+            let rowsHTML = '';
+            
+            data.files.forEach(file => {
+                const statusClass = file.is_processed ? 'processed' : 'pending';
+                const statusIcon = file.is_processed ? 'dashicons-yes-alt' : 'dashicons-clock';
+                const statusColor = file.is_processed ? '#46b450' : '#ffb900';
+                
+                rowsHTML += `
+                    <tr class="dm-file-row dm-file-status-${statusClass}">
+                        <td class="dm-file-name-col">
+                            <span class="dashicons dashicons-media-default" style="margin-right: 8px;"></span>
+                            <span class="dm-file-name">${file.filename}</span>
+                        </td>
+                        <td class="dm-file-size-col">${file.size_formatted}</td>
+                        <td class="dm-file-status-col">
+                            <span class="dashicons ${statusIcon}" style="color: ${statusColor}; margin-right: 4px;"></span>
+                            <span class="dm-file-status">${file.status}</span>
+                        </td>
+                        <td class="dm-file-date-col">${file.modified_formatted}</td>
+                        <td class="dm-file-actions-col">
+                            <button type="button" class="button button-small dm-delete-file" data-filename="${file.filename}" title="Delete file">
+                                <span class="dashicons dashicons-trash"></span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            $tableBody.html(rowsHTML);
+        },
+
+        /**
+         * Show different file states (loading, empty, populated)
+         */
+        showFileState: function(state) {
+            const $loading = $('#dm-files-loading');
+            const $empty = $('#dm-files-empty');
+            const $table = $('#dm-files-table');
+            
+            // Hide all states first
+            $loading.hide();
+            $empty.hide();
+            $table.hide();
+            
+            // Show the requested state
+            switch (state) {
+                case 'loading':
+                    $loading.show();
+                    break;
+                case 'empty':
+                    $empty.show();
+                    break;
+                case 'populated':
+                    $table.show();
+                    break;
+            }
+        },
+
+        /**
+         * Show upload progress using new template structure
+         */
+        showUploadProgress: function(show) {
+            const $progressContainer = $('.dm-file-upload-progress');
+            const $progressText = $('.dm-upload-progress-text');
+            
+            if (show) {
+                $progressContainer.show();
+                $progressText.text('Uploading files...');
+            } else {
+                $progressContainer.hide();
+            }
+        },
+
+        /**
+         * Show temporary messages
+         */
+        showMessage: function(message, type) {
+            const $container = $('.dm-file-upload-container');
+            const messageClass = type === 'success' ? 'notice-success' : 'notice-error';
+            const iconClass = type === 'success' ? 'dashicons-yes-alt' : 'dashicons-warning';
+            
+            const $message = $(`
+                <div class="notice ${messageClass} dm-upload-message" style="margin: 10px 0; padding: 8px 12px; display: flex; align-items: center;">
+                    <span class="dashicons ${iconClass}" style="margin-right: 8px;"></span>
+                    <span>${message}</span>
+                </div>
+            `);
+            
+            $container.prepend($message);
+            
+            // Auto-remove messages after 4 seconds
+            setTimeout(() => {
+                $message.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 4000);
         }
 
-    };
+    });
 
     /**
      * Initialize when document is ready

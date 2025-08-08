@@ -32,8 +32,15 @@ if (!$has_auth) {
             <p><?php echo esc_html(sprintf(__('The %s handler does not require authentication to function.', 'data-machine'), $handler_label)); ?></p>
         </div>
         <div class="dm-auth-actions">
+            <?php 
+            // Determine correct handler settings template - WordPress needs input/output distinction
+            $template_slug = $handler_slug;
+            if ($handler_slug === 'wordpress' && isset($step_type)) {
+                $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+            }
+            ?>
             <button type="button" class="button button-secondary dm-modal-content" 
-                    data-template="handler-settings"
+                    data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
                     data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
                 <?php esc_html_e('Back to Settings', 'data-machine'); ?>
             </button>
@@ -130,8 +137,15 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
     
     <!-- Modal Navigation -->
     <div class="dm-modal-navigation">
+        <?php 
+        // Determine correct handler settings template - WordPress needs input/output distinction
+        $template_slug = $handler_slug;
+        if ($handler_slug === 'wordpress' && isset($step_type)) {
+            $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+        }
+        ?>
         <button type="button" class="button button-secondary dm-modal-content" 
-                data-template="handler-settings"
+                data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
                 data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
             <?php esc_html_e('Back to Settings', 'data-machine'); ?>
         </button>

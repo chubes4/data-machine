@@ -47,6 +47,25 @@ function dm_register_files_input_filters() {
         return $all_settings;
     });
     
+    // Files custom template registration - provides specialized upload interface
+    add_filter('dm_render_template', function($content, $template_name, $data = []) {
+        if ($template_name === 'modal/handler-settings/files') {
+            // Files handler provides its own template with upload interface
+            // Use the existing files.php template temporarily
+            $template_path = dirname(__DIR__, 4) . '/admin/pages/pipelines/templates/modal/handler-settings/files.php';
+            if (file_exists($template_path)) {
+                // Extract data for template scope
+                $context = $data;
+                
+                // Capture template output
+                ob_start();
+                include $template_path;
+                return ob_get_clean();
+            }
+        }
+        return $content;
+    }, 10, 3);
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
     
     // DataPacket creation removed - engine uses universal DataPacket constructor
@@ -95,10 +114,15 @@ function dm_register_files_input_filters() {
     add_action('wp_ajax_dm_upload_file', function() {
         dm_handle_file_upload();
     });
+    
+    // AJAX handler for getting files with processing status
+    add_action('wp_ajax_dm_get_handler_files', function() {
+        dm_get_handler_files();
+    });
 }
 
 /**
- * Handle AJAX file upload
+ * Handle AJAX file upload with handler context support
  */
 function dm_handle_file_upload() {
     // Verify nonce
@@ -115,6 +139,14 @@ function dm_handle_file_upload() {
     
     $file = $_FILES['file'];
     $logger = apply_filters('dm_get_logger', null);
+    
+    // Extract flow_step_id from request for proper file isolation
+    $flow_step_id = null;
+    if (!empty($_POST['flow_id']) && !empty($_POST['step_position'])) {
+        $step_id = sanitize_text_field($_POST['step_position']);
+        $flow_id = absint($_POST['flow_id']);
+        $flow_step_id = $step_id . '_' . $flow_id;
+    }
     
     try {
         // Basic validation - file size and dangerous extensions
@@ -141,14 +173,14 @@ function dm_handle_file_upload() {
             throw new Exception(__('File type not allowed for security reasons.', 'data-machine'));
         }
         
-        // Use repository to store file
+        // Use repository to store file with handler context
         $repository = apply_filters('dm_get_files_repository', null);
         if (!$repository) {
             wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
             return;
         }
         
-        $stored_path = $repository->store_file($file['tmp_name'], $file['name']);
+        $stored_path = $repository->store_file($file['tmp_name'], $file['name'], $flow_step_id);
         
         if (!$stored_path) {
             wp_send_json_error(['message' => __('Failed to store file.', 'data-machine')]);
@@ -160,7 +192,8 @@ function dm_handle_file_upload() {
         
         $logger?->debug('File uploaded successfully via AJAX.', [
             'filename' => $file['name'],
-            'stored_path' => $stored_path
+            'stored_path' => $stored_path,
+            'flow_step_id' => $flow_step_id
         ]);
         
         wp_send_json_success([
@@ -171,10 +204,90 @@ function dm_handle_file_upload() {
     } catch (Exception $e) {
         $logger?->error('File upload failed.', [
             'filename' => $file['name'],
-            'error' => $e->getMessage()
+            'error' => $e->getMessage(),
+            'flow_step_id' => $flow_step_id
         ]);
         
         wp_send_json_error(['message' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Handle AJAX request to get files with processing status for a specific handler
+ */
+function dm_get_handler_files() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_upload_file')) {
+        wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
+        return;
+    }
+    
+    // Extract flow_step_id from request for proper file isolation
+    $flow_step_id = null;
+    $flow_id = null;
+    if (!empty($_POST['flow_id']) && !empty($_POST['step_position'])) {
+        $step_id = sanitize_text_field($_POST['step_position']);
+        $flow_id = absint($_POST['flow_id']);
+        $flow_step_id = $step_id . '_' . $flow_id;
+    } else {
+        wp_send_json_error(['message' => __('Missing handler context parameters.', 'data-machine')]);
+        return;
+    }
+    
+    try {
+        // Get files repository service
+        $repository = apply_filters('dm_get_files_repository', null);
+        if (!$repository) {
+            wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
+            return;
+        }
+        
+        // Get all files for this flow step
+        $files = $repository->get_all_files($flow_step_id);
+        
+        // Get processed items service to check processing status
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $processed_items_service = $all_databases['processed_items'] ?? null;
+        if (!$processed_items_service) {
+            wp_send_json_error(['message' => __('Processed items service not available.', 'data-machine')]);
+            return;
+        }
+        
+        // Enhance files with processing status
+        $files_with_status = [];
+        foreach ($files as $file) {
+            $is_processed = $processed_items_service->has_item_been_processed(
+                $flow_id,
+                'files',
+                $file['path']
+            );
+            
+            $files_with_status[] = [
+                'filename' => $file['filename'],
+                'size' => $file['size'],
+                'size_formatted' => size_format($file['size']),
+                'modified' => $file['modified'],
+                'modified_formatted' => date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $file['modified']),
+                'is_processed' => $is_processed,
+                'status' => $is_processed ? __('Processed', 'data-machine') : __('Pending', 'data-machine'),
+                'path' => $file['path']
+            ];
+        }
+        
+        wp_send_json_success([
+            'files' => $files_with_status,
+            'total_files' => count($files_with_status),
+            'pending_files' => count(array_filter($files_with_status, fn($f) => !$f['is_processed']))
+        ]);
+        
+    } catch (Exception $e) {
+        $logger = apply_filters('dm_get_logger', null);
+        $logger?->error('Failed to get handler files.', [
+            'error' => $e->getMessage(),
+            'flow_step_id' => $flow_step_id
+        ]);
+        
+        wp_send_json_error(['message' => __('Failed to retrieve files.', 'data-machine')]);
     }
 }
 

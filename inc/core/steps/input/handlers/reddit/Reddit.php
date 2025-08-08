@@ -57,10 +57,11 @@ class Reddit {
 	 *
 	 * @param int $pipeline_id The pipeline ID for this execution context.
 	 * @param array  $handler_config Decoded handler configuration specific to this handler.
+	 * @param int|null $flow_id The flow ID for processed items tracking.
 	 * @return array Array containing 'processed_items' key with standardized data packets for Reddit data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_input_data(int $pipeline_id, array $handler_config): array {
+	public function get_input_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
 		$logger = apply_filters('dm_get_logger', null);
 		$user_id = get_current_user_id();
 		$logger?->debug('Reddit Input: Entering get_input_data.', ['pipeline_id' => $pipeline_id]);

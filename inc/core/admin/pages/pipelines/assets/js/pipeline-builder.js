@@ -186,13 +186,26 @@
             $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
                 const $step = $(this);
                 const stepType = $step.data('step-type');
+                const stepId = $step.data('step-id'); // Read step_id from DOM
+                const stepLabel = $step.find('.dm-step-title').text().trim(); // Read label from DOM
                 
                 if (stepType) {
-                    stepConfiguration.push({
+                    const stepData = {
                         step_type: stepType,
-                        position: index,
-                        step_config: {} // Will be populated when step configuration is implemented
-                    });
+                        position: index
+                    };
+                    
+                    // Include step_id if available (required for existing steps)
+                    if (stepId) {
+                        stepData.step_id = stepId;
+                    }
+                    
+                    // Include label if available
+                    if (stepLabel) {
+                        stepData.label = stepLabel;
+                    }
+                    
+                    stepConfiguration.push(stepData);
                 }
             });
             

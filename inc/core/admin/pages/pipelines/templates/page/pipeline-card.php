@@ -25,6 +25,19 @@ if (isset($pipeline) && !empty($pipeline)) {
     $step_config = is_object($pipeline) ? $pipeline->step_configuration : ($pipeline['step_configuration'] ?? '');
     $pipeline_steps = !empty($step_config) ? json_decode($step_config, true) : [];
     $pipeline_steps = is_array($pipeline_steps) ? $pipeline_steps : [];
+    
+    // Validate all pipeline steps have required step_id - fail fast if missing
+    foreach ($pipeline_steps as $key => $step) {
+        if (empty($step['step_id'])) {
+            $logger = apply_filters('dm_get_logger', null);
+            $logger?->error('Pipeline step missing required step_id - data corruption detected', [
+                'pipeline_id' => $pipeline_id,
+                'step_position' => $key,
+                'step_data' => $step
+            ]);
+            throw new \RuntimeException("Pipeline {$pipeline_id} step at position {$key} missing required step_id - cannot render pipeline");
+        }
+    }
 }
 
 $step_count = count($pipeline_steps);

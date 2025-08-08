@@ -44,22 +44,42 @@ class OutputStep {
         try {
             $logger->debug('Output Step: Starting data publishing (closed-door)', ['job_id' => $job_id]);
 
-            // Get job and pipeline configuration
-            $job = $db_jobs->get_job($job_id);
-            if (!$job) {
-                $logger->error('Output Step: Job not found for output step', ['job_id' => $job_id]);
-                return false;
+            // Get step configuration from job_config using current step position
+            $flow_config = $job_config['flow_config'] ?? [];
+            $step_position = $job_config['current_step_position'] ?? null;
+            
+            if ($step_position === null) {
+                $logger->error('Output Step: Output step requires current step position', [
+                    'job_id' => $job_id,
+                    'available_job_config' => array_keys($job_config)
+                ]);
+                return [];
             }
-
-            // Get step configuration
-            $step_config = $this->get_step_configuration($job_id, 'output');
+            
+            $step_config = $flow_config[$step_position] ?? null;
+            
             if (!$step_config || empty($step_config['handler'])) {
-                $logger->error('Output Step: Output step requires handler configuration', ['job_id' => $job_id]);
-                return false;
+                $logger->error('Output Step: Output step requires handler configuration', [
+                    'job_id' => $job_id,
+                    'step_position' => $step_position,
+                    'available_flow_positions' => array_keys($flow_config)
+                ]);
+                return [];
             }
 
-            $handler = $step_config['handler'];
-            $handler_config = $step_config['config'] ?? [];
+            $handler_data = $step_config['handler'] ?? null;
+            
+            if (!$handler_data || empty($handler_data['handler_slug'])) {
+                $logger->error('Output Step: Output step handler configuration invalid', [
+                    'job_id' => $job_id,
+                    'step_position' => $step_position,
+                    'handler_data' => $handler_data
+                ]);
+                return [];
+            }
+            
+            $handler = $handler_data['handler_slug'];
+            $handler_config = $handler_data['settings'] ?? [];
 
             // Output steps use latest DataPacket (first in array)
             $data_packet = $data_packets[0] ?? null;
@@ -69,7 +89,7 @@ class OutputStep {
             }
 
             // Execute single output handler - one step, one handler, per flow
-            $handler_result = $this->execute_output_handler_direct($handler, $data_packet, $job, $handler_config);
+            $handler_result = $this->execute_output_handler_direct($handler, $data_packet, $job_config, $handler_config);
 
             if (!$handler_result) {
                 $logger->error('Output Step: Handler execution failed', [
@@ -147,51 +167,6 @@ class OutputStep {
         }
     }
 
-    /**
-     * Get step configuration from pipeline or job context
-     * 
-     * @param int $job_id Job ID
-     * @param string $step_name Step name
-     * @return array|null Step configuration or null if not found
-     */
-    private function get_step_configuration(int $job_id, string $step_name): ?array {
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_jobs || !$db_flows) {
-            return null;
-        }
-        
-        // Get job to find flow_id
-        $job = $db_jobs->get_job($job_id);
-        if (!$job) {
-            return null;
-        }
-
-        // Get flow_id from job
-        $flow_id = is_object($job) ? $job->flow_id : ($job['flow_id'] ?? null);
-        if (!$flow_id) {
-            return null;
-        }
-
-        // Get flow record from flows database
-        $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) {
-            return null;
-        }
-
-        // Parse flow's flow_config to find step configuration
-        $flow_config_json = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? '{}');
-        $flow_config = json_decode($flow_config_json, true);
-        
-        if (!is_array($flow_config)) {
-            return null;
-        }
-
-        // Return step configuration for the specified step
-        return $flow_config[$step_name] ?? null;
-    }
 
 
     /**
@@ -199,11 +174,11 @@ class OutputStep {
      * 
      * @param string $handler_name Output handler name
      * @param object $data_packet DataPacket object to publish
-     * @param object $job Job object
+     * @param array $job_config Job configuration from JobCreator
      * @param array $handler_config Handler configuration
      * @return array|null Output result or null on failure
      */
-    private function execute_output_handler_direct(string $handler_name, object $data_packet, object $job, array $handler_config): ?array {
+    private function execute_output_handler_direct(string $handler_name, object $data_packet, array $job_config, array $handler_config): ?array {
         $logger = apply_filters('dm_get_logger', null);
 
         // Get handler object directly from handler system
@@ -211,7 +186,7 @@ class OutputStep {
         if (!$handler) {
             $logger->error('Output Step: Handler not found or invalid', [
                 'handler' => $handler_name,
-                'job_id' => $job->job_id
+                'job_config' => array_keys($job_config)
             ]);
             return null;
         }
@@ -219,11 +194,13 @@ class OutputStep {
         try {
             // Handler is already instantiated from the registry
 
-            // Get pipeline ID for handler
-            $pipeline_id = $this->get_pipeline_id_from_job($job);
+            // Get pipeline and flow IDs from job_config (provided by JobCreator)
+            $pipeline_id = $job_config['pipeline_id'] ?? null;
+            $flow_id = $job_config['flow_id'] ?? null;
+            
             if (!$pipeline_id) {
-                $logger->error('Output Step: Pipeline ID not found', [
-                    'job_id' => $job->job_id
+                $logger->error('Output Step: Pipeline ID not found in job config', [
+                    'job_config_keys' => array_keys($job_config)
                 ]);
                 return null;
             }
@@ -242,7 +219,8 @@ class OutputStep {
         } catch (\Exception $e) {
             $logger->error('Output Step: Handler execution failed', [
                 'handler' => $handler_name,
-                'job_id' => $job->job_id,
+                'pipeline_id' => $pipeline_id ?? 'unknown',
+                'flow_id' => $flow_id ?? 'unknown',
                 'exception' => $e->getMessage()
             ]);
             return null;
@@ -250,15 +228,6 @@ class OutputStep {
     }
 
 
-    /**
-     * Get pipeline ID from job context
-     * 
-     * @param object $job Job object
-     * @return int|null Pipeline ID or null if not found
-     */
-    private function get_pipeline_id_from_job(object $job): ?int {
-        return $job->pipeline_id ?? null;
-    }
 
     /**
      * Get handler object directly from the handler system.

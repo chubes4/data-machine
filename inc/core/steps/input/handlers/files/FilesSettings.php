@@ -37,7 +37,7 @@ class FilesSettings {
             'file_upload_section' => [
                 'type' => 'section',
                 'label' => __('File Upload', 'data-machine'),
-                'description' => __('Upload files to be processed by this handler.', 'data-machine'),
+                'description' => __('Upload any file type - the pipeline will handle compatibility.', 'data-machine'),
             ],
             'auto_cleanup_enabled' => [
                 'type' => 'checkbox',
@@ -59,14 +59,14 @@ class FilesSettings {
         // Auto-cleanup setting
         $sanitized['auto_cleanup_enabled'] = isset($raw_settings['auto_cleanup_enabled']) && $raw_settings['auto_cleanup_enabled'] == '1';
         
-        // Uploaded files (if provided through file upload interface)
+        // Accept any uploaded files without type validation
         if (isset($raw_settings['uploaded_files']) && is_array($raw_settings['uploaded_files'])) {
             $sanitized['uploaded_files'] = array_map(function($file) {
                 return [
                     'original_name' => sanitize_file_name($file['original_name'] ?? ''),
                     'persistent_path' => sanitize_text_field($file['persistent_path'] ?? ''),
                     'size' => absint($file['size'] ?? 0),
-                    'mime_type' => sanitize_text_field($file['mime_type'] ?? ''),
+                    'mime_type' => sanitize_text_field($file['mime_type'] ?? 'application/octet-stream'),
                     'uploaded_at' => sanitize_text_field($file['uploaded_at'] ?? gmdate('Y-m-d H:i:s'))
                 ];
             }, $raw_settings['uploaded_files']);

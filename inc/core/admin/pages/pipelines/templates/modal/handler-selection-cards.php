@@ -18,7 +18,7 @@ if (!defined('WPINC')) {
 <div class="dm-handler-selection-container">
     <!-- Hidden inputs for context -->
     <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id ?? ''); ?>" />
-    <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id ?? ''); ?>" />
+    <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id ?? ''); ?>" />
     <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
     
     <div class="dm-handler-selection-header">
@@ -34,10 +34,16 @@ if (!defined('WPINC')) {
             return ($handler['type'] ?? '') === $step_type;
         });
         
-        foreach ($handlers as $handler_slug => $handler_config): ?>
+        foreach ($handlers as $handler_slug => $handler_config): 
+            // Determine correct template for handler - WordPress needs input/output distinction
+            $template_slug = $handler_slug;
+            if ($handler_slug === 'wordpress') {
+                $template_slug = ($step_type === 'input') ? 'wordpress_input' : 'wordpress_output';
+            }
+            ?>
             <div class="dm-handler-selection-card dm-modal-content" 
-                 data-template="handler-settings"
-                 data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'
+                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
+                 data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_step_id":"<?php echo esc_attr($flow_step_id ?? ''); ?>"}'
                  data-handler-slug="<?php echo esc_attr($handler_slug); ?>" 
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 

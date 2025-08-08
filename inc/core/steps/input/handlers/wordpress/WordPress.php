@@ -57,10 +57,11 @@ class WordPress {
      *
      * @param int $pipeline_id The pipeline ID for this execution context.
      * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
+     * @param int|null $flow_id The flow ID for processed items tracking.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If input data is invalid or cannot be retrieved.
      */
-    public function get_input_data(int $pipeline_id, array $handler_config): array {
+    public function get_input_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
         }

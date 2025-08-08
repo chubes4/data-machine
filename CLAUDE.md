@@ -113,8 +113,6 @@ $step_config = $step_configs[$step_type] ?? null;
 // DataPacket creation - Handler-based creation
 $datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
 
-// ProcessedItems service discovery
-$processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
 
 // Job services - Pure discovery
 $job_status_manager = apply_filters('dm_get_job_status_manager', null);
@@ -431,41 +429,35 @@ public function get_template() {
 
 ## Modal System
 
-**Four-File Architecture**: Clean separation between universal modal lifecycle, content-specific interactions, page content management, and flow-specific operations.
+**Three-File JavaScript Architecture**: Universal modal lifecycle management with specialized content interaction and page operation handling.
 
 ### Core Components
 
-**core-modal.js**: Universal modal lifecycle management only
-- Modal open/close/loading states
-- AJAX content loading via `wp_ajax_dm_get_modal_content` action
-- Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes (uses `dm-modal-active` CSS class for state management)
-- Focus management and accessibility
-- Provides `dmCoreModal` API for programmatic modal operations
+**core-modal.js**: Universal modal lifecycle management
+- Modal open/close/loading states with accessibility focus management
+- AJAX content loading via `dm_get_modal_content` action endpoint  
+- Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes
+- State management via `dm-modal-active` CSS class for accessibility compliance
+- Focus trap implementation for WCAG compliance
+- Provides `dmCoreModal` global API for programmatic operations
+- Events: `dm-core-modal-closed`, `dm-core-modal-content-loaded`
 
-**pipeline-modal.js**: Pipeline-specific modal content interactions
-- Handles buttons and forms created by PHP modal templates
-- OAuth connections, tab switching, form submissions (legacy compatibility only)
-- Visual feedback for card selections
-- Triggers `dm-pipeline-modal-saved` events for page updates
-- No modal opening/closing - only content interaction
-
-**pipeline-builder.js**: Page content management for pipeline operations
-- Handles data-attribute-driven actions (`data-template="add-step-action"`, `data-template="delete-action"`)
-- **Direct Handler Action Pattern**: Handler configuration uses direct AJAX calls eliminating form submission complexity
-- Manages pipeline state and UI updates via template requesting pattern
-- Direct AJAX operations return data only - HTML via `requestTemplate()` method
-- Arrow rendering handled by PHP templates with universal `is_first_step` logic
-- Never calls modal APIs directly - clean separation maintained
-- Pure DOM manipulation layer - zero HTML generation
+**pipelines-modal.js**: Pipeline-specific modal content interactions  
+- OAuth connection workflows (connect/disconnect/test handlers)
+- Visual feedback for card selections and form interactions
+- File upload functionality with drag-and-drop support
+- Handler-specific template integration and configuration UI
+- Schedule form interactions and validation
+- Triggers `dm-pipeline-modal-saved` events for page coordination
+- Zero modal lifecycle management - purely content interaction
 
 **flow-builder.js**: Flow-specific operations and handler management
-- Handles flow configuration management (`data-template="add-handler-action"`, `data-template="configure-step"`)
-- Manages flow instances, handler configuration, and flow execution
-- Direct data attribute handler for adding handlers to flow steps
-- Add Flow button click handler and Run now button operations
-- Flow deletion operations (`data-template="delete-action"`)
-- Listens for handler saving events to refresh UI
-- Specialized for flow-level operations while maintaining architectural consistency
+- Flow configuration management with direct AJAX patterns
+- Handler addition to flow steps via `data-template="add-handler-action"`
+- Flow instance management (add/delete flows)
+- Flow execution via "Run Now" functionality  
+- Flow step card updates after handler configuration
+- Event coordination with modal system for UI updates
 
 ### Data-Attribute Communication
 
@@ -516,14 +508,50 @@ Automatic modal triggers using data attributes - no JavaScript required:
 
 ### Modal Content Registration
 
+**Collection-Based Registration**: Components register multiple modals via the `dm_get_modals` filter:
+
 ```php
 add_filter('dm_get_modals', function($modals) {
-    $modals['my-modal'] = [
-        'content' => apply_filters('dm_render_template', '', 'modal/my-modal', $context),
-        'title' => __('My Modal', 'my-plugin')
+    $modals['step-selection'] = [
+        'template' => 'modal/step-selection-cards',
+        'title' => __('Select Step Type', 'data-machine')
+    ];
+    $modals['handler-selection'] = [
+        'template' => 'modal/handler-selection-cards', 
+        'title' => __('Select Handler', 'data-machine')
+    ];
+    // Static content registration (for pre-rendered content)
+    $modals['static-modal'] = [
+        'content' => apply_filters('dm_render_template', '', 'modal/static-content', $context),
+        'title' => __('Static Modal', 'data-machine')
     ];
     return $modals;
 });
+```
+
+### Handler-Specific Template System
+
+**Dynamic Template Routing**: Modal system supports handler-specific templates with automatic fallback:
+
+```php
+// Handler-specific template pattern: 'handler-settings/{handler_slug}'
+// Automatically tries specific template first, falls back to universal
+
+// Try handler-specific template first
+$content = apply_filters('dm_render_template', '', 'modal/handler-settings/files', $context);
+
+// Automatic fallback to universal template if handler-specific not found
+$content = apply_filters('dm_render_template', '', 'modal/handler-settings', $context);
+```
+
+**Template Structure**:
+```
+/templates/modal/
+├── handler-settings.php          # Universal fallback template
+├── handler-settings/
+│   ├── files.php                 # Files handler specific
+│   ├── wordpress_input.php       # WordPress input specific
+│   └── twitter.php               # Twitter handler specific
 ```
 
 ### Modal Lifecycle Improvements
@@ -570,8 +598,41 @@ handleAddHandlerAction: function(e) {
 Any admin page can use the modal system by:
 1. Including `core-modal.js` via admin page asset filter
 2. Adding `.dm-modal-open` buttons in PHP templates with proper data attributes
-3. Registering modal content via `dm_get_modal` filter
+3. Registering modal content via `dm_get_modals` filter
 4. Zero page-specific modal JavaScript required
+
+### Modal AJAX Endpoints
+
+**Dual Endpoint Architecture**: Modal system provides two AJAX endpoints for different use cases:
+
+**Universal Modal Content** - `dm_get_modal_content`:
+- Used for general modal loading from registered modal collection
+- Routes to universal ModalAjax handler
+- Supports both static content and dynamic template rendering
+- Primary endpoint for `.dm-modal-open` button triggers
+
+**Pipeline Template Requests** - `dm_pipeline_ajax` with `get_template` action:
+- Used for dynamic template rendering during page operations
+- Routes to PipelineModalAjax handler  
+- Supports JavaScript template requesting pattern
+- Used by `requestTemplate()` method in pipeline-builder.js
+
+```javascript
+// Universal modal loading
+$.ajax({
+    action: 'dm_get_modal_content',
+    template: 'step-selection',
+    context: JSON.stringify(contextData)
+});
+
+// Template requesting for dynamic updates
+$.ajax({
+    action: 'dm_pipeline_ajax',
+    pipeline_action: 'get_template',
+    template: 'page/pipeline-step-card',
+    template_data: JSON.stringify(stepData)
+});
+```
 
 ### AJAX Handler Routing
 
@@ -618,19 +679,14 @@ if (in_array($action, $modal_actions)) {
 **Database Layer Location**: ProcessedItems system located in `/inc/core/database/ProcessedItems/` following consistent database component architecture.
 
 **Components**:
-- **ProcessedItems.php**: Core database operations and table management
-- **ProcessedItemsManager.php**: Business logic and duplicate tracking services
+- **ProcessedItems.php**: Core database operations, duplicate tracking services, and table management
 - **ProcessedItemsFilters.php**: Self-registration via filter-based discovery patterns
-- **ProcessedItemsOperations.php**: CRUD operations and data manipulation
-- **ProcessedItemsQueries.php**: Query builders and data retrieval logic
-- **ProcessedItemsCleanup.php**: Automated maintenance and cleanup operations
 
-**Discovery Registration**: Uses standard database service pattern with manager service for business operations:
+**Discovery Registration**: Uses standard database service collection pattern:
 ```php
-// ProcessedItems discovery pattern
+// ProcessedItems discovery pattern - database service collection only
 $all_databases = apply_filters('dm_get_database_services', []);
 $processed_items_service = $all_databases['processed_items'] ?? null;
-$processed_items_manager = apply_filters('dm_get_processed_items_manager', null);
 ```
 
 ## Pipeline+Flow Lifecycle

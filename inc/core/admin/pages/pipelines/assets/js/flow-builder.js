@@ -55,7 +55,7 @@
             const $button = $(e.currentTarget);
             const contextData = $button.data('context');
             
-            if (!contextData || !contextData.handler_slug || !contextData.step_type || !contextData.flow_id) {
+            if (!contextData || !contextData.handler_slug || !contextData.step_type || !contextData.flow_step_id) {
                 console.error('Invalid handler data in button context:', contextData);
                 return;
             }
@@ -97,16 +97,19 @@
                 return;
             }
             
-            if (!contextData.flow_id || contextData.flow_id === 'new') {
-                console.error('Missing or invalid flow_id in context:', contextData);
-                alert('Valid Flow ID is required');
+            if (!contextData.flow_step_id) {
+                console.error('Missing flow_step_id in context:', contextData);
+                alert('Flow step ID is required');
                 return;
             }
             
-            // Collect form data from the modal for dm_save_handler_settings endpoint
+            // Collect form data from the modal for add-handler-action endpoint
             const $modal = $('#dm-modal');
             const formData = {
-                action: 'dm_save_handler_settings'
+                action: 'dm_pipeline_ajax',
+                pipeline_action: 'add-handler-action',
+                context: JSON.stringify(contextData),
+                nonce: dmPipelineBuilder.pipeline_ajax_nonce
             };
             
             // Add all form inputs from the modal (including hidden fields)
@@ -255,6 +258,7 @@
             $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
                 const $step = $(this);
                 const stepType = $step.data('step-type');
+                const stepId = $step.data('step-id'); // Read actual step_id from DOM
                 
                 if (stepType) {
                     pipelineSteps.push({
@@ -262,7 +266,7 @@
                         position: index,
                         step_config: {},
                         is_empty: false,  // Required by step-card template
-                        step_id: null     // Optional, but template checks for it
+                        step_id: stepId   // Use actual step_id from DOM data attribute
                     });
                 }
             });
@@ -335,7 +339,7 @@
          */
         handleModalSaved: function(e, data) {
             // For handler operations, update the specific step card
-            if (data && data.handler_slug && data.step_type && data.flow_id) {
+            if (data && data.handler_slug && data.step_type && data.flow_step_id) {
                 console.log('Handler saved, updating step card for:', data.step_type, 'with handler:', data.handler_slug);
                 this.updateFlowStepCard(data);
             }
@@ -345,16 +349,17 @@
          * Update specific flow step card after handler configuration
          */
         updateFlowStepCard: function(handlerData) {
-            const { flow_id, step_type, handler_slug } = handlerData;
+            const { flow_step_id, step_type, handler_slug } = handlerData;
+            
+            // Extract flow_id from flow_step_id (step_id_flow_id format)
+            const flow_id = flow_step_id.split('_').slice(-1)[0];
             
             // Find the specific flow step card to update
-            const $flowStepContainer = $(`.dm-step-container[data-flow-id="${flow_id}"][data-step-type="${step_type}"]`);
+            const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
             
             if (!$flowStepContainer.length) {
-                console.error('Flow step container not found for flow_id:', flow_id, 'step_type:', step_type);
-                // Fallback to page reload if step card not found
-                window.location.reload();
-                return;
+                console.error('Flow step container not found for flow_step_id:', flow_step_id);
+                throw new Error(`Flow step container not found for flow_step_id: ${flow_step_id}`);
             }
 
             // Get updated flow configuration from database
@@ -378,6 +383,7 @@
                             step: {
                                 step_type: step_type,
                                 position: $flowStepContainer.data('step-position') || 0,
+                                step_id: $flowStepContainer.data('pipeline-step-id'),
                                 is_empty: false
                             },
                             flow_config: response.data.flow_config,
@@ -390,19 +396,16 @@
                             console.log('Step card updated successfully for handler:', handler_slug);
                         }).catch((error) => {
                             console.error('Failed to render updated step card template:', error);
-                            // Fallback to page reload on template error
-                            window.location.reload();
+                            throw new Error('Failed to render updated step card template: ' + error);
                         });
                     } else {
                         console.error('Failed to get updated flow configuration:', response.data?.message);
-                        // Fallback to page reload on data error
-                        window.location.reload();
+                        throw new Error('Failed to get updated flow configuration: ' + (response.data?.message || 'Unknown error'));
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Failed to get flow configuration:', error);
-                    // Fallback to page reload on AJAX error
-                    window.location.reload();
+                    throw new Error('Failed to get flow configuration: ' + error);
                 }
             });
         },

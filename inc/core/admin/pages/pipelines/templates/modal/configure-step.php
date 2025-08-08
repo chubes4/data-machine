@@ -14,9 +14,8 @@ if (!defined('WPINC')) {
     die;
 }
 
-$step_type = $step_type ?? 'unknown';
-$pipeline_id = $pipeline_id ?? null;
-$step_id = $step_id ?? null;
+// Context auto-resolved by PipelineContextManager filter before template renders
+// All required context variables are available: $step_type, $pipeline_id, $step_id
 
 ?>
 <div class="dm-configure-step-container">
@@ -87,7 +86,7 @@ $step_id = $step_id ?? null;
         </button>
         <button type="button" class="button button-primary dm-modal-close" 
                 data-template="configure-step-action"
-                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>"}'>
+                data-context='{"step_type":"<?php echo esc_attr($step_type ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","step_id":"<?php echo esc_attr($step_id ?? ''); ?>"}'>
             <?php esc_html_e('Save Step Configuration', 'data-machine'); ?>
         </button>
     </div>

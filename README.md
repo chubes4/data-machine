@@ -1160,27 +1160,21 @@ add_filter('dm_get_handler_settings', function($settings) {
     return $settings;
 });
 
-// Modal content registration for handler settings
-add_filter('dm_get_modal', function($content, $template) {
-    if ($template === 'handler-settings' && $content === null) {
-        $context = $_POST['context'] ?? [];
-        $handler_slug = $context['handler_slug'] ?? '';
-        
-        if ($handler_slug === 'my_handler') {
-            return apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-                'handler_slug' => 'my_handler',
-                'handler_config' => [
-                    'label' => __('My Handler', 'my-plugin'),
-                    'description' => __('Custom handler description', 'my-plugin')
-                ],
-                'step_type' => $context['step_type'] ?? 'input',
-                'flow_id' => $context['flow_id'] ?? '',
-                'pipeline_id' => $context['pipeline_id'] ?? ''
-            ]);
-        }
-    }
-    return $content;
-}, 10, 2);
+// Modal content registration for handler settings - Collection-based pattern
+add_filter('dm_get_modals', function($modals) {
+    $modals['my-handler-settings'] = [
+        'template' => 'modal/handler-settings-form',
+        'title' => __('My Handler Settings', 'my-plugin'),
+        'data' => [
+            'handler_slug' => 'my_handler',
+            'handler_config' => [
+                'label' => __('My Handler', 'my-plugin'),
+                'description' => __('Custom handler description', 'my-plugin')
+            ]
+        ]
+    ];
+    return $modals;
+});
 ```
 
 ### Adding Custom Steps
@@ -1360,7 +1354,7 @@ testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 - **Scheduler**: WordPress → Tools → Action Scheduler (automated pipeline execution)
 - **AJAX Debugging**: Browser network tab shows pipeline builder and modal AJAX calls
 - **Modal Debugging**: Console logs show modal content generation and filter discovery
-- **Filter Monitoring**: `dm_get_steps`, `dm_get_modal`, `dm_get_handlers` filter calls in debug output
+- **Filter Monitoring**: `dm_get_steps`, `dm_get_modals`, `dm_get_handlers` filter calls in debug output
 - **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/`
 - **Security Verification**: WordPress nonce verification and capability checks in debug mode
 - **Performance Metrics**: Asset loading and dependency resolution in browser DevTools

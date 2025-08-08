@@ -112,6 +112,48 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
         }
 
+        // Sync new step to all flows for this pipeline (flow step synchronization)
+        $db_flows = $all_databases['flows'] ?? null;
+        if ($db_flows) {
+            $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+            foreach ($flows as $flow) {
+                $flow_id = $flow['flow_id'];
+                $flow_config = $flow['flow_config'] ?? ['steps' => []];
+                
+                // Validate that flow_config is array (database layer should provide arrays)
+                if (!is_array($flow_config)) {
+                    wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
+                    return;
+                }
+                
+                // Flow config is position-based array, ensure it exists
+                if (!is_array($flow_config)) {
+                    $flow_config = [];
+                }
+                
+                // Add new step to flow using position-based structure
+                $step_position = $next_position / 10; // Convert position to step index
+                $flow_step_id = $new_step['step_id'] . '_' . $flow_id;
+                $flow_config[$step_position] = [
+                    'flow_step_id' => $flow_step_id,
+                    'step_type' => $step_type,
+                    'pipeline_step_id' => $new_step['step_id'],
+                    'handler' => null
+                ];
+                
+                // Update flow with new step
+                $flow_update_success = $db_flows->update_flow($flow_id, [
+                    'flow_config' => json_encode($flow_config)
+                ]);
+                
+                if (!$flow_update_success) {
+                    // Log warning but don't fail step addition
+                    $logger = apply_filters('dm_get_logger', null);
+                    $logger && $logger->error("Failed to sync new step to flow {$flow_id}");
+                }
+            }
+        }
+
         wp_send_json_success([
             'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
             'step_type' => $step_type,
@@ -273,9 +315,50 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Failed to update pipeline', 'data-machine')]);
         }
 
-        // Get affected flows for reporting
+        // Get affected flows for reporting and cleanup
         $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         $flow_count = count($affected_flows);
+        
+        // Sync step deletion to all flows for this pipeline (remove flow step entries)
+        foreach ($affected_flows as $flow) {
+            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_config_raw = is_object($flow) ? $flow->flow_config : $flow['flow_config'];
+            $flow_config = json_decode($flow_config_raw, true) ?: [];
+            
+            // Remove the deleted step from flow using position-based structure
+            $pipeline_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+            
+            // Find position of deleted step
+            $deleted_step_position = null;
+            foreach ($pipeline_steps as $index => $pipeline_step) {
+                if (($pipeline_step['step_id'] ?? '') === $step_id) {
+                    $deleted_step_position = $index;
+                    break;
+                }
+            }
+            
+            if ($deleted_step_position !== null && isset($flow_config[$deleted_step_position])) {
+                // Log handler cleanup
+                $has_handler = !empty($flow_config[$deleted_step_position]['handler']);
+                unset($flow_config[$deleted_step_position]);
+                
+                // Reindex flow config to maintain sequential positions
+                $flow_config = array_values($flow_config);
+                
+                // Update flow with cleaned configuration
+                $flow_update_success = $db_flows->update_flow($flow_id, [
+                    'flow_config' => json_encode($flow_config)
+                ]);
+                
+                if (!$flow_update_success) {
+                    // Log warning but don't fail step deletion
+                    $logger = apply_filters('dm_get_logger', null);
+                    $logger && $logger->error("Failed to remove deleted step from flow {$flow_id}");
+                } else if ($logger) {
+                    $logger && $logger->debug("Removed step at position {$deleted_step_position} with" . ($has_handler ? ' handler' : ' no handler') . " from flow {$flow_id}");
+                }
+            }
+        }
         
         // Log the deletion
         $logger = apply_filters('dm_get_logger', null);
@@ -395,13 +478,28 @@ class PipelinePageAjax
         // Create default "Draft Flow" for the new pipeline
         $db_flows = $all_databases['flows'] ?? null;
         if ($db_flows) {
+            // Get current pipeline step configuration for flow sync
+            $pipeline_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+            $flow_config = [];
+            
+            // Populate flow config with existing pipeline steps using position-based structure
+            foreach ($pipeline_steps as $index => $step) {
+                $step_id = $step['step_id'] ?? null;
+                if ($step_id) {
+                    // Position-based structure with flow step ID for reference
+                    $flow_config[$index] = [
+                        'flow_step_id' => $step_id . '_draft', // Temporary, will be updated with actual flow_id
+                        'step_type' => $step['step_type'],
+                        'pipeline_step_id' => $step_id,
+                        'handler' => null
+                    ];
+                }
+            }
+            
             $flow_data = [
                 'pipeline_id' => $pipeline_id,
                 'flow_name' => __('Draft Flow', 'data-machine'),
-                'flow_config' => json_encode([
-                    // Template structure for handler configuration - populated via UI
-                    // Each step will have one handler configured through the admin interface
-                ]),
+                'flow_config' => json_encode($flow_config),
                 'scheduling_config' => json_encode([
                     'status' => 'inactive',
                     'interval' => 'manual'
@@ -409,7 +507,29 @@ class PipelinePageAjax
             ];
             
             $flow_id = $db_flows->create_flow($flow_data);
-            // Continue even if flow creation fails - pipeline is more important
+            
+            // After flow creation, update flow config with proper flow step IDs
+            if ($flow_id && !empty($pipeline_steps)) {
+                $updated_flow_config = [];
+                foreach ($pipeline_steps as $index => $step) {
+                    $step_id = $step['step_id'] ?? null;
+                    if ($step_id) {
+                        // Update with proper flow step ID: step_id_flow_id
+                        $flow_step_id = $step_id . '_' . $flow_id;
+                        $updated_flow_config[$index] = [
+                            'flow_step_id' => $flow_step_id,
+                            'step_type' => $step['step_type'],
+                            'pipeline_step_id' => $step_id,
+                            'handler' => null
+                        ];
+                    }
+                }
+                
+                // Update flow with proper flow step IDs
+                $db_flows->update_flow($flow_id, [
+                    'flow_config' => json_encode($updated_flow_config)
+                ]);
+            }
         }
 
         // Get the created pipeline data
@@ -464,14 +584,15 @@ class PipelinePageAjax
         $flow_number = count($existing_flows) + 1;
         $flow_name = sprintf(__('%s Flow %d', 'data-machine'), $pipeline_name, $flow_number);
 
+        // Get current pipeline step configuration for flow sync
+        $pipeline_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $flow_config = [];
+        
         // Create new flow
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
-            'flow_config' => json_encode([
-                // Template structure for handler configuration - populated via UI
-                // Each step will have one handler configured through the admin interface
-            ]), // Empty config initially
+            'flow_config' => json_encode($flow_config), // Start with empty structure, will populate after flow_id available
             'scheduling_config' => json_encode([
                 'status' => 'inactive',
                 'interval' => 'manual'
@@ -479,6 +600,35 @@ class PipelinePageAjax
         ];
 
         $flow_id = $db_flows->create_flow($flow_data);
+        
+        // After flow creation, populate flow config with pipeline steps using position-based structure
+        if ($flow_id && !empty($pipeline_steps)) {
+            $updated_flow_config = [];
+            foreach ($pipeline_steps as $index => $step) {
+                $step_id = $step['step_id'] ?? null;
+                if ($step_id) {
+                    // Create proper flow step ID: step_id_flow_id
+                    $flow_step_id = $step_id . '_' . $flow_id;
+                    $updated_flow_config[$index] = [
+                        'flow_step_id' => $flow_step_id,
+                        'step_type' => $step['step_type'],
+                        'pipeline_step_id' => $step_id,
+                        'handler' => null
+                    ];
+                }
+            }
+            
+            // Update flow with proper flow step IDs
+            $success = $db_flows->update_flow($flow_id, [
+                'flow_config' => json_encode($updated_flow_config)
+            ]);
+            
+            if (!$success) {
+                // Log warning but don't fail flow creation
+                $logger = apply_filters('dm_get_logger', null);
+                $logger && $logger->error("Failed to sync pipeline steps to new flow {$flow_id}");
+            }
+        }
         
         if (!$flow_id) {
             wp_send_json_error(['message' => __('Failed to create flow', 'data-machine')]);

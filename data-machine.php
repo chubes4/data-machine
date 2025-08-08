@@ -110,7 +110,7 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * 1. Adding custom handlers via dm_get_handlers filter
  * 2. Adding custom steps via dm_get_steps filter  
  * 3. Adding custom admin pages via dm_get_admin_page filter
- * 4. Adding custom modal content via dm_get_modal filter
+ * 4. Adding custom modal content via dm_get_modals filter
  * 5. Overriding core services with higher filter priorities
  * 
  * ARCHITECTURAL PRINCIPLES:

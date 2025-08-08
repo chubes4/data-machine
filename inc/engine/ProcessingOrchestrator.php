@@ -50,11 +50,11 @@ class ProcessingOrchestrator {
 	 * @param int $step_position The step position in pipeline (0-based).
 	 * @param int|null $pipeline_id The pipeline ID.
 	 * @param int|null $flow_id The flow ID.
-	 * @param array|null $pipeline_config Pre-built pipeline configuration.
+	 * @param array|null $job_config Pre-built job configuration.
 	 * @param array|null $previous_data_packets Previous step data packets.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function execute_step_callback( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $pipeline_config = null, $previous_data_packets = null ): bool {
+	public static function execute_step_callback( $job_id, $step_position, $pipeline_id = null, $flow_id = null, $job_config = null, $previous_data_packets = null ): bool {
 		$orchestrator = apply_filters('dm_get_orchestrator', null);
 		if ( ! $orchestrator ) {
 			$logger = apply_filters('dm_get_logger', null);
@@ -68,8 +68,8 @@ class ProcessingOrchestrator {
 		}
 		
 		// Call execute_step with complete parameter set
-		if ( $pipeline_id && $flow_id && $pipeline_config ) {
-			return $orchestrator->execute_step( $step_position, $job_id, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets ?: [] );
+		if ( $pipeline_id && $flow_id && $job_config ) {
+			return $orchestrator->execute_step( $step_position, $job_id, $pipeline_id, $flow_id, $job_config, $previous_data_packets ?: [] );
 		} else {
 			// Legacy fallback - should not occur with new JobCreator
 			$logger = apply_filters('dm_get_logger', null);
@@ -95,11 +95,11 @@ class ProcessingOrchestrator {
 	 * @param int $job_id The job ID.
 	 * @param int $pipeline_id The pipeline ID.
 	 * @param int $flow_id The flow ID.
-	 * @param array $pipeline_config Pre-built pipeline configuration from JobCreator.
+	 * @param array $job_config Pre-built job configuration from JobCreator.
 	 * @param array $previous_data_packets Previous step data packets for execution.
 	 * @return bool True on success, false on failure.
 	 */
-	public function execute_step( int $step_position, int $job_id, int $pipeline_id, int $flow_id, array $pipeline_config, array $previous_data_packets = [] ): bool {
+	public function execute_step( int $step_position, int $job_id, int $pipeline_id, int $flow_id, array $job_config, array $previous_data_packets = [] ): bool {
 		try {
 			// Get services via filters
 			$logger = apply_filters('dm_get_logger', null);
@@ -115,9 +115,9 @@ class ProcessingOrchestrator {
 				'step_position' => $step_position
 			] );
 			
-			// Use pre-built pipeline configuration from JobCreator
-			if ( empty( $pipeline_config ) ) {
-				$logger->error( 'Pipeline configuration is empty', [
+			// Use pre-built job configuration from JobCreator
+			if ( empty( $job_config ) ) {
+				$logger->error( 'Job configuration is empty', [
 					'pipeline_id' => $pipeline_id,
 					'job_id' => $job_id,
 					'step_position' => $step_position
@@ -125,12 +125,12 @@ class ProcessingOrchestrator {
 				return false;
 			}
 			
-			// Use pre-built pipeline configuration from JobCreator (no database lookups)
-			$pipeline_steps = $pipeline_config['pipeline_step_config'] ?? [];
+			// Use pre-built job configuration from JobCreator (no database lookups)
+			$pipeline_steps = $job_config['pipeline_step_config'] ?? [];
 			
 			// Validate we have steps in pre-built configuration
 			if ( empty( $pipeline_steps ) ) {
-				$logger->error( 'Pipeline configuration contains no steps', [
+				$logger->error( 'Job configuration contains no steps', [
 					'step_position' => $step_position,
 					'job_id' => $job_id,
 					'pipeline_id' => $pipeline_id
@@ -192,8 +192,11 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
+			// Add current step position to job config for step access
+			$job_config['current_step_position'] = $step_position;
+			
 			// Execute step with job configuration - steps access data directly from job_config
-			$output_data_packets = $step_instance->execute( $job_id, $previous_data_packets, $pipeline_config );
+			$output_data_packets = $step_instance->execute( $job_id, $previous_data_packets, $job_config );
 			
 			// Validate step return - must be array of DataPackets
 			if ( ! is_array( $output_data_packets ) ) {
@@ -222,7 +225,7 @@ class ProcessingOrchestrator {
 				if ( $next_step_exists ) {
 					$next_step_position = $step_position + 1;
 					// Pass output DataPackets to next step (pure engine flow)
-					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $pipeline_config, $output_data_packets ) ) {
+					if ( ! $this->schedule_next_step( $job_id, $next_step_position, $pipeline_id, $flow_id, $job_config, $output_data_packets ) ) {
 						$logger->error( 'Failed to schedule next step', [
 							'current_position' => $step_position,
 							'next_position' => $next_step_position,
@@ -278,11 +281,11 @@ class ProcessingOrchestrator {
 	 * @param int $step_position The next step position.
 	 * @param int $pipeline_id The pipeline ID.
 	 * @param int $flow_id The flow ID.
-	 * @param array $pipeline_config Pre-built pipeline configuration.
+	 * @param array $job_config Pre-built job configuration.
 	 * @param array $previous_data_packets Previous step data for next execution.
 	 * @return bool True on success, false on failure.
 	 */
-	private function schedule_next_step( int $job_id, int $step_position, int $pipeline_id, int $flow_id, array $pipeline_config, array $previous_data_packets = [] ): bool {
+	private function schedule_next_step( int $job_id, int $step_position, int $pipeline_id, int $flow_id, array $job_config, array $previous_data_packets = [] ): bool {
 		$logger = apply_filters('dm_get_logger', null);
 		
 		$scheduler = apply_filters('dm_get_action_scheduler', null);
@@ -299,7 +302,7 @@ class ProcessingOrchestrator {
 				'step_position' => $step_position,
 				'pipeline_id' => $pipeline_id,
 				'flow_id' => $flow_id,
-				'pipeline_config' => $pipeline_config,
+				'pipeline_config' => $job_config,
 				'previous_data_packets' => $previous_data_packets
 			],
 			'data-machine'

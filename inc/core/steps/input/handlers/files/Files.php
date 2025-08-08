@@ -47,10 +47,11 @@ class Files {
 	 *
      * @param int $pipeline_id Pipeline ID for context.
      * @param array  $handler_config Handler configuration array.
+     * @param int|null $flow_id The flow ID for processed items tracking.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_input_data(int $pipeline_id, array $handler_config): array {
+	public function get_input_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         // Validate pipeline ID
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
@@ -63,14 +64,20 @@ class Files {
             throw new Exception(esc_html__('Files repository service not available.', 'data-machine'));
         }
 
+        // Extract flow_step_id for proper file isolation
+        $flow_step_id = $handler_config['flow_step_id'] ?? null;
+        
         // Get uploaded files from handler config
         $uploaded_files = $handler_config['uploaded_files'] ?? [];
         
-        // If no uploaded files in config, check repository for available files
+        // If no uploaded files in config, check repository for available files with proper isolation
         if (empty($uploaded_files)) {
-            $repo_files = $repository->get_all_files();
+            $repo_files = $repository->get_all_files($flow_step_id);
             if (empty($repo_files)) {
-                $logger?->debug('Files Input: No files available in repository.', ['pipeline_id' => $pipeline_id]);
+                $logger?->debug('Files Input: No files available in repository.', [
+                    'pipeline_id' => $pipeline_id,
+                    'flow_step_id' => $flow_step_id
+                ]);
                 return ['processed_items' => []];
             }
             
@@ -87,7 +94,7 @@ class Files {
         }
         
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($pipeline_id, ['uploaded_files' => $uploaded_files]);
+        $next_file = $this->find_next_unprocessed_file($flow_id, ['uploaded_files' => $uploaded_files]);
         
         if (!$next_file) {
             $logger?->debug('Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
@@ -103,23 +110,16 @@ class Files {
         $file_identifier = $next_file['persistent_path'];
         $mime_type = $next_file['mime_type'] ?? 'application/octet-stream';
         
-        // Read text file content for supported text types
-        $content_string = null;
-        if ($this->is_text_file($mime_type)) {
-            $content_string = $this->read_text_file_content($next_file['persistent_path'], $mime_type);
-        }
+        // Pass file directly to engine - let downstream steps handle file type compatibility
         
-        // Create standardized item data
+        // Create simple file data packet - let engine handle file processing
         $item_data = [
-            'content_string' => $content_string, // Text content for text files, null for other types
-            'file_info' => [
-                'original_name' => $next_file['original_name'],
-                'mime_type' => $mime_type,
-                'size' => $next_file['size'] ?? 0,
-                'persistent_path' => $next_file['persistent_path']
-            ],
+            'file_path' => $next_file['persistent_path'],
+            'file_name' => $next_file['original_name'], 
+            'mime_type' => $mime_type,
+            'file_size' => $next_file['size'] ?? 0,
             'source_type' => 'files',
-            'item_identifier_to_log' => $file_identifier, // Used by processed items system
+            'item_identifier_to_log' => $file_identifier,
             'original_id' => $file_identifier,
             'original_title' => $next_file['original_name'],
             'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
@@ -127,6 +127,7 @@ class Files {
 
         $logger?->debug('Files Input: Found unprocessed file for processing.', [
             'pipeline_id' => $pipeline_id,
+            'flow_step_id' => $flow_step_id,
             'file_path' => $file_identifier
         ]);
 
@@ -135,13 +136,13 @@ class Files {
 	}
 
     /**
-     * Find the next unprocessed file for a pipeline.
+     * Find the next unprocessed file for a flow.
      *
-     * @param int $pipeline_id Pipeline ID.
+     * @param int|null $flow_id Flow ID.
      * @param array $config Files configuration.
      * @return array|null File info or null if no unprocessed files.
      */
-    private function find_next_unprocessed_file(int $pipeline_id, array $config): ?array {
+    private function find_next_unprocessed_file(?int $flow_id, array $config): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
         
         if (empty($uploaded_files)) {
@@ -161,7 +162,7 @@ class Files {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            if (!$db_processed_items->has_item_been_processed($pipeline_id, 'files', $file_identifier)) {
+            if (!$db_processed_items->has_item_been_processed($flow_id, 'files', $file_identifier)) {
                 return $file;
             }
         }
@@ -181,98 +182,7 @@ class Files {
         return $file_info['type'] ?? 'application/octet-stream';
     }
 
-    /**
-     * Check if a MIME type represents a text file that should be read as content.
-     * Simplified - let AI models handle most file types
-     *
-     * @param string $mime_type MIME type to check.
-     * @return bool True if it's a text file type.
-     */
-    private function is_text_file(string $mime_type): bool {
-        $text_mime_types = [
-            'text/plain',
-            'text/csv',
-            'application/json',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ];
-        
-        return in_array($mime_type, $text_mime_types);
-    }
 
-    /**
-     * Read text content from a file.
-     *
-     * @param string $file_path Path to the file.
-     * @param string $mime_type MIME type of the file.
-     * @return string|null File content or null if reading failed.
-     */
-    private function read_text_file_content(string $file_path, string $mime_type): ?string {
-        try {
-            // Security check - ensure file exists and is readable
-            if (!file_exists($file_path) || !is_readable($file_path)) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Cannot read file.', ['file_path' => $file_path]);
-                return null;
-            }
-
-            // WordPress native memory management
-            wp_raise_memory_limit('admin');
-            
-            // Basic file size check to prevent memory issues
-            $file_size = filesize($file_path);
-            if ($file_size === false) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: Cannot determine file size.', ['file_path' => $file_path]);
-                return null;
-            }
-            
-            // Check if file is too large (conservative 32MB limit)
-            $max_file_size = 32 * 1024 * 1024; // 32MB
-            if ($file_size > $max_file_size) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: File too large to process safely.', [
-                    'file_path' => $file_path,
-                    'file_size' => size_format($file_size),
-                    'max_allowed' => size_format($max_file_size)
-                ]);
-                return null;
-            }
-
-            // Pass file directly to AI instead of pre-processing
-            // Let AI providers handle text extraction with their specialized systems
-            $content = [
-                'file_path' => $file_path,
-                'mime_type' => $mime_type,
-                'filename' => basename($file_path),
-                'file_size' => filesize($file_path)
-            ];
-
-            // File data is ready - no content validation needed since AI will handle it
-            if (empty($content['file_path']) || !file_exists($content['file_path'])) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger?->error('Files Input: File not found or inaccessible.', ['file_path' => $file_path]);
-                return null;
-            }
-
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->debug('Files Input: Successfully prepared file for AI processing.', [
-                'file_path' => $file_path,
-                'mime_type' => $content['mime_type'],
-                'file_size' => $content['file_size']
-            ]);
-
-            return $content;
-
-        } catch (Exception $e) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->error('Files Input: Error reading text file.', [
-                'file_path' => $file_path,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
 
 
     
@@ -334,36 +244,24 @@ class Files {
     }
 
     /**
-     * Basic file validation - keep only essential security checks
+     * Basic security validation - only block dangerous executable files
      *
      * @param string $file_path Path to file
      * @param string $filename Original filename
-     * @throws Exception If file fails basic validation
+     * @throws Exception If file fails security validation
      */
     private function validate_file_basic(string $file_path, string $filename): void {
-        // Basic file size check to prevent memory issues
-        $file_size = filesize($file_path);
-        if ($file_size === false) {
-            throw new Exception(esc_html__('Cannot determine file size.', 'data-machine'));
-        }
-        
-        // Conservative 32MB limit
-        $max_file_size = 32 * 1024 * 1024; // 32MB
-        if ($file_size > $max_file_size) {
-            throw new Exception(sprintf(
-                /* translators: %1$s: actual file size, %2$s: maximum allowed size */
-                __('File too large: %1$s. Maximum allowed size: %2$s', 'data-machine'),
-                size_format($file_size),
-                size_format($max_file_size)
-            ));
-        }
-
-        // Only block obviously dangerous extensions
-        $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr'];
+        // Only block obviously dangerous executable extensions for security
+        $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr', 'com', 'pif', 'vbs', 'js'];
         $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
         if (in_array($file_extension, $dangerous_extensions)) {
             throw new Exception(esc_html__('File type not allowed for security reasons.', 'data-machine'));
+        }
+        
+        // Verify file exists and is readable
+        if (!file_exists($file_path) || !is_readable($file_path)) {
+            throw new Exception(esc_html__('File is not accessible.', 'data-machine'));
         }
     }
 }

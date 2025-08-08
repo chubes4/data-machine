@@ -187,18 +187,19 @@ class AI_HTTP_Ajax_Handler {
         }
         
         try {
-            $client = new AI_HTTP_Client([
-                'plugin_context' => $plugin_context,
-                'ai_type' => 'llm'
-            ]);
+            // Use same working pattern as ModelSelector
+            $options_manager = new AI_HTTP_Options_Manager($plugin_context, 'llm');
+            $provider_config = $options_manager->get_provider_settings($provider);
             
-            $models = $client->get_models($provider);
+            // Use unified model fetcher (same as working ModelSelector)
+            $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($provider, $provider_config);
             
-            if (is_wp_error($models)) {
-                wp_send_json_error(['message' => $models->get_error_message()]);
-            } else {
-                wp_send_json_success($models);
+            if (empty($models)) {
+                wp_send_json_error(['message' => 'No API key configured for ' . $provider . '. Enter API key to load models.']);
+                return;
             }
+            
+            wp_send_json_success($models);
             
         } catch (Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);

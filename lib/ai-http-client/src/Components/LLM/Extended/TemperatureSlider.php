@@ -41,7 +41,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
         $html .= 'id="' . esc_attr($unique_id) . '_temperature" ';
         $html .= 'name="' . esc_attr($field_name) . '" ';
         $html .= 'value="' . esc_attr($temperature) . '" ';
-        $html .= 'placeholder="0.7" ';
+        $html .= 'placeholder="0.5" ';
         $html .= 'data-component-id="' . esc_attr($unique_id) . '" ';
         $html .= 'data-component-type="temperature_input" ';
         $html .= 'class="ai-temperature-input" ';
@@ -87,7 +87,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
             ],
             'default_value' => [
                 'type' => 'number',
-                'default' => 0.7,
+                'default' => 0.5,
                 'description' => 'Default temperature value'
             ],
             'labels' => [
@@ -105,7 +105,7 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
             ],
             'help_text' => [
                 'type' => 'string',
-                'default' => 'Enter a value between 0 and 1. Lower values = more focused, higher values = more creative.',
+                'default' => 'Value between 0 and 1. Lower values = more focused, higher values = more creative.',
                 'description' => 'Help text displayed below slider'
             ]
         ];
@@ -122,13 +122,13 @@ class AI_HTTP_Extended_TemperatureSlider implements AI_HTTP_Component_Interface 
             'min' => 0,
             'max' => 1,
             'step' => 0.1,
-            'default_value' => 0.7,
+            'default_value' => 0.5,
             'labels' => [
                 'creative' => 'Creative',
                 'focused' => 'Focused'
             ],
             'show_help' => true,
-            'help_text' => 'Enter a value between 0 and 1. Lower values = more focused, higher values = more creative.'
+            'help_text' => 'Value between 0 and 1. Lower values = more focused, higher values = more creative.'
         ];
     }
     

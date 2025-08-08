@@ -36,19 +36,17 @@ class FilesRepository {
     /**
      * Get the repository directory path
      *
-     * @param array|null $handler_context Handler context for isolation (flow_id, step_id)
+     * @param string|null $flow_step_id Flow step ID for isolation (step_id_flow_id format)
      * @return string Full path to repository directory
      */
-    public function get_repository_path(?array $handler_context = null): string {
+    public function get_repository_path(?string $flow_step_id = null): string {
         $upload_dir = wp_upload_dir();
         $base_path = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
         
-        // If handler context provided, create isolated subdirectory
-        if ($handler_context && isset($handler_context['flow_id'], $handler_context['step_id'])) {
-            $flow_id = absint($handler_context['flow_id']);
-            $step_id = sanitize_text_field($handler_context['step_id']);
-            $context_dir = "flow_{$flow_id}_step_{$step_id}";
-            return trailingslashit($base_path) . $context_dir;
+        // If flow_step_id provided, create isolated subdirectory
+        if ($flow_step_id) {
+            $safe_flow_step_id = sanitize_file_name($flow_step_id);
+            return trailingslashit($base_path) . $safe_flow_step_id;
         }
         
         return $base_path;
@@ -57,19 +55,17 @@ class FilesRepository {
     /**
      * Get the repository URL
      *
-     * @param array|null $handler_context Handler context for isolation (flow_id, step_id)
+     * @param string|null $flow_step_id Flow step ID for isolation (step_id_flow_id format)
      * @return string URL to repository directory
      */
-    public function get_repository_url(?array $handler_context = null): string {
+    public function get_repository_url(?string $flow_step_id = null): string {
         $upload_dir = wp_upload_dir();
         $base_url = trailingslashit($upload_dir['baseurl']) . self::REPOSITORY_DIR;
         
-        // If handler context provided, create isolated subdirectory URL
-        if ($handler_context && isset($handler_context['flow_id'], $handler_context['step_id'])) {
-            $flow_id = absint($handler_context['flow_id']);
-            $step_id = sanitize_text_field($handler_context['step_id']);
-            $context_dir = "flow_{$flow_id}_step_{$step_id}";
-            return trailingslashit($base_url) . $context_dir;
+        // If flow_step_id provided, create isolated subdirectory URL
+        if ($flow_step_id) {
+            $safe_flow_step_id = sanitize_file_name($flow_step_id);
+            return trailingslashit($base_url) . $safe_flow_step_id;
         }
         
         return $base_url;
@@ -78,11 +74,11 @@ class FilesRepository {
     /**
      * Ensure repository directory exists
      *
-     * @param array|null $handler_context Handler context for isolation
+     * @param string|null $flow_step_id Flow step ID for isolation
      * @return bool True if directory exists or was created
      */
-    public function ensure_repository_exists(?array $handler_context = null): bool {
-        $repo_path = $this->get_repository_path($handler_context);
+    public function ensure_repository_exists(?string $flow_step_id = null): bool {
+        $repo_path = $this->get_repository_path($flow_step_id);
         
         if (!file_exists($repo_path)) {
             $created = wp_mkdir_p($repo_path);
@@ -106,11 +102,11 @@ class FilesRepository {
      *
      * @param string $source_path Path to source file
      * @param string $filename Original filename to use
-     * @param array|null $handler_context Handler context for isolation
+     * @param string|null $flow_step_id Flow step ID for isolation
      * @return string|false Repository file path on success, false on failure
      */
-    public function store_file(string $source_path, string $filename, ?array $handler_context = null) {
-        if (!$this->ensure_repository_exists($handler_context)) {
+    public function store_file(string $source_path, string $filename, ?string $flow_step_id = null) {
+        if (!$this->ensure_repository_exists($flow_step_id)) {
             return false;
         }
 
@@ -124,7 +120,7 @@ class FilesRepository {
 
         // Sanitize filename for security
         $safe_filename = $this->sanitize_filename($filename);
-        $destination_path = $this->get_repository_path($handler_context) . '/' . $safe_filename;
+        $destination_path = $this->get_repository_path($flow_step_id) . '/' . $safe_filename;
 
         // Copy file to repository
         $copied = copy($source_path, $destination_path);
@@ -149,15 +145,15 @@ class FilesRepository {
     /**
      * Get all files in the repository
      *
-     * @param array|null $handler_context Handler context for isolation
+     * @param string|null $flow_step_id Flow step ID for isolation
      * @return array Array of file information
      */
-    public function get_all_files(?array $handler_context = null): array {
-        if (!$this->ensure_repository_exists($handler_context)) {
+    public function get_all_files(?string $flow_step_id = null): array {
+        if (!$this->ensure_repository_exists($flow_step_id)) {
             return [];
         }
 
-        $repo_path = $this->get_repository_path($handler_context);
+        $repo_path = $this->get_repository_path($flow_step_id);
         $files = glob($repo_path . '/*');
         $file_list = [];
 
@@ -175,7 +171,7 @@ class FilesRepository {
                     'path' => $file_path,
                     'size' => filesize($file_path),
                     'modified' => filemtime($file_path),
-                    'url' => $this->get_repository_url() . '/' . $filename
+                    'url' => $this->get_repository_url($flow_step_id) . '/' . $filename
                 ];
             }
         }
@@ -210,12 +206,12 @@ class FilesRepository {
      * Delete a file from the repository
      *
      * @param string $filename Filename to delete
-     * @param array|null $handler_context Handler context for isolation
+     * @param string|null $flow_step_id Flow step ID for isolation
      * @return bool True on success, false on failure
      */
-    public function delete_file(string $filename, ?array $handler_context = null): bool {
+    public function delete_file(string $filename, ?string $flow_step_id = null): bool {
         $safe_filename = $this->sanitize_filename($filename);
-        $file_path = $this->get_repository_path($handler_context) . '/' . $safe_filename;
+        $file_path = $this->get_repository_path($flow_step_id) . '/' . $safe_filename;
 
         if (!file_exists($file_path)) {
             return false;
@@ -236,21 +232,21 @@ class FilesRepository {
      * Clean up old files (older than specified days)
      *
      * @param int $days Files older than this many days will be deleted
-     * @param array|null $handler_context Handler context for isolation
+     * @param string|null $flow_step_id Flow step ID for isolation
      * @return int Number of files deleted
      */
-    public function cleanup_old_files(int $days = 7, ?array $handler_context = null): int {
-        if (!$this->ensure_repository_exists($handler_context)) {
+    public function cleanup_old_files(int $days = 7, ?string $flow_step_id = null): int {
+        if (!$this->ensure_repository_exists($flow_step_id)) {
             return 0;
         }
 
         $cutoff_time = time() - ($days * DAY_IN_SECONDS);
-        $files = $this->get_all_files($handler_context);
+        $files = $this->get_all_files($flow_step_id);
         $deleted_count = 0;
 
         foreach ($files as $file) {
             if ($file['modified'] < $cutoff_time) {
-                if ($this->delete_file($file['filename'], $handler_context)) {
+                if ($this->delete_file($file['filename'], $flow_step_id)) {
                     $deleted_count++;
                 }
             }
@@ -270,11 +266,11 @@ class FilesRepository {
     /**
      * Get repository statistics
      *
-     * @param array|null $handler_context Handler context for isolation
+     * @param string|null $flow_step_id Flow step ID for isolation
      * @return array Repository statistics
      */
-    public function get_repository_stats(?array $handler_context = null): array {
-        $files = $this->get_all_files($handler_context);
+    public function get_repository_stats(?string $flow_step_id = null): array {
+        $files = $this->get_all_files($flow_step_id);
         $total_size = 0;
         $oldest_file = null;
         $newest_file = null;
@@ -329,17 +325,4 @@ class FilesRepository {
         }
     }
 
-    /**
-     * Create handler context array for file isolation
-     *
-     * @param int $flow_id Flow ID
-     * @param string $step_id Step UUID for stable identification
-     * @return array Handler context
-     */
-    public static function create_handler_context(int $flow_id, string $step_id): array {
-        return [
-            'flow_id' => $flow_id,
-            'step_id' => $step_id
-        ];
-    }
 }

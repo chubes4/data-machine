@@ -136,6 +136,7 @@ function dm_register_pipelines_admin_page_filters() {
                                 ],
                                 'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
                                 'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
+                                'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                 'strings' => [
                                     'connecting' => __('Connecting...', 'data-machine'),
                                     'disconnecting' => __('Disconnecting...', 'data-machine'),
@@ -172,7 +173,7 @@ function dm_register_pipelines_admin_page_filters() {
         
         // Define modal actions (UI/template operations)
         $modal_actions = [
-            'get_modal', 'get_template', 'get_flow_step_card', 'get_flow_config',
+            'get_template', 'get_flow_step_card', 'get_flow_config',
             'configure-step-action', 'add-location-action', 'add-handler-action'
         ];
         
@@ -226,9 +227,10 @@ function dm_register_pipelines_admin_page_filters() {
             'title' => __('Schedule Flow', 'data-machine')
         ];
         
-        // Generic handler settings modal (redirects to specific handlers)
+        // Handler-specific settings modals - direct template access
+        // WordPress handlers require input/output distinction
         $modals['handler-settings'] = [
-            'template' => 'modal/handler-settings-form',
+            'dynamic_template' => true, // Flag for dynamic template resolution
             'title' => __('Handler Settings', 'data-machine')
         ];
         
@@ -272,30 +274,41 @@ function dm_handle_save_handler_settings() {
     // Get form data
     $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
     $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-    $step_id = sanitize_text_field(wp_unslash($_POST['step_id'] ?? ''));
-    $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+    $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
     $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+    
+    // Extract flow_id and step_id from flow_step_id for backward compatibility
+    $flow_id = null;
+    $step_id = null;
+    if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
+        $parts = explode('_', $flow_step_id, 2);
+        if (count($parts) === 2) {
+            $step_id = $parts[0];
+            $flow_id = (int)$parts[1];
+        }
+    }
     
     $logger && $logger->debug('Handler settings extracted parameters', [
         'handler_slug' => $handler_slug,
         'step_type' => $step_type,
+        'flow_step_id' => $flow_step_id,
         'step_id' => $step_id,
         'flow_id' => $flow_id,
         'pipeline_id' => $pipeline_id
     ]);
     
-    if (empty($handler_slug) || empty($step_type) || empty($step_id)) {
+    if (empty($handler_slug) || empty($step_type) || empty($flow_step_id)) {
         $error_details = [
             'handler_slug_empty' => empty($handler_slug),
             'step_type_empty' => empty($step_type),
-            'step_id_empty' => empty($step_id),
+            'flow_step_id_empty' => empty($flow_step_id),
             'post_keys' => array_keys($_POST)
         ];
         
-        $logger && $logger->error('Handler slug, step type, and step ID validation failed', $error_details);
+        $logger && $logger->error('Handler slug, step type, and flow step ID validation failed', $error_details);
         
         wp_send_json_error([
-            'message' => __('Handler slug, step type, and step ID are required.', 'data-machine'),
+            'message' => __('Handler slug, step type, and flow step ID are required.', 'data-machine'),
             'debug_info' => $error_details
         ]);
         return;
@@ -349,34 +362,40 @@ function dm_handle_save_handler_settings() {
             return;
         }
         
-        // Parse current flow configuration
-        $flow_config_raw = $flow['flow_config'] ?? '{}';
-        $flow_config = is_string($flow_config_raw) ? json_decode($flow_config_raw, true) : $flow_config_raw;
-        $flow_config = $flow_config ?: [];
+        // Get current flow configuration (already decoded by database layer)
+        $flow_config = $flow['flow_config'] ?? [];
+        
+        // Validate that flow_config is array (database layer should provide arrays)
+        if (!is_array($flow_config)) {
+            wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
+            return;
+        }
         
         // Initialize step configuration if it doesn't exist
         if (!isset($flow_config['steps'])) {
             $flow_config['steps'] = [];
         }
         
-        // Find or create step configuration using step_id
-        if (!isset($flow_config['steps'][$step_id])) {
-            $flow_config['steps'][$step_id] = [
+        // Use the provided flow step ID directly (already in step_id_flow_id format)
+        // Find or create step configuration using flow step ID
+        if (!isset($flow_config['steps'][$flow_step_id])) {
+            $flow_config['steps'][$flow_step_id] = [
                 'step_type' => $step_type,
+                'pipeline_step_id' => $step_id,
                 'handlers' => []
             ];
         }
         
         // Initialize handlers array if it doesn't exist
-        if (!isset($flow_config['steps'][$step_id]['handlers'])) {
-            $flow_config['steps'][$step_id]['handlers'] = [];
+        if (!isset($flow_config['steps'][$flow_step_id]['handlers'])) {
+            $flow_config['steps'][$flow_step_id]['handlers'] = [];
         }
         
         // Check if handler already exists
-        $handler_exists = isset($flow_config['steps'][$step_id]['handlers'][$handler_slug]);
+        $handler_exists = isset($flow_config['steps'][$flow_step_id]['handlers'][$handler_slug]);
         
         // UPDATE existing handler settings OR ADD new handler (no replacement)
-        $flow_config['steps'][$step_id]['handlers'][$handler_slug] = [
+        $flow_config['steps'][$flow_step_id]['handlers'][$handler_slug] = [
             'handler_slug' => $handler_slug,
             'settings' => $handler_settings,
             'enabled' => true
@@ -396,7 +415,7 @@ function dm_handle_save_handler_settings() {
         $logger = apply_filters('dm_get_logger', null);
         if ($logger) {
             $action_type = $handler_exists ? 'updated' : 'added';
-            $logger->debug("Handler '{$handler_slug}' {$action_type} for step '{$step_type}' in flow {$flow_id}");
+            $logger->debug("Handler '{$handler_slug}' {$action_type} for flow step '{$flow_step_id}' in flow {$flow_id}");
         }
         
         $action_message = $handler_exists 
@@ -407,7 +426,8 @@ function dm_handle_save_handler_settings() {
             'message' => $action_message,
             'handler_slug' => $handler_slug,
             'step_type' => $step_type,
-            'flow_id' => $flow_id,
+            'flow_step_id' => $flow_step_id,
+            'pipeline_id' => $pipeline_id,
             'handler_config' => $handler_config,
             'handler_settings' => $handler_settings,
             'action_type' => $handler_exists ? 'updated' : 'added'
@@ -430,6 +450,288 @@ function dm_handle_save_handler_settings() {
 $scheduler_filters_path = __DIR__ . '/scheduler/PipelineSchedulerFilters.php';
 if (file_exists($scheduler_filters_path)) {
     require_once $scheduler_filters_path;
+}
+
+// Pipeline template context resolution - handles context for all pipeline/flow templates
+add_filter('dm_render_template', function($content, $template_name, $data = []) {
+    // Pipeline template context requirements
+    $pipeline_template_requirements = [
+        // Modal templates
+        'modal/configure-step' => [
+            'required' => ['step_type', 'pipeline_id', 'step_id'],
+            'optional' => ['flow_id'],
+            'auto_generate' => ['flow_step_id' => '{step_id}_{flow_id}']
+        ],
+        'modal/handler-selection-cards' => [
+            'required' => ['pipeline_id', 'flow_id', 'step_type']
+        ],
+        // Handler-specific settings templates - support all handlers with WordPress input/output variants
+        'modal/handler-settings/files' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/rss' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/reddit' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/googlesheets_input' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/googlesheets_output' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/wordpress_input' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/wordpress_output' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/twitter' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/facebook' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/threads' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/handler-settings/bluesky' => [
+            'required' => ['handler_slug', 'step_type'],
+            'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        ],
+        'modal/step-selection-cards' => [
+            'required' => ['pipeline_id']
+        ],
+        'modal/flow-schedule' => [
+            'required' => ['flow_id']
+        ],
+        
+        // Page templates
+        'page/pipeline-step-card' => [
+            'required' => ['pipeline_id', 'step', 'is_first_step'],
+            'extract_from_step' => ['step_id', 'step_type']
+        ],
+        'page/flow-step-card' => [
+            'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
+            'extract_from_step' => ['step_id', 'step_type'],
+            'auto_generate' => [
+                'pipeline_step_id' => '{step.step_id}',
+                'flow_step_id' => '{step.step_id}_{flow_id}'
+            ]
+        ],
+        'page/flow-instance-card' => [
+            'required' => ['flow'],
+            'extract_from_flow' => ['flow_id', 'pipeline_id', 'flow_name']
+        ],
+        'page/pipeline-card' => [
+            'required' => ['pipeline'],
+            'extract_from_pipeline' => ['pipeline_id', 'pipeline_name', 'step_configuration']
+        ]
+    ];
+    
+    // Resolve context if this template has requirements
+    if (isset($pipeline_template_requirements[$template_name])) {
+        $requirements = $pipeline_template_requirements[$template_name];
+        $data = dm_resolve_pipeline_context($requirements, $data);
+    }
+    
+    return $content; // Continue filter chain
+}, 5, 3);
+
+/**
+ * Resolve pipeline template context based on requirements
+ * 
+ * @param array $requirements Template context requirements
+ * @param array $data Current template data
+ * @return array Enhanced data with resolved context
+ */
+function dm_resolve_pipeline_context($requirements, $data) {
+    // Validate required fields
+    if (!empty($requirements['required'])) {
+        foreach ($requirements['required'] as $field) {
+            if (!dm_has_context_field($field, $data)) {
+                // Log missing required context
+                $logger = apply_filters('dm_get_logger', null);
+                if ($logger) {
+                    $logger->error("Pipeline template context missing required field: {$field}", [
+                        'requirements' => $requirements,
+                        'available_data_keys' => array_keys($data)
+                    ]);
+                }
+            }
+        }
+    }
+    
+    // Auto-generate composite IDs
+    if (!empty($requirements['auto_generate'])) {
+        foreach ($requirements['auto_generate'] as $target_field => $pattern) {
+            $data[$target_field] = dm_generate_id_from_pattern($pattern, $data);
+        }
+    }
+    
+    // Extract nested data from objects/arrays
+    if (!empty($requirements['extract_from_step'])) {
+        $data = dm_extract_step_data($data, $requirements['extract_from_step']);
+    }
+    
+    if (!empty($requirements['extract_from_flow'])) {
+        $data = dm_extract_flow_data($data, $requirements['extract_from_flow']);
+    }
+    
+    if (!empty($requirements['extract_from_pipeline'])) {
+        $data = dm_extract_pipeline_data($data, $requirements['extract_from_pipeline']);
+    }
+    
+    return $data;
+}
+
+/**
+ * Check if context field exists and has value
+ * 
+ * @param string $field Field name to check
+ * @param array $data Data array to check
+ * @return bool True if field exists and has value
+ */
+function dm_has_context_field($field, $data) {
+    // Handle nested field access (e.g., 'step.step_id')
+    if (strpos($field, '.') !== false) {
+        $parts = explode('.', $field);
+        $current = $data;
+        
+        foreach ($parts as $part) {
+            if (is_array($current) && isset($current[$part])) {
+                $current = $current[$part];
+            } elseif (is_object($current) && isset($current->$part)) {
+                $current = $current->$part;
+            } else {
+                return false;
+            }
+        }
+        
+        return !empty($current);
+    }
+    
+    return isset($data[$field]) && !empty($data[$field]);
+}
+
+/**
+ * Generate ID from pattern using available data
+ * 
+ * @param string $pattern Pattern like '{step_id}_{flow_id}'
+ * @param array $data Available data
+ * @return string Generated ID
+ */
+function dm_generate_id_from_pattern($pattern, $data) {
+    // Replace {field} patterns with actual values
+    return preg_replace_callback('/\{([^}]+)\}/', function($matches) use ($data) {
+        $field = $matches[1];
+        
+        // Handle nested field access
+        if (strpos($field, '.') !== false) {
+            $parts = explode('.', $field);
+            $value = $data;
+            
+            foreach ($parts as $part) {
+                if (is_array($value) && isset($value[$part])) {
+                    $value = $value[$part];
+                } elseif (is_object($value) && isset($value->$part)) {
+                    $value = $value->$part;
+                } else {
+                    return '';
+                }
+            }
+            
+            return $value;
+        }
+        
+        return $data[$field] ?? '';
+    }, $pattern);
+}
+
+/**
+ * Extract step-related data
+ * 
+ * @param array $data Current data
+ * @param array $fields Fields to extract from step
+ * @return array Enhanced data
+ */
+function dm_extract_step_data($data, $fields) {
+    if (!isset($data['step'])) {
+        return $data;
+    }
+    
+    $step = $data['step'];
+    
+    foreach ($fields as $field) {
+        if (is_array($step) && isset($step[$field])) {
+            $data[$field] = $step[$field];
+        } elseif (is_object($step) && isset($step->$field)) {
+            $data[$field] = $step->$field;
+        }
+    }
+    
+    return $data;
+}
+
+/**
+ * Extract flow-related data
+ * 
+ * @param array $data Current data
+ * @param array $fields Fields to extract from flow
+ * @return array Enhanced data
+ */
+function dm_extract_flow_data($data, $fields) {
+    if (!isset($data['flow'])) {
+        return $data;
+    }
+    
+    $flow = $data['flow'];
+    
+    foreach ($fields as $field) {
+        if (is_array($flow) && isset($flow[$field])) {
+            $data[$field] = $flow[$field];
+        } elseif (is_object($flow) && isset($flow->$field)) {
+            $data[$field] = $flow->$field;
+        }
+    }
+    
+    return $data;
+}
+
+/**
+ * Extract pipeline-related data
+ * 
+ * @param array $data Current data
+ * @param array $fields Fields to extract from pipeline
+ * @return array Enhanced data
+ */
+function dm_extract_pipeline_data($data, $fields) {
+    if (!isset($data['pipeline'])) {
+        return $data;
+    }
+    
+    $pipeline = $data['pipeline'];
+    
+    foreach ($fields as $field) {
+        if (is_array($pipeline) && isset($pipeline[$field])) {
+            $data[$field] = $pipeline[$field];
+        } elseif (is_object($pipeline) && isset($pipeline->$field)) {
+            $data[$field] = $pipeline->$field;
+        }
+    }
+    
+    return $data;
 }
 
 // Auto-register when file loads - achieving complete self-containment

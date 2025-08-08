@@ -49,33 +49,6 @@ class PipelineModalAjax
     }
 
 
-    /**
-     * Get modal based on template and context
-     * Routes to appropriate content generation method
-     */
-    private function handle_get_modal()
-    {
-        $template = sanitize_text_field(wp_unslash($_POST['template'] ?? ''));
-        $context = $_POST['context'] ?? [];
-
-        // Pure discovery pattern - get all registered modals
-        $all_modals = apply_filters('dm_get_modals', []);
-        $modal_data = $all_modals[$template] ?? null;
-        
-        if ($modal_data) {
-            $content = $modal_data['content'] ?? '';
-            $title = $modal_data['title'] ?? ucfirst(str_replace('-', ' ', $template));
-            
-            wp_send_json_success([
-                'content' => $content,
-                'title' => $title
-            ]);
-        } else {
-            wp_send_json_error([
-                'message' => sprintf(__('Modal template "%s" not found', 'data-machine'), $template)
-            ]);
-        }
-    }
 
     /**
      * Get rendered template with provided data
@@ -200,8 +173,14 @@ class PipelineModalAjax
             return;
         }
 
-        // Parse flow configuration
-        $flow_config = json_decode($flow['flow_config'] ?? '{}', true) ?: [];
+        // Get flow configuration (already decoded by database layer)
+        $flow_config = $flow['flow_config'] ?? [];
+        
+        // Validate that flow_config is array (database layer should provide arrays)
+        if (!is_array($flow_config)) {
+            wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
+            return;
+        }
 
         wp_send_json_success([
             'flow_id' => $flow_id,
@@ -458,21 +437,33 @@ class PipelineModalAjax
         // Try to get parameters from context first, then fallback to direct POST parameters
         $handler_slug = sanitize_text_field($context['handler_slug'] ?? $_POST['handler_slug'] ?? '');
         $step_type = sanitize_text_field($context['step_type'] ?? $_POST['step_type'] ?? '');
-        $flow_id = (int)sanitize_text_field($context['flow_id'] ?? $_POST['flow_id'] ?? '');
+        $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? $_POST['flow_step_id'] ?? '');
         $pipeline_id = (int)sanitize_text_field($context['pipeline_id'] ?? $_POST['pipeline_id'] ?? '');
         
-        if (empty($handler_slug) || empty($step_type)) {
+        // Extract flow_id and step_id from flow_step_id for backward compatibility and validation
+        $flow_id = null;
+        $step_id = null;
+        if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
+            $parts = explode('_', $flow_step_id, 2);
+            if (count($parts) === 2) {
+                $step_id = $parts[0];
+                $flow_id = (int)$parts[1];
+            }
+        }
+        
+        if (empty($handler_slug) || empty($step_type) || empty($flow_step_id)) {
             $error_details = [
                 'handler_slug_empty' => empty($handler_slug),
                 'step_type_empty' => empty($step_type),
+                'flow_step_id_empty' => empty($flow_step_id),
                 'context_keys' => array_keys($context),
                 'post_keys' => array_keys($_POST)
             ];
             
-            $logger && $logger->error('Handler slug and step type validation failed', $error_details);
+            $logger && $logger->error('Handler slug, step type, and flow step ID validation failed', $error_details);
             
             wp_send_json_error([
-                'message' => __('Handler slug and step type are required', 'data-machine'),
+                'message' => __('Handler slug, step type, and flow step ID are required', 'data-machine'),
                 'debug_info' => $error_details
             ]);
         }
@@ -522,35 +513,48 @@ class PipelineModalAjax
                 wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
             }
             
-            // Parse current flow configuration
-            $flow_config_raw = $flow['flow_config'] ?? '{}';
-            $flow_config = is_string($flow_config_raw) ? json_decode($flow_config_raw, true) : $flow_config_raw;
-            $flow_config = $flow_config ?: [];
+            // Get current flow configuration (already decoded by database layer)
+            $flow_config = $flow['flow_config'] ?? [];
             
-            // Initialize step configuration if it doesn't exist
-            if (!isset($flow_config['steps'])) {
-                $flow_config['steps'] = [];
+            // Validate that flow_config is array (database layer should provide arrays)
+            if (!is_array($flow_config)) {
+                wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
+                return;
             }
             
-            // Find or create step configuration
-            $step_key = $step_type;
-            if (!isset($flow_config['steps'][$step_key])) {
-                $flow_config['steps'][$step_key] = [
+            // Find step position by searching existing flow_config for matching flow_step_id
+            // This eliminates the need to lookup pipeline step configuration
+            $step_position = null;
+            
+            // First, check if this flow_step_id already exists in flow_config
+            foreach ($flow_config as $position => $flow_step) {
+                if (($flow_step['flow_step_id'] ?? '') === $flow_step_id) {
+                    $step_position = $position;
+                    break;
+                }
+            }
+            
+            // If not found, assign the next available position
+            if ($step_position === null) {
+                $step_position = count($flow_config);
+            }
+            
+            // Initialize position-based step configuration if it doesn't exist
+            if (!isset($flow_config[$step_position])) {
+                $flow_config[$step_position] = [
+                    'flow_step_id' => $flow_step_id,
                     'step_type' => $step_type,
-                    'handlers' => []
+                    'pipeline_step_id' => $step_id,
+                    'handler' => null
                 ];
             }
             
-            // Initialize handlers array if it doesn't exist
-            if (!isset($flow_config['steps'][$step_key]['handlers'])) {
-                $flow_config['steps'][$step_key]['handlers'] = [];
-            }
-            
             // Check if handler already exists
-            $handler_exists = isset($flow_config['steps'][$step_key]['handlers'][$handler_slug]);
+            $handler_exists = isset($flow_config[$step_position]['handler']) && 
+                             ($flow_config[$step_position]['handler']['handler_slug'] ?? '') === $handler_slug;
             
-            // UPDATE existing handler settings OR ADD new handler
-            $flow_config['steps'][$step_key]['handlers'][$handler_slug] = [
+            // UPDATE existing handler settings OR ADD new handler (single handler per step)
+            $flow_config[$step_position]['handler'] = [
                 'handler_slug' => $handler_slug,
                 'settings' => $handler_settings,
                 'enabled' => true
@@ -569,7 +573,7 @@ class PipelineModalAjax
             $logger = apply_filters('dm_get_logger', null);
             if ($logger) {
                 $action_type = $handler_exists ? 'updated' : 'added';
-                $logger->debug("Handler '{$handler_slug}' {$action_type} for step '{$step_type}' in flow {$flow_id}");
+                $logger->debug("Handler '{$handler_slug}' {$action_type} for step position {$step_position} in flow {$flow_id}");
             }
             
             $action_message = $handler_exists 
@@ -580,7 +584,8 @@ class PipelineModalAjax
                 'message' => $action_message,
                 'handler_slug' => $handler_slug,
                 'step_type' => $step_type,
-                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id,
+                'pipeline_id' => $pipeline_id,
                 'handler_config' => $handler_config,
                 'handler_settings' => $handler_settings,
                 'action_type' => $handler_exists ? 'updated' : 'added'

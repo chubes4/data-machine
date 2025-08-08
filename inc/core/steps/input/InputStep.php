@@ -50,31 +50,48 @@ class InputStep {
             
             // Input steps ignore pipeline context - pure data generation
 
-            // Get job and pipeline configuration
-            $job = $db_jobs->get_job($job_id);
-            if (!$job) {
-                $logger = apply_filters('dm_get_logger', null);
-                if ($logger) {
-                    $logger->error('Job not found for input step', ['job_id' => $job_id]);
-                }
-                return false;
+            // Get step configuration from job_config using current step position
+            $flow_config = $job_config['flow_config'] ?? [];
+            $step_position = $job_config['current_step_position'] ?? null;
+            
+            if ($step_position === null) {
+                $logger->error('Input step requires current step position', [
+                    'job_id' => $job_id,
+                    'available_job_config' => array_keys($job_config)
+                ]);
+                return [];
             }
-
-            // Get step configuration
-            $step_config = $this->get_step_configuration($job_id, 'input');
+            
+            $step_config = $flow_config[$step_position] ?? null;
+            
             if (!$step_config || empty($step_config['handler'])) {
-                $logger = apply_filters('dm_get_logger', null);
-                if ($logger) {
-                    $logger->error('Input step requires handler configuration', ['job_id' => $job_id]);
-                }
-                return false;
+                $logger->error('Input step requires handler configuration', [
+                    'job_id' => $job_id,
+                    'step_position' => $step_position,
+                    'available_flow_positions' => array_keys($flow_config)
+                ]);
+                return [];
             }
 
-            $handler = $step_config['handler'];
-            $handler_config = $step_config['config'] ?? [];
+            $handler_data = $step_config['handler'] ?? null;
+            
+            if (!$handler_data || empty($handler_data['handler_slug'])) {
+                $logger->error('Input step handler configuration invalid', [
+                    'job_id' => $job_id,
+                    'step_position' => $step_position,
+                    'handler_data' => $handler_data
+                ]);
+                return [];
+            }
+            
+            $handler = $handler_data['handler_slug'];
+            $handler_config = $handler_data['settings'] ?? [];
+            
+            // Add flow_step_id to handler config for proper file isolation
+            $handler_config['flow_step_id'] = $step_config['flow_step_id'] ?? null;
 
             // Execute single handler - one step, one handler, per flow
-            $data_packet = $this->execute_handler($handler, $job, $handler_config);
+            $data_packet = $this->execute_handler($handler, $job_config, $handler_config);
 
             if (!$data_packet instanceof DataPacket) {
                 $logger = apply_filters('dm_get_logger', null);
@@ -113,61 +130,16 @@ class InputStep {
         }
     }
 
-    /**
-     * Get step configuration from pipeline or job context
-     * 
-     * @param int $job_id Job ID
-     * @param string $step_name Step name
-     * @return array|null Step configuration or null if not found
-     */
-    private function get_step_configuration(int $job_id, string $step_name): ?array {
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_jobs || !$db_flows) {
-            return null;
-        }
-        
-        // Get job to find flow_id
-        $job = $db_jobs->get_job($job_id);
-        if (!$job) {
-            return null;
-        }
-
-        // Get flow_id from job
-        $flow_id = is_object($job) ? $job->flow_id : ($job['flow_id'] ?? null);
-        if (!$flow_id) {
-            return null;
-        }
-
-        // Get flow record from flows database
-        $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) {
-            return null;
-        }
-
-        // Parse flow's flow_config to find step configuration
-        $flow_config_json = is_object($flow) ? $flow->flow_config : ($flow['flow_config'] ?? '{}');
-        $flow_config = json_decode($flow_config_json, true);
-        
-        if (!is_array($flow_config)) {
-            return null;
-        }
-
-        // Return step configuration for the specified step
-        return $flow_config[$step_name] ?? null;
-    }
 
     /**
      * Execute input handler directly using pure auto-discovery
      * 
      * @param string $handler_name Input handler name
-     * @param object $job Job object
+     * @param array $job_config Job configuration from JobCreator
      * @param array $handler_config Handler configuration
      * @return DataPacket|null DataPacket or null on failure
      */
-    private function execute_handler(string $handler_name, object $job, array $handler_config): ?DataPacket {
+    private function execute_handler(string $handler_name, array $job_config, array $handler_config): ?DataPacket {
         $logger = apply_filters('dm_get_logger', null);
 
         // Get handler object directly from handler system
@@ -175,7 +147,7 @@ class InputStep {
         if (!$handler) {
             $logger->error('Input Step: Handler not found or invalid', [
                 'handler' => $handler_name,
-                'job_id' => $job->job_id
+                'job_config' => array_keys($job_config)
             ]);
             return null;
         }
@@ -183,22 +155,25 @@ class InputStep {
         try {
             // Handler is already instantiated from the registry
 
-            // Get pipeline ID for handler
-            $pipeline_id = $this->get_pipeline_id_from_job($job);
+            // Get pipeline and flow IDs from job_config (provided by JobCreator)
+            $pipeline_id = $job_config['pipeline_id'] ?? null;
+            $flow_id = $job_config['flow_id'] ?? null;
+            
             if (!$pipeline_id) {
-                $logger->error('Input Step: Pipeline ID not found', [
-                    'job_id' => $job->job_id
+                $logger->error('Input Step: Pipeline ID not found in job config', [
+                    'job_config_keys' => array_keys($job_config)
                 ]);
                 return null;
             }
 
             // Execute handler - handlers return arrays, use universal conversion
-            $result = $handler->get_input_data($pipeline_id, $handler_config);
+            // Pass flow_id for processed items tracking
+            $result = $handler->get_input_data($pipeline_id, $handler_config, $flow_id);
 
             // Convert handler output to DataPacket using filter system
             $context = [
-                'job_id' => $job->job_id,
-                'pipeline_id' => $pipeline_id
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id
             ];
             
             // Create DataPacket using universal constructor - handlers must return proper structure
@@ -222,15 +197,16 @@ class InputStep {
                     $data_packet->attachments = array_merge($data_packet->attachments, $result['attachments']);
                 }
                 
-                // Add context information
-                $data_packet->metadata['job_id'] = $context['job_id'];
+                // Add context information  
                 $data_packet->metadata['pipeline_id'] = $context['pipeline_id'];
+                $data_packet->metadata['flow_id'] = $context['flow_id'];
                 $data_packet->processing['steps_completed'][] = 'input';
                 
             } catch (\Exception $e) {
                 $logger->error('Input Step: Failed to create DataPacket from handler output', [
                     'handler' => $handler_name,
-                    'job_id' => $job->job_id,
+                    'pipeline_id' => $pipeline_id,
+                    'flow_id' => $flow_id,
                     'result_type' => gettype($result),
                     'error' => $e->getMessage()
                 ]);
@@ -242,22 +218,14 @@ class InputStep {
         } catch (\Exception $e) {
             $logger->error('Input Step: Handler execution failed', [
                 'handler' => $handler_name,
-                'job_id' => $job->job_id,
+                'pipeline_id' => $pipeline_id ?? 'unknown',
+                'flow_id' => $flow_id ?? 'unknown',
                 'exception' => $e->getMessage()
             ]);
             return null;
         }
     }
 
-    /**
-     * Get pipeline ID from job context
-     * 
-     * @param object $job Job object
-     * @return int|null Pipeline ID or null if not found
-     */
-    private function get_pipeline_id_from_job(object $job): ?int {
-        return $job->pipeline_id ?? null;
-    }
 
     /**
      * Get handler object directly from the handler system.

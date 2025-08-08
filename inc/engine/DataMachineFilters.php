@@ -39,9 +39,7 @@ if ( ! defined( 'WPINC' ) ) {
  * 
  * Business logic services (moved to core components):
  * - Logger → Admin component
-  
  * - JobCreator → Jobs component
- * - ProcessedItemsManager → ProcessedItems component
  * - AI services → AI step component
  * 
  * Usage: $service = apply_filters('dm_get_{service_name}', null);
