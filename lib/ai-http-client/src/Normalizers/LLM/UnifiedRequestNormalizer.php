@@ -14,6 +14,27 @@ defined('ABSPATH') || exit;
 class AI_HTTP_Unified_Request_Normalizer {
 
     /**
+     * Files API upload callback for file ID generation
+     * @var callable|null
+     */
+    private $files_api_callback = null;
+
+    /**
+     * Current provider name for file uploads
+     * @var string|null
+     */
+    private $current_provider = null;
+
+    /**
+     * Set Files API callback for uploading files
+     *
+     * @param callable $callback Function that takes (file_path, purpose, provider_name) and returns file_id
+     */
+    public function set_files_api_callback($callback) {
+        $this->files_api_callback = $callback;
+    }
+
+    /**
      * Normalize request for any provider
      *
      * @param array $standard_request Standardized request format
@@ -23,6 +44,9 @@ class AI_HTTP_Unified_Request_Normalizer {
      * @throws Exception If provider not supported
      */
     public function normalize($standard_request, $provider_name, $provider_config = array()) {
+        // Store provider name for file uploads
+        $this->current_provider = $provider_name;
+        
         // Validate standard input first
         $this->validate_standard_request($standard_request);
         
@@ -281,8 +305,8 @@ class AI_HTTP_Unified_Request_Normalizer {
 
             $normalized_message = array('role' => $message['role']);
 
-            // Handle multi-modal content
-            if (isset($message['images']) || isset($message['image_urls']) || isset($message['files'])) {
+            // Handle multi-modal content (images, files) or content arrays
+            if (isset($message['images']) || isset($message['image_urls']) || isset($message['files']) || is_array($message['content'])) {
                 $normalized_message['content'] = $this->build_openai_multimodal_content($message);
             } else {
                 $normalized_message['content'] = $message['content'];
@@ -302,7 +326,7 @@ class AI_HTTP_Unified_Request_Normalizer {
     }
 
     /**
-     * Build OpenAI multi-modal content
+     * Build OpenAI multi-modal content with direct file upload
      *
      * @param array $message Message with multi-modal content
      * @return array OpenAI multi-modal content format
@@ -310,28 +334,88 @@ class AI_HTTP_Unified_Request_Normalizer {
     private function build_openai_multimodal_content($message) {
         $content = array();
 
-        // Add text content
-        if (!empty($message['content'])) {
-            $content[] = array(
-                'type' => 'text',
-                'text' => $message['content']
-            );
-        }
-
-        // Handle image URLs
-        if (isset($message['image_urls']) && is_array($message['image_urls'])) {
-            foreach ($message['image_urls'] as $image_url) {
+        // Handle content array format (from AIStep)
+        if (is_array($message['content'])) {
+            foreach ($message['content'] as $content_item) {
+                if (isset($content_item['type'])) {
+                    switch ($content_item['type']) {
+                        case 'text':
+                            $content[] = array(
+                                'type' => 'input_text',
+                                'text' => $content_item['text']
+                            );
+                            break;
+                        case 'file':
+                            // FILES API INTEGRATION - NO BASE64
+                            try {
+                                $file_path = $content_item['file_path'];
+                                $file_id = $this->upload_file_via_files_api($file_path);
+                                
+                                $mime_type = $content_item['mime_type'] ?? mime_content_type($file_path);
+                                
+                                if (strpos($mime_type, 'image/') === 0) {
+                                    // Images use input_image with file_id
+                                    $content[] = array(
+                                        'type' => 'input_image',
+                                        'file_id' => $file_id
+                                    );
+                                } else {
+                                    // Non-images use input_file with file_id
+                                    $content[] = array(
+                                        'type' => 'input_file',
+                                        'file_id' => $file_id
+                                    );
+                                }
+                            } catch (Exception $e) {
+                                // Log error but continue processing
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log('[UnifiedRequestNormalizer] Files API upload failed: ' . $e->getMessage());
+                                }
+                                // Skip this file if upload fails
+                            }
+                            break;
+                        default:
+                            // Pass through unknown types
+                            $content[] = $content_item;
+                            break;
+                    }
+                }
+            }
+        } else {
+            // Add text content for string format
+            if (!empty($message['content'])) {
                 $content[] = array(
-                    'type' => 'image_url',
-                    'image_url' => array(
-                        'url' => $image_url,
-                        'detail' => 'auto'
-                    )
+                    'type' => 'input_text',
+                    'text' => $message['content']
                 );
             }
         }
 
         return $content;
+    }
+
+    /**
+     * Upload file via Files API callback
+     *
+     * @param string $file_path Path to file to upload
+     * @return string File ID from Files API
+     * @throws Exception If upload fails or callback not set
+     */
+    private function upload_file_via_files_api($file_path) {
+        if (!$this->files_api_callback) {
+            throw new Exception('Files API callback not set - cannot upload files');
+        }
+
+        if (!file_exists($file_path)) {
+            throw new Exception("File not found: {$file_path}");
+        }
+
+        if (!$this->current_provider) {
+            throw new Exception('Provider name not set - cannot determine which Files API to use');
+        }
+
+        // Call the Files API callback with provider name for multi-provider support
+        return call_user_func($this->files_api_callback, $file_path, 'user_data', $this->current_provider);
     }
 
     /**

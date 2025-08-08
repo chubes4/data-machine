@@ -2,9 +2,8 @@
 /**
  * AI HTTP Client - Plugin Context Helper
  * 
- * Centralized handling of plugin context validation and graceful fallbacks.
- * Prevents fatal errors when plugin context is missing while maintaining
- * proper error logging and configuration state management.
+ * STRICT validation with NO FALLBACKS or legacy support.
+ * Enforces proper plugin context configuration - fails immediately if invalid.
  *
  * @package AIHttpClient\Utils
  * @author Chris Huber <https://chubes.net>
@@ -15,46 +14,29 @@ defined('ABSPATH') || exit;
 class AI_HTTP_Plugin_Context_Helper {
 
     /**
-     * Fallback context used when no plugin context is provided
-     */
-    const FALLBACK_CONTEXT = 'ai-http-client-fallback';
-
-    /**
-     * Validate and sanitize plugin context with graceful fallback
+     * Validate and sanitize plugin context - STRICT validation with NO FALLBACKS
      *
      * @param mixed $context Plugin context to validate
-     * @return array Validation result with context and configuration state
+     * @return array Validation result
+     * @throws \InvalidArgumentException If context is invalid
      */
     public static function validate_context($context) {
         if (empty($context)) {
-            self::log_context_error('Plugin context is required but not provided. Using fallback context.');
-            
-            return array(
-                'context' => self::FALLBACK_CONTEXT,
-                'is_configured' => false,
-                'is_fallback' => true,
-                'error' => 'Plugin context is required for proper functionality'
-            );
+            self::log_context_error('Plugin context is required but not provided - FAILING');
+            throw new \InvalidArgumentException('Plugin context is required for AI HTTP Client operation');
         }
 
         // Sanitize and validate the context
         $sanitized_context = sanitize_key($context);
         
         if (empty($sanitized_context)) {
-            self::log_context_error('Plugin context failed sanitization. Using fallback context.');
-            
-            return array(
-                'context' => self::FALLBACK_CONTEXT,
-                'is_configured' => false,
-                'is_fallback' => true,
-                'error' => 'Plugin context failed sanitization'
-            );
+            self::log_context_error('Plugin context failed sanitization - FAILING');
+            throw new \InvalidArgumentException('Plugin context failed sanitization - must be valid key string');
         }
 
         return array(
             'context' => $sanitized_context,
             'is_configured' => true,
-            'is_fallback' => false,
             'error' => null
         );
     }
@@ -70,28 +52,15 @@ class AI_HTTP_Plugin_Context_Helper {
     }
 
     /**
-     * Check if a context validation result is using fallback
-     *
-     * @param array $validation_result Result from validate_context()
-     * @return bool True if using fallback context, false otherwise
-     */
-    public static function is_fallback($validation_result) {
-        return isset($validation_result['is_fallback']) && $validation_result['is_fallback'];
-    }
-
-    /**
      * Get the context string from validation result
      *
      * @param array $validation_result Result from validate_context()
      * @return string Plugin context string
+     * @throws \InvalidArgumentException If validation result is malformed
      */
     public static function get_context($validation_result) {
         if (!isset($validation_result['context'])) {
             throw new \InvalidArgumentException('Context validation result is malformed - context key missing');
-        }
-        
-        if (isset($validation_result['is_fallback']) && $validation_result['is_fallback']) {
-            throw new \RuntimeException('Plugin context is using fallback - component should not proceed with potentially invalid context');
         }
         
         return $validation_result['context'];
@@ -154,68 +123,44 @@ class AI_HTTP_Plugin_Context_Helper {
     }
 
     /**
-     * Validate plugin context for constructor usage
+     * Validate plugin context for constructor usage - STRICT validation
      * 
-     * Provides a simple interface for classes that need plugin context
-     * in their constructors without throwing fatal errors.
-     *
      * @param mixed $plugin_context The plugin context to validate
      * @param string $class_name Name of the class for error reporting
      * @return array Validation result
+     * @throws \InvalidArgumentException If context is invalid
      */
     public static function validate_for_constructor($plugin_context, $class_name = 'Unknown Class') {
-        $validation = self::validate_context($plugin_context);
-        
-        if (!self::is_configured($validation)) {
+        try {
+            return self::validate_context($plugin_context);
+        } catch (\InvalidArgumentException $e) {
             self::log_context_error(
-                'Constructor called without valid plugin context in ' . $class_name,
+                'Constructor failed in ' . $class_name . ': ' . $e->getMessage(),
                 $class_name
             );
+            throw $e;
         }
-
-        return $validation;
     }
 
     /**
-     * Validate plugin context for static method usage
-     *
-     * Provides validation specifically for static methods that receive
-     * plugin context in their arguments.
+     * Validate plugin context for static method usage - STRICT validation
      *
      * @param array $args Arguments array that should contain plugin_context
      * @param string $method_name Name of the method for error reporting
      * @return array Validation result
+     * @throws \InvalidArgumentException If context is invalid
      */
     public static function validate_for_static_method($args, $method_name = 'Unknown Method') {
         $context = isset($args['plugin_context']) ? $args['plugin_context'] : null;
-        $validation = self::validate_context($context);
         
-        if (!self::is_configured($validation)) {
+        try {
+            return self::validate_context($context);
+        } catch (\InvalidArgumentException $e) {
             self::log_context_error(
-                'Static method ' . $method_name . ' called without valid plugin context',
+                'Static method ' . $method_name . ' failed: ' . $e->getMessage(),
                 $method_name
             );
+            throw $e;
         }
-
-        return $validation;
-    }
-
-    /**
-     * Get fallback context string
-     *
-     * @return string The fallback context identifier
-     */
-    public static function get_fallback_context() {
-        return self::FALLBACK_CONTEXT;
-    }
-
-    /**
-     * Check if a given context string is the fallback context
-     *
-     * @param string $context Context string to check
-     * @return bool True if it's the fallback context
-     */
-    public static function is_fallback_context($context) {
-        return $context === self::FALLBACK_CONTEXT;
     }
 }

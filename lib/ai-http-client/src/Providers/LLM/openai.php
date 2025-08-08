@@ -120,4 +120,111 @@ class AI_HTTP_OpenAI_Provider extends Base_LLM_Provider {
         return $this->execute_get_request($url);
     }
 
+    /**
+     * Upload file to OpenAI Files API
+     * 
+     * @param string $file_path Path to file to upload
+     * @param string $purpose Purpose for upload (default: 'user_data')
+     * @return string File ID from OpenAI
+     * @throws Exception If upload fails
+     */
+    public function upload_file($file_path, $purpose = 'user_data') {
+        if (!$this->is_configured()) {
+            throw new Exception('OpenAI provider not configured');
+        }
+
+        if (!file_exists($file_path)) {
+            throw new Exception("File not found: {$file_path}");
+        }
+
+        // OpenAI file upload endpoint
+        $url = $this->base_url . '/files';
+        
+        // Prepare multipart form data
+        $boundary = wp_generate_uuid4();
+        $headers = array_merge($this->get_auth_headers(), [
+            'Content-Type' => 'multipart/form-data; boundary=' . $boundary
+        ]);
+
+        // Build multipart body
+        $body = '';
+        
+        // Purpose field
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"purpose\"\r\n\r\n";
+        $body .= $purpose . "\r\n";
+        
+        // File field
+        $body .= "--{$boundary}\r\n";
+        $body .= 'Content-Disposition: form-data; name="file"; filename="' . basename($file_path) . "\"\r\n";
+        $body .= "Content-Type: " . mime_content_type($file_path) . "\r\n\r\n";
+        $body .= file_get_contents($file_path) . "\r\n";
+        $body .= "--{$boundary}--\r\n";
+
+        // Send request
+        $response = wp_remote_post($url, [
+            'headers' => $headers,
+            'body' => $body,
+            'timeout' => 120  // File uploads can take time
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('OpenAI file upload failed: ' . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+        
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[OpenAI Debug] File Upload Response Status: {$response_code}");
+            error_log("[OpenAI Debug] File Upload Response Body: {$response_body}");
+        }
+
+        if ($response_code !== 200) {
+            throw new Exception("OpenAI file upload failed with status {$response_code}: {$response_body}");
+        }
+
+        $data = json_decode($response_body, true);
+        if (!isset($data['id'])) {
+            throw new Exception('OpenAI file upload response missing file ID');
+        }
+
+        return $data['id'];
+    }
+
+    /**
+     * Delete file from OpenAI Files API
+     * 
+     * @param string $file_id OpenAI file ID to delete
+     * @return bool Success status
+     * @throws Exception If delete fails
+     */
+    public function delete_file($file_id) {
+        if (!$this->is_configured()) {
+            throw new Exception('OpenAI provider not configured');
+        }
+
+        $url = $this->base_url . "/files/{$file_id}";
+        
+        $response = wp_remote_request($url, [
+            'method' => 'DELETE',
+            'headers' => $this->get_auth_headers(),
+            'timeout' => 30
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('OpenAI file delete failed: ' . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[OpenAI Debug] File Delete Response Status: {$response_code}");
+        }
+
+        return $response_code === 200;
+    }
+
 }

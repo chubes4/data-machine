@@ -21,10 +21,11 @@ class ReceiverStep {
      * Execute webhook reception (stub implementation)
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packets Array of data packets from previous steps
-     * @return bool Always returns false - no handlers implemented yet
+     * @param array $data_packet Array of data packets from previous steps
+     * @param array $step_config Step configuration for receiver step
+     * @return array Returns empty array - no handlers implemented yet
      */
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
         $logger = apply_filters('dm_get_logger', null);
         
         if ($logger) {
@@ -34,7 +35,7 @@ class ReceiverStep {
             ]);
         }
         
-        // Return false - step cannot complete without handlers
-        return false;
+        // Return empty array - step cannot complete without handlers
+        return [];
     }
 }

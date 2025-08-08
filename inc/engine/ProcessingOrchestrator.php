@@ -67,20 +67,23 @@ class ProcessingOrchestrator {
 			return false;
 		}
 		
-		// Call execute_step with complete parameter set
+		// Call execute_step with complete parameter set - FAIL IMMEDIATELY if missing data
 		if ( $pipeline_id && $flow_id && $job_config ) {
 			return $orchestrator->execute_step( $step_position, $job_id, $pipeline_id, $flow_id, $job_config, $data_packet ?: [] );
-		} else {
-			// Legacy fallback - should not occur with new JobCreator
-			$logger = apply_filters('dm_get_logger', null);
-			if ( $logger ) {
-				$logger->error( 'Legacy execute_step_callback invocation - missing pipeline data', [
-					'job_id' => $job_id,
-					'step_position' => $step_position
-				] );
-			}
-			return false;
 		}
+		
+		// No legacy support - fail immediately
+		$logger = apply_filters('dm_get_logger', null);
+		if ( $logger ) {
+			$logger->error( 'execute_step_callback requires complete parameter set - missing pipeline data', [
+				'job_id' => $job_id,
+				'step_position' => $step_position,
+				'pipeline_id' => $pipeline_id,
+				'flow_id' => $flow_id,
+				'has_job_config' => !empty($job_config)
+			] );
+		}
+		return false;
 	}
 	/**
 	 * Execute a pipeline step using pre-built configuration from JobCreator.
@@ -192,11 +195,20 @@ class ProcessingOrchestrator {
 				return false;
 			}
 
-			// Add current step position to job config for step access
-			$job_config['current_step_position'] = $step_position;
+			// For steps that need handlers (fetch/publish), merge with flow config
+			$flow_config = $job_config['flow_config'] ?? [];
+			$flow_step_config = $flow_config[$step_position] ?? [];
 			
-			// Execute step with job configuration - steps access data directly from job_config
-			$data_packet = $step_instance->execute( $job_id, $data_packet, $job_config );
+			// Merge step config with flow step config (handlers, settings)
+			$merged_step_config = array_merge($step_config, $flow_step_config);
+			
+			// Add essential IDs that steps/handlers need for processing
+			$merged_step_config['pipeline_id'] = $pipeline_id;
+			$merged_step_config['flow_id'] = $flow_id;
+			
+			// Pass merged step configuration directly - steps should not introspect job config
+			// Steps receive only their own configuration, not entire pipeline or flow config
+			$data_packet = $step_instance->execute( $job_id, $data_packet, $merged_step_config );
 			
 			// Validate step return - must be data packet array
 			if ( ! is_array( $data_packet ) ) {

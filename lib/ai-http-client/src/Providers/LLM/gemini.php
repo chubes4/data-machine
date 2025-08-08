@@ -107,4 +107,119 @@ class AI_HTTP_Gemini_Provider extends Base_LLM_Provider {
         $url = $this->base_url . '/models';
         return $this->execute_get_request($url);
     }
+
+    /**
+     * Upload file to Google Gemini File API
+     * 
+     * @param string $file_path Path to file to upload
+     * @param string $purpose Purpose for upload (default: 'user_data')
+     * @return string File URI from Google
+     * @throws Exception If upload fails
+     */
+    public function upload_file($file_path, $purpose = 'user_data') {
+        if (!$this->is_configured()) {
+            throw new Exception('Gemini provider not configured');
+        }
+
+        if (!file_exists($file_path)) {
+            throw new Exception("File not found: {$file_path}");
+        }
+
+        // Google Gemini file upload endpoint
+        $url = 'https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=multipart&key=' . $this->api_key;
+        
+        // Prepare multipart form data
+        $boundary = wp_generate_uuid4();
+        $headers = [
+            'Content-Type' => 'multipart/form-data; boundary=' . $boundary
+        ];
+
+        // Build multipart body with metadata and file
+        $body = '';
+        
+        // Metadata part
+        $metadata = json_encode([
+            'file' => [
+                'display_name' => basename($file_path)
+            ]
+        ]);
+        
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"metadata\"\r\n";
+        $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
+        $body .= $metadata . "\r\n";
+        
+        // File part
+        $body .= "--{$boundary}\r\n";
+        $body .= 'Content-Disposition: form-data; name="data"; filename="' . basename($file_path) . "\"\r\n";
+        $body .= "Content-Type: " . mime_content_type($file_path) . "\r\n\r\n";
+        $body .= file_get_contents($file_path) . "\r\n";
+        $body .= "--{$boundary}--\r\n";
+
+        // Send request
+        $response = wp_remote_post($url, [
+            'headers' => $headers,
+            'body' => $body,
+            'timeout' => 120
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Gemini file upload failed: ' . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+        
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[Gemini Debug] File Upload Response Status: {$response_code}");
+            error_log("[Gemini Debug] File Upload Response Body: {$response_body}");
+        }
+
+        if ($response_code !== 200) {
+            throw new Exception("Gemini file upload failed with status {$response_code}: {$response_body}");
+        }
+
+        $data = json_decode($response_body, true);
+        if (!isset($data['file']['uri'])) {
+            throw new Exception('Gemini file upload response missing file URI');
+        }
+
+        return $data['file']['uri'];
+    }
+
+    /**
+     * Delete file from Google Gemini File API
+     * 
+     * @param string $file_uri Gemini file URI to delete
+     * @return bool Success status
+     * @throws Exception If delete fails
+     */
+    public function delete_file($file_uri) {
+        if (!$this->is_configured()) {
+            throw new Exception('Gemini provider not configured');
+        }
+
+        // Extract file name from URI
+        $file_name = basename(parse_url($file_uri, PHP_URL_PATH));
+        $url = "https://generativelanguage.googleapis.com/v1beta/files/{$file_name}?key=" . $this->api_key;
+        
+        $response = wp_remote_request($url, [
+            'method' => 'DELETE',
+            'timeout' => 30
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Gemini file delete failed: ' . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        
+        // Debug logging in development mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[Gemini Debug] File Delete Response Status: {$response_code}");
+        }
+
+        return $response_code === 200;
+    }
 }

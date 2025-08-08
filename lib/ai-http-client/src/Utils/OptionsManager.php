@@ -116,27 +116,34 @@ class AI_HTTP_Options_Manager {
      * @return array Provider settings with merged API key
      */
     public function get_provider_settings($provider_name) {
-        $all_settings = get_option($this->get_scoped_option_name(self::OPTION_NAME_BASE), array());
+        error_log("[OptionsManager Debug] ====== GET_PROVIDER_SETTINGS START ======");
+        error_log("[OptionsManager Debug] Called for provider: {$provider_name}");
+        error_log("[OptionsManager Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
+        
+        // Get plugin-specific settings
+        $scoped_option_name = $this->get_scoped_option_name(self::OPTION_NAME_BASE);
+        $all_settings = get_option($scoped_option_name, array());
         $provider_settings = isset($all_settings[$provider_name]) ? $all_settings[$provider_name] : array();
         
-        // Debug logging for API key retrieval
-        error_log("[OptionsManager Debug] Getting provider settings for: {$provider_name}");
-        error_log("[OptionsManager Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
-        error_log("[OptionsManager Debug] Scoped option name: " . $this->get_scoped_option_name(self::OPTION_NAME_BASE));
-        error_log("[OptionsManager Debug] Provider-specific settings: " . json_encode($provider_settings));
+        error_log("[OptionsManager Debug] Scoped option name: {$scoped_option_name}");
+        error_log("[OptionsManager Debug] Plugin-specific settings keys: " . json_encode(array_keys($provider_settings)));
         
         // Merge with shared API key
         $shared_api_keys = get_option(self::SHARED_API_KEYS_OPTION, array());
-        error_log("[OptionsManager Debug] All shared API keys: " . json_encode(array_keys($shared_api_keys)));
+        error_log("[OptionsManager Debug] Available shared providers: " . json_encode(array_keys($shared_api_keys)));
         
         if (isset($shared_api_keys[$provider_name])) {
-            $provider_settings['api_key'] = $this->get_api_key($provider_name);
-            error_log("[OptionsManager Debug] Found shared API key for {$provider_name}");
+            $api_key = $this->get_api_key($provider_name);
+            $provider_settings['api_key'] = $api_key;
+            error_log("[OptionsManager Debug] MERGED API KEY - length: " . strlen($api_key));
         } else {
-            error_log("[OptionsManager Debug] No shared API key found for {$provider_name}");
+            error_log("[OptionsManager Debug] CRITICAL: No shared API key found for provider: {$provider_name}");
         }
         
+        $final_api_key_status = isset($provider_settings['api_key']) && !empty($provider_settings['api_key']) ? 'SET_LENGTH_' . strlen($provider_settings['api_key']) : 'EMPTY';
+        error_log("[OptionsManager Debug] Final API key status: {$final_api_key_status}");
         error_log("[OptionsManager Debug] Final provider settings keys: " . json_encode(array_keys($provider_settings)));
+        error_log("[OptionsManager Debug] ====== GET_PROVIDER_SETTINGS END ======");
         
         return $provider_settings;
     }
@@ -299,10 +306,27 @@ class AI_HTTP_Options_Manager {
      * @return bool True on success
      */
     private function set_shared_api_key($provider_name, $api_key) {
+        error_log("[OptionsManager Debug] set_shared_api_key() called for provider: {$provider_name}");
+        error_log("[OptionsManager Debug] API key length: " . strlen($api_key));
+        
         $shared_api_keys = get_option(self::SHARED_API_KEYS_OPTION, array());
+        
+        // Check if API key already exists with same value
+        $existing_api_key = isset($shared_api_keys[$provider_name]) ? $shared_api_keys[$provider_name] : null;
+        $keys_identical = ($existing_api_key && $existing_api_key === $api_key);
+        error_log("[OptionsManager Debug] API keys identical: " . ($keys_identical ? 'YES' : 'NO'));
+        
         $shared_api_keys[$provider_name] = $api_key;
         
-        return update_option(self::SHARED_API_KEYS_OPTION, $shared_api_keys);
+        $update_result = update_option(self::SHARED_API_KEYS_OPTION, $shared_api_keys);
+        error_log("[OptionsManager Debug] update_option result: " . ($update_result ? 'SUCCESS' : 'FAILED'));
+        
+        // CRITICAL FIX: WordPress update_option() returns false if no change is needed
+        // If API keys are identical, that's actually success (no update needed)
+        $final_result = $update_result || $keys_identical;
+        error_log("[OptionsManager Debug] final API key result: " . ($final_result ? 'SUCCESS' : 'FAILED'));
+        
+        return $final_result;
     }
 
     /**
@@ -572,11 +596,24 @@ class AI_HTTP_Options_Manager {
      */
     public function get_step_configuration($step_id) {
         if (!$this->is_configured) {
+            error_log("[OptionsManager Debug] get_step_configuration() called but not configured - plugin_context: {$this->plugin_context}, ai_type: {$this->ai_type}");
             return array();
         }
         
-        $step_configs = get_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), array());
-        return isset($step_configs[$step_id]) ? $step_configs[$step_id] : array();
+        $option_name = $this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE);
+        $step_configs = get_option($option_name, array());
+        $step_config = isset($step_configs[$step_id]) ? $step_configs[$step_id] : array();
+        
+        error_log("[OptionsManager Debug] get_step_configuration() for step_id: {$step_id}");
+        error_log("[OptionsManager Debug] Option name: {$option_name}");
+        error_log("[OptionsManager Debug] Available step IDs: " . json_encode(array_keys($step_configs)));
+        error_log("[OptionsManager Debug] Step config exists: " . (empty($step_config) ? 'NO' : 'YES'));
+        if (!empty($step_config)) {
+            error_log("[OptionsManager Debug] Step config keys: " . json_encode(array_keys($step_config)));
+            error_log("[OptionsManager Debug] Configured provider: " . ($step_config['provider'] ?? 'NOT_SET'));
+        }
+        
+        return $step_config;
     }
 
     /**
@@ -587,14 +624,44 @@ class AI_HTTP_Options_Manager {
      * @return bool True if saved successfully
      */
     public function save_step_configuration($step_id, $config) {
+        error_log("[OptionsManager Debug] save_step_configuration() called");
+        error_log("[OptionsManager Debug] step_id: {$step_id}");
+        error_log("[OptionsManager Debug] raw config: " . json_encode($config));
+        error_log("[OptionsManager Debug] is_configured: " . ($this->is_configured ? 'YES' : 'NO'));
+        
         if (!$this->is_configured) {
+            error_log("[OptionsManager Debug] FAILED: Options manager not configured");
             return false;
         }
         
-        $step_configs = get_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), array());
-        $step_configs[$step_id] = $this->sanitize_step_settings($config);
+        $option_name = $this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE);
+        error_log("[OptionsManager Debug] option_name: {$option_name}");
         
-        return update_option($this->get_scoped_option_name(self::STEP_CONFIG_OPTION_BASE), $step_configs);
+        $step_configs = get_option($option_name, array());
+        error_log("[OptionsManager Debug] existing step configs count: " . count($step_configs));
+        
+        // Check if this step already exists
+        $existing_config = isset($step_configs[$step_id]) ? $step_configs[$step_id] : null;
+        error_log("[OptionsManager Debug] existing config for step: " . ($existing_config ? json_encode($existing_config) : 'NONE'));
+        
+        $sanitized_config = $this->sanitize_step_settings($config);
+        error_log("[OptionsManager Debug] sanitized config: " . json_encode($sanitized_config));
+        
+        // Check if configs are identical
+        $configs_identical = ($existing_config && json_encode($existing_config) === json_encode($sanitized_config));
+        error_log("[OptionsManager Debug] configs identical: " . ($configs_identical ? 'YES' : 'NO'));
+        
+        $step_configs[$step_id] = $sanitized_config;
+        
+        $update_result = update_option($option_name, $step_configs);
+        error_log("[OptionsManager Debug] update_option result: " . ($update_result ? 'SUCCESS' : 'FAILED'));
+        
+        // CRITICAL FIX: WordPress update_option() returns false if no change is needed
+        // If configs are identical, that's actually success (no update needed)
+        $final_result = $update_result || $configs_identical;
+        error_log("[OptionsManager Debug] final result: " . ($final_result ? 'SUCCESS' : 'FAILED'));
+        
+        return $final_result;
     }
 
     /**

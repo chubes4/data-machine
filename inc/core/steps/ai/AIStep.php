@@ -48,10 +48,10 @@ class AIStep {
      * 
      * @param int $job_id The job ID to process
      * @param array $data_packet The cumulative data packet array for this job
-     * @param array $job_config Complete job configuration from JobCreator
+     * @param array $step_config Step configuration for this AI step
      * @return array Updated data packet array with AI output added
      */
-    public function execute(int $job_id, array $data_packet = [], array $job_config = []): array {
+    public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $ai_http_client = apply_filters('dm_get_ai_http_client', null);
 
@@ -67,22 +67,11 @@ class AIStep {
                 return [];
             }
 
-            $logger->debug('AI Step: Starting AI processing with fluid context', ['job_id' => $job_id]);
+            $logger->debug('AI Step: Starting AI processing with step config', ['job_id' => $job_id]);
 
-            // Get step configuration from job configuration
-            // ARCHITECTURE: AI steps have pipeline-level configuration (prompts, models)
-            // Get current step by finding the AI step in pipeline steps array
-            $pipeline_steps = $job_config['pipeline_step_config'] ?? [];
-            $step_config = null;
-            foreach ($pipeline_steps as $step) {
-                if (($step['step_type'] ?? '') === 'ai') {
-                    $step_config = $step;
-                    break;
-                }
-            }
-            
-            if (!$step_config) {
-                $logger->error('AI Step: AI step configuration not found in job config', ['job_id' => $job_id]);
+            // Use step configuration directly - no pipeline introspection needed
+            if (empty($step_config)) {
+                $logger->error('AI Step: No step configuration provided', ['job_id' => $job_id]);
                 return [];
             }
 
@@ -104,39 +93,76 @@ class AIStep {
             ]);
 
 
-            // Extract content from the latest input for AI processing
-            $content = '';
-            if (isset($latest_input['content'])) {
-                if (!empty($latest_input['content']['title'])) {
-                    $content .= "Title: " . $latest_input['content']['title'] . "\n\n";
-                }
-                if (!empty($latest_input['content']['body'])) {
-                    $content .= $latest_input['content']['body'];
-                }
-            }
-
-            if (empty($content)) {
-                $logger->error('AI Step: No content found in latest input', [
+            // Extract content or file data from the latest input for AI processing
+            $metadata = $latest_input['metadata'] ?? [];
+            $file_path = $metadata['file_path'] ?? '';
+            
+            // Check if we have a file to process
+            if ($file_path && file_exists($file_path)) {
+                $logger->debug('AI Step: Processing file input', [
                     'job_id' => $job_id,
-                    'latest_input_keys' => array_keys($latest_input)
+                    'file_path' => $file_path,
+                    'mime_type' => $metadata['mime_type'] ?? 'unknown'
                 ]);
-                return $data_packet; // Return unchanged array
-            }
+                
+                // DIRECT FILE UPLOAD - NO BASE64 ENCODING
+                $system_prompt = $step_config['system_prompt'] ?? 'Analyze this file and provide insights.';
+                
+                $messages = [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'file',
+                                'file_path' => $file_path,
+                                'mime_type' => $metadata['mime_type'] ?? ''
+                            ],
+                            [
+                                'type' => 'text',
+                                'text' => $system_prompt
+                            ]
+                        ]
+                    ]
+                ];
+                
+                $logger->debug('AI Step: File prepared for direct upload processing', [
+                    'job_id' => $job_id,
+                    'file_type' => $metadata['mime_type'] ?? 'unknown'
+                ]);
+                
+            } else {
+                // Process text content using existing logic
+                $content = '';
+                if (isset($latest_input['content'])) {
+                    if (!empty($latest_input['content']['title'])) {
+                        $content .= "Title: " . $latest_input['content']['title'] . "\n\n";
+                    }
+                    if (!empty($latest_input['content']['body'])) {
+                        $content .= $latest_input['content']['body'];
+                    }
+                }
 
-            // Get publish handlers from flow config for directive application
-            $flow_config = $job_config['flow_config'] ?? [];
-            $publish_handlers = $this->extract_publish_handlers($flow_config);
-            
-            // Apply platform-specific directives if publish handlers are configured
-            $enhanced_content = $this->apply_output_directives(trim($content), $publish_handlers, $flow_config);
-            
-            // Build AI messages array
-            $messages = [
-                [
-                    'role' => 'user',
-                    'content' => $enhanced_content
-                ]
-            ];
+                if (empty($content)) {
+                    $logger->error('AI Step: No content or file data found in latest input', [
+                        'job_id' => $job_id,
+                        'latest_input_keys' => array_keys($latest_input),
+                        'has_file_path' => !empty($file_path),
+                        'file_exists' => $file_path ? file_exists($file_path) : false
+                    ]);
+                    return $data_packet; // Return unchanged array
+                }
+
+                // Use content directly without cross-step awareness
+                $enhanced_content = trim($content);
+                
+                // Build AI messages array for text content
+                $messages = [
+                    [
+                        'role' => 'user',
+                        'content' => $enhanced_content
+                    ]
+                ];
+            }
             
             // Get step_id for AI HTTP Client step-aware processing
 
@@ -153,6 +179,17 @@ class AIStep {
             
             // Prepare AI request with messages for step-aware processing
             $ai_request = ['messages' => $messages];
+            
+            // Debug: Log step configuration details before AI request
+            $step_debug_config = $ai_http_client->get_step_configuration($step_id);
+            $logger->debug('AI Step: Step configuration retrieved', [
+                'job_id' => $job_id,
+                'step_id' => $step_id,
+                'step_config_exists' => !empty($step_debug_config),
+                'step_config_keys' => array_keys($step_debug_config),
+                'configured_provider' => $step_debug_config['provider'] ?? 'NOT_SET',
+                'configured_model' => $step_debug_config['model'] ?? 'NOT_SET'
+            ]);
             
             // Execute AI request using AI HTTP Client's step-aware method
             // This automatically uses step-specific configuration (provider, model, temperature, etc.)
@@ -223,135 +260,6 @@ class AIStep {
 
 
 
-    /**
-     * Extract publish handlers from flow configuration
-     * 
-     * @param array $flow_config Flow configuration array
-     * @return array Array of publish handler types
-     */
-    private function extract_publish_handlers(array $flow_config): array {
-        $publish_handlers = [];
-        
-        if (empty($flow_config)) {
-            return $publish_handlers;
-        }
-        
-        // Validate flow_config structure - must be position-based array
-        $logger = apply_filters('dm_get_logger', null);
-        $first_key = key($flow_config);
-        if (!is_int($first_key)) {
-            if ($logger) {
-                $logger->error('AI Step: Invalid flow_config structure - expected position-based array with integer keys', [
-                    'first_key_type' => gettype($first_key),
-                    'first_key_value' => $first_key,
-                    'flow_config_keys' => array_keys($flow_config)
-                ]);
-            }
-            return $publish_handlers;
-        }
-        
-        // Flow config contains step configurations with handlers
-        foreach ($flow_config as $position => $step_config) {
-            if (!is_array($step_config)) {
-                continue;
-            }
-            
-            // Check if handler exists and is configured
-            $handler = $step_config['handler'] ?? null;
-            if (empty($handler) || !is_array($handler)) {
-                continue;
-            }
-            
-            $handler_slug = $handler['slug'] ?? '';
-            if (empty($handler_slug)) {
-                continue;
-            }
-            
-            // Get handler information to determine if it's a publish handler
-            $all_handlers = apply_filters('dm_get_handlers', []);
-            $handler_info = $all_handlers[$handler_slug] ?? null;
-            
-            if ($handler_info && ($handler_info['type'] ?? '') === 'publish') {
-                $publish_handlers[] = [
-                    'handler_slug' => $handler_slug,
-                    'handler_config' => $handler['settings'] ?? []
-                ];
-            }
-        }
-        
-        return $publish_handlers;
-    }
-    
-    /**
-     * Apply output directives based on publish handlers
-     * 
-     * @param string $content Original content
-     * @param array $publish_handlers Array of publish handler configurations
-     * @param array $flow_config Complete flow configuration
-     * @return string Enhanced content with directives
-     */
-    private function apply_output_directives(string $content, array $publish_handlers, array $flow_config): string {
-        if (empty($publish_handlers)) {
-            return $content;
-        }
-        
-        $logger = apply_filters('dm_get_logger', null);
-        $enhanced_content = $content;
-        
-        foreach ($publish_handlers as $handler_info) {
-            $handler_slug = $handler_info['handler_slug'];
-            $handler_config = $handler_info['handler_config'];
-            
-            // Map handler slugs to directive output types
-            $output_type = $this->map_handler_to_output_type($handler_slug);
-            
-            if (empty($output_type)) {
-                continue;
-            }
-            
-            // Build output config for directive system
-            $output_config = [
-                $handler_slug => $handler_config
-            ];
-            
-            // Apply directives using the existing filter system
-            $directive_block = apply_filters('dm_get_output_directive', '', $output_type, $output_config);
-            
-            if (!empty($directive_block)) {
-                $enhanced_content .= $directive_block;
-                
-                if ($logger) {
-                    $logger->debug('AI Step: Applied directives for handler', [
-                        'handler' => $handler_slug,
-                        'output_type' => $output_type,
-                        'directive_length' => strlen($directive_block)
-                    ]);
-                }
-            }
-        }
-        
-        return $enhanced_content;
-    }
-    
-    /**
-     * Map handler slug to directive output type
-     * 
-     * @param string $handler_slug Handler slug
-     * @return string Output type for directive system
-     */
-    private function map_handler_to_output_type(string $handler_slug): string {
-        // Map publish handler slugs to directive output types
-        $handler_to_type_map = [
-            'twitter' => 'twitter',
-            'bluesky' => 'bluesky', 
-            'facebook' => 'facebook',
-            'threads' => 'threads',
-            'wordpress' => 'wordpress',
-            'googlesheets' => 'googlesheets'
-        ];
-        
-        return $handler_to_type_map[$handler_slug] ?? '';
-    }
 
     /**
      * AI Step Configuration handled by AI HTTP Client Library

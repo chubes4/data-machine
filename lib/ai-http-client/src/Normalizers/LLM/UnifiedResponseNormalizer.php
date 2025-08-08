@@ -57,8 +57,8 @@ class AI_HTTP_Unified_Response_Normalizer {
      * @return array Standard format
      */
     private function normalize_from_openai($openai_response) {
-        // Handle OpenAI Responses API format (primary)
-        if (isset($openai_response['response'])) {
+        // Handle OpenAI Responses API format (primary) - detect by object type
+        if (isset($openai_response['object']) && $openai_response['object'] === 'response') {
             return $this->normalize_openai_responses_api($openai_response);
         }
         
@@ -68,7 +68,7 @@ class AI_HTTP_Unified_Response_Normalizer {
         }
         
         // Handle streaming format
-        if (isset($openai_response['content']) && !isset($openai_response['response']) && !isset($openai_response['choices'])) {
+        if (isset($openai_response['content']) && !isset($openai_response['choices'])) {
             return $this->normalize_openai_streaming($openai_response);
         }
         
@@ -215,10 +215,8 @@ class AI_HTTP_Unified_Response_Normalizer {
      * @return array Standard format
      */
     private function normalize_openai_responses_api($response) {
-        $response_data = $response['response'];
-        
-        // Extract response ID for continuation
-        $response_id = isset($response_data['id']) ? $response_data['id'] : null;
+        // Extract response ID for continuation - it's at the top level, not nested
+        $response_id = isset($response['id']) ? $response['id'] : null;
         if ($response_id && $this->provider) {
             $this->provider->set_last_response_id($response_id);
         }
@@ -227,11 +225,23 @@ class AI_HTTP_Unified_Response_Normalizer {
         $content = '';
         $tool_calls = array();
         
-        if (isset($response_data['output']) && is_array($response_data['output'])) {
-            foreach ($response_data['output'] as $output_item) {
-                if (isset($output_item['type'])) {
+        if (isset($response['output']) && is_array($response['output'])) {
+            foreach ($response['output'] as $output_item) {
+                // Handle message type output items (the actual response format)
+                if (isset($output_item['type']) && $output_item['type'] === 'message') {
+                    if (isset($output_item['content']) && is_array($output_item['content'])) {
+                        foreach ($output_item['content'] as $content_item) {
+                            if (isset($content_item['type']) && $content_item['type'] === 'output_text') {
+                                $content .= isset($content_item['text']) ? $content_item['text'] : '';
+                            }
+                        }
+                    }
+                }
+                // Handle direct content types (fallback)
+                elseif (isset($output_item['type'])) {
                     switch ($output_item['type']) {
                         case 'content':
+                        case 'output_text':
                             $content .= isset($output_item['text']) ? $output_item['text'] : '';
                             break;
                         case 'function_call':
@@ -251,11 +261,11 @@ class AI_HTTP_Unified_Response_Normalizer {
             }
         }
 
-        // Extract usage
+        // Extract usage - it's at the top level
         $usage = array(
-            'prompt_tokens' => isset($response_data['usage']['prompt_tokens']) ? $response_data['usage']['prompt_tokens'] : 0,
-            'completion_tokens' => isset($response_data['usage']['completion_tokens']) ? $response_data['usage']['completion_tokens'] : 0,
-            'total_tokens' => isset($response_data['usage']['total_tokens']) ? $response_data['usage']['total_tokens'] : 0
+            'prompt_tokens' => isset($response['usage']['input_tokens']) ? $response['usage']['input_tokens'] : 0,
+            'completion_tokens' => isset($response['usage']['output_tokens']) ? $response['usage']['output_tokens'] : 0,
+            'total_tokens' => isset($response['usage']['total_tokens']) ? $response['usage']['total_tokens'] : 0
         );
 
         return array(
@@ -263,8 +273,8 @@ class AI_HTTP_Unified_Response_Normalizer {
             'data' => array(
                 'content' => $content,
                 'usage' => $usage,
-                'model' => isset($response_data['model']) ? $response_data['model'] : '',
-                'finish_reason' => isset($response_data['status']) ? $response_data['status'] : 'unknown',
+                'model' => isset($response['model']) ? $response['model'] : '',
+                'finish_reason' => isset($response['status']) ? $response['status'] : 'unknown',
                 'tool_calls' => !empty($tool_calls) ? $tool_calls : null,
                 'response_id' => $response_id
             ),

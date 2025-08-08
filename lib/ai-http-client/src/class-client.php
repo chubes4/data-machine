@@ -99,6 +99,11 @@ class AI_HTTP_Client {
                 $this->response_normalizer = new AI_HTTP_Unified_Response_Normalizer();
                 $this->streaming_normalizer = new AI_HTTP_Unified_Streaming_Normalizer();
                 $this->tool_results_normalizer = new AI_HTTP_Unified_Tool_Results_Normalizer();
+                
+                // Set up Files API callback for file uploads (NO BASE64) - MULTI-PROVIDER
+                $this->request_normalizer->set_files_api_callback(function($file_path, $purpose = 'user_data', $provider_name = 'openai') {
+                    return $this->upload_file_to_provider_files_api($file_path, $purpose, $provider_name);
+                });
                 break;
                 
             case 'upscaling':
@@ -436,15 +441,22 @@ class AI_HTTP_Client {
      * @return array Provider configuration with merged API keys
      */
     private function get_provider_config($provider_name) {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+        $caller_method = $backtrace[1]['function'] ?? 'unknown';
+        
+        error_log("[AI_HTTP_Client Debug] ====== GET_PROVIDER_CONFIG START ======");
+        error_log("[AI_HTTP_Client Debug] Called by method: {$caller_method}");
+        error_log("[AI_HTTP_Client Debug] Provider: {$provider_name}");
+        error_log("[AI_HTTP_Client Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
+        
         $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
         $config = $options_manager->get_provider_settings($provider_name);
         
-        // Debug logging for provider configuration
-        error_log("[AI_HTTP_Client Debug] get_provider_config() called for: {$provider_name}");
-        error_log("[AI_HTTP_Client Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
+        // Debug API key status
         $api_key_status = isset($config['api_key']) && !empty($config['api_key']) ? 'SET_LENGTH_' . strlen($config['api_key']) : 'EMPTY';
-        error_log("[AI_HTTP_Client Debug] Config API key status: {$api_key_status}");
-        error_log("[AI_HTTP_Client Debug] Config keys available: " . json_encode(array_keys($config)));
+        error_log("[AI_HTTP_Client Debug] FINAL CONFIG API key status: {$api_key_status}");
+        error_log("[AI_HTTP_Client Debug] FINAL CONFIG keys available: " . json_encode(array_keys($config)));
+        error_log("[AI_HTTP_Client Debug] ====== GET_PROVIDER_CONFIG END ======");
         
         return $config;
     }
@@ -468,6 +480,26 @@ class AI_HTTP_Client {
         if (empty($request['messages'])) {
             throw new Exception('Messages array cannot be empty');
         }
+    }
+
+    /**
+     * Upload file to any provider's Files API (NO BASE64) - MULTI-PROVIDER SUPPORT
+     *
+     * @param string $file_path Path to file to upload
+     * @param string $purpose Purpose for upload (default: 'user_data')
+     * @param string $provider_name Provider to upload to (openai, anthropic, gemini, etc.)
+     * @return string File ID from provider's Files API
+     * @throws Exception If upload fails
+     */
+    private function upload_file_to_provider_files_api($file_path, $purpose = 'user_data', $provider_name = 'openai') {
+        // Get the specified provider for Files API upload
+        $provider = $this->get_provider($provider_name);
+        if (!$provider) {
+            throw new Exception("{$provider_name} provider not available for Files API upload");
+        }
+
+        // Use the provider's native upload_file method (all providers implement Files API)
+        return $provider->upload_file($file_path, $purpose);
     }
 
     /**
@@ -517,10 +549,14 @@ class AI_HTTP_Client {
         
         try {
             // Load step configuration
+            error_log("[AI_HTTP_Client Debug] send_step_request() called for step_id: {$step_id}");
+            error_log("[AI_HTTP_Client Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
+            
             $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
             $step_config = $options_manager->get_step_configuration($step_id);
             
             if (empty($step_config)) {
+                error_log("[AI_HTTP_Client Debug] CRITICAL: No step configuration found for step_id: {$step_id}");
                 return $this->create_error_response("No configuration found for step: {$step_id}");
             }
             
@@ -530,8 +566,12 @@ class AI_HTTP_Client {
             // Get provider from step config
             $provider = $step_config['provider'] ?? null;
             if (!$provider) {
+                error_log("[AI_HTTP_Client Debug] CRITICAL: No provider in step configuration for step_id: {$step_id}");
+                error_log("[AI_HTTP_Client Debug] Step config keys: " . json_encode(array_keys($step_config)));
                 return $this->create_error_response("No provider configured for step: {$step_id}");
             }
+            
+            error_log("[AI_HTTP_Client Debug] Step configuration loaded successfully - provider: {$provider}");
             
             // Send request using step-configured provider  
             return $this->send_request($enhanced_request, $provider);

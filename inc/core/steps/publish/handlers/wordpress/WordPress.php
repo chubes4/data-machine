@@ -659,14 +659,14 @@ class WordPress {
             ];
         }
 
-        // Success - return detailed information (optional response fields allowed for backwards compatibility)
+        // Success - return detailed information
         return array(
             'success' => true,
             'status' => 'success',
             'message' => __('Post published to remote WordPress site successfully!', 'data-machine'),
-            'remote_post_id' => $response_data['post_id'] ?? null, // Optional for backwards compatibility
-            'remote_edit_link' => $response_data['edit_link'] ?? null, // Optional for backwards compatibility
-            'remote_view_link' => $response_data['view_link'] ?? null, // Optional for backwards compatibility
+            'remote_post_id' => $response_data['post_id'],
+            'remote_edit_link' => $response_data['edit_link'],
+            'remote_view_link' => $response_data['view_link'],
             'post_title' => $parsed_data['title'],
             'final_output' => $parsed_data['content'],
             'assigned_category_id' => $assigned_category_id,

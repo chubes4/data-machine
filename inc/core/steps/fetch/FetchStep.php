@@ -31,10 +31,10 @@ class FetchStep {
      * 
      * @param int $job_id The job ID to process
      * @param array $data_packet The cumulative data packet array for this job  
-     * @param array $job_config Complete job configuration from JobCreator
+     * @param array $step_config Step configuration including handler settings
      * @return array Updated data packet array with fetch data added
      */
-    public function execute(int $job_id, array $data_packet = [], array $job_config = []): array {
+    public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
         $logger = apply_filters('dm_get_logger', null);
         $all_databases = apply_filters('dm_get_database_services', []);
         $db_jobs = $all_databases['jobs'] ?? null;
@@ -46,37 +46,18 @@ class FetchStep {
                 'existing_items' => count($data_packet)
             ]);
             
-            // Fetch steps ignore pipeline context - pure data generation
-
-            // Get step configuration from job_config using current step position
-            $flow_config = $job_config['flow_config'] ?? [];
-            $step_position = $job_config['current_step_position'] ?? null;
-            
-            if ($step_position === null) {
-                $logger->error('Fetch step requires current step position', [
-                    'job_id' => $job_id,
-                    'available_job_config' => array_keys($job_config)
-                ]);
-                return [];
-            }
-            
-            $step_config = $flow_config[$step_position] ?? null;
-            
-            if (!$step_config || empty($step_config['handler'])) {
-                $logger->error('Fetch step requires handler configuration', [
-                    'job_id' => $job_id,
-                    'step_position' => $step_position,
-                    'available_flow_positions' => array_keys($flow_config)
-                ]);
+            // Use step configuration directly - no job config introspection needed
+            if (empty($step_config)) {
+                $logger->error('Fetch Step: No step configuration provided', ['job_id' => $job_id]);
                 return [];
             }
 
             $handler_data = $step_config['handler'] ?? null;
             
             if (!$handler_data || empty($handler_data['handler_slug'])) {
-                $logger->error('Fetch step handler configuration invalid', [
+                $logger->error('Fetch Step: Fetch step requires handler configuration', [
                     'job_id' => $job_id,
-                    'step_position' => $step_position,
+                    'available_step_config' => array_keys($step_config),
                     'handler_data' => $handler_data
                 ]);
                 return [];
@@ -89,7 +70,7 @@ class FetchStep {
             $handler_config['flow_step_id'] = $step_config['flow_step_id'] ?? null;
 
             // Execute single handler - one step, one handler, per flow
-            $fetch_entry = $this->execute_handler($handler, $job_config, $handler_config);
+            $fetch_entry = $this->execute_handler($handler, $step_config, $handler_config);
 
             if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
                 $logger->error('Fetch handler returned no content', ['job_id' => $job_id]);
@@ -125,11 +106,11 @@ class FetchStep {
      * Execute fetch handler directly using pure auto-discovery
      * 
      * @param string $handler_name Fetch handler name
-     * @param array $job_config Job configuration from JobCreator
+     * @param array $step_config Step configuration including pipeline/flow IDs
      * @param array $handler_config Handler configuration
      * @return array|null Fetch entry array or null on failure
      */
-    private function execute_handler(string $handler_name, array $job_config, array $handler_config): ?array {
+    private function execute_handler(string $handler_name, array $step_config, array $handler_config): ?array {
         $logger = apply_filters('dm_get_logger', null);
 
         // Get handler object directly from handler system
@@ -137,7 +118,7 @@ class FetchStep {
         if (!$handler) {
             $logger->error('Fetch Step: Handler not found or invalid', [
                 'handler' => $handler_name,
-                'job_config' => array_keys($job_config)
+                'step_config' => array_keys($step_config)
             ]);
             return null;
         }
@@ -145,13 +126,13 @@ class FetchStep {
         try {
             // Handler is already instantiated from the registry
 
-            // Get pipeline and flow IDs from job_config (provided by JobCreator)
-            $pipeline_id = $job_config['pipeline_id'] ?? null;
-            $flow_id = $job_config['flow_id'] ?? null;
+            // Get pipeline and flow IDs from step_config (provided by orchestrator)
+            $pipeline_id = $step_config['pipeline_id'] ?? null;
+            $flow_id = $step_config['flow_id'] ?? null;
             
             if (!$pipeline_id) {
-                $logger->error('Fetch Step: Pipeline ID not found in job config', [
-                    'job_config_keys' => array_keys($job_config)
+                $logger->error('Fetch Step: Pipeline ID not found in step config', [
+                    'step_config_keys' => array_keys($step_config)
                 ]);
                 return null;
             }
@@ -258,17 +239,20 @@ class FetchStep {
 
 
     /**
-     * Define configuration fields for fetch step
+     * Define handler configuration fields for fetch step
+     * 
+     * Returns form fields for selecting and configuring fetch handlers.
+     * This is NOT for AI prompt configuration - use AIStep for prompts.
      * 
      * PURE CAPABILITY-BASED: External fetch step classes only need:
      * - execute(int $job_id): bool method
-     * - get_prompt_fields(): array static method (optional)
+     * - get_config_fields(): array static method (optional)
      * - Parameter-less constructor
      * - No interface implementation required
      * 
-     * @return array Configuration field definitions for UI
+     * @return array Handler configuration field definitions for UI
      */
-    public static function get_prompt_fields(): array {
+    public static function get_config_fields(): array {
         // Get available fetch handlers via pure discovery
         $all_handlers = apply_filters('dm_get_handlers', []);
         $fetch_handlers = array_filter($all_handlers, function($handler) {

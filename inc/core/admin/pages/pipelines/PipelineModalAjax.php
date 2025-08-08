@@ -296,35 +296,90 @@ class PipelineModalAjax
                     ]);
                     
                     // Extract AI configuration with proper field names
+                    $step_config_data = []; // Step config data (no API key)
+                    $api_key = null; // API key for shared storage
+                    $provider = null; // Provider for API key storage
+                    
                     if (isset($_POST[$provider_field])) {
-                        $form_data['provider'] = sanitize_text_field(wp_unslash($_POST[$provider_field]));
+                        $provider = sanitize_text_field(wp_unslash($_POST[$provider_field]));
+                        $step_config_data['provider'] = $provider;
                     }
                     if (isset($_POST[$api_key_field])) {
-                        $form_data['api_key'] = sanitize_text_field(wp_unslash($_POST[$api_key_field]));
+                        $api_key = sanitize_text_field(wp_unslash($_POST[$api_key_field]));
+                        // API key goes to shared storage, NOT step config
                     }
                     if (isset($_POST[$model_field])) {
-                        $form_data['model'] = sanitize_text_field(wp_unslash($_POST[$model_field]));
+                        $step_config_data['model'] = sanitize_text_field(wp_unslash($_POST[$model_field]));
                     }
                     if (isset($_POST[$temperature_field])) {
-                        $form_data['temperature'] = floatval($_POST[$temperature_field]);
+                        $step_config_data['temperature'] = floatval($_POST[$temperature_field]);
                     }
                     if (isset($_POST[$system_prompt_field])) {
-                        $form_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST[$system_prompt_field]));
+                        $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST[$system_prompt_field]));
                     }
                     if (isset($_POST['system_prompt'])) {
-                        $form_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST['system_prompt']));
+                        $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST['system_prompt']));
                     }
                     
-                    // Save step-specific configuration
-                    $success = $options_manager->save_step_configuration($step_id, $form_data);
+                    // CRITICAL FIX: Save API key to shared storage SEPARATELY
+                    $api_key_success = true;
+                    if (!empty($api_key) && !empty($provider)) {
+                        $api_key_success = $options_manager->set_api_key($provider, $api_key);
+                        $logger?->debug('API key save attempt', [
+                            'provider' => $provider,
+                            'api_key_length' => strlen($api_key),
+                            'save_success' => $api_key_success
+                        ]);
+                    }
+                    
+                    // Save step-specific configuration (without API key)
+                    $logger?->debug('Before step config save', [
+                        'step_id' => $step_id,
+                        'config_data' => $step_config_data,
+                        'options_manager_configured' => $options_manager->is_configured()
+                    ]);
+                    
+                    $step_config_success = $options_manager->save_step_configuration($step_id, $step_config_data);
+                    
+                    $logger?->debug('Step config save attempt', [
+                        'step_id' => $step_id,
+                        'config_keys' => array_keys($step_config_data),
+                        'save_success' => $step_config_success,
+                        'option_name' => 'ai_http_client_step_config_data-machine_llm'
+                    ]);
+                    
+                    $success = $api_key_success && $step_config_success;
                     
                     if ($success) {
                         wp_send_json_success([
                             'message' => __('AI step configuration saved successfully', 'data-machine'),
-                            'step_id' => $step_id
+                            'step_id' => $step_id,
+                            'debug_info' => [
+                                'api_key_saved' => $api_key_success,
+                                'step_config_saved' => $step_config_success,
+                                'provider' => $provider
+                            ]
                         ]);
                     } else {
-                        wp_send_json_error(['message' => __('Failed to save AI step configuration', 'data-machine')]);
+                        $error_details = [];
+                        if (!$api_key_success) {
+                            $error_details[] = 'API key save failed';
+                        }
+                        if (!$step_config_success) {
+                            $error_details[] = 'Step configuration save failed';
+                        }
+                        
+                        wp_send_json_error([
+                            'message' => __('Failed to save AI step configuration', 'data-machine'),
+                            'details' => implode(', ', $error_details),
+                            'debug_info' => [
+                                'api_key_success' => $api_key_success,
+                                'step_config_success' => $step_config_success,
+                                'provider' => $provider,
+                                'has_api_key' => !empty($api_key),
+                                'api_key_length' => !empty($api_key) ? strlen($api_key) : 0
+                            ]
+                        ]);
                     }
                     
                 } catch (Exception $e) {

@@ -149,44 +149,7 @@ class AI_HTTP_File_Upload_Client {
         return isset($mime_types[$extension]) ? $mime_types[$extension] : 'application/octet-stream';
     }
 
-    /**
-     * Check if file size is suitable for upload vs embedding
-     * Based on Data Machine's size thresholds
-     *
-     * @param string $file_path File path
-     * @param int $max_embed_size Maximum size for embedding (default 5MB like Data Machine)
-     * @return bool True if file should be uploaded, false if it can be embedded
-     */
-    public static function should_upload_file($file_path, $max_embed_size = 5242880) {
-        if (!file_exists($file_path)) {
-            return false;
-        }
-
-        $file_size = filesize($file_path);
-        return $file_size === false || $file_size > $max_embed_size;
-    }
-
-    /**
-     * Encode file to base64 for embedding
-     * For smaller files that don't need upload API
-     *
-     * @param string $file_path File path
-     * @return string Base64 encoded file content
-     * @throws Exception If file cannot be read
-     */
-    public static function encode_file_base64($file_path) {
-        if (!file_exists($file_path)) {
-            throw new Exception('File not found');
-        }
-
-        $content = file_get_contents($file_path);
-        if ($content === false) {
-            throw new Exception('Could not read file');
-        }
-
-        $mime_type = self::get_mime_type($file_path);
-        return 'data:' . $mime_type . ';base64,' . base64_encode($content);
-    }
+    // BASE64 METHODS ELIMINATED - All providers now use direct file upload APIs
 
     /**
      * Delete uploaded file from provider
