@@ -54,7 +54,7 @@ class Reddit {
 	}
 
 	/**
-	 * Fetches and prepares input data packets from a specified subreddit.
+	 * Fetches and prepares fetch data packets from a specified subreddit.
 	 *
 	 * @param int $pipeline_id The pipeline ID for this execution context.
 	 * @param array  $handler_config Decoded handler configuration specific to this handler.

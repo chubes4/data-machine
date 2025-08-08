@@ -1,16 +1,16 @@
 <?php
 /**
- * WordPress Input Handler Settings
+ * WordPress Fetch Handler Settings
  *
- * Defines settings fields and sanitization for WordPress input handler.
+ * Defines settings fields and sanitization for WordPress fetch handler.
  * Part of the modular handler architecture.
  *
- * @package    Data_Machine
- * @subpackage Data_Machine/handlers/input/wordpress
+ * @package    DataMachine
+ * @subpackage Core\Handlers\Fetch\WordPress
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Input\WordPress;
+namespace DataMachine\Core\Handlers\Fetch\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -27,7 +27,7 @@ class WordPressSettings {
     }
 
     /**
-     * Get settings fields for WordPress input handler.
+     * Get settings fields for WordPress fetch handler.
      *
      * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
@@ -271,7 +271,7 @@ class WordPressSettings {
     }
 
     /**
-     * Sanitize WordPress input handler settings.
+     * Sanitize WordPress fetch handler settings.
      *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.

@@ -2,7 +2,7 @@
 /**
  * Files Handler Settings Template
  *
- * Enhanced template for Files input handler configuration with auto-upload interface.
+ * Enhanced template for Files fetch handler configuration with auto-upload interface.
  * Provides file selection, auto-upload, and status display capabilities.
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Templates

@@ -43,7 +43,7 @@ class Files {
 	}
 
 	/**
-	 * Processes uploaded files and prepares input data.
+	 * Processes uploaded files and prepares fetch data.
 	 *
      * @param int $pipeline_id Pipeline ID for context.
      * @param array  $handler_config Handler configuration array.

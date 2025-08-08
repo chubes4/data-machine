@@ -255,7 +255,7 @@ class PublishStep {
             'handler' => [
                 'type' => 'select',
                 'label' => 'Publish Destination',
-                'description' => 'Choose one publish handler to publish data (single handler per step)',
+                'description' => 'Choose one publish handler to publish data',
                 'options' => $handler_options,
                 'required' => true
             ],

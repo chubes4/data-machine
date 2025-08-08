@@ -145,7 +145,7 @@ class GoogleSheetsSettings {
             'timestamp' => __('Current timestamp when data is processed', 'data-machine'),
             'title' => __('Parsed title/headline from AI output', 'data-machine'),
             'content' => __('Parsed content/body from AI output', 'data-machine'),
-            'source_url' => __('Original source URL of the input data', 'data-machine'),
+            'source_url' => __('Original source URL of the fetch data', 'data-machine'),
             'source_type' => __('Type of fetch source (rss, reddit, files, etc.)', 'data-machine'),
             'job_id' => __('Unique job ID for tracking and debugging', 'data-machine'),
             'created_at' => __('Original creation timestamp from source data', 'data-machine')

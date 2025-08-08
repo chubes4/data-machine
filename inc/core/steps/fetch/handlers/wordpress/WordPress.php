@@ -53,13 +53,13 @@ class WordPress {
     }
 
     /**
-     * Fetches and prepares WordPress input data from various sources into a standardized format.
+     * Fetches and prepares WordPress fetch data from various sources into a standardized format.
      *
      * @param int $pipeline_id The pipeline ID for this execution context.
      * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
      * @param int|null $flow_id The flow ID for processed items tracking.
      * @return array Array with 'processed_items' key containing eligible items.
-     * @throws Exception If input data is invalid or cannot be retrieved.
+     * @throws Exception If fetch data is invalid or cannot be retrieved.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         if (empty($pipeline_id)) {

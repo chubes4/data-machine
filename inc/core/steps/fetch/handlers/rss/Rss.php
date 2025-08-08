@@ -39,7 +39,7 @@ class Rss {
     }
 
     /**
-     * Fetches and prepares input data packets from an RSS feed.
+     * Fetches and prepares fetch data packets from an RSS feed.
      *
      * @param int $pipeline_id The pipeline ID for this execution context.
      * @param array  $handler_config Decoded handler configuration specific to this handler.

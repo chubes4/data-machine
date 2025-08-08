@@ -284,7 +284,7 @@ class FetchStep {
             'handlers' => [
                 'type' => 'multiselect',
                 'label' => 'Fetch Sources',
-                'description' => 'Choose one or more fetch handlers to collect data (executed in batch)',
+                'description' => 'Choose one or more fetch handlers to collect data',
                 'options' => $handler_options,
                 'required' => true
             ],
