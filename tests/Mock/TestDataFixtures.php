@@ -69,18 +69,32 @@ class TestDataFixtures {
             'flow_name' => 'Test Flow',
             'pipeline_id' => 1,
             'flow_config' => [
-                'input' => [
-                    'mock_input' => [
-                        'source_data' => 'test content for processing'
+                0 => [
+                    'flow_step_id' => 'test-step-1_1',
+                    'step_type' => 'fetch',
+                    'pipeline_step_id' => 'test-step-1',
+                    'handler' => [
+                        'slug' => 'mock_input',
+                        'settings' => [
+                            'source_data' => 'test content for processing'
+                        ]
                     ]
                 ],
-                'ai' => [
-                    'model' => 'mock-ai-model',
-                    'temperature' => 0.7
+                1 => [
+                    'flow_step_id' => 'test-step-2_1',
+                    'step_type' => 'ai',
+                    'pipeline_step_id' => 'test-step-2',
+                    'handler' => null
                 ],
-                'output' => [
-                    'mock_output' => [
-                        'format' => 'json'
+                2 => [
+                    'flow_step_id' => 'test-step-3_1',
+                    'step_type' => 'publish',
+                    'pipeline_step_id' => 'test-step-3',
+                    'handler' => [
+                        'slug' => 'mock_output',
+                        'settings' => [
+                            'format' => 'json'
+                        ]
                     ]
                 ]
             ],

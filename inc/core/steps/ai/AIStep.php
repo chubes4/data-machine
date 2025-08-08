@@ -123,11 +123,18 @@ class AIStep {
                 return $data_packet; // Return unchanged array
             }
 
+            // Get publish handlers from flow config for directive application
+            $flow_config = $job_config['flow_config'] ?? [];
+            $publish_handlers = $this->extract_publish_handlers($flow_config);
+            
+            // Apply platform-specific directives if publish handlers are configured
+            $enhanced_content = $this->apply_output_directives(trim($content), $publish_handlers, $flow_config);
+            
             // Build AI messages array
             $messages = [
                 [
                     'role' => 'user',
-                    'content' => trim($content)
+                    'content' => $enhanced_content
                 ]
             ];
             
@@ -215,6 +222,136 @@ class AIStep {
 
 
 
+
+    /**
+     * Extract publish handlers from flow configuration
+     * 
+     * @param array $flow_config Flow configuration array
+     * @return array Array of publish handler types
+     */
+    private function extract_publish_handlers(array $flow_config): array {
+        $publish_handlers = [];
+        
+        if (empty($flow_config)) {
+            return $publish_handlers;
+        }
+        
+        // Validate flow_config structure - must be position-based array
+        $logger = apply_filters('dm_get_logger', null);
+        $first_key = key($flow_config);
+        if (!is_int($first_key)) {
+            if ($logger) {
+                $logger->error('AI Step: Invalid flow_config structure - expected position-based array with integer keys', [
+                    'first_key_type' => gettype($first_key),
+                    'first_key_value' => $first_key,
+                    'flow_config_keys' => array_keys($flow_config)
+                ]);
+            }
+            return $publish_handlers;
+        }
+        
+        // Flow config contains step configurations with handlers
+        foreach ($flow_config as $position => $step_config) {
+            if (!is_array($step_config)) {
+                continue;
+            }
+            
+            // Check if handler exists and is configured
+            $handler = $step_config['handler'] ?? null;
+            if (empty($handler) || !is_array($handler)) {
+                continue;
+            }
+            
+            $handler_slug = $handler['slug'] ?? '';
+            if (empty($handler_slug)) {
+                continue;
+            }
+            
+            // Get handler information to determine if it's a publish handler
+            $all_handlers = apply_filters('dm_get_handlers', []);
+            $handler_info = $all_handlers[$handler_slug] ?? null;
+            
+            if ($handler_info && ($handler_info['type'] ?? '') === 'publish') {
+                $publish_handlers[] = [
+                    'handler_slug' => $handler_slug,
+                    'handler_config' => $handler['settings'] ?? []
+                ];
+            }
+        }
+        
+        return $publish_handlers;
+    }
+    
+    /**
+     * Apply output directives based on publish handlers
+     * 
+     * @param string $content Original content
+     * @param array $publish_handlers Array of publish handler configurations
+     * @param array $flow_config Complete flow configuration
+     * @return string Enhanced content with directives
+     */
+    private function apply_output_directives(string $content, array $publish_handlers, array $flow_config): string {
+        if (empty($publish_handlers)) {
+            return $content;
+        }
+        
+        $logger = apply_filters('dm_get_logger', null);
+        $enhanced_content = $content;
+        
+        foreach ($publish_handlers as $handler_info) {
+            $handler_slug = $handler_info['handler_slug'];
+            $handler_config = $handler_info['handler_config'];
+            
+            // Map handler slugs to directive output types
+            $output_type = $this->map_handler_to_output_type($handler_slug);
+            
+            if (empty($output_type)) {
+                continue;
+            }
+            
+            // Build output config for directive system
+            $output_config = [
+                $handler_slug => $handler_config
+            ];
+            
+            // Apply directives using the existing filter system
+            $directive_block = apply_filters('dm_get_output_directive', '', $output_type, $output_config);
+            
+            if (!empty($directive_block)) {
+                $enhanced_content .= $directive_block;
+                
+                if ($logger) {
+                    $logger->debug('AI Step: Applied directives for handler', [
+                        'handler' => $handler_slug,
+                        'output_type' => $output_type,
+                        'directive_length' => strlen($directive_block)
+                    ]);
+                }
+            }
+        }
+        
+        return $enhanced_content;
+    }
+    
+    /**
+     * Map handler slug to directive output type
+     * 
+     * @param string $handler_slug Handler slug
+     * @return string Output type for directive system
+     */
+    private function map_handler_to_output_type(string $handler_slug): string {
+        // Map publish handler slugs to directive output types
+        $handler_to_type_map = [
+            'twitter' => 'twitter',
+            'bluesky' => 'bluesky', 
+            'facebook' => 'facebook',
+            'threads' => 'threads',
+            'wordpress' => 'wordpress',
+            'googlesheets' => 'googlesheets'
+        ];
+        
+        return $handler_to_type_map[$handler_slug] ?? '';
+    }
 
     /**
      * AI Step Configuration handled by AI HTTP Client Library

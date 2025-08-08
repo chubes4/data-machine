@@ -23,12 +23,17 @@ class WordPressDirectives {
     }
 
     public function add_wordpress_directives(string $directive_block, string $output_type, array $output_config): string {
-        if ($output_type !== 'publish_local' && $output_type !== 'publish_remote') {
+        if ($output_type !== 'wordpress') {
             return $directive_block;
         }
         
         $wordpress_config = $output_config['wordpress'] ?? [];
-        $destination_type = $wordpress_config['destination_type'] ?? 'local';
+        // Determine destination type from handler configuration
+        $destination_type = 'local'; // Default to local
+        if (!empty($wordpress_config['target_site_url']) || !empty($wordpress_config['location_id'])) {
+            $destination_type = 'remote';
+        }
+        
         $post_type = $wordpress_config['post_type'] ?? $wordpress_config['selected_remote_post_type'] ?? 'post';
         $post_status = $wordpress_config['post_status'] ?? $wordpress_config['remote_post_status'] ?? 'draft';
         

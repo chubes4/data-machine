@@ -91,23 +91,11 @@ class WordPressAuth {
             return false;
         }
 
-        // Encrypt the API key before storing
-        $encryption_helper = apply_filters('dm_get_encryption_helper', null);
-        if (!$encryption_helper) {
-            $this->get_logger()?->error('WordPress Auth: Encryption helper not available.');
-            return false;
-        }
-
-        $encrypted_api_key = $encryption_helper->encrypt($api_key);
-        if ($encrypted_api_key === false) {
-            $this->get_logger()?->error('WordPress Auth: Failed to encrypt API key.');
-            return false;
-        }
-
+        // Store the API key directly
         $credentials = [
             'api_url' => esc_url_raw($api_url),
             'username' => sanitize_text_field($username),
-            'api_key' => $encrypted_api_key,
+            'api_key' => $api_key,
             'stored_at' => time()
         ];
 
@@ -130,23 +118,11 @@ class WordPressAuth {
             return null;
         }
 
-        // Decrypt the API key
-        $encryption_helper = apply_filters('dm_get_encryption_helper', null);
-        if (!$encryption_helper) {
-            $this->get_logger()?->error('WordPress Auth: Encryption helper not available for decryption.');
-            return null;
-        }
-
-        $decrypted_api_key = $encryption_helper->decrypt($credentials['api_key']);
-        if ($decrypted_api_key === false) {
-            $this->get_logger()?->error('WordPress Auth: Failed to decrypt API key.');
-            return null;
-        }
-
+        // Get the API key directly
         return [
             'api_url' => $credentials['api_url'] ?? '',
             'username' => $credentials['username'] ?? '',
-            'api_key' => $decrypted_api_key,
+            'api_key' => $credentials['api_key'] ?? '',
             'stored_at' => $credentials['stored_at'] ?? 0
         ];
     }

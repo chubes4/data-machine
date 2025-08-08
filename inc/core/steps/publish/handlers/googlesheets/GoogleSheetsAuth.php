@@ -39,14 +39,6 @@ class GoogleSheetsAuth {
         return apply_filters('dm_get_logger', null);
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Checks if admin has valid Google Sheets authentication
@@ -76,27 +68,16 @@ class GoogleSheetsAuth {
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
-        // Decrypt the stored tokens
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $logger && $logger->error('Encryption helper service unavailable for Google Sheets connection.');
-            return new \WP_Error('googlesheets_service_unavailable', __('Encryption service unavailable for Google Sheets authentication.', 'data-machine'));
-        }
-
-        $decrypted_access_token = $encryption_helper->decrypt($credentials['access_token']);
-        $decrypted_refresh_token = $encryption_helper->decrypt($credentials['refresh_token']);
-        
-        if ($decrypted_access_token === false || $decrypted_refresh_token === false) {
-            $logger && $logger->error('Failed to decrypt Google Sheets credentials.');
-            return new \WP_Error('googlesheets_decryption_failed', __('Failed to decrypt Google Sheets credentials. Please re-authenticate.', 'data-machine'));
-        }
+        // Get the stored tokens directly
+        $access_token = $credentials['access_token'];
+        $refresh_token = $credentials['refresh_token'];
 
         // Check if access token needs refreshing
         $expires_at = $credentials['expires_at'] ?? 0;
         if (time() >= $expires_at - 300) { // Refresh 5 minutes before expiry
             $logger && $logger->debug('Google Sheets access token expired, attempting refresh.');
             
-            $refreshed_token = $this->refresh_access_token($decrypted_refresh_token);
+            $refreshed_token = $this->refresh_access_token($refresh_token);
             if (is_wp_error($refreshed_token)) {
                 return $refreshed_token;
             }
@@ -105,7 +86,7 @@ class GoogleSheetsAuth {
         }
 
         $logger && $logger->debug('Successfully retrieved valid Google Sheets access token.');
-        return $decrypted_access_token;
+        return $access_token;
     }
 
     /**
@@ -175,21 +156,10 @@ class GoogleSheetsAuth {
      * @param int $expires_in Token expiry time in seconds.
      */
     private function update_credentials(string $access_token, string $refresh_token, int $expires_in) {
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            return; // Can't update without encryption
-        }
-
-        $encrypted_access_token = $encryption_helper->encrypt($access_token);
-        $encrypted_refresh_token = $encryption_helper->encrypt($refresh_token);
-        
-        if ($encrypted_access_token === false || $encrypted_refresh_token === false) {
-            return; // Can't update with failed encryption
-        }
-
+        // Store the tokens directly
         $account_data = [
-            'access_token' => $encrypted_access_token,
-            'refresh_token' => $encrypted_refresh_token,
+            'access_token' => $access_token,
+            'refresh_token' => $refresh_token,
             'expires_at' => time() + $expires_in,
             'last_refreshed_at' => time()
         ];
@@ -344,26 +314,10 @@ class GoogleSheetsAuth {
             exit;
         }
 
-        // 4. Store encrypted credentials
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $logger && $logger->error('Encryption helper service unavailable during OAuth callback.');
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_service_unavailable'));
-            exit;
-        }
-
-        $encrypted_access_token = $encryption_helper->encrypt($token_data['access_token']);
-        $encrypted_refresh_token = $encryption_helper->encrypt($token_data['refresh_token']);
-        
-        if ($encrypted_access_token === false || $encrypted_refresh_token === false) {
-            $logger && $logger->error('Failed to encrypt Google Sheets tokens.');
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_encryption_failed'));
-            exit;
-        }
-        
+        // 4. Store credentials
         $account_data = [
-            'access_token' => $encrypted_access_token,
-            'refresh_token' => $encrypted_refresh_token,
+            'access_token' => $token_data['access_token'],
+            'refresh_token' => $token_data['refresh_token'],
             'expires_at' => time() + ($token_data['expires_in'] ?? 3600),
             'scope' => $token_data['scope'] ?? self::SCOPES,
             'last_verified_at' => time()

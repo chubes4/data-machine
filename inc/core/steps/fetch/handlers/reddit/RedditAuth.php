@@ -33,14 +33,6 @@ class RedditAuth {
         return apply_filters('dm_get_logger', null);
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Registers the necessary WordPress action hooks.
@@ -230,27 +222,12 @@ class RedditAuth {
              $this->get_logger()->warning('Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error, 'user_id' => $user_id]);
         }
 
-        // --- 5. Store Tokens and User Info (Encrypted) --- 
-        // Encrypt the tokens before storing
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Reddit OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_service_unavailable'));
-            exit;
-        }
-        $encrypted_access_token = $encryption_helper->encrypt($access_token);
-        $encrypted_refresh_token = $refresh_token ? $encryption_helper->encrypt($refresh_token) : null;
-        
-        if ($encrypted_access_token === false || ($refresh_token && $encrypted_refresh_token === false)) {
-            $this->get_logger()?->error('Reddit OAuth Error: Failed to encrypt tokens.', ['user_id' => $user_id]);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_encryption_failed'));
-            exit;
-        }
-        
+        // --- 5. Store Tokens and User Info --- 
+        // Store the tokens directly
         $account_data = [
             'username'           => $identity_username, // Might be null
-            'access_token'       => $encrypted_access_token,      // Store encrypted!
-            'refresh_token'      => $encrypted_refresh_token,     // Store encrypted!
+            'access_token'       => $access_token,
+            'refresh_token'      => $refresh_token,
             'token_expires_at'   => $token_expires_at,
             'scope'              => $scope_granted,
             'last_refreshed_at'  => time()
@@ -277,15 +254,10 @@ class RedditAuth {
             $this->get_logger()->error('Reddit Token Refresh Error: Refresh token not found in admin options.');
             return false;
         }
-        // Decrypt the refresh token
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Reddit Token Refresh Error: Encryption helper service unavailable.');
-            return false;
-        }
-        $refresh_token = $encryption_helper->decrypt($reddit_account['refresh_token']);
-        if ($refresh_token === false) {
-            $this->get_logger()->error('Reddit Token Refresh Error: Failed to decrypt refresh token.');
+        // Get the refresh token directly
+        $refresh_token = $reddit_account['refresh_token'];
+        if (empty($refresh_token)) {
+            $this->get_logger()->error('Reddit Token Refresh Error: Refresh token not found.');
             return false;
         }
 
@@ -348,24 +320,11 @@ class RedditAuth {
         $new_scope_granted = $data['scope'] ?? $reddit_account['scope'] ?? ''; // Keep old scope if not returned
         $new_token_expires_at = time() + intval($new_expires_in);
 
-        // Encrypt the tokens before storing
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Reddit Token Refresh Error: Encryption helper service unavailable during token storage.');
-            return false;
-        }
-        $encrypted_new_access_token = $encryption_helper->encrypt($new_access_token);
-        $encrypted_new_refresh_token = $encryption_helper->encrypt($new_refresh_token);
-        
-        if ($encrypted_new_access_token === false || $encrypted_new_refresh_token === false) {
-            $this->get_logger()->error('Reddit Token Refresh Error: Failed to encrypt new tokens.');
-            return false;
-        }
-
+        // Store the tokens directly
         $updated_account_data = [
             'username'           => $reddit_account['username'] ?? null, // Keep existing username
-            'access_token'       => $encrypted_new_access_token,
-            'refresh_token'      => $encrypted_new_refresh_token,
+            'access_token'       => $new_access_token,
+            'refresh_token'      => $new_refresh_token,
             'token_expires_at'   => $new_token_expires_at,
             'scope'              => $new_scope_granted,
             'last_refreshed_at'  => time() // Update refresh time

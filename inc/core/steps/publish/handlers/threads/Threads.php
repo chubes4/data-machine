@@ -43,11 +43,8 @@ class Threads {
         $title = $data_packet->content->title ?? '';
         $content = $data_packet->content->body ?? '';
         
-        // Get output config from DataPacket (set by OutputStep)
-        $output_config = $data_packet->output_config ?? [];
-        $flow_job_config = [
-            'output_config' => $output_config
-        ];
+        // Get publish config from DataPacket (set by PublishStep)
+        $publish_config = $data_packet->publish_config ?? [];
         
         // Extract metadata from DataPacket
         $input_metadata = [
@@ -58,12 +55,9 @@ class Threads {
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->debug('Threads Output: Starting Threads publication.');
 
-        // Get output config from the job config array
-        $config = $flow_job_config['output_config'] ?? [];
-        if (!is_array($config)) $config = [];
-
-        // Access config from nested structure
-        $threads_config = $config['threads'] ?? [];
+        // Get config - publish_config is the handler_config directly
+        $threads_config = $publish_config;
+        if (!is_array($threads_config)) $threads_config = [];
 
         // Validate content from DataPacket
         if (empty($title) && empty($content)) {

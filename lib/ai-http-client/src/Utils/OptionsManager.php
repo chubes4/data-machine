@@ -119,11 +119,24 @@ class AI_HTTP_Options_Manager {
         $all_settings = get_option($this->get_scoped_option_name(self::OPTION_NAME_BASE), array());
         $provider_settings = isset($all_settings[$provider_name]) ? $all_settings[$provider_name] : array();
         
+        // Debug logging for API key retrieval
+        error_log("[OptionsManager Debug] Getting provider settings for: {$provider_name}");
+        error_log("[OptionsManager Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
+        error_log("[OptionsManager Debug] Scoped option name: " . $this->get_scoped_option_name(self::OPTION_NAME_BASE));
+        error_log("[OptionsManager Debug] Provider-specific settings: " . json_encode($provider_settings));
+        
         // Merge with shared API key
         $shared_api_keys = get_option(self::SHARED_API_KEYS_OPTION, array());
+        error_log("[OptionsManager Debug] All shared API keys: " . json_encode(array_keys($shared_api_keys)));
+        
         if (isset($shared_api_keys[$provider_name])) {
-            $provider_settings['api_key'] = $shared_api_keys[$provider_name];
+            $provider_settings['api_key'] = $this->get_api_key($provider_name);
+            error_log("[OptionsManager Debug] Found shared API key for {$provider_name}");
+        } else {
+            error_log("[OptionsManager Debug] No shared API key found for {$provider_name}");
         }
+        
+        error_log("[OptionsManager Debug] Final provider settings keys: " . json_encode(array_keys($provider_settings)));
         
         return $provider_settings;
     }
@@ -250,25 +263,25 @@ class AI_HTTP_Options_Manager {
     }
 
     /**
-     * Get API key for provider from shared storage (with encryption support)
+     * Get API key for provider from shared storage
      *
      * @param string $provider_name Provider name
-     * @return string API key (decrypted if needed)
+     * @return string API key
      */
     public function get_api_key($provider_name) {
         $shared_api_keys = get_option(self::SHARED_API_KEYS_OPTION, array());
         $api_key = isset($shared_api_keys[$provider_name]) ? $shared_api_keys[$provider_name] : '';
         
-        // If encryption is available, decrypt the key
-        if (!empty($api_key) && $this->is_encryption_available()) {
-            return $this->decrypt_api_key($api_key);
-        }
+        // Debug logging for API key retrieval
+        error_log("[OptionsManager Debug] get_api_key() called for: {$provider_name}");
+        error_log("[OptionsManager Debug] Shared API keys available: " . json_encode(array_keys($shared_api_keys)));
+        error_log("[OptionsManager Debug] API key " . ($api_key ? "found, length: " . strlen($api_key) : "not found"));
         
         return $api_key;
     }
 
     /**
-     * Set API key for provider in shared storage (with encryption support)
+     * Set API key for provider in shared storage
      *
      * @param string $provider_name Provider name
      * @param string $api_key API key
@@ -279,18 +292,13 @@ class AI_HTTP_Options_Manager {
     }
 
     /**
-     * Set shared API key for provider (with encryption support)
+     * Set shared API key for provider
      *
      * @param string $provider_name Provider name
      * @param string $api_key API key
      * @return bool True on success
      */
     private function set_shared_api_key($provider_name, $api_key) {
-        // If encryption is available, encrypt the key
-        if ($this->is_encryption_available()) {
-            $api_key = $this->encrypt_api_key($api_key);
-        }
-        
         $shared_api_keys = get_option(self::SHARED_API_KEYS_OPTION, array());
         $shared_api_keys[$provider_name] = $api_key;
         
@@ -413,48 +421,6 @@ class AI_HTTP_Options_Manager {
         return $sanitized;
     }
 
-    /**
-     * Check if encryption is available
-     *
-     * @return bool True if encryption is available
-     */
-    private function is_encryption_available() {
-        // Check if WordPress has encryption keys defined
-        return defined('AUTH_KEY') && defined('SECURE_AUTH_KEY');
-    }
-
-    /**
-     * Encrypt API key
-     *
-     * @param string $api_key Plain API key
-     * @return string Encrypted API key
-     */
-    private function encrypt_api_key($api_key) {
-        if (!$this->is_encryption_available()) {
-            return $api_key;
-        }
-        
-        // Simple encryption using WordPress constants
-        $key = AUTH_KEY . SECURE_AUTH_KEY;
-        return base64_encode($api_key ^ str_repeat($key, ceil(strlen($api_key) / strlen($key))));
-    }
-
-    /**
-     * Decrypt API key
-     *
-     * @param string $encrypted_key Encrypted API key
-     * @return string Plain API key
-     */
-    private function decrypt_api_key($encrypted_key) {
-        if (!$this->is_encryption_available()) {
-            return $encrypted_key;
-        }
-        
-        // Simple decryption using WordPress constants
-        $key = AUTH_KEY . SECURE_AUTH_KEY;
-        $decoded = base64_decode($encrypted_key);
-        return $decoded ^ str_repeat($key, ceil(strlen($decoded) / strlen($key)));
-    }
     
     /**
      * Initialize AJAX handlers for settings management

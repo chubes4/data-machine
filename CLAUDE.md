@@ -63,7 +63,7 @@ if (in_array($action, $modal_actions)) {
 - **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
 - **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL), created_at, updated_at
 - **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
-- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, encrypted_password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
+- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 
 **Table Relationships**:
 - Flows reference Pipelines (many-to-one): `flows.pipeline_id → pipelines.pipeline_id`
@@ -77,7 +77,6 @@ if (in_array($action, $modal_actions)) {
 $logger = apply_filters('dm_get_logger', null);
 $ai_client = apply_filters('dm_get_ai_http_client', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
-$encryption = apply_filters('dm_get_encryption_helper', null);
 $scheduler = apply_filters('dm_get_action_scheduler', null);
 $http_service = apply_filters('dm_get_http_service', null);
 $constants = apply_filters('dm_get_constants', null);

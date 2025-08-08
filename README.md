@@ -276,7 +276,6 @@ The filter-based architecture supports custom handlers. Common extension pattern
 $logger = apply_filters('dm_get_logger', null);
 $ai_client = apply_filters('dm_get_ai_http_client', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
-$encryption = apply_filters('dm_get_encryption_helper', null);
 
 // Pure discovery with filtering
 $all_databases = apply_filters('dm_get_database_services', []);
@@ -296,32 +295,30 @@ $all_steps = apply_filters('dm_get_steps', []);              // All step types
 $ai_config = apply_filters('dm_get_steps', null, 'ai');      // Specific type
 ```
 
-**EncryptionHelper Service Pattern**:
+**Simple Credential Storage Pattern**:
 ```php
-// Secure API key storage using the new EncryptionHelper service
+// Direct credential storage for custom handlers
 class MyCustomHandler {
     public function save_credentials($api_key, $api_secret) {
-        $encryption = apply_filters('dm_get_encryption_helper', null);
-        
-        // Encrypt sensitive data before storage
-        $encrypted_key = $encryption->encrypt($api_key);
-        $encrypted_secret = $encryption->encrypt($api_secret);
-        
-        update_option('my_handler_api_key', $encrypted_key);
-        update_option('my_handler_api_secret', $encrypted_secret);
+        // Store credentials directly in WordPress options
+        update_option('my_handler_api_key', sanitize_text_field($api_key));
+        update_option('my_handler_api_secret', sanitize_text_field($api_secret));
     }
     
     public function get_credentials() {
-        $encryption = apply_filters('dm_get_encryption_helper', null);
-        
-        // Decrypt when needed
-        $encrypted_key = get_option('my_handler_api_key');
-        $encrypted_secret = get_option('my_handler_api_secret');
+        // Retrieve stored credentials
+        $api_key = get_option('my_handler_api_key', '');
+        $api_secret = get_option('my_handler_api_secret', '');
         
         return [
-            'api_key' => $encryption->decrypt($encrypted_key),
-            'api_secret' => $encryption->decrypt($encrypted_secret)
+            'api_key' => $api_key,
+            'api_secret' => $api_secret
         ];
+    }
+    
+    public function is_configured() {
+        $credentials = $this->get_credentials();
+        return !empty($credentials['api_key']) && !empty($credentials['api_secret']);
     }
 }
 ```
@@ -1346,7 +1343,7 @@ testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 - **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
 - **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL), created_at, updated_at
 - **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
-- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, encrypted_password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
+- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 
 **Monitoring**:
 - **Jobs**: Data Machine → Jobs (real-time status updates and logging)

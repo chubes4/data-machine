@@ -14,7 +14,6 @@ namespace DataMachine\Admin;
 
 use DataMachine\Admin\AdminMenuAssets;
 use DataMachine\Admin\Logger;
-use DataMachine\Admin\EncryptionHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -44,12 +43,6 @@ function dm_register_admin_filters() {
         return $logger;
     }, 10);
 
-    add_filter('dm_get_encryption_helper', function($encryption_helper) {
-        if ($encryption_helper === null) {
-            return new EncryptionHelper();
-        }
-        return $encryption_helper;
-    }, 10);
     
     // Legacy content rendering filter removed - now using unified system
     

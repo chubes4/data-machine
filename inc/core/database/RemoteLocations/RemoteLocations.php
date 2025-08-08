@@ -2,7 +2,7 @@
 /**
  * RemoteLocations database service - manages remote WordPress site connections.
  *
- * Handles CRUD operations for remote location data with password encryption and
+ * Handles CRUD operations for remote location data and
  * synchronization tracking. Provides core functionality for WordPress-to-WordPress
  * data transfer operations.
  *
@@ -33,14 +33,6 @@ class RemoteLocations {
         $this->table_name = $wpdb->prefix . 'dm_remote_locations';
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Adds a new remote location.
@@ -55,15 +47,7 @@ class RemoteLocations {
             return false; // Basic validation
         }
 
-        // Use the Encryption Helper
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            return false;
-        }
-        $encrypted_password = $encryption_helper->encrypt($data['password']);
-        if ($encrypted_password === false) {
-            return false;
-        }
+        $password = $data['password'];
 
         $result = $wpdb->insert(
             $this->table_name,
@@ -71,7 +55,7 @@ class RemoteLocations {
                 'location_name' => sanitize_text_field($data['location_name']),
                 'target_site_url' => esc_url_raw(untrailingslashit($data['target_site_url'])),
                 'target_username' => sanitize_text_field($data['target_username']),
-                'encrypted_password' => $encrypted_password,
+                'password' => $password,
                 'created_at' => current_time('mysql', 1),
                 'updated_at' => current_time('mysql', 1),
             ),
@@ -111,16 +95,7 @@ class RemoteLocations {
             $update_formats[] = '%s';
         }
         if (isset($data['password'])) { // Allow updating with an empty password if intended
-            // Use the Encryption Helper
-            $encryption_helper = $this->get_encryption_helper();
-            if (!$encryption_helper) {
-                return false;
-            }
-            $encrypted_password = $encryption_helper->encrypt($data['password']);
-            if ($encrypted_password === false) {
-                 return false;
-            }
-            $update_data['encrypted_password'] = $encrypted_password;
+            $update_data['password'] = $data['password'];
             $update_formats[] = '%s';
         }
         // Add enabled post types if present in $data
@@ -179,10 +154,10 @@ class RemoteLocations {
      * Retrieves a single remote location by ID.
      *
      * @param int $location_id The location ID.
-     * @param bool $decrypt_password Whether to decrypt the password.
+     * @param bool $include_password Whether to include the password in the response.
      * @return object|null Location object on success, null if not found.
      */
-    public function get_location(int $location_id, bool $decrypt_password = false): ?object {
+    public function get_location(int $location_id, bool $include_password = false): ?object {
         global $wpdb;
 
         $location = $wpdb->get_row($wpdb->prepare(
@@ -194,22 +169,10 @@ class RemoteLocations {
             return null;
         }
 
-        if ($decrypt_password && isset($location->encrypted_password)) {
-            // Use the Encryption Helper
-            $encryption_helper = $this->get_encryption_helper();
-            if ($encryption_helper) {
-                $location->password = $encryption_helper->decrypt($location->encrypted_password);
-            } else {
-                $location->password = false;
-            }
-            if ($location->password === false) {
-                // Optionally handle decryption failure, e.g., set password to null or an error indicator
-                unset($location->password);
-            }
+        if (!$include_password && isset($location->password)) {
+            // Unset password field if not requested
+            unset($location->password);
         }
-
-        // Unset encrypted version if decrypted or not requested
-        unset($location->encrypted_password);
 
         return $location;
     }
@@ -284,7 +247,7 @@ class RemoteLocations {
             location_name varchar(255) NOT NULL,
             target_site_url varchar(255) NOT NULL,
             target_username varchar(100) NOT NULL,
-            encrypted_password text NOT NULL,
+            password text NOT NULL,
             synced_site_info longtext NULL,
             enabled_post_types longtext NULL,
             enabled_taxonomies longtext NULL,

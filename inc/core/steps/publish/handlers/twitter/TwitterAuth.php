@@ -41,14 +41,6 @@ class TwitterAuth {
         return apply_filters('dm_get_logger', null);
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Checks if admin has valid Twitter authentication
@@ -77,19 +69,9 @@ class TwitterAuth {
             return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
-        // Decrypt the stored tokens
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Encryption helper service unavailable for Twitter connection.');
-            return new \WP_Error('twitter_service_unavailable', __('Encryption service unavailable for Twitter authentication.', 'data-machine'));
-        }
-        $decrypted_access_token = $encryption_helper->decrypt($credentials['access_token']);
-        $decrypted_access_token_secret = $encryption_helper->decrypt($credentials['access_token_secret']);
-        
-        if ($decrypted_access_token === false || $decrypted_access_token_secret === false) {
-            $this->get_logger() && $this->get_logger()->error('Failed to decrypt Twitter credentials.');
-            return new \WP_Error('twitter_decryption_failed', __('Failed to decrypt Twitter credentials. Please re-authenticate.', 'data-machine'));
-        }
+        // Get the stored tokens directly
+        $access_token = $credentials['access_token'];
+        $access_token_secret = $credentials['access_token_secret'];
 
         $consumer_key = get_option('twitter_api_key');
         $consumer_secret = get_option('twitter_api_secret');
@@ -99,7 +81,7 @@ class TwitterAuth {
         }
 
         try {
-            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $decrypted_access_token, $decrypted_access_token_secret);
+            $connection = new TwitterOAuth($consumer_key, $consumer_secret, $access_token, $access_token_secret);
             $this->get_logger() && $this->get_logger()->debug('Successfully created authenticated Twitter connection.');
             return $connection;
         } catch (\Exception $e) {
@@ -249,26 +231,11 @@ class TwitterAuth {
                 exit;
             }
 
-            // --- 4. Store Permanent Credentials (Encrypted) --- 
-            // Encrypt the access tokens before storing
-            $encryption_helper = apply_filters('dm_get_encryption_helper', null);
-            if (!$encryption_helper) {
-                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Encryption helper service unavailable.');
-                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_service_unavailable'));
-                exit;
-            }
-            $encrypted_access_token = $encryption_helper->encrypt($access_token_data['oauth_token']);
-            $encrypted_access_token_secret = $encryption_helper->encrypt($access_token_data['oauth_token_secret']);
-            
-            if ($encrypted_access_token === false || $encrypted_access_token_secret === false) {
-                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to encrypt access tokens.');
-                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_encryption_failed'));
-                exit;
-            }
-            
+            // --- 4. Store Permanent Credentials --- 
+            // Store the access tokens directly
             $account_data = [
-                'access_token'        => $encrypted_access_token,
-                'access_token_secret' => $encrypted_access_token_secret,
+                'access_token'        => $access_token_data['oauth_token'],
+                'access_token_secret' => $access_token_data['oauth_token_secret'],
                 'user_id'             => $access_token_data['user_id'] ?? null, // Twitter User ID
                 'screen_name'         => $access_token_data['screen_name'] ?? null, // Twitter Screen Name (@handle)
                 'last_verified_at'    => time() // Timestamp of this successful auth

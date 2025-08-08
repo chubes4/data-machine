@@ -144,18 +144,11 @@ class Reddit {
 			$logger?->debug('Reddit Input: Token refresh successful.', ['pipeline_id' => $pipeline_id]);
 		}
 
-		// Decrypt the access token
-		$encrypted_access_token = $reddit_account['access_token'] ?? null;
-		if (empty($encrypted_access_token)) {
+		// Get the access token directly
+		$access_token = $reddit_account['access_token'] ?? null;
+		if (empty($access_token)) {
 			$logger?->error('Reddit Input: Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
 			throw new Exception(esc_html__( 'Could not obtain valid Reddit access token.', 'data-machine' ));
-		}
-		
-		$encryption_helper = apply_filters('dm_get_encryption_helper', null);
-		$access_token = $encryption_helper->decrypt($encrypted_access_token);
-		if ($access_token === false) {
-			$logger?->error('Reddit Input: Failed to decrypt access token.', ['pipeline_id' => $pipeline_id]);
-			throw new Exception(esc_html__( 'Failed to decrypt Reddit access token. Please re-authenticate.', 'data-machine' ));
 		}
 		// --- End Token Retrieval & Refresh ---
 

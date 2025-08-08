@@ -53,11 +53,8 @@ class Twitter {
         $title = $data_packet->content->title ?? '';
         $content = $data_packet->content->body ?? '';
         
-        // Get output config from DataPacket (set by OutputStep)
-        $output_config = $data_packet->output_config ?? [];
-        $flow_job_config = [
-            'output_config' => $output_config
-        ];
+        // Get publish config from DataPacket (set by PublishStep)
+        $publish_config = $data_packet->publish_config ?? [];
         
         // Extract metadata from DataPacket
         $input_metadata = [
@@ -69,11 +66,10 @@ class Twitter {
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->debug('Starting Twitter output handling.');
         
-        // 1. Get config
-        $output_config = $flow_job_config['output_config']['twitter'] ?? []; // Use 'twitter' sub-key
-        $char_limit = $output_config['twitter_char_limit'] ?? 280;
-        $include_source = $output_config['twitter_include_source'] ?? true;
-        $enable_images = $output_config['twitter_enable_images'] ?? true;
+        // 1. Get config - publish_config is the handler_config directly
+        $char_limit = $publish_config['twitter_char_limit'] ?? 280;
+        $include_source = $publish_config['twitter_include_source'] ?? true;
+        $enable_images = $publish_config['twitter_enable_images'] ?? true;
 
         // 2. Get authenticated connection using internal TwitterAuth
         $connection = $this->auth->get_connection();

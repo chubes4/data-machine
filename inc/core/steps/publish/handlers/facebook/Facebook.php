@@ -60,11 +60,8 @@ class Facebook {
         $title = $data_packet->content->title ?? '';
         $content = $data_packet->content->body ?? '';
         
-        // Get output config from DataPacket (set by OutputStep)
-        $output_config = $data_packet->output_config ?? [];
-        $flow_job_config = [
-            'output_config' => $output_config
-        ];
+        // Get publish config from DataPacket (set by PublishStep)
+        $publish_config = $data_packet->publish_config ?? [];
         
         // Extract metadata from DataPacket
         $input_metadata = [
@@ -76,41 +73,18 @@ class Facebook {
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->debug('Starting Facebook output handling.');
 
-        // 1. Validate configuration - no defaults allowed
-        $output_config = $flow_job_config['output_config']['facebook'] ?? [];
+        // 1. Get config - publish_config is the handler_config directly
+        $target_id = trim($publish_config['facebook_target_id'] ?? '');
+        $include_images = (bool) ($publish_config['include_images'] ?? true);
+        $include_videos = (bool) ($publish_config['include_videos'] ?? true);
+        $link_handling = $publish_config['link_handling'] ?? 'auto';
         
-        if (!isset($output_config['facebook_target_id'])) {
+        if (empty($target_id)) {
             return [
                 'success' => false,
                 'error' => __('Facebook target_id configuration is required.', 'data-machine')
             ];
         }
-        
-        if (!isset($output_config['include_images'])) {
-            return [
-                'success' => false,
-                'error' => __('Facebook include_images configuration is required.', 'data-machine')
-            ];
-        }
-        
-        if (!isset($output_config['include_videos'])) {
-            return [
-                'success' => false,
-                'error' => __('Facebook include_videos configuration is required.', 'data-machine')
-            ];
-        }
-        
-        if (!isset($output_config['link_handling'])) {
-            return [
-                'success' => false,
-                'error' => __('Facebook link_handling configuration is required.', 'data-machine')
-            ];
-        }
-        
-        $target_id = trim($output_config['facebook_target_id']);
-        $include_images = (bool) $output_config['include_images'];
-        $include_videos = (bool) $output_config['include_videos'];
-        $link_handling = $output_config['link_handling'];
         
         if (empty($target_id)) {
             return [

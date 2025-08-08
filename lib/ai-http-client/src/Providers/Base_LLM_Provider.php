@@ -33,6 +33,12 @@ class Base_LLM_Provider {
         $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
         $this->timeout = isset($config['timeout']) ? intval($config['timeout']) : 30;
         
+        // Debug logging for API key configuration
+        $provider_name = $this->get_provider_name();
+        $api_key_status = empty($this->api_key) ? 'EMPTY' : 'SET_LENGTH_' . strlen($this->api_key);
+        error_log("[{$provider_name} Debug] Provider Constructor - API Key Status: {$api_key_status}");
+        error_log("[{$provider_name} Debug] Provider Constructor - Config Keys: " . json_encode(array_keys($config)));
+        
         if (isset($config['base_url']) && !empty($config['base_url'])) {
             $this->base_url = rtrim($config['base_url'], '/');
         } else {
@@ -169,11 +175,21 @@ class Base_LLM_Provider {
         $provider_name = $this->get_provider_name();
         error_log("[{$provider_name} Debug] API Request URL: " . $url);
         
-        // Log headers (sanitize API key)
+        // Log headers (sanitize API key but show status)
         $sanitized_headers = $headers;
+        $api_key_status = 'NOT_SET';
         if (isset($sanitized_headers['Authorization'])) {
-            $sanitized_headers['Authorization'] = 'Bearer [REDACTED]';
+            $auth_value = $sanitized_headers['Authorization'];
+            if (empty($auth_value) || $auth_value === 'Bearer ' || $auth_value === 'Bearer') {
+                $api_key_status = 'EMPTY';
+                $sanitized_headers['Authorization'] = 'Bearer [EMPTY]';
+            } else {
+                $bearer_token = str_replace('Bearer ', '', $auth_value);
+                $api_key_status = 'SET_LENGTH_' . strlen($bearer_token);
+                $sanitized_headers['Authorization'] = 'Bearer [REDACTED_LENGTH_' . strlen($bearer_token) . ']';
+            }
         }
+        error_log("[{$provider_name} Debug] API Key Status: {$api_key_status}");
         error_log("[{$provider_name} Debug] Request Headers: " . json_encode($sanitized_headers));
         
         // Log request payload

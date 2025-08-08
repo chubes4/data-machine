@@ -37,14 +37,6 @@ class BlueskyAuth {
         return apply_filters('dm_get_logger', null);
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Checks if admin has valid Bluesky authentication
@@ -53,8 +45,8 @@ class BlueskyAuth {
      */
     public function is_authenticated(): bool {
         $handle = get_option('bluesky_username', '');
-        $encrypted_password = get_option('bluesky_app_password', '');
-        return !empty($handle) && !empty($encrypted_password);
+        $password = get_option('bluesky_app_password', '');
+        return !empty($handle) && !empty($password);
     }
 
     /**
@@ -68,29 +60,11 @@ class BlueskyAuth {
 
         // Get credentials from site options (global configuration)
         $handle = get_option('bluesky_username', '');
-        $encrypted_password = get_option('bluesky_app_password', '');
+        $password = get_option('bluesky_app_password', '');
 
-        if (empty($handle) || empty($encrypted_password)) {
+        if (empty($handle) || empty($password)) {
             $logger && $logger->error('Bluesky handle or app password missing in site options.');
             return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured on the API Keys page.', 'data-machine'));
-        }
-
-        // Decrypt the stored password
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $logger && $logger->error('Encryption helper service unavailable for Bluesky authentication.');
-            return new \WP_Error('bluesky_service_unavailable', __('Encryption service unavailable for Bluesky authentication.', 'data-machine'));
-        }
-
-        $password = $encryption_helper->decrypt($encrypted_password);
-        if ($password === false) {
-            $logger && $logger->error('Failed to decrypt Bluesky app password.');
-            return new \WP_Error('bluesky_decryption_failed', __('Failed to decrypt Bluesky app password. Please re-save the settings.', 'data-machine'));
-        }
-
-        if (empty($password)) {
-            $logger && $logger->error('Bluesky app password is empty after decryption.');
-            return new \WP_Error('bluesky_empty_password', __('Bluesky app password is empty. Please check your configuration.', 'data-machine'));
         }
 
         // Authenticate with Bluesky and get session
@@ -243,9 +217,9 @@ class BlueskyAuth {
      */
     public function get_account_details(): ?array {
         $handle = get_option('bluesky_username', '');
-        $encrypted_password = get_option('bluesky_app_password', '');
+        $password = get_option('bluesky_app_password', '');
         
-        if (empty($handle) || empty($encrypted_password)) {
+        if (empty($handle) || empty($password)) {
             return null;
         }
         

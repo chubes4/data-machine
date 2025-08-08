@@ -51,14 +51,6 @@ class FacebookAuth {
         return apply_filters('dm_get_logger', null);
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Checks if admin has valid Facebook authentication
@@ -88,7 +80,7 @@ class FacebookAuth {
      * Retrieves the stored Page access token.
      * Uses global site options for admin-only authentication.
      *
-     * @return string|null Page Access token or null if not found/valid/decryption fails.
+     * @return string|null Page Access token or null if not found/valid.
      */
     public function get_page_access_token(): ?string {
         $account = get_option('facebook_auth_data', []);
@@ -101,17 +93,8 @@ class FacebookAuth {
             return null;
         }
 
-        // Decrypt page token
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            return null;
-        }
-        $decrypted_token = $encryption_helper->decrypt($account['page_access_token']);
-        if($decrypted_token === false) {
-            return null;
-        }
-
-        return $decrypted_token;
+        // Get page token directly
+        return $account['page_access_token'];
     }
 
     /**
@@ -217,17 +200,8 @@ class FacebookAuth {
         $page_access_token = $page_credentials['access_token'];
         $page_name = $page_credentials['name'];
 
-        // Encrypt the page access token before storing
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
-            return new \WP_Error('facebook_oauth_service_unavailable', __('Encryption service unavailable for storing Facebook access token.', 'data-machine'));
-        }
-        $encrypted_page_token = $encryption_helper->encrypt($page_access_token);
-        if ($encrypted_page_token === false) {
-             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Failed to encrypt page access token.', ['user_id' => $user_id]);
-             return new \WP_Error('facebook_oauth_page_encryption_failed', __('Failed to securely store the Facebook page access token.', 'data-machine'));
-        }
+        // Store the page access token directly
+        $page_token = $page_access_token;
 
         // Fetch user profile info
         $profile_info = $this->get_user_profile($access_token);
@@ -245,21 +219,12 @@ class FacebookAuth {
              ]);
         }
 
-        // Encrypt the user access token before storing
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Encryption helper service unavailable for user token.', ['user_id' => $user_id]);
-            return new \WP_Error('facebook_oauth_service_unavailable', __('Encryption service unavailable for storing Facebook user token.', 'data-machine'));
-        }
-        $encrypted_user_token = $encryption_helper->encrypt($access_token);
-        if ($encrypted_user_token === false) {
-             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Failed to encrypt user access token.', ['user_id' => $user_id]);
-             return new \WP_Error('facebook_oauth_user_encryption_failed', __('Failed to securely store the Facebook user access token.', 'data-machine'));
-        }
+        // Store the user access token directly
+        $user_token = $access_token;
 
         $account_details = [
-            'user_access_token'  => $encrypted_user_token,
-            'page_access_token'  => $encrypted_page_token,
+            'user_access_token'  => $user_token,
+            'page_access_token'  => $page_token,
             'token_type'         => $data['token_type'] ?? 'bearer',
             'user_id'            => $user_profile_id,
             'user_name'          => $user_profile_name,
@@ -493,10 +458,7 @@ class FacebookAuth {
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['user_access_token'])) {
-            $encryption_helper = apply_filters('dm_get_encryption_helper', null);
-            if ($encryption_helper) {
-                $token = $encryption_helper->decrypt($account['user_access_token']);
-            }
+            $token = $account['user_access_token'];
         }
 
         if ($token) {

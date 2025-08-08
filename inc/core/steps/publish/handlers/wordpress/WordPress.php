@@ -52,15 +52,11 @@ class WordPress {
         $content_tags = $data_entry->content->tags ?? []; // Optional property
         $content_summary = $data_entry->content->summary ?? ''; // Optional property
 
-        // Validate output_config in data entry
-        if (!isset($data_entry->output_config)) {
-            return ['success' => false, 'error' => 'Data entry structure violation: output_config missing'];
+        // Get publish config from data entry (set by PublishStep)
+        $publish_config = $data_entry->publish_config ?? [];
+        if (!is_array($publish_config)) {
+            return ['success' => false, 'error' => 'Invalid publish_config format - array required'];
         }
-        
-        // Get output config from data entry
-        $flow_job_config = [
-            'output_config' => $data_entry->output_config
-        ];
 
         // Validate metadata in data entry
         if (!isset($data_entry->metadata)) {
@@ -74,18 +70,12 @@ class WordPress {
             'image_source_url' => !empty($data_entry->attachments->images) ? $data_entry->attachments->images[0]->url : null // Optional
         ];
 
-        // Get output config directly from the job config array - guaranteed by validation above
-        $config = $flow_job_config['output_config'];
-        if (!is_array($config)) {
-            return ['success' => false, 'error' => 'Invalid output_config format - array required'];
-        }
-
-        // Validate WordPress configuration - require explicit setup
-        if (!isset($config['wordpress']) || !is_array($config['wordpress'])) {
-            return ['success' => false, 'error' => 'WordPress configuration missing - wordpress config block required'];
+        // Get config - publish_config is the handler_config directly
+        if (empty($publish_config)) {
+            return ['success' => false, 'error' => 'WordPress configuration is required'];
         }
         
-        $wordpress_config = $config['wordpress'];
+        $wordpress_config = $publish_config;
         
         // Require explicit destination type - no defaults
         if (!isset($wordpress_config['destination_type'])) {
@@ -411,8 +401,8 @@ class WordPress {
             ];
         }
         
-        if ($location->password === false) { // Check decryption failure
-            $error_message = __('Failed to decrypt password for the selected Remote Location.', 'data-machine');
+        if ($location->password === false) { // Check password retrieval failure
+            $error_message = __('Failed to retrieve password for the selected Remote Location.', 'data-machine');
             $logger = apply_filters('dm_get_logger', null);
             $logger && $logger->error($error_message, ['location_id' => $location_id]);
             return [
@@ -424,7 +414,7 @@ class WordPress {
         // Use fetched credentials
         $remote_url = $location->target_site_url;
         $remote_user = $location->target_username;
-        $remote_password = $location->password; // Decrypted password
+        $remote_password = $location->password;
 
         // Get publish settings from the config
         $post_type = $config['selected_remote_post_type'] ?? 'post';

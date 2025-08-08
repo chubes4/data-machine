@@ -49,10 +49,6 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Retrieves the AI HTTP client for multi-provider AI integration.
  * Usage: $ai_client = apply_filters('dm_get_ai_http_client', null);
  * 
- * @filter dm_get_encryption_helper
- * Retrieves the encryption helper for secure data handling.
- * Usage: $encryption = apply_filters('dm_get_encryption_helper', null);
- * 
  * @filter dm_get_action_scheduler
  * Retrieves the Action Scheduler service for background job management.
  * Usage: $scheduler = apply_filters('dm_get_action_scheduler', null);

@@ -58,11 +58,8 @@ class Bluesky {
         $title = $data_packet->content->title ?? '';
         $content = $data_packet->content->body ?? '';
         
-        // Get output config from DataPacket (set by OutputStep)
-        $output_config = $data_packet->output_config ?? [];
-        $flow_job_config = [
-            'output_config' => $output_config
-        ];
+        // Get publish config from DataPacket (set by PublishStep)
+        $publish_config = $data_packet->publish_config ?? [];
         
         // Extract metadata from DataPacket
         $input_metadata = [
@@ -74,27 +71,9 @@ class Bluesky {
         $logger = apply_filters('dm_get_logger', null);
         $logger && $logger->debug('Starting Bluesky output handling.');
         
-        // 1. Get config - require explicit configuration
-        $output_config = $flow_job_config['output_config']['bluesky'] ?? [];
-        
-        if (!isset($output_config['bluesky_include_source'])) {
-            $logger && $logger->error('Bluesky publish configuration missing required bluesky_include_source setting.');
-            return [
-                'success' => false,
-                'error' => __('Bluesky configuration incomplete: bluesky_include_source setting required.', 'data-machine')
-            ];
-        }
-        
-        if (!isset($output_config['bluesky_enable_images'])) {
-            $logger && $logger->error('Bluesky publish configuration missing required bluesky_enable_images setting.');
-            return [
-                'success' => false,
-                'error' => __('Bluesky configuration incomplete: bluesky_enable_images setting required.', 'data-machine')
-            ];
-        }
-        
-        $include_source = $output_config['bluesky_include_source'];
-        $enable_images = $output_config['bluesky_enable_images'];
+        // 1. Get config - publish_config is the handler_config directly
+        $include_source = $publish_config['bluesky_include_source'] ?? true;
+        $enable_images = $publish_config['bluesky_enable_images'] ?? true;
 
         // 2. Get authenticated session using internal BlueskyAuth
         $session = $this->auth->get_session();

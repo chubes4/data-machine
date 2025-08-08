@@ -53,14 +53,6 @@ class ThreadsAuth {
         return apply_filters('dm_get_logger', null);
     }
 
-    /**
-     * Get encryption helper service via filter
-     *
-     * @return object|null EncryptionHelper instance or null if not available
-     */
-    private function get_encryption_helper() {
-        return apply_filters('dm_get_encryption_helper', null);
-    }
 
     /**
      * Checks if admin has valid Threads authentication
@@ -89,7 +81,7 @@ class ThreadsAuth {
     /**
      * Retrieves the stored access token.
      * Uses global site options for admin-only authentication.
-     * Handles decryption and token refresh if needed.
+     * Handles token refresh if needed.
      *
      * @return string|null Access token or null if not found/valid.
      */
@@ -112,25 +104,14 @@ class ThreadsAuth {
             }
         }
 
-        // Decrypt the current token first
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            return null;
-        }
-        $current_token = $encryption_helper->decrypt($account['access_token']);
-        if ($current_token === false) {
-            return null;
-        }
+        // Get the current token directly
+        $current_token = $account['access_token'];
 
         if ($needs_refresh) {
             $refreshed_data = $this->refresh_access_token($current_token);
             if (!is_wp_error($refreshed_data)) {
                 // Update stored account details with refreshed token and expiry
-                $encryption_helper = $this->get_encryption_helper();
-                if (!$encryption_helper) {
-                    return null;
-                }
-                $account['access_token'] = $encryption_helper->encrypt($refreshed_data['access_token']);
+                $account['access_token'] = $refreshed_data['access_token'];
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
                 // Update the site option immediately
                 update_option('threads_auth_data', $account);
@@ -145,7 +126,7 @@ class ThreadsAuth {
             }
         }
 
-        // If no refresh needed or attempt failed but token still valid, return current decrypted token
+        // If no refresh needed or attempt failed but token still valid, return current token
         return $current_token;
     }
 
@@ -279,7 +260,7 @@ class ThreadsAuth {
 
         // 4. Prepare account details using the long-lived token
         $account_details = [
-            'access_token'     => $long_lived_access_token, // Will be encrypted below
+            'access_token'     => $long_lived_access_token,
             'expires_in'       => $long_lived_expires_in, // Store the long-lived expiry duration (for info)
             'token_type'       => $long_lived_token_type,
             'fb_user_id'       => null, // Store the authenticating FB User ID if needed
@@ -291,7 +272,7 @@ class ThreadsAuth {
         ];
 
         // Use the long-lived token for fetching profile info
-        $current_access_token = $long_lived_access_token; // Use the raw long-lived token before encrypting it
+        $current_access_token = $long_lived_access_token; // Use the long-lived token
 
         // Fetch the /me node info using the long-lived token.
         // Based on testing, this should return the Page info (ID, name) when token has Threads scopes.
@@ -310,17 +291,7 @@ class ThreadsAuth {
             return new \WP_Error('threads_oauth_me_id_missing', $error_message);
         }
 
-        // Encrypt tokens before storing
-        $encryption_helper = $this->get_encryption_helper();
-        if (!$encryption_helper) {
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Encryption helper service unavailable.', ['user_id' => $user_id]);
-            return new \WP_Error('threads_oauth_service_unavailable', __('Encryption service unavailable for storing Threads access token.', 'data-machine'));
-        }
-        $account_details['access_token'] = $encryption_helper->encrypt($account_details['access_token']);
-        if ($account_details['access_token'] === false) {
-             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Failed to encrypt access token.', ['user_id' => $user_id]);
-             return new \WP_Error('threads_oauth_encryption_failed', __('Failed to securely store the Threads access token.', 'data-machine'));
-        }
+        // Store token directly
 
         // Update site option with all collected details for admin-only architecture
         update_option('threads_auth_data', $account_details);
@@ -446,10 +417,7 @@ class ThreadsAuth {
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {
-            $encryption_helper = apply_filters('dm_get_encryption_helper', null);
-            if ($encryption_helper) {
-                $token = $encryption_helper->decrypt($account['access_token']);
-            }
+            $token = $account['access_token'];
         }
 
         if ($token) {

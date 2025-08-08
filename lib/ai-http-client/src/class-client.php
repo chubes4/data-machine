@@ -437,7 +437,16 @@ class AI_HTTP_Client {
      */
     private function get_provider_config($provider_name) {
         $options_manager = new AI_HTTP_Options_Manager($this->plugin_context, $this->ai_type);
-        return $options_manager->get_provider_settings($provider_name);
+        $config = $options_manager->get_provider_settings($provider_name);
+        
+        // Debug logging for provider configuration
+        error_log("[AI_HTTP_Client Debug] get_provider_config() called for: {$provider_name}");
+        error_log("[AI_HTTP_Client Debug] Plugin context: {$this->plugin_context}, AI type: {$this->ai_type}");
+        $api_key_status = isset($config['api_key']) && !empty($config['api_key']) ? 'SET_LENGTH_' . strlen($config['api_key']) : 'EMPTY';
+        error_log("[AI_HTTP_Client Debug] Config API key status: {$api_key_status}");
+        error_log("[AI_HTTP_Client Debug] Config keys available: " . json_encode(array_keys($config)));
+        
+        return $config;
     }
 
 

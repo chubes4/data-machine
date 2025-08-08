@@ -54,11 +54,8 @@ class GoogleSheets {
         $title = $data_packet->content->title ?? '';
         $content = $data_packet->content->body ?? '';
         
-        // Get output config from DataPacket (set by OutputStep)
-        $output_config = $data_packet->output_config ?? [];
-        $flow_job_config = [
-            'output_config' => $output_config
-        ];
+        // Get publish config from DataPacket (set by PublishStep)
+        $publish_config = $data_packet->publish_config ?? [];
         
         // Extract metadata from DataPacket
         $input_metadata = [
@@ -73,11 +70,10 @@ class GoogleSheets {
         
         $logger && $logger->debug('Starting Google Sheets output handling.');
         
-        // 1. Get configuration
-        $output_config = $flow_job_config['output_config']['googlesheets'] ?? [];
-        $spreadsheet_id = $output_config['googlesheets_spreadsheet_id'] ?? '';
-        $worksheet_name = $output_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
-        $column_mapping = $output_config['googlesheets_column_mapping'] ?? $this->get_default_column_mapping();
+        // 1. Get configuration - publish_config is the handler_config directly
+        $spreadsheet_id = $publish_config['googlesheets_spreadsheet_id'] ?? '';
+        $worksheet_name = $publish_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
+        $column_mapping = $publish_config['googlesheets_column_mapping'] ?? $this->get_default_column_mapping();
 
         // 2. Validate required configuration
         if (empty($spreadsheet_id)) {
