@@ -250,8 +250,7 @@ function dm_get_handler_files() {
         // Enhance files with processing status
         $files_with_status = [];
         foreach ($files as $file) {
-            $is_processed = false;
-            do_action('dm_is_item_processed', $flow_id, 'files', $file['path'], &$is_processed);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'files', $file['path']);
             
             $files_with_status[] = [
                 'filename' => $file['filename'],

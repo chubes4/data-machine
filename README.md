@@ -69,17 +69,17 @@ Flow C: Manual Content (On-demand)
 
 ### Your First Pipeline+Flow
 1. **Create Pipeline Template**: Data Machine → Pipelines → Create New
-   - System automatically creates "Draft Flow" instance for immediate use
-   - Click "Add Step" to open the dynamic step selection modal
-   - Select step type from the visual interface (Fetch, AI, Publish, etc.)
-   - Choose specific handler from automatically discovered options
-   - Configure step settings through the AJAX-driven interface
-2. **Configure Your Draft Flow**: Customize the auto-created flow instance
-   - RSS Feed URL: Choose your source through the handler settings form
+   - Creates "Draft Flow" instance automatically
+   - Click "Add Step" to open step selection modal
+   - Select step type from interface (Fetch, AI, Publish, etc.)
+   - Choose handler from available options
+   - Configure step settings through AJAX interface
+2. **Configure Your Draft Flow**: Customize the flow instance
+   - RSS Feed URL: Choose source through handler settings form
    - AI Model: Select GPT-4, Claude, etc. from available providers
-   - WordPress: Select target blog/site with real-time validation
-   - Schedule: Set timing (daily, weekly, manual) with Action Scheduler integration
-3. **Test & Deploy**: Run flow and monitor results with comprehensive logging
+   - WordPress: Select target blog/site
+   - Schedule: Set timing (daily, weekly, manual) with Action Scheduler
+3. **Test & Deploy**: Run flow and monitor results
 
 ## Architecture: Pipeline+Flow System
 
@@ -90,14 +90,14 @@ Flow C: Manual Content (On-demand)
 - **Step Definitions**: Specify step types and positions (0-99)
 - **No Configuration**: Pure workflow structure without handler specifics
 - **Template Library**: Build library of common workflow patterns
-- **Auto-Flow Creation**: Each new pipeline automatically generates a "Draft Flow" instance
+- **Auto-Flow Creation**: Each pipeline generates a "Draft Flow" instance
 
 ### Flow Layer (Instances)
 - **Pipeline Implementation**: Each flow uses a specific pipeline template
 - **Handler Configuration**: Configure specific handlers for each step
 - **Independent Scheduling**: Each flow has its own timing and triggers
 - **User Settings**: Per-flow customization of AI models, accounts, etc.
-- **Immediate Availability**: "Draft Flow" created automatically for instant workflow execution
+- **Immediate Availability**: "Draft Flow" created automatically
 
 ### Linear Processing Within Each Flow
 - **Position-Based Execution**: Steps run in order 0-99 within each flow
@@ -145,9 +145,11 @@ Data Machine implements a pure discovery filter architecture enabling AI workflo
 
 ```php
 // Core services - completely replaceable
-$logger = apply_filters('dm_get_logger', null);
-$ai_client = apply_filters('dm_get_ai_http_client', null);
+do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
+
+// AI HTTP Client - direct instantiation (bundled library)
+$ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
 
 // Database services - pure discovery with filtering
 $all_databases = apply_filters('dm_get_database_services', []);
@@ -176,7 +178,7 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 ## Key Features
 
 ### Universal Modal System
-Filter-based modal architecture enabling unlimited extensibility:
+Filter-based modal architecture:
 - **Filter Discovery**: Components register modal content via `dm_get_modals` filter
 - **Template-Based Interface**: Modals identified by template names rather than component IDs
 - **Dynamic Step Discovery**: `apply_filters('dm_get_steps', [])` discovers all step types for UI generation
@@ -190,20 +192,20 @@ Filter-based modal architecture enabling unlimited extensibility:
 ### Pipeline Builder System
 AJAX-driven interface with modal system integration:
 - **Dynamic Step Selection**: Real-time discovery of available step types through filter system
-- **Handler Auto-Discovery**: Automatically shows available handlers for each step type
+- **Handler Discovery**: Shows available handlers for each step type
 - **Modal Integration**: Seamless modal interactions with WordPress-native interface
 - **Template Architecture**: Clean separation of modal and page templates with dynamic step cards
-- **AJAX Architecture**: Specialized handler separation - PipelinePageAjax handles business logic operations (add_step, save_pipeline, delete_flow), PipelineModalAjax handles UI operations (get_modal, get_template, configure-step-action)
+- **AJAX Architecture**: Universal routing with dm_ajax_route action hook for streamlined request handling
 - **Real-time Validation**: Immediate feedback on handler availability and configuration
 - **Filter-Based Content**: Modal content generated via filter system for extensibility
-- **Auto-Flow Creation**: New pipelines automatically create "Draft Flow" for immediate execution
+- **Auto-Flow Creation**: New pipelines create "Draft Flow" for execution
 - **WordPress Security**: Standard nonce verification, capability checks, and input sanitization
 
 ### Pipeline+Flow Architecture
 Two-layer system enabling template reuse and independent workflow execution:
 - **Pipeline Templates**: Reusable workflow definitions with step sequences
 - **Flow Instances**: Configured executions with specific handlers and scheduling
-- **Template Library**: Build once, deploy multiple times with different configurations
+- **Template Library**: Build once, use multiple times with different configurations
 - **Independent Scheduling**: Each flow runs on its own timing and triggers
 
 ### Multi-Source Context Collection
@@ -273,8 +275,8 @@ The filter-based architecture supports custom handlers. Common extension pattern
 **Core Services Discovery**:
 ```php
 // All services accessed via apply_filters - zero constructor injection
-$logger = apply_filters('dm_get_logger', null);
-$ai_client = apply_filters('dm_get_ai_http_client', null);
+do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
+$ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
 
 // Pure discovery with filtering
@@ -377,7 +379,7 @@ $flow_config_b = [
 // Implementation showing DataPacket flow
 class ProductAnalysisStep {
     public function execute(int $job_id, array $data_packets = []): bool {
-        $logger = apply_filters('dm_get_logger', null);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // AI steps consume all packets for complete context
         foreach ($data_packets as $index => $packet) {
@@ -566,7 +568,7 @@ class ContentManagementPipeline {
 ```php
 class DatabaseFetchStep {
     public function execute(int $job_id, array $data_packets = []): bool {
-        $logger = apply_filters('dm_get_logger', null);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Custom database connection
         global $wpdb;
@@ -606,8 +608,8 @@ $database_step = $all_steps['database_fetch'] ?? null;
 ```php
 class SentimentAnalysisStep {
     public function execute(int $job_id, array $data_packets = []): bool {
-        $ai_client = apply_filters('dm_get_ai_http_client', null);
-        $logger = apply_filters('dm_get_logger', null);
+        $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // AI steps consume all packets for complete context
         $combined_content = '';
@@ -656,7 +658,7 @@ class SentimentAnalysisStep {
 ```php
 class SlackNotificationStep {
     public function execute(int $job_id, array $data_packets = []): bool {
-        $logger = apply_filters('dm_get_logger', null);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Publish steps typically use latest packet
         $latest_packet = $data_packets[0] ?? null;
@@ -1106,7 +1108,7 @@ class MyFetchHandler {
     
     // Required method for fetch handlers
     public function fetch_data(array $step_config): array {
-        $logger = apply_filters('dm_get_logger', null);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Process fetch data and return array of data packets
         $data_packets = [];
@@ -1125,7 +1127,7 @@ class MyPublishHandler {
     
     // Required method for publish handlers
     public function publish_data(array $data_packet, array $step_config): bool {
-        $logger = apply_filters('dm_get_logger', null);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Process publish data
         // Your custom publish logic here
@@ -1190,8 +1192,8 @@ add_filter('dm_get_steps', function($steps) {
 class CustomProcessingStep {
     public function execute(int $job_id, array $data_packet, array $step_config): array {
         // Access all services via filters
-        $logger = apply_filters('dm_get_logger', null);
-        $ai_client = apply_filters('dm_get_ai_http_client', null);
+        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
+        $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
         
         // ALL steps receive uniform array of DataPackets (most recent first)
         // Steps self-select data processing approach:
@@ -1241,9 +1243,10 @@ public function execute(int $job_id, array $data_packets = []): bool {
 ### Service Override System
 ```php
 // Override any core service
-add_filter('dm_get_logger', function($service) {
-    return new MyCustomLogger();
-}, 20); // Higher priority = override
+add_action('dm_log', function($level, $message, $context = []) {
+    // Custom logging implementation
+    MyCustomLogger::log($level, $message, $context);
+}, 10, 3);
 
 // Add custom database service via collection registration
 add_filter('dm_get_database_services', function($services) {
@@ -1277,16 +1280,19 @@ define('WP_DEBUG', false);  // Production mode - clean deployment with essential
 
 **Logger Configuration**:
 ```php
+// Central logging system - all components use dm_log action
+do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
+do_action('dm_log', 'error', 'Process failed', ['error' => $error_details]);
+do_action('dm_log', 'warning', 'Non-critical issue', ['context' => 'data']);
+
 // Runtime logger configuration (3-level system)
-$logger = apply_filters('dm_get_logger', null);
+$all_databases = apply_filters('dm_get_database_services', []);
+$logger = new \DataMachine\Engine\Logger(); // Direct access if needed
 
 // Set log level: 'debug' (full), 'error' (problems only), 'none' (disabled)
 $logger->set_level('debug');  // Enable full logging for development
 $logger->set_level('error');  // Production setting (default)
 $logger->set_level('none');   // Disable logging completely
-
-// Check current setting
-$current_level = $logger->get_level();
 
 // Log management
 $logger->clear_logs();                    // Clear all log files

@@ -115,30 +115,8 @@ $handler_configured = !empty($current_handler);
                     <!-- No handlers configured -->
                     <div class="dm-placeholder-text"><?php esc_html_e('No handlers configured', 'data-machine'); ?></div>
                 <?php elseif ($step_type === 'ai'): ?>
-                    <!-- AI step status -->
-                    <?php 
-                    // Get AI configuration for this step using filter-based discovery
-                    $ai_config = [];
-                    if ($pipeline_step_id) {
-                        $ai_client = apply_filters('dm_get_ai_http_client', null);
-                        if ($ai_client) {
-                            // Convert pipeline_step_id to step_id for AI HTTP Client interface boundary
-                            $step_id = $pipeline_step_id;
-                            $ai_config = $ai_client->get_step_configuration($step_id);
-                        }
-                    }
-                    
-                    if (!empty($ai_config['provider']) && !empty($ai_config['model'])): ?>
-                        <div class="dm-ai-config-status">
-                            <span class="dm-ai-provider"><?php echo esc_html(ucfirst($ai_config['provider'])); ?></span>
-                            <span class="dm-ai-model"><?php echo esc_html($ai_config['model']); ?></span>
-                            <?php if (!empty($ai_config['temperature'])): ?>
-                                <span class="dm-ai-temperature">T: <?php echo esc_html($ai_config['temperature']); ?></span>
-                            <?php endif; ?>
-                        </div>
-                    <?php else: ?>
-                        <div class="dm-placeholder-text"><?php esc_html_e('Configure step to see AI status', 'data-machine'); ?></div>
-                    <?php endif; ?>
+                    <!-- AI step status - simplified without service call -->
+                    <div class="dm-placeholder-text"><?php esc_html_e('AI processing step configured', 'data-machine'); ?></div>
                 <?php endif; ?>
             </div>
         </div>

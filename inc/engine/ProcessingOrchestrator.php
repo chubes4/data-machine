@@ -309,13 +309,12 @@ class ProcessingOrchestrator {
 	 */
 	private function schedule_next_step( int $job_id, int $execution_order, int $pipeline_id, int $flow_id, array $job_config, array $data_packet = [] ): bool {
 		
-		$scheduler = apply_filters('dm_get_action_scheduler', null);
-		if (!$scheduler) {
-			do_action('dm_log', 'error', 'ActionScheduler service not available');
+		if (!function_exists('as_schedule_single_action')) {
+			do_action('dm_log', 'error', 'Action Scheduler not available');
 			return false;
 		}
 		
-		$action_id = $scheduler->schedule_single_action(
+		$action_id = as_schedule_single_action(
 			time(), // Action Scheduler handles immediate execution precisely
 			'dm_execute_step',
 			[

@@ -18,47 +18,37 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## AJAX Handler Architecture
 
-**Specialized Handler Separation**: Clean separation between modal UI operations and page business logic with filter-based discovery:
+**Universal AJAX Routing**: Clean AJAX architecture using universal `dm_ajax_route` action hook for streamlined request handling:
 
-- **PipelinePageAjax.php**: Business logic operations (add_step, delete_step, save_pipeline, delete_pipeline, delete_flow)
-- **PipelineModalAjax.php**: UI/template operations (get_template, configure-step-action, add-handler-action)
+- **Page Actions**: Business logic operations (dm_add_step, dm_delete_step, dm_create_pipeline, dm_delete_pipeline, dm_add_flow, dm_delete_flow, dm_save_flow_schedule, dm_run_flow_now)
+- **Modal Actions**: UI/template operations (dm_get_template, dm_get_flow_step_card, dm_get_flow_config, dm_configure_step_action, dm_add_location_action, dm_add_handler_action)
 
-**Handler Registration**: Admin pages register specialized handlers:
+**AJAX Registration**: Direct action hook registration with universal routing:
 ```php
-'ajax_handlers' => [
-    'modal' => new PipelineModalAjax(),
-    'page' => new PipelinePageAjax()
-]
+// Page actions (business logic operations)
+add_action('wp_ajax_dm_add_step', fn() => do_action('dm_ajax_route', 'dm_add_step', 'page'));
+add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
+add_action('wp_ajax_dm_create_pipeline', fn() => do_action('dm_ajax_route', 'dm_create_pipeline', 'page'));
+
+// Modal actions (UI/template operations)
+add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
+add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', 'dm_get_flow_step_card', 'modal'));
 ```
 
-**Dynamic Routing**: PipelinesFilters.php routes based on action type using discovered handlers:
+**Universal Modal Content**: Separate endpoint for general modal loading:
 ```php
-$modal_actions = [
-    'get_template', 'get_flow_step_card', 'get_flow_config',
-    'configure-step-action', 'add-location-action', 'add-handler-action'
-];
-
-$all_pages = apply_filters('dm_get_admin_pages', []);
-$ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-
-if (in_array($action, $modal_actions)) {
-    $ajax_handlers['modal']->handle_pipeline_modal_ajax();
-} else {
-    $ajax_handlers['page']->handle_pipeline_page_ajax();
-}
+add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_content']);
 ```
 
-## Current Status
+## Current Implementation Status
 
-**Core Systems Status**: Production ready with complete filter-based architecture, pipeline execution, AI integration, and handler framework.
+**Core Systems**: Complete filter-based architecture, pipeline execution, AI integration, and handler framework.
 
-**Completed Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, specialized AJAX handlers, handler directive system.
+**Completed Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, universal AJAX routing, handler directive system.
 
 **Current Implementation Limitations**:
 - WordPress Formatting: AI outputs markdown format, WordPress handler needs HTML/blocks conversion
 - Handler Testing: ProcessedItems system needs comprehensive testing across all handlers
-
-**Architecture Quality**: Zero known critical architectural issues, robust security patterns, consistent filter-based design throughout.
 
 ## Database Schema
 
@@ -79,12 +69,13 @@ if (in_array($action, $modal_actions)) {
 ```php
 // Core services - Direct discovery
 $logger = apply_filters('dm_get_logger', null);
-$ai_client = apply_filters('dm_get_ai_http_client', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
-$scheduler = apply_filters('dm_get_action_scheduler', null);
 $http_service = apply_filters('dm_get_http_service', null);
 $constants = apply_filters('dm_get_constants', null);
 $pipeline_context = apply_filters('dm_get_pipeline_context', null);
+
+// AI HTTP Client - Direct instantiation (bundled library)
+$ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
 
 // Database services - Pure discovery with filtering
 $all_databases = apply_filters('dm_get_database_services', []);
@@ -159,11 +150,10 @@ $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data)
 
 **Immediate Tasks**:
 1. Complete authentication implementations for social media handlers (Threads, Bluesky, Google Sheets, Reddit)
-2. Implement WordPress format conversion (markdown → HTML/blocks) in publish handler
-3. Expand handler directive system to remaining handlers (Twitter, Facebook, etc.)
-4. Comprehensive testing of ProcessedItems system across all handlers
+2. Expand handler directive system to remaining handlers (Twitter, Facebook, etc.)
+3. Comprehensive testing of ProcessedItems system across all handlers
 
-**Working Systems Ready for Extension**:
+**Available for Extension**:
 - Handler directive framework (WordPress implementation complete)
 - Filter-based authentication system (Twitter and Facebook implementations complete)
 - Pipeline execution engine with DataPacket flow
@@ -201,18 +191,21 @@ error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 
 ## Components
 
-**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration), ActionScheduler
+**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration)
 
 **Handlers**:
 - Fetch: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
 - Publish: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets (6 handlers)
 - Receiver: Webhook framework (stub implementation)
-- Total: 11 active handlers
+- Total: 11 handlers + 1 stub framework
 
 **Authentication Implementation Status**:
-- Twitter: ✅ Complete OAuth 1.0a implementation with full workflow
-- Facebook: ✅ Complete OAuth 2.0 implementation with full workflow and page management
-- Threads, Bluesky, Google Sheets, Reddit: ⚠️ Stub implementations with OAuth framework structure
+- Twitter: ✅ Complete OAuth 1.0a implementation
+- Facebook: ✅ Complete OAuth 2.0 implementation
+- Threads: ⚠️ Stub implementation with framework structure
+- Bluesky: ⚠️ Stub implementation with framework structure  
+- Google Sheets: ⚠️ Stub implementation with framework structure
+- Reddit: ⚠️ Stub implementation with framework structure
 - WordPress: Uses Remote Locations (site-to-site authentication)
 - Files, RSS: No authentication required
 
@@ -337,18 +330,17 @@ if (!empty($handler_directive)) {
 }
 ```
 
-**Current Working Implementation**:
+**Current Implementation**:
 - WordPress handler: Complete directive for structured content formatting
 - Framework supports all handlers via consistent registration pattern
 - AI steps automatically discover and inject appropriate directives based on pipeline step sequence
-- Zero configuration required - handlers self-register directives via filter system
+- Handlers self-register directives via filter system
 
 **Architecture Benefits**:
 - **Contextual AI Guidance**: AI receives specific formatting instructions for target platforms
 - **Self-Registering**: Handlers declare their own AI requirements via filters
 - **Pipeline-Aware**: AI steps automatically detect next step handler and apply appropriate directive
 - **Extensible**: Any handler can register custom AI directives following the same pattern
-- **Zero Configuration**: Works automatically when handlers register directives - no manual setup required
 
 ## Arrow Rendering Architecture
 
@@ -796,7 +788,7 @@ $deleted_count = $repository->cleanup_old_files(7); // 7 days
 
 **Database Tables**:
 - `wp_dm_pipelines`: Template definitions with step sequences
-- `wp_dm_flows`: Configured instances with handler settings (auto-created \"Draft Flow\" for new pipelines)
+- `wp_dm_flows`: Configured instances with handler settings (auto-created "Draft Flow" for new pipelines)
 - `wp_dm_jobs`: Execution records
 
 ## ProcessedItems Architecture

@@ -16,7 +16,6 @@ namespace DataMachine\Core\Handlers\Fetch\WordPress;
 
 use DataMachine\Core\Database\RemoteLocations;
 use Exception;
-use InvalidArgumentException;
 use WP_Query;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -64,6 +63,11 @@ class WordPress {
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+        }
+        
+        // Handle null flow_id gracefully - skip processed items tracking when flow context missing
+        if ($flow_id === null) {
+            do_action('dm_log', 'debug', 'WordPress fetch called without flow_id - processed items tracking disabled');
         }
         
         $user_id = get_current_user_id();
@@ -176,8 +180,7 @@ class WordPress {
             }
 
             $post_id = $post->ID;
-            $is_processed = false;
-            do_action('dm_is_item_processed', $flow_id, 'wordpress_local', $post_id, &$is_processed);
+            $is_processed = ($flow_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_id, 'wordpress_local', $post_id) : false;
             if ($is_processed) {
                 continue;
             }
@@ -347,8 +350,7 @@ class WordPress {
                     continue;
                 }
                 
-                $is_processed = false;
-                do_action('dm_is_item_processed', $flow_id, 'wordpress_remote_rest', $current_item_id, &$is_processed);
+                $is_processed = ($flow_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_id, 'wordpress_remote_rest', $current_item_id) : false;
                 if ($is_processed) {
                     continue;
                 }
@@ -391,7 +393,7 @@ class WordPress {
                         'original_date_gmt' => $original_date_string_for_meta,
                     ]
                 ];
-                $logger && $logger->debug('WordPress REST Input: Adding eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $pipeline_id]);
+                do_action('dm_log', 'debug', 'WordPress REST Input: Adding eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $pipeline_id]);
                 array_push($eligible_items_packets, $input_data_packet);
                 if (count($eligible_items_packets) >= $process_limit) {
                     break;
@@ -414,7 +416,7 @@ class WordPress {
         }
         
         if (empty($eligible_items_packets)) {
-            $logger && $logger->add_admin_info(__('No new items found matching the criteria from the API endpoint.', 'data-machine'));
+            do_action('dm_log', 'debug', __('No new items found matching the criteria from the API endpoint.', 'data-machine'));
             return [];
         }
 
@@ -550,8 +552,7 @@ class WordPress {
                 }
 
                 $current_item_id = $post['ID'];
-                $is_processed = false;
-                do_action('dm_is_item_processed', $flow_id, 'wordpress_remote_airdrop', $current_item_id, &$is_processed);
+                $is_processed = ($flow_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_id, 'wordpress_remote_airdrop', $current_item_id) : false;
                 if ($is_processed) {
                     continue;
                 }
@@ -793,11 +794,6 @@ class WordPress {
         
         return [];
     }
-
-
-
-
-
 
 
     /**

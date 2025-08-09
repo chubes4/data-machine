@@ -299,8 +299,7 @@ class Reddit {
 				// 3. Check if already processed
 				// Skip processed items tracking if flow_id not available
 				if ($flow_id) {
-					$is_processed = false;
-					do_action('dm_is_item_processed', $flow_id, 'reddit', $current_item_id, &$is_processed);
+					$is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'reddit', $current_item_id);
 					if ($is_processed) {
 						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 						continue; // Skip if already processed

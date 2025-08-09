@@ -163,183 +163,34 @@ function dm_register_pipelines_admin_page_filters() {
         return $pages;
     });
     
-    // AJAX handler registration - Route to specialized page or modal handlers
-    // Individual WordPress action hooks - replacing central router
+    // AJAX handler registration - Universal routing via dm_ajax_route action hook
+    // Eliminates 132 lines of repetitive handler discovery and routing code
     
-    // Page actions (business logic operations)
-    add_action('wp_ajax_dm_add_step', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_add_step')) {
-            $page_handler->handle_add_step();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
+    // Page actions (business logic operations) - using universal AJAX routing
+    add_action('wp_ajax_dm_add_step', fn() => do_action('dm_ajax_route', 'dm_add_step', 'page'));
+    add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
+    add_action('wp_ajax_dm_delete_pipeline', fn() => do_action('dm_ajax_route', 'dm_delete_pipeline', 'page'));
+    add_action('wp_ajax_dm_create_pipeline', fn() => do_action('dm_ajax_route', 'dm_create_pipeline', 'page'));
+    add_action('wp_ajax_dm_add_flow', fn() => do_action('dm_ajax_route', 'dm_add_flow', 'page'));
+    add_action('wp_ajax_dm_delete_flow', fn() => do_action('dm_ajax_route', 'dm_delete_flow', 'page'));
+    add_action('wp_ajax_dm_save_flow_schedule', fn() => do_action('dm_ajax_route', 'dm_save_flow_schedule', 'page'));
+    add_action('wp_ajax_dm_run_flow_now', fn() => do_action('dm_ajax_route', 'dm_run_flow_now', 'page'));
     
-    add_action('wp_ajax_dm_delete_step', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_delete_step')) {
-            $page_handler->handle_delete_step();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_delete_pipeline', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_delete_pipeline')) {
-            $page_handler->handle_delete_pipeline();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_create_pipeline', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_create_pipeline')) {
-            $page_handler->handle_create_pipeline();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_add_flow', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_add_flow')) {
-            $page_handler->handle_add_flow();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_delete_flow', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_delete_flow')) {
-            $page_handler->handle_delete_flow();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_save_flow_schedule', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_save_flow_schedule')) {
-            $page_handler->handle_save_flow_schedule();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_run_flow_now', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        if ($page_handler && method_exists($page_handler, 'handle_run_flow_now')) {
-            $page_handler->handle_run_flow_now();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    // Modal actions (UI/template operations)  
-    add_action('wp_ajax_dm_get_template', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $modal_handler = $ajax_handlers['modal'] ?? null;
-        if ($modal_handler && method_exists($modal_handler, 'handle_get_template')) {
-            $modal_handler->handle_get_template();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_get_flow_step_card', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $modal_handler = $ajax_handlers['modal'] ?? null;
-        if ($modal_handler && method_exists($modal_handler, 'handle_get_flow_step_card')) {
-            $modal_handler->handle_get_flow_step_card();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_get_flow_config', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $modal_handler = $ajax_handlers['modal'] ?? null;
-        if ($modal_handler && method_exists($modal_handler, 'handle_get_flow_config')) {
-            $modal_handler->handle_get_flow_config();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_configure_step_action', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $modal_handler = $ajax_handlers['modal'] ?? null;
-        if ($modal_handler && method_exists($modal_handler, 'handle_configure_step_action')) {
-            $modal_handler->handle_configure_step_action();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_add_location_action', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $modal_handler = $ajax_handlers['modal'] ?? null;
-        if ($modal_handler && method_exists($modal_handler, 'handle_add_location_action')) {
-            $modal_handler->handle_add_location_action();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
-    
-    add_action('wp_ajax_dm_add_handler_action', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $modal_handler = $ajax_handlers['modal'] ?? null;
-        if ($modal_handler && method_exists($modal_handler, 'handle_add_handler_action')) {
-            $modal_handler->handle_add_handler_action();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    });
+    // Modal actions (UI/template operations) - using universal AJAX routing
+    add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
+    add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', 'dm_get_flow_step_card', 'modal'));
+    add_action('wp_ajax_dm_get_flow_config', fn() => do_action('dm_ajax_route', 'dm_get_flow_config', 'modal'));
+    add_action('wp_ajax_dm_configure_step_action', fn() => do_action('dm_ajax_route', 'dm_configure_step_action', 'modal'));
+    add_action('wp_ajax_dm_add_location_action', fn() => do_action('dm_ajax_route', 'dm_add_location_action', 'modal'));
+    add_action('wp_ajax_dm_add_handler_action', fn() => do_action('dm_ajax_route', 'dm_add_handler_action', 'modal'));
     
     // Handler settings AJAX endpoint - handles "Add Handler to Flow" form submissions
     add_action('wp_ajax_dm_save_handler_settings', function() {
         dm_handle_save_handler_settings();
     });
     
-    // Auto-save AJAX endpoint - routes to PipelinePageAjax for processing
-    add_action('wp_ajax_dm_pipeline_auto_save', function() {
-        $all_pages = apply_filters('dm_get_admin_pages', []);
-        $pipeline_page = $all_pages['pipelines'] ?? null;
-        $ajax_handlers = $pipeline_page['ajax_handlers'] ?? [];
-        $page_handler = $ajax_handlers['page'] ?? null;
-        
-        if ($page_handler && method_exists($page_handler, 'handle_auto_save')) {
-            $page_handler->handle_auto_save();
-        } else {
-            wp_send_json_error(['message' => __('Auto-save handler not available', 'data-machine')]);
-        }
-    });
+    // Auto-save AJAX endpoint - using universal AJAX routing
+    add_action('wp_ajax_dm_pipeline_auto_save', fn() => do_action('dm_ajax_route', 'dm_pipeline_auto_save', 'page'));
     
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     

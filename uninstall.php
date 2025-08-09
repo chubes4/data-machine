@@ -46,11 +46,7 @@ $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_remote_locations" );
 
 
 // Clear Action Scheduler jobs if available
-// Try to use filter-based service first, fallback to direct call for cleanup
-$scheduler = apply_filters('dm_get_action_scheduler', null);
-if ($scheduler) {
-	$scheduler->unschedule_all_actions('', array(), 'data-machine');
-} elseif ( function_exists( 'as_unschedule_all_actions' ) ) {
+if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( '', array(), 'data-machine' );
 }
 

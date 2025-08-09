@@ -22,14 +22,6 @@ class WordPressAuth {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return mixed Logger instance or null
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
     /**
      * Registers the necessary WordPress action hooks.
@@ -66,7 +58,7 @@ class WordPressAuth {
         $response = wp_remote_get($test_url, $args);
         
         if (is_wp_error($response)) {
-            $this->get_logger()?->error('WordPress Auth: API validation failed.', [
+            do_action('dm_log', 'error', 'WordPress Auth: API validation failed.', [
                 'error' => $response->get_error_message(),
                 'url' => $test_url
             ]);

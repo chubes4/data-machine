@@ -52,8 +52,7 @@ class Threads {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Threads Output: Starting Threads publication.');
+        do_action('dm_log', 'debug', 'Threads Output: Starting Threads publication.');
 
         // Get config - publish_config is the handler_config directly
         $threads_config = $publish_config;
@@ -61,7 +60,7 @@ class Threads {
 
         // Validate content from DataPacket
         if (empty($title) && empty($content)) {
-            $logger && $logger->error('Threads Output: DataPacket content is empty.');
+            do_action('dm_log', 'error', 'Threads Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Threads.', 'data-machine')
@@ -139,7 +138,7 @@ class Threads {
             // Build post URL using page_id since we don't have username in new architecture
             $post_url = "https://www.threads.net/t/{$media_id}";
 
-            $logger && $logger->debug('Threads Output: Successfully published to Threads.', [
+            do_action('dm_log', 'debug', 'Threads Output: Successfully published to Threads.', [
                 'media_id' => $media_id
             ]);
 
@@ -153,7 +152,7 @@ class Threads {
             ];
 
         } catch (Exception $e) {
-            $logger && $logger->error('Threads Output: Exception during publication.', [
+            do_action('dm_log', 'error', 'Threads Output: Exception during publication.', [
                 'error' => $e->getMessage()
             ]);
             

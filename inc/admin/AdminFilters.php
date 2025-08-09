@@ -13,7 +13,6 @@
 namespace DataMachine\Admin;
 
 use DataMachine\Admin\AdminMenuAssets;
-use DataMachine\Admin\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -36,12 +35,6 @@ function dm_register_admin_filters() {
         return $admin_menu_assets;
     }, 10);
 
-    add_filter('dm_get_logger', function($logger) {
-        if ($logger === null) {
-            return new Logger();
-        }
-        return $logger;
-    }, 10);
 
     
     // Legacy content rendering filter removed - now using unified system

@@ -69,9 +69,7 @@ class Facebook {
             'image_source_url' => !empty($data_packet->attachments->images) ? $data_packet->attachments->images[0]->url : null
         ];
         
-        // Get logger service via filter
-        $logger = apply_filters('dm_get_logger', null);
-        $logger && $logger->debug('Starting Facebook output handling.');
+        do_action('dm_log', 'debug', 'Starting Facebook output handling.');
 
         // 1. Get config - publish_config is the handler_config directly
         $target_id = trim($publish_config['facebook_target_id'] ?? '');
@@ -105,7 +103,7 @@ class Facebook {
         $page_access_token = $this->auth->get_page_access_token();
 
         if (empty($page_id) || empty($page_access_token)) {
-            $logger && $logger->error('Facebook Output: Failed to get Page ID or Page Access Token.', [
+            do_action('dm_log', 'error', 'Facebook Output: Failed to get Page ID or Page Access Token.', [
                 'page_id_found' => !empty($page_id), 
                 'token_found' => !empty($page_access_token)
             ]);
@@ -115,14 +113,14 @@ class Facebook {
             ];
         }
         
-        $logger && $logger->debug('Facebook Output: Retrieved Page credentials.', ['page_id' => $page_id]);
+        do_action('dm_log', 'debug', 'Facebook Output: Retrieved Page credentials.', ['page_id' => $page_id]);
 
         // 4. Validate content from DataPacket
         $source_link = $input_metadata['source_url'] ?? null;
         $post_content = $title ? $title . ": " . $content : $content;
 
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Facebook Output: DataPacket content is empty.');
+            do_action('dm_log', 'warning', 'Facebook Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot post empty content to Facebook.', 'data-machine')
@@ -141,7 +139,7 @@ class Facebook {
         // Get HTTP service via filter - required for all operations
         $http_service = apply_filters('dm_get_http_service', null);
         if (!$http_service) {
-            $logger && $logger->error('Facebook Output: HTTP service not available.');
+            do_action('dm_log', 'error', 'Facebook Output: HTTP service not available.');
             return [
                 'success' => false,
                 'error' => __('Facebook output requires HTTP service. Service not available from dm_get_http_service filter.', 'data-machine')
@@ -150,7 +148,7 @@ class Facebook {
 
         // Determine post type and prepare API parameters - no silent fallbacks
         if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
-            if (!$this->is_image_accessible($image_url, $logger)) {
+            if (!$this->is_image_accessible($image_url)) {
                 return [
                     'success' => false,
                     'error' => sprintf(__('Facebook image URL not accessible: %s', 'data-machine'), $image_url)
@@ -179,7 +177,7 @@ class Facebook {
             }
             
             // Video Post - append video link to content
-            $logger && $logger->debug('Facebook API: Including video link in text post.', ['video_url' => $video_url]);
+            do_action('dm_log', 'debug', 'Facebook API: Including video link in text post.', ['video_url' => $video_url]);
             $post_content .= "\n\nVideo: " . $video_url;
             $endpoint = "/{$page_id}/feed";
             $api_params = ['message' => $post_content];
@@ -200,7 +198,7 @@ class Facebook {
             // Use HTTP service
             $http_response = $http_service->post($url, $api_params, [], 'Facebook API');
             if (is_wp_error($http_response)) {
-                $logger && $logger->error('Facebook API Error: HTTP request failed.', [
+                do_action('dm_log', 'error', 'Facebook API Error: HTTP request failed.', [
                     'error' => $http_response->get_error_message(), 
                 ]);
                 return [
@@ -226,7 +224,7 @@ class Facebook {
                 $error_message = $data['error']['message'] ?? 'Unknown Facebook API error.';
                 $error_type = $data['error']['type'] ?? 'APIError';
                 $error_code_fb = $data['error']['code'] ?? 'UnknownCode';
-                $logger && $logger->error('Facebook API Error: Received error response.', [
+                do_action('dm_log', 'error', 'Facebook API Error: Received error response.', [
                     'http_code' => $http_code, 
                     'fb_error' => $data['error'], 
                 ]);
@@ -243,7 +241,7 @@ class Facebook {
                 // Construct the URL to the post
                 $output_url = "https://www.facebook.com/" . $post_id;
 
-                $logger && $logger->debug('Facebook post published successfully.', [
+                do_action('dm_log', 'debug', 'Facebook post published successfully.', [
                     'post_id' => $post_id, 
                     'output_url' => $output_url
                 ]);
@@ -261,7 +259,7 @@ class Facebook {
                     $comment_response = $http_service->post($comment_url, $comment_api_params, [], 'Facebook Comments API');
 
                     if (is_wp_error($comment_response)) {
-                        $logger && $logger->error('Facebook API: Failed to post source link comment.', [
+                        do_action('dm_log', 'error', 'Facebook API: Failed to post source link comment.', [
                             'post_id' => $post_id,
                             'error' => $comment_response->get_error_message(),
                         ]);
@@ -276,7 +274,7 @@ class Facebook {
                     $comment_http_code = $comment_response['status_code'];
 
                     if (is_wp_error($comment_data)) {
-                        $logger && $logger->error('Facebook API: Failed to parse comment response.', [
+                        do_action('dm_log', 'error', 'Facebook API: Failed to parse comment response.', [
                             'post_id' => $post_id,
                             'error' => $comment_data->get_error_message(),
                         ]);
@@ -288,7 +286,7 @@ class Facebook {
                     
                     if (isset($comment_data['error'])) {
                         $error_message = $comment_data['error']['message'] ?? 'Unknown comment API error';
-                        $logger && $logger->error('Facebook API: Source link comment API error.', [
+                        do_action('dm_log', 'error', 'Facebook API: Source link comment API error.', [
                             'post_id' => $post_id,
                             'http_code' => $comment_http_code,
                             'fb_error' => $comment_data['error'],
@@ -300,7 +298,7 @@ class Facebook {
                     }
                     
                     if ($comment_http_code < 200 || $comment_http_code >= 300 || !isset($comment_data['id'])) {
-                        $logger && $logger->error('Facebook API: Unexpected comment response.', [
+                        do_action('dm_log', 'error', 'Facebook API: Unexpected comment response.', [
                             'post_id' => $post_id,
                             'http_code' => $comment_http_code,
                             'response' => $comment_data
@@ -311,7 +309,7 @@ class Facebook {
                         ];
                     }
                     
-                    $logger && $logger->debug('Facebook API: Successfully posted source link as comment.', [
+                    do_action('dm_log', 'debug', 'Facebook API: Successfully posted source link as comment.', [
                         'post_id' => $post_id, 
                         'comment_id' => $comment_data['id']
                     ]);
@@ -328,7 +326,7 @@ class Facebook {
                 ];
             } else {
                 // Handle cases where response is successful but doesn't contain expected ID
-                $logger && $logger->error('Facebook API Error: Unexpected response format or missing post ID.', [
+                do_action('dm_log', 'error', 'Facebook API Error: Unexpected response format or missing post ID.', [
                     'http_code' => $http_code, 
                     'response_body' => $body, 
                 ]);
@@ -339,7 +337,7 @@ class Facebook {
             }
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Facebook Output Exception: ' . $e->getMessage(), [
+            do_action('dm_log', 'error', 'Facebook Output Exception: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             return [
@@ -405,10 +403,9 @@ class Facebook {
      * Check if an image URL is accessible by making a HEAD request
      *
      * @param string $image_url The image URL to check
-     * @param object|null $logger Logger instance
      * @return bool True if accessible, false otherwise
      */
-    private function is_image_accessible(string $image_url, $logger = null): bool {
+    private function is_image_accessible(string $image_url): bool {
         // Skip certain problematic domains/patterns
         $problematic_patterns = [
             'preview.redd.it', // Reddit preview URLs often have access restrictions
@@ -417,7 +414,7 @@ class Facebook {
         
         foreach ($problematic_patterns as $pattern) {
             if (strpos($image_url, $pattern) !== false) {
-                $logger && $logger->warning('Facebook: Skipping problematic image URL pattern', [
+                do_action('dm_log', 'warning', 'Facebook: Skipping problematic image URL pattern', [
                     'url' => $image_url, 
                     'pattern' => $pattern
                 ]);
@@ -432,7 +429,7 @@ class Facebook {
         ]);
 
         if (is_wp_error($response)) {
-            $logger && $logger->warning('Facebook: Image URL not accessible', [
+            do_action('dm_log', 'warning', 'Facebook: Image URL not accessible', [
                 'url' => $image_url, 
                 'error' => $response->get_error_message()
             ]);
@@ -447,7 +444,7 @@ class Facebook {
             return true;
         }
 
-        $logger && $logger->warning('Facebook: Image URL validation failed', [
+        do_action('dm_log', 'warning', 'Facebook: Image URL validation failed', [
             'url' => $image_url, 
             'http_code' => $http_code, 
             'content_type' => $content_type

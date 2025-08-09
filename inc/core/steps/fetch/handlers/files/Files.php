@@ -152,8 +152,7 @@ class Files {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            $is_processed = false;
-            do_action('dm_is_item_processed', $flow_id, 'files', $file_identifier, &$is_processed);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'files', $file_identifier);
             
             if (!$is_processed) {
                 return $file;

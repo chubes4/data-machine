@@ -362,7 +362,6 @@ class Twitter {
      * Check if an image URL is accessible by making a HEAD request
      *
      * @param string $image_url The image URL to check
-     * @param object|null $logger Logger instance
      * @return bool True if accessible, false otherwise
      */
     private function is_image_accessible(string $image_url): bool {

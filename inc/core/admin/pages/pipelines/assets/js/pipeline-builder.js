@@ -467,7 +467,7 @@
             } else {
                 ajaxData.action = 'dm_delete_step';
                 ajaxData.pipeline_id = pipelineId;
-                ajaxData.step_id = pipelineStepId;
+                ajaxData.pipeline_step_id = pipelineStepId;
             }
             
             // AJAX call to appropriate endpoint

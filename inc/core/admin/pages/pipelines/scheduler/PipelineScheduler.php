@@ -107,13 +107,12 @@ class PipelineScheduler
             return false;
         }
 
-        // Schedule using filter-based ActionScheduler service
-        $scheduler = apply_filters('dm_get_action_scheduler', null);
-        if (!$scheduler) {
+        // Schedule using Action Scheduler directly
+        if (!function_exists('as_schedule_recurring_action')) {
             return false;
         }
         
-        $action_id = $scheduler->schedule_recurring_action(
+        $action_id = as_schedule_recurring_action(
             time(),
             $interval_seconds,
             "dm_execute_flow_{$flow_id}",
@@ -142,12 +141,11 @@ class PipelineScheduler
      */
     public function deactivate_flow(int $flow_id): bool
     {
-        $scheduler = apply_filters('dm_get_action_scheduler', null);
-        if (!$scheduler) {
+        if (!function_exists('as_unschedule_action')) {
             return false;
         }
         
-        $result = $scheduler->unschedule_action(
+        $result = as_unschedule_action(
             "dm_execute_flow_{$flow_id}",
             ['flow_id' => $flow_id],
             'data-machine'
@@ -209,12 +207,11 @@ class PipelineScheduler
      */
     public function get_next_run_time(int $flow_id): ?string
     {
-        $scheduler = apply_filters('dm_get_action_scheduler', null);
-        if (!$scheduler) {
+        if (!function_exists('as_next_scheduled_action')) {
             return null;
         }
         
-        $action = $scheduler->get_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
+        $action = as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
         
         if ($action) {
             return date('Y-m-d H:i:s', $action);
@@ -231,12 +228,11 @@ class PipelineScheduler
      */
     public function is_flow_scheduled(int $flow_id): bool
     {
-        $scheduler = apply_filters('dm_get_action_scheduler', null);
-        if (!$scheduler) {
+        if (!function_exists('as_next_scheduled_action')) {
             return false;
         }
         
-        return $scheduler->get_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine') !== false;
+        return as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine') !== false;
     }
 
     /**

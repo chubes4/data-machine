@@ -9,7 +9,7 @@
 
 namespace DataMachine\Core\Handlers\Fetch\Reddit;
 
-use DataMachine\Admin\Logger;
+use DataMachine\Engine\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -24,14 +24,6 @@ class RedditAuth {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return Logger|null
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
 
     /**
@@ -111,7 +103,7 @@ class RedditAuth {
 
         // Verify State
         if ( empty($state_received) || empty($stored_state) || !hash_equals($stored_state, $state_received) ) {
-            $this->get_logger()->error('Reddit OAuth Error: State mismatch or missing.', ['received' => $state_received, 'user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: State mismatch or missing.', ['received' => $state_received, 'user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_state_mismatch'));
             exit;
         }
@@ -119,14 +111,14 @@ class RedditAuth {
         // Check for errors returned by Reddit
         if (isset($_GET['error'])) {
             $error_code = sanitize_key($_GET['error']);
-            $this->get_logger()->error('Reddit OAuth Error: Received error from Reddit.', ['error' => $error_code, 'user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Received error from Reddit.', ['error' => $error_code, 'user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_' . $error_code));
             exit;
         }
 
         // Check for authorization code
         if (!isset($_GET['code'])) {
-            $this->get_logger()->error('Reddit OAuth Error: Authorization code missing in callback.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Authorization code missing in callback.', ['user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_code'));
             exit;
         }
@@ -137,7 +129,7 @@ class RedditAuth {
         $client_id = get_option('reddit_oauth_client_id');
         $client_secret = get_option('reddit_oauth_client_secret');
         if (empty($client_id) || empty($client_secret)) {
-             $this->get_logger()->error('Reddit OAuth Error: Client ID or Secret not configured for token exchange.', ['user_id' => $user_id]);
+             do_action('dm_log', 'error', 'Reddit OAuth Error: Client ID or Secret not configured for token exchange.', ['user_id' => $user_id]);
              wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_credentials'));
              exit;
         }
@@ -169,7 +161,7 @@ class RedditAuth {
         // --- 3. Process Token Response --- 
         if (is_wp_error($response)) {
             $error_message = $response->get_error_message();
-            $this->get_logger()->error('Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $error_message, 'user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $error_message, 'user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_token_request_failed'));
             exit;
         }
@@ -180,7 +172,7 @@ class RedditAuth {
 
         if ($response_code !== 200 || empty($data['access_token'])) {
             $error_detail = isset($data['error']) ? $data['error'] : 'Unknown reason';
-            $this->get_logger()->error('Reddit OAuth Error: Failed to retrieve access token.', [
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to retrieve access token.', [
                 'response_code' => $response_code,
                 'error_detail'  => $error_detail,
                 'response_body' => $body, // Log full body for debugging
@@ -215,11 +207,11 @@ class RedditAuth {
             if (!empty($identity_data['name'])) {
                 $identity_username = $identity_data['name'];
             } else {
-                 $this->get_logger()->warning('Reddit OAuth Warning: Could not get username from /api/v1/me, but token obtained.', ['user_id' => $user_id, 'identity_response' => $identity_body]);
+                 do_action('dm_log', 'warning', 'Reddit OAuth Warning: Could not get username from /api/v1/me, but token obtained.', ['user_id' => $user_id, 'identity_response' => $identity_body]);
             }
         } else {
              $identity_error = is_wp_error($identity_response) ? $identity_response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($identity_response);
-             $this->get_logger()->warning('Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error, 'user_id' => $user_id]);
+             do_action('dm_log', 'warning', 'Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error, 'user_id' => $user_id]);
         }
 
         // --- 5. Store Tokens and User Info --- 
@@ -247,17 +239,17 @@ class RedditAuth {
      * @return bool True on successful refresh and update, false otherwise.
      */
     public function refresh_token(): bool {
-        $this->get_logger()->debug('Attempting Reddit token refresh for admin authentication.');
+        do_action('dm_log', 'debug', 'Attempting Reddit token refresh for admin authentication.');
 
         $reddit_account = get_option('dm_reddit_auth_data', []);
         if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['refresh_token'])) {
-            $this->get_logger()->error('Reddit Token Refresh Error: Refresh token not found in admin options.');
+            do_action('dm_log', 'error', 'Reddit Token Refresh Error: Refresh token not found in admin options.');
             return false;
         }
         // Get the refresh token directly
         $refresh_token = $reddit_account['refresh_token'];
         if (empty($refresh_token)) {
-            $this->get_logger()->error('Reddit Token Refresh Error: Refresh token not found.');
+            do_action('dm_log', 'error', 'Reddit Token Refresh Error: Refresh token not found.');
             return false;
         }
 
@@ -265,7 +257,7 @@ class RedditAuth {
         $client_id = get_option('reddit_oauth_client_id');
         $client_secret = get_option('reddit_oauth_client_secret');
         if (empty($client_id) || empty($client_secret)) {
-             $this->get_logger()->error('Reddit Token Refresh Error: Client ID or Secret not configured.');
+             do_action('dm_log', 'error', 'Reddit Token Refresh Error: Client ID or Secret not configured.');
              return false; // Cannot proceed
         }
         $developer_username = get_option('reddit_developer_username', 'DataMachinePlugin');
@@ -290,7 +282,7 @@ class RedditAuth {
         // --- Process Refresh Response ---
         if (is_wp_error($response)) {
             $error_message = $response->get_error_message();
-            $this->get_logger()->error('Reddit Token Refresh Error: Request failed.', ['error' => $error_message]);
+            do_action('dm_log', 'error', 'Reddit Token Refresh Error: Request failed.', ['error' => $error_message]);
             return false;
         }
 
@@ -302,7 +294,7 @@ class RedditAuth {
         // Reddit might return 400 Bad Request if refresh token is invalid/revoked
         if ($response_code !== 200 || empty($data['access_token'])) {
             $error_detail = isset($data['error']) ? $data['error'] : 'Unknown reason';
-             $this->get_logger()->error('Reddit Token Refresh Error: Failed to retrieve new access token.', [
+             do_action('dm_log', 'error', 'Reddit Token Refresh Error: Failed to retrieve new access token.', [
                 'response_code' => $response_code,
                 'error_detail'  => $error_detail,
                 'response_body' => $body
@@ -331,7 +323,7 @@ class RedditAuth {
         ];
 
         update_option('dm_reddit_auth_data', $updated_account_data);
-        $this->get_logger()->debug('Reddit token refreshed successfully.', ['new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
+        do_action('dm_log', 'debug', 'Reddit token refreshed successfully.', ['new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
         return true;
     }
 
@@ -374,8 +366,7 @@ class RedditAuth {
         
         // Log when account exists but details are missing
         if (empty($details)) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger?->warning('Reddit account exists but all details are missing', [
+            do_action('dm_log', 'warning', 'Reddit account exists but all details are missing', [
                 'has_access_token' => !empty($account['access_token']),
                 'available_keys' => array_keys($account)
             ]);

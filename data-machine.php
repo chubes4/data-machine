@@ -37,19 +37,18 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * 
  * CORE SERVICE FILTERS:
  * 
- * @filter dm_get_logger
- * Retrieves the logger service instance for structured logging.
- * Usage: $logger = apply_filters('dm_get_logger', null);
+ * @action dm_log
+ * Central logging action for all components throughout the plugin.
+ * Usage: do_action('dm_log', 'level', 'message', ['context' => 'data']);
  * 
  * @filter dm_get_orchestrator  
  * Retrieves the processing orchestrator for pipeline execution.
  * Usage: $orchestrator = apply_filters('dm_get_orchestrator', null);
  * 
- * @filter dm_get_ai_http_client
- * Retrieves the AI HTTP client for multi-provider AI integration.
- * Usage: $ai_client = apply_filters('dm_get_ai_http_client', null);
+ * @deprecated Removed filter - use direct instantiation instead
+ * AI HTTP Client: $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
  * 
- * @filter dm_get_action_scheduler
+ * @deprecated dm_get_action_scheduler
  * Retrieves the Action Scheduler service for background job management.
  * Usage: $scheduler = apply_filters('dm_get_action_scheduler', null);
  * 

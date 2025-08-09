@@ -30,14 +30,6 @@ class GoogleSheetsAuth {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return object|null Logger instance or null if not available
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
 
     /**
@@ -59,12 +51,11 @@ class GoogleSheetsAuth {
      * @return string|\WP_Error Access token string or WP_Error on failure.
      */
     public function get_service() {
-        $logger = $this->get_logger();
-        $logger && $logger->debug('Attempting to get authenticated Google Sheets access token.');
+        do_action('dm_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
 
         $credentials = get_option('googlesheets_auth_data', []);
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
-            $logger && $logger->error('Missing Google Sheets credentials in options.');
+            do_action('dm_log', 'error', 'Missing Google Sheets credentials in options.');
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
@@ -75,7 +66,7 @@ class GoogleSheetsAuth {
         // Check if access token needs refreshing
         $expires_at = $credentials['expires_at'] ?? 0;
         if (time() >= $expires_at - 300) { // Refresh 5 minutes before expiry
-            $logger && $logger->debug('Google Sheets access token expired, attempting refresh.');
+            do_action('dm_log', 'debug', 'Google Sheets access token expired, attempting refresh.');
             
             $refreshed_token = $this->refresh_access_token($refresh_token);
             if (is_wp_error($refreshed_token)) {
@@ -85,7 +76,7 @@ class GoogleSheetsAuth {
             return $refreshed_token; // Return the new access token
         }
 
-        $logger && $logger->debug('Successfully retrieved valid Google Sheets access token.');
+        do_action('dm_log', 'debug', 'Successfully retrieved valid Google Sheets access token.');
         return $access_token;
     }
 
@@ -96,13 +87,12 @@ class GoogleSheetsAuth {
      * @return string|\WP_Error New access token or WP_Error on failure.
      */
     private function refresh_access_token(string $refresh_token) {
-        $logger = $this->get_logger();
         
         $client_id = get_option('googlesheets_client_id');
         $client_secret = get_option('googlesheets_client_secret');
         
         if (empty($client_id) || empty($client_secret)) {
-            $logger && $logger->error('Missing Google OAuth client credentials.');
+            do_action('dm_log', 'error', 'Missing Google OAuth client credentials.');
             return new \WP_Error('googlesheets_missing_oauth_config', __('Google OAuth configuration is incomplete.', 'data-machine'));
         }
 
@@ -117,7 +107,7 @@ class GoogleSheetsAuth {
         ]);
 
         if (is_wp_error($response)) {
-            $logger && $logger->error('Google token refresh request failed.', [
+            do_action('dm_log', 'error', 'Google token refresh request failed.', [
                 'error' => $response->get_error_message()
             ]);
             return new \WP_Error('googlesheets_refresh_failed', __('Failed to refresh Google Sheets access token.', 'data-machine'));
@@ -127,7 +117,7 @@ class GoogleSheetsAuth {
         $response_body = wp_remote_retrieve_body($response);
         
         if ($response_code !== 200) {
-            $logger && $logger->error('Google token refresh failed.', [
+            do_action('dm_log', 'error', 'Google token refresh failed.', [
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
@@ -136,14 +126,14 @@ class GoogleSheetsAuth {
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token'])) {
-            $logger && $logger->error('Invalid token refresh response from Google.');
+            do_action('dm_log', 'error', 'Invalid token refresh response from Google.');
             return new \WP_Error('googlesheets_invalid_refresh_response', __('Invalid response from Google during token refresh.', 'data-machine'));
         }
 
         // Update stored credentials with new access token
         $this->update_credentials($token_data['access_token'], $refresh_token, $token_data['expires_in'] ?? 3600);
         
-        $logger && $logger->debug('Successfully refreshed Google Sheets access token.');
+        do_action('dm_log', 'debug', 'Successfully refreshed Google Sheets access token.');
         return $token_data['access_token'];
     }
 
@@ -181,7 +171,6 @@ class GoogleSheetsAuth {
      * Hooked to 'admin_post_dm_googlesheets_oauth_init'.
      */
     public function handle_oauth_init() {
-        $logger = $this->get_logger();
         
         // 1. Verify Nonce & Capability
         if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'dm_googlesheets_oauth_init_nonce')) {
@@ -219,7 +208,7 @@ class GoogleSheetsAuth {
 
         $auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($auth_params);
 
-        $logger && $logger->debug('Redirecting user to Google OAuth authorization.', [
+        do_action('dm_log', 'debug', 'Redirecting user to Google OAuth authorization.', [
             'user_id' => get_current_user_id(),
             'auth_url' => $auth_url
         ]);
@@ -234,7 +223,6 @@ class GoogleSheetsAuth {
      * Hooked to 'admin_post_dm_googlesheets_oauth_callback'.
      */
     public function handle_oauth_callback() {
-        $logger = $this->get_logger();
         
         // 1. Initial checks
         if (!is_user_logged_in()) {
@@ -245,14 +233,14 @@ class GoogleSheetsAuth {
         // Check for error parameter
         if (isset($_GET['error'])) {
             $error = sanitize_text_field($_GET['error']);
-            $logger && $logger->warning('Google OAuth error returned.', ['error' => $error]);
+            do_action('dm_log', 'warning', 'Google OAuth error returned.', ['error' => $error]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_oauth_error'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
-            $logger && $logger->error('Missing code or state parameter in Google OAuth callback.');
+            do_action('dm_log', 'error', 'Missing code or state parameter in Google OAuth callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_missing_callback_params'));
             exit;
         }
@@ -265,7 +253,7 @@ class GoogleSheetsAuth {
         delete_transient(self::STATE_TRANSIENT_PREFIX . $state);
 
         if (empty($stored_user_id) || $stored_user_id != get_current_user_id()) {
-            $logger && $logger->error('Invalid or expired state parameter in Google OAuth callback.');
+            do_action('dm_log', 'error', 'Invalid or expired state parameter in Google OAuth callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_invalid_state'));
             exit;
         }
@@ -288,7 +276,7 @@ class GoogleSheetsAuth {
         ]);
 
         if (is_wp_error($response)) {
-            $logger && $logger->error('Google token exchange request failed.', [
+            do_action('dm_log', 'error', 'Google token exchange request failed.', [
                 'error' => $response->get_error_message()
             ]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_token_exchange_failed'));
@@ -299,7 +287,7 @@ class GoogleSheetsAuth {
         $response_body = wp_remote_retrieve_body($response);
         
         if ($response_code !== 200) {
-            $logger && $logger->error('Google token exchange failed.', [
+            do_action('dm_log', 'error', 'Google token exchange failed.', [
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
@@ -309,7 +297,7 @@ class GoogleSheetsAuth {
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token']) || empty($token_data['refresh_token'])) {
-            $logger && $logger->error('Invalid token response from Google.');
+            do_action('dm_log', 'error', 'Invalid token response from Google.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_invalid_token_response'));
             exit;
         }
@@ -325,7 +313,7 @@ class GoogleSheetsAuth {
 
         update_option('googlesheets_auth_data', $account_data);
 
-        $logger && $logger->debug('Successfully completed Google Sheets OAuth flow.');
+        do_action('dm_log', 'debug', 'Successfully completed Google Sheets OAuth flow.');
 
         // 5. Redirect on success
         wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=googlesheets'));

@@ -2,14 +2,14 @@
 /**
  * Handles logging for the Data Machine plugin using Monolog.
  *
- * Provides methods for logging to a dedicated file and managing admin notices.
+ * Core infrastructure logging service for system-wide operations.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/admin
+ * @subpackage Data_Machine/includes/engine
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Admin;
+namespace DataMachine\Engine;
 
 // Declare upfront to ensure they are available
 use Monolog\Logger as MonologLogger;

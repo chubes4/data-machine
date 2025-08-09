@@ -44,14 +44,6 @@ class ThreadsAuth {
         add_action('admin_init', [$this, 'handle_oauth_callback_check']);
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return object|null Logger instance or null if not available
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
 
     /**
@@ -176,13 +168,13 @@ class ThreadsAuth {
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
     public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
-        $this->get_logger() && $this->get_logger()->debug('Handling Threads OAuth callback.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Handling Threads OAuth callback.', ['user_id' => $user_id]);
 
         // 1. Verify state - use transient for admin-only architecture
         $stored_state = get_transient('dm_threads_oauth_state_' . $user_id);
         delete_transient('dm_threads_oauth_state_' . $user_id); // Clean up state
         if (empty($stored_state) || !hash_equals($stored_state, $state)) {
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: State mismatch.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: State mismatch.', ['user_id' => $user_id]);
             return new \WP_Error('threads_oauth_state_mismatch', __('Invalid state parameter during Threads authentication.', 'data-machine'));
         }
 
@@ -206,7 +198,7 @@ class ThreadsAuth {
         ], 'Threads Token Exchange');
 
         if (is_wp_error($response)) {
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
             return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $response);
         }
 
@@ -216,14 +208,14 @@ class ThreadsAuth {
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error_description'] ?? $data['error'] ?? 'Failed to retrieve access token from Threads.';
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Token exchange failed.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Token exchange failed.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
             return new \WP_Error('threads_oauth_token_exchange_failed', $error_message, $data);
         }
 
         $initial_access_token = $data['access_token'];
 
         // 3. Exchange short-lived token for a long-lived one
-        $this->get_logger() && $this->get_logger()->debug('Threads OAuth: Exchanging short-lived token for long-lived token.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Threads OAuth: Exchanging short-lived token for long-lived token.', ['user_id' => $user_id]);
         $exchange_params = [
             'grant_type'    => 'th_exchange_token',
             'client_secret' => $this->get_client_secret(),
@@ -237,7 +229,7 @@ class ThreadsAuth {
         ]);
 
         if (is_wp_error($exchange_response)) {
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['user_id' => $user_id, 'error' => $exchange_response->get_error_message()]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['user_id' => $user_id, 'error' => $exchange_response->get_error_message()]);
             return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'data-machine'), $exchange_response);
         }
 
@@ -248,12 +240,12 @@ class ThreadsAuth {
         if ($exchange_http_code !== 200 || empty($exchange_data['access_token'])) {
             // Fail hard if the exchange doesn't succeed, as we need the long-lived token.
             $exchange_error_message = $exchange_data['error']['message'] ?? $exchange_data['error_description'] ?? 'Failed to retrieve long-lived access token from Threads.';
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Long-lived token exchange failed (API).', ['user_id' => $user_id, 'http_code' => $exchange_http_code, 'response' => $exchange_body]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange failed (API).', ['user_id' => $user_id, 'http_code' => $exchange_http_code, 'response' => $exchange_body]);
             return new \WP_Error('threads_oauth_exchange_failed', $exchange_error_message, $exchange_data);
         }
 
         // Successfully exchanged for long-lived token
-        $this->get_logger() && $this->get_logger()->debug('Threads OAuth: Successfully exchanged for long-lived token.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Threads OAuth: Successfully exchanged for long-lived token.', ['user_id' => $user_id]);
         $long_lived_access_token = $exchange_data['access_token'];
         $long_lived_expires_in = $exchange_data['expires_in'] ?? null; // Should be ~60 days in seconds
         $long_lived_token_type = $exchange_data['token_type'] ?? 'bearer';
@@ -280,10 +272,10 @@ class ThreadsAuth {
         if (!is_wp_error($posting_entity_info) && isset($posting_entity_info['id'])) {
             $account_details['page_id'] = $posting_entity_info['id']; // Store the ID returned by /me as page_id
             $account_details['page_name'] = $posting_entity_info['name'] ?? 'Unknown Page/User';
-            $this->get_logger() && $this->get_logger()->debug('Fetched posting entity info from /me.', ['user_id' => $user_id, 'posting_entity_id' => $posting_entity_info['id'], 'posting_entity_name' => $account_details['page_name']]);
+            do_action('dm_log', 'debug', 'Fetched posting entity info from /me.', ['user_id' => $user_id, 'posting_entity_id' => $posting_entity_info['id'], 'posting_entity_name' => $account_details['page_name']]);
         } else {
             // Critical error if /me doesn't return the necessary ID
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Failed to fetch posting entity info from /me endpoint.', [
+            do_action('dm_log', 'error', 'Threads OAuth Error: Failed to fetch posting entity info from /me endpoint.', [
                 'user_id' => $user_id,
                 'error' => is_wp_error($posting_entity_info) ? $posting_entity_info->get_error_message() : '/me did not return an ID',
             ]);
@@ -295,7 +287,7 @@ class ThreadsAuth {
 
         // Update site option with all collected details for admin-only architecture
         update_option('threads_auth_data', $account_details);
-        $this->get_logger() && $this->get_logger()->debug('Threads account authenticated and token stored.', ['user_id' => $user_id, 'page_id' => $account_details['page_id']]);
+        do_action('dm_log', 'debug', 'Threads account authenticated and token stored.', ['user_id' => $user_id, 'page_id' => $account_details['page_id']]);
 
         return true;
     }
@@ -336,14 +328,14 @@ class ThreadsAuth {
     private function get_facebook_user_profile(string $access_token): array|\WP_Error {
         // Use Facebook Graph API endpoint for /me
         $url = 'https://graph.facebook.com/v19.0/me?fields=id,name'; // Adjust version as needed
-        $this->get_logger() && $this->get_logger()->debug('Facebook Graph API: Fetching authenticating user profile.', ['url' => $url]);
+        do_action('dm_log', 'debug', 'Facebook Graph API: Fetching authenticating user profile.', ['url' => $url]);
         $response = wp_remote_get($url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
             'timeout' => 10,
         ]);
 
         if (is_wp_error($response)) {
-             $this->get_logger() && $this->get_logger()->error('Facebook Graph API Error: Profile fetch wp_remote_get failed.', ['error' => $response->get_error_message()]);
+             do_action('dm_log', 'error', 'Facebook Graph API Error: Profile fetch wp_remote_get failed.', ['error' => $response->get_error_message()]);
             return $response;
         }
 
@@ -353,16 +345,16 @@ class ThreadsAuth {
 
         if ($http_code !== 200 || isset($data['error'])) {
              $error_message = $data['error']['message'] ?? 'Failed to fetch Facebook user profile.';
-             $this->get_logger() && $this->get_logger()->error('Facebook Graph API Error: Profile fetch failed.', ['http_code' => $http_code, 'response' => $body]);
+             do_action('dm_log', 'error', 'Facebook Graph API Error: Profile fetch failed.', ['http_code' => $http_code, 'response' => $body]);
              return new \WP_Error('fb_profile_fetch_failed', $error_message, $data);
         }
 
          if (empty($data['id'])) {
-             $this->get_logger() && $this->get_logger()->error('Facebook Graph API Error: Profile fetch response missing ID.', ['http_code' => $http_code, 'response' => $body]);
+             do_action('dm_log', 'error', 'Facebook Graph API Error: Profile fetch response missing ID.', ['http_code' => $http_code, 'response' => $body]);
              return new \WP_Error('fb_profile_id_missing', __('Profile ID missing in response from Facebook Graph API.', 'data-machine'), $data);
          }
 
-        $this->get_logger() && $this->get_logger()->debug('Facebook Graph API: Profile fetched successfully.', ['profile_id' => $data['id']]);
+        do_action('dm_log', 'debug', 'Facebook Graph API: Profile fetched successfully.', ['profile_id' => $data['id']]);
         return $data; // Contains 'id' and 'name'
     }
 
@@ -432,13 +424,10 @@ class ThreadsAuth {
             // Log success or failure of revocation, but don't stop deletion
             if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
                 // Token revocation failed, but continue with local cleanup
-                $logger = $this->get_logger();
-                if ($logger) {
-                    $error_details = is_wp_error($response) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($response);
-                    $logger->error('Threads token revocation failed during account deletion.', [
-                        'error' => $error_details
-                    ]);
-                }
+                $error_details = is_wp_error($response) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($response);
+                do_action('dm_log', 'error', 'Threads token revocation failed during account deletion.', [
+                    'error' => $error_details
+                ]);
             }
         }
 
@@ -473,7 +462,7 @@ class ThreadsAuth {
         if (isset($_GET['error'])) {
             $error = sanitize_text_field($_GET['error']);
             $error_description = isset($_GET['error_description']) ? sanitize_text_field($_GET['error_description']) : 'No description provided.';
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error (Callback Init): User denied access or error occurred.', ['error' => $error, 'description' => $error_description]);
+            do_action('dm_log', 'error', 'Threads OAuth Error (Callback Init): User denied access or error occurred.', ['error' => $error, 'description' => $error_description]);
             // Add an admin notice by storing in transient and display on API keys page
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_description), 60);
             // Redirect back to the API keys page cleanly, removing error params
@@ -483,14 +472,14 @@ class ThreadsAuth {
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
             wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check user permissions (should be logged in to WP admin)
         if (!current_user_can('manage_options')) {
-             $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
+             do_action('dm_log', 'error', 'Threads OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
              wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-pipelines')));
              exit;
         }
@@ -503,7 +492,7 @@ class ThreadsAuth {
         $app_id = get_option('threads_app_id');
         $app_secret = get_option('threads_app_secret');
         if (empty($app_id) || empty($app_secret)) {
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
             wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
@@ -514,11 +503,11 @@ class ThreadsAuth {
         if (is_wp_error($result)) {
             $error_code = $result->get_error_code();
             $error_message = $result->get_error_message();
-            $this->get_logger() && $this->get_logger()->error('Threads OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
+            do_action('dm_log', 'error', 'Threads OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_message), 60);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=error_token'));
         } else {
-            $this->get_logger() && $this->get_logger()->debug('Threads OAuth Callback Successful.', ['user_id' => $user_id]);
+            do_action('dm_log', 'debug', 'Threads OAuth Callback Successful.', ['user_id' => $user_id]);
             set_transient('dm_oauth_success_threads', 'Threads account connected successfully!', 60);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=success'));
         }

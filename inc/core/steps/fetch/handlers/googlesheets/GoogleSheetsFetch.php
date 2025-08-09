@@ -173,8 +173,7 @@ class GoogleSheetsFetch {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
-            $is_processed = false;
-            do_action('dm_is_item_processed', $flow_id, 'googlesheets_fetch', $row_identifier, &$is_processed);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'googlesheets_fetch', $row_identifier);
             if ($is_processed) {
                 do_action('dm_log', 'debug', 'Google Sheets Fetch: Skipping already processed row.', [
                     'row_identifier' => $row_identifier,

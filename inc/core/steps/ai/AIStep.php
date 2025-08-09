@@ -52,14 +52,14 @@ class AIStep {
      * @return array Updated data packet array with AI output added
      */
     public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
-        $ai_http_client = apply_filters('dm_get_ai_http_client', null);
-
         try {
-            // Validate required services
-            if (!$ai_http_client) {
-                do_action('dm_log', 'error', 'AI Step: AI HTTP client service unavailable', ['job_id' => $job_id]);
+            // Create AI HTTP client directly
+            if (!class_exists('\AI_HTTP_Client')) {
+                do_action('dm_log', 'error', 'AI Step: AI HTTP Client class not available', ['job_id' => $job_id]);
                 return [];
             }
+            
+            $ai_http_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
 
             do_action('dm_log', 'debug', 'AI Step: Starting AI processing with step config', ['job_id' => $job_id]);
 

@@ -41,14 +41,12 @@ class Pipelines {
 	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
 		global $wpdb;
-		$logger = apply_filters( 'dm_get_logger', null );
-
 		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] ?? '' );
 		$step_configuration = $pipeline_data['step_configuration'] ?? [];
 
 		// Validate required fields
 		if ( empty( $pipeline_name ) ) {
-			$logger && $logger->error( 'Cannot create pipeline - missing pipeline name', [
+			do_action( 'dm_log', 'error', 'Cannot create pipeline - missing pipeline name', [
 				'pipeline_data' => $pipeline_data
 			] );
 			return false;
@@ -73,7 +71,7 @@ class Pipelines {
 		$inserted = $wpdb->insert( $this->table_name, $data, $format );
 
 		if ( false === $inserted ) {
-			$logger && $logger->error( 'Failed to insert pipeline', [
+			do_action( 'dm_log', 'error', 'Failed to insert pipeline', [
 				'pipeline_name' => $pipeline_name,
 				'db_error' => $wpdb->last_error
 			] );
@@ -81,7 +79,7 @@ class Pipelines {
 		}
 
 		$pipeline_id = $wpdb->insert_id;
-		$logger && $logger->debug( 'Successfully created pipeline', [
+		do_action( 'dm_log', 'debug', 'Successfully created pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
@@ -135,10 +133,9 @@ class Pipelines {
 	 */
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
 		global $wpdb;
-		$logger = apply_filters( 'dm_get_logger', null );
 
 		if ( empty( $pipeline_id ) ) {
-			$logger && $logger->error( 'Cannot update pipeline - missing pipeline ID' );
+			do_action( 'dm_log', 'error', 'Cannot update pipeline - missing pipeline ID' );
 			return false;
 		}
 
@@ -168,7 +165,7 @@ class Pipelines {
 		$format[] = '%s';
 
 		if ( empty( $update_data ) ) {
-			$logger && $logger->warning( 'No valid data provided for pipeline update', [
+			do_action( 'dm_log', 'warning', 'No valid data provided for pipeline update', [
 				'pipeline_id' => $pipeline_id
 			] );
 			return false;
@@ -183,14 +180,14 @@ class Pipelines {
 		);
 
 		if ( false === $updated ) {
-			$logger && $logger->error( 'Failed to update pipeline', [
+			do_action( 'dm_log', 'error', 'Failed to update pipeline', [
 				'pipeline_id' => $pipeline_id,
 				'db_error' => $wpdb->last_error
 			] );
 			return false;
 		}
 
-		$logger && $logger->debug( 'Successfully updated pipeline', [
+		do_action( 'dm_log', 'debug', 'Successfully updated pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'updated_fields' => array_keys( $update_data )
 		] );
@@ -206,10 +203,9 @@ class Pipelines {
 	 */
 	public function delete_pipeline( int $pipeline_id ): bool {
 		global $wpdb;
-		$logger = apply_filters( 'dm_get_logger', null );
 
 		if ( empty( $pipeline_id ) ) {
-			$logger && $logger->error( 'Cannot delete pipeline - missing pipeline ID' );
+			do_action( 'dm_log', 'error', 'Cannot delete pipeline - missing pipeline ID' );
 			return false;
 		}
 
@@ -224,7 +220,7 @@ class Pipelines {
 		);
 
 		if ( false === $deleted ) {
-			$logger && $logger->error( 'Failed to delete pipeline', [
+			do_action( 'dm_log', 'error', 'Failed to delete pipeline', [
 				'pipeline_id' => $pipeline_id,
 				'pipeline_name' => $pipeline_name,
 				'db_error' => $wpdb->last_error
@@ -233,13 +229,13 @@ class Pipelines {
 		}
 
 		if ( 0 === $deleted ) {
-			$logger && $logger->warning( 'Pipeline not found for deletion', [
+			do_action( 'dm_log', 'warning', 'Pipeline not found for deletion', [
 				'pipeline_id' => $pipeline_id
 			] );
 			return false;
 		}
 
-		$logger && $logger->debug( 'Successfully deleted pipeline', [
+		do_action( 'dm_log', 'debug', 'Successfully deleted pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
@@ -411,12 +407,9 @@ class Pipelines {
 		dbDelta( $sql );
 
 		// Log table creation
-		$logger = apply_filters( 'dm_get_logger', null );
-		if ( $logger ) {
-			$logger->debug( 'Created pipelines database table', [
-				'table_name' => $table_name,
-				'action' => 'create_table'
-			] );
-		}
+		do_action( 'dm_log', 'debug', 'Created pipelines database table', [
+			'table_name' => $table_name,
+			'action' => 'create_table'
+		] );
 	}
 }

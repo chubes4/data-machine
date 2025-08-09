@@ -53,11 +53,11 @@ class TwitterAuth {
      * @return TwitterOAuth|\WP_Error Authenticated connection object or WP_Error on failure.
      */
     public function get_connection() {
-        $this->get_logger() && $this->get_logger()->debug('Attempting to get authenticated Twitter connection.');
+        do_action('dm_log', 'debug', 'Attempting to get authenticated Twitter connection.');
 
         $credentials = get_option('twitter_auth_data', []);
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
-            $this->get_logger() && $this->get_logger()->error('Missing Twitter credentials in options.');
+            do_action('dm_log', 'error', 'Missing Twitter credentials in options.');
             return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
         }
 
@@ -68,16 +68,16 @@ class TwitterAuth {
         $consumer_key = get_option('twitter_api_key');
         $consumer_secret = get_option('twitter_api_secret');
         if (empty($consumer_key) || empty($consumer_secret)) {
-            $this->get_logger() && $this->get_logger()->error('Missing Twitter API key/secret in site options.');
+            do_action('dm_log', 'error', 'Missing Twitter API key/secret in site options.');
             return new \WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
         }
 
         try {
             $connection = new TwitterOAuth($consumer_key, $consumer_secret, $access_token, $access_token_secret);
-            $this->get_logger() && $this->get_logger()->debug('Successfully created authenticated Twitter connection.');
+            do_action('dm_log', 'debug', 'Successfully created authenticated Twitter connection.');
             return $connection;
         } catch (\Exception $e) {
-            $this->get_logger() && $this->get_logger()->error('Exception creating TwitterOAuth connection: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Exception creating TwitterOAuth connection: ' . $e->getMessage());
             return new \WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'data-machine'));
         }
     }
@@ -126,7 +126,7 @@ class TwitterAuth {
             if ($connection->getLastHttpCode() != 200 || !isset($request_token['oauth_token']) || !isset($request_token['oauth_token_secret'])) {
                 $error_message = 'Failed to get request token from Twitter.';
                 $response_info = $connection->getLastXHeaders(); // Or other debug info
-                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: ' . $error_message, [
+                do_action('dm_log', 'error', 'Twitter OAuth Error: ' . $error_message, [
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody(), // Log response body if available
                     'headers' => $response_info
@@ -148,7 +148,7 @@ class TwitterAuth {
             exit;
 
         } catch (\Exception $e) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Exception during init: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Twitter OAuth Exception during init: ' . $e->getMessage());
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_init_exception'));
             exit;
         }
@@ -171,14 +171,14 @@ class TwitterAuth {
             $denied_token = sanitize_text_field($_GET['denied']);
             // Clean up transient if we can identify it (optional)
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
-            $this->get_logger() && $this->get_logger()->warning('Twitter OAuth Warning: User denied access.', ['denied_token' => $denied_token]);
+            do_action('dm_log', 'warning', 'Twitter OAuth Warning: User denied access.', ['denied_token' => $denied_token]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_access_denied'));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['oauth_token']) || !isset($_GET['oauth_verifier'])) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['query_params' => $_GET]);
+            do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['query_params' => $_GET]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_callback_params'));
             exit;
         }
@@ -192,7 +192,7 @@ class TwitterAuth {
         delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);
 
         if (empty($oauth_token_secret)) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Request token secret missing or expired in transient.', ['oauth_token' => $oauth_token]);
+            do_action('dm_log', 'error', 'Twitter OAuth Error: Request token secret missing or expired in transient.', ['oauth_token' => $oauth_token]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_token_secret_expired'));
             exit;
         }
@@ -200,7 +200,7 @@ class TwitterAuth {
         $apiKey = get_option('twitter_api_key');
         $apiSecret = get_option('twitter_api_secret');
         if (empty($apiKey) || empty($apiSecret)) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: API Key/Secret missing during callback.');
+            do_action('dm_log', 'error', 'Twitter OAuth Error: API Key/Secret missing during callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_app_keys'));
             exit;
         }
@@ -215,7 +215,7 @@ class TwitterAuth {
 
             // Check for errors during token exchange
             if ($connection->getLastHttpCode() != 200 || !isset($access_token_data['oauth_token']) || !isset($access_token_data['oauth_token_secret'])) {
-                $this->get_logger() && $this->get_logger()->error('Twitter OAuth Error: Failed to get access token.', [
+                do_action('dm_log', 'error', 'Twitter OAuth Error: Failed to get access token.', [
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
                 ]);
@@ -241,7 +241,7 @@ class TwitterAuth {
             exit;
 
         } catch (\Exception $e) {
-            $this->get_logger() && $this->get_logger()->error('Twitter OAuth Exception during callback: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Twitter OAuth Exception during callback: ' . $e->getMessage());
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_callback_exception'));
             exit;
         }

@@ -369,8 +369,7 @@ class WordPress {
 
         if (empty($location_id)) {
             $error_message = __('No Remote Location selected for this module.', 'data-machine');
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['config' => $config]);
+            do_action('dm_log', 'error', $error_message, ['config' => $config]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -392,8 +391,7 @@ class WordPress {
 
         if (!$location || empty($location->target_site_url) || empty($location->target_username) || !isset($location->password)) {
             $error_message = __('Could not retrieve details for the selected Remote Location.', 'data-machine');
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id]);
+            do_action('dm_log', 'error', $error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -402,8 +400,7 @@ class WordPress {
         
         if ($location->password === false) { // Check password retrieval failure
             $error_message = __('Failed to retrieve password for the selected Remote Location.', 'data-machine');
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id]);
+            do_action('dm_log', 'error', $error_message, ['location_id' => $location_id]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -451,8 +448,7 @@ class WordPress {
             if ($timestamp !== false) {
                 $post_date_iso = gmdate('Y-m-d\TH:i:s', $timestamp);
             } else {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->warning('Could not parse original_date_gmt from input metadata.', ['original_date_gmt' => $source_date_gmt_string, 'metadata' => $input_metadata]);
+                do_action('dm_log', 'warning', 'Could not parse original_date_gmt from input metadata.', ['original_date_gmt' => $source_date_gmt_string, 'metadata' => $input_metadata]);
             }
         }
 
@@ -498,8 +494,7 @@ class WordPress {
 
         // Validate taxonomy usage against remote site capabilities
         if (!empty($category_id) && !$site_supports_categories) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->warning('Remote site does not support categories - skipping category assignment', [
+            do_action('dm_log', 'warning', 'Remote site does not support categories - skipping category assignment', [
                 'location_id' => $location_id,
                 'category_id' => $category_id
             ]);
@@ -507,8 +502,7 @@ class WordPress {
         }
 
         if (!empty($tag_id) && !$site_supports_tags) {
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->warning('Remote site does not support tags - skipping tag assignment', [
+            do_action('dm_log', 'warning', 'Remote site does not support tags - skipping tag assignment', [
                 'location_id' => $location_id,
                 'tag_id' => $tag_id
             ]);
@@ -544,8 +538,7 @@ class WordPress {
                     $payload['tag_names'] = [$first_tag_name];
                     $assigned_tag_names = [$first_tag_name];
                     if (count($parsed_data['tags']) > 1) {
-                        $logger = apply_filters('dm_get_logger', null);
-                        $logger && $logger->debug("Remote Publish: Instruct mode - Sending only first tag '{$first_tag_name}'. AI provided: " . implode(', ', $parsed_data['tags']), ['location_id' => $location_id]);
+                        do_action('dm_log', 'debug', "Remote Publish: Instruct mode - Sending only first tag '{$first_tag_name}'. AI provided: " . implode(', ', $parsed_data['tags']), ['location_id' => $location_id]);
                     }
                 } else {
                     $assigned_tag_names = [];
@@ -601,8 +594,7 @@ class WordPress {
 
         if (is_wp_error($response)) {
             $error_message = __('Failed to send data to remote WordPress site: ', 'data-machine') . $response->get_error_message();
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id, 'payload' => $payload]);
+            do_action('dm_log', 'error', $error_message, ['location_id' => $location_id, 'payload' => $payload]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -614,8 +606,7 @@ class WordPress {
 
         if ($response_code < 200 || $response_code >= 300) {
             $error_message = __('Remote WordPress site returned an error: ', 'data-machine') . $response_code . ' - ' . $response_body;
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id, 'response_code' => $response_code, 'response_body' => $response_body]);
+            do_action('dm_log', 'error', $error_message, ['location_id' => $location_id, 'response_code' => $response_code, 'response_body' => $response_body]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -626,8 +617,7 @@ class WordPress {
         $response_data = json_decode($response_body, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             $error_message = __('Failed to parse response from remote WordPress site.', 'data-machine');
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id, 'response_body' => $response_body]);
+            do_action('dm_log', 'error', $error_message, ['location_id' => $location_id, 'response_body' => $response_body]);
             return [
                 'success' => false,
                 'error' => $error_message
@@ -637,8 +627,7 @@ class WordPress {
         // Check if the remote operation was successful
         if (empty($response_data['success']) || $response_data['success'] !== true) {
             if (!isset($response_data['error'])) {
-                $logger = apply_filters('dm_get_logger', null);
-                $logger && $logger->error('Remote WordPress site returned no error message.', ['location_id' => $location_id, 'response_data' => $response_data]);
+                do_action('dm_log', 'error', 'Remote WordPress site returned no error message.', ['location_id' => $location_id, 'response_data' => $response_data]);
                 return [
                     'success' => false,
                     'error' => __('Remote WordPress site failed with no error message provided.', 'data-machine')
@@ -646,8 +635,7 @@ class WordPress {
             }
             
             $error_message = $response_data['error'];
-            $logger = apply_filters('dm_get_logger', null);
-            $logger && $logger->error($error_message, ['location_id' => $location_id, 'response_data' => $response_data]);
+            do_action('dm_log', 'error', $error_message, ['location_id' => $location_id, 'response_data' => $response_data]);
             return [
                 'success' => false,
                 'error' => $error_message

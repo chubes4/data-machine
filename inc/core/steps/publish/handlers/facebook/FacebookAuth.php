@@ -42,14 +42,6 @@ class FacebookAuth {
         add_action('admin_init', [$this, 'handle_oauth_callback_check']);
     }
 
-    /**
-     * Get logger service via filter
-     *
-     * @return object|null Logger instance or null if not available
-     */
-    private function get_logger() {
-        return apply_filters('dm_get_logger', null);
-    }
 
 
     /**
@@ -120,13 +112,13 @@ class FacebookAuth {
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
     public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
-        $this->get_logger() && $this->get_logger()->debug('Handling Facebook OAuth callback.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Handling Facebook OAuth callback.', ['user_id' => $user_id]);
 
         // 1. Verify state - use transient for admin-only architecture
         $stored_state = get_transient('dm_facebook_oauth_state_' . $user_id);
         delete_transient('dm_facebook_oauth_state_' . $user_id); // Clean up state
         if (empty($stored_state) || !hash_equals($stored_state, $state)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: State mismatch.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: State mismatch.', ['user_id' => $user_id]);
             return new \WP_Error('facebook_oauth_state_mismatch', __('Invalid state parameter during Facebook authentication.', 'data-machine'));
         }
 
@@ -142,7 +134,7 @@ class FacebookAuth {
         // Facebook requires GET for token exchange - use HttpService for external override capability
         $http_service = apply_filters('dm_get_http_service', null);
         if (!$http_service) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: HttpService not available.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: HttpService not available.', ['user_id' => $user_id]);
             return new \WP_Error('facebook_oauth_service_unavailable', __('HTTP service unavailable for Facebook token exchange.', 'data-machine'));
         }
 
@@ -151,7 +143,7 @@ class FacebookAuth {
         ], 'Facebook Token Exchange');
 
         if (is_wp_error($response)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
             return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'data-machine'), $response);
         }
 
@@ -161,7 +153,7 @@ class FacebookAuth {
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve access token from Facebook.';
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Token exchange failed.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Token exchange failed.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
             return new \WP_Error('facebook_oauth_token_exchange_failed', $error_message, $data);
         }
 
@@ -172,7 +164,7 @@ class FacebookAuth {
         $long_lived_token_data = $this->exchange_for_long_lived_token($short_lived_token);
 
         if (is_wp_error($long_lived_token_data)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Failed to exchange for long-lived token.', [
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Failed to exchange for long-lived token.', [
                 'user_id' => $user_id,
                 'error' => $long_lived_token_data->get_error_message(),
                 'error_data' => $long_lived_token_data->get_error_data()
@@ -187,7 +179,7 @@ class FacebookAuth {
         $page_credentials = $this->get_page_credentials($access_token, $user_id);
 
         if (is_wp_error($page_credentials)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Failed to fetch page credentials.', [
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Failed to fetch page credentials.', [
                 'user_id' => $user_id,
                 'error' => $page_credentials->get_error_message(),
                 'error_data' => $page_credentials->get_error_data()
@@ -212,7 +204,7 @@ class FacebookAuth {
             $user_profile_id = $profile_info['id'] ?? 'ErrorFetchingId';
             $user_profile_name = $profile_info['name'] ?? 'ErrorFetchingName';
         } else {
-             $this->get_logger() && $this->get_logger()->warning('Facebook OAuth Warning: Failed to fetch user profile info.', [
+             do_action('dm_log', 'warning', 'Facebook OAuth Warning: Failed to fetch user profile info.', [
                  'user_id' => $user_id,
                  'error' => $profile_info->get_error_message(),
                  'error_data' => $profile_info->get_error_data()
@@ -236,7 +228,7 @@ class FacebookAuth {
 
         // Store details in site options for admin-only architecture
         update_option('facebook_auth_data', $account_details);
-        $this->get_logger() && $this->get_logger()->debug(
+        do_action('dm_log', 'debug',
             'Facebook account authenticated. User and Page credentials stored.',
             [
                 'user_id' => $user_id,
@@ -340,7 +332,7 @@ class FacebookAuth {
      * @return array|\WP_Error ['access_token' => ..., 'expires_at' => timestamp] or WP_Error
      */
     private function exchange_for_long_lived_token(string $short_lived_token): array|\WP_Error {
-        $this->get_logger() && $this->get_logger()->debug('Exchanging Facebook short-lived token for long-lived token.');
+        do_action('dm_log', 'debug', 'Exchanging Facebook short-lived token for long-lived token.');
         $params = [
             'grant_type'        => 'fb_exchange_token',
             'client_id'         => $this->get_client_id(),
@@ -358,7 +350,7 @@ class FacebookAuth {
         $response = $http_service->get($url, ['timeout' => 15], 'Facebook Long-lived Token Exchange');
 
         if (is_wp_error($response)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Long-lived token request failed.', ['error' => $response->get_error_message()]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Long-lived token request failed.', ['error' => $response->get_error_message()]);
             return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $response);
         }
 
@@ -368,7 +360,7 @@ class FacebookAuth {
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve long-lived access token from Facebook.';
-             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Long-lived token exchange failed.', ['http_code' => $http_code, 'response' => $body]);
+             do_action('dm_log', 'error', 'Facebook OAuth Error: Long-lived token exchange failed.', ['http_code' => $http_code, 'response' => $body]);
             return new \WP_Error('facebook_oauth_long_token_exchange_failed', $error_message, $data);
         }
 
@@ -376,7 +368,7 @@ class FacebookAuth {
         $expires_in = $data['expires_in'] ?? 3600 * 24 * 60; // Default to ~60 days if not provided
         $expires_at = time() + intval($expires_in);
 
-        $this->get_logger() && $this->get_logger()->debug('Successfully obtained Facebook long-lived token.');
+        do_action('dm_log', 'debug', 'Successfully obtained Facebook long-lived token.');
 
         return [
             'access_token' => $data['access_token'],
@@ -392,7 +384,7 @@ class FacebookAuth {
      * @return array|\WP_Error An array containing the first page's 'id', 'name', and 'access_token', or WP_Error on failure.
      */
     private function get_page_credentials(string $user_access_token, int $user_id): array|\WP_Error {
-        $this->get_logger() && $this->get_logger()->debug('Fetching Facebook page credentials.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Fetching Facebook page credentials.', ['user_id' => $user_id]);
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
 
         // Use HttpService for external override capability
@@ -409,7 +401,7 @@ class FacebookAuth {
         ], 'Facebook Pages API');
 
         if (is_wp_error($response)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook Page Fetch Error: Request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: Request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
             return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $response);
         }
 
@@ -419,12 +411,12 @@ class FacebookAuth {
 
         if ($http_code !== 200 || !isset($data['data'])) {
             $error_message = $data['error']['message'] ?? 'Failed to retrieve pages from Facebook.';
-            $this->get_logger() && $this->get_logger()->error('Facebook Page Fetch Error: API error.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: API error.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
             return new \WP_Error('facebook_page_api_error', $error_message, $data);
         }
 
         if (empty($data['data'])) {
-            $this->get_logger() && $this->get_logger()->error('Facebook Page Fetch Error: No pages found for this user.', ['user_id' => $user_id, 'response' => $body]);
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: No pages found for this user.', ['user_id' => $user_id, 'response' => $body]);
             return new \WP_Error('facebook_no_pages_found', __('No Facebook pages associated with this account were found. Please ensure the account manages at least one page and granted necessary permissions.', 'data-machine'));
         }
 
@@ -432,11 +424,11 @@ class FacebookAuth {
         $first_page = $data['data'][0];
 
         if (empty($first_page['id']) || empty($first_page['access_token']) || empty($first_page['name'])) {
-             $this->get_logger() && $this->get_logger()->error('Facebook Page Fetch Error: Incomplete data for the first page.', ['user_id' => $user_id, 'page_data' => $first_page]);
+             do_action('dm_log', 'error', 'Facebook Page Fetch Error: Incomplete data for the first page.', ['user_id' => $user_id, 'page_data' => $first_page]);
             return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'data-machine'));
         }
 
-        $this->get_logger() && $this->get_logger()->debug('Successfully fetched credentials for Facebook page.', ['user_id' => $user_id, 'page_id' => $first_page['id']]);
+        do_action('dm_log', 'debug', 'Successfully fetched credentials for Facebook page.', ['user_id' => $user_id, 'page_id' => $first_page['id']]);
 
         return [
             'id'           => $first_page['id'],
@@ -505,21 +497,21 @@ class FacebookAuth {
         if (isset($_GET['error'])) {
             $error = sanitize_text_field($_GET['error']);
             $error_description = isset($_GET['error_description']) ? sanitize_text_field($_GET['error_description']) : 'User denied access or an error occurred.';
-            $this->get_logger() && $this->get_logger()->warning('Facebook OAuth Error in callback:', ['error' => $error, 'description' => $error_description]);
+            do_action('dm_log', 'warning', 'Facebook OAuth Error in callback:', ['error' => $error, 'description' => $error_description]);
             wp_redirect(add_query_arg('auth_error', $error, admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
             wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check user permissions (should be logged in to WP admin)
         if (!current_user_can('manage_options')) {
-             $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
+             do_action('dm_log', 'error', 'Facebook OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
              wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-pipelines')));
              exit;
         }
@@ -532,7 +524,7 @@ class FacebookAuth {
         $app_id = get_option('facebook_app_id');
         $app_secret = get_option('facebook_app_secret');
         if (empty($app_id) || empty($app_secret)) {
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Facebook OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
             wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
@@ -543,11 +535,11 @@ class FacebookAuth {
         if (is_wp_error($result)) {
             $error_code = $result->get_error_code();
             $error_message = $result->get_error_message();
-            $this->get_logger() && $this->get_logger()->error('Facebook OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
+            do_action('dm_log', 'error', 'Facebook OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
             // Redirect with a generic or specific error code
             wp_redirect(add_query_arg('auth_error', $error_code, admin_url('admin.php?page=dm-pipelines')));
         } else {
-            $this->get_logger() && $this->get_logger()->debug('Facebook OAuth Callback Successful.', ['user_id' => $user_id]);
+            do_action('dm_log', 'debug', 'Facebook OAuth Callback Successful.', ['user_id' => $user_id]);
             wp_redirect(add_query_arg('auth_success', 'facebook', admin_url('admin.php?page=dm-pipelines')));
         }
         exit;

@@ -50,12 +50,6 @@ function dm_register_direct_service_filters() {
     // PURE ENGINE SERVICES - Direct registration for simple orchestration utilities
     // These are core engine components that belong in the orchestration layer
     
-    add_filter('dm_get_ai_http_client', function($service) {
-        if ($service !== null) {
-            return $service;
-        }
-        return new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-    }, 10);
     
     add_filter('dm_get_orchestrator', function($service) {
         if ($service !== null) {
@@ -73,12 +67,6 @@ function dm_register_direct_service_filters() {
     }, 10);
     
     
-    add_filter('dm_get_action_scheduler', function($service) {
-        if ($service !== null) {
-            return $service;
-        }
-        return new \DataMachine\Engine\ActionSchedulerService();
-    }, 10);
 
 }
 
@@ -177,6 +165,34 @@ function dm_register_utility_filters() {
     // Pure discovery handler directives system - cross-component AI directive discovery
     // Usage: $all_directives = apply_filters('dm_get_handler_directives', []); $directive = $all_directives[$handler_slug] ?? '';
     add_filter('dm_get_handler_directives', '__return_empty_array');
+    
+    // ProcessedItems checking system - single responsibility filter for duplicate prevention
+    // Usage: $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, $source_type, $item_identifier);
+    add_filter('dm_is_item_processed', function($default, $flow_id, $source_type, $item_identifier) {
+        $all_databases = apply_filters('dm_get_database_services', []);
+        $processed_items = $all_databases['processed_items'] ?? null;
+        
+        if (!$processed_items) {
+            do_action('dm_log', 'warning', 'ProcessedItems service unavailable for item check', [
+                'flow_id' => $flow_id, 
+                'source_type' => $source_type,
+                'item_identifier' => substr($item_identifier, 0, 50) . '...'
+            ]);
+            return false;
+        }
+        
+        $is_processed = $processed_items->has_item_been_processed($flow_id, $source_type, $item_identifier);
+        
+        // Optional debug logging for processed item checks
+        do_action('dm_log', 'debug', 'Processed item check via filter', [
+            'flow_id' => $flow_id,
+            'source_type' => $source_type,
+            'identifier' => substr($item_identifier, 0, 50) . '...',
+            'is_processed' => $is_processed
+        ]);
+        
+        return $is_processed;
+    }, 10, 4);
     
 }
 

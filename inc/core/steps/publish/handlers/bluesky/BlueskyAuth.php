@@ -47,15 +47,14 @@ class BlueskyAuth {
      * @return array|\WP_Error Session data array or WP_Error on failure.
      */
     public function get_session() {
-        $logger = $this->get_logger();
-        $logger && $logger->debug('Attempting to get authenticated Bluesky session.');
+        do_action('dm_log', 'debug', 'Attempting to get authenticated Bluesky session.');
 
         // Get credentials from site options (global configuration)
         $handle = get_option('bluesky_username', '');
         $password = get_option('bluesky_app_password', '');
 
         if (empty($handle) || empty($password)) {
-            $logger && $logger->error('Bluesky handle or app password missing in site options.');
+            do_action('dm_log', 'error', 'Bluesky handle or app password missing in site options.');
             return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured on the API Keys page.', 'data-machine'));
         }
 
@@ -66,7 +65,7 @@ class BlueskyAuth {
         unset($password);
 
         if (is_wp_error($session_data)) {
-            $logger && $logger->error('Bluesky authentication failed.', [
+            do_action('dm_log', 'error', 'Bluesky authentication failed.', [
                 'error_code' => $session_data->get_error_code(),
                 'error_message' => $session_data->get_error_message()
             ]);
@@ -78,7 +77,7 @@ class BlueskyAuth {
         $pds_url = $session_data['pds_url'] ?? null;
 
         if (empty($access_token) || empty($did) || empty($pds_url)) {
-            $logger && $logger->error('Bluesky session data incomplete after authentication.', [
+            do_action('dm_log', 'error', 'Bluesky session data incomplete after authentication.', [
                 'has_token' => !empty($access_token),
                 'has_did' => !empty($did),
                 'has_pds_url' => !empty($pds_url)
@@ -89,7 +88,7 @@ class BlueskyAuth {
         // Add handle to session data for URL building
         $session_data['handle'] = $handle;
 
-        $logger && $logger->debug('Bluesky authentication successful.', [
+        do_action('dm_log', 'debug', 'Bluesky authentication successful.', [
             'did' => $did,
             'pds' => $pds_url,
             'handle' => $handle
@@ -106,7 +105,6 @@ class BlueskyAuth {
      * @return array|\WP_Error Session data array on success, WP_Error on failure.
      */
     private function create_bluesky_session(string $handle, string $password) {
-        $logger = $this->get_logger();
         $url = 'https://bsky.social/xrpc/com.atproto.server.createSession';
         
         $body = wp_json_encode([
@@ -115,11 +113,11 @@ class BlueskyAuth {
         ]);
 
         if (false === $body) {
-            $logger && $logger->error('Failed to JSON encode Bluesky session request body.', ['handle' => $handle]);
+            do_action('dm_log', 'error', 'Failed to JSON encode Bluesky session request body.', ['handle' => $handle]);
             return new \WP_Error('bluesky_json_encode_error', __('Could not encode authentication request.', 'data-machine'));
         }
 
-        $logger && $logger->debug('Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
+        do_action('dm_log', 'debug', 'Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
 
         $response = wp_remote_post($url, [
             'headers' => [
@@ -130,7 +128,7 @@ class BlueskyAuth {
         ]);
 
         if (is_wp_error($response)) {
-            $logger && $logger->error('Bluesky session request failed.', [
+            do_action('dm_log', 'error', 'Bluesky session request failed.', [
                 'handle' => $handle,
                 'error' => $response->get_error_message()
             ]);
@@ -141,7 +139,7 @@ class BlueskyAuth {
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
         
-        $logger && $logger->debug('Bluesky session response received.', [
+        do_action('dm_log', 'debug', 'Bluesky session response received.', [
             'handle' => $handle,
             'code' => $response_code,
             'body_snippet' => substr($response_body, 0, 200)
@@ -149,7 +147,7 @@ class BlueskyAuth {
 
         $session_data = json_decode($response_body, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $logger && $logger->error('Failed to decode Bluesky session response JSON.', [
+            do_action('dm_log', 'error', 'Failed to decode Bluesky session response JSON.', [
                 'handle' => $handle,
                 'json_error' => json_last_error_msg()
             ]);
@@ -158,7 +156,7 @@ class BlueskyAuth {
 
         if ($response_code !== 200) {
             if (empty($session_data['message'])) {
-                $logger && $logger->error('Bluesky authentication failed with no error message provided.', [
+                do_action('dm_log', 'error', 'Bluesky authentication failed with no error message provided.', [
                     'handle' => $handle,
                     'code' => $response_code,
                     'response_data' => $session_data
@@ -168,7 +166,7 @@ class BlueskyAuth {
             }
             
             $error_message = $session_data['message'];
-            $logger && $logger->error('Bluesky authentication failed (non-200 response).', [
+            do_action('dm_log', 'error', 'Bluesky authentication failed (non-200 response).', [
                 'handle' => $handle,
                 'code' => $response_code,
                 'response_message' => $error_message
@@ -179,7 +177,7 @@ class BlueskyAuth {
 
         // Require PDS URL in session data - no defaults or inference
         if (empty($session_data['pdsUrl'])) {
-            $logger && $logger->error('Bluesky session response missing required pdsUrl field.', [
+            do_action('dm_log', 'error', 'Bluesky session response missing required pdsUrl field.', [
                 'handle' => $handle,
                 'response_keys' => array_keys($session_data)
             ]);
@@ -193,7 +191,7 @@ class BlueskyAuth {
             $session_data['pds_url'] = $session_data['pdsUrl'];
         }
         
-        $logger && $logger->debug('Using PDS URL from session response.', [
+        do_action('dm_log', 'debug', 'Using PDS URL from session response.', [
             'handle' => $handle,
             'pds_url' => $session_data['pds_url']
         ]);

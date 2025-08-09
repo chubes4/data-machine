@@ -65,10 +65,7 @@ class GoogleSheets {
             'job_id' => $data_packet->metadata->job_id ?? null
         ];
         
-        // Get logger service via filter
-        $logger = apply_filters('dm_get_logger', null);
-        
-        $logger && $logger->debug('Starting Google Sheets output handling.');
+        do_action('dm_log', 'debug', 'Starting Google Sheets output handling.');
         
         // 1. Get configuration - publish_config is the handler_config directly
         $spreadsheet_id = $publish_config['googlesheets_spreadsheet_id'] ?? '';
@@ -77,7 +74,7 @@ class GoogleSheets {
 
         // 2. Validate required configuration
         if (empty($spreadsheet_id)) {
-            $logger && $logger->error('Google Sheets Output: Spreadsheet ID is required.');
+            do_action('dm_log', 'error', 'Google Sheets Output: Spreadsheet ID is required.');
             return [
                 'success' => false,
                 'error' => __('Google Sheets spreadsheet ID is required in configuration.', 'data-machine')
@@ -89,7 +86,7 @@ class GoogleSheets {
 
         // 4. Handle authentication errors
         if (is_wp_error($sheets_service)) {
-             $logger && $logger->error('Google Sheets Output Error: Failed to get authenticated service.', [
+             do_action('dm_log', 'error', 'Google Sheets Output Error: Failed to get authenticated service.', [
                 'error_code' => $sheets_service->get_error_code(),
                 'error_message' => $sheets_service->get_error_message(),
              ]);
@@ -101,7 +98,7 @@ class GoogleSheets {
 
         // 5. Validate content from DataPacket
         if (empty($title) && empty($content)) {
-            $logger && $logger->warning('Google Sheets Output: DataPacket content is empty.');
+            do_action('dm_log', 'warning', 'Google Sheets Output: DataPacket content is empty.');
             return [
                 'success' => false,
                 'error' => __('Cannot append empty content to Google Sheets.', 'data-machine')
@@ -112,7 +109,7 @@ class GoogleSheets {
         $row_data = $this->prepare_row_data($title, $content, $input_metadata, $column_mapping);
 
         if (empty($row_data)) {
-            $logger && $logger->error('Google Sheets Output: Failed to prepare row data.');
+            do_action('dm_log', 'error', 'Google Sheets Output: Failed to prepare row data.');
             return [
                 'success' => false,
                 'error' => __('Failed to prepare data for Google Sheets.', 'data-machine')
@@ -124,7 +121,7 @@ class GoogleSheets {
             $result = $this->append_to_sheet($sheets_service, $spreadsheet_id, $worksheet_name, $row_data);
 
             if (is_wp_error($result)) {
-                $logger && $logger->error('Failed to append data to Google Sheets.', [
+                do_action('dm_log', 'error', 'Failed to append data to Google Sheets.', [
                     'spreadsheet_id' => $spreadsheet_id,
                     'error_code' => $result->get_error_code(),
                     'error_message' => $result->get_error_message()
@@ -136,7 +133,7 @@ class GoogleSheets {
             }
 
             $sheet_url = "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}";
-            $logger && $logger->debug('Successfully appended data to Google Sheets.', [
+            do_action('dm_log', 'debug', 'Successfully appended data to Google Sheets.', [
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet' => $worksheet_name
             ]);
@@ -150,7 +147,7 @@ class GoogleSheets {
             ];
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Google Sheets Output Exception: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Google Sheets Output Exception: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -253,7 +250,6 @@ class GoogleSheets {
      * @return array|\WP_Error Result array on success, WP_Error on failure.
      */
     private function append_to_sheet($sheets_service, string $spreadsheet_id, string $worksheet_name, array $row_data) {
-        $logger = apply_filters('dm_get_logger', null);
         
         try {
             // Prepare the range (worksheet name + starting cell)
@@ -279,7 +275,7 @@ class GoogleSheets {
             ]);
 
             if (is_wp_error($response)) {
-                $logger && $logger->error('Google Sheets API request failed.', [
+                do_action('dm_log', 'error', 'Google Sheets API request failed.', [
                     'error' => $response->get_error_message(),
                     'spreadsheet_id' => $spreadsheet_id
                 ]);
@@ -293,7 +289,7 @@ class GoogleSheets {
                 $error_data = json_decode($response_body, true);
                 $error_message = $error_data['error']['message'] ?? 'Unknown Google Sheets API error';
                 
-                $logger && $logger->error('Google Sheets API error.', [
+                do_action('dm_log', 'error', 'Google Sheets API error.', [
                     'response_code' => $response_code,
                     'error_message' => $error_message,
                     'spreadsheet_id' => $spreadsheet_id
@@ -306,14 +302,14 @@ class GoogleSheets {
             $result = json_decode($response_body, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
-                $logger && $logger->error('Failed to decode Google Sheets API response.');
+                do_action('dm_log', 'error', 'Failed to decode Google Sheets API response.');
                 return new \WP_Error('googlesheets_decode_error', __('Invalid response from Google Sheets API.', 'data-machine'));
             }
 
             return $result;
 
         } catch (\Exception $e) {
-            $logger && $logger->error('Exception during Google Sheets append operation: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Exception during Google Sheets append operation: ' . $e->getMessage());
             return new \WP_Error('googlesheets_exception', $e->getMessage());
         }
     }

@@ -182,8 +182,7 @@ class Rss {
             }
 
             // Check if already processed
-            $is_processed = false;
-            do_action('dm_is_item_processed', $flow_id, 'rss', $guid, &$is_processed);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'rss', $guid);
             if ($is_processed) {
                 do_action('dm_log', 'debug', 'RSS Input: Skipping already processed item.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                 continue;
