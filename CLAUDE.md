@@ -10,7 +10,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 **Filter-Based Design**: Every service uses `apply_filters()` with pure discovery patterns. Components self-register via dedicated `*Filters.php` files.
 
-**Architectural Consistency**: Comprehensive cleanup eliminated legacy patterns, user-scoped code, and mixed architectural approaches. All components follow consistent admin-only patterns aligned with established standards.
+**Architectural Consistency**: All components follow consistent admin-only patterns with zero mixed architectural approaches, user-scoped code, or inconsistent patterns.
 
 **Two-Layer Architecture**:
 - **Pipelines**: Reusable workflow templates with step sequences (positions 0-99)
@@ -18,7 +18,7 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## AJAX Handler Architecture
 
-**Universal AJAX Routing**: Clean AJAX architecture using universal `dm_ajax_route` action hook for streamlined request handling:
+**Universal AJAX Routing**: Clean AJAX architecture using universal `dm_ajax_route` action hook for streamlined request handling with automatic handler discovery:
 
 - **Page Actions**: Business logic operations (dm_add_step, dm_delete_step, dm_create_pipeline, dm_delete_pipeline, dm_add_flow, dm_delete_flow, dm_save_flow_schedule, dm_run_flow_now)
 - **Modal Actions**: UI/template operations (dm_get_template, dm_get_flow_step_card, dm_get_flow_config, dm_configure_step_action, dm_add_location_action, dm_add_handler_action)
@@ -40,15 +40,22 @@ add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', '
 add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_content']);
 ```
 
+**Automatic Handler Resolution**: Universal routing automatically converts AJAX actions to method names and discovers handlers via admin page registration:
+```php
+// dm_add_step → handle_add_step method call
+// Discovers handler from admin page ajax_handlers configuration
+$method_name = 'handle_' . str_replace('dm_', '', $ajax_action);
+```
+
 ## Current Implementation Status
 
-**Core Systems**: Complete filter-based architecture, pipeline execution, AI integration, and handler framework.
+**Core Systems**: Complete filter-based architecture, pipeline execution, AI integration, handler framework, action hook system, template context resolution.
 
-**Completed Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, universal AJAX routing, handler directive system.
+**Completed Features**: Pipeline+Flow architecture, multi-provider AI integration, filter-based dependencies, AJAX pipeline builder, universal modal system, template rendering, automatic "Draft Flow" creation, universal AJAX routing, handler directive system, action scheduler integration, template context resolution system, files repository with cleanup.
 
-**Current Implementation Limitations**:
-- WordPress Formatting: AI outputs markdown format, WordPress handler needs HTML/blocks conversion
-- Handler Testing: ProcessedItems system needs comprehensive testing across all handlers
+**AI Processing Architecture**: Complete whole-packet processing with rich content support (text, files, mixed content) and handler directive injection.
+
+**Action Hook System**: Central "button press" style hooks eliminate code duplication across components (dm_run_flow_now, dm_update_job_status, dm_execute_step, dm_log, dm_ajax_route, dm_pipeline_auto_save, dm_mark_item_processed).
 
 ## Database Schema
 
@@ -70,9 +77,14 @@ add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_conte
 // Core services - Direct discovery
 $logger = apply_filters('dm_get_logger', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
-$http_service = apply_filters('dm_get_http_service', null);
 $constants = apply_filters('dm_get_constants', null);
 $pipeline_context = apply_filters('dm_get_pipeline_context', null);
+$job_creator = apply_filters('dm_get_job_creator', null);
+
+// HTTP requests - Use dm_send_request action hook (HttpService eliminated)
+$result = null;
+do_action('dm_send_request', 'GET', $url, $args, 'API Context', $result);
+// $result['success'] boolean, $result['data'] contains response, $result['error'] contains error message
 
 // AI HTTP Client - Direct instantiation (bundled library)
 $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
@@ -141,9 +153,12 @@ $admin_pages = apply_filters('dm_get_admin_pages', []);
 $jobs_page = $admin_pages['jobs'] ?? null;
 $pipelines_page = $admin_pages['pipelines'] ?? null;
 
-// Universal template rendering
+// Universal template rendering with automatic context resolution
 $template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
 $page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
+
+// Files repository - Singleton pattern
+$files_repository = apply_filters('dm_get_files_repository', null);
 ```
 
 ## Development Priorities
@@ -255,26 +270,77 @@ $logger->cleanup_log_files(10, 30); // Auto-cleanup based on size/age
 
 ## DataPacket Structure
 
-Universal data contract between pipeline steps:
+Universal data contract between pipeline steps supporting rich content:
 ```php
 [
+    'type' => 'rss|files|ai|wordpress|twitter', // Source/processing type
     'content' => ['body' => $content, 'title' => $title],
-    'metadata' => ['source' => $source, 'timestamp' => $time],
-    'context' => ['job_id' => $id, 'step_position' => $pos]
+    'metadata' => [
+        'source_type' => $source_type,
+        'file_path' => $file_path,     // For file inputs
+        'mime_type' => $mime_type,     // For file inputs
+        'model' => $model,             // For AI outputs
+        'provider' => $provider,       // For AI outputs
+        'usage' => $usage_stats        // For AI outputs
+    ],
+    'timestamp' => $timestamp
 ]
 ```
 
-**Step Implementation**:
+**Step Implementation with Rich Content**:
 ```php
 class MyStep {
     public function execute(int $job_id, array $data_packet, array $step_config): array {
         foreach ($data_packet as $data) {
+            // Handle text content
             $content = $data['content']['body'] ?? '';
-            // Process content
+            
+            // Handle file content
+            $file_path = $data['metadata']['file_path'] ?? '';
+            if ($file_path && file_exists($file_path)) {
+                // Process file content
+            }
+            
+            // Process based on type
+            $type = $data['type'] ?? 'unknown';
         }
         return $data_packet; // Return updated data packet array
     }
 }
+```
+
+**AI Processing**: AI steps process ALL data packet entries simultaneously for complete pipeline context and rich content support (files, text, mixed inputs). The AI step automatically injects handler directives for subsequent steps to provide platform-specific formatting instructions.
+
+## ProcessingOrchestrator Architecture
+
+**Pure Execution Engine**: Lean architecture designed exclusively for pipeline step execution with zero database dependencies or redundant data preparation.
+
+**Architectural Principles**:
+- **JobCreator Builds Configuration**: Complete pipeline configuration assembled by JobCreator before execution
+- **Orchestrator Executes Steps**: Receives pre-built configuration and executes steps in sequence
+- **Zero Database Dependencies**: No database operations during execution - all data provided in configuration
+- **Pure Pipeline Flow**: DataPacket array flows through steps with Action Scheduler coordination
+
+**Execution Flow**:
+1. Receives pre-built configuration from JobCreator via Action Scheduler
+2. Gets step data directly from provided pipeline_config array
+3. Instantiates step classes via filter-based discovery
+4. Passes complete job configuration to steps for self-configuration
+5. Schedules next step with updated DataPacket array
+
+**Step Requirements**:
+- **Parameter-less Constructor**: Steps instantiated without dependencies
+- **Standard Execute Method**: `execute(int $job_id, array $data_packet = [], array $job_config = []): array`
+- **Return Updated DataPacket**: Must return modified data packet array for next step
+- **Self-Configuration**: Steps extract needed configuration from job_config parameter
+
+**Action Scheduler Integration**:
+```php
+// Static callback method for direct Action Scheduler execution
+ProcessingOrchestrator::execute_step_callback($job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets);
+
+// Called via dm_execute_step action hook
+do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
 ```
 
 ## Context-Specific Step Card Templates
@@ -670,6 +736,7 @@ Any admin page can use the modal system by:
 - Routes to PipelineModalAjax handler  
 - Supports JavaScript template requesting pattern
 - Used by `requestTemplate()` method in pipeline-builder.js
+- Integrates with template context resolution system
 
 ```javascript
 // Universal modal loading
@@ -679,7 +746,7 @@ $.ajax({
     context: JSON.stringify(contextData)
 });
 
-// Template requesting for dynamic updates
+// Template requesting for dynamic updates with automatic context resolution
 $.ajax({
     action: 'dm_pipeline_ajax',
     pipeline_action: 'get_template',
@@ -698,45 +765,99 @@ $.ajax({
 $pipeline_template_requirements = [
     // Modal templates with automatic context resolution
     'modal/configure-step' => [
-        'required' => ['step_type', 'pipeline_id', 'step_id'],
+        'required' => ['step_type', 'pipeline_id', 'pipeline_step_id'],
         'optional' => ['flow_id'],
-        'auto_generate' => ['flow_step_id' => '{step_id}_{flow_id}']
+        'auto_generate' => ['flow_step_id' => '{pipeline_step_id}_{flow_id}']
     ],
     'modal/handler-selection-cards' => [
         'required' => ['pipeline_id', 'flow_id', 'step_type']
     ],
     
-    // Handler-specific settings templates - all handlers supported
+    // Handler-specific settings templates - comprehensive handler support
     'modal/handler-settings/files' => [
         'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/rss' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/reddit' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/googlesheets_fetch' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/googlesheets_publish' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
     ],
     'modal/handler-settings/wordpress_fetch' => [
         'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
     ],
     'modal/handler-settings/wordpress_publish' => [
         'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'step_id', 'flow_step_id']
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/twitter' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/facebook' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/threads' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+    ],
+    'modal/handler-settings/bluesky' => [
+        'required' => ['handler_slug', 'step_type'],
+        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
     ],
     
     // Page templates with data extraction
     'page/flow-step-card' => [
         'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
-        'extract_from_step' => ['step_id', 'step_type'],
+        'extract_from_step' => ['pipeline_step_id', 'step_type'],
         'auto_generate' => [
-            'pipeline_step_id' => '{step.step_id}',
-            'flow_step_id' => '{step.step_id}_{flow_id}'
+            'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
         ]
     ]
 ];
 ```
 
 **Context Resolution Features**:
-- **Required Field Validation**: Ensures critical context data is present
-- **Auto-Generated Composite IDs**: Creates flow_step_id patterns automatically
-- **Data Extraction**: Extracts nested data from step, flow, and pipeline objects
-- **Logging**: Missing context fields logged for debugging
+- **Required Field Validation**: Ensures critical context data is present with debug logging
+- **Auto-Generated Composite IDs**: Creates flow_step_id patterns automatically using pipeline_step_id
+- **Data Extraction**: Extracts nested data from step, flow, and pipeline objects using dot notation
+- **Pattern Substitution**: Handles complex ID generation like `{step.pipeline_step_id}_{flow_id}`
+- **Nested Field Access**: Supports both array and object property access for data extraction
+- **Comprehensive Logging**: Missing context fields logged with available keys for debugging
+- **Multiple Extraction Points**: Support for `extract_from_step`, `extract_from_flow`, and `extract_from_pipeline`
+- **Optional Field Handling**: Graceful handling of optional template context fields
+
+**Context Resolution Process**:
+1. Validates required fields exist in template data
+2. Auto-generates composite IDs using pattern substitution with field replacement
+3. Extracts nested data from step objects (pipeline_step_id, step_type, etc.)
+4. Extracts nested data from flow and pipeline objects when specified
+5. Logs missing required fields with available keys for debugging
+6. Returns enhanced data with all resolved context fields
+
+**Pattern Substitution Examples**:
+```php
+// Simple field substitution
+'flow_step_id' => '{pipeline_step_id}_{flow_id}'
+// Result: 'abc123_456' from pipeline_step_id='abc123', flow_id='456'
+
+// Nested field substitution
+'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
+// Result: extracts pipeline_step_id from step object
+```
 
 ## Files Handler Repository System
 
@@ -758,11 +879,12 @@ $repository = apply_filters('dm_get_files_repository', null);
 ```
 
 **Key Features**:
-- **Flow-Specific Isolation**: Files stored with `flow_step_id` context (`{step_id}_{flow_id}`)
+- **Flow-Specific Isolation**: Files stored with `flow_step_id` context (`{pipeline_step_id}_{flow_id}`)
 - **Automatic Cleanup**: Weekly scheduled cleanup of old files via ActionScheduler
 - **Security Validation**: File size limits (32MB) and dangerous extension blocking
 - **Processing Status Integration**: Files marked as processed via ProcessedItems service
 - **AJAX File Upload**: Secure upload handling with nonce verification
+- **Repository Pattern**: Singleton repository implementation accessed via `dm_get_files_repository` filter
 
 **File Management Operations**:
 ```php
@@ -777,19 +899,70 @@ $deleted_count = $repository->cleanup_old_files(7); // 7 days
 ```
 
 
+## Action Hook System
+
+**Central "Button Press" Hooks**: Eliminates code duplication across components through centralized action handlers with consistent service discovery and error handling.
+
+**Core Action Hooks**:
+```php
+// Flow execution - eliminates 40+ lines of duplication per call site
+do_action('dm_run_flow_now', $flow_id, 'manual_execution');
+
+// Intelligent job status updates with method selection
+do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+// Context-aware status updates: 'start', 'complete', or general 'update'
+do_action('dm_update_job_status', $job_id, 'processing', 'start');
+do_action('dm_update_job_status', $job_id, 'completed', 'complete');
+
+// Core pipeline step execution for Action Scheduler
+do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
+
+// Central logging eliminating logger service discovery
+do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
+do_action('dm_log', 'debug', 'Step completed', ['step_type' => 'ai']);
+do_action('dm_log', 'warning', 'Rate limit approached', ['remaining' => 10]);
+
+// Universal AJAX routing eliminating 132 lines of duplication
+do_action('dm_ajax_route', 'dm_add_step', 'page');
+do_action('dm_ajax_route', 'dm_get_template', 'modal');
+
+// Pipeline auto-save operations
+do_action('dm_pipeline_auto_save', $pipeline_id);
+
+// Universal processed item marking across all handlers
+do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
+do_action('dm_mark_item_processed', $flow_id, 'files', $file_path);
+
+// Universal HTTP request handling
+$result = null;
+do_action('dm_send_request', 'POST', $url, $args, 'API Call', $result);
+// Result passed by reference, contains success/error status
+```
+
+**Action Hook Architecture Benefits**:
+- **Eliminates Duplication**: Single implementation for operations triggered from multiple locations
+- **Consistent Error Handling**: Unified logging and validation patterns across all actions
+- **Filter-Based Services**: All actions use consistent service discovery patterns
+- **Simplified Call Sites**: Complex operations reduced from 40+ lines to single action calls
+- **Central Logic**: Business logic consolidated in DataMachineActions.php
+
 ## Critical Rules
 
 **Engine Agnosticism**: NEVER hardcode step types in `/inc/engine/` directory  
 **Discovery Pattern**: Prefer collection-based discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;` for most services. Parameter-based filters are acceptable for context-specific services like `dm_get_context` which requires job_id parameter  
 **Service Access**: Always use filter-based discovery patterns - never `new ServiceClass()` direct instantiation  
-**Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods  
+**Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods - automatic context resolution applied  
+**Action Hooks**: Use central action hooks for common operations - eliminates service discovery duplication
+**Field Naming**: Use `pipeline_step_id` consistently throughout system - matches database schema and UUID4 requirements
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)  
 **CSS Namespace**: All admin CSS must use `dm-` prefix  
 
 **Database Tables**:
-- `wp_dm_pipelines`: Template definitions with step sequences
+- `wp_dm_pipelines`: Template definitions with step sequences (pipeline_step_id UUID4 fields consistently used)
 - `wp_dm_flows`: Configured instances with handler settings (auto-created "Draft Flow" for new pipelines)
-- `wp_dm_jobs`: Execution records
+- `wp_dm_jobs`: Execution records with Action Scheduler integration
+- `wp_dm_processed_items`: Duplicate tracking with flow_id, source_type, item_identifier
+- `wp_dm_remote_locations`: Site-to-site authentication for WordPress handlers
 
 ## ProcessedItems Architecture
 
@@ -894,7 +1067,7 @@ $content = apply_filters('dm_render_template', '', 'modal/handler-settings-form'
 3. Returns rendered content with extracted data variables
 4. Displays error if template not found in any location
 
-**Critical**: NEVER use legacy `render_template()` methods - always use the universal filter system.
+**Critical**: Always use the universal `dm_render_template` filter system for template rendering.
 
 ### Template Requesting in JavaScript
 
