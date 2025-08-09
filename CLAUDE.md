@@ -18,34 +18,16 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 ## AJAX Handler Architecture
 
-**Universal AJAX Routing**: Clean AJAX architecture using universal `dm_ajax_route` action hook for streamlined request handling with automatic handler discovery:
+**Universal AJAX Routing**: Clean architecture using `dm_ajax_route` action hook with automatic handler discovery. Page actions handle business logic, modal actions handle UI/templates.
 
-- **Page Actions**: Business logic operations (dm_add_step, dm_delete_step, dm_create_pipeline, dm_delete_pipeline, dm_add_flow, dm_delete_flow, dm_save_flow_schedule, dm_run_flow_now)
-- **Modal Actions**: UI/template operations (dm_get_template, dm_get_flow_step_card, dm_get_flow_config, dm_configure_step_action, dm_add_location_action, dm_add_handler_action)
-
-**AJAX Registration**: Direct action hook registration with universal routing:
+**Registration Pattern**:
 ```php
-// Page actions (business logic operations)
 add_action('wp_ajax_dm_add_step', fn() => do_action('dm_ajax_route', 'dm_add_step', 'page'));
-add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
-add_action('wp_ajax_dm_create_pipeline', fn() => do_action('dm_ajax_route', 'dm_create_pipeline', 'page'));
-
-// Modal actions (UI/template operations)
 add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
-add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', 'dm_get_flow_step_card', 'modal'));
-```
-
-**Universal Modal Content**: Separate endpoint for general modal loading:
-```php
 add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_content']);
 ```
 
-**Automatic Handler Resolution**: Universal routing automatically converts AJAX actions to method names and discovers handlers via admin page registration:
-```php
-// dm_add_step → handle_add_step method call
-// Discovers handler from admin page ajax_handlers configuration
-$method_name = 'handle_' . str_replace('dm_', '', $ajax_action);
-```
+**Handler Resolution**: `dm_add_step` → `handle_add_step()` method via admin page configuration.
 
 ## Current Implementation Status
 
@@ -77,85 +59,36 @@ $method_name = 'handle_' . str_replace('dm_', '', $ajax_action);
 // Core services - Direct discovery
 $logger = apply_filters('dm_get_logger', null);
 $orchestrator = apply_filters('dm_get_orchestrator', null);
-$constants = apply_filters('dm_get_constants', null);
-$pipeline_context = apply_filters('dm_get_pipeline_context', null);
 $job_creator = apply_filters('dm_get_job_creator', null);
 
-// HTTP requests - Use dm_send_request action hook (HttpService eliminated)
+// HTTP requests - Use dm_send_request action hook
 $result = null;
 do_action('dm_send_request', 'GET', $url, $args, 'API Context', $result);
-// $result['success'] boolean, $result['data'] contains response, $result['error'] contains error message
+// $result['success'] boolean, $result['data'] response, $result['error'] message
 
-// AI HTTP Client - Direct instantiation (bundled library)
-$ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-
-// Database services - Pure discovery with filtering
+// Database services - Collection discovery
 $all_databases = apply_filters('dm_get_database_services', []);
 $db_jobs = $all_databases['jobs'] ?? null;
-$db_flows = $all_databases['flows'] ?? null;
-$db_pipelines = $all_databases['pipelines'] ?? null;
-$db_processed_items = $all_databases['processed_items'] ?? null;
-$db_remote_locations = $all_databases['remote_locations'] ?? null;
 
-// Handler discovery - Pure discovery with type filtering
+// Handler discovery - Type filtering
 $all_handlers = apply_filters('dm_get_handlers', []);
 $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
-$publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
 $specific_handler = $all_handlers['twitter'] ?? null;
 
-// Authentication - Pure discovery with filtering
+// Authentication, Settings, Directives - Collection patterns
 $all_auth = apply_filters('dm_get_auth_providers', []);
-$twitter_auth = $all_auth['twitter'] ?? null;
-
-// Handler settings - Pure discovery with filtering  
 $all_settings = apply_filters('dm_get_handler_settings', []);
-$twitter_settings = $all_settings['twitter'] ?? null;
-
-// Handler directives - Pure discovery with filtering
 $all_directives = apply_filters('dm_get_handler_directives', []);
-$wordpress_directive = $all_directives['wordpress_publish'] ?? null;
 
 // Context services - Parameter-based discovery
 $job_context = apply_filters('dm_get_context', null, $job_id);
 
-// Step discovery - Pure discovery only
+// Step discovery and configuration
 $all_steps = apply_filters('dm_get_steps', []);
-$ai_step = $all_steps['ai'] ?? null;
-$fetch_step = $all_steps['fetch'] ?? null;
-$publish_step = $all_steps['publish'] ?? null;
-
-// Step configuration - Pure discovery with context
 $step_configs = apply_filters('dm_get_step_configs', []);
-$step_config = $step_configs[$step_type] ?? null;
 
-// DataPacket creation - Handler-based creation
-$datapacket = apply_filters('dm_create_datapacket', null, $source_data, $source_type, $context);
-
-
-// Job services - Pure discovery
-$job_status_manager = apply_filters('dm_get_job_status_manager', null);
-$job_creator = apply_filters('dm_get_job_creator', null);
-
-// Additional AI services - Pure discovery
-$all_ai_services = apply_filters('dm_get_ai_services', []);
-$fluid_context_bridge = apply_filters('dm_get_fluid_context_bridge', null);
-$ai_response_parser = apply_filters('dm_get_ai_response_parser', null);
-$prompt_builder = apply_filters('dm_get_prompt_builder', null);
-
-// Modal system - Pure discovery
-$all_modals = apply_filters('dm_get_modals', []);
-$step_selection_modal = $all_modals['step-selection'] ?? null;
-$handler_settings_modal = $all_modals['handler-settings'] ?? null;
-$confirmation_modal = $all_modals['confirmation'] ?? null;
-
-// Admin page discovery - Pure discovery
-$admin_pages = apply_filters('dm_get_admin_pages', []);
-$jobs_page = $admin_pages['jobs'] ?? null;
-$pipelines_page = $admin_pages['pipelines'] ?? null;
-
-// Universal template rendering with automatic context resolution
-$template_content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
-$page_content = apply_filters('dm_render_template', '', 'page/jobs-page', $data);
+// Template rendering with context resolution
+$content = apply_filters('dm_render_template', '', 'modal/handler-settings', $data);
 
 // Files repository - Singleton pattern
 $files_repository = apply_filters('dm_get_files_repository', null);
@@ -164,9 +97,10 @@ $files_repository = apply_filters('dm_get_files_repository', null);
 ## Development Priorities
 
 **Immediate Tasks**:
-1. Complete authentication implementations for social media handlers (Threads, Bluesky, Google Sheets, Reddit)
-2. Expand handler directive system to remaining handlers (Twitter, Facebook, etc.)
+1. Complete authentication implementations for remaining handlers (Google Sheets, Reddit OAuth 2.0)
+2. Implement handler directives for social media handlers (Twitter, Facebook, Threads, Bluesky)
 3. Comprehensive testing of ProcessedItems system across all handlers
+4. Expand template context resolution system for additional handler-specific templates
 
 **Available for Extension**:
 - Handler directive framework (WordPress implementation complete)
@@ -217,10 +151,10 @@ error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 **Authentication Implementation Status**:
 - Twitter: ✅ Complete OAuth 1.0a implementation
 - Facebook: ✅ Complete OAuth 2.0 implementation
-- Threads: ⚠️ Stub implementation with framework structure
-- Bluesky: ⚠️ Stub implementation with framework structure  
-- Google Sheets: ⚠️ Stub implementation with framework structure
-- Reddit: ⚠️ Stub implementation with framework structure
+- Threads: ✅ Complete OAuth 2.0 implementation with long-lived token refresh
+- Bluesky: ✅ Complete authentication implementation with app password system
+- Google Sheets: ⚠️ Authentication framework structure ready for OAuth 2.0 implementation
+- Reddit: ⚠️ Authentication framework structure ready for OAuth 2.0 implementation
 - WordPress: Uses Remote Locations (site-to-site authentication)
 - Files, RSS: No authentication required
 
@@ -330,17 +264,17 @@ class MyStep {
 
 **Step Requirements**:
 - **Parameter-less Constructor**: Steps instantiated without dependencies
-- **Standard Execute Method**: `execute(int $job_id, array $data_packet = [], array $job_config = []): array`
+- **Standard Execute Method**: `execute(int $job_id, array $data_packet = [], array $step_config = []): array`
 - **Return Updated DataPacket**: Must return modified data packet array for next step
-- **Self-Configuration**: Steps extract needed configuration from job_config parameter
+- **Self-Configuration**: Steps extract needed configuration from step_config parameter (merged step and flow configuration)
 
 **Action Scheduler Integration**:
 ```php
 // Static callback method for direct Action Scheduler execution
-ProcessingOrchestrator::execute_step_callback($job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets);
+ProcessingOrchestrator::execute_step_callback($job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
 
 // Called via dm_execute_step action hook
-do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
+do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets);
 ```
 
 ## Context-Specific Step Card Templates
@@ -398,9 +332,9 @@ if (!empty($handler_directive)) {
 
 **Current Implementation**:
 - WordPress handler: Complete directive for structured content formatting
-- Framework supports all handlers via consistent registration pattern
+- Twitter, Facebook, Threads, Bluesky handlers: Framework ready for directive implementation
 - AI steps automatically discover and inject appropriate directives based on pipeline step sequence
-- Handlers self-register directives via filter system
+- Handlers self-register directives via filter system using consistent registration pattern
 
 **Architecture Benefits**:
 - **Contextual AI Guidance**: AI receives specific formatting instructions for target platforms
@@ -446,417 +380,92 @@ this.requestTemplate('page/pipeline-step-card', {
 
 ## Template Rendering Architecture
 
-**JavaScript Template Requesting**: Critical architectural pattern that eliminates HTML generation inconsistencies between initial page load and AJAX updates by maintaining PHP templates as the single source of HTML structure.
+**JavaScript Template Requesting**: JavaScript requests pre-rendered templates from PHP to eliminate HTML generation inconsistencies between page load and AJAX updates.
 
-**Core Principle**: JavaScript requests pre-rendered templates from PHP instead of generating HTML directly, ensuring consistency across UI updates.
+**Core Principle**: PHP templates are single source of HTML structure, JavaScript handles pure DOM manipulation.
 
-### Template Requesting Pattern
-
-**JavaScript Template Requests with Arrow Logic**:
+**Template Requesting Pattern**:
 ```javascript
-// New architecture - JavaScript requests templates with data
-// Calculate is_first_step for consistent arrow rendering
-const nonEmptySteps = $container.find('.dm-step:not(.dm-step-card--empty)').length;
-const isFirstRealStep = nonEmptySteps === 0;
-
-// Universal step card template with context awareness
-this.requestTemplate('page/step-card', {
-    step: stepData,
-    context: 'pipeline', // or 'flow'
-    pipeline_id: pipelineId,
-    is_first_step: isFirstRealStep  // Critical for arrow consistency
-}).then((stepHtml) => {
-    // Insert rendered template into DOM
-    $(container).append(stepHtml);
-});
-
-// Universal template requesting method
 requestTemplate(templateName, templateData) {
-    return new Promise((resolve, reject) => {
-        $.ajax({
-            url: dmPipelineBuilder.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'dm_pipeline_ajax',
-                pipeline_action: 'get_template',
-                template: templateName,
-                template_data: JSON.stringify(templateData),
-                nonce: dmPipelineBuilder.pipeline_ajax_nonce
-            },
-            success: (response) => {
-                if (response.success) {
-                    resolve(response.data.html);
-                } else {
-                    reject(response.data.message);
-                }
-            },
-            error: (xhr, status, error) => {
-                reject(error);
-            }
-        });
-    });
+    return $.ajax({
+        url: dmPipelineBuilder.ajax_url, type: 'POST',
+        data: {
+            action: 'dm_pipeline_ajax', pipeline_action: 'get_template',
+            template: templateName, template_data: JSON.stringify(templateData),
+            nonce: dmPipelineBuilder.pipeline_ajax_nonce
+        }
+    }).then(response => response.data.html);
 }
+
+// Usage with arrow logic
+const isFirstRealStep = $container.find('.dm-step:not(.dm-step-card--empty)').length === 0;
+this.requestTemplate('page/step-card', {step: stepData, is_first_step: isFirstRealStep});
 ```
 
-**AJAX Handler Data-Only Responses**:
+**AJAX Handler Pattern**: Return data only, request templates separately:
 ```php
-// AJAX handlers return structured data only
-public function add_step_to_pipeline() {
-    // Process step addition logic
-    wp_send_json_success([
-        'step_data' => $step_data,  // NOT step_html
-        'message' => __('Step added successfully', 'data-machine')
-    ]);
-}
-
-public function add_flow_to_pipeline() {
-    // Process flow addition logic  
-    wp_send_json_success([
-        'flow_data' => $flow_data,  // NOT flow_card_html
-        'message' => __('Flow added successfully', 'data-machine')
-    ]);
-}
+wp_send_json_success(['step_data' => $data]); // NOT step_html
 ```
 
-**Template Rendering Endpoint**:
-```php
-public function get_template() {
-    $template = sanitize_text_field($_POST['template']);
-    $data = json_decode(wp_unslash($_POST['data']), true);
-    
-    $html = apply_filters('dm_render_template', '', $template, $data);
-    
-    wp_send_json_success(['html' => $html]);
-}
-```
-
-### Architecture Benefits
-
-- **Eliminates Inconsistencies**: HTML structure identical between page load and AJAX updates
-- **Single Source of Truth**: PHP templates control all HTML generation
-- **Clean Separation**: JavaScript becomes pure DOM manipulation layer
-- **Integration**: Seamless integration with `dm_render_template` filter system
-- **Maintainability**: Template changes automatically apply to all contexts
-- **Arrow Consistency**: Universal `is_first_step` pattern eliminates double arrows and positioning issues  
-
-### JavaScript Architecture Principles
-
-**Pure DOM Manipulation**: JavaScript handles only data processing and DOM insertion - never HTML generation
-**Template Requesting**: All HTML comes from PHP templates via AJAX template requests
-**Data-Driven Updates**: AJAX responses contain structured data, templates requested separately
-**Consistency**: Identical rendering logic for initial load and dynamic updates
+**Benefits**: Consistent HTML structure, single source of truth, clean separation, seamless `dm_render_template` integration.
 
 ## Modal System
 
-**Three-File JavaScript Architecture**: Universal modal lifecycle management with specialized content interaction and page operation handling.
+**Three-File JavaScript Architecture**: Universal modal lifecycle (core-modal.js), pipeline content interactions (pipelines-modal.js), flow operations (flow-builder.js).
 
-### Core Components
+**Core Components**:
+- **core-modal.js**: Modal lifecycle, AJAX loading via `dm_get_modal_content`, accessibility focus management
+- **pipelines-modal.js**: OAuth workflows, file uploads, handler configuration UI 
+- **flow-builder.js**: Flow management, handler addition, execution via "Run Now"
 
-**core-modal.js**: Universal modal lifecycle management
-- Modal open/close/loading states with accessibility focus management
-- AJAX content loading via `dm_get_modal_content` action endpoint  
-- Universal `.dm-modal-open` button handling with `data-template` and `data-context` attributes
-- State management via `dm-modal-active` CSS class for accessibility compliance
-- Focus trap implementation for WCAG compliance
-- Provides `dmCoreModal` global API for programmatic operations
-- Events: `dm-core-modal-closed`, `dm-core-modal-content-loaded`
-
-**pipelines-modal.js**: Pipeline-specific modal content interactions  
-- OAuth connection workflows (connect/disconnect/test handlers)
-- Visual feedback for card selections and form interactions
-- File upload functionality with drag-and-drop support
-- Handler-specific template integration and configuration UI
-- Schedule form interactions and validation
-- Triggers `dm-pipeline-modal-saved` events for page coordination
-- Zero modal lifecycle management - purely content interaction
-
-**flow-builder.js**: Flow-specific operations and handler management
-- Flow configuration management with direct AJAX patterns
-- Handler addition to flow steps via `data-template="add-handler-action"`
-- Flow instance management (add/delete flows)
-- Flow execution via "Run Now" functionality  
-- Flow step card updates after handler configuration
-- Event coordination with modal system for UI updates
-
-### Data-Attribute Communication
-
-Pipeline system uses data attributes for clean separation between modal content and page actions:
-
+**Data-Attribute Communication**:
 ```javascript
-// Modal content cards with data attributes trigger page actions
 <div class="dm-step-selection-card dm-modal-close" 
-     data-template="add-step-action"
-     data-context='{"step_type":"fetch","pipeline_id":"123"}'>
-
-// Direct handler action pattern - no form submission
-<button class="button button-primary dm-modal-close" 
-        data-template="add-handler-action"
-        data-context='{"handler_slug":"twitter","step_type":"publish","flow_id":"123"}'>
-
-// Pipeline-builder.js listens for data-attribute clicks
-$(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
-$(document).on('click', '[data-template="add-handler-action"]', this.handleAddHandlerAction.bind(this));
-$(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
+     data-template="add-step-action" data-context='{"step_type":"fetch"}'>
 ```
 
-### PHP Template Integration
-
-Automatic modal triggers using data attributes - no JavaScript required:
-
-```php
-<!-- Trigger button in PHP template -->
-<button type="button" class="button dm-modal-open" 
-        data-template="step-selection"
-        data-context='{"pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-    <?php esc_html_e('Add Step', 'data-machine'); ?>
-</button>
-```
-
-**Critical**: Individual modal cards need context data attributes, not just containers:
-
-```php
-<!-- CORRECT: Each card has required data -->
-<div class="dm-step-selection-card" 
-     data-step-type="<?php echo esc_attr($step_type); ?>"
-     data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-
-<!-- INCORRECT: Only container has context -->
-<div class="dm-container" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-    <div class="dm-step-selection-card" data-step-type="<?php echo esc_attr($step_type); ?>">
-```
-
-### Modal Content Registration
-
-**Collection-Based Registration**: Components register multiple modals via the `dm_get_modals` filter:
-
+**Modal Registration**:
 ```php
 add_filter('dm_get_modals', function($modals) {
     $modals['step-selection'] = [
         'template' => 'modal/step-selection-cards',
         'title' => __('Select Step Type', 'data-machine')
     ];
-    $modals['handler-selection'] = [
-        'template' => 'modal/handler-selection-cards', 
-        'title' => __('Select Handler', 'data-machine')
-    ];
-    // Static content registration (for pre-rendered content)
-    $modals['static-modal'] = [
-        'content' => apply_filters('dm_render_template', '', 'modal/static-content', $context),
-        'title' => __('Static Modal', 'data-machine')
-    ];
     return $modals;
 });
 ```
 
-### Handler-Specific Template System
+**Handler-Specific Templates**: Automatic fallback from `modal/handler-settings/{handler}` to universal `modal/handler-settings`.
 
-**Dynamic Template Routing**: Modal system supports handler-specific templates with automatic fallback:
+**AJAX Endpoints**: 
+- `dm_get_modal_content` - General modal loading
+- `dm_pipeline_ajax` with `get_template` - Dynamic template rendering
 
-```php
-// Handler-specific template pattern: 'handler-settings/{handler_slug}'
-// Automatically tries specific template first, falls back to universal
-
-// Try handler-specific template first
-$content = apply_filters('dm_render_template', '', 'modal/handler-settings/files', $context);
-
-// Automatic fallback to universal template if handler-specific not found
-$content = apply_filters('dm_render_template', '', 'modal/handler-settings', $context);
-```
-
-**Template Structure**:
-```
-/templates/modal/
-├── handler-settings.php          # Universal fallback template
-├── handler-settings/
-│   ├── files.php                 # Files handler specific
-│   ├── wordpress_fetch.php       # WordPress fetch specific
-│   ├── wordpress_publish.php     # WordPress publish specific
-│   └── twitter.php               # Twitter handler specific
-```
-
-### Modal Lifecycle Improvements
-
-**Automatic Modal Management**: Action buttons include `dm-modal-close` class for automatic modal dismissal after action completion. Modal state managed via `dm-modal-active` CSS class for accessibility and focus management.
-
-**Universal Confirmation Modal**: Context-aware confirmation modal supports pipeline, step, and flow deletion with automatic action execution.
-
-### Direct Action Handler Pattern
-
-**Architectural Alignment**: Handler configuration implements direct action patterns consistent with established system architecture.
-
-**Implementation Pattern**:
-```javascript
-// Direct handler action in pipeline-builder.js
-handleAddHandlerAction: function(e) {
-    const contextData = $(e.currentTarget).data('context');
-    
-    // Direct AJAX call with handler configuration
-    $.ajax({
-        url: dmPipelineBuilder.ajax_url,
-        data: {
-            action: 'dm_save_handler_settings',
-            handler_slug: contextData.handler_slug,
-            step_type: contextData.step_type,
-            flow_id: contextData.flow_id
-        }
-    });
-}
-```
-
-**Template Integration**:
-```php
-<!-- Direct action button in handler settings modal -->
-<button type="button" class="button button-primary dm-modal-close" 
-        data-template="add-handler-action"
-        data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
-    <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
-</button>
-```
-
-### Universal Reusability
-
-Any admin page can use the modal system by:
-1. Including `core-modal.js` via admin page asset filter
-2. Adding `.dm-modal-open` buttons in PHP templates with proper data attributes
-3. Registering modal content via `dm_get_modals` filter
-4. Zero page-specific modal JavaScript required
-
-### Modal AJAX Endpoints
-
-**Dual Endpoint Architecture**: Modal system provides two AJAX endpoints for different use cases:
-
-**Universal Modal Content** - `dm_get_modal_content`:
-- Used for general modal loading from registered modal collection
-- Routes to universal ModalAjax handler
-- Supports both static content and dynamic template rendering
-- Primary endpoint for `.dm-modal-open` button triggers
-
-**Pipeline Template Requests** - `dm_pipeline_ajax` with `get_template` action:
-- Used for dynamic template rendering during page operations
-- Routes to PipelineModalAjax handler  
-- Supports JavaScript template requesting pattern
-- Used by `requestTemplate()` method in pipeline-builder.js
-- Integrates with template context resolution system
-
-```javascript
-// Universal modal loading
-$.ajax({
-    action: 'dm_get_modal_content',
-    template: 'step-selection',
-    context: JSON.stringify(contextData)
-});
-
-// Template requesting for dynamic updates with automatic context resolution
-$.ajax({
-    action: 'dm_pipeline_ajax',
-    pipeline_action: 'get_template',
-    template: 'page/pipeline-step-card',
-    template_data: JSON.stringify(stepData)
-});
-```
+**Universal Reusability**: Include `core-modal.js`, add `.dm-modal-open` buttons with data attributes, register via `dm_get_modals` filter.
 
 
 ## Template Context Resolution System
 
 **Sophisticated Template Requirements**: PipelinesFilters.php implements comprehensive template context resolution with automatic field generation and data extraction.
 
-**Template Requirements Definition**:
+**Key Features**:
+- **Required Field Validation**: Ensures critical context data with debug logging
+- **Auto-Generated Composite IDs**: Creates flow_step_id patterns (`{pipeline_step_id}_{flow_id}`)
+- **Data Extraction**: Extracts nested data from step/flow/pipeline objects using dot notation
+- **Pattern Substitution**: Complex ID generation like `{step.pipeline_step_id}_{flow_id}`
+- **Multiple Extraction Points**: `extract_from_step`, `extract_from_flow`, `extract_from_pipeline`
+
+**Template Requirements Pattern**:
 ```php
-$pipeline_template_requirements = [
-    // Modal templates with automatic context resolution
-    'modal/configure-step' => [
-        'required' => ['step_type', 'pipeline_id', 'pipeline_step_id'],
-        'optional' => ['flow_id'],
-        'auto_generate' => ['flow_step_id' => '{pipeline_step_id}_{flow_id}']
-    ],
-    'modal/handler-selection-cards' => [
-        'required' => ['pipeline_id', 'flow_id', 'step_type']
-    ],
-    
-    // Handler-specific settings templates - comprehensive handler support
-    'modal/handler-settings/files' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/rss' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/reddit' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/googlesheets_fetch' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/googlesheets_publish' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/wordpress_fetch' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/wordpress_publish' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/twitter' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/facebook' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/threads' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    'modal/handler-settings/bluesky' => [
-        'required' => ['handler_slug', 'step_type'],
-        'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-    ],
-    
-    // Page templates with data extraction
-    'page/flow-step-card' => [
-        'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
-        'extract_from_step' => ['pipeline_step_id', 'step_type'],
-        'auto_generate' => [
-            'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
-        ]
-    ]
-];
-```
-
-**Context Resolution Features**:
-- **Required Field Validation**: Ensures critical context data is present with debug logging
-- **Auto-Generated Composite IDs**: Creates flow_step_id patterns automatically using pipeline_step_id
-- **Data Extraction**: Extracts nested data from step, flow, and pipeline objects using dot notation
-- **Pattern Substitution**: Handles complex ID generation like `{step.pipeline_step_id}_{flow_id}`
-- **Nested Field Access**: Supports both array and object property access for data extraction
-- **Comprehensive Logging**: Missing context fields logged with available keys for debugging
-- **Multiple Extraction Points**: Support for `extract_from_step`, `extract_from_flow`, and `extract_from_pipeline`
-- **Optional Field Handling**: Graceful handling of optional template context fields
-
-**Context Resolution Process**:
-1. Validates required fields exist in template data
-2. Auto-generates composite IDs using pattern substitution with field replacement
-3. Extracts nested data from step objects (pipeline_step_id, step_type, etc.)
-4. Extracts nested data from flow and pipeline objects when specified
-5. Logs missing required fields with available keys for debugging
-6. Returns enhanced data with all resolved context fields
-
-**Pattern Substitution Examples**:
-```php
-// Simple field substitution
-'flow_step_id' => '{pipeline_step_id}_{flow_id}'
-// Result: 'abc123_456' from pipeline_step_id='abc123', flow_id='456'
-
-// Nested field substitution
-'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
-// Result: extracts pipeline_step_id from step object
+'modal/handler-settings/[handler]' => [
+    'required' => ['handler_slug', 'step_type'],
+    'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
+],
+'page/flow-step-card' => [
+    'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
+    'extract_from_step' => ['pipeline_step_id', 'step_type'],
+    'auto_generate' => ['flow_step_id' => '{step.pipeline_step_id}_{flow_id}']
+]
 ```
 
 ## Files Handler Repository System
@@ -901,50 +510,39 @@ $deleted_count = $repository->cleanup_old_files(7); // 7 days
 
 ## Action Hook System
 
-**Central "Button Press" Hooks**: Eliminates code duplication across components through centralized action handlers with consistent service discovery and error handling.
+**Central "Button Press" Hooks**: Eliminates code duplication through centralized action handlers with consistent service discovery and error handling.
 
 **Core Action Hooks**:
 ```php
 // Flow execution - eliminates 40+ lines of duplication per call site
 do_action('dm_run_flow_now', $flow_id, 'manual_execution');
 
-// Intelligent job status updates with method selection
+// Intelligent job status updates with automatic method selection
+do_action('dm_update_job_status', $job_id, 'processing', 'start'); // Uses start_job()
+do_action('dm_update_job_status', $job_id, 'completed', 'complete'); // Uses complete_job()
 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-// Context-aware status updates: 'start', 'complete', or general 'update'
-do_action('dm_update_job_status', $job_id, 'processing', 'start');
-do_action('dm_update_job_status', $job_id, 'completed', 'complete');
 
-// Core pipeline step execution for Action Scheduler
+// Core pipeline step execution with enhanced error handling
 do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
 
 // Central logging eliminating logger service discovery
 do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
-do_action('dm_log', 'debug', 'Step completed', ['step_type' => 'ai']);
-do_action('dm_log', 'warning', 'Rate limit approached', ['remaining' => 10]);
 
 // Universal AJAX routing eliminating 132 lines of duplication
 do_action('dm_ajax_route', 'dm_add_step', 'page');
-do_action('dm_ajax_route', 'dm_get_template', 'modal');
-
-// Pipeline auto-save operations
-do_action('dm_pipeline_auto_save', $pipeline_id);
 
 // Universal processed item marking across all handlers
 do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
-do_action('dm_mark_item_processed', $flow_id, 'files', $file_path);
 
 // Universal HTTP request handling
 $result = null;
 do_action('dm_send_request', 'POST', $url, $args, 'API Call', $result);
-// Result passed by reference, contains success/error status
+// Result: ['success' => bool, 'data' => response_array, 'error' => error_message]
 ```
 
-**Action Hook Architecture Benefits**:
-- **Eliminates Duplication**: Single implementation for operations triggered from multiple locations
-- **Consistent Error Handling**: Unified logging and validation patterns across all actions
-- **Filter-Based Services**: All actions use consistent service discovery patterns
-- **Simplified Call Sites**: Complex operations reduced from 40+ lines to single action calls
-- **Central Logic**: Business logic consolidated in DataMachineActions.php
+**HTTP Request System**: The `dm_send_request` action hook provides comprehensive HTTP functionality with all HTTP methods (GET, POST, PUT, DELETE, PATCH), intelligent status validation, enhanced error handling, automatic logging, and structured response format.
+
+**Benefits**: Eliminates duplication, consistent error handling, unified service discovery, simplified call sites (40+ lines → single action call), centralized logic in DataMachineActions.php.
 
 ## Critical Rules
 
@@ -994,135 +592,40 @@ $processed_items_service = $all_databases['processed_items'] ?? null;
 
 ## Admin Page Architecture
 
-**Direct Template Rendering Pattern**: AdminMenuAssets.php uses standardized template name pattern for unified page rendering without content_callback dependencies.
+**Direct Template Rendering Pattern**: AdminMenuAssets.php uses standardized `"page/{$page_slug}-page"` template pattern for unified rendering.
 
-**Template Name Convention**: Admin pages render using pattern `"page/{$page_slug}-page"`:
-```php
-// AdminMenuAssets.php - Direct template rendering
-private function render_admin_page_content($page_config, $page_slug) {
-    $content = apply_filters('dm_render_template', '', "page/{$page_slug}-page", [
-        'page_slug' => $page_slug,
-        'page_config' => $page_config
-    ]);
-    
-    if (!empty($content)) {
-        echo $content;
-    } else {
-        // Default empty state
-        echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
-        echo '<p>' . esc_html__('Page content not configured.', 'data-machine') . '</p></div>';
-    }
-}
-```
-
-**Unified Registration and Discovery**: Admin pages register with assets, templates, and configuration in a single filter, providing complete self-contained page definitions:
+**Unified Registration**: Admin pages register with assets, templates, and configuration in a single `dm_get_admin_pages` filter:
 
 ```php
-// Complete admin page registration with all components
 add_filter('dm_get_admin_pages', function($pages) {
     $pages['jobs'] = [
         'page_title' => __('Jobs', 'data-machine'),
-        'menu_title' => __('Jobs', 'data-machine'),
-        'capability' => 'manage_options',
-        'position' => 20,
+        'capability' => 'manage_options', 'position' => 20,
         'templates' => __DIR__ . '/templates/',
-        'assets' => [
-            'css' => ['dm-admin-jobs' => ['file' => 'path/to/style.css']],
-            'js' => ['dm-jobs-admin' => ['file' => 'path/to/script.js', 'deps' => ['jquery']]]
-        ]
+        'assets' => ['css' => [...], 'js' => [...]]
     ];
     return $pages;
 });
-
-// Discovery and access pattern throughout plugin
-$all_pages = apply_filters('dm_get_admin_pages', []);
-$specific_page = $all_pages[$page_slug] ?? null;
-
-// AdminMenuAssets automatically discovers and processes all registered pages
-// Pages sorted by position, then alphabetically for consistent menu order
 ```
 
 ## Universal Template Rendering
 
-**Filter-Based Template Discovery**: Templates are discovered from admin page registration and rendered through the universal `dm_render_template` filter system.
+**Filter-Based Template Discovery**: Templates discovered from admin page registration and rendered through universal `dm_render_template` filter system.
 
-**Template Registration**: Admin pages register template directories via their `dm_get_admin_pages` filter configuration (see Admin Page Architecture section for complete registration examples).
-
-**Template Usage**: Components use the universal filter for all template rendering:
-
+**Template Usage**:
 ```php
-// Universal template rendering - discovers from registered admin pages
-$content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', [
-    'handler_slug' => 'twitter',
-    'settings_data' => $settings
-]);
-
-// Template discovery searches all registered admin page template directories
-// Returns error message if template not found in any registered location
+$content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
 ```
 
-**Template Discovery Process**:
-1. Filter searches all registered admin page template directories
-2. Constructs full path: `{template_dir}/{template_name}.php`
-3. Returns rendered content with extracted data variables
-4. Displays error if template not found in any location
-
-**Critical**: Always use the universal `dm_render_template` filter system for template rendering.
-
-### Template Requesting in JavaScript
-
-**JavaScript Template Integration**: Use the template requesting pattern for all dynamic HTML updates:
-
+**JavaScript Template Integration**: Use template requesting pattern for dynamic HTML updates:
 ```javascript
-// Template requesting in page scripts
-class PipelineBuilder {
-    requestTemplate(template, data) {
-        return $.ajax({
-            url: ajaxurl,
-            method: 'POST', 
-            data: {
-                action: 'dm_pipeline_ajax',
-                pipeline_action: 'get_template',
-                template: template,
-                template_data: JSON.stringify(data),
-                nonce: this.nonce
-            }
-        }).then(response => response.data.html);
-    }
-    
-    // Usage example with arrow logic
-    addStepToUI(stepData) {
-        // Calculate is_first_step for consistent arrow rendering
-        const nonEmptySteps = $('.dm-pipeline-steps').find('.dm-step:not(.dm-step-card--empty)').length;
-        const isFirstRealStep = nonEmptySteps === 0;
-        
-        // Context-specific step card template
-        this.requestTemplate('page/pipeline-step-card', {
-            step: stepData,
-            pipeline_id: this.pipelineId,
-            is_first_step: isFirstRealStep  // Critical for arrow consistency
-        }).then(stepHtml => {
-            $('.dm-pipeline-steps').append(stepHtml);
-        });
-    }
+requestTemplate(template, data) {
+    return $.ajax({
+        action: 'dm_pipeline_ajax', pipeline_action: 'get_template',
+        template: template, template_data: JSON.stringify(data)
+    }).then(response => response.data.html);
 }
 ```
 
-**AJAX Handler Pattern**: Return data only, never HTML:
-
-```php
-public function ajax_handler() {
-    // Process business logic
-    $result_data = $this->process_action();
-    
-    // Return structured data only - NO HTML
-    wp_send_json_success([
-        'data' => $result_data,
-        'message' => __('Action completed', 'data-machine')
-    ]);
-    
-    // JavaScript will request template separately:
-    // this.requestTemplate('page/result-card', result_data)
-}
-```
+**AJAX Handler Pattern**: Return data only, never HTML - JavaScript requests templates separately.
 
