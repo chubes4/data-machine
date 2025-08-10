@@ -10,8 +10,8 @@ WordPress plugin for AI content processing workflows. Built with WordPress-nativ
 
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter support
 - **Visual Pipeline Builder**: AJAX-driven workflow construction with modal system
-- **Context Processing**: Multi-source data collection and processing with dynamic step discovery
 - **Sequential Workflows**: Chain different AI models and providers with real-time configuration
+- **Action Hook Architecture**: Three-action execution engine with organized CRUD operations
 - **Content Publishing**: Distribute to Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets
 - **WordPress Integration**: Native WordPress patterns and admin interface
 - **Filter Architecture**: Extensible system using WordPress filters
@@ -121,7 +121,7 @@ Pipeline: "Blog Publishing"
 ### Uniform Array Processing Example
 ```php
 // ALL steps receive array of DataPackets (most recent first)
-public function execute(int $job_id, array $data, array $step_config): array {
+public function execute(string $flow_step_id, array $data, array $step_config): array {
     // AI steps process entire array for complete context
     foreach ($data as $packet) {
         $content = $packet->content['body'];
@@ -146,8 +146,8 @@ Data Machine implements a pure discovery filter architecture enabling AI workflo
 ```php
 // Core services - action hooks for operations
 do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
-// ProcessingOrchestrator is core engine - direct instantiation
-$orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
+// Pipeline execution via three-action execution engine (Engine.php)
+do_action('dm_run_flow_now', $flow_id);
 
 // AI HTTP Client - direct instantiation (bundled library)
 $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
@@ -278,8 +278,8 @@ The filter-based architecture supports custom handlers. Common extension pattern
 // Services use appropriate access patterns - zero constructor injection
 do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
 $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-// ProcessingOrchestrator is core engine - direct instantiation
-$orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
+// Pipeline execution via pure functional action hooks (Engine.php)
+do_action('dm_run_flow_now', $flow_id, 'manual_execution');
 
 // Pure discovery with filtering
 $all_databases = apply_filters('dm_db', []);

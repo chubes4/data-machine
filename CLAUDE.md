@@ -59,12 +59,13 @@ add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_conte
 // Core services - Action hooks and direct instantiation
 // Logger operations via dm_log action hook (see Action Hook System)
 do_action('dm_log', 'error', 'Message', ['context' => 'data']);
-// ProcessingOrchestrator is core engine - direct instantiation
-$orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
-// JobCreator operations via dm_run_flow_now action hook (see Action Hook System)
+// Flow execution via dm_run_flow_now action hook (see Action Hook System)
 do_action('dm_run_flow_now', $flow_id, 'manual_execution');
 
-// HTTP requests - Use dm_send_request action hook
+// HTTP requests - Two patterns available
+// 1. Filter-based discovery (most handlers)
+$response = apply_filters('dm_request', [], 'GET', $url, $args);
+// 2. Action hook pattern (Facebook handler only) 
 $result = null;
 do_action('dm_send_request', 'GET', $url, $args, 'API Context', $result);
 // $result['success'] boolean, $result['data'] response, $result['error'] message
@@ -100,14 +101,13 @@ $files_repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository()
 ## Development Priorities
 
 **Immediate Tasks**:
-1. Complete authentication implementations for remaining handlers (Google Sheets, Reddit OAuth 2.0)
-2. Implement handler directives for social media handlers (Twitter, Facebook, Threads, Bluesky)
-3. Comprehensive testing of ProcessedItems system across all handlers
-4. Expand template context resolution system for additional handler-specific templates
+1. Implement handler directives for social media handlers (Twitter, Facebook, Threads, Bluesky)
+2. Comprehensive testing of ProcessedItems system across all handlers
+3. Expand template context resolution system for additional handler-specific templates
 
 **Available for Extension**:
 - Handler directive framework (WordPress implementation complete)
-- Filter-based authentication system (Twitter and Facebook implementations complete)
+- Filter-based authentication system (all handlers complete)
 - Pipeline execution engine with DataPacket flow
 - Universal modal and template rendering systems
 
@@ -143,7 +143,7 @@ error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
 
 ## Components
 
-**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Orchestrator, AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration)
+**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Execution Engine (actions/ architecture), AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration)
 
 **Handlers**:
 - Fetch: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
@@ -156,8 +156,8 @@ error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
 - Facebook: ✅ Complete OAuth 2.0 implementation
 - Threads: ✅ Complete OAuth 2.0 implementation with long-lived token refresh
 - Bluesky: ✅ Complete authentication implementation with app password system
-- Google Sheets: ⚠️ Authentication framework structure ready for OAuth 2.0 implementation
-- Reddit: ⚠️ Authentication framework structure ready for OAuth 2.0 implementation
+- Google Sheets: ✅ Complete OAuth 2.0 implementation
+- Reddit: ✅ Complete OAuth 2.0 implementation
 - WordPress: Uses Remote Locations (site-to-site authentication)
 - Files, RSS: No authentication required
 
@@ -252,36 +252,39 @@ class MyStep {
 
 **AI Processing**: AI steps process ALL data packet entries simultaneously for complete pipeline context and rich content support (files, text, mixed inputs). The AI step automatically injects handler directives for subsequent steps to provide platform-specific formatting instructions.
 
-## ProcessingOrchestrator Architecture
+## Execution Engine Architecture
 
-**Pure Execution Engine**: Lean architecture designed exclusively for pipeline step execution with zero database dependencies or redundant data preparation.
+**Pure Functional Execution**: Three-action engine design located in `/inc/engine/actions/Engine.php` providing complete pipeline execution with KISS compliance.
 
-**Architectural Principles**:
-- **JobCreator Builds Configuration**: Complete pipeline configuration assembled by JobCreator before execution
-- **Orchestrator Executes Steps**: Receives pre-built configuration and executes steps in sequence
-- **Zero Database Dependencies**: No database operations during execution - all data provided in configuration
-- **Pure Pipeline Flow**: DataPacket array flows through steps with Action Scheduler coordination
+**Core Execution Actions**:
+- **dm_run_flow_now**: Pipeline initiation ("start button")
+- **dm_execute_step**: Core step execution with functional orchestration
+- **dm_schedule_next_step**: Action Scheduler step transitions
 
 **Execution Flow**:
-1. Receives pre-built configuration from JobCreator via Action Scheduler
-2. Gets step data directly from provided pipeline_config array
-3. Instantiates step classes via filter-based discovery
-4. Passes complete job configuration to steps for self-configuration
-5. Schedules next step with updated DataPacket array
+1. `dm_run_flow_now` creates job via organized `dm_create` action
+2. `dm_schedule_next_step` schedules first step with Action Scheduler
+3. `dm_execute_step` loads step config, instantiates step class, executes step
+4. Step returns updated DataPacket array for next step
+5. `dm_schedule_next_step` continues pipeline flow
 
 **Step Requirements**:
 - **Parameter-less Constructor**: Steps instantiated without dependencies
-- **Standard Execute Method**: `execute(int $job_id, array $data_packet = [], array $step_config = []): array`
+- **Standard Execute Method**: `execute(string $flow_step_id, array $data = [], array $step_config = []): array`
 - **Return Updated DataPacket**: Must return modified data packet array for next step
-- **Self-Configuration**: Steps extract needed configuration from step_config parameter (merged step and flow configuration)
+- **Self-Configuration**: Steps extract needed configuration from step_config parameter
 
 **Action Scheduler Integration**:
 ```php
-// Static callback method for direct Action Scheduler execution
-ProcessingOrchestrator::execute_step_callback($job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
+// Core execution via Action Scheduler
+as_schedule_single_action(time(), 'dm_execute_step', [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'data' => $data
+], 'data-machine');
 
-// Called via dm_execute_step action hook
-do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets);
+// Called via action hook system
+do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 ```
 
 ## Context-Specific Step Card Templates
@@ -338,10 +341,10 @@ if (!empty($handler_directive)) {
 ```
 
 **Current Implementation**:
-- WordPress handler: Complete directive for structured content formatting
-- Twitter, Facebook, Threads, Bluesky handlers: Framework ready for directive implementation
+- WordPress handler: ✅ Complete directive implementation with structured content formatting
+- Twitter, Facebook, Threads, Bluesky handlers: ⚠️ Framework ready for directive implementation
 - AI steps automatically discover and inject appropriate directives based on pipeline step sequence
-- Handlers self-register directives via filter system using consistent registration pattern
+- Handlers self-register directives via `dm_handler_directives` filter using consistent registration pattern
 
 **Architecture Benefits**:
 - **Contextual AI Guidance**: AI receives specific formatting instructions for target platforms
@@ -510,37 +513,41 @@ $deleted_count = $repository->cleanup_old_files(7); // 7 days
 
 **Central "Button Press" Hooks**: Eliminates code duplication through centralized action handlers with consistent service discovery and error handling.
 
-**Core Action Hooks**:
+**Core Action Hooks** (organized in `/inc/engine/actions/`):
 ```php
-// Flow execution - eliminates 40+ lines of duplication per call site
-do_action('dm_run_flow_now', $flow_id, 'manual_execution');
+// EXECUTION ENGINE (Engine.php)
+// Pipeline initiation
+do_action('dm_run_flow_now', $flow_id);
+// Core step execution  
+do_action('dm_execute_step', $job_id, $flow_step_id, $data);
+// Action Scheduler step transitions
+do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
-// Intelligent job status updates with automatic method selection
-do_action('dm_update_job_status', $job_id, 'processing', 'start'); // Uses start_job()
-do_action('dm_update_job_status', $job_id, 'completed', 'complete'); // Uses complete_job()
-do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+// ORGANIZED ACTIONS (Create.php, Update.php, Delete.php)
+// CRUD operations
+do_action('dm_create', 'job', ['pipeline_id' => $pipeline_id, 'flow_id' => $flow_id]);
+do_action('dm_update_job_status', $job_id, 'completed', 'complete');
+do_action('dm_delete', 'flow', $flow_id);
 
-// Core pipeline step execution with enhanced error handling
-do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet);
-
+// UTILITY ACTIONS (DataMachineActions.php)
 // Central logging eliminating logger service discovery
 do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
-
 // Universal AJAX routing eliminating 132 lines of duplication
 do_action('dm_ajax_route', 'dm_add_step', 'page');
-
 // Universal processed item marking across all handlers
 do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
-
-// Universal HTTP request handling
-$result = null;
-do_action('dm_send_request', 'POST', $url, $args, 'API Call', $result);
-// Result: ['success' => bool, 'data' => response_array, 'error' => error_message]
 ```
 
-**HTTP Request System**: The `dm_send_request` action hook provides comprehensive HTTP functionality with all HTTP methods (GET, POST, PUT, DELETE, PATCH), intelligent status validation, enhanced error handling, automatic logging, and structured response format.
+**HTTP Request System**: Two patterns available for HTTP operations:
+- **Filter Pattern**: `$response = apply_filters('dm_request', [], 'GET', $url, $args);` (most handlers)
+- **Action Pattern**: `dm_send_request` action hook (Facebook handler only)
 
-**Benefits**: Eliminates duplication, consistent error handling, unified service discovery, simplified call sites (40+ lines → single action call), centralized logic in DataMachineActions.php.
+**Architecture Organization**: 
+- **Engine.php**: Core 3-action execution engine
+- **Create.php, Update.php, Delete.php**: Organized CRUD operations
+- **DataMachineActions.php**: Utility actions eliminating duplication
+
+**Benefits**: WordPress-native action registration, clean file organization, eliminates duplication, consistent error handling, simplified call sites.
 
 ## Critical Rules
 
