@@ -405,7 +405,7 @@ function dm_handle_save_handler_settings() {
         
         // Auto-save pipeline after handler settings change
         if ($pipeline_id > 0) {
-            do_action('dm_pipeline_auto_save', $pipeline_id);
+            do_action('dm_auto_save', $pipeline_id);
         }
         
         $action_message = $handler_exists 

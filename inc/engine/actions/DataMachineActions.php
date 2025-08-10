@@ -61,11 +61,11 @@ require_once __DIR__ . '/Update.php';
  * Actions registered:
  * - dm_run_flow_now($flow_id, $context): Central flow execution trigger
  * - dm_update_job_status($job_id, $new_status, $context, $old_status): Intelligent status updates
- * - dm_execute_step($job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_data_packets): Core step execution
+ * - dm_execute_step($job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_datas): Core step execution
  * - dm_auto_save($pipeline_id): Central pipeline auto-save operations
  * - dm_mark_item_processed($flow_id, $source_type, $item_identifier): Universal processed item marking
  * - dm_update_flow_schedule($flow_id, $schedule_status, $schedule_interval, $old_status): Engine-level flow scheduling
- * - dm_schedule_next_step($job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data_packet): Central step scheduling
+ * - dm_schedule_next_step($job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data): Central step scheduling
  * - dm_log($level, $message, $context): Central logging with automatic logger discovery and validation
  * 
  * Usage Examples:
@@ -75,7 +75,7 @@ require_once __DIR__ . '/Update.php';
  * do_action('dm_auto_save', $pipeline_id);
  * do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
  * do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly', 'inactive');
- * do_action('dm_schedule_next_step', $job_id, 1, $pipeline_id, $flow_id, $job_config, $data_packet);
+ * do_action('dm_schedule_next_step', $job_id, 1, $pipeline_id, $flow_id, $job_config, $data);
  * do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
  * do_action('dm_ajax_route', 'dm_add_step', 'page');
  *
@@ -111,10 +111,10 @@ function dm_register_core_actions() {
     
     
     // Core step execution hook - ultra-simple flow_step_id based execution
-    add_action( 'dm_execute_step', function( $flow_step_id, $data_packet = null ) {
+    add_action( 'dm_execute_step', function( $flow_step_id, $data = null ) {
         try {
             // Call static method with ultra-simple signature
-            $result = \DataMachine\Engine\ProcessingOrchestrator::execute_step_callback( $flow_step_id, $data_packet );
+            $result = \DataMachine\Engine\ProcessingOrchestrator::execute_step_callback( $flow_step_id, $data );
             
             do_action('dm_log', 'debug', 'Action Scheduler hook executed step', [
                 'flow_step_id' => $flow_step_id,
@@ -188,7 +188,7 @@ function dm_register_core_actions() {
     
     
     // Central step scheduling hook - ultra-simple flow_step_id based scheduling
-    add_action('dm_schedule_next_step', function($flow_step_id, $data_packet = []) {
+    add_action('dm_schedule_next_step', function($flow_step_id, $data = []) {
         if (!function_exists('as_schedule_single_action')) {
             do_action('dm_log', 'error', 'Action Scheduler not available for step scheduling', [
                 'flow_step_id' => $flow_step_id
@@ -202,7 +202,7 @@ function dm_register_core_actions() {
             'dm_execute_step',
             [
                 'flow_step_id' => $flow_step_id,
-                'data_packet' => $data_packet
+                'data' => $data
             ],
             'data-machine'
         );

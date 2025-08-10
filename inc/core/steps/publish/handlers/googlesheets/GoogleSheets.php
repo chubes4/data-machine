@@ -46,23 +46,23 @@ class GoogleSheets {
     /**
      * Handles appending the AI output to Google Sheets.
      *
-     * @param object $data_packet Universal DataPacket JSON object with all content and metadata.
+     * @param object $data Universal DataPacket JSON object with all content and metadata.
      * @return array Result array on success or failure.
      */
-    public function handle_publish($data_packet): array {
+    public function handle_publish($data): array {
         // Access structured content directly from DataPacket (no parsing needed)
-        $title = $data_packet->content->title ?? '';
-        $content = $data_packet->content->body ?? '';
+        $title = $data->content->title ?? '';
+        $content = $data->content->body ?? '';
         
         // Get publish config from DataPacket (set by PublishStep)
-        $publish_config = $data_packet->publish_config ?? [];
+        $publish_config = $data->publish_config ?? [];
         
         // Extract metadata from DataPacket
         $input_metadata = [
-            'source_url' => $data_packet->metadata->source_url ?? null,
-            'source_type' => $data_packet->metadata->source_type ?? 'unknown',
-            'created_at' => $data_packet->metadata->created_at ?? current_time('c'),
-            'job_id' => $data_packet->metadata->job_id ?? null
+            'source_url' => $data->metadata->source_url ?? null,
+            'source_type' => $data->metadata->source_type ?? 'unknown',
+            'created_at' => $data->metadata->created_at ?? current_time('c'),
+            'job_id' => $data->metadata->job_id ?? null
         ];
         
         do_action('dm_log', 'debug', 'Starting Google Sheets output handling.');

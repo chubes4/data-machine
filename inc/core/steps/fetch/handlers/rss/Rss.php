@@ -255,7 +255,7 @@ class Rss {
                 ];
             }
 
-            $input_data_packet = [
+            $input_data = [
                 'data' => [
                     'content_string' => $content_string,
                     'file_info' => $file_info
@@ -263,7 +263,7 @@ class Rss {
                 'metadata' => $metadata
             ];
             
-            $eligible_items_packets[] = $input_data_packet;
+            $eligible_items_packets[] = $input_data;
             
             if (count($eligible_items_packets) >= $process_limit) {
                 do_action('dm_log', 'debug', 'RSS Input: Reached process limit.', ['limit' => $process_limit, 'pipeline_id' => $pipeline_id]);

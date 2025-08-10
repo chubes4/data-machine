@@ -137,13 +137,13 @@ class DataMachine_Update_Actions {
                 return;
             }
             
-            // Direct Action Scheduler call - no wrapper layer
+            // Direct Action Scheduler call using universal flow execution entry point
             if (function_exists('as_schedule_recurring_action')) {
                 $action_id = as_schedule_recurring_action(
                     time(),
                     $interval_seconds,
-                    "dm_execute_flow_{$flow_id}",
-                    ['flow_id' => $flow_id],
+                    'dm_run_flow_now',
+                    [$flow_id],
                     'data-machine'
                 );
                 
@@ -155,11 +155,11 @@ class DataMachine_Update_Actions {
                 ]);
             }
         } elseif ($old_status === 'active') {
-            // Direct Action Scheduler deactivation
+            // Direct Action Scheduler deactivation using universal action
             if (function_exists('as_unschedule_action')) {
                 $result = as_unschedule_action(
-                    "dm_execute_flow_{$flow_id}",
-                    ['flow_id' => $flow_id],
+                    'dm_run_flow_now',
+                    [$flow_id],
                     'data-machine'
                 );
                 

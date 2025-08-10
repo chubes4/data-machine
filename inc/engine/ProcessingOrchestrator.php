@@ -19,7 +19,7 @@
  *
  * STEP REQUIREMENTS:
  * - Parameter-less constructor only
- * - execute(int $job_id, array $data_packet = [], array $job_config = []): array method required
+ * - execute(int $job_id, array $data = [], array $job_config = []): array method required
  * - Must return updated data packet array for next step
  * - Steps extract needed configuration from job_config themselves
  *
@@ -42,15 +42,15 @@ class ProcessingOrchestrator {
 	 * Ultra-simple flow_step_id based execution.
 	 *
 	 * @param string $flow_step_id The flow step ID (format: pipeline_step_id_flow_id).
-	 * @param array|null $data_packet Previous step data packet array.
+	 * @param array|null $data Previous step data packet array.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function execute_step_callback( string $flow_step_id, $data_packet = null ): bool {
+	public static function execute_step_callback( string $flow_step_id, $data = null ): bool {
 		// Direct instantiation - ProcessingOrchestrator is the core engine
 		$orchestrator = new self();
 		
 		// Ultra-simple flow_step_id execution
-		return $orchestrator->execute_step( $flow_step_id, $data_packet ?: [] );
+		return $orchestrator->execute_step( $flow_step_id, $data ?: [] );
 	}
 
 	/**
@@ -140,10 +140,10 @@ class ProcessingOrchestrator {
 	 * - Single database query for complete step execution
 	 *
 	 * @param string $flow_step_id The flow step ID (format: pipeline_step_id_flow_id).
-	 * @param array $data_packet Previous step data packet array for execution.
+	 * @param array $data Previous step data packet array for execution.
 	 * @return bool True on success, false on failure.
 	 */
-	public function execute_step( string $flow_step_id, array $data_packet = [] ): bool {
+	public function execute_step( string $flow_step_id, array $data = [] ): bool {
 		try {
 			do_action('dm_log', 'debug', 'Executing step with flow_step_id', [
 				'flow_step_id' => $flow_step_id
@@ -210,15 +210,18 @@ class ProcessingOrchestrator {
 				}
 			}
 			
+			// Extract job_id from flow_step_id for step context
+			$step_config['job_id'] = $this->extract_job_id_from_flow_step_id($flow_step_id);
+			
 			// Execute step with complete configuration
-			$data_packet = $step_instance->execute( $flow_step_id, $data_packet, $step_config );
+			$data = $step_instance->execute( $flow_step_id, $data, $step_config );
 			
 			// Validate step return - must be data packet array
-			if ( ! is_array( $data_packet ) ) {
+			if ( ! is_array( $data ) ) {
 				do_action('dm_log', 'error', 'Step must return data packet array', [
 					'flow_step_id' => $flow_step_id,
 					'class' => $step_class,
-					'returned_type' => gettype( $data_packet )
+					'returned_type' => gettype( $data )
 				] );
 				return false;
 			}
@@ -226,11 +229,11 @@ class ProcessingOrchestrator {
 			do_action('dm_log', 'debug', 'Step executed with data packet array', [
 				'flow_step_id' => $flow_step_id,
 				'class' => $step_class,
-				'final_items' => count( $data_packet )
+				'final_items' => count( $data )
 			] );
 
 			// Success = non-empty data packet array, failure = empty array
-			$step_success = ! empty( $data_packet );
+			$step_success = ! empty( $data );
 			
 			// Handle pipeline flow based on step success
 			if ( $step_success ) {
@@ -239,7 +242,7 @@ class ProcessingOrchestrator {
 				
 				if ( $next_flow_step_id ) {
 					// Schedule next step with updated data packet
-					if ( ! $this->schedule_next_step( $next_flow_step_id, $data_packet ) ) {
+					if ( ! $this->schedule_next_step( $next_flow_step_id, $data ) ) {
 						do_action('dm_log', 'error', 'Failed to schedule next step', [
 							'current_flow_step_id' => $flow_step_id,
 							'next_flow_step_id' => $next_flow_step_id
@@ -250,12 +253,12 @@ class ProcessingOrchestrator {
 					do_action('dm_log', 'debug', 'Scheduled next step with data packet array', [
 						'current_flow_step_id' => $flow_step_id,
 						'next_flow_step_id' => $next_flow_step_id,
-						'items_passed' => count( $data_packet )
+						'items_passed' => count( $data )
 					] );
 				} else {
 					do_action('dm_log', 'debug', 'Pipeline execution completed successfully', [
 						'final_flow_step_id' => $flow_step_id,
-						'final_items' => count( $data_packet )
+						'final_items' => count( $data )
 					] );
 				}
 			} else {
@@ -282,13 +285,37 @@ class ProcessingOrchestrator {
 	 * Schedule the next step in the async pipeline using flow_step_id.
 	 *
 	 * @param string $flow_step_id The next flow step ID to execute.
-	 * @param array $data_packet Previous step data packet array for next execution.
+	 * @param array $data Previous step data packet array for next execution.
 	 * @return bool True on success, false on failure.
 	 */
-	private function schedule_next_step( string $flow_step_id, array $data_packet = [] ): bool {
+	private function schedule_next_step( string $flow_step_id, array $data = [] ): bool {
 		// Use centralized action hook for flow_step_id scheduling
-		do_action('dm_schedule_next_step', $flow_step_id, $data_packet);
+		do_action('dm_schedule_next_step', $flow_step_id, $data);
 		return true; // Action hook handles error logging internally
+	}
+
+	/**
+	 * Extract job_id from flow_step_id context for step execution.
+	 * 
+	 * @param string $flow_step_id The flow step ID to extract job_id from
+	 * @return int Job ID or 0 if not found
+	 */
+	private function extract_job_id_from_flow_step_id(string $flow_step_id): int {
+		$parts = $this->split_flow_step_id($flow_step_id);
+		$flow_id = $parts['flow_id'] ?? null;
+		
+		if ($flow_id) {
+			$all_databases = apply_filters('dm_db', []);
+			$db_jobs = $all_databases['jobs'] ?? null;
+			if ($db_jobs) {
+				$active_jobs = $db_jobs->get_active_jobs_for_flow($flow_id);
+				if (!empty($active_jobs)) {
+					return (int)$active_jobs[0]['job_id'];
+				}
+			}
+		}
+		
+		return 0; // Fallback - steps can handle this
 	}
 
 } // End class

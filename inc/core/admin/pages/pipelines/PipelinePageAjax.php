@@ -132,7 +132,7 @@ class PipelinePageAjax
         // Auto-save pipeline after flow schedule change
         $pipeline_id = (int)$flow['pipeline_id'];
         if ($pipeline_id > 0) {
-            do_action('dm_pipeline_auto_save', $pipeline_id);
+            do_action('dm_auto_save', $pipeline_id);
         }
 
         wp_send_json_success([
@@ -148,15 +148,11 @@ class PipelinePageAjax
      */
     public function handle_run_flow_now()
     {
-        // Get pipeline_id from flow for dm_create action
+        // Use the proper action hook chain - let dm_run_flow_now handle pipeline_id lookup
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
-        $pipeline_id = $this->get_pipeline_id_from_flow($flow_id);
         
-        do_action('dm_create', 'job', [
-            'flow_id' => $flow_id,
-            'pipeline_id' => $pipeline_id,
-            'context' => 'run_now'
-        ], ['source' => 'ajax']);
+        // Use the designed entry point for flow execution
+        do_action('dm_run_flow_now', $flow_id);
     }
 
 

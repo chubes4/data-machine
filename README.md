@@ -121,21 +121,21 @@ Pipeline: "Blog Publishing"
 ### Uniform Array Processing Example
 ```php
 // ALL steps receive array of DataPackets (most recent first)
-public function execute(int $job_id, array $data_packet, array $step_config): array {
+public function execute(int $job_id, array $data, array $step_config): array {
     // AI steps process entire array for complete context
-    foreach ($data_packet as $packet) {
+    foreach ($data as $packet) {
         $content = $packet->content['body'];
         // Process all packets for complete context
     }
     
     // Most other steps use latest only
-    $latest_packet = $data_packet[0] ?? null;
+    $latest_packet = $data[0] ?? null;
     if ($latest_packet) {
         $content = $latest_packet->content['body'];
         // Process only most recent data
     }
     
-    return $data_packet; // Return updated data packet array
+    return $data; // Return updated data packet array
 }
 ```
 
@@ -380,11 +380,11 @@ $flow_config_b = [
 
 // Implementation showing DataPacket flow
 class ProductAnalysisStep {
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $datas = []): bool {
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // AI steps consume all packets for complete context
-        foreach ($data_packets as $index => $packet) {
+        foreach ($datas as $index => $packet) {
             $content = $packet->content['body'];
             $source = $packet->metadata['source'] ?? "Step $index";
             
@@ -569,7 +569,7 @@ class ContentManagementPipeline {
 **Custom Fetch Step**:
 ```php
 class DatabaseFetchStep {
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $datas = []): bool {
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Custom database connection
@@ -579,7 +579,7 @@ class DatabaseFetchStep {
         );
         
         // Create DataPacket for next step
-        $data_packet = [
+        $data = [
             'content' => ['body' => json_encode($results), 'title' => 'Database Export'],
             'metadata' => ['source' => 'custom_database', 'record_count' => count($results)],
             'context' => ['job_id' => $job_id, 'step_position' => 0]
@@ -609,13 +609,13 @@ $database_step = $all_steps['database_fetch'] ?? null;
 **Custom AI Processing Step**:
 ```php
 class SentimentAnalysisStep {
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $datas = []): bool {
         $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // AI steps consume all packets for complete context
         $combined_content = '';
-        foreach ($data_packets as $packet) {
+        foreach ($datas as $packet) {
             $combined_content .= $packet->content['body'] . "\n\n";
         }
         
@@ -659,11 +659,11 @@ class SentimentAnalysisStep {
 **Custom Publish Step**:
 ```php
 class SlackNotificationStep {
-    public function execute(int $job_id, array $data_packets = []): bool {
+    public function execute(int $job_id, array $datas = []): bool {
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Publish steps typically use latest packet
-        $latest_packet = $data_packets[0] ?? null;
+        $latest_packet = $datas[0] ?? null;
         if (!$latest_packet) {
             $logger->error('No data packet available for Slack notification');
             return false;
@@ -1113,11 +1113,11 @@ class MyFetchHandler {
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Process fetch data and return array of data packets
-        $data_packets = [];
+        $datas = [];
         
         // Your custom fetch logic here
         
-        return $data_packets;
+        return $datas;
     }
 }
 
@@ -1128,7 +1128,7 @@ class MyPublishHandler {
     }
     
     // Required method for publish handlers
-    public function publish_data(array $data_packet, array $step_config): bool {
+    public function publish_data(array $data, array $step_config): bool {
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         
         // Process publish data
@@ -1192,24 +1192,24 @@ add_filter('dm_steps', function($steps) {
 });
 
 class CustomProcessingStep {
-    public function execute(int $job_id, array $data_packet, array $step_config): array {
+    public function execute(int $job_id, array $data, array $step_config): array {
         // Access all services via filters
         do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
         $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
         
         // ALL steps receive uniform array of DataPackets (most recent first)
         // Steps self-select data processing approach:
-        // - Most steps: use data_packet[0] only
-        // - AI steps: use entire data_packet array
+        // - Most steps: use data[0] only
+        // - AI steps: use entire data array
         
-        $latest_packet = $data_packet[0] ?? null;
+        $latest_packet = $data[0] ?? null;
         if ($latest_packet) {
             $content = $latest_packet->content['body'];
             // Process latest data for most steps
         }
         
         // Your custom processing logic here
-        return $data_packet; // Return updated data packet array
+        return $data; // Return updated data packet array
     }
 }
 ```
@@ -1233,9 +1233,9 @@ class CustomProcessingStep {
 // Step 5: Publish (WordPress Handler) - position 4 - publish using complete context
 
 // At Step 4 (Gemini AI) - uses entire array for multi-model context:
-public function execute(int $job_id, array $data_packets = []): bool {
+public function execute(int $job_id, array $datas = []): bool {
     // AI steps consume all packets (most recent first)
-    foreach ($data_packets as $index => $packet) {
+    foreach ($datas as $index => $packet) {
         $step_name = $packet->metadata['step_name'] ?? "Step $index";
         // Process all previous AI outputs for analysis
     }

@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
  * and flow-level settings, maintaining complete separation from step-level logic.
  * 
  * PURE CAPABILITY-BASED: External fetch step classes only need:
- * - execute(int $job_id, array $data_packet, array $step_config): array method
+ * - execute(int $job_id, array $data, array $step_config): array method
  * - Parameter-less constructor
  * - No interface implementation required
  * 
@@ -34,11 +34,12 @@ class FetchStep {
      * - Adds fetch data to the array and returns updated array
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packet The cumulative data packet array for this job  
+     * @param array $data The cumulative data packet array for this job  
      * @param array $step_config Step configuration including handler settings
      * @return array Updated data packet array with fetch data added
      */
-    public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
+    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
+        $job_id = $step_config['job_id'] ?? 0;
         $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
@@ -46,7 +47,7 @@ class FetchStep {
             // Fetch steps generate data from external sources 
             do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [
                 'job_id' => $job_id,
-                'existing_items' => count($data_packet)
+                'existing_items' => count($data)
             ]);
             
             // Use step configuration directly - no job config introspection needed
@@ -77,21 +78,21 @@ class FetchStep {
 
             if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
                 do_action('dm_log', 'error', 'Fetch handler returned no content', ['job_id' => $job_id]);
-                return $data_packet; // Return unchanged array
+                return $data; // Return unchanged array
             }
 
             // Add fetch entry to front of data packet array (newest first)
-            array_unshift($data_packet, $fetch_entry);
+            array_unshift($data, $fetch_entry);
 
             do_action('dm_log', 'debug', 'Fetch Step: Data collection completed', [
                 'job_id' => $job_id,
                 'handler' => $handler,
                 'content_length' => strlen($fetch_entry['content']['body'] ?? '') + strlen($fetch_entry['content']['title'] ?? ''),
                 'source_type' => $fetch_entry['metadata']['source_type'] ?? '',
-                'total_items' => count($data_packet)
+                'total_items' => count($data)
             ]);
 
-            return $data_packet;
+            return $data;
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Fetch Step: Exception during data collection', [
@@ -100,7 +101,7 @@ class FetchStep {
                 'trace' => $e->getTraceAsString()
             ]);
             // Return unchanged data packet on failure
-            return $data_packet;
+            return $data;
         }
     }
 

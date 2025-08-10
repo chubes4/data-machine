@@ -30,7 +30,7 @@ if (!defined('ABSPATH')) {
  * 
  * EXTERNAL PLUGIN REQUIREMENTS (minimum):
  * - Class with parameter-less constructor
- * - execute(int $job_id, array $data_packet, array $step_config): array method
+ * - execute(int $job_id, array $data, array $step_config): array method
  * - get_prompt_fields(): array static method for UI configuration (optional)
  * 
  * Supports any AI operation: summarization, fact-checking, enhancement, translation,
@@ -47,11 +47,12 @@ class AIStep {
      * - Returns updated array with AI output added
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packet The cumulative data packet array for this job
+     * @param array $data The cumulative data packet array for this job
      * @param array $step_config The merged step configuration including pipeline and flow settings
      * @return array Updated data packet array with AI output added
      */
-    public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
+    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
+        $job_id = $step_config['job_id'] ?? 0;
         try {
             // Create AI HTTP client directly
             if (!class_exists('\AI_HTTP_Client')) {
@@ -73,21 +74,21 @@ class AIStep {
             $title = $step_config['title'] ?? 'AI Processing';
 
             // Process ALL data packet entries (oldest to newest for logical message flow)
-            if (empty($data_packet)) {
+            if (empty($data)) {
                 do_action('dm_log', 'error', 'AI Step: No data found in data packet array', ['job_id' => $job_id]);
-                return $data_packet;
+                return $data;
             }
             
             do_action('dm_log', 'debug', 'AI Step: Processing all data packet inputs', [
                 'job_id' => $job_id,
-                'total_inputs' => count($data_packet)
+                'total_inputs' => count($data)
             ]);
 
             // Build messages from all data packet entries (reverse order for oldest-to-newest)
             $messages = [];
-            $data_packet_reversed = array_reverse($data_packet);
+            $data_reversed = array_reverse($data);
             
-            foreach ($data_packet_reversed as $index => $input) {
+            foreach ($data_reversed as $index => $input) {
                 $input_type = $input['type'] ?? 'unknown';
                 $metadata = $input['metadata'] ?? [];
                 
@@ -163,9 +164,9 @@ class AIStep {
             if (empty($messages)) {
                 do_action('dm_log', 'error', 'AI Step: No processable content found in any data packet inputs', [
                     'job_id' => $job_id,
-                    'total_inputs' => count($data_packet)
+                    'total_inputs' => count($data)
                 ]);
-                return $data_packet;
+                return $data;
             }
             
             do_action('dm_log', 'debug', 'AI Step: All inputs processed into messages', [
@@ -295,18 +296,18 @@ class AIStep {
             ];
             
             // Add AI response to front of data packet array (newest first)
-            array_unshift($data_packet, $ai_entry);
+            array_unshift($data, $ai_entry);
 
             do_action('dm_log', 'debug', 'AI Step: Processing completed successfully', [
                 'job_id' => $job_id,
                 'ai_content_length' => strlen($ai_content),
                 'model' => $ai_response['data']['model'] ?? 'unknown',
                 'provider' => $ai_response['provider'] ?? 'unknown',
-                'total_items_in_packet' => count($data_packet)
+                'total_items_in_packet' => count($data)
             ]);
             
             // Return updated data packet array
-            return $data_packet;
+            return $data;
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'AI Step: Exception during processing', [
@@ -315,7 +316,7 @@ class AIStep {
                 'trace' => $e->getTraceAsString()
             ]);
             // Return unchanged data packet on failure  
-            return $data_packet;
+            return $data;
         }
     }
     

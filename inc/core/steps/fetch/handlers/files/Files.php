@@ -105,7 +105,7 @@ class Files {
             throw new Exception("File not found: {$next_file['persistent_path']}");
         }
 
-        // Create input_data_packet using the file path as the identifier
+        // Create input_data using the file path as the identifier
         $file_identifier = $next_file['persistent_path'];
         $mime_type = $next_file['mime_type'] ?? 'application/octet-stream';
         

@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
  * and flow-level settings, maintaining complete separation from step-level logic.
  * 
  * PURE CAPABILITY-BASED: External publish step classes only need:
- * - execute(int $job_id, array $data_packet, array $step_config): array method
+ * - execute(int $job_id, array $data, array $step_config): array method
  * - Parameter-less constructor
  * - No interface implementation required
  * 
@@ -31,15 +31,16 @@ class PublishStep {
      * 
      * PURE ARRAY SYSTEM:
      * - Receives the cumulative data packet array (newest items first)
-     * - Uses latest entry for publishing (data_packet[0])
+     * - Uses latest entry for publishing (data[0])
      * - Adds publish result to the array and returns updated array
      * 
      * @param int $job_id The job ID to process
-     * @param array $data_packet The cumulative data packet array for this job
+     * @param array $data The cumulative data packet array for this job
      * @param array $step_config Step configuration including handler settings
      * @return array Updated data packet array with publish result added
      */
-    public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
+    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
+        $job_id = $step_config['job_id'] ?? 0;
         $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
@@ -67,10 +68,10 @@ class PublishStep {
             $handler_settings = $handler_data['settings'] ?? [];
 
             // Publish steps use latest data entry (first in array)
-            $latest_data = $data_packet[0] ?? null;
+            $latest_data = $data[0] ?? null;
             if (!$latest_data) {
                 do_action('dm_log', 'error', 'Publish Step: No data available from previous step', ['job_id' => $job_id]);
-                return $data_packet; // Return unchanged array
+                return $data; // Return unchanged array
             }
 
             // Execute single publish handler - one step, one handler, per flow
@@ -81,7 +82,7 @@ class PublishStep {
                     'job_id' => $job_id,
                     'handler' => $handler
                 ]);
-                return $data_packet; // Return unchanged array
+                return $data; // Return unchanged array
             }
 
             // Create publish data entry for the data packet array
@@ -103,15 +104,15 @@ class PublishStep {
             ];
             
             // Add publish entry to front of data packet array (newest first)
-            array_unshift($data_packet, $publish_entry);
+            array_unshift($data, $publish_entry);
             
             do_action('dm_log', 'debug', 'Publish Step: Publishing completed successfully', [
                 'job_id' => $job_id,
                 'handler' => $handler,
-                'total_items' => count($data_packet)
+                'total_items' => count($data)
             ]);
 
-            return $data_packet;
+            return $data;
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Publish Step: Exception during publishing', [
@@ -120,7 +121,7 @@ class PublishStep {
                 'trace' => $e->getTraceAsString()
             ]);
             // Return empty array on failure (engine interprets as step failure)
-            return $data_packet;
+            return $data;
         }
     }
 
@@ -212,7 +213,7 @@ class PublishStep {
         return class_exists($class_name) ? new $class_name() : null;
     }
 
-    // PublishStep receives cumulative data packet array from engine via $data_packet parameter
+    // PublishStep receives cumulative data packet array from engine via $data parameter
 
 
 }

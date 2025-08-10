@@ -222,7 +222,7 @@ class GoogleSheetsFetch {
                 'original_date_gmt' => gmdate('Y-m-d\TH:i:s\Z') // Current timestamp as creation time
             ];
 
-            $fetch_data_packet = [
+            $fetch_data = [
                 'data' => [
                     'content_string' => $content_string,
                     'file_info' => null // No file info for spreadsheet data
@@ -230,7 +230,7 @@ class GoogleSheetsFetch {
                 'metadata' => $metadata
             ];
             
-            $eligible_items_packets[] = $fetch_data_packet;
+            $eligible_items_packets[] = $fetch_data;
             $rows_processed++;
             
             do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed spreadsheet row.', [

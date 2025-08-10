@@ -196,7 +196,7 @@ class WordPress {
             $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 
             // Create standardized packet
-            $input_data_packet = [
+            $input_data = [
                 'data' => [
                     'content_string' => $content_string,
                     'file_info' => null
@@ -211,7 +211,7 @@ class WordPress {
                     'original_date_gmt' => $post->post_date_gmt
                 ]
             ];
-            $eligible_items_packets[] = $input_data_packet;
+            $eligible_items_packets[] = $input_data;
         }
 
         if (empty($eligible_items_packets)) {
@@ -381,7 +381,7 @@ class WordPress {
                 $source_name = $api_host ? ucwords(str_replace(['www.', '.com', '.org', '.net'], '', $api_host)) : 'Unknown Source';
                 $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . wp_strip_all_tags($full_content_html);
                 
-                $input_data_packet = [
+                $input_data = [
                     'data' => [
                         'content_string' => $content_string,
                         'file_info' => null
@@ -396,7 +396,7 @@ class WordPress {
                     ]
                 ];
                 do_action('dm_log', 'debug', 'WordPress REST Input: Adding eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $pipeline_id]);
-                array_push($eligible_items_packets, $input_data_packet);
+                array_push($eligible_items_packets, $input_data);
                 if (count($eligible_items_packets) >= $process_limit) {
                     break;
                 }
@@ -584,7 +584,7 @@ class WordPress {
                 $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 
                 // Create standardized packet
-                $input_data_packet = [
+                $input_data = [
                     'data' => [
                         'content_string' => $content_string,
                         'file_info' => null
@@ -599,7 +599,7 @@ class WordPress {
                         'original_date_gmt' => $post['post_date_gmt'] ?? null
                     ]
                 ];
-                array_push($eligible_items_packets, $input_data_packet);
+                array_push($eligible_items_packets, $input_data);
                 $items_added_this_page++;
 
                 if (count($eligible_items_packets) >= $process_limit) {
