@@ -28,7 +28,7 @@ class Threads {
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['threads'] ?? null;
     }
 
@@ -54,7 +54,7 @@ class Threads {
         
         do_action('dm_log', 'debug', 'Threads Output: Starting Threads publication.');
 
-        // Get config - publish_config is the handler_config directly
+        // Get config - publish_config is the handler_settings directly
         $threads_config = $publish_config;
         if (!is_array($threads_config)) $threads_config = [];
 
@@ -182,7 +182,6 @@ class Threads {
                 'Content-Type' => 'application/json'
             ],
             'body' => json_encode($container_data),
-            'timeout' => 30
         ];
 
         $response = wp_remote_request($endpoint, $args);
@@ -232,7 +231,6 @@ class Threads {
             'body' => json_encode([
                 'creation_id' => $creation_id
             ]),
-            'timeout' => 30
         ];
 
         $response = wp_remote_request($endpoint, $args);

@@ -27,7 +27,7 @@ $schedule_interval = $scheduling_config['interval'] ?? 'manual';
 $last_run = $scheduling_config['last_run_at'] ?? null;
 if (!$last_run) {
     // Fallback: Get latest job for this flow
-    $all_databases = apply_filters('dm_get_database_services', []);
+    $all_databases = apply_filters('dm_db', []);
     $jobs_db = $all_databases['jobs'] ?? null;
     if ($jobs_db) {
         $jobs = $jobs_db->get_jobs_for_flow($flow_id);
@@ -35,9 +35,14 @@ if (!$last_run) {
     }
 }
 
-// Get next scheduled run
-$scheduler = apply_filters('dm_get_pipeline_scheduler', null);
-$next_run = $scheduler ? $scheduler->get_next_run_time($flow_id) : null;
+// Get next scheduled run directly from Action Scheduler
+$next_run = null;
+if (function_exists('as_next_scheduled_action')) {
+    $next_action = as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
+    if ($next_action) {
+        $next_run = date('Y-m-d H:i:s', $next_action);
+    }
+}
 
 // Validate required data - no fallbacks
 if (!isset($pipeline_steps)) {
@@ -91,14 +96,16 @@ if (is_object($flow)) {
             <?php if (!empty($pipeline_steps)): ?>
                 <?php foreach ($pipeline_steps as $index => $step): ?>
                     <?php 
-                    // Simple flow step card - no context complexity
-                    echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
-                        'step' => $step,
-                        'flow_config' => $flow_config,
-                        'flow_id' => $flow_id,
-                        'pipeline_id' => $pipeline_id,
-                        'is_first_step' => ($index === 0)
-                    ]);
+                    // Skip empty steps entirely - they don't belong in flow instances
+                    if (!($step['is_empty'] ?? false)) {
+                        echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
+                            'step' => $step,
+                            'flow_config' => $flow_config,
+                            'flow_id' => $flow_id,
+                            'pipeline_id' => $pipeline_id,
+                            'is_first_step' => ($index === 0)
+                        ]);
+                    }
                     ?>
                 <?php endforeach; ?>
             <?php else: ?>

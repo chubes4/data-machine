@@ -5,7 +5,7 @@
  * "Plugins Within Plugins" Architecture Implementation
  * 
  * Unified admin page architecture with embedded asset configuration and modal integration.
- * Demonstrates complete self-containment through direct dm_get_admin_page registration
+ * Demonstrates complete self-containment through direct dm_admin_pages registration
  * with zero bridge systems or legacy compatibility layers.
  * 
  * @package DataMachine
@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_pipelines_admin_page_filters() {
     
     // Pure discovery mode - matches actual system usage
-    add_filter('dm_get_admin_pages', function($pages) {
+    add_filter('dm_admin_pages', function($pages) {
         $pages['pipelines'] = [
             'page_title' => __('Pipelines', 'data-machine'),
             'menu_title' => __('Pipelines', 'data-machine'),
@@ -88,7 +88,6 @@ function dm_register_pipelines_admin_page_filters() {
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
-                                'pipeline_auto_save_nonce' => wp_create_nonce('dm_pipeline_auto_save_nonce'),
                                 'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
                                 'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                 'strings' => [
@@ -168,13 +167,15 @@ function dm_register_pipelines_admin_page_filters() {
     
     // Page actions (business logic operations) - using universal AJAX routing
     add_action('wp_ajax_dm_add_step', fn() => do_action('dm_ajax_route', 'dm_add_step', 'page'));
-    add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
-    add_action('wp_ajax_dm_delete_pipeline', fn() => do_action('dm_ajax_route', 'dm_delete_pipeline', 'page'));
     add_action('wp_ajax_dm_create_pipeline', fn() => do_action('dm_ajax_route', 'dm_create_pipeline', 'page'));
     add_action('wp_ajax_dm_add_flow', fn() => do_action('dm_ajax_route', 'dm_add_flow', 'page'));
-    add_action('wp_ajax_dm_delete_flow', fn() => do_action('dm_ajax_route', 'dm_delete_flow', 'page'));
     add_action('wp_ajax_dm_save_flow_schedule', fn() => do_action('dm_ajax_route', 'dm_save_flow_schedule', 'page'));
     add_action('wp_ajax_dm_run_flow_now', fn() => do_action('dm_ajax_route', 'dm_run_flow_now', 'page'));
+    
+    // Central deletion endpoints - delegate to dm_delete action hook
+    add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
+    add_action('wp_ajax_dm_delete_pipeline', fn() => do_action('dm_ajax_route', 'dm_delete_pipeline', 'page')); 
+    add_action('wp_ajax_dm_delete_flow', fn() => do_action('dm_ajax_route', 'dm_delete_flow', 'page'));
     
     // Modal actions (UI/template operations) - using universal AJAX routing
     add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
@@ -189,8 +190,6 @@ function dm_register_pipelines_admin_page_filters() {
         dm_handle_save_handler_settings();
     });
     
-    // Auto-save AJAX endpoint - using universal AJAX routing
-    add_action('wp_ajax_dm_pipeline_auto_save', fn() => do_action('dm_ajax_route', 'dm_pipeline_auto_save', 'page'));
     
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     
@@ -198,7 +197,7 @@ function dm_register_pipelines_admin_page_filters() {
     // All modal content routed through unified ModalAjax.php endpoint
     
     // Modal registration - Two-layer architecture: metadata only, content via dm_render_template
-    add_filter('dm_get_modals', function($modals) {
+    add_filter('dm_modals', function($modals) {
         // Static pipeline modals - metadata only, content generated during AJAX via dm_render_template
         $modals['step-selection'] = [
             'template' => 'modal/step-selection-cards',
@@ -311,7 +310,7 @@ function dm_handle_save_handler_settings() {
     }
     
     // Get handler configuration via pure discovery
-    $all_handlers = apply_filters('dm_get_handlers', []);
+    $all_handlers = apply_filters('dm_handlers', []);
     $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
         return ($handler['type'] ?? '') === $step_type;
     });
@@ -321,15 +320,15 @@ function dm_handle_save_handler_settings() {
         return;
     }
     
-    $handler_config = $handlers[$handler_slug];
+    $handler_info = $handlers[$handler_slug];
     
     // Get settings class to process form data using pure discovery
-    $all_settings = apply_filters('dm_get_handler_settings', []);
-    $settings_instance = $all_settings[$handler_slug] ?? null;
-    $handler_settings = [];
+    $all_settings = apply_filters('dm_handler_settings', []);
+    $handler_settings = $all_settings[$handler_slug] ?? null;
+    $saved_handler_settings = [];
     
     // If handler has settings, sanitize the form data
-    if ($settings_instance && method_exists($settings_instance, 'sanitize')) {
+    if ($handler_settings && method_exists($handler_settings, 'sanitize')) {
         $raw_settings = [];
         
         // Extract form fields (skip WordPress and system fields)
@@ -339,12 +338,12 @@ function dm_handle_save_handler_settings() {
             }
         }
         
-        $handler_settings = $settings_instance->sanitize($raw_settings);
+        $saved_handler_settings = $handler_settings->sanitize($raw_settings);
     }
     
     // For flow context, add handler to flow configuration
     if ($flow_id > 0) {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
@@ -386,7 +385,7 @@ function dm_handle_save_handler_settings() {
         // UPDATE existing handler settings OR ADD new handler (single handler per step)
         $flow_config[$flow_step_id]['handler'] = [
             'handler_slug' => $handler_slug,
-            'settings' => $handler_settings,
+            'settings' => $saved_handler_settings,
             'enabled' => true
         ];
         
@@ -404,9 +403,14 @@ function dm_handle_save_handler_settings() {
         $action_type = $handler_exists ? 'updated' : 'added';
         do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow step '{$flow_step_id}' in flow {$flow_id}");
         
+        // Auto-save pipeline after handler settings change
+        if ($pipeline_id > 0) {
+            do_action('dm_pipeline_auto_save', $pipeline_id);
+        }
+        
         $action_message = $handler_exists 
-            ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug)
-            : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug);
+            ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
+            : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug);
         
         wp_send_json_success([
             'message' => $action_message,
@@ -414,29 +418,24 @@ function dm_handle_save_handler_settings() {
             'step_type' => $step_type,
             'flow_step_id' => $flow_step_id,
             'pipeline_id' => $pipeline_id,
-            'handler_config' => $handler_config,
-            'handler_settings' => $handler_settings,
+            'handler_config' => $handler_info,
+            'handler_settings' => $saved_handler_settings,
             'action_type' => $handler_exists ? 'updated' : 'added'
         ]);
         
     } else {
         // For pipeline context (template), just confirm the handler is valid
         wp_send_json_success([
-            'message' => sprintf(__('Handler "%s" configuration saved.', 'data-machine'), $handler_config['label'] ?? $handler_slug),
+            'message' => sprintf(__('Handler "%s" configuration saved.', 'data-machine'), $handler_info['label'] ?? $handler_slug),
             'handler_slug' => $handler_slug,
             'step_type' => $step_type,
             'pipeline_id' => $pipeline_id,
-            'handler_config' => $handler_config,
-            'handler_settings' => $handler_settings
+            'handler_config' => $handler_info,
+            'handler_settings' => $saved_handler_settings
         ]);
     }
 }
 
-// Load Pipeline Scheduler component filters
-$scheduler_filters_path = __DIR__ . '/scheduler/PipelineSchedulerFilters.php';
-if (file_exists($scheduler_filters_path)) {
-    require_once $scheduler_filters_path;
-}
 
 // Pipeline template context resolution - handles context for all pipeline/flow templates
 add_filter('dm_render_template', function($content, $template_name, $data = []) {

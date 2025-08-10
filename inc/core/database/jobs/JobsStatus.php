@@ -102,7 +102,7 @@ class JobsStatus {
         }
 
         // Update flow last_run_at using existing services if available
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if ($db_flows && !empty($job->flow_id)) {
             // Update flow's last_run_at in scheduling configuration

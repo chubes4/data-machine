@@ -103,7 +103,6 @@ class GoogleSheetsAuth {
                 'refresh_token' => $refresh_token,
                 'grant_type' => 'refresh_token'
             ],
-            'timeout' => 30
         ]);
 
         if (is_wp_error($response)) {
@@ -272,7 +271,6 @@ class GoogleSheetsAuth {
                 'grant_type' => 'authorization_code',
                 'redirect_uri' => $callback_url
             ],
-            'timeout' => 30
         ]);
 
         if (is_wp_error($response)) {

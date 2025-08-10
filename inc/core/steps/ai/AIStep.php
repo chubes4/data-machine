@@ -395,8 +395,8 @@ class AIStep {
         }
         
         // Check if any handlers exist for the next step type that have directives
-        $all_handlers = apply_filters('dm_get_handlers', []);
-        $all_directives = apply_filters('dm_get_handler_directives', []);
+        $all_handlers = apply_filters('dm_handlers', []);
+        $all_directives = apply_filters('dm_handler_directives', []);
 
         // Find handlers for the next step type
         $step_handlers = array_filter($all_handlers, function($handler) use ($next_step) {
@@ -414,7 +414,7 @@ class AIStep {
         // Check if any of those handlers have directives
         $available_directive = '';
         $selected_handler = '';
-        foreach ($step_handlers as $handler_slug => $handler_config) {
+        foreach ($step_handlers as $handler_slug => $handler_info) {
             if (isset($all_directives[$handler_slug])) {
                 $available_directive = $all_directives[$handler_slug];
                 $selected_handler = $handler_slug;

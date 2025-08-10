@@ -249,10 +249,8 @@
         handleModalOpened: function(e, title, content) {
             // Check if this is a files handler modal
             if ($('#dm-file-upload').length > 0) {
-                // Small delay to ensure template is fully rendered
-                setTimeout(() => {
-                    this.loadExistingFiles();
-                }, 100);
+                // Load existing files immediately
+                this.loadExistingFiles();
             }
         },
 
@@ -616,12 +614,10 @@
             
             $container.prepend($message);
             
-            // Auto-remove messages after 4 seconds
-            setTimeout(() => {
-                $message.fadeOut(300, function() {
-                    $(this).remove();
-                });
-            }, 4000);
+            // Remove message immediately after display
+            $message.fadeOut(300, function() {
+                $(this).remove();
+            });
         }
 
     });

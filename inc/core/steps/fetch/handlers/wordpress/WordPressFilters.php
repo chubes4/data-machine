@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_wordpress_fetch_filters() {
     
     // Handler registration - WordPress declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['wordpress_fetch'] = [
             'type' => 'fetch',
             'class' => WordPress::class,
@@ -42,13 +42,13 @@ function dm_register_wordpress_fetch_filters() {
     });
     
     // Authentication registration - pure discovery mode
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         $providers['wordpress_fetch'] = new WordPressAuth();
         return $providers;
     });
     
     // Settings registration - pure discovery mode
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['wordpress_fetch'] = new WordPressSettings();
         return $all_settings;
     });

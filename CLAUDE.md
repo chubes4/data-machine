@@ -56,10 +56,13 @@ add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_conte
 ## Filter Reference
 
 ```php
-// Core services - Direct discovery
-$logger = apply_filters('dm_get_logger', null);
-$orchestrator = apply_filters('dm_get_orchestrator', null);
-$job_creator = apply_filters('dm_get_job_creator', null);
+// Core services - Action hooks and direct instantiation
+// Logger operations via dm_log action hook (see Action Hook System)
+do_action('dm_log', 'error', 'Message', ['context' => 'data']);
+// ProcessingOrchestrator is core engine - direct instantiation
+$orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
+// JobCreator operations via dm_run_flow_now action hook (see Action Hook System)
+do_action('dm_run_flow_now', $flow_id, 'manual_execution');
 
 // HTTP requests - Use dm_send_request action hook
 $result = null;
@@ -67,11 +70,11 @@ do_action('dm_send_request', 'GET', $url, $args, 'API Context', $result);
 // $result['success'] boolean, $result['data'] response, $result['error'] message
 
 // Database services - Collection discovery
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $db_jobs = $all_databases['jobs'] ?? null;
 
 // Handler discovery - Type filtering
-$all_handlers = apply_filters('dm_get_handlers', []);
+$all_handlers = apply_filters('dm_handlers', []);
 $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
 $specific_handler = $all_handlers['twitter'] ?? null;
 
@@ -84,14 +87,14 @@ $all_directives = apply_filters('dm_get_handler_directives', []);
 $job_context = apply_filters('dm_get_context', null, $job_id);
 
 // Step discovery and configuration
-$all_steps = apply_filters('dm_get_steps', []);
-$step_configs = apply_filters('dm_get_step_configs', []);
+$all_steps = apply_filters('dm_steps', []);
+$step_settings = apply_filters('dm_step_settings', []);
 
 // Template rendering with context resolution
 $content = apply_filters('dm_render_template', '', 'modal/handler-settings', $data);
 
-// Files repository - Singleton pattern
-$files_repository = apply_filters('dm_get_files_repository', null);
+// Files repository - Direct instantiation (handler-specific infrastructure)
+$files_repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
 ```
 
 ## Development Priorities
@@ -133,9 +136,9 @@ php -l file.php             # Syntax check
 
 # Service Discovery Validation
 define('WP_DEBUG', true); # Enable debugging
-error_log('Database services: ' . print_r(apply_filters('dm_get_database_services', []), true));
-error_log('Handlers: ' . print_r(apply_filters('dm_get_handlers', []), true));
-error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
+error_log('Database services: ' . print_r(apply_filters('dm_db', []), true));
+error_log('Handlers: ' . print_r(apply_filters('dm_handlers', []), true));
+error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
 ```
 
 ## Components
@@ -178,7 +181,11 @@ error_log('Steps: ' . print_r(apply_filters('dm_get_steps', []), true));
 
 **Runtime Configuration**:
 ```php
-$logger = apply_filters('dm_get_logger', null);
+// Use dm_log action hook for logging operations (preferred)
+do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
+
+// Direct access if needed for configuration
+$logger = new \DataMachine\Engine\Logger();
 
 // Get current level
 $current_level = $logger->get_level(); // Returns 'debug', 'error', or 'none'
@@ -187,7 +194,7 @@ $current_level = $logger->get_level(); // Returns 'debug', 'error', or 'none'
 $logger->set_level('error'); // Changes effective immediately
 
 // Available levels
-$levels = Logger::get_available_log_levels(); // Returns array with descriptions
+$levels = \DataMachine\Engine\Logger::get_available_log_levels(); // Returns array with descriptions
 ```
 
 **Default Configuration**: Log level defaults to `error` (problems only) for production environments while providing full debugging capability when needed.
@@ -426,7 +433,7 @@ wp_send_json_success(['step_data' => $data]); // NOT step_html
 
 **Modal Registration**:
 ```php
-add_filter('dm_get_modals', function($modals) {
+add_filter('dm_modals', function($modals) {
     $modals['step-selection'] = [
         'template' => 'modal/step-selection-cards',
         'title' => __('Select Step Type', 'data-machine')
@@ -441,7 +448,7 @@ add_filter('dm_get_modals', function($modals) {
 - `dm_get_modal_content` - General modal loading
 - `dm_pipeline_ajax` with `get_template` - Dynamic template rendering
 
-**Universal Reusability**: Include `core-modal.js`, add `.dm-modal-open` buttons with data attributes, register via `dm_get_modals` filter.
+**Universal Reusability**: Include `core-modal.js`, add `.dm-modal-open` buttons with data attributes, register via `dm_modals` filter.
 
 
 ## Template Context Resolution System
@@ -470,21 +477,12 @@ add_filter('dm_get_modals', function($modals) {
 
 ## Files Handler Repository System
 
-**Singleton Repository Pattern**: Files handler implements dedicated repository for file management with flow-specific isolation.
+**Direct Instantiation Pattern**: Files handler implements dedicated repository for file management with flow-specific isolation.
 
-**Repository Service Discovery**:
+**Repository Usage**:
 ```php
-// Singleton pattern for Files repository
-add_filter('dm_get_files_repository', function($repository) {
-    static $instance = null;
-    if ($instance === null) {
-        $instance = new FilesRepository();
-    }
-    return $instance;
-}, 10, 1);
-
-// Usage pattern
-$repository = apply_filters('dm_get_files_repository', null);
+// Direct instantiation - Files handler internal infrastructure
+$repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
 ```
 
 **Key Features**:
@@ -493,7 +491,7 @@ $repository = apply_filters('dm_get_files_repository', null);
 - **Security Validation**: File size limits (32MB) and dangerous extension blocking
 - **Processing Status Integration**: Files marked as processed via ProcessedItems service
 - **AJAX File Upload**: Secure upload handling with nonce verification
-- **Repository Pattern**: Singleton repository implementation accessed via `dm_get_files_repository` filter
+- **Repository Pattern**: Direct instantiation as Files handler internal infrastructure
 
 **File Management Operations**:
 ```php
@@ -573,7 +571,7 @@ do_action('dm_send_request', 'POST', $url, $args, 'API Call', $result);
 **Discovery Registration**: Uses standard database service collection pattern:
 ```php
 // ProcessedItems discovery pattern - database service collection only
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $processed_items_service = $all_databases['processed_items'] ?? null;
 ```
 
@@ -594,10 +592,10 @@ $processed_items_service = $all_databases['processed_items'] ?? null;
 
 **Direct Template Rendering Pattern**: AdminMenuAssets.php uses standardized `"page/{$page_slug}-page"` template pattern for unified rendering.
 
-**Unified Registration**: Admin pages register with assets, templates, and configuration in a single `dm_get_admin_pages` filter:
+**Unified Registration**: Admin pages register with assets, templates, and configuration in a single `dm_admin_pages` filter:
 
 ```php
-add_filter('dm_get_admin_pages', function($pages) {
+add_filter('dm_admin_pages', function($pages) {
     $pages['jobs'] = [
         'page_title' => __('Jobs', 'data-machine'),
         'capability' => 'manage_options', 'position' => 20,

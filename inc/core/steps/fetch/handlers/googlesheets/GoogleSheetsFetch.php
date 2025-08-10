@@ -72,7 +72,7 @@ class GoogleSheetsFetch {
         $process_limit = max(1, absint($config['row_limit'] ?? 100));
 
         // Get Google Sheets authentication service
-        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $all_auth = apply_filters('dm_auth_providers', []);
         $auth_service = $all_auth['googlesheets'] ?? null;
         if (!$auth_service) {
             throw new Exception(esc_html__('Google Sheets authentication service not available.', 'data-machine'));
@@ -105,7 +105,6 @@ class GoogleSheetsFetch {
                 'Authorization' => 'Bearer ' . $access_token,
                 'Accept' => 'application/json',
             ],
-            'timeout' => 30,
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
         ]);
 

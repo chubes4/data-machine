@@ -29,7 +29,7 @@ if (!defined('WPINC')) {
         <?php 
         // Template self-discovery - get handlers for this step type
         $step_type = $step_type ?? 'unknown';
-        $all_handlers = apply_filters('dm_get_handlers', []);
+        $all_handlers = apply_filters('dm_handlers', []);
         $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
             return ($handler['type'] ?? '') === $step_type;
         });

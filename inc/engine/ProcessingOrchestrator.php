@@ -2,18 +2,20 @@
 /**
  * Pure execution engine for data processing pipelines.
  *
- * LEAN ARCHITECTURE:
- * - JobCreator builds complete pipeline configuration
- * - Orchestrator receives pre-built config and executes steps
- * - Zero database dependencies or redundant data preparation
+ * RUNTIME LOADING ARCHITECTURE:
+ * - Ultra-simple job creation (job_id with pipeline_id + flow_id)
+ * - ProcessingOrchestrator loads all configuration at runtime
+ * - Database queries performed only when needed for step execution
  * - Pure pipeline execution with DataPacket flow
  *
  * EXECUTION FLOW:
- * - Receives pre-built configuration from JobCreator via Action Scheduler
- * - Gets step data directly from provided pipeline_config array
- * - Instantiates step classes via filter-based discovery
- * - Passes complete job config to steps for self-configuration
- * - Schedules next step with updated data packet array
+ * - Receives job_id and execution_order from Action Scheduler
+ * - Loads job data to get pipeline_id and flow_id
+ * - Loads pipeline steps from database
+ * - Loads flow configuration from database
+ * - Merges step and flow configuration
+ * - Instantiates and executes step with merged configuration
+ * - Schedules next step with updated DataPacket
  *
  * STEP REQUIREMENTS:
  * - Parameter-less constructor only
@@ -34,124 +36,137 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ProcessingOrchestrator {
 
-	/**
-	 * Constructor with filter-based service access.
-	 * Uses pure filter-based architecture for dependency resolution.
-	 */
-	public function __construct() {
-		// Parameter-less constructor - all services accessed via filters
-	}
 
 	/**
 	 * Static callback method for Action Scheduler direct execution.
-	 * Eliminates the need for WordPress hook registration layers.
+	 * Ultra-simple flow_step_id based execution.
 	 *
-	 * @param int $job_id The job ID.
-	 * @param int $execution_order The step execution order in pipeline (0-based).
-	 * @param int|null $pipeline_id The pipeline ID.
-	 * @param int|null $flow_id The flow ID.
-	 * @param array|null $job_config Pre-built job configuration.
+	 * @param string $flow_step_id The flow step ID (format: pipeline_step_id_flow_id).
 	 * @param array|null $data_packet Previous step data packet array.
 	 * @return bool True on success, false on failure.
 	 */
-	public static function execute_step_callback( $job_id, $execution_order, $pipeline_id = null, $flow_id = null, $job_config = null, $data_packet = null ): bool {
-		$orchestrator = apply_filters('dm_get_orchestrator', null);
-		if ( ! $orchestrator ) {
-			do_action('dm_log', 'error', 'Orchestrator service not available for Action Scheduler callback', [
-				'job_id' => $job_id,
-				'execution_order' => $execution_order
-			]);
-			return false;
+	public static function execute_step_callback( string $flow_step_id, $data_packet = null ): bool {
+		// Direct instantiation - ProcessingOrchestrator is the core engine
+		$orchestrator = new self();
+		
+		// Ultra-simple flow_step_id execution
+		return $orchestrator->execute_step( $flow_step_id, $data_packet ?: [] );
+	}
+
+	/**
+	 * Split flow_step_id using clean filter-based parsing.
+	 * 
+	 * @param string $flow_step_id The flow step ID.
+	 * @return array Parsed components with 'pipeline_step_id' and 'flow_id' keys.
+	 */
+	private function split_flow_step_id( string $flow_step_id ) {
+		return apply_filters('dm_split_flow_step_id', [], $flow_step_id);
+	}
+
+	/**
+	 * Load complete flow step configuration from flow_step_id.
+	 * 
+	 * @param string $flow_step_id The flow step ID.
+	 * @return array|null Complete step configuration or null if not found.
+	 */
+	private function load_flow_step_config( string $flow_step_id ) {
+		$parts = $this->split_flow_step_id($flow_step_id);
+		$flow_id = $parts['flow_id'] ?? null;
+		if (!$flow_id) {
+			do_action('dm_log', 'error', 'Invalid flow_step_id format', ['flow_step_id' => $flow_step_id]);
+			return null;
 		}
-		
-		// Call execute_step with complete parameter set - FAIL IMMEDIATELY if missing data
-		if ( $pipeline_id && $flow_id && $job_config ) {
-			return $orchestrator->execute_step( $execution_order, $job_id, $pipeline_id, $flow_id, $job_config, $data_packet ?: [] );
+
+		// Single database query
+		$all_databases = apply_filters('dm_db', []);
+		$db_flows = $all_databases['flows'] ?? null;
+		if (!$db_flows) {
+			do_action('dm_log', 'error', 'Flows database service unavailable', ['flow_step_id' => $flow_step_id]);
+			return null;
 		}
-		
-		// No legacy support - fail immediately
-		do_action('dm_log', 'error', 'execute_step_callback requires complete parameter set - missing pipeline data', [
-			'job_id' => $job_id,
-				'execution_order' => $execution_order,
-				'pipeline_id' => $pipeline_id,
-				'flow_id' => $flow_id,
-				'has_job_config' => !empty($job_config)
-			] );
-		
-		return false;
+
+		$flow = $db_flows->get_flow($flow_id);
+		if (!$flow || empty($flow['flow_config'])) {
+			do_action('dm_log', 'error', 'Flow not found or empty config', ['flow_step_id' => $flow_step_id, 'flow_id' => $flow_id]);
+			return null;
+		}
+
+		$flow_config = is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+		if (!isset($flow_config[$flow_step_id])) {
+			do_action('dm_log', 'error', 'Flow step not found in flow config', ['flow_step_id' => $flow_step_id]);
+			return null;
+		}
+
+		return $flow_config[$flow_step_id];
+	}
+
+	/**
+	 * Find next flow step ID by execution order.
+	 * 
+	 * @param string $current_flow_step_id Current flow step ID.
+	 * @return string|null Next flow step ID or null if no next step.
+	 */
+	private function find_next_flow_step_id( string $current_flow_step_id ) {
+		$current_config = $this->load_flow_step_config($current_flow_step_id);
+		if (!$current_config) {
+			return null;
+		}
+
+		$flow_id = $current_config['flow_id'];
+		$current_execution_order = $current_config['execution_order'];
+		$next_execution_order = $current_execution_order + 1;
+
+		// Load flow to search all steps
+		$all_databases = apply_filters('dm_db', []);
+		$db_flows = $all_databases['flows'] ?? null;
+		$flow = $db_flows->get_flow($flow_id);
+		$flow_config = is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+
+		// Find step with next execution order
+		foreach ($flow_config as $flow_step_id => $config) {
+			if (($config['execution_order'] ?? -1) === $next_execution_order) {
+				return $flow_step_id;
+			}
+		}
+
+		return null; // No next step
 	}
 	/**
-	 * Execute a pipeline step using pre-built configuration from JobCreator.
+	 * Execute a pipeline step using flow_step_id based execution.
 	 * 
-	 * PURE EXECUTION ENGINE:
-	 * - Uses pre-built pipeline configuration (no database lookups)
-	 * - Gets step data directly from pipeline_config array
-	 * - Instantiates step and passes complete job configuration
-	 * - Steps handle their own configuration extraction
+	 * ULTRA-SIMPLE FLOW-STEP-ID ENGINE:
+	 * - Single parameter contains all execution context
+	 * - Flow config has execution_order + complete step configuration
+	 * - Single database query for complete step execution
 	 *
-	 * @param int $execution_order The step execution order in pipeline_config array (0-based index).
-	 * @param int $job_id The job ID.
-	 * @param int $pipeline_id The pipeline ID.
-	 * @param int $flow_id The flow ID.
-	 * @param array $job_config Pre-built job configuration from JobCreator.
+	 * @param string $flow_step_id The flow step ID (format: pipeline_step_id_flow_id).
 	 * @param array $data_packet Previous step data packet array for execution.
 	 * @return bool True on success, false on failure.
 	 */
-	public function execute_step( int $execution_order, int $job_id, int $pipeline_id, int $flow_id, array $job_config, array $data_packet = [] ): bool {
+	public function execute_step( string $flow_step_id, array $data_packet = [] ): bool {
 		try {
-			do_action('dm_log', 'debug', 'Executing pipeline step with pre-built configuration', [
-				'job_id' => $job_id,
-				'pipeline_id' => $pipeline_id,
-				'flow_id' => $flow_id,
-				'step_execution_order' => $execution_order
+			do_action('dm_log', 'debug', 'Executing step with flow_step_id', [
+				'flow_step_id' => $flow_step_id
 			]);
 			
-			// Use pre-built job configuration from JobCreator
-			if ( empty( $job_config ) ) {
-				do_action('dm_log', 'error', 'Job configuration is empty', [
-					'pipeline_id' => $pipeline_id,
-					'job_id' => $job_id,
-					'execution_order' => $execution_order
-				] );
+			// Load complete step configuration using flow_step_id
+			$step_config = $this->load_flow_step_config($flow_step_id);
+			if (!$step_config) {
+				do_action('dm_log', 'error', 'Failed to load step configuration', [
+					'flow_step_id' => $flow_step_id
+				]);
 				return false;
 			}
-			
-			// Use pre-built job configuration from JobCreator (no database lookups)
-			$pipeline_steps = $job_config['pipeline_step_config'] ?? [];
-			
-			// Validate we have steps in pre-built configuration
-			if ( empty( $pipeline_steps ) ) {
-				do_action('dm_log', 'error', 'Job configuration contains no steps', [
-					'execution_order' => $execution_order,
-					'job_id' => $job_id,
-					'pipeline_id' => $pipeline_id
-				] );
-				return false;
-			}
-			
-			// Get step directly from pre-built array by execution order index
-			if ( ! isset( $pipeline_steps[$execution_order] ) ) {
-				do_action('dm_log', 'error', 'Step not found at execution order in pre-built configuration', [
-					'execution_order' => $execution_order,
-					'available_steps' => count( $pipeline_steps ),
-					'job_id' => $job_id
-				] );
-				return false;
-			}
-			
-			$step_config = $pipeline_steps[$execution_order];
-			$next_step_exists = isset( $pipeline_steps[$execution_order + 1] );
 
-			// Get step class via direct discovery - no mapping needed
+			// Get step class via direct discovery
 			$step_type = $step_config['step_type'] ?? '';
-			$all_steps = apply_filters('dm_get_steps', []);
+			$all_steps = apply_filters('dm_steps', []);
 			$step_definition = $all_steps[$step_type] ?? null;
 			
 			if ( ! $step_definition ) {
 				do_action('dm_log', 'error', 'Step type not found in registry', [
-					'execution_order' => $execution_order,
-					'step_type' => $step_type,
-					'job_id' => $job_id
+					'flow_step_id' => $flow_step_id,
+					'step_type' => $step_type
 				] );
 				return false;
 			}
@@ -159,15 +174,12 @@ class ProcessingOrchestrator {
 			$step_class = $step_definition['class'] ?? '';
 			if ( ! class_exists( $step_class ) ) {
 				do_action('dm_log', 'error', 'Pipeline step class not found', [
-					'execution_order' => $execution_order,
+					'flow_step_id' => $flow_step_id,
 					'step_type' => $step_type,
-					'class' => $step_class,
-					'job_id' => $job_id
+					'class' => $step_class
 				] );
 				return false;
 			}
-
-			// ProcessingOrchestrator is now lean - job tracking moved to ActionScheduler
 
 			// Create step instance (parameter-less constructor)
 			$step_instance = new $step_class();
@@ -175,60 +187,36 @@ class ProcessingOrchestrator {
 			// Enforce standard execute method requirement
 			if ( ! method_exists( $step_instance, 'execute' ) ) {
 				do_action('dm_log', 'error', 'Pipeline step must have execute method', [
-					'execution_order' => $execution_order,
+					'flow_step_id' => $flow_step_id,
 					'class' => $step_class,
-					'job_id' => $job_id,
 					'available_methods' => get_class_methods( $step_instance )
 				] );
 				return false;
 			}
 
-			// For steps that need handlers (fetch/publish), get live flow config
-			$all_databases = apply_filters('dm_get_database_services', []);
-			$db_flows = $all_databases['flows'] ?? null;
-			
-			$flow_config = [];
-			$flow_step_config = [];
-			
-			if ($db_flows) {
-				$flow = $db_flows->get_flow($flow_id);
-				if ($flow && !empty($flow['flow_config'])) {
-					$flow_config = json_decode($flow['flow_config'], true) ?: [];
-					
-					// Search flow_config for step matching current pipeline_step_id
-					$current_pipeline_step_id = $step_config['pipeline_step_id'] ?? '';
-					
-					foreach ($flow_config as $flow_step) {
-						if (($flow_step['pipeline_step_id'] ?? '') === $current_pipeline_step_id) {
-							$flow_step_config = $flow_step;
-							break;
-						}
+			// Add pipeline context for AI steps only (for directive discovery)
+			if ($step_type === 'ai') {
+				// AI steps need pipeline context to find next step for directive injection
+				$parts = $this->split_flow_step_id($flow_step_id);
+				$flow_id = $parts['flow_id'] ?? null;
+				if ($flow_id) {
+					$all_databases = apply_filters('dm_db', []);
+					$db_flows = $all_databases['flows'] ?? null;
+					if ($db_flows) {
+						$flow = $db_flows->get_flow($flow_id);
+						$full_flow_config = is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+						$step_config['full_flow_config'] = $full_flow_config;
 					}
 				}
 			}
 			
-			// Merge step config with flow step config (handlers, settings)
-			$merged_step_config = array_merge($step_config, $flow_step_config);
-			
-			// Add essential IDs that steps/handlers need for processing
-			$merged_step_config['pipeline_id'] = $pipeline_id;
-			$merged_step_config['flow_id'] = $flow_id;
-			
-			// Add pipeline context for AI steps only (for directive discovery)
-			if ($step_type === 'ai') {
-				$merged_step_config['pipeline_step_config'] = $pipeline_steps;
-				$merged_step_config['current_execution_order'] = $execution_order;
-			}
-			
-			// Pass merged step configuration directly - steps should not introspect job config
-			// Steps receive only their own configuration, not entire pipeline or flow config
-			$data_packet = $step_instance->execute( $job_id, $data_packet, $merged_step_config );
+			// Execute step with complete configuration
+			$data_packet = $step_instance->execute( $flow_step_id, $data_packet, $step_config );
 			
 			// Validate step return - must be data packet array
 			if ( ! is_array( $data_packet ) ) {
 				do_action('dm_log', 'error', 'Step must return data packet array', [
-					'job_id' => $job_id,
-					'execution_order' => $execution_order,
+					'flow_step_id' => $flow_step_id,
 					'class' => $step_class,
 					'returned_type' => gettype( $data_packet )
 				] );
@@ -236,8 +224,7 @@ class ProcessingOrchestrator {
 			}
 			
 			do_action('dm_log', 'debug', 'Step executed with data packet array', [
-				'job_id' => $job_id,
-				'execution_order' => $execution_order,
+				'flow_step_id' => $flow_step_id,
 				'class' => $step_class,
 				'final_items' => count( $data_packet )
 			] );
@@ -247,37 +234,33 @@ class ProcessingOrchestrator {
 			
 			// Handle pipeline flow based on step success
 			if ( $step_success ) {
-				if ( $next_step_exists ) {
-					$next_execution_order = $execution_order + 1;
-					// Pass data packet array to next step (pure engine flow)
-					if ( ! $this->schedule_next_step( $job_id, $next_execution_order, $pipeline_id, $flow_id, $job_config, $data_packet ) ) {
+				// Find next step using execution_order
+				$next_flow_step_id = $this->find_next_flow_step_id($flow_step_id);
+				
+				if ( $next_flow_step_id ) {
+					// Schedule next step with updated data packet
+					if ( ! $this->schedule_next_step( $next_flow_step_id, $data_packet ) ) {
 						do_action('dm_log', 'error', 'Failed to schedule next step', [
-							'current_position' => $execution_order,
-							'next_position' => $next_execution_order,
-							'job_id' => $job_id
+							'current_flow_step_id' => $flow_step_id,
+							'next_flow_step_id' => $next_flow_step_id
 						] );
 						return false;
 					}
 					
 					do_action('dm_log', 'debug', 'Scheduled next step with data packet array', [
-						'current_execution_order' => $execution_order,
-						'next_execution_order' => $next_execution_order,
-						'job_id' => $job_id,
+						'current_flow_step_id' => $flow_step_id,
+						'next_flow_step_id' => $next_flow_step_id,
 						'items_passed' => count( $data_packet )
 					] );
 				} else {
-					// Final step completed successfully with output
 					do_action('dm_log', 'debug', 'Pipeline execution completed successfully', [
-						'final_execution_order' => $execution_order,
-						'job_id' => $job_id,
+						'final_flow_step_id' => $flow_step_id,
 						'final_items' => count( $data_packet )
 					] );
 				}
 			} else {
-				// Step failed - returned empty data packet array
-				do_action('dm_log', 'error', 'Step execution failed - no output data', [
-					'job_id' => $job_id,
-					'failed_step' => $execution_order,
+				do_action('dm_log', 'error', 'Step execution failed - empty data packet', [
+					'flow_step_id' => $flow_step_id,
 					'class' => $step_class
 				] );
 			}
@@ -286,8 +269,7 @@ class ProcessingOrchestrator {
 
 		} catch ( \Exception $e ) {
 			do_action('dm_log', 'error', 'Exception in pipeline step execution', [
-					'execution_order' => $execution_order,
-					'job_id' => $job_id,
+					'flow_step_id' => $flow_step_id,
 					'error' => $e->getMessage(),
 					'trace' => $e->getTraceAsString()
 				] );
@@ -297,48 +279,16 @@ class ProcessingOrchestrator {
 
 
 	/**
-	 * Schedule the next step in the async pipeline using direct Action Scheduler execution.
+	 * Schedule the next step in the async pipeline using flow_step_id.
 	 *
-	 * @param int $job_id The job ID.
-	 * @param int $execution_order The next step execution order.
-	 * @param int $pipeline_id The pipeline ID.
-	 * @param int $flow_id The flow ID.
-	 * @param array $job_config Pre-built job configuration.
+	 * @param string $flow_step_id The next flow step ID to execute.
 	 * @param array $data_packet Previous step data packet array for next execution.
 	 * @return bool True on success, false on failure.
 	 */
-	private function schedule_next_step( int $job_id, int $execution_order, int $pipeline_id, int $flow_id, array $job_config, array $data_packet = [] ): bool {
-		
-		if (!function_exists('as_schedule_single_action')) {
-			do_action('dm_log', 'error', 'Action Scheduler not available');
-			return false;
-		}
-		
-		$action_id = as_schedule_single_action(
-			time(), // Action Scheduler handles immediate execution precisely
-			'dm_execute_step',
-			[
-				'job_id' => $job_id,
-				'execution_order' => $execution_order,
-				'pipeline_id' => $pipeline_id,
-				'flow_id' => $flow_id,
-				'pipeline_config' => $job_config,
-				'previous_data_packets' => $data_packet
-			],
-			'data-machine'
-		);
-
-		$success = $action_id !== false && $action_id !== 0;
-		
-		if ( ! $success ) {
-			do_action('dm_log', 'error', 'Failed to schedule next step', [
-				'job_id' => $job_id,
-				'execution_order' => $execution_order,
-				'action_id' => $action_id
-			] );
-		}
-		
-		return $success;
+	private function schedule_next_step( string $flow_step_id, array $data_packet = [] ): bool {
+		// Use centralized action hook for flow_step_id scheduling
+		do_action('dm_schedule_next_step', $flow_step_id, $data_packet);
+		return true; // Action hook handles error logging internally
 	}
 
 } // End class

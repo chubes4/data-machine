@@ -349,16 +349,13 @@
                 $message.css('color', '#dc3545');
             }
             
-            // Insert message after button and fade it in
+            // Insert message after button and fade it in, then out
             $button.after($message);
-            $message.hide().fadeIn(300);
-            
-            // Auto-remove after 3 seconds
-            setTimeout(() => {
-                $message.fadeOut(300, function() {
+            $message.hide().fadeIn(300, function() {
+                $(this).fadeOut(300, function() {
                     $(this).remove();
                 });
-            }, 3000);
+            });
         },
 
         /**
@@ -544,9 +541,7 @@
             
             // Add visual feedback for the update
             $flowCountElement.addClass('dm-count-updated');
-            setTimeout(() => {
-                $flowCountElement.removeClass('dm-count-updated');
-            }, 1000);
+            $flowCountElement.removeClass('dm-count-updated');
         },
 
         /**

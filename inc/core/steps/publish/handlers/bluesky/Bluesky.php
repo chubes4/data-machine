@@ -30,11 +30,11 @@ class Bluesky {
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['bluesky'] ?? null;
         
         if ($this->auth === null) {
-            throw new \RuntimeException('Bluesky authentication service not available. Required service missing from dm_get_auth_providers filter.');
+            throw new \RuntimeException('Bluesky authentication service not available. Required service missing from dm_auth_providers filter.');
         }
     }
 
@@ -69,7 +69,7 @@ class Bluesky {
         
         do_action('dm_log', 'debug', 'Starting Bluesky output handling.');
         
-        // 1. Get config - publish_config is the handler_config directly
+        // 1. Get config - publish_config is the handler_settings directly
         $include_source = $publish_config['bluesky_include_source'] ?? true;
         $enable_images = $publish_config['bluesky_enable_images'] ?? true;
 
@@ -368,7 +368,6 @@ class Bluesky {
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body' => $image_content,
-            'timeout' => 60
         ]);
 
         unlink($temp_file_path);
@@ -417,7 +416,6 @@ class Bluesky {
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body' => $body,
-            'timeout' => 30
         ]);
 
         if (is_wp_error($response)) {

@@ -222,10 +222,8 @@
             // Open modal
             dmCoreModal.open(template, contextData);
 
-            // Restore button state after a delay
-            setTimeout(() => {
-                $button.text(originalText).prop('disabled', false);
-            }, 1000);
+            // Restore button state immediately
+            $button.text(originalText).prop('disabled', false);
         });
 
         // Modal content trigger - changes modal content without closing/reopening

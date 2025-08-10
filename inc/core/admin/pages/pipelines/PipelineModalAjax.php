@@ -91,14 +91,14 @@ class PipelineModalAjax
         }
 
         // Validate step type exists using pure discovery
-        $all_steps = apply_filters('dm_get_steps', []);
+        $all_steps = apply_filters('dm_steps', []);
         $step_config = $all_steps[$step_type] ?? null;
         if (!$step_config) {
             wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
         }
 
         // Check if this is the first flow step by counting existing steps in flows
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         $flows = $db_flows ? $db_flows->get_flows_by_pipeline($_POST['pipeline_id'] ?? 0) : [];
         $is_first_step = empty($flows) || empty($flows[0]['flow_config'] ?? []);
@@ -134,7 +134,7 @@ class PipelineModalAjax
         }
 
         // Get database service
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
@@ -413,7 +413,7 @@ class PipelineModalAjax
         }
         
         // Get remote locations database service
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_remote_locations = $all_databases['remote_locations'] ?? null;
         if (!$db_remote_locations) {
             wp_send_json_error(['message' => __('Remote locations database service unavailable', 'data-machine')]);
@@ -475,14 +475,14 @@ class PipelineModalAjax
         // Fallback: if not in context, get from flow_config lookup
         if (!$flow_id || !$pipeline_step_id) {
             // Get database service to lookup flow config
-            $all_databases = apply_filters('dm_get_database_services', []);
+            $all_databases = apply_filters('dm_db', []);
             $db_flows = $all_databases['flows'] ?? null;
             
             if ($db_flows && $flow_step_id) {
                 // Find the flow that contains this flow_step_id
-                $flows = $db_flows->get_all_flows();
+                $flows = $db_flows->get_all_active_flows();
                 foreach ($flows as $flow) {
-                    $flow_config = json_decode($flow['flow_config'] ?? '{}', true);
+                    $flow_config = $flow['flow_config'] ?? [];
                     if (isset($flow_config[$flow_step_id])) {
                         $flow_step_data = $flow_config[$flow_step_id];
                         $flow_id = $flow_step_data['flow_id'] ?? $flow['flow_id'];
@@ -511,7 +511,7 @@ class PipelineModalAjax
         }
         
         // Get handler configuration via pure discovery
-        $all_handlers = apply_filters('dm_get_handlers', []);
+        $all_handlers = apply_filters('dm_handlers', []);
         $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
             return ($handler['type'] ?? '') === $step_type;
         });
@@ -520,15 +520,15 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Invalid handler for this step type', 'data-machine')]);
         }
         
-        $handler_config = $handlers[$handler_slug];
+        $handler_info = $handlers[$handler_slug];
         
         // Get settings class to process form data using pure discovery
-        $all_settings = apply_filters('dm_get_handler_settings', []);
-        $settings_instance = $all_settings[$handler_slug] ?? null;
-        $handler_settings = [];
+        $all_settings = apply_filters('dm_handler_settings', []);
+        $handler_settings = $all_settings[$handler_slug] ?? null;
+        $saved_handler_settings = [];
         
         // If handler has settings, sanitize the form data
-        if ($settings_instance && method_exists($settings_instance, 'sanitize')) {
+        if ($handler_settings && method_exists($handler_settings, 'sanitize')) {
             $raw_settings = [];
             
             // Extract form fields (skip WordPress and system fields)
@@ -538,12 +538,12 @@ class PipelineModalAjax
                 }
             }
             
-            $handler_settings = $settings_instance->sanitize($raw_settings);
+            $saved_handler_settings = $handler_settings->sanitize($raw_settings);
         }
         
         // For flow context, update or add handler to flow configuration
         if ($flow_id > 0) {
-            $all_databases = apply_filters('dm_get_database_services', []);
+            $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
             if (!$db_flows) {
                 wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
@@ -581,7 +581,7 @@ class PipelineModalAjax
             // UPDATE existing handler settings OR ADD new handler (single handler per step)
             $flow_config[$flow_step_id]['handler'] = [
                 'handler_slug' => $handler_slug,
-                'settings' => $handler_settings,
+                'settings' => $saved_handler_settings,
                 'enabled' => true
             ];
             
@@ -599,8 +599,8 @@ class PipelineModalAjax
             do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
             
             $action_message = $handler_exists 
-                ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug)
-                : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_config['label'] ?? $handler_slug);
+                ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
+                : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug);
             
             wp_send_json_success([
                 'message' => $action_message,
@@ -610,20 +610,20 @@ class PipelineModalAjax
                 'flow_id' => $flow_id,
                 'pipeline_step_id' => $pipeline_step_id,
                 'pipeline_id' => $pipeline_id,
-                'handler_config' => $handler_config,
-                'handler_settings' => $handler_settings,
+                'handler_config' => $handler_info,
+                'handler_settings' => $saved_handler_settings,
                 'action_type' => $handler_exists ? 'updated' : 'added'
             ]);
             
         } else {
             // For pipeline context (template), just confirm the handler is valid
             wp_send_json_success([
-                'message' => sprintf(__('Handler "%s" configuration saved', 'data-machine'), $handler_config['label'] ?? $handler_slug),
+                'message' => sprintf(__('Handler "%s" configuration saved', 'data-machine'), $handler_info['label'] ?? $handler_slug),
                 'handler_slug' => $handler_slug,
                 'step_type' => $step_type,
                 'pipeline_id' => $pipeline_id,
-                'handler_config' => $handler_config,
-                'handler_settings' => $handler_settings
+                'handler_config' => $handler_info,
+                'handler_settings' => $saved_handler_settings
             ]);
         }
     }

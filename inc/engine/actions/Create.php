@@ -1,0 +1,471 @@
+<?php
+/**
+ * Data Machine Create Actions
+ *
+ * Centralized creation operations for all entity types - pipelines, flows, steps, and jobs.
+ * Eliminates code duplication across creation types through unified validation, 
+ * error handling, and service discovery patterns.
+ *
+ * SUPPORTED CREATION TYPES:
+ * - pipeline: New pipeline with auto-generated Draft Flow
+ * - flow: New flow with pipeline step synchronization
+ * - step: New pipeline step with flow synchronization
+ * - job: Job creation via existing flow execution system
+ *
+ * ARCHITECTURAL BENEFITS:
+ * - Consistent permission checking across all creation operations
+ * - Unified validation patterns for different entity types
+ * - Filter-based service discovery for database operations
+ * - Centralized logging and error handling
+ *
+ * @package DataMachine
+ * @since NEXT_VERSION
+ */
+
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
+
+/**
+ * Data Machine Create Actions Class
+ *
+ * Handles centralized creation operations through the dm_create action hook.
+ * Provides consistent validation, permission checking, and service discovery
+ * patterns for all creation types.
+ *
+ * @since NEXT_VERSION
+ */
+class DataMachine_Create_Actions {
+
+    /**
+     * Register create action hooks.
+     *
+     * Registers the central dm_create action hook that routes to specific
+     * creation handlers based on entity type.
+     *
+     * @since NEXT_VERSION
+     */
+    public function register_actions() {
+        // Central creation action hook - eliminates code duplication across all creation types
+        add_action('dm_create', [$this, 'handle_create'], 10, 3);
+    }
+
+    /**
+     * Handle universal creation operations for all entity types.
+     *
+     * Central creation handler that eliminates code duplication across pipeline, flow, step, and job creation.
+     * Provides consistent validation, error handling, and service discovery patterns.
+     *
+     * @param string $create_type Type of entity to create (pipeline|flow|step|job)
+     * @param array $data Creation data and parameters
+     * @param array $context Additional context information
+     * @since NEXT_VERSION
+     */
+    public function handle_create($create_type, $data = [], $context = []) {
+        // Universal permission check
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions for create operation.', 'data-machine')]);
+            return;
+        }
+        
+        // Validate create type
+        $valid_create_types = ['pipeline', 'flow', 'step', 'job'];
+        if (!in_array($create_type, $valid_create_types)) {
+            wp_send_json_error(['message' => __('Invalid creation type.', 'data-machine')]);
+            return;
+        }
+        
+        // Get required database services using filter-based discovery
+        $required_services = $this->get_required_database_services($create_type);
+        $all_databases = apply_filters('dm_db', []);
+        
+        foreach ($required_services as $service_key) {
+            if (!isset($all_databases[$service_key])) {
+                wp_send_json_error(['message' => __('Required database services unavailable.', 'data-machine')]);
+                return;
+            }
+        }
+        
+        // Route to specific creation handler
+        switch ($create_type) {
+            case 'pipeline':
+                $this->create_pipeline_handler($data, $context, $all_databases);
+                break;
+            case 'flow':
+                $this->create_flow_handler($data, $context, $all_databases);
+                break;
+            case 'step':
+                $this->create_step_handler($data, $context, $all_databases);
+                break;
+            case 'job':
+                $this->create_job_handler($data, $context, $all_databases);
+                break;
+        }
+    }
+
+    /**
+     * Get required database services for creation operation.
+     *
+     * Maps creation types to required database service keys for validation
+     * and service discovery before creation operations.
+     *
+     * @param string $create_type Type of entity being created
+     * @return array Array of required database service keys
+     * @since NEXT_VERSION
+     */
+    private function get_required_database_services($create_type) {
+        $service_map = [
+            'pipeline' => ['pipelines', 'flows'],
+            'flow' => ['flows', 'pipelines'],
+            'step' => ['pipelines', 'flows'],
+            'job' => ['jobs', 'flows', 'pipelines']
+        ];
+        return $service_map[$create_type] ?? [];
+    }
+
+    /**
+     * Handle pipeline creation with auto-generated Draft Flow.
+     *
+     * Creates new pipeline with default configuration and automatically
+     * generates a Draft Flow instance to maintain existing behavior patterns.
+     *
+     * @param array $data Creation data
+     * @param array $context Context information
+     * @param array $databases Database services
+     * @since NEXT_VERSION
+     */
+    private function create_pipeline_handler($data, $context, $databases) {
+        $db_pipelines = $databases['pipelines'];
+        $db_flows = $databases['flows'];
+        
+        // Extract pipeline name with fallback
+        $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : __('Draft Pipeline', 'data-machine');
+        
+        // Create pipeline with default configuration
+        $pipeline_data = [
+            'pipeline_name' => $pipeline_name,
+            'step_configuration' => []
+        ];
+        
+        $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
+        if (!$pipeline_id) {
+            wp_send_json_error(['message' => __('Failed to create pipeline', 'data-machine')]);
+            return;
+        }
+        
+        // Auto-create Draft Flow (maintains existing behavior)
+        $flow_data = [
+            'pipeline_id' => $pipeline_id,
+            'flow_name' => __('Draft Flow', 'data-machine'),
+            'flow_config' => json_encode([]),
+            'scheduling_config' => json_encode(['status' => 'inactive', 'interval' => 'manual'])
+        ];
+        
+        $flow_id = $db_flows->create_flow($flow_data);
+        if (!$flow_id) {
+            do_action('dm_log', 'error', "Failed to create Draft Flow for pipeline {$pipeline_id}");
+        }
+        
+        // Get complete pipeline data for response
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        
+        do_action('dm_log', 'debug', "Created pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with auto-generated Draft Flow");
+        
+        wp_send_json_success([
+            'message' => __('Pipeline created successfully', 'data-machine'),
+            'pipeline_id' => $pipeline_id,
+            'pipeline_name' => $pipeline_name,
+            'pipeline_data' => $pipeline,
+            'existing_flows' => $existing_flows,
+            'created_type' => 'pipeline'
+        ]);
+    }
+
+    /**
+     * Handle flow creation with pipeline step synchronization.
+     *
+     * Creates new flow for existing pipeline and synchronizes any existing
+     * pipeline steps to the new flow configuration.
+     *
+     * @param array $data Creation data
+     * @param array $context Context information
+     * @param array $databases Database services
+     * @since NEXT_VERSION
+     */
+    private function create_flow_handler($data, $context, $databases) {
+        $db_flows = $databases['flows'];
+        $db_pipelines = $databases['pipelines'];
+        
+        // Validate required pipeline_id
+        $pipeline_id = isset($data['pipeline_id']) ? (int)sanitize_text_field(wp_unslash($data['pipeline_id'])) : 0;
+        if ($pipeline_id <= 0) {
+            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
+            return;
+        }
+        
+        // Validate pipeline exists
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        if (!$pipeline) {
+            wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
+            return;
+        }
+        
+        // Generate flow name
+        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $flow_number = count($existing_flows) + 1;
+        $flow_name = isset($data['flow_name']) ? sanitize_text_field(wp_unslash($data['flow_name'])) : sprintf(__('%s Flow %d', 'data-machine'), $pipeline_name, $flow_number);
+        
+        // Create flow with cascade step sync
+        $flow_data = [
+            'pipeline_id' => $pipeline_id,
+            'flow_name' => $flow_name,
+            'flow_config' => json_encode([]),
+            'scheduling_config' => json_encode(['status' => 'inactive', 'interval' => 'manual'])
+        ];
+        
+        $flow_id = $db_flows->create_flow($flow_data);
+        if (!$flow_id) {
+            wp_send_json_error(['message' => __('Failed to create flow', 'data-machine')]);
+            return;
+        }
+        
+        // Sync existing pipeline steps to new flow
+        $pipeline_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        if (!empty($pipeline_steps)) {
+            $flow_config = $this->generate_flow_steps_config($flow_id, $pipeline_steps);
+            $db_flows->update_flow($flow_id, ['flow_config' => json_encode($flow_config)]);
+        }
+        
+        $flow = $db_flows->get_flow($flow_id);
+        
+        do_action('dm_log', 'debug', "Created flow '{$flow_name}' (ID: {$flow_id}) for pipeline {$pipeline_id} with " . count($pipeline_steps) . " synced steps");
+        
+        wp_send_json_success([
+            'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
+            'flow_id' => $flow_id,
+            'flow_name' => $flow_name,
+            'pipeline_id' => $pipeline_id,
+            'flow_data' => $flow,
+            'created_type' => 'flow'
+        ]);
+    }
+
+    /**
+     * Handle step creation with flow synchronization.
+     *
+     * Creates new step in pipeline configuration and synchronizes the addition
+     * across all associated flows. Validates step type and handles execution order.
+     *
+     * @param array $data Creation data
+     * @param array $context Context information
+     * @param array $databases Database services
+     * @since NEXT_VERSION
+     */
+    private function create_step_handler($data, $context, $databases) {
+        $db_pipelines = $databases['pipelines'];
+        $db_flows = $databases['flows'];
+        
+        // Validate required parameters
+        $pipeline_id = isset($data['pipeline_id']) ? (int)sanitize_text_field(wp_unslash($data['pipeline_id'])) : 0;
+        $step_type = isset($data['step_type']) ? sanitize_text_field(wp_unslash($data['step_type'])) : '';
+        
+        if ($pipeline_id <= 0) {
+            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
+            return;
+        }
+        
+        if (empty($step_type)) {
+            wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
+            return;
+        }
+        
+        // Validate step type exists
+        $all_steps = apply_filters('dm_steps', []);
+        $step_config = $all_steps[$step_type] ?? null;
+        if (!$step_config) {
+            wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
+            return;
+        }
+        
+        // Get current pipeline steps for execution order
+        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $next_execution_order = count($current_steps);
+        
+        // Create new step data
+        $new_step = [
+            'step_type' => $step_type,
+            'execution_order' => $next_execution_order,
+            'pipeline_step_id' => wp_generate_uuid4(),
+            'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
+        ];
+        
+        // Add to pipeline
+        $current_steps[] = $new_step;
+        $success = $db_pipelines->update_pipeline($pipeline_id, [
+            'step_configuration' => json_encode($current_steps)
+        ]);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
+            return;
+        }
+        
+        // Sync to all existing flows
+        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        foreach ($flows as $flow) {
+            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $this->sync_step_to_flow($flow_id, $new_step, $db_flows);
+        }
+        
+        // Trigger auto-save
+        do_action('dm_auto_save', $pipeline_id);
+        
+        do_action('dm_log', 'debug', "Created step '{$step_type}' (ID: {$new_step['pipeline_step_id']}) for pipeline {$pipeline_id}, synced to " . count($flows) . " flows");
+        
+        wp_send_json_success([
+            'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
+            'step_type' => $step_type,
+            'step_config' => $step_config,
+            'pipeline_id' => $pipeline_id,
+            'execution_order' => $new_step['execution_order'],
+            'pipeline_step_id' => $new_step['pipeline_step_id'],
+            'step_data' => $new_step,
+            'created_type' => 'step'
+        ]);
+    }
+
+    /**
+     * Handle ultra-simple job creation.
+     *
+     * Creates job with minimal data (pipeline_id + flow_id only).
+     * ProcessingOrchestrator handles all complexity at runtime.
+     *
+     * @param array $data Creation data
+     * @param array $context Context information (unused)
+     * @param array $databases Database services
+     * @since NEXT_VERSION
+     */
+    private function create_job_handler($data, $context, $databases) {
+        // Extract minimal required data
+        $pipeline_id = isset($data['pipeline_id']) ? (int)sanitize_text_field(wp_unslash($data['pipeline_id'])) : 0;
+        $flow_id = isset($data['flow_id']) ? (int)sanitize_text_field(wp_unslash($data['flow_id'])) : 0;
+        
+        if ($pipeline_id <= 0 || $flow_id <= 0) {
+            wp_send_json_error(['message' => __('Pipeline ID and Flow ID are required', 'data-machine')]);
+            return;
+        }
+        
+        // Simple existence check
+        $db_flows = $databases['flows'];
+        if (!$db_flows->get_flow($flow_id)) {
+            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
+            return;
+        }
+        
+        // Create job with minimal data - ProcessingOrchestrator handles everything else
+        $db_jobs = $databases['jobs'];
+        $job_id = $db_jobs->create_job([
+            'pipeline_id' => $pipeline_id,
+            'flow_id' => $flow_id
+        ]);
+        
+        if (!$job_id) {
+            wp_send_json_error(['message' => __('Failed to create job', 'data-machine')]);
+            return;
+        }
+        
+        // Generate initial flow_step_id for first step (execution_order = 0)
+        $db_flows = $databases['flows'];
+        $flow = $db_flows->get_flow($flow_id);
+        $flow_config = is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+        
+        // Find first step (execution_order = 0)
+        $first_flow_step_id = null;
+        foreach ($flow_config as $flow_step_id => $config) {
+            if (($config['execution_order'] ?? -1) === 0) {
+                $first_flow_step_id = $flow_step_id;
+                break;
+            }
+        }
+        
+        if (!$first_flow_step_id) {
+            wp_send_json_error(['message' => __('No first step found in flow configuration', 'data-machine')]);
+            return;
+        }
+        
+        // Schedule execution with flow_step_id
+        do_action('dm_schedule_next_step', $first_flow_step_id, []);
+        
+        do_action('dm_log', 'debug', "Created job {$job_id} for pipeline {$pipeline_id}, flow {$flow_id}");
+        
+        wp_send_json_success([
+            'job_id' => $job_id,
+            'message' => __('Job started successfully', 'data-machine'),
+            'created_type' => 'job'
+        ]);
+    }
+
+    /**
+     * Generate flow steps configuration from pipeline steps.
+     *
+     * Creates flow configuration array with proper flow step IDs and structure
+     * based on pipeline step data.
+     *
+     * @param int $flow_id Flow ID
+     * @param array $pipeline_steps Array of pipeline step data
+     * @return array Flow configuration array
+     * @since NEXT_VERSION
+     */
+    private function generate_flow_steps_config($flow_id, $pipeline_steps) {
+        $flow_config = [];
+        foreach ($pipeline_steps as $step) {
+            $pipeline_step_id = $step['pipeline_step_id'] ?? null;
+            if ($pipeline_step_id) {
+                $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
+                $flow_config[$flow_step_id] = [
+                    'flow_step_id' => $flow_step_id,
+                    'step_type' => $step['step_type'],
+                    'pipeline_step_id' => $pipeline_step_id,
+                    'flow_id' => $flow_id,
+                    'execution_order' => $step['execution_order'],
+                    'handler' => null
+                ];
+            }
+        }
+        return $flow_config;
+    }
+
+    /**
+     * Synchronize new step to existing flow.
+     *
+     * Updates flow configuration to include new step with proper flow step ID
+     * and configuration structure.
+     *
+     * @param int $flow_id Flow ID to sync step to
+     * @param array $new_step New step data
+     * @param object $db_flows Flows database service
+     * @since NEXT_VERSION
+     */
+    private function sync_step_to_flow($flow_id, $new_step, $db_flows) {
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) return;
+        
+        $flow_config = $flow['flow_config'] ?? [];
+        $pipeline_step_id = $new_step['pipeline_step_id'];
+        $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
+        
+        $flow_config[$flow_step_id] = [
+            'flow_step_id' => $flow_step_id,
+            'step_type' => $new_step['step_type'],
+            'pipeline_step_id' => $pipeline_step_id,
+            'flow_id' => $flow_id,
+            'execution_order' => $new_step['execution_order'],
+            'handler' => null
+        ];
+        
+        $db_flows->update_flow($flow_id, ['flow_config' => json_encode($flow_config)]);
+    }
+}

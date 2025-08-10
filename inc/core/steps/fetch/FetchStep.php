@@ -11,12 +11,16 @@ if (!defined('ABSPATH')) {
 /**
  * Universal Fetch Step - Executes any fetch handler
  * 
- * This step can gather data from any configured fetch source.
- * No interface requirements - detected via method existence only.
- * External plugins can create completely independent fetch step classes.
- * All functionality is capability-based, not inheritance-based.
+ * This step can gather data from any configured fetch source using the filter-based
+ * handler discovery system. Handler configuration is managed through the modal system
+ * and flow-level settings, maintaining complete separation from step-level logic.
  * 
- * Handler selection is determined by step configuration, enabling
+ * PURE CAPABILITY-BASED: External fetch step classes only need:
+ * - execute(int $job_id, array $data_packet, array $step_config): array method
+ * - Parameter-less constructor
+ * - No interface implementation required
+ * 
+ * Handler selection is determined by flow configuration, enabling
  * complete flexibility in pipeline composition.
  */
 class FetchStep {
@@ -35,7 +39,7 @@ class FetchStep {
      * @return array Updated data packet array with fetch data added
      */
     public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
         try {
@@ -63,13 +67,13 @@ class FetchStep {
             }
             
             $handler = $handler_data['handler_slug'];
-            $handler_config = $handler_data['settings'] ?? [];
+            $handler_settings = $handler_data['settings'] ?? [];
             
-            // Add flow_step_id to handler config for proper file isolation
-            $handler_config['flow_step_id'] = $step_config['flow_step_id'] ?? null;
+            // Add flow_step_id to handler settings for proper file isolation
+            $handler_settings['flow_step_id'] = $step_config['flow_step_id'] ?? null;
 
             // Execute single handler - one step, one handler, per flow
-            $fetch_entry = $this->execute_handler($handler, $step_config, $handler_config);
+            $fetch_entry = $this->execute_handler($handler, $step_config, $handler_settings);
 
             if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
                 do_action('dm_log', 'error', 'Fetch handler returned no content', ['job_id' => $job_id]);
@@ -106,10 +110,10 @@ class FetchStep {
      * 
      * @param string $handler_name Fetch handler name
      * @param array $step_config Step configuration including pipeline/flow IDs
-     * @param array $handler_config Handler configuration
+     * @param array $handler_settings Handler settings
      * @return array|null Fetch entry array or null on failure
      */
-    private function execute_handler(string $handler_name, array $step_config, array $handler_config): ?array {
+    private function execute_handler(string $handler_name, array $step_config, array $handler_settings): ?array {
         // Get handler object directly from handler system
         $handler = $this->get_handler_object($handler_name);
         if (!$handler) {
@@ -136,7 +140,7 @@ class FetchStep {
 
             // Execute handler - handlers return arrays, use universal conversion
             // Pass flow_id for processed items tracking
-            $result = $handler->get_fetch_data($pipeline_id, $handler_config, $flow_id);
+            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $flow_id);
 
             // Convert handler output to data entry for the data packet array
             $context = [
@@ -223,69 +227,18 @@ class FetchStep {
      */
     private function get_handler_object(string $handler_name): ?object {
         // Direct handler discovery - no redundant filtering needed
-        $all_handlers = apply_filters('dm_get_handlers', []);
-        $handler_config = $all_handlers[$handler_name] ?? null;
+        $all_handlers = apply_filters('dm_handlers', []);
+        $handler_info = $all_handlers[$handler_name] ?? null;
         
-        if (!$handler_config || !isset($handler_config['class'])) {
+        if (!$handler_info || !isset($handler_info['class'])) {
             return null;
         }
         
-        $class_name = $handler_config['class'];
+        $class_name = $handler_info['class'];
         return class_exists($class_name) ? new $class_name() : null;
     }
 
 
-    /**
-     * Define handler configuration fields for fetch step
-     * 
-     * Returns form fields for selecting and configuring fetch handlers.
-     * This is NOT for AI prompt configuration - use AIStep for prompts.
-     * 
-     * PURE CAPABILITY-BASED: External fetch step classes only need:
-     * - execute(int $job_id): bool method
-     * - get_config_fields(): array static method (optional)
-     * - Parameter-less constructor
-     * - No interface implementation required
-     * 
-     * @return array Handler configuration field definitions for UI
-     */
-    public static function get_config_fields(): array {
-        // Get available fetch handlers via pure discovery
-        $all_handlers = apply_filters('dm_get_handlers', []);
-        $fetch_handlers = array_filter($all_handlers, function($handler) {
-            return ($handler['type'] ?? '') === 'fetch';
-        });
-        $handler_options = [];
-        
-        foreach ($fetch_handlers as $slug => $handler_info) {
-            $handler_options[$slug] = $handler_info['label'] ?? ucfirst($slug);
-        }
-
-        return [
-            'handlers' => [
-                'type' => 'multiselect',
-                'label' => 'Fetch Sources',
-                'description' => 'Choose one or more fetch handlers to collect data',
-                'options' => $handler_options,
-                'required' => true
-            ],
-            'config' => [
-                'type' => 'json',
-                'label' => 'Handler Configuration',
-                'description' => 'JSON configuration applied to all selected fetch handlers',
-                'placeholder' => '{"feed_url": "https://example.com/feed.xml"}'
-            ]
-        ];
-    }
-
-
-    /**
-     * Fail a job with an error message.
-     *
-     * @param int $job_id The job ID.
-     * @param string $message The error message.
-     * @return bool Always returns false for easy return usage.
-     */
 }
 
 

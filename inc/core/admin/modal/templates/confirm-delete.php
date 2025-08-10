@@ -51,7 +51,7 @@ if ($delete_type === 'pipeline') {
 }
 
 // Template self-discovery - fetch affected flows and jobs data via filter-based discovery
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $db_flows = $all_databases['flows'] ?? null;
 $db_jobs = $all_databases['jobs'] ?? null;
 

@@ -22,7 +22,6 @@ class Base_LLM_Provider {
 
     protected $api_key;
     protected $base_url;
-    protected $timeout = 30;
 
     /**
      * Constructor - handles common configuration
@@ -31,7 +30,6 @@ class Base_LLM_Provider {
      */
     public function __construct($config = array()) {
         $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
-        $this->timeout = isset($config['timeout']) ? intval($config['timeout']) : 30;
         
         // Debug logging for API key configuration
         $provider_name = $this->get_provider_name();
@@ -137,7 +135,6 @@ class Base_LLM_Provider {
                 }
                 return strlen($data);
             },
-            CURLOPT_TIMEOUT => $this->timeout,
             CURLOPT_RETURNTRANSFER => false
         ));
 
@@ -198,7 +195,6 @@ class Base_LLM_Provider {
         $response = wp_remote_post($url, array(
             'headers' => $headers,
             'body' => wp_json_encode($request_data),
-            'timeout' => $this->timeout,
             'method' => 'POST'
         ));
 
@@ -229,8 +225,7 @@ class Base_LLM_Provider {
         $headers = $this->get_auth_headers();
 
         $response = wp_remote_get($url, array(
-            'headers' => $headers,
-            'timeout' => $this->timeout
+            'headers' => $headers
         ));
 
         if (is_wp_error($response)) {

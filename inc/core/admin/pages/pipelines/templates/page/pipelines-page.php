@@ -15,7 +15,7 @@ if (!defined('WPINC')) {
 }
 
 // Get pipelines data directly
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $db_pipelines = $all_databases['pipelines'] ?? null;
 $db_flows = $all_databases['flows'] ?? null;
 

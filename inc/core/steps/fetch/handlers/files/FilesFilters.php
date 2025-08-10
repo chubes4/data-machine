@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_files_fetch_filters() {
     // Handler registration - Files declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['files'] = [
             'type' => 'fetch',
             'class' => Files::class,
@@ -42,7 +42,7 @@ function dm_register_files_fetch_filters() {
     });
     
     // Settings registration - parameter-matched to 'files' handler
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['files'] = new FilesSettings();
         return $all_settings;
     });
@@ -71,18 +71,11 @@ function dm_register_files_fetch_filters() {
     // DataPacket creation removed - engine uses universal DataPacket constructor
     // Files handler returns properly formatted data for direct constructor usage
     
-    // FilesRepository service registration - singleton pattern for consistency
-    add_filter('dm_get_files_repository', function($repository) {
-        static $instance = null;
-        if ($instance === null) {
-            $instance = new FilesRepository();
-        }
-        return $instance;
-    }, 10, 1);
+    // FilesRepository removed - Files handler uses direct instantiation
     
     // Action Scheduler cleanup integration
     add_action('dm_cleanup_old_files', function() {
-        $repository = apply_filters('dm_get_files_repository', null);
+        $repository = new FilesRepository();
         if ($repository) {
             $deleted_count = $repository->cleanup_old_files(7); // Delete files older than 7 days
             
@@ -172,7 +165,7 @@ function dm_handle_file_upload() {
         }
         
         // Use repository to store file with handler context
-        $repository = apply_filters('dm_get_files_repository', null);
+        $repository = new FilesRepository();
         if (!$repository) {
             wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
             return;
@@ -230,7 +223,7 @@ function dm_get_handler_files() {
     
     try {
         // Get files repository service
-        $repository = apply_filters('dm_get_files_repository', null);
+        $repository = new FilesRepository();
         if (!$repository) {
             wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
             return;
@@ -240,7 +233,7 @@ function dm_get_handler_files() {
         $files = $repository->get_all_files($flow_step_id);
         
         // Get processed items service to check processing status
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $processed_items_service = $all_databases['processed_items'] ?? null;
         if (!$processed_items_service) {
             wp_send_json_error(['message' => __('Processed items service not available.', 'data-machine')]);
@@ -250,7 +243,7 @@ function dm_get_handler_files() {
         // Enhance files with processing status
         $files_with_status = [];
         foreach ($files as $file) {
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'files', $file['path']);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file['path']);
             
             $files_with_status[] = [
                 'filename' => $file['filename'],

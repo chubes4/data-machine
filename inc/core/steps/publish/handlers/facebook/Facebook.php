@@ -32,11 +32,11 @@ class Facebook {
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['facebook'] ?? null;
         
         if ($this->auth === null) {
-            throw new \RuntimeException('Facebook authentication service not available. Required service missing from dm_get_auth_providers filter.');
+            throw new \RuntimeException('Facebook authentication service not available. Required service missing from dm_auth_providers filter.');
         }
     }
 
@@ -71,7 +71,7 @@ class Facebook {
         
         do_action('dm_log', 'debug', 'Starting Facebook output handling.');
 
-        // 1. Get config - publish_config is the handler_config directly
+        // 1. Get config - publish_config is the handler_settings directly
         $target_id = trim($publish_config['facebook_target_id'] ?? '');
         $include_images = (bool) ($publish_config['include_images'] ?? true);
         $include_videos = (bool) ($publish_config['include_videos'] ?? true);
@@ -136,15 +136,7 @@ class Facebook {
             $video_url = esc_url($input_metadata['video_source_url']);
         }
 
-        // Get HTTP service via filter - required for all operations
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            do_action('dm_log', 'error', 'Facebook Output: HTTP service not available.');
-            return [
-                'success' => false,
-                'error' => __('Facebook output requires HTTP service. Service not available from dm_get_http_service filter.', 'data-machine')
-            ];
-        }
+        // Note: Using dm_send_request action hook for all HTTP operations
 
         // Determine post type and prepare API parameters - no silent fallbacks
         if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
@@ -195,27 +187,31 @@ class Facebook {
             $graph_api_url = 'https://graph.facebook.com/' . self::FACEBOOK_API_VERSION;
             $url = $graph_api_url . $endpoint;
 
-            // Use HTTP service
-            $http_response = $http_service->post($url, $api_params, [], 'Facebook API');
-            if (is_wp_error($http_response)) {
+            // Use dm_send_request action hook for Facebook API call
+            $args = ['body' => $api_params];
+            $result = null;
+            do_action('dm_send_request', 'POST', $url, $args, 'Facebook API', $result);
+            
+            if (!$result['success']) {
                 do_action('dm_log', 'error', 'Facebook API Error: HTTP request failed.', [
-                    'error' => $http_response->get_error_message(), 
+                    'error' => $result['error'], 
                 ]);
                 return [
                     'success' => false,
-                    'error' => $http_response->get_error_message()
+                    'error' => $result['error']
                 ];
             }
 
-            $body = $http_response['body'];
-            $http_code = $http_response['status_code'];
+            $body = $result['data']['body'];
+            $http_code = $result['data']['status_code'];
 
             // Parse JSON response with error handling
-            $data = $http_service->parse_json($body, 'Facebook API');
-            if (is_wp_error($data)) {
+            $data = json_decode($body, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $error_message = sprintf(__('Invalid JSON from Facebook API: %s', 'data-machine'), json_last_error_msg());
                 return [
                     'success' => false,
-                    'error' => $data->get_error_message()
+                    'error' => $error_message
                 ];
             }
 
@@ -256,31 +252,33 @@ class Facebook {
                     ];
 
                     $comment_url = $graph_api_url . $comment_endpoint;
-                    $comment_response = $http_service->post($comment_url, $comment_api_params, [], 'Facebook Comments API');
+                    $comment_args = ['body' => $comment_api_params];
+                    $comment_result = null;
+                    do_action('dm_send_request', 'POST', $comment_url, $comment_args, 'Facebook Comments API', $comment_result);
 
-                    if (is_wp_error($comment_response)) {
+                    if (!$comment_result['success']) {
                         do_action('dm_log', 'error', 'Facebook API: Failed to post source link comment.', [
                             'post_id' => $post_id,
-                            'error' => $comment_response->get_error_message(),
+                            'error' => $comment_result['error'],
                         ]);
                         return [
                             'success' => false,
-                            'error' => sprintf(__('Facebook post successful but source comment failed: %s', 'data-machine'), $comment_response->get_error_message())
+                            'error' => sprintf(__('Facebook post successful but source comment failed: %s', 'data-machine'), $comment_result['error'])
                         ];
                     }
                     
-                    $comment_body = $comment_response['body'];
-                    $comment_data = $http_service->parse_json($comment_body, 'Facebook Comments API');
-                    $comment_http_code = $comment_response['status_code'];
+                    $comment_body = $comment_result['data']['body'];
+                    $comment_data = json_decode($comment_body, true);
+                    $comment_http_code = $comment_result['data']['status_code'];
 
-                    if (is_wp_error($comment_data)) {
+                    if (json_last_error() !== JSON_ERROR_NONE) {
                         do_action('dm_log', 'error', 'Facebook API: Failed to parse comment response.', [
                             'post_id' => $post_id,
-                            'error' => $comment_data->get_error_message(),
+                            'error' => json_last_error_msg(),
                         ]);
                         return [
                             'success' => false,
-                            'error' => sprintf(__('Facebook post successful but source comment parsing failed: %s', 'data-machine'), $comment_data->get_error_message())
+                            'error' => sprintf(__('Facebook post successful but source comment parsing failed: %s', 'data-machine'), json_last_error_msg())
                         ];
                     }
                     
@@ -424,7 +422,6 @@ class Facebook {
 
         // Test accessibility with HEAD request
         $response = wp_remote_head($image_url, [
-            'timeout' => 10,
             'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
         ]);
 

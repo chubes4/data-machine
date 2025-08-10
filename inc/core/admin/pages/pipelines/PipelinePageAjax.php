@@ -25,282 +25,62 @@ class PipelinePageAjax
 
 
     /**
-     * Add step to pipeline
+     * Add step to pipeline - delegated to central dm_create action
      */
     public function handle_add_step()
     {
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
-        
-        if (empty($step_type)) {
-            wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
-        }
-
-        if (empty($pipeline_id)) {
-            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
-        }
-
-        // Validate step type exists
-        $all_steps = apply_filters('dm_get_steps', []);
-        $step_config = $all_steps[$step_type] ?? null;
-        if (!$step_config) {
-            wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
-        }
-
-        // Use layer 3 function to add step and sync to flows
-        $new_step = $this->add_step_to_pipeline($pipeline_id, $step_type);
-        if (!$new_step) {
-            wp_send_json_error(['message' => __('Failed to add step to pipeline', 'data-machine')]);
-        }
-
-        // Trigger auto-save hooks
-        do_action('dm_pipeline_auto_save', $pipeline_id);
-
-        wp_send_json_success([
-            'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
-            'step_type' => $step_type,
-            'step_config' => $step_config,
-            'pipeline_id' => $pipeline_id,
-            'execution_order' => $new_step['execution_order'],
-            'pipeline_step_id' => $new_step['pipeline_step_id'],
-            'step_data' => $new_step
-        ]);
+        do_action('dm_create', 'step', $_POST, ['source' => 'ajax']);
     }
 
 
     /**
-     * Delete step from pipeline with cascade handling
+     * Delete step from pipeline - delegated to central dm_delete action
      */
     public function handle_delete_step()
     {
         $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
-        if (empty($pipeline_step_id) || $pipeline_id <= 0) {
-            wp_send_json_error(['message' => __('Pipeline step ID and pipeline ID are required', 'data-machine')]);
-        }
-
-        // Get pipeline data for response
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_pipelines || !$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
-        }
-
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
-        if (!$pipeline) {
-            wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
-        }
-
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-        $flow_count = count($affected_flows);
-
-        // Use layer 3 to delete pipeline step and sync to all flows
-        $success = $this->delete_pipeline_step($pipeline_id, $pipeline_step_id);
-        if (!$success) {
-            wp_send_json_error(['message' => __('Failed to delete step from pipeline', 'data-machine')]);
-        }
-
-        // Trigger auto-save hooks
-        do_action('dm_pipeline_auto_save', $pipeline_id);
-
-        // Get remaining steps count for response
-        $remaining_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
-        
-        // Log the deletion
-        do_action('dm_log', 'debug', "Deleted step with ID '{$pipeline_step_id}' from pipeline '{$pipeline_name}' (ID: {$pipeline_id}). Affected {$flow_count} flows.");
-
-        wp_send_json_success([
-            'message' => sprintf(
-                __('Step deleted successfully from pipeline "%s". %d flows were affected.', 'data-machine'),
-                $pipeline_name,
-                $flow_count
-            ),
-            'pipeline_id' => (int)$pipeline_id,
-            'pipeline_step_id' => $pipeline_step_id,
-            'affected_flows' => $flow_count,
-            'remaining_steps' => count($remaining_steps)
-        ]);
+        // Delegate to central deletion system
+        do_action('dm_delete', 'step', $pipeline_step_id, ['pipeline_id' => $pipeline_id]);
     }
 
     /**
-     * Delete pipeline with flow cascade deletion
-     * Deletes flows first, then the pipeline itself. Jobs are left intact as historical records.
+     * Delete pipeline - delegated to central dm_delete action
      */
     public function handle_delete_pipeline()
     {
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
-        if (empty($pipeline_id)) {
-            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
-        }
-
-        // Get pipeline data for response before deletion
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_pipelines || !$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
-        }
-
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
-        if (!$pipeline) {
-            wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
-        }
-        
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-        $flow_count = count($affected_flows);
-
-        // Use layer 4 to delete pipeline with full cascade deletion
-        $success = $this->delete_pipeline($pipeline_id);
-        if (!$success) {
-            wp_send_json_error(['message' => __('Failed to delete pipeline', 'data-machine')]);
-        }
-
-        // Log the deletion
-        do_action('dm_log', 'debug', "Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows. Job records preserved as historical data.");
-
-        wp_send_json_success([
-            'message' => sprintf(
-                __('Pipeline "%s" deleted successfully. %d flows were also deleted. Associated job records are preserved as historical data.', 'data-machine'),
-                $pipeline_name,
-                $flow_count
-            ),
-            'pipeline_id' => $pipeline_id,
-            'pipeline_name' => $pipeline_name,
-            'deleted_flows' => $flow_count
-        ]);
+        // Delegate to central deletion system
+        do_action('dm_delete', 'pipeline', $pipeline_id);
     }
 
     /**
-     * Create a new pipeline in the database
+     * Create a new pipeline in the database - delegated to central dm_create action
      */
     public function handle_create_pipeline()
     {
-        // Use top layer function to create complete pipeline with draft flow
-        $pipeline_id = $this->create_new_pipeline();
-        if (!$pipeline_id) {
-            wp_send_json_error(['message' => __('Failed to create pipeline', 'data-machine')]);
-        }
-
-        // Get the created pipeline for response
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-
-        if (!$db_pipelines || !$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
-        }
-
-        // Get the created pipeline data
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
-        if (!$pipeline) {
-            wp_send_json_error(['message' => __('Failed to retrieve created pipeline', 'data-machine')]);
-        }
-
-        // Get pipeline name from created pipeline
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-
-        // Get existing flows (should include the newly created draft flow)
-        $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-
-        wp_send_json_success([
-            'message' => __('Pipeline created successfully', 'data-machine'),
-            'pipeline_id' => $pipeline_id,
-            'pipeline_name' => $pipeline_name,
-            'pipeline_data' => $pipeline,
-            'existing_flows' => $existing_flows
-        ]);
+        do_action('dm_create', 'pipeline', $_POST, ['source' => 'ajax']);
     }
 
     /**
-     * Add flow to pipeline
+     * Add flow to pipeline - delegated to central dm_create action
      */
     public function handle_add_flow()
     {
-        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
-        
-        if (empty($pipeline_id)) {
-            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
-        }
-
-        // Use layer 2 function to add flow to pipeline  
-        $flow_id = $this->add_flow_to_pipeline($pipeline_id);
-        if (!$flow_id) {
-            wp_send_json_error(['message' => __('Failed to create flow', 'data-machine')]);
-        }
-
-        // Get the created flow data
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        $flow = $db_flows ? $db_flows->get_flow($flow_id) : null;
-        
-        if (!$flow) {
-            wp_send_json_error(['message' => __('Failed to retrieve created flow', 'data-machine')]);
-        }
-
-        $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
-
-        wp_send_json_success([
-            'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
-            'flow_id' => $flow_id,
-            'flow_name' => $flow_name,
-            'pipeline_id' => $pipeline_id,
-            'flow_data' => $flow
-        ]);
+        do_action('dm_create', 'flow', $_POST, ['source' => 'ajax']);
     }
 
     /**
-     * Delete flow from pipeline
-     * Deletes the flow instance only. Associated jobs are left intact as historical records.
+     * Delete flow - delegated to central dm_delete action
      */
     public function handle_delete_flow()
     {
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
         
-        if (empty($flow_id)) {
-            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
-        }
-
-        // Get flow data for response before deletion
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable', 'data-machine')]);
-        }
-
-        $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) {
-            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
-        }
-        
-        $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
-        $pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
-
-        // Use layer 2 to delete flow
-        $success = $this->delete_flow($flow_id);
-        if (!$success) {
-            wp_send_json_error(['message' => __('Failed to delete flow', 'data-machine')]);
-        }
-
-        // Log the deletion
-        do_action('dm_log', 'debug', "Deleted flow '{$flow_name}' (ID: {$flow_id}). Associated job records preserved as historical data.");
-
-        wp_send_json_success([
-            'message' => sprintf(
-                __('Flow "%s" deleted successfully. Associated job records are preserved as historical data.', 'data-machine'),
-                $flow_name
-            ),
-            'flow_id' => $flow_id,
-            'flow_name' => $flow_name,
-            'pipeline_id' => $pipeline_id
-        ]);
+        // Delegate to central deletion system
+        do_action('dm_delete', 'flow', $flow_id);
     }
 
     /**
@@ -317,7 +97,7 @@ class PipelinePageAjax
         }
 
         // Get database services using filter-based discovery
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
@@ -346,16 +126,13 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Failed to save schedule configuration', 'data-machine')]);
         }
 
-        // Handle Action Scheduler scheduling
-        $scheduler = apply_filters('dm_get_scheduler', null);
-        if ($scheduler) {
-            if ($schedule_status === 'active' && $schedule_interval !== 'manual') {
-                // Activate scheduling
-                $scheduler->activate_flow($flow_id);
-            } elseif ($old_status === 'active') {
-                // Deactivate scheduling if it was previously active
-                $scheduler->deactivate_flow($flow_id);
-            }
+        // Handle Action Scheduler scheduling via central action hook
+        do_action('dm_update_flow_schedule', $flow_id, $schedule_status, $schedule_interval, $old_status);
+
+        // Auto-save pipeline after flow schedule change
+        $pipeline_id = (int)$flow['pipeline_id'];
+        if ($pipeline_id > 0) {
+            do_action('dm_pipeline_auto_save', $pipeline_id);
         }
 
         wp_send_json_success([
@@ -367,79 +144,21 @@ class PipelinePageAjax
     }
 
     /**
-     * Run flow immediately
+     * Run flow immediately - delegated to central dm_create action
      */
     public function handle_run_flow_now()
     {
+        // Get pipeline_id from flow for dm_create action
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
-
-        if (empty($flow_id)) {
-            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
-        }
-
-        // Get flow data for response message
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        $flow = ($db_flows) ? $db_flows->get_flow($flow_id) : null;
-        $flow_name = $flow['flow_name'] ?? 'Unknown Flow';
-
-        // Trigger central flow execution hook - "button press"
-        do_action('dm_run_flow_now', $flow_id, 'run_now');
-
-        // For now, assume success (hook handler logs any failures)
-        wp_send_json_success([
-            'message' => sprintf(__('Flow "%s" started successfully', 'data-machine'), $flow_name)
-        ]);
-    }
-
-    /**
-     * Handle auto-save operations for pipeline data
-     * Always performs full pipeline save regardless of input
-     */
-    public function handle_auto_save()
-    {
-        // Verify nonce
-        if (!check_ajax_referer('dm_pipeline_auto_save_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
-        }
-
-        // Verify user capabilities
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-        }
-
-        // Get pipeline ID - only required parameter
-        $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
-        if (empty($pipeline_id)) {
-            wp_send_json_error(['message' => __('Pipeline ID is required', 'data-machine')]);
-        }
-
-        // Simple debouncing to prevent excessive saves
-        $debounce_key = "dm_auto_save_{$pipeline_id}";
-        if (get_transient($debounce_key)) {
-            set_transient($debounce_key, time(), 2); // Extend 2-second debounce window
-            wp_send_json_success([
-                'message' => __('Auto-save debounced', 'data-machine'),
-                'debounced' => true,
-                'timestamp' => time()
-            ]);
-            return;
-        }
-
-        // Set debounce transient
-        set_transient($debounce_key, time(), 2);
-
-        // Trigger the auto-save action hook (always full save)
-        do_action('dm_pipeline_auto_save', $pipeline_id);
-
-        // Return success response
-        wp_send_json_success([
-            'message' => __('Pipeline auto-saved successfully', 'data-machine'),
+        $pipeline_id = $this->get_pipeline_id_from_flow($flow_id);
+        
+        do_action('dm_create', 'job', [
+            'flow_id' => $flow_id,
             'pipeline_id' => $pipeline_id,
-            'timestamp' => time(),
-            'debounced' => false
-        ]);
+            'context' => 'run_now'
+        ], ['source' => 'ajax']);
     }
+
 
     /**
      * Top Layer: Complete pipeline initialization
@@ -450,7 +169,7 @@ class PipelinePageAjax
      * @return int|false Pipeline ID on success, false on failure
      */
     private function create_new_pipeline($pipeline_name = null) {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
         if (!$db_pipelines) {
@@ -489,7 +208,7 @@ class PipelinePageAjax
      * @return array|false Step data on success, false on failure
      */
     private function add_step_to_pipeline($pipeline_id, $step_type) {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
         
@@ -502,7 +221,7 @@ class PipelinePageAjax
         $next_execution_order = count($current_steps);
 
         // Get step config for label
-        $all_steps = apply_filters('dm_get_steps', []);
+        $all_steps = apply_filters('dm_steps', []);
         $step_config = $all_steps[$step_type] ?? [];
 
         // Create new step data
@@ -527,8 +246,8 @@ class PipelinePageAjax
         $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-            $flow_config_raw = is_object($flow) ? $flow->flow_config : $flow['flow_config'];
-            $flow_config = json_decode($flow_config_raw, true) ?: [];
+            $flow_config = is_object($flow) ? $flow->flow_config : $flow['flow_config'];
+            $flow_config = $flow_config ?: [];
             
             // Add new step to this flow
             $new_flow_steps = $this->add_flow_steps($flow_id, [$new_step]);
@@ -557,7 +276,7 @@ class PipelinePageAjax
      * @return int|false Flow ID on success, false on failure
      */
     private function add_flow_to_pipeline($pipeline_id, $flow_name = null) {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
@@ -641,157 +360,23 @@ class PipelinePageAjax
     }
 
     /**
-     * =================== DELETION HIERARCHY ===================
-     * 4-layer deletion architecture mirroring creation hierarchy
-     */
-
-    /**
-     * Layer 1 (Bottom): Delete specific flow steps from a flow
+     * Get pipeline ID from flow ID
      * 
-     * Single source of truth for flow step deletion logic.
-     * Removes specified pipeline_step_ids from flow's flow_config.
-     * 
-     * @param int $flow_id Flow ID to delete steps from
-     * @param array $pipeline_step_ids Array of pipeline step IDs to remove
-     * @return bool Success status
+     * @param int $flow_id Flow ID
+     * @return int Pipeline ID
      */
-    private function delete_flow_steps($flow_id, $pipeline_step_ids) {
-        $all_databases = apply_filters('dm_get_database_services', []);
+    private function get_pipeline_id_from_flow($flow_id) {
+        $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         
         if (!$db_flows) {
-            return false;
+            return 0;
         }
-
-        // Get current flow config
+        
         $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) {
-            return false;
-        }
-
-        $flow_config_raw = is_object($flow) ? $flow->flow_config : $flow['flow_config'];
-        $flow_config = json_decode($flow_config_raw, true) ?: [];
-        
-        // Remove flow steps for specified pipeline step IDs
-        $deleted_count = 0;
-        foreach ($flow_config as $flow_step_id => $step_data) {
-            if (isset($step_data['pipeline_step_id']) && in_array($step_data['pipeline_step_id'], $pipeline_step_ids)) {
-                unset($flow_config[$flow_step_id]);
-                $deleted_count++;
-            }
-        }
-        
-        // Update flow with cleaned configuration
-        if ($deleted_count > 0) {
-            return $db_flows->update_flow($flow_id, [
-                'flow_config' => json_encode($flow_config)
-            ]);
-        }
-        
-        return true; // No steps to delete
+        return $flow ? (int)($flow['pipeline_id'] ?? 0) : 0;
     }
 
-    /**
-     * Layer 2: Delete entire flow and all its flow steps
-     * 
-     * Thin wrapper around database delete_flow method.
-     * 
-     * @param int $flow_id Flow ID to delete
-     * @return bool Success status
-     */
-    private function delete_flow($flow_id) {
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_flows) {
-            return false;
-        }
-        
-        return $db_flows->delete_flow($flow_id);
-    }
-
-    /**
-     * Layer 3: Delete pipeline step and sync to all flows
-     * 
-     * Removes step from pipeline and calls delete_flow_steps for all flows.
-     * 
-     * @param int $pipeline_id Pipeline ID containing the step
-     * @param string $pipeline_step_id Pipeline step ID to delete
-     * @return bool Success status
-     */
-    private function delete_pipeline_step($pipeline_id, $pipeline_step_id) {
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_pipelines || !$db_flows) {
-            return false;
-        }
-
-        // Get current pipeline steps and remove the specified step
-        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
-        $updated_steps = [];
-        $step_found = false;
-        
-        foreach ($current_steps as $step) {
-            if (($step['pipeline_step_id'] ?? '') !== $pipeline_step_id) {
-                $updated_steps[] = $step;
-            } else {
-                $step_found = true;
-            }
-        }
-        
-        if (!$step_found) {
-            return false; // Step not found
-        }
-
-        // Update pipeline configuration
-        $success = $db_pipelines->update_pipeline($pipeline_id, [
-            'step_configuration' => json_encode($updated_steps)
-        ]);
-        
-        if (!$success) {
-            return false;
-        }
-
-        // Sync step deletion to all flows using layer 1
-        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-        foreach ($flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-            $this->delete_flow_steps($flow_id, [$pipeline_step_id]);
-        }
-        
-        return true;
-    }
-
-    /**
-     * Layer 4 (Top): Delete entire pipeline with cascade deletion
-     * 
-     * Deletes all flows (using layer 2) then deletes the pipeline.
-     * 
-     * @param int $pipeline_id Pipeline ID to delete
-     * @return bool Success status
-     */
-    private function delete_pipeline($pipeline_id) {
-        $all_databases = apply_filters('dm_get_database_services', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_pipelines || !$db_flows) {
-            return false;
-        }
-
-        // Get all flows for this pipeline and delete them using layer 2
-        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-        foreach ($flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-            $success = $this->delete_flow($flow_id);
-            if (!$success) {
-                return false; // Fail fast if any flow deletion fails
-            }
-        }
-
-        // Finally delete the pipeline itself
-        return $db_pipelines->delete_pipeline($pipeline_id);
-    }
+    // All deletion logic moved to central dm_delete action in DataMachineActions.php
+    // This eliminates ~200 lines of duplicated deletion code and provides unified deletion patterns
 }

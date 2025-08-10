@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_facebook_filters() {
     
     // Handler registration - Facebook declares itself as publish handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['facebook'] = [
             'type' => 'publish',
             'class' => Facebook::class,
@@ -42,13 +42,13 @@ function dm_register_facebook_filters() {
     });
     
     // Authentication registration - pure discovery mode
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         $providers['facebook'] = new FacebookAuth();
         return $providers;
     });
     
     // Settings registration - pure discovery mode
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['facebook'] = new FacebookSettings();
         return $all_settings;
     });

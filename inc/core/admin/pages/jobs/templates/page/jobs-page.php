@@ -14,7 +14,7 @@ if (!defined('WPINC')) {
 }
 
 // Get jobs data using filter-based discovery
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $db_jobs = $all_databases['jobs'] ?? null;
 
 $recent_jobs = [];

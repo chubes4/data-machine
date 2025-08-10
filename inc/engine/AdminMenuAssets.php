@@ -7,7 +7,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Admin;
+namespace DataMachine\Engine;
  
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -70,7 +70,7 @@ class AdminMenuAssets {
     /**
      * Register admin pages via dynamic discovery system.
      * 
-     * Uses consistent discovery pattern matching dm_get_steps and dm_get_handlers.
+     * Uses consistent discovery pattern matching dm_steps and dm_handlers.
      * All components self-register via filters with zero hardcoded limitations.
      * Pages are ordered by position parameter with alphabetical fallback.
      *
@@ -78,7 +78,7 @@ class AdminMenuAssets {
      */
     public function add_admin_menu() {
         // Discovery mode - get all registered admin pages dynamically
-        $registered_pages = apply_filters('dm_get_admin_pages', []);
+        $registered_pages = apply_filters('dm_admin_pages', []);
         
         // Only create Data Machine menu if pages are available
         if (empty($registered_pages)) {

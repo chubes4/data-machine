@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
 function dm_register_googlesheets_fetch_filters() {
     
     // Handler registration - Google Sheets Fetch declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['googlesheets_fetch'] = [
             'type' => 'fetch',
             'class' => GoogleSheetsFetch::class,
@@ -45,7 +45,7 @@ function dm_register_googlesheets_fetch_filters() {
     });
     
     // Settings registration - parameter-matched to 'googlesheets_fetch' handler
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['googlesheets_fetch'] = new GoogleSheetsFetchSettings();
         return $all_settings;
     });
@@ -54,7 +54,7 @@ function dm_register_googlesheets_fetch_filters() {
     
     // Authentication registration - pure discovery mode
     // This creates bi-directional Google Sheets integration by sharing auth with publish handler
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         // Use shared authentication for both fetch and publish Google Sheets handlers
         $providers['googlesheets'] = new \DataMachine\Core\Handlers\Publish\GoogleSheets\GoogleSheetsAuth();
         return $providers;

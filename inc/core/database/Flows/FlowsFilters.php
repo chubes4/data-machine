@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_flows_database_filters() {
     
     // Database service registration - Pure discovery pattern (collection building)
-    add_filter('dm_get_database_services', function($services) {
+    add_filter('dm_db', function($services) {
         if (!isset($services['flows'])) {
             $services['flows'] = new Flows();
         }

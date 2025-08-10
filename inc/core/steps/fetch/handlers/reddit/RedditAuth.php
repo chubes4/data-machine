@@ -152,7 +152,6 @@ class RedditAuth {
                 'code'         => $code,
                 'redirect_uri' => $redirect_uri,
             ],
-            'timeout' => 15, // seconds
         ];
 
         // Make the POST request
@@ -197,7 +196,6 @@ class RedditAuth {
                 'Authorization' => 'Bearer ' . $access_token,
                  'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')'
             ],
-            'timeout' => 10,
         ];
         $identity_response = wp_remote_get($identity_url, $identity_args);
         $identity_username = null;
@@ -274,7 +272,6 @@ class RedditAuth {
                 'grant_type'    => 'refresh_token',
                 'refresh_token' => $refresh_token,
             ],
-            'timeout' => 15,
         ];
 
         $response = wp_remote_post($token_url, $args);

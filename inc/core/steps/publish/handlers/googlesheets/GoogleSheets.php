@@ -30,7 +30,7 @@ class GoogleSheets {
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['googlesheets_output'] ?? null;
     }
 
@@ -67,7 +67,7 @@ class GoogleSheets {
         
         do_action('dm_log', 'debug', 'Starting Google Sheets output handling.');
         
-        // 1. Get configuration - publish_config is the handler_config directly
+        // 1. Get configuration - publish_config is the handler_settings directly
         $spreadsheet_id = $publish_config['googlesheets_spreadsheet_id'] ?? '';
         $worksheet_name = $publish_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
         $column_mapping = $publish_config['googlesheets_column_mapping'] ?? $this->get_default_column_mapping();
@@ -271,7 +271,6 @@ class GoogleSheets {
                     'Content-Type' => 'application/json'
                 ],
                 'body' => wp_json_encode($body),
-                'timeout' => 30
             ]);
 
             if (is_wp_error($response)) {

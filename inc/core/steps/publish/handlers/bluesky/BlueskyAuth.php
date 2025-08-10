@@ -124,7 +124,6 @@ class BlueskyAuth {
                 'Content-Type' => 'application/json'
             ],
             'body' => $body,
-            'timeout' => 30
         ]);
 
         if (is_wp_error($response)) {

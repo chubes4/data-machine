@@ -125,7 +125,6 @@ class AI_HTTP_Grok_Provider extends Base_LLM_Provider {
         $response = wp_remote_post($url, [
             'headers' => $headers,
             'body' => $body,
-            'timeout' => 120
         ]);
 
         if (is_wp_error($response)) {
@@ -170,7 +169,6 @@ class AI_HTTP_Grok_Provider extends Base_LLM_Provider {
         $response = wp_remote_request($url, [
             'method' => 'DELETE',
             'headers' => $this->get_auth_headers(),
-            'timeout' => 30
         ]);
 
         if (is_wp_error($response)) {

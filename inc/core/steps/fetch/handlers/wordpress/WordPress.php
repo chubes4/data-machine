@@ -47,7 +47,7 @@ class WordPress {
      * @return RemoteLocations The remote locations database service.
      */
     protected function get_db_remote_locations() {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         return $all_databases['remote_locations'] ?? null;
     }
 
@@ -280,22 +280,24 @@ class WordPress {
             $pages_fetched++;
             do_action('dm_log', 'debug', 'WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $pipeline_id]);
 
-            // Use HTTP service via filter
-            $http_service = apply_filters('dm_get_http_service', null);
-            $http_response = $http_service->get($next_page_url, [], 'WordPress REST API');
-            if (is_wp_error($http_response)) {
-                if ($pages_fetched === 1) throw new Exception(esc_html($http_response->get_error_message()));
+            // Use dm_send_request action hook for REST API call
+            $result = null;
+            do_action('dm_send_request', 'GET', $next_page_url, [], 'WordPress REST API', $result);
+            
+            if (!$result['success']) {
+                if ($pages_fetched === 1) throw new Exception(esc_html($result['error']));
                 else break;
             }
 
             // Parse JSON response with error handling
-            $response_data = $http_service->parse_json($http_response['body'], 'WordPress REST API');
-            if (is_wp_error($response_data)) {
-                if ($pages_fetched === 1) throw new Exception(esc_html($response_data->get_error_message()));
+            $response_data = json_decode($result['data']['body'], true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $error_message = sprintf(__('Invalid JSON from WordPress REST API: %s', 'data-machine'), json_last_error_msg());
+                if ($pages_fetched === 1) throw new Exception(esc_html($error_message));
                 else break;
             }
 
-            $response_headers = $http_response['headers'];
+            $response_headers = $result['data']['headers'];
 
             // Extract items array using data_path if provided, or auto-detect first array
             $items = [];
@@ -508,21 +510,23 @@ class WordPress {
                 'headers' => array('Authorization' => $auth_header)
             );
 
-            // Use HTTP service via filter
-            $http_service = apply_filters('dm_get_http_service', null);
-            $http_response = $http_service->get($current_api_url, $args, 'Airdrop REST API');
-            if (is_wp_error($http_response)) {
-                if ($current_page === 1) throw new Exception(esc_html($http_response->get_error_message()));
+            // Use dm_send_request action hook for Airdrop API call
+            $result = null;
+            do_action('dm_send_request', 'GET', $current_api_url, $args, 'Airdrop REST API', $result);
+            
+            if (!$result['success']) {
+                if ($current_page === 1) throw new Exception(esc_html($result['error']));
                 else break;
             }
 
-            $response_headers = $http_response['headers'];
-            $body = $http_response['body'];
+            $response_headers = $result['data']['headers'];
+            $body = $result['data']['body'];
 
             // Parse JSON response with error handling
-            $response_data = $http_service->parse_json($body, 'Airdrop REST API');
-            if (is_wp_error($response_data)) {
-                if ($current_page === 1) throw new Exception(esc_html($response_data->get_error_message()));
+            $response_data = json_decode($body, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $error_message = sprintf(__('Invalid JSON from Airdrop REST API: %s', 'data-machine'), json_last_error_msg());
+                if ($current_page === 1) throw new Exception(esc_html($error_message));
                 else break;
             }
             $posts_data = $response_data['posts'] ?? [];

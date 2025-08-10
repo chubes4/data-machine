@@ -238,7 +238,6 @@ class AI_HTTP_WordPressSSEHandler {
             CURLOPT_POSTFIELDS => wp_json_encode($request),
             CURLOPT_HTTPHEADER => $this->format_curl_headers($headers),
             CURLOPT_WRITEFUNCTION => array($this, 'process_streaming_chunk'),
-            CURLOPT_TIMEOUT => 120, // 2 minute timeout
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,

@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_reddit_fetch_filters() {
     
     // Handler registration - Reddit declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['reddit'] = [
             'type' => 'fetch',
             'class' => Reddit::class,
@@ -42,13 +42,13 @@ function dm_register_reddit_fetch_filters() {
     });
     
     // Authentication registration - pure discovery mode
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         $providers['reddit'] = new RedditAuth();
         return $providers;
     });
     
     // Settings registration - pure discovery mode
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['reddit'] = new RedditSettings();
         return $all_settings;
     });

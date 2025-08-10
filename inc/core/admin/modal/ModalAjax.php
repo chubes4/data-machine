@@ -3,10 +3,10 @@
  * Universal Modal AJAX Handler
  *
  * Handles all modal content requests through a single, universal AJAX endpoint.
- * Routes to the dm_get_modals filter system for component-specific content generation.
+ * Routes to the dm_modals filter system for component-specific content generation.
  *
  * This enables the universal modal architecture where any component can register
- * modal content via the dm_get_modals filter without needing custom AJAX handlers.
+ * modal content via the dm_modals filter without needing custom AJAX handlers.
  * Eliminates component-specific modal AJAX handlers through unified architecture.
  *
  * @package DataMachine\Core\Admin\Modal
@@ -25,7 +25,7 @@ if (!defined('ABSPATH')) {
  *
  * Provides a single AJAX endpoint for all modal content requests across
  * the entire Data Machine admin interface. Components register modal content
- * via the dm_get_modals filter system.
+ * via the dm_modals filter system.
  *
  * @since 1.0.0
  */
@@ -44,7 +44,7 @@ class ModalAjax
     /**
      * Handle modal content AJAX requests
      *
-     * Routes to the dm_get_modals filter system for component-specific content.
+     * Routes to the dm_modals filter system for component-specific content.
      * Maintains WordPress security standards with nonce verification and
      * capability checks.
      *
@@ -76,7 +76,7 @@ class ModalAjax
         }
 
         // Two-layer modal architecture: check registered modals first
-        $all_modals = apply_filters('dm_get_modals', []);
+        $all_modals = apply_filters('dm_modals', []);
         $modal_data = $all_modals[$template] ?? null;
 
         if ($modal_data) {

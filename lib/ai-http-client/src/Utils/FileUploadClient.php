@@ -26,11 +26,10 @@ class AI_HTTP_File_Upload_Client {
      * @param string $upload_url Provider's file upload endpoint
      * @param array $headers Authentication headers
      * @param string $purpose Purpose for the file (e.g., 'assistants', 'fine-tune')
-     * @param int $timeout Request timeout in seconds
      * @return array Upload response with file ID
      * @throws Exception If upload fails
      */
-    public static function upload_file($file_path, $upload_url, $headers, $purpose = 'assistants', $timeout = 120) {
+    public static function upload_file($file_path, $upload_url, $headers, $purpose = 'assistants') {
         // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_init -- Required for multipart file uploads
         if (!function_exists('curl_init')) {
             throw new Exception('cURL is required for file uploads');
@@ -70,7 +69,6 @@ class AI_HTTP_File_Upload_Client {
             CURLOPT_POST => 1,
             CURLOPT_POSTFIELDS => $post_fields,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => $timeout,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_FOLLOWLOCATION => false, // Security: Disable redirects for file uploads
             CURLOPT_MAXREDIRS => 0,          // Security: No redirects allowed
@@ -110,18 +108,17 @@ class AI_HTTP_File_Upload_Client {
      * @param string $upload_url Provider's file upload endpoint
      * @param array $headers Authentication headers
      * @param string $purpose Purpose for the file
-     * @param int $timeout Request timeout in seconds
      * @return array Upload response with file ID
      * @throws Exception If attachment not found or upload fails
      */
-    public static function upload_attachment($attachment_id, $upload_url, $headers, $purpose = 'assistants', $timeout = 120) {
+    public static function upload_attachment($attachment_id, $upload_url, $headers, $purpose = 'assistants') {
         $file_path = get_attached_file($attachment_id);
         
         if (!$file_path) {
             throw new Exception('Attachment not found');
         }
 
-        return self::upload_file($file_path, $upload_url, $headers, $purpose, $timeout);
+        return self::upload_file($file_path, $upload_url, $headers, $purpose);
     }
 
     /**
@@ -161,10 +158,9 @@ class AI_HTTP_File_Upload_Client {
      * @param string $file_id File ID from upload response
      * @param string $delete_url Provider's file delete endpoint
      * @param array $headers Authentication headers
-     * @param int $timeout Request timeout in seconds
      * @return bool True if deletion successful
      */
-    public static function delete_file($file_id, $delete_url, $headers, $timeout = 30) {
+    public static function delete_file($file_id, $delete_url, $headers) {
         // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_init -- Required for DELETE method reliability
         if (!function_exists('curl_init')) {
             return false;
@@ -185,7 +181,6 @@ class AI_HTTP_File_Upload_Client {
             CURLOPT_HTTPHEADER => $curl_headers,
             CURLOPT_CUSTOMREQUEST => 'DELETE',
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => $timeout,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_FOLLOWLOCATION => false, // Security: Disable redirects for delete operations
             CURLOPT_MAXREDIRS => 0,          // Security: No redirects allowed

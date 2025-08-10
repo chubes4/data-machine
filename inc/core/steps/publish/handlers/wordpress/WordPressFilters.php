@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_wordpress_publish_filters() {
     
     // Handler registration - WordPress declares itself as publish handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['wordpress_publish'] = [
             'type' => 'publish',
             'class' => WordPress::class,
@@ -42,28 +42,28 @@ function dm_register_wordpress_publish_filters() {
     });
     
     // Authentication registration - pure discovery mode
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         $providers['wordpress_publish'] = new WordPressAuth();
         return $providers;
     });
     
     // Settings registration - pure discovery mode
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['wordpress_publish'] = new WordPressSettings();
         return $all_settings;
     });
     
     // Handler directive registration - pure discovery mode
-    add_filter('dm_get_handler_directives', function($directives) {
+    add_filter('dm_handler_directives', function($directives) {
         $directives['wordpress_publish'] = 'When publishing to WordPress, format your response as:\nTITLE: [compelling post title]\nCATEGORY: [single category name]\nTAGS: [comma,separated,tags]\nCONTENT:\n[your content here]';
         return $directives;
     });
     
     // Modal content registration - Pure discovery mode
-    add_filter('dm_get_modals', function($modals) {
+    add_filter('dm_modals', function($modals) {
         // Get WordPress settings for modal content
-        $all_settings = apply_filters('dm_get_handler_settings', []);
-        $settings_instance = $all_settings['wordpress_publish'] ?? null;
+        $all_settings = apply_filters('dm_handler_settings', []);
+        $handler_settings = $all_settings['wordpress_publish'] ?? null;
         
         // Handler-specific modal removed - core modal handles generic 'handler-settings'
         
@@ -71,7 +71,7 @@ function dm_register_wordpress_publish_filters() {
         $modals['remote-locations-manager'] = [
             'content' => apply_filters('dm_render_template', '', 'modal/remote-locations-manager', [
                 'handler_slug' => 'wordpress_publish',
-                'handler_config' => [
+                'handler_settings' => [
                     'label' => __('WordPress', 'data-machine'),
                     'description' => __('Create and update WordPress posts and pages', 'data-machine')
                 ],

@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_jobs_admin_page_filters() {
     
     // Pure discovery mode - matches actual system usage
-    add_filter('dm_get_admin_pages', function($pages) {
+    add_filter('dm_admin_pages', function($pages) {
         $pages['jobs'] = [
             'page_title' => __('Jobs', 'data-machine'),
             'menu_title' => __('Jobs', 'data-machine'),  

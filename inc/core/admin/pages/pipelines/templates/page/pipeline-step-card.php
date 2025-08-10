@@ -31,14 +31,14 @@ $step_data = $step; // Database format: step IS the step data
 // Pipeline-specific variables (from original pipeline context branch)
 $step_title = $is_empty ? '' : ($step_data['label'] ?? ucfirst(str_replace('_', ' ', $step_type)));
 
-// Step configurations discovery (pure discovery pattern)
+// Step settings discovery (pure discovery pattern)
 if ($is_empty) {
-    $step_config_info = null;
+    $step_settings_info = null;
 } else {
-    $all_step_configs = apply_filters('dm_get_step_configs', []);
-    $step_config_info = $all_step_configs[$step_type] ?? null;
+    $all_step_settings = apply_filters('dm_step_settings', []);
+    $step_settings_info = $all_step_settings[$step_type] ?? null;
 }
-$has_step_config = !$is_empty && !empty($step_config_info);
+$has_step_settings = !$is_empty && !empty($step_settings_info);
 
 ?>
 <div class="dm-step-container" 
@@ -83,14 +83,14 @@ $has_step_config = !$is_empty && !empty($step_config_info);
                     <!-- Pipeline actions: Delete + Configure -->
                     <button type="button" class="button button-small button-link-delete dm-modal-open" 
                             data-template="confirm-delete"
-                            data-context='{"delete_type":"step","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"},'>
+                            data-context='{"delete_type":"step","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
                         <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>
-                    <?php if ($has_step_config): ?>
+                    <?php if ($has_step_settings): ?>
                         <button type="button" class="button button-small button-link-configure dm-modal-open" 
                                 data-template="configure-step"
-                                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","modal_type":"<?php echo esc_attr($step_config_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_config_info['config_type'] ?? ''); ?>"},'>
-                            <?php echo esc_html($step_config_info['button_text'] ?? __('Configure', 'data-machine')); ?>
+                                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","modal_type":"<?php echo esc_attr($step_settings_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_settings_info['config_type'] ?? ''); ?>"}'>
+                            <?php echo esc_html($step_settings_info['button_text'] ?? __('Configure', 'data-machine')); ?>
                         </button>
                     <?php endif; ?>
                 </div>

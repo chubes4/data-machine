@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_googlesheets_filters() {
     
     // Handler registration - Google Sheets declares itself as publish handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['googlesheets_output'] = [
             'type' => 'publish',
             'class' => GoogleSheets::class,
@@ -42,13 +42,13 @@ function dm_register_googlesheets_filters() {
     });
     
     // Authentication registration - pure discovery mode
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         $providers['googlesheets_output'] = new GoogleSheetsAuth();
         return $providers;
     });
     
     // Settings registration - pure discovery mode
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['googlesheets_output'] = new GoogleSheetsSettings();
         return $all_settings;
     });

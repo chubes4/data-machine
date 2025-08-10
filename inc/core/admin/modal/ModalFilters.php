@@ -9,7 +9,7 @@
  * capabilities in their own *Filters.php files following true modular architecture.
  * 
  * The modal system is a Universal HTML Popup Component that serves any component's
- * self-generated content via the dm_get_modals filter.
+ * self-generated content via the dm_modals filter.
  * 
  * @package DataMachine
  * @subpackage Core\Admin\Modal
@@ -57,7 +57,7 @@ function dm_register_modal_system_filters() {
     
     // Pure infrastructure - NO component-specific logic
     // Individual components register their own modal content generators
-    // in their own *Filters.php files using the dm_get_modals collection filter
+    // in their own *Filters.php files using the dm_modals collection filter
     
     // Components register modals using the collection-based pattern:
     // See PipelinesFilters.php and WordPressFilters.php for examples

@@ -31,26 +31,13 @@ if (!defined('ABSPATH')) {
 function dm_register_jobs_database_filters() {
     
     // Database service registration - Pure discovery pattern (collection building)
-    add_filter('dm_get_database_services', function($services) {
+    add_filter('dm_db', function($services) {
         if (!isset($services['jobs'])) {
             $services['jobs'] = new Jobs();
         }
         return $services;
     });
     
-    
-    // Job Creator service - handles job creation logic
-    add_filter('dm_get_job_creator', function($service) {
-        if ($service !== null) {
-            return $service; // External override provided
-        }
-        
-        static $job_creator_instance = null;
-        if ($job_creator_instance === null) {
-            $job_creator_instance = new \DataMachine\Engine\JobCreator();
-        }
-        return $job_creator_instance;
-    }, 10);
 }
 
 // Auto-register when file loads - achieving complete self-containment

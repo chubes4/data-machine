@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_receiver_step_filters() {
     
     // Step registration - Receiver declares itself as 'receiver' step type (pure discovery mode)
-    add_filter('dm_get_steps', function($steps) {
+    add_filter('dm_steps', function($steps) {
         $steps['receiver'] = [
             'label' => __('Receiver', 'data-machine'),
             'description' => __('Accept webhooks from external platforms (framework implementation - coming soon)', 'data-machine'),

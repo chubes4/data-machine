@@ -144,28 +144,29 @@ public function execute(int $job_id, array $data_packet, array $step_config): ar
 Data Machine implements a pure discovery filter architecture enabling AI workflows through WordPress-native patterns. Every component uses collection-based discovery for complete replaceability and extensibility:
 
 ```php
-// Core services - completely replaceable
+// Core services - action hooks for operations
 do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
-$orchestrator = apply_filters('dm_get_orchestrator', null);
+// ProcessingOrchestrator is core engine - direct instantiation
+$orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
 
 // AI HTTP Client - direct instantiation (bundled library)
 $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
 
 // Database services - pure discovery with filtering
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $db_jobs = $all_databases['jobs'] ?? null;
 $db_pipelines = $all_databases['pipelines'] ?? null;
 $db_analytics = $all_databases['analytics'] ?? null; // External
 
 // Handler discovery - pure discovery with type filtering
-$all_handlers = apply_filters('dm_get_handlers', []);
+$all_handlers = apply_filters('dm_handlers', []);
 $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
 $publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
 $custom_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'my_custom_type');
 
 // Step system - configuration arrays with implicit behavior
-$steps = apply_filters('dm_get_steps', [], '');
-$ai_config = apply_filters('dm_get_steps', null, 'ai');
+$steps = apply_filters('dm_steps', [], '');
+$ai_config = apply_filters('dm_steps', null, 'ai');
 ```
 
 ### Architecture Separation
@@ -179,9 +180,9 @@ $ai_config = apply_filters('dm_get_steps', null, 'ai');
 
 ### Universal Modal System
 Filter-based modal architecture:
-- **Filter Discovery**: Components register modal content via `dm_get_modals` filter
+- **Filter Discovery**: Components register modal content via `dm_modals` filter
 - **Template-Based Interface**: Modals identified by template names rather than component IDs
-- **Dynamic Step Discovery**: `apply_filters('dm_get_steps', [])` discovers all step types for UI generation
+- **Dynamic Step Discovery**: `apply_filters('dm_steps', [])` discovers all step types for UI generation
 - **WordPress Security**: Nonce verification, capability checks, input sanitization
 - **Component Independence**: Each component registers modal content via *Filters.php files
 - **Universal AJAX Handler**: Single handler processes all modal requests with security verification
@@ -239,7 +240,7 @@ Chain different AI providers in sequential pipeline steps:
 - **Google Sheets**: Export data to spreadsheets for business intelligence with OAuth 2.0
 
 **Receiver Step Framework** - Located in `/inc/core/steps/receiver/`:
-- **Webhook Reception**: Integrated stub implementation visible in step selection modal
+- **Webhook Reception**: Framework structure for webhook reception (stub implementation)
 - **Extension Pattern**: Demonstrates dynamic step discovery and handler integration
 - **Development Status**: Framework prepared for future webhook capabilities
 
@@ -274,27 +275,28 @@ The filter-based architecture supports custom handlers. Common extension pattern
 
 **Core Services Discovery**:
 ```php
-// All services accessed via apply_filters - zero constructor injection
+// Services use appropriate access patterns - zero constructor injection
 do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
 $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-$orchestrator = apply_filters('dm_get_orchestrator', null);
+// ProcessingOrchestrator is core engine - direct instantiation
+$orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
 
 // Pure discovery with filtering
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $db_jobs = $all_databases['jobs'] ?? null;
 $db_pipelines = $all_databases['pipelines'] ?? null;
 $db_flows = $all_databases['flows'] ?? null;
 
 // Handler discovery - pure discovery with filtering
-$all_handlers = apply_filters('dm_get_handlers', []);
+$all_handlers = apply_filters('dm_handlers', []);
 $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
 $publish_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish');
-$all_auth = apply_filters('dm_get_auth_providers', []);
+$all_auth = apply_filters('dm_auth_providers', []);
 $twitter_auth = $all_auth['twitter'] ?? null;
 
 // Step discovery (dual-mode)
-$all_steps = apply_filters('dm_get_steps', []);              // All step types
-$ai_config = apply_filters('dm_get_steps', null, 'ai');      // Specific type
+$all_steps = apply_filters('dm_steps', []);              // All step types
+$ai_config = apply_filters('dm_steps', null, 'ai');      // Specific type
 ```
 
 **Simple Credential Storage Pattern**:
@@ -589,7 +591,7 @@ class DatabaseFetchStep {
 }
 
 // Pure discovery step registration
-add_filter('dm_get_steps', function($steps) {
+add_filter('dm_steps', function($steps) {
     $steps['database_fetch'] = [
         'label' => __('Database Fetch', 'my-plugin'),
         'description' => __('Read data from custom database tables', 'my-plugin'),
@@ -600,7 +602,7 @@ add_filter('dm_get_steps', function($steps) {
 });
 
 // Access through pure discovery
-$all_steps = apply_filters('dm_get_steps', []);
+$all_steps = apply_filters('dm_steps', []);
 $database_step = $all_steps['database_fetch'] ?? null;
 ```
 
@@ -713,7 +715,7 @@ class SlackNotificationStep {
 **Custom Modal Registration**:
 ```php
 // Register custom modals via pure discovery
-add_filter('dm_get_modals', function($modals) {
+add_filter('dm_modals', function($modals) {
     $modals['analytics-dashboard'] = [
         'template' => 'modal/analytics-dashboard',
         'title' => __('Analytics Dashboard', 'my-plugin')
@@ -799,7 +801,7 @@ add_filter('dm_get_modals', function($modals) {
 **Template Registration**:
 ```php
 // Register admin page with template directory
-add_filter('dm_get_admin_pages', function($pages) {
+add_filter('dm_admin_pages', function($pages) {
     $pages['my_custom_page'] = [
         'page_title' => __('My Custom Page', 'my-plugin'),
         'menu_title' => __('Custom Page', 'my-plugin'),
@@ -1137,7 +1139,7 @@ class MyPublishHandler {
 }
 
 // Pure discovery registration - collection-based
-add_filter('dm_get_handlers', function($handlers) {
+add_filter('dm_handlers', function($handlers) {
     $handlers['my_handler'] = [
         'type' => 'fetch',
         'class' => \MyPlugin\Handlers\MyFetchHandler::class,
@@ -1148,19 +1150,19 @@ add_filter('dm_get_handlers', function($handlers) {
 });
 
 // Authentication component (optional) - collection-based registration
-add_filter('dm_get_auth_providers', function($providers) {
+add_filter('dm_auth_providers', function($providers) {
     $providers['my_handler'] = new \MyPlugin\Handlers\MyHandlerAuth();
     return $providers;
 });
 
 // Settings component (optional) - collection-based registration
-add_filter('dm_get_handler_settings', function($settings) {
+add_filter('dm_handler_settings', function($settings) {
     $settings['my_handler'] = new \MyPlugin\Handlers\MyHandlerSettings();
     return $settings;
 });
 
 // Modal content registration for handler settings - Collection-based pattern
-add_filter('dm_get_modals', function($modals) {
+add_filter('dm_modals', function($modals) {
     $modals['my-handler-settings'] = [
         'template' => 'modal/handler-settings-form',
         'title' => __('My Handler Settings', 'my-plugin'),
@@ -1180,7 +1182,7 @@ add_filter('dm_get_modals', function($modals) {
 
 ```php
 // Register custom pipeline step via pure discovery
-add_filter('dm_get_steps', function($steps) {
+add_filter('dm_steps', function($steps) {
     $steps['custom_processing'] = [
         'label' => __('Custom Processing', 'my-plugin'),
         'description' => __('Custom data processing step', 'my-plugin'),
@@ -1249,7 +1251,7 @@ add_action('dm_log', function($level, $message, $context = []) {
 }, 10, 3);
 
 // Add custom database service via collection registration
-add_filter('dm_get_database_services', function($services) {
+add_filter('dm_db', function($services) {
     $services['analytics'] = new MyPlugin\Database\Analytics();
     return $services;
 });
@@ -1286,7 +1288,7 @@ do_action('dm_log', 'error', 'Process failed', ['error' => $error_details]);
 do_action('dm_log', 'warning', 'Non-critical issue', ['context' => 'data']);
 
 // Runtime logger configuration (3-level system)
-$all_databases = apply_filters('dm_get_database_services', []);
+$all_databases = apply_filters('dm_db', []);
 $logger = new \DataMachine\Engine\Logger(); // Direct access if needed
 
 // Set log level: 'debug' (full), 'error' (problems only), 'none' (disabled)
@@ -1357,7 +1359,7 @@ testModalTrigger('step-selection', { pipeline_id: 1, debug: true });
 - **Scheduler**: WordPress → Tools → Action Scheduler (automated pipeline execution)
 - **AJAX Debugging**: Browser network tab shows pipeline builder and modal AJAX calls
 - **Modal Debugging**: Console logs show modal content generation and filter discovery
-- **Filter Monitoring**: `dm_get_steps`, `dm_get_modals`, `dm_get_handlers` filter calls in debug output
+- **Filter Monitoring**: `dm_steps`, `dm_modals`, `dm_handlers` filter calls in debug output
 - **Template Architecture**: Modal templates in `/templates/modal/`, page templates in `/templates/page/`
 - **Security Verification**: WordPress nonce verification and capability checks in debug mode
 - **Performance Metrics**: Asset loading and dependency resolution in browser DevTools

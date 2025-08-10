@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_rss_fetch_filters() {
     
     // Handler registration - RSS declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['rss'] = [
             'type' => 'fetch',
             'class' => Rss::class,
@@ -42,7 +42,7 @@ function dm_register_rss_fetch_filters() {
     });
     
     // Settings registration - parameter-matched to 'rss' handler
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['rss'] = new RssSettings();
         return $all_settings;
     });

@@ -26,14 +26,14 @@ $flow_id = $context['flow_id'] ?? null;
 $pipeline_step_id = $context['pipeline_step_id'] ?? null;
 
 // Template self-discovery - get handler configuration and settings
-$handler_config = [];
-$settings_instance = null;
+$handler_info = [];
+$handler_settings = null;
 $settings_fields = [];
 
 if ($handler_slug) {
     // Get handler configuration via pure discovery
-    $all_handlers = apply_filters('dm_get_handlers', []);
-    $handler_config = $all_handlers[$handler_slug] ?? [];
+    $all_handlers = apply_filters('dm_handlers', []);
+    $handler_info = $all_handlers[$handler_slug] ?? [];
     
     // Get handler settings instance via pure discovery 
     // Handle special cases like WordPress fetch/publish distinction
@@ -42,20 +42,20 @@ if ($handler_slug) {
         $settings_key = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
     }
     
-    $all_settings = apply_filters('dm_get_handler_settings', []);
-    $settings_instance = $all_settings[$settings_key] ?? null;
+    $all_settings = apply_filters('dm_handler_settings', []);
+    $handler_settings = $all_settings[$settings_key] ?? null;
     
     // Get settings fields with current configuration
-    if ($settings_instance && method_exists($settings_instance, 'get_fields')) {
+    if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
         $current_settings = $context['current_settings'] ?? [];
-        $settings_fields = $settings_instance::get_fields($current_settings);
+        $settings_fields = $handler_settings::get_fields($current_settings);
     }
 }
 
-$handler_label = $handler_config['label'] ?? ucfirst(str_replace('_', ' ', $handler_slug));
+$handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handler_slug));
 
 // Authentication discovery via pure discovery mode
-$all_auth = apply_filters('dm_get_auth_providers', []);
+$all_auth = apply_filters('dm_auth_providers', []);
 $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
 
 ?>
@@ -112,13 +112,13 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
             // If we have a flow_step_id and flow_id, get the settings from flow_config
             if (!empty($flow_step_id) && !empty($flow_id)) {
                     // Get flow configuration directly
-                    $all_databases = apply_filters('dm_get_database_services', []);
+                    $all_databases = apply_filters('dm_db', []);
                     $db_flows = $all_databases['flows'] ?? null;
                     
                     if ($db_flows) {
                         $flow = $db_flows->get_flow($flow_id);
                         if ($flow && !empty($flow['flow_config'])) {
-                            $flow_config = json_decode($flow['flow_config'], true) ?: [];
+                            $flow_config = $flow['flow_config'] ?: [];
                             
                             // Direct access using flow_step_id as key
                             if (isset($flow_config[$flow_step_id])) {

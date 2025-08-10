@@ -24,10 +24,9 @@ class AI_HTTP_Tool_Executor {
      * @param string $tool_name Tool name
      * @param array $arguments Tool arguments
      * @param string $call_id Optional call ID for tracking
-     * @param int $timeout_seconds Optional timeout in seconds (default: 30)
      * @return array Tool execution result
      */
-    public static function execute_tool($tool_name, $arguments = array(), $call_id = null, $timeout_seconds = 30) {
+    public static function execute_tool($tool_name, $arguments = array(), $call_id = null) {
         $start_time = microtime(true);
         
         try {
@@ -40,8 +39,8 @@ class AI_HTTP_Tool_Executor {
                 );
             }
             
-            // Execute with timeout handling
-            $result = self::execute_with_timeout($tool_name, $arguments, $call_id, $timeout_seconds);
+            // Execute tool handler
+            $result = self::execute_with_timeout($tool_name, $arguments, $call_id);
             
             // Add execution metadata
             $execution_time = microtime(true) - $start_time;
@@ -69,40 +68,28 @@ class AI_HTTP_Tool_Executor {
     }
     
     /**
-     * Execute tool with timeout handling
+     * Execute tool handler
      *
      * @param string $tool_name Tool name
      * @param array $arguments Tool arguments  
      * @param string $call_id Call ID
-     * @param int $timeout_seconds Timeout in seconds
      * @return array Tool execution result
-     * @throws Exception If timeout is exceeded
+     * @throws Exception If execution fails
      */
-    private static function execute_with_timeout($tool_name, $arguments, $call_id, $timeout_seconds) {
-        $start_time = time();
-        
-        // Set up timeout tracking
-        $max_execution_time = ini_get('max_execution_time');
-        if ($max_execution_time > 0 && $timeout_seconds > $max_execution_time) {
-            $timeout_seconds = $max_execution_time - 5; // Leave 5 seconds buffer
-        }
+    private static function execute_with_timeout($tool_name, $arguments, $call_id) {
         
         // Check registered custom tools
         if (isset(self::$custom_tools[$tool_name])) {
             $handler = self::$custom_tools[$tool_name];
             
-            // Execute with periodic timeout checks
-            $result = self::execute_handler_with_checks($handler, $arguments, $call_id, $start_time, $timeout_seconds);
+            // Execute handler
+            $result = call_user_func($handler, $arguments, $call_id);
             return $result;
         }
         
         // Allow WordPress plugins to handle tools via filter
         $result = apply_filters('ai_http_client_execute_tool', null, $tool_name, $arguments, $call_id);
         
-        // Check timeout after filter execution
-        if ((time() - $start_time) > $timeout_seconds) {
-            throw new Exception("Tool execution timeout exceeded (" . esc_html($timeout_seconds) . "s)");
-        }
         
         if ($result !== null) {
             return $result;
@@ -114,27 +101,6 @@ class AI_HTTP_Tool_Executor {
         );
     }
     
-    /**
-     * Execute handler with timeout checks
-     *
-     * @param callable $handler Tool handler
-     * @param array $arguments Tool arguments
-     * @param string $call_id Call ID
-     * @param int $start_time Start timestamp
-     * @param int $timeout_seconds Timeout in seconds
-     * @return array Tool execution result
-     * @throws Exception If timeout is exceeded
-     */
-    private static function execute_handler_with_checks($handler, $arguments, $call_id, $start_time, $timeout_seconds) {
-        // For simple handlers, just execute directly with timeout check
-        $result = call_user_func($handler, $arguments, $call_id);
-        
-        if ((time() - $start_time) > $timeout_seconds) {
-            throw new Exception("Tool execution timeout exceeded (" . esc_html($timeout_seconds) . "s)");
-        }
-        
-        return $result;
-    }
 
     /**
      * Register a custom tool handler
@@ -249,15 +215,14 @@ class AI_HTTP_Tool_Executor {
      * @param array $arguments Tool arguments
      * @param string $call_id Call ID
      * @param int $max_retries Maximum number of retries (default: 2)
-     * @param int $timeout_seconds Timeout per attempt in seconds (default: 30)
      * @return array Tool execution result
      */
-    public static function execute_tool_with_retry($tool_name, $arguments = array(), $call_id = null, $max_retries = 2, $timeout_seconds = 30) {
+    public static function execute_tool_with_retry($tool_name, $arguments = array(), $call_id = null, $max_retries = 2) {
         $last_error = null;
         
         for ($attempt = 0; $attempt <= $max_retries; $attempt++) {
             try {
-                $result = self::execute_tool($tool_name, $arguments, $call_id, $timeout_seconds);
+                $result = self::execute_tool($tool_name, $arguments, $call_id);
                 
                 // If successful, return immediately
                 if (isset($result['success']) && $result['success']) {

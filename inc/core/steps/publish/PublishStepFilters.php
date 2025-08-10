@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_publish_step_filters() {
     
     // Step registration - Publish declares itself as 'publish' step type (pure discovery mode)
-    add_filter('dm_get_steps', function($steps) {
+    add_filter('dm_steps', function($steps) {
         $steps['publish'] = [
             'label' => __('Publish', 'data-machine'),
             'description' => __('Publish to target destinations', 'data-machine'),

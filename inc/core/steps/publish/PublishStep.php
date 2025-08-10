@@ -12,12 +12,16 @@ if (!defined('ABSPATH')) {
 /**
  * Universal Publish Step - Executes any publish handler
  * 
- * This step can publish data to any configured publish destination.
- * No interface requirements - detected via method existence only.
- * External plugins can create completely independent publish step classes.
- * All functionality is capability-based, not inheritance-based.
+ * This step can publish data to any configured destination using the filter-based
+ * handler discovery system. Handler configuration is managed through the modal system
+ * and flow-level settings, maintaining complete separation from step-level logic.
  * 
- * Handler selection is determined by step configuration, enabling
+ * PURE CAPABILITY-BASED: External publish step classes only need:
+ * - execute(int $job_id, array $data_packet, array $step_config): array method
+ * - Parameter-less constructor
+ * - No interface implementation required
+ * 
+ * Handler selection is determined by flow configuration, enabling
  * complete flexibility in publishing workflows.
  */
 class PublishStep {
@@ -36,7 +40,7 @@ class PublishStep {
      * @return array Updated data packet array with publish result added
      */
     public function execute(int $job_id, array $data_packet = [], array $step_config = []): array {
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
         try {
@@ -60,7 +64,7 @@ class PublishStep {
             }
             
             $handler = $handler_data['handler_slug'];
-            $handler_config = $handler_data['settings'] ?? [];
+            $handler_settings = $handler_data['settings'] ?? [];
 
             // Publish steps use latest data entry (first in array)
             $latest_data = $data_packet[0] ?? null;
@@ -70,7 +74,7 @@ class PublishStep {
             }
 
             // Execute single publish handler - one step, one handler, per flow
-            $handler_result = $this->execute_publish_handler_direct($handler, $latest_data, $step_config, $handler_config);
+            $handler_result = $this->execute_publish_handler_direct($handler, $latest_data, $step_config, $handler_settings);
 
             if (!$handler_result) {
                 do_action('dm_log', 'error', 'Publish Step: Handler execution failed', [
@@ -128,10 +132,10 @@ class PublishStep {
      * @param string $handler_name Publish handler name
      * @param array $data_entry Latest data entry from data packet array
      * @param array $step_config Step configuration from ProcessingOrchestrator
-     * @param array $handler_config Handler configuration
+     * @param array $handler_settings Handler settings
      * @return array|null Publish result or null on failure
      */
-    private function execute_publish_handler_direct(string $handler_name, array $data_entry, array $step_config, array $handler_config): ?array {
+    private function execute_publish_handler_direct(string $handler_name, array $data_entry, array $step_config, array $handler_settings): ?array {
         // Get handler object directly from handler system
         $handler = $this->get_handler_object($handler_name, 'publish');
         if (!$handler) {
@@ -160,7 +164,7 @@ class PublishStep {
             
             // Convert data entry to pure JSON object  
             $json_data_entry = json_decode(json_encode($data_entry));
-            $json_data_entry->publish_config = $handler_config;
+            $json_data_entry->publish_config = $handler_settings;
             
             // Execute handler with pure JSON object - beautiful simplicity
             $publish_result = $handler->handle_publish($json_data_entry);
@@ -192,63 +196,20 @@ class PublishStep {
      */
     private function get_handler_object(string $handler_name, string $handler_type): ?object {
         // Direct handler discovery - no redundant filtering needed
-        $all_handlers = apply_filters('dm_get_handlers', []);
-        $handler_config = $all_handlers[$handler_name] ?? null;
+        $all_handlers = apply_filters('dm_handlers', []);
+        $handler_info = $all_handlers[$handler_name] ?? null;
         
-        if (!$handler_config || !isset($handler_config['class'])) {
+        if (!$handler_info || !isset($handler_info['class'])) {
             return null;
         }
         
         // Verify handler type matches
-        if (($handler_config['type'] ?? '') !== $handler_type) {
+        if (($handler_info['type'] ?? '') !== $handler_type) {
             return null;
         }
         
-        $class_name = $handler_config['class'];
+        $class_name = $handler_info['class'];
         return class_exists($class_name) ? new $class_name() : null;
-    }
-
-    /**
-     * Define handler configuration fields for publish step
-     * 
-     * Returns form fields for selecting and configuring publish handlers.
-     * This is NOT for AI prompt configuration - use AIStep for prompts.
-     * 
-     * PURE CAPABILITY-BASED: External publish step classes only need:
-     * - execute(int $job_id): bool method
-     * - get_config_fields(): array static method (optional)
-     * - Parameter-less constructor
-     * - No interface implementation required
-     * 
-     * @return array Handler configuration field definitions for UI
-     */
-    public static function get_config_fields(): array {
-        // Get available publish handlers via pure discovery
-        $all_handlers = apply_filters('dm_get_handlers', []);
-        $publish_handlers = array_filter($all_handlers, function($handler) {
-            return ($handler['type'] ?? '') === 'publish';
-        });
-        $handler_options = [];
-        
-        foreach ($publish_handlers as $slug => $handler_info) {
-            $handler_options[$slug] = $handler_info['label'] ?? ucfirst($slug);
-        }
-
-        return [
-            'handler' => [
-                'type' => 'select',
-                'label' => 'Publish Destination',
-                'description' => 'Choose one publish handler to publish data',
-                'options' => $handler_options,
-                'required' => true
-            ],
-            'config' => [
-                'type' => 'json',
-                'label' => 'Handler Configuration',
-                'description' => 'JSON configuration for the selected publish handler',
-                'placeholder' => '{"post_title": "Auto-generated Post"}'
-            ]
-        ];
     }
 
     // PublishStep receives cumulative data packet array from engine via $data_packet parameter

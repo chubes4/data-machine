@@ -131,21 +131,18 @@ class FacebookAuth {
         ];
         $token_url = self::TOKEN_URL . '?' . http_build_query($token_params);
 
-        // Facebook requires GET for token exchange - use HttpService for external override capability
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            do_action('dm_log', 'error', 'Facebook OAuth Error: HttpService not available.', ['user_id' => $user_id]);
-            return new \WP_Error('facebook_oauth_service_unavailable', __('HTTP service unavailable for Facebook token exchange.', 'data-machine'));
+        // Facebook requires GET for token exchange - use dm_send_request action hook
+        $result = null;
+        do_action('dm_send_request', 'GET', $token_url, [
+        ], 'Facebook Token Exchange', $result);
+        
+        // Convert result to WP_Error format for compatibility
+        if (!$result['success']) {
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $result['error']]);
+            return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'data-machine'), $result['error']);
         }
-
-        $response = $http_service->get($token_url, [
-            'timeout' => 15,
-        ], 'Facebook Token Exchange');
-
-        if (is_wp_error($response)) {
-            do_action('dm_log', 'error', 'Facebook OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
-            return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'data-machine'), $response);
-        }
+        
+        $response = $result['data'];
 
         $body = $response['body'];
         $data = json_decode($body, true);
@@ -298,20 +295,18 @@ class FacebookAuth {
     private function get_user_profile(string $access_token): array|\WP_Error {
         $url = self::GRAPH_API_URL . '/me?fields=id,name';
         
-        // Use HttpService for external override capability
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            return new \WP_Error('facebook_service_unavailable', __('HTTP service unavailable for Facebook profile fetch.', 'data-machine'));
-        }
-
-        $response = $http_service->get($url, [
+        // Use dm_send_request action hook for Facebook profile fetch
+        $result = null;
+        do_action('dm_send_request', 'GET', $url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
-            'timeout' => 10,
-        ], 'Facebook Profile API');
-
-        if (is_wp_error($response)) {
-            return $response;
+        ], 'Facebook Profile API', $result);
+        
+        if (!$result['success']) {
+            return new \WP_Error('facebook_profile_fetch_failed', $result['error']);
         }
+        
+        $response = $result['data'];
+
 
         $body = $response['body'];
         $data = json_decode($body, true);
@@ -341,18 +336,17 @@ class FacebookAuth {
         ];
         $url = self::TOKEN_URL . '?' . http_build_query($params);
 
-        // Use HttpService for external override capability
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            return new \WP_Error('facebook_service_unavailable', __('HTTP service unavailable for Facebook long-lived token exchange.', 'data-machine'));
+        // Use dm_send_request action hook for long-lived token exchange
+        $result = null;
+        do_action('dm_send_request', 'GET', $url, [], 'Facebook Long-lived Token Exchange', $result);
+        
+        if (!$result['success']) {
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Long-lived token request failed.', ['error' => $result['error']]);
+            return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $result['error']);
         }
+        
+        $response = $result['data'];
 
-        $response = $http_service->get($url, ['timeout' => 15], 'Facebook Long-lived Token Exchange');
-
-        if (is_wp_error($response)) {
-            do_action('dm_log', 'error', 'Facebook OAuth Error: Long-lived token request failed.', ['error' => $response->get_error_message()]);
-            return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $response);
-        }
 
         $body = $response['body'];
         $data = json_decode($body, true);
@@ -387,23 +381,21 @@ class FacebookAuth {
         do_action('dm_log', 'debug', 'Fetching Facebook page credentials.', ['user_id' => $user_id]);
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
 
-        // Use HttpService for external override capability
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            return new \WP_Error('facebook_service_unavailable', __('HTTP service unavailable for Facebook pages fetch.', 'data-machine'));
-        }
-
-        $response = $http_service->get($url, [
+        // Use dm_send_request action hook for Facebook pages fetch
+        $result = null;
+        do_action('dm_send_request', 'GET', $url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $user_access_token,
             ],
-            'timeout' => 15,
-        ], 'Facebook Pages API');
-
-        if (is_wp_error($response)) {
-            do_action('dm_log', 'error', 'Facebook Page Fetch Error: Request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
-            return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $response);
+        ], 'Facebook Pages API', $result);
+        
+        if (!$result['success']) {
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: Request failed.', ['user_id' => $user_id, 'error' => $result['error']]);
+            return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $result['error']);
         }
+        
+        $response = $result['data'];
+
 
         $body = $response['body'];
         $data = json_decode($body, true);
@@ -454,15 +446,18 @@ class FacebookAuth {
         }
 
         if ($token) {
-            // Attempt deauthorization with Facebook - use HttpService for external override capability
-            $http_service = apply_filters('dm_get_http_service', null);
-            if ($http_service) {
-                $url = self::GRAPH_API_URL . '/me/permissions';
-                $response = $http_service->delete($url, [
-                    'body' => ['access_token' => $token],
-                    'timeout' => 10,
-                ], 'Facebook Deauthorization');
-                // Log success or failure of deauthorization, but don't stop deletion
+            // Attempt deauthorization with Facebook - use dm_send_request action hook
+            $url = self::GRAPH_API_URL . '/me/permissions';
+            $result = null;
+            do_action('dm_send_request', 'DELETE', $url, [
+                'body' => ['access_token' => $token],
+                ], 'Facebook Deauthorization', $result);
+            
+            // Log success or failure of deauthorization, but don't stop deletion
+            if (!$result['success']) {
+                do_action('dm_log', 'warning', 'Facebook deauthorization failed (non-critical)', ['error' => $result['error']]);
+            } else {
+                do_action('dm_log', 'debug', 'Facebook deauthorization successful');
             }
         }
 

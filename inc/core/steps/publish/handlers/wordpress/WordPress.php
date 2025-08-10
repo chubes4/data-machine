@@ -70,7 +70,7 @@ class WordPress {
             'image_source_url' => !empty($data_entry->attachments->images) ? $data_entry->attachments->images[0]->url : null // Optional
         ];
 
-        // Get config - publish_config is the handler_config directly
+        // Get config - publish_config is the handler_settings directly
         if (empty($publish_config)) {
             return ['success' => false, 'error' => 'WordPress configuration is required'];
         }
@@ -377,7 +377,7 @@ class WordPress {
         }
 
         // Get remote locations database service - fail fast if unavailable
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         if (!isset($all_databases['remote_locations'])) {
             return [
                 'success' => false,
@@ -586,7 +586,6 @@ class WordPress {
                 'Content-Type' => 'application/json',
             ),
             'body' => wp_json_encode($payload),
-            'timeout' => 30,
         );
 
         // Make the API request
@@ -671,7 +670,7 @@ class WordPress {
      */
     private static function get_remote_fields(array $current_config = []): array {
         // Get remote locations service via filter system - fail fast if unavailable
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         if (!isset($all_databases['remote_locations'])) {
             throw new \Exception(esc_html__('Remote locations service not available. This indicates a core filter registration issue.', 'data-machine'));
         }

@@ -93,27 +93,23 @@ class Rss {
         // Fetch the RSS feed
         do_action('dm_log', 'debug', 'RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'pipeline_id' => $pipeline_id]);
         
-        // Use HTTP service for feed fetching
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            throw new Exception(esc_html__('HTTP service not available.', 'data-machine'));
-        }
-
+        // Use dm_send_request action hook for feed fetching
         $args = [
-            'timeout' => 30,
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
         ];
 
-        $response = $http_service->get($feed_url, $args, 'RSS Feed');
-        if (is_wp_error($response)) {
+        $result = null;
+        do_action('dm_send_request', 'GET', $feed_url, $args, 'RSS Feed', $result);
+        
+        if (!$result['success']) {
             throw new Exception(sprintf(
                 /* translators: %s: error message */
                 esc_html__('Failed to fetch RSS feed: %s', 'data-machine'),
-                esc_html($response->get_error_message())
+                esc_html($result['error'])
             ));
         }
 
-        $feed_content = $response['body'];
+        $feed_content = $result['data']['body'];
         if (empty($feed_content)) {
             throw new Exception(esc_html__('RSS feed content is empty.', 'data-machine'));
         }

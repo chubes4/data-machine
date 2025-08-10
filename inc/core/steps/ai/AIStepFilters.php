@@ -37,7 +37,7 @@ if (!defined('ABSPATH')) {
  * This maintains the self-registration pattern and keeps AI functionality self-contained.
  * 
  * Registered Filters:
- * - dm_get_steps: Register AI step for pipeline discovery * 
+ * - dm_steps: Register AI step for pipeline discovery * 
  * @since 1.0.0
  */
 function dm_register_ai_step_filters() {
@@ -51,7 +51,7 @@ function dm_register_ai_step_filters() {
      * @param array $steps Current steps array
      * @return array Updated steps array
      */
-    add_filter('dm_get_steps', function($steps) {
+    add_filter('dm_steps', function($steps) {
         $steps['ai'] = [
             'label' => __('AI Processing', 'data-machine'),
             'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
@@ -80,7 +80,7 @@ function dm_register_ai_step_filters() {
      * @param array $context Step context data
      * @return array|mixed Step configuration or original value
      */
-    add_filter('dm_get_step_configs', function($configs) {
+    add_filter('dm_step_settings', function($configs) {
         $configs['ai'] = [
             'config_type' => 'ai_configuration',
             'modal_type' => 'configure-step', // Links to existing modal content registration

@@ -161,6 +161,7 @@
             };
         },
 
+
         /**
          * Validate pipeline data before saving
          */
@@ -191,131 +192,17 @@
             const $pipelineCard = $input.closest('.dm-pipeline-card');
             const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
             
-            this.updateSaveButtonState();
             
             // Add visual feedback
             const pipelineName = $input.val().trim();
             if (pipelineName.length > 0) {
                 $input.removeClass('dm-invalid');
                 
-                // Trigger auto-save with debouncing if pipeline has ID
-                if (pipelineId > 0) {
-                    this.debouncedAutoSave(pipelineId);
-                }
             } else {
                 $input.addClass('dm-invalid');
             }
         },
 
-        /**
-         * Debounced auto-save for pipeline data
-         * Always performs full pipeline save
-         */
-        debouncedAutoSave: function(pipelineId) {
-            // Clear existing timeout for this pipeline
-            if (this.autoSaveTimeouts && this.autoSaveTimeouts[pipelineId]) {
-                clearTimeout(this.autoSaveTimeouts[pipelineId]);
-            }
-            
-            // Initialize timeouts object if needed
-            if (!this.autoSaveTimeouts) {
-                this.autoSaveTimeouts = {};
-            }
-            
-            // Set new timeout with 2-second debounce
-            this.autoSaveTimeouts[pipelineId] = setTimeout(() => {
-                this.performAutoSave(pipelineId);
-            }, 2000);
-        },
-
-        /**
-         * Perform auto-save AJAX request
-         * Always performs full pipeline save
-         */
-        performAutoSave: function(pipelineId) {
-            // Show saving indicator
-            this.showAutoSaveStatus(pipelineId, 'saving');
-            
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_pipeline_auto_save',
-                    pipeline_id: pipelineId,
-                    nonce: dmPipelineBuilder.pipeline_auto_save_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        if (response.data.debounced) {
-                            // Auto-save was debounced, don't show status
-                            return;
-                        }
-                        
-                        this.showAutoSaveStatus(pipelineId, 'saved', response.data.timestamp);
-                        
-                        // Hide status after 3 seconds
-                        setTimeout(() => {
-                            this.hideAutoSaveStatus(pipelineId);
-                        }, 3000);
-                    } else {
-                        this.showAutoSaveStatus(pipelineId, 'error', null, response.data.message);
-                        console.error('Auto-save failed:', response.data.message);
-                    }
-                },
-                error: (xhr, status, error) => {
-                    this.showAutoSaveStatus(pipelineId, 'error', null, 'Auto-save request failed');
-                    console.error('Auto-save AJAX error:', error);
-                }
-            });
-        },
-
-        /**
-         * Show auto-save status indicator
-         */
-        showAutoSaveStatus: function(pipelineId, status, timestamp = null, message = null) {
-            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            let $statusIndicator = $pipelineCard.find('.dm-auto-save-status');
-            
-            // Create status indicator if it doesn't exist
-            if ($statusIndicator.length === 0) {
-                $statusIndicator = $('<div class="dm-auto-save-status"></div>');
-                $pipelineCard.find('.dm-pipeline-header').append($statusIndicator);
-            }
-            
-            // Set status content based on type
-            let statusText = '';
-            let statusClass = '';
-            
-            switch (status) {
-                case 'saving':
-                    statusText = 'Saving...';
-                    statusClass = 'dm-status-saving';
-                    break;
-                case 'saved':
-                    const timeAgo = timestamp ? Math.floor((Date.now() / 1000) - timestamp) : 0;
-                    statusText = timeAgo <= 1 ? 'Saved ✓' : `Auto-saved ${timeAgo}s ago`;
-                    statusClass = 'dm-status-saved';
-                    break;
-                case 'error':
-                    statusText = message || 'Auto-save failed';
-                    statusClass = 'dm-status-error';
-                    break;
-            }
-            
-            $statusIndicator
-                .removeClass('dm-status-saving dm-status-saved dm-status-error')
-                .addClass(statusClass)
-                .text(statusText)
-                .show();
-        },
-
-        /**
-         * Hide auto-save status indicator
-         */
-        hideAutoSaveStatus: function(pipelineId) {
-            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            $pipelineCard.find('.dm-auto-save-status').hide();
-        },
 
         /**
          * Update flow button state based on pipeline validation
@@ -406,10 +293,8 @@
                 }
                 
                 // Focus on the pipeline name input in the new card
-                setTimeout(() => {
-                    const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
-                    $newCard.find('.dm-pipeline-title-input').focus().select();
-                }, 100);
+                const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
+                $newCard.find('.dm-pipeline-title-input').focus().select();
             }).catch((error) => {
                 console.error('Failed to render pipeline card template:', error);
             });

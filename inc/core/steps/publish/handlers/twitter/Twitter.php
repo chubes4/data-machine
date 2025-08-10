@@ -29,7 +29,7 @@ class Twitter {
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_get_auth_providers', []);
+        $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['twitter'] ?? null;
     }
 
@@ -64,7 +64,7 @@ class Twitter {
         
         do_action('dm_log', 'debug', 'Starting Twitter output handling.');
         
-        // 1. Get config - publish_config is the handler_config directly
+        // 1. Get config - publish_config is the handler_settings directly
         $char_limit = $publish_config['twitter_char_limit'] ?? 280;
         $include_source = $publish_config['twitter_include_source'] ?? true;
         $enable_images = $publish_config['twitter_enable_images'] ?? true;
@@ -139,7 +139,7 @@ class Twitter {
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
                 }
                 
-                $temp_image_path = download_url($image_source_url, 15); // 15 second timeout
+                $temp_image_path = download_url($image_source_url);
 
                 if (is_wp_error($temp_image_path)) {
                     do_action('dm_log', 'warning', 'Failed to download image for Twitter upload.', ['url' => $image_source_url, 'error' => $temp_image_path->get_error_message()]);
@@ -380,7 +380,6 @@ class Twitter {
 
         // Test accessibility with HEAD request
         $response = wp_remote_head($image_url, [
-            'timeout' => 10,
             'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
         ]);
 

@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_twitter_filters() {
     
     // Handler registration - Twitter declares itself as publish handler (pure discovery mode)
-    add_filter('dm_get_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'publish',
             'class' => Twitter::class,
@@ -42,13 +42,13 @@ function dm_register_twitter_filters() {
     });
     
     // Authentication registration - pure discovery mode
-    add_filter('dm_get_auth_providers', function($providers) {
+    add_filter('dm_auth_providers', function($providers) {
         $providers['twitter'] = new TwitterAuth();
         return $providers;
     });
     
     // Settings registration - pure discovery mode
-    add_filter('dm_get_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['twitter'] = new TwitterSettings();
         return $all_settings;
     });

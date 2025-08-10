@@ -52,7 +52,6 @@ class WordPressAuth {
             'headers' => [
                 'Authorization' => 'Basic ' . base64_encode($username . ':' . $api_key)
             ],
-            'timeout' => 10
         ];
 
         $response = wp_remote_get($test_url, $args);

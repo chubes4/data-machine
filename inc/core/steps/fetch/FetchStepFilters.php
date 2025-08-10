@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_fetch_step_filters() {
     
     // Step registration - Fetch declares itself as 'fetch' step type (pure discovery mode)
-    add_filter('dm_get_steps', function($steps) {
+    add_filter('dm_steps', function($steps) {
         $steps['fetch'] = [
             'label' => __('Fetch', 'data-machine'),
             'description' => __('Collect data from external sources', 'data-machine'),

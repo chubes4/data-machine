@@ -187,20 +187,18 @@ class ThreadsAuth {
             'code'          => $code,
         ];
 
-        // Use HttpService for external override capability
-        $http_service = apply_filters('dm_get_http_service', null);
-        if (!$http_service) {
-            return new \WP_Error('threads_service_unavailable', __('HTTP service unavailable for Threads token exchange.', 'data-machine'));
+        // Use dm_send_request action hook for Threads token exchange
+        $result = null;
+        do_action('dm_send_request', 'POST', self::TOKEN_URL, [
+            'body' => $token_params,
+        ], 'Threads Token Exchange', $result);
+        
+        if (!$result['success']) {
+            do_action('dm_log', 'error', 'Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $result['error']]);
+            return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $result['error']);
         }
-
-        $response = $http_service->post(self::TOKEN_URL, $token_params, [
-            'timeout' => 15,
-        ], 'Threads Token Exchange');
-
-        if (is_wp_error($response)) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $response->get_error_message()]);
-            return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $response);
-        }
+        
+        $response = $result['data'];
 
         $body = $response['body'];
         $data = json_decode($body, true);
@@ -225,7 +223,6 @@ class ThreadsAuth {
         $exchange_url = 'https://graph.threads.net/access_token?' . http_build_query($exchange_params);
 
         $exchange_response = wp_remote_get($exchange_url, [
-            'timeout' => 15,
         ]);
 
         if (is_wp_error($exchange_response)) {
@@ -331,7 +328,6 @@ class ThreadsAuth {
         do_action('dm_log', 'debug', 'Facebook Graph API: Fetching authenticating user profile.', ['url' => $url]);
         $response = wp_remote_get($url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
-            'timeout' => 10,
         ]);
 
         if (is_wp_error($response)) {
@@ -371,7 +367,7 @@ class ThreadsAuth {
          ];
          $url = self::REFRESH_URL . '?' . http_build_query($params);
 
-         $response = wp_remote_get($url, ['timeout' => 15]);
+         $response = wp_remote_get($url, []);
 
          if (is_wp_error($response)) {
              return new \WP_Error('threads_refresh_http_error', $response->get_error_message(), $response);
@@ -418,8 +414,7 @@ class ThreadsAuth {
             $response = wp_remote_request($url, [
                 'method' => 'DELETE',
                 'body' => ['access_token' => $token],
-                'timeout' => 10,
-            ]);
+                ]);
 
             // Log success or failure of revocation, but don't stop deletion
             if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {

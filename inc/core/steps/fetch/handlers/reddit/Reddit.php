@@ -27,7 +27,7 @@ class Reddit {
 	 */
 	public function __construct() {
 		// Get auth service via filter-based discovery pattern
-		$all_auth = apply_filters('dm_get_auth_providers', []);
+		$all_auth = apply_filters('dm_auth_providers', []);
 		$this->oauth_reddit = $all_auth['reddit'] ?? null;
 	}
 
@@ -40,18 +40,6 @@ class Reddit {
 		return $this->oauth_reddit;
 	}
 
-	/**
-	 * Get current job context for flow_id needed by processed items.
-	 * This is a temporary approach until handler signatures include full context.
-	 *
-	 * @return array|null Job context array or null if not found.
-	 */
-	private function get_current_job_context(): ?array {
-		// Get current job context from filter system
-		// This assumes InputStep sets this context during handler execution
-		$context = apply_filters('dm_get_current_handler_context', null);
-		return is_array($context) ? $context : null;
-	}
 
 	/**
 	 * Fetches and prepares fetch data packets from a specified subreddit.
@@ -93,14 +81,8 @@ class Reddit {
 			// Continue without processed items tracking rather than fail completely
 		}
 
-		// Check if essential dependencies are available
-		if (!$db_processed_items) {
-			do_action('dm_log', 'error', 'Reddit Input: Required service dependency missing.', [
-				'pipeline_id' => $pipeline_id,
-				'processed_items_missing' => !$db_processed_items
-			]);
-			throw new Exception(esc_html__( 'Required service not available in Reddit handler.', 'data-machine' ));
-		}
+		// Note: ProcessedItems service discovered via filter when needed
+		// No upfront service validation required with filter-based architecture
 
 		// --- Retrieve Reddit OAuth Token & Refresh if needed ---
 		$reddit_account = get_option('dm_reddit_auth_data', []);
@@ -240,21 +222,23 @@ class Reddit {
 				'headers' => $log_headers
 			]);
 
-			// Use HTTP service - replaces ~25 lines of duplicated HTTP code
-			$http_service = apply_filters('dm_get_http_service', null);
-			$http_response = $http_service->get($reddit_url, $args, 'Reddit API');
-			if (is_wp_error($http_response)) {
-				if ($pages_fetched === 1) throw new Exception(esc_html($http_response->get_error_message()));
+			// Use dm_send_request action hook for API call
+			$result = null;
+			do_action('dm_send_request', 'GET', $reddit_url, $args, 'Reddit API', $result);
+			
+			if (!$result['success']) {
+				if ($pages_fetched === 1) throw new Exception(esc_html($result['error']));
 				else break;
 			}
 
-			$body = $http_response['body'];
-			do_action('dm_log', 'debug', 'Reddit Input: API Response Code', ['code' => $http_response['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
+			$body = $result['data']['body'];
+			do_action('dm_log', 'debug', 'Reddit Input: API Response Code', ['code' => $result['data']['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
 
 			// Parse JSON response with error handling
-			$response_data = $http_service->parse_json($body, 'Reddit API');
-			if (is_wp_error($response_data)) {
-				if ($pages_fetched === 1) throw new Exception(esc_html($response_data->get_error_message()));
+			$response_data = json_decode($body, true);
+			if (json_last_error() !== JSON_ERROR_NONE) {
+				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'data-machine'), json_last_error_msg());
+				if ($pages_fetched === 1) throw new Exception(esc_html($error_message));
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
@@ -367,10 +351,12 @@ class Reddit {
 						]
 					];
 					try {
-						$comments_response = $http_service->get($comments_url, $comment_args, 'Reddit Comments');
-						if (!is_wp_error($comments_response)) {
-							$comments_data = $http_service->parse_json($comments_response['body'], 'Reddit Comments');
-							if (!is_wp_error($comments_data)) {
+						$comments_result = null;
+						do_action('dm_send_request', 'GET', $comments_url, $comment_args, 'Reddit Comments', $comments_result);
+						
+						if ($comments_result['success']) {
+							$comments_data = json_decode($comments_result['data']['body'], true);
+							if (json_last_error() === JSON_ERROR_NONE) {
 							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
 								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
 								if (!empty($top_comments)) {
@@ -393,7 +379,7 @@ class Reddit {
 								do_action('dm_log', 'warning', 'Reddit Input: Failed to parse comments JSON.', [
 									'item_id' => $current_item_id,
 									'comments_url' => $comments_url,
-									'error' => $comments_data->get_error_message(),
+									'error' => json_last_error_msg(),
 									'pipeline_id' => $pipeline_id
 								]);
 							}
@@ -401,7 +387,7 @@ class Reddit {
 							do_action('dm_log', 'warning', 'Reddit Input: Failed to fetch comments for post.', [
 								'item_id' => $current_item_id,
 								'comments_url' => $comments_url,
-								'error' => $comments_response->get_error_message(),
+								'error' => $comments_result['error'],
 								'pipeline_id' => $pipeline_id
 							]);
 						}

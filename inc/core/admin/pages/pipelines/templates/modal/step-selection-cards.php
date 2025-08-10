@@ -26,7 +26,7 @@ if (!defined('WPINC')) {
     <div class="dm-step-cards">
         <?php 
         // Template self-discovery - get all registered steps
-        $all_steps = apply_filters('dm_get_steps', []);
+        $all_steps = apply_filters('dm_steps', []);
         uasort($all_steps, function($a, $b) {
             $pos_a = $a['position'] ?? 999;
             $pos_b = $b['position'] ?? 999;
@@ -40,7 +40,7 @@ if (!defined('WPINC')) {
             
             // Get available handlers for this step type using pure discovery
             $handlers_list = '';
-            $all_handlers = apply_filters('dm_get_handlers', []);
+            $all_handlers = apply_filters('dm_handlers', []);
             $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
                 return ($handler['type'] ?? '') === $step_type;
             });

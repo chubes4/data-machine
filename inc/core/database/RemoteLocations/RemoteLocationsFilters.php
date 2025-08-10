@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_remote_locations_database_filters() {
     
     // Database service registration - Pure discovery pattern (collection building)
-    add_filter('dm_get_database_services', function($services) {
+    add_filter('dm_db', function($services) {
         if (!isset($services['remote_locations'])) {
             $services['remote_locations'] = new RemoteLocations();
         }
@@ -39,9 +39,9 @@ function dm_register_remote_locations_database_filters() {
     });
     
     // Modal content registration - Remote Locations modal for pipeline integration
-    add_filter('dm_get_modals', function($modals) {
+    add_filter('dm_modals', function($modals) {
         // Get Remote Locations service via pure discovery
-        $all_databases = apply_filters('dm_get_database_services', []);
+        $all_databases = apply_filters('dm_db', []);
         $db_remote_locations = $all_databases['remote_locations'] ?? null;
         
         $modals['remote-locations-manager'] = [
