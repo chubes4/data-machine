@@ -69,10 +69,7 @@ class Reddit {
 			throw new Exception(esc_html__( 'Reddit authentication service not available. Please check system configuration.', 'data-machine' ));
 		}
 
-		// For processed items tracking, we need flow_id. Get it from job context via job_id
-		// This is a temporary approach - ideally the handler signature should provide full context
-		$current_job = $this->get_current_job_context();
-		$flow_id = $current_job ? ($current_job['flow_id'] ?? null) : null;
+		// Flow ID is provided via method parameter for processed items tracking
 		
 		if (!$flow_id) {
 			do_action('dm_log', 'error', 'Reddit Input: Could not determine flow context for processed items tracking.', [
@@ -222,17 +219,16 @@ class Reddit {
 				'headers' => $log_headers
 			]);
 
-			// Use dm_send_request action hook for API call
-			$result = null;
-			do_action('dm_send_request', 'GET', $reddit_url, $args, 'Reddit API', $result);
+			// Use dm_request filter for API call
+			$result = apply_filters('dm_request', null, 'GET', $reddit_url, $args, 'Reddit API');
 			
 			if (!$result['success']) {
 				if ($pages_fetched === 1) throw new Exception(esc_html($result['error']));
 				else break;
 			}
 
-			$body = $result['data']['body'];
-			do_action('dm_log', 'debug', 'Reddit Input: API Response Code', ['code' => $result['data']['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
+			$body = $result['data'];
+			do_action('dm_log', 'debug', 'Reddit Input: API Response Code', ['code' => $result['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
 
 			// Parse JSON response with error handling
 			$response_data = json_decode($body, true);
@@ -351,11 +347,10 @@ class Reddit {
 						]
 					];
 					try {
-						$comments_result = null;
-						do_action('dm_send_request', 'GET', $comments_url, $comment_args, 'Reddit Comments', $comments_result);
+						$comments_result = apply_filters('dm_request', null, 'GET', $comments_url, $comment_args, 'Reddit API');
 						
 						if ($comments_result['success']) {
-							$comments_data = json_decode($comments_result['data']['body'], true);
+							$comments_data = json_decode($comments_result['data'], true);
 							if (json_last_error() === JSON_ERROR_NONE) {
 							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
 								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);

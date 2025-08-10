@@ -2,7 +2,7 @@
 /**
  * Data Machine Delete Actions
  *
- * Centralized deletion operations for all entity types - pipelines, flows, steps, and logs.
+ * Centralized deletion operations for all entity types - pipelines, flows, and steps.
  * Eliminates code duplication across deletion types through unified validation, 
  * error handling, and service discovery patterns.
  *
@@ -10,7 +10,6 @@
  * - pipeline: Cascade deletion of pipeline and associated flows
  * - flow: Single flow deletion with job preservation
  * - step: Pipeline step removal with flow synchronization
- * - logs: System log file clearing
  *
  * ARCHITECTURAL BENEFITS:
  * - Consistent permission checking across all deletion operations
@@ -58,7 +57,7 @@ class DataMachine_Delete_Actions {
      * handlers based on entity type. Provides consistent validation and
      * permission checking across all deletion operations.
      *
-     * @param string $delete_type Type of entity to delete (pipeline|flow|step|logs)
+     * @param string $delete_type Type of entity to delete (pipeline|flow|step)
      * @param mixed $target_id Target entity ID or identifier
      * @param array $context Additional context information
      * @since NEXT_VERSION
@@ -71,7 +70,7 @@ class DataMachine_Delete_Actions {
         }
         
         // Validate delete type
-        $valid_delete_types = ['pipeline', 'flow', 'step', 'logs'];
+        $valid_delete_types = ['pipeline', 'flow', 'step'];
         if (!in_array($delete_type, $valid_delete_types)) {
             wp_send_json_error(['message' => __('Invalid deletion type.', 'data-machine')]);
             return;
@@ -88,21 +87,14 @@ class DataMachine_Delete_Actions {
             return;
         }
         
-        if ($delete_type === 'logs' && !empty($target_id)) {
-            wp_send_json_error(['message' => __('Logs deletion does not require a target ID.', 'data-machine')]);
-            return;
-        }
+        // Get database services using filter-based discovery
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        $db_flows = $all_databases['flows'] ?? null;
         
-        // Get database services using filter-based discovery (not needed for logs)
-        if ($delete_type !== 'logs') {
-            $all_databases = apply_filters('dm_db', []);
-            $db_pipelines = $all_databases['pipelines'] ?? null;
-            $db_flows = $all_databases['flows'] ?? null;
-            
-            if (!$db_pipelines || !$db_flows) {
-                wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
-                return;
-            }
+        if (!$db_pipelines || !$db_flows) {
+            wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
+            return;
         }
         
         // Route to specific deletion handler
@@ -124,9 +116,6 @@ class DataMachine_Delete_Actions {
                 $this->handle_step_deletion($target_id, $pipeline_id, $db_pipelines, $db_flows);
                 break;
                 
-            case 'logs':
-                $this->handle_logs_deletion();
-                break;
         }
     }
 
@@ -143,14 +132,14 @@ class DataMachine_Delete_Actions {
      */
     private function handle_pipeline_deletion($pipeline_id, $db_pipelines, $db_flows) {
         // Get pipeline data for response before deletion
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Pipeline not found.', 'data-machine')]);
             return;
         }
         
         $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
         // Delete all flows first (cascade)
@@ -242,18 +231,18 @@ class DataMachine_Delete_Actions {
      */
     private function handle_step_deletion($pipeline_step_id, $pipeline_id, $db_pipelines, $db_flows) {
         // Get pipeline data for response
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Pipeline not found.', 'data-machine')]);
             return;
         }
 
         $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
         // Get current pipeline steps and remove the specified step
-        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         $updated_steps = [];
         $step_found = false;
         
@@ -283,8 +272,7 @@ class DataMachine_Delete_Actions {
         // Sync step deletion to all flows
         foreach ($affected_flows as $flow) {
             $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-            $flow_config = is_object($flow) ? $flow->flow_config : $flow['flow_config'];
-            $flow_config = $flow_config ?: [];
+            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             
             // Remove flow steps for this pipeline step ID
             foreach ($flow_config as $flow_step_id => $step_data) {
@@ -303,7 +291,7 @@ class DataMachine_Delete_Actions {
         do_action('dm_auto_save', $pipeline_id);
 
         // Get remaining steps count for response
-        $remaining_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $remaining_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         
         // Log the deletion
         do_action('dm_log', 'debug', "Deleted step with ID '{$pipeline_step_id}' from pipeline '{$pipeline_name}' (ID: {$pipeline_id}). Affected {$flow_count} flows.");
@@ -321,30 +309,4 @@ class DataMachine_Delete_Actions {
         ]);
     }
 
-    /**
-     * Handle logs deletion using Logger service
-     *
-     * Clears all system log files using the Logger service clear_logs method.
-     * Provides success/failure response for UI feedback.
-     *
-     * @since NEXT_VERSION
-     */
-    private function handle_logs_deletion() {
-        // Direct Logger instantiation - core engine component
-        $logger = new \DataMachine\Engine\Logger();
-        
-        // Use Logger's clear_logs method for consistency
-        $success = $logger->clear_logs();
-        
-        if ($success) {
-            // Log the action
-            do_action('dm_log', 'debug', 'Log files cleared successfully via central dm_delete action.');
-            
-            wp_send_json_success([
-                'message' => __('Logs cleared successfully.', 'data-machine')
-            ]);
-        } else {
-            wp_send_json_error(['message' => __('Failed to clear logs.', 'data-machine')]);
-        }
-    }
 }

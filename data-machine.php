@@ -41,7 +41,7 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Central logging action for all components throughout the plugin.
  * Usage: do_action('dm_log', 'level', 'message', ['context' => 'data']);
  * 
- * ProcessingOrchestrator: $orchestrator = new \DataMachine\Engine\ProcessingOrchestrator();
+ * Pipeline Execution: via dm_execute_step action hook (pure functional orchestration)
  * AI HTTP Client: $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
  * 
  * @filter dm_handlers

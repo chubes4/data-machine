@@ -131,10 +131,8 @@ class FacebookAuth {
         ];
         $token_url = self::TOKEN_URL . '?' . http_build_query($token_params);
 
-        // Facebook requires GET for token exchange - use dm_send_request action hook
-        $result = null;
-        do_action('dm_send_request', 'GET', $token_url, [
-        ], 'Facebook Token Exchange', $result);
+        // Facebook requires GET for token exchange - use dm_request filter
+        $result = apply_filters('dm_request', null, 'GET', $token_url, [], 'Facebook OAuth');
         
         // Convert result to WP_Error format for compatibility
         if (!$result['success']) {
@@ -142,11 +140,9 @@ class FacebookAuth {
             return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'data-machine'), $result['error']);
         }
         
-        $response = $result['data'];
-
-        $body = $response['body'];
+        $body = $result['data'];
         $data = json_decode($body, true);
-        $http_code = $response['status_code'];
+        $http_code = $result['status_code'];
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve access token from Facebook.';
@@ -295,22 +291,18 @@ class FacebookAuth {
     private function get_user_profile(string $access_token): array|\WP_Error {
         $url = self::GRAPH_API_URL . '/me?fields=id,name';
         
-        // Use dm_send_request action hook for Facebook profile fetch
-        $result = null;
-        do_action('dm_send_request', 'GET', $url, [
+        // Use dm_request filter for Facebook profile fetch
+        $result = apply_filters('dm_request', null, 'GET', $url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
-        ], 'Facebook Profile API', $result);
+        ], 'Facebook Authentication');
         
         if (!$result['success']) {
             return new \WP_Error('facebook_profile_fetch_failed', $result['error']);
         }
         
-        $response = $result['data'];
-
-
-        $body = $response['body'];
+        $body = $result['data'];
         $data = json_decode($body, true);
-        $http_code = $response['status_code'];
+        $http_code = $result['status_code'];
 
         if ($http_code !== 200 || isset($data['error'])) {
              $error_message = $data['error']['message'] ?? 'Failed to fetch Facebook profile.';
@@ -336,21 +328,17 @@ class FacebookAuth {
         ];
         $url = self::TOKEN_URL . '?' . http_build_query($params);
 
-        // Use dm_send_request action hook for long-lived token exchange
-        $result = null;
-        do_action('dm_send_request', 'GET', $url, [], 'Facebook Long-lived Token Exchange', $result);
+        // Use dm_request filter for long-lived token exchange
+        $result = apply_filters('dm_request', null, 'GET', $url, [], 'Facebook OAuth');
         
         if (!$result['success']) {
             do_action('dm_log', 'error', 'Facebook OAuth Error: Long-lived token request failed.', ['error' => $result['error']]);
             return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $result['error']);
         }
         
-        $response = $result['data'];
-
-
-        $body = $response['body'];
+        $body = $result['data'];
         $data = json_decode($body, true);
-        $http_code = $response['status_code'];
+        $http_code = $result['status_code'];
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve long-lived access token from Facebook.';
@@ -381,25 +369,21 @@ class FacebookAuth {
         do_action('dm_log', 'debug', 'Fetching Facebook page credentials.', ['user_id' => $user_id]);
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
 
-        // Use dm_send_request action hook for Facebook pages fetch
-        $result = null;
-        do_action('dm_send_request', 'GET', $url, [
+        // Use dm_request filter for Facebook pages fetch
+        $result = apply_filters('dm_request', null, 'GET', $url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $user_access_token,
             ],
-        ], 'Facebook Pages API', $result);
+        ], 'Facebook Authentication');
         
         if (!$result['success']) {
             do_action('dm_log', 'error', 'Facebook Page Fetch Error: Request failed.', ['user_id' => $user_id, 'error' => $result['error']]);
             return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $result['error']);
         }
         
-        $response = $result['data'];
-
-
-        $body = $response['body'];
+        $body = $result['data'];
         $data = json_decode($body, true);
-        $http_code = $response['status_code'];
+        $http_code = $result['status_code'];
 
         if ($http_code !== 200 || !isset($data['data'])) {
             $error_message = $data['error']['message'] ?? 'Failed to retrieve pages from Facebook.';
@@ -446,12 +430,11 @@ class FacebookAuth {
         }
 
         if ($token) {
-            // Attempt deauthorization with Facebook - use dm_send_request action hook
+            // Attempt deauthorization with Facebook - use dm_request filter
             $url = self::GRAPH_API_URL . '/me/permissions';
-            $result = null;
-            do_action('dm_send_request', 'DELETE', $url, [
+            $result = apply_filters('dm_request', null, 'DELETE', $url, [
                 'body' => ['access_token' => $token],
-                ], 'Facebook Deauthorization', $result);
+                ], 'Facebook Authentication');
             
             // Log success or failure of deauthorization, but don't stop deletion
             if (!$result['success']) {

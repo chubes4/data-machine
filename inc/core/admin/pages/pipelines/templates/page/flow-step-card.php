@@ -47,8 +47,11 @@ if (!$is_empty) {
 
 // Get handler configuration from flow config using direct flow_step_id lookup
 $current_handler = null;
-if (!$is_empty && !empty($flow_config[$flow_step_id]['handler'])) {
-    $current_handler = $flow_config[$flow_step_id]['handler'];
+if (!$is_empty) {
+    $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+    if (!empty($step_config['handler'])) {
+        $current_handler = $step_config['handler'];
+    }
 }
 
 // Get available handlers for this step type

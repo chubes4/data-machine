@@ -111,22 +111,11 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
             
             // If we have a flow_step_id and flow_id, get the settings from flow_config
             if (!empty($flow_step_id) && !empty($flow_id)) {
-                    // Get flow configuration directly
-                    $all_databases = apply_filters('dm_db', []);
-                    $db_flows = $all_databases['flows'] ?? null;
-                    
-                    if ($db_flows) {
-                        $flow = $db_flows->get_flow($flow_id);
-                        if ($flow && !empty($flow['flow_config'])) {
-                            $flow_config = $flow['flow_config'] ?: [];
-                            
-                            // Direct access using flow_step_id as key
-                            if (isset($flow_config[$flow_step_id])) {
-                                $current_settings = $flow_config[$flow_step_id]['handler']['settings'] ?? [];
-                            }
-                        }
-                    }
+                $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+                if (!empty($step_config)) {
+                    $current_settings = $step_config['handler']['settings'] ?? [];
                 }
+            }
             
             
             // Render settings fields using the Settings class and field renderer

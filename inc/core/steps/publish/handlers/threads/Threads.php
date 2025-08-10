@@ -184,17 +184,17 @@ class Threads {
             'body' => json_encode($container_data),
         ];
 
-        $response = wp_remote_request($endpoint, $args);
+        $result = apply_filters('dm_request', null, 'POST', $endpoint, $args, 'Threads API');
         
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             return [
                 'success' => false,
-                'error' => $response->get_error_message()
+                'error' => $result['error']
             ];
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
         $data = json_decode($response_body, true);
 
         if ($response_code !== 200 || empty($data['id'])) {
@@ -233,17 +233,17 @@ class Threads {
             ]),
         ];
 
-        $response = wp_remote_request($endpoint, $args);
+        $result = apply_filters('dm_request', null, 'POST', $endpoint, $args, 'Threads API');
         
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             return [
                 'success' => false,
-                'error' => $response->get_error_message()
+                'error' => $result['error']
             ];
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
         $data = json_decode($response_body, true);
 
         if ($response_code !== 200 || empty($data['id'])) {

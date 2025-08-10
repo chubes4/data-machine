@@ -341,74 +341,24 @@ function dm_handle_save_handler_settings() {
         $saved_handler_settings = $handler_settings->sanitize($raw_settings);
     }
     
-    // For flow context, add handler to flow configuration
+    // For flow context, add handler to flow configuration using centralized action
     if ($flow_id > 0) {
-        $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        if (!$db_flows) {
-            wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
-            return;
-        }
-        
-        // Get current flow
-        $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) {
-            wp_send_json_error(['message' => __('Flow not found.', 'data-machine')]);
-            return;
-        }
-        
-        // Get current flow configuration (already decoded by database layer)
-        $flow_config = $flow['flow_config'] ?? [];
-        
-        // Validate that flow_config is array (database layer should provide arrays)
-        if (!is_array($flow_config)) {
-            wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
-            return;
-        }
-        
-        // Initialize step configuration if it doesn't exist
-        // Use standard flow_config structure: direct flow_step_id key
-        if (!isset($flow_config[$flow_step_id])) {
-            $flow_config[$flow_step_id] = [
-                'flow_step_id' => $flow_step_id,
-                'step_type' => $step_type,
-                'pipeline_step_id' => $pipeline_step_id,
-                'flow_id' => $flow_id,
-                'handler' => null
-            ];
-        }
-        
-        // Check if handler already exists
-        $handler_exists = isset($flow_config[$flow_step_id]['handler']) && 
-                         ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
-        
-        // UPDATE existing handler settings OR ADD new handler (single handler per step)
-        $flow_config[$flow_step_id]['handler'] = [
-            'handler_slug' => $handler_slug,
-            'settings' => $saved_handler_settings,
-            'enabled' => true
-        ];
-        
-        // Update flow with new configuration
-        $success = $db_flows->update_flow($flow_id, [
-            'flow_config' => wp_json_encode($flow_config)
-        ]);
+        // Use centralized flow handler management action
+        $success = do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
         
         if (!$success) {
             wp_send_json_error(['message' => __('Failed to add handler to flow.', 'data-machine')]);
             return;
         }
         
-        // Log the action
-        $action_type = $handler_exists ? 'updated' : 'added';
-        do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow step '{$flow_step_id}' in flow {$flow_id}");
-        
         // Auto-save pipeline after handler settings change
         if ($pipeline_id > 0) {
             do_action('dm_auto_save', $pipeline_id);
         }
         
-        $action_message = $handler_exists 
+        // Determine action type for response (simple check - handler exists if settings were previously saved)
+        $action_type = !empty($saved_handler_settings) ? 'updated' : 'added';
+        $action_message = ($action_type === 'updated')
             ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
             : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug);
         
@@ -420,7 +370,7 @@ function dm_handle_save_handler_settings() {
             'pipeline_id' => $pipeline_id,
             'handler_config' => $handler_info,
             'handler_settings' => $saved_handler_settings,
-            'action_type' => $handler_exists ? 'updated' : 'added'
+            'action_type' => $action_type
         ]);
         
     } else {

@@ -328,131 +328,43 @@ class AIStep {
      * @return string Handler directive or empty string
      */
     private function get_next_step_directive(array $step_config, int $job_id): string {
-        // Enhanced debug logging - capture complete step configuration
-        do_action('dm_log', 'debug', 'AI Step: Starting directive discovery', [
-            'job_id' => $job_id,
-            'step_config_keys' => array_keys($step_config),
-            'has_pipeline_config' => isset($step_config['pipeline_step_config']),
-            'has_flow_config' => isset($step_config['flow_config']),
-            'flow_id' => $step_config['flow_id'] ?? 'NOT_SET'
-        ]);
-        
-        // Get pipeline step configuration
-        $pipeline_steps = $step_config['pipeline_step_config'] ?? [];
-        $current_execution_order = $step_config['current_execution_order'] ?? -1;
-        
-        do_action('dm_log', 'debug', 'AI Step: Pipeline analysis', [
-            'job_id' => $job_id,
-            'current_execution_order' => $current_execution_order,
-            'total_pipeline_steps' => count($pipeline_steps),
-            'pipeline_step_execution_orders' => array_map(fn($s) => $s['execution_order'] ?? 'no_order', $pipeline_steps),
-            'pipeline_step_types' => array_map(fn($s) => $s['step_type'] ?? 'no_type', $pipeline_steps)
-        ]);
-        
-        // Find next step in pipeline - use sequential discovery, not execution-order-based
-        $next_step = null;
-        $current_pipeline_step_id = $step_config['pipeline_step_id'] ?? '';
-        
-        // Find current step index in pipeline sequence
-        $current_step_index = null;
-        foreach ($pipeline_steps as $index => $step) {
-            if ($step['pipeline_step_id'] === $current_pipeline_step_id) {
-                $current_step_index = $index;
-                break;
-            }
+        // Get current flow step ID from the step config
+        $current_flow_step_id = $step_config['flow_step_id'] ?? '';
+        if (!$current_flow_step_id) {
+            do_action('dm_log', 'debug', 'AI Step: No flow_step_id available for directive discovery', ['job_id' => $job_id]);
+            return '';
         }
         
-        do_action('dm_log', 'debug', 'AI Step: Current step identification', [
-            'job_id' => $job_id,
-            'current_pipeline_step_id' => $current_pipeline_step_id,
-            'current_step_index' => $current_step_index,
-            'total_pipeline_steps' => count($pipeline_steps)
-        ]);
-        
-        // Get next step in sequence (if exists)
-        if ($current_step_index !== null && isset($pipeline_steps[$current_step_index + 1])) {
-            $next_step = $pipeline_steps[$current_step_index + 1];
-            do_action('dm_log', 'debug', 'AI Step: Next step found via sequential discovery', [
-                'job_id' => $job_id,
-                'next_step_index' => $current_step_index + 1,
-                'next_pipeline_step_id' => $next_step['pipeline_step_id'] ?? 'NO_ID',
-                'next_step_type' => $next_step['step_type'] ?? 'NO_TYPE'
-            ]);
-        } else {
-            do_action('dm_log', 'debug', 'AI Step: No next step in sequence', [
-                'job_id' => $job_id,
-                'current_step_index' => $current_step_index,
-                'is_last_step' => $current_step_index === (count($pipeline_steps) - 1)
-            ]);
+        // Use parameter-based filter to find next flow step
+        $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $current_flow_step_id);
+        if (!$next_flow_step_id) {
+            do_action('dm_log', 'debug', 'AI Step: No next step found - end of pipeline', ['job_id' => $job_id]);
+            return '';
         }
         
-        if (!$next_step) {
-            do_action('dm_log', 'debug', 'AI Step: No next step found for directive - end of pipeline', [
+        // Use parameter-based filter to get next step configuration
+        $next_step_config = apply_filters('dm_get_flow_step_config', [], $next_flow_step_id);
+        if (!$next_step_config || !isset($next_step_config['handler']['handler_slug'])) {
+            do_action('dm_log', 'debug', 'AI Step: Next step has no handler configured', [
                 'job_id' => $job_id,
-                'current_step_index' => $current_step_index,
-                'total_steps' => count($pipeline_steps)
+                'next_flow_step_id' => $next_flow_step_id
             ]);
             return '';
         }
         
-        // Check if any handlers exist for the next step type that have directives
-        $all_handlers = apply_filters('dm_handlers', []);
+        // Use discovery pattern to get all handler directives
         $all_directives = apply_filters('dm_handler_directives', []);
-
-        // Find handlers for the next step type
-        $step_handlers = array_filter($all_handlers, function($handler) use ($next_step) {
-            return ($handler['type'] ?? '') === $next_step['step_type'];
-        });
-
-        do_action('dm_log', 'debug', 'AI Step: Handler directive discovery', [
+        $handler_slug = $next_step_config['handler']['handler_slug'];
+        $directive = $all_directives[$handler_slug] ?? '';
+        
+        do_action('dm_log', 'debug', 'AI Step: Handler directive discovery result', [
             'job_id' => $job_id,
-            'next_step_type' => $next_step['step_type'],
-            'available_handlers_for_step_type' => array_keys($step_handlers),
-            'total_available_directives' => count($all_directives),
-            'available_directive_handlers' => array_keys($all_directives)
-        ]);
-
-        // Check if any of those handlers have directives
-        $available_directive = '';
-        $selected_handler = '';
-        foreach ($step_handlers as $handler_slug => $handler_info) {
-            if (isset($all_directives[$handler_slug])) {
-                $available_directive = $all_directives[$handler_slug];
-                $selected_handler = $handler_slug;
-                
-                do_action('dm_log', 'debug', 'AI Step: Found handler directive for next step', [
-                    'job_id' => $job_id,
-                    'next_step_type' => $next_step['step_type'],
-                    'handler_slug' => $handler_slug,
-                    'directive_length' => strlen($available_directive),
-                    'directive_preview' => substr($available_directive, 0, 100) . '...'
-                ]);
-                break; // Use first available directive
-            }
-        }
-
-        if (!empty($available_directive)) {
-            do_action('dm_log', 'debug', 'AI Step: Returning handler directive', [
-                'job_id' => $job_id,
-                'handler' => $selected_handler,
-                'next_step_type' => $next_step['step_type'],
-                'directive_full' => $available_directive
-            ]);
-            return $available_directive;
-        }
-
-        do_action('dm_log', 'debug', 'AI Step: No handler directives available for next step type', [
-            'job_id' => $job_id,
-            'next_step_type' => $next_step['step_type'],
-            'handlers_for_step_type' => array_keys($step_handlers),
-            'handlers_with_directives' => array_keys($all_directives)
+            'next_flow_step_id' => $next_flow_step_id,
+            'handler_slug' => $handler_slug,
+            'has_directive' => !empty($directive)
         ]);
         
-        do_action('dm_log', 'debug', 'AI Step: No directive found for next step', [
-            'job_id' => $job_id,
-            'next_step_type' => $next_step['step_type'] ?? 'unknown'
-        ]);
-        return '';
+        return $directive;
     }
 
 

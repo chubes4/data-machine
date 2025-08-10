@@ -100,24 +100,24 @@ class GoogleSheetsFetch {
         ]);
 
         // Make API request
-        $response = wp_remote_get($api_url, [
+        $result = apply_filters('dm_request', null, 'GET', $api_url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
                 'Accept' => 'application/json',
             ],
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
-        ]);
+        ], 'Google Sheets API');
 
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             throw new Exception(sprintf(
                 /* translators: %s: error message */
                 esc_html__('Failed to fetch Google Sheets data: %s', 'data-machine'),
-                esc_html($response->get_error_message())
+                esc_html($result['error'])
             ));
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
 
         if ($response_code !== 200) {
             $error_data = json_decode($response_body, true);

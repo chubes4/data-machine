@@ -155,18 +155,17 @@ class RedditAuth {
         ];
 
         // Make the POST request
-        $response = wp_remote_post($token_url, $args);
+        $result = apply_filters('dm_request', null, 'POST', $token_url, $args, 'Reddit OAuth');
 
         // --- 3. Process Token Response --- 
-        if (is_wp_error($response)) {
-            $error_message = $response->get_error_message();
-            do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $error_message, 'user_id' => $user_id]);
+        if (!$result['success']) {
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $result['error'], 'user_id' => $user_id]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_token_request_failed'));
             exit;
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $body = $result['data'];
         $data = json_decode($body, true);
 
         if ($response_code !== 200 || empty($data['access_token'])) {
@@ -197,10 +196,10 @@ class RedditAuth {
                  'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')'
             ],
         ];
-        $identity_response = wp_remote_get($identity_url, $identity_args);
+        $identity_result = apply_filters('dm_request', null, 'GET', $identity_url, $identity_args, 'Reddit Authentication');
         $identity_username = null;
-        if (!is_wp_error($identity_response) && wp_remote_retrieve_response_code($identity_response) === 200) {
-            $identity_body = wp_remote_retrieve_body($identity_response);
+        if ($identity_result['success'] && $identity_result['status_code'] === 200) {
+            $identity_body = $identity_result['data'];
             $identity_data = json_decode($identity_body, true);
             if (!empty($identity_data['name'])) {
                 $identity_username = $identity_data['name'];
@@ -208,7 +207,7 @@ class RedditAuth {
                  do_action('dm_log', 'warning', 'Reddit OAuth Warning: Could not get username from /api/v1/me, but token obtained.', ['user_id' => $user_id, 'identity_response' => $identity_body]);
             }
         } else {
-             $identity_error = is_wp_error($identity_response) ? $identity_response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($identity_response);
+             $identity_error = $identity_result['success'] ? 'HTTP ' . $identity_result['status_code'] : $identity_result['error'];
              do_action('dm_log', 'warning', 'Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error, 'user_id' => $user_id]);
         }
 
@@ -274,17 +273,16 @@ class RedditAuth {
             ],
         ];
 
-        $response = wp_remote_post($token_url, $args);
+        $result = apply_filters('dm_request', null, 'POST', $token_url, $args, 'Reddit OAuth');
 
         // --- Process Refresh Response ---
-        if (is_wp_error($response)) {
-            $error_message = $response->get_error_message();
-            do_action('dm_log', 'error', 'Reddit Token Refresh Error: Request failed.', ['error' => $error_message]);
+        if (!$result['success']) {
+            do_action('dm_log', 'error', 'Reddit Token Refresh Error: Request failed.', ['error' => $result['error']]);
             return false;
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $body = $result['data'];
         $data = json_decode($body, true);
 
         // Check for errors or missing new access token

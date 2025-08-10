@@ -57,13 +57,8 @@ if (!isset($flow)) {
     throw new \InvalidArgumentException('flow-instance-card template requires flow parameter');
 }
 
-if (is_object($flow)) {
-    $flow_config = $flow->flow_config;
-} else if (is_array($flow) && isset($flow['flow_config'])) {
-    $flow_config = $flow['flow_config'];
-} else {
-    throw new \InvalidArgumentException('flow-instance-card template flow must have flow_config property/key');
-}
+// Get flow configuration using centralized filter
+$flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
 ?>
 <div class="dm-flow-instance-card" data-flow-id="<?php echo esc_attr($flow_id); ?>">

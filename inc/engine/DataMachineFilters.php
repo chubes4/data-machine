@@ -10,7 +10,7 @@
  * - dm_register_utility_filters(): Pure discovery utility filter hooks
  * 
  * Architectural Separation:
- * - Core engine components (ProcessingOrchestrator, Logger): Direct instantiation
+ * - Core engine components (Logger): Direct instantiation
  * - Extensible services (database, handlers, steps): Filter-based discovery
  * - Backend processing logic → Engine components (this file)
  * - Admin/UI logic → Core admin components (inc/core/admin/)
@@ -85,6 +85,7 @@ function dm_register_core_database_services() {
  * - dm_auth_providers: Authentication provider discovery
  * - dm_handler_settings: Handler configuration discovery  
  * - dm_handler_directives: AI directive discovery for handlers
+ * - dm_request: WordPress HTTP request wrapper with centralized logging
  * - dm_scheduler_intervals: Extensible scheduler interval definitions for external plugins
  * 
  * @since 0.1.0
@@ -152,6 +153,144 @@ function dm_register_utility_filters() {
         return $is_processed;
     }, 10, 4);
     
+    // WordPress HTTP request wrapper system - centralized HTTP handling with context logging
+    // Usage: $result = apply_filters('dm_request', null, 'POST', $url, $args, 'Context Description');
+    add_filter('dm_request', function($default, $method, $url, $args, $context) {
+        // Input validation
+        $valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+        $method = strtoupper($method);
+        if (!in_array($method, $valid_methods)) {
+            do_action('dm_log', 'error', 'HTTP Request: Invalid method', ['method' => $method, 'context' => $context]);
+            return ['success' => false, 'error' => __('Invalid HTTP method', 'data-machine')];
+        }
+
+        // Default args with Data Machine user agent
+        $args = wp_parse_args($args, [
+            'user-agent' => sprintf('DataMachine/%s (+%s)', 
+                defined('DATA_MACHINE_VERSION') ? DATA_MACHINE_VERSION : '1.0', 
+                home_url())
+        ]);
+
+        // Set method for non-GET requests
+        if ($method !== 'GET') {
+            $args['method'] = $method;
+        }
+
+        // Log request initiation
+        do_action('dm_log', 'debug', "HTTP Request: {$method} to {$context}", [
+            'url' => $url, 
+            'method' => $method
+        ]);
+
+        // Make the request using appropriate WordPress function
+        $response = ($method === 'GET') ? wp_remote_get($url, $args) : wp_remote_request($url, $args);
+
+        // Handle WordPress HTTP errors (network issues, timeouts, etc.)
+        if (is_wp_error($response)) {
+            $error_message = sprintf(
+                /* translators: %1$s: context/service name, %2$s: error message */
+                __('Failed to connect to %1$s: %2$s', 'data-machine'),
+                $context,
+                $response->get_error_message()
+            );
+            
+            do_action('dm_log', 'error', 'HTTP Request: Connection failed', [
+                'context' => $context,
+                'url' => $url,
+                'method' => $method,
+                'error' => $response->get_error_message(),
+                'error_code' => $response->get_error_code()
+            ]);
+            
+            return ['success' => false, 'error' => $error_message];
+        }
+
+        // Check HTTP status code
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
+        // Determine success status codes based on HTTP method
+        $success_codes = [];
+        switch ($method) {
+            case 'GET':
+                $success_codes = [200];
+                break;
+            case 'POST':
+                $success_codes = [200, 201, 202];
+                break;
+            case 'PUT':
+                $success_codes = [200, 201, 204];
+                break;
+            case 'PATCH':
+                $success_codes = [200, 204];
+                break;
+            case 'DELETE':
+                $success_codes = [200, 202, 204];
+                break;
+        }
+        
+        if (!in_array($status_code, $success_codes)) {
+            $error_message = sprintf(
+                /* translators: %1$s: context/service name, %2$s: HTTP method, %3$d: HTTP status code */
+                __('%1$s %2$s returned HTTP %3$d', 'data-machine'),
+                $context,
+                $method,
+                $status_code
+            );
+
+            // Try to extract error details from response body
+            $error_details = null;
+            if (!empty($body)) {
+                // Try to parse as JSON first for structured error messages
+                $decoded = json_decode($body, true);
+                if (is_array($decoded)) {
+                    $error_keys = ['message', 'error', 'error_description', 'detail'];
+                    foreach ($error_keys as $key) {
+                        if (isset($decoded[$key]) && is_string($decoded[$key])) {
+                            $error_details = $decoded[$key];
+                            break;
+                        }
+                    }
+                }
+                // If not JSON, use first line of body
+                if (!$error_details) {
+                    $first_line = strtok($body, "\n");
+                    $error_details = strlen($first_line) > 100 ? substr($first_line, 0, 97) . '...' : $first_line;
+                }
+            }
+            
+            if ($error_details) {
+                $error_message .= ': ' . $error_details;
+            }
+
+            do_action('dm_log', 'error', 'HTTP Request: Error response', [
+                'context' => $context,
+                'url' => $url,
+                'method' => $method,
+                'status_code' => $status_code,
+                'body_preview' => substr($body, 0, 200)
+            ]);
+            
+            return ['success' => false, 'error' => $error_message];
+        }
+
+        // Success - return structured response
+        do_action('dm_log', 'debug', "HTTP Request: Successful {$method} to {$context}", [
+            'url' => $url,
+            'method' => $method,
+            'status_code' => $status_code,
+            'content_length' => strlen($body)
+        ]);
+
+        return [
+            'success' => true,
+            'data' => $body,
+            'status_code' => $status_code,
+            'headers' => wp_remote_retrieve_headers($response),
+            'response' => $response
+        ];
+    }, 10, 5);
+
     // Extensible scheduler intervals system - allows external plugins to add custom intervals
     // Usage: $all_intervals = apply_filters('dm_scheduler_intervals', []); $hourly = $all_intervals['hourly'] ?? null;
     add_filter('dm_scheduler_intervals', function($intervals) {
@@ -191,26 +330,117 @@ function dm_register_utility_filters() {
         ];
     }, 10);
     
-    // Flow step ID parsing system - clean separation of parsing logic from execution engine
-    // Usage: $parts = apply_filters('dm_split_flow_step_id', [], $flow_step_id); $flow_id = $parts['flow_id'] ?? null;
-    add_filter('dm_split_flow_step_id', function($default, $flow_step_id) {
-        if (empty($flow_step_id) || !is_string($flow_step_id)) {
+    
+    // Flow configuration loading system - takes flow_id, returns complete flow_config array
+    // Usage: $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+    add_filter('dm_get_flow_config', function($default, $flow_id) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+        
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow config access failed - database service unavailable', ['flow_id' => $flow_id]);
             return [];
         }
-        
-        $parts = explode('_', $flow_step_id);
-        if (count($parts) >= 2) {
-            // Last part is flow_id, everything before is pipeline_step_id (handles UUID underscores)
-            $flow_id = array_pop($parts);
-            $pipeline_step_id = implode('_', $parts);
-            
-            return [
-                'pipeline_step_id' => $pipeline_step_id,
-                'flow_id' => (int)$flow_id
-            ];
+
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow || empty($flow['flow_config'])) {
+            return [];
         }
+
+        return is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+    }, 10, 2);
+    
+    // Pipeline flows loading system - takes pipeline_id, returns all flows for pipeline
+    // Usage: $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+    add_filter('dm_get_pipeline_flows', function($default, $pipeline_id) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
         
-        return [];
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Pipeline flows access failed - database service unavailable', ['pipeline_id' => $pipeline_id]);
+            return [];
+        }
+
+        return $db_flows->get_flows_for_pipeline($pipeline_id);
+    }, 10, 2);
+
+    // Pipeline steps configuration loading system - takes pipeline_id, returns step configuration array
+    // Usage: $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+    add_filter('dm_get_pipeline_steps', function($default, $pipeline_id) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            do_action('dm_log', 'error', 'Pipeline steps access failed - database service unavailable', ['pipeline_id' => $pipeline_id]);
+            return [];
+        }
+
+        return $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+    }, 10, 2);
+
+    // Universal pipelines loading system - handles both individual and all pipeline access
+    // Usage: $all_pipelines = apply_filters('dm_get_pipelines', []); // Get all
+    // Usage: $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id); // Get specific
+    add_filter('dm_get_pipelines', function($default, $pipeline_id = null) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            $context = $pipeline_id ? "individual pipeline (ID: {$pipeline_id})" : 'all pipelines';
+            do_action('dm_log', 'error', "Pipeline access failed - database service unavailable for {$context}");
+            return $pipeline_id ? null : [];
+        }
+
+        if ($pipeline_id) {
+            // Individual pipeline access
+            return $db_pipelines->get_pipeline($pipeline_id);
+        } else {
+            // All pipelines access  
+            return $db_pipelines->get_all_pipelines();
+        }
+    }, 10, 2);
+    
+    // Flow step configuration loading system - takes flow_step_id, returns complete step config
+    // Usage: $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+    add_filter('dm_get_flow_step_config', function($default, $flow_step_id) {
+        // Extract flow_id from flow_step_id (format: pipeline_step_id_flow_id)
+        $parts = explode('_', $flow_step_id);
+        if (count($parts) < 2) {
+            return [];
+        }
+        $flow_id = (int)array_pop($parts); // Last part is flow_id
+        
+        // Use centralized flow config filter
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        return $flow_config[$flow_step_id] ?? [];
+    }, 10, 2);
+    
+    // Next flow step discovery system - takes current flow_step_id, returns next flow_step_id  
+    // Usage: $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
+    add_filter('dm_get_next_flow_step_id', function($default, $flow_step_id) {
+        $current_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+        if (!$current_config) {
+            return null;
+        }
+
+        $flow_id = $current_config['flow_id'];
+        $current_execution_order = $current_config['execution_order'];
+        $next_execution_order = $current_execution_order + 1;
+
+        // Use centralized flow config filter  
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        if (empty($flow_config)) {
+            return null;
+        }
+
+        // Find step with next execution order
+        foreach ($flow_config as $flow_step_id => $config) {
+            if (($config['execution_order'] ?? -1) === $next_execution_order) {
+                return $flow_step_id;
+            }
+        }
+
+        return null; // No next step
     }, 10, 2);
     
 }

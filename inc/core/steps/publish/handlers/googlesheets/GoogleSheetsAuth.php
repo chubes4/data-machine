@@ -96,24 +96,24 @@ class GoogleSheetsAuth {
             return new \WP_Error('googlesheets_missing_oauth_config', __('Google OAuth configuration is incomplete.', 'data-machine'));
         }
 
-        $response = wp_remote_post('https://oauth2.googleapis.com/token', [
+        $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
             'body' => [
                 'client_id' => $client_id,
                 'client_secret' => $client_secret,
                 'refresh_token' => $refresh_token,
                 'grant_type' => 'refresh_token'
             ],
-        ]);
+        ], 'Google Sheets OAuth');
 
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             do_action('dm_log', 'error', 'Google token refresh request failed.', [
-                'error' => $response->get_error_message()
+                'error' => $result['error']
             ]);
             return new \WP_Error('googlesheets_refresh_failed', __('Failed to refresh Google Sheets access token.', 'data-machine'));
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
         
         if ($response_code !== 200) {
             do_action('dm_log', 'error', 'Google token refresh failed.', [
@@ -263,7 +263,7 @@ class GoogleSheetsAuth {
         $client_secret = get_option('googlesheets_client_secret');
         $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
 
-        $response = wp_remote_post('https://oauth2.googleapis.com/token', [
+        $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
             'body' => [
                 'client_id' => $client_id,
                 'client_secret' => $client_secret,
@@ -271,18 +271,18 @@ class GoogleSheetsAuth {
                 'grant_type' => 'authorization_code',
                 'redirect_uri' => $callback_url
             ],
-        ]);
+        ], 'Google Sheets OAuth');
 
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             do_action('dm_log', 'error', 'Google token exchange request failed.', [
-                'error' => $response->get_error_message()
+                'error' => $result['error']
             ]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_token_exchange_failed'));
             exit;
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
         
         if ($response_code !== 200) {
             do_action('dm_log', 'error', 'Google token exchange failed.', [

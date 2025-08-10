@@ -280,9 +280,8 @@ class WordPress {
             $pages_fetched++;
             do_action('dm_log', 'debug', 'WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $pipeline_id]);
 
-            // Use dm_send_request action hook for REST API call
-            $result = null;
-            do_action('dm_send_request', 'GET', $next_page_url, [], 'WordPress REST API', $result);
+            // Use dm_request filter for REST API call
+            $result = apply_filters('dm_request', null, 'GET', $next_page_url, [], 'WordPress API');
             
             if (!$result['success']) {
                 if ($pages_fetched === 1) throw new Exception(esc_html($result['error']));
@@ -290,14 +289,14 @@ class WordPress {
             }
 
             // Parse JSON response with error handling
-            $response_data = json_decode($result['data']['body'], true);
+            $response_data = json_decode($result['data'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $error_message = sprintf(__('Invalid JSON from WordPress REST API: %s', 'data-machine'), json_last_error_msg());
                 if ($pages_fetched === 1) throw new Exception(esc_html($error_message));
                 else break;
             }
 
-            $response_headers = $result['data']['headers'];
+            $response_headers = $result['headers'];
 
             // Extract items array using data_path if provided, or auto-detect first array
             $items = [];
@@ -510,17 +509,16 @@ class WordPress {
                 'headers' => array('Authorization' => $auth_header)
             );
 
-            // Use dm_send_request action hook for Airdrop API call
-            $result = null;
-            do_action('dm_send_request', 'GET', $current_api_url, $args, 'Airdrop REST API', $result);
+            // Use dm_request filter for Airdrop API call
+            $result = apply_filters('dm_request', null, 'GET', $current_api_url, $args, 'WordPress API');
             
             if (!$result['success']) {
                 if ($current_page === 1) throw new Exception(esc_html($result['error']));
                 else break;
             }
 
-            $response_headers = $result['data']['headers'];
-            $body = $result['data']['body'];
+            $response_headers = $result['headers'];
+            $body = $result['data'];
 
             // Parse JSON response with error handling
             $response_data = json_decode($body, true);

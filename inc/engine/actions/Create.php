@@ -168,8 +168,8 @@ class DataMachine_Create_Actions {
         }
         
         // Get complete pipeline data for response
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
-        $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
+        $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         
         do_action('dm_log', 'debug', "Created pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with auto-generated Draft Flow");
         
@@ -206,7 +206,7 @@ class DataMachine_Create_Actions {
         }
         
         // Validate pipeline exists
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Pipeline not found', 'data-machine')]);
             return;
@@ -214,7 +214,7 @@ class DataMachine_Create_Actions {
         
         // Generate flow name
         $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_number = count($existing_flows) + 1;
         $flow_name = isset($data['flow_name']) ? sanitize_text_field(wp_unslash($data['flow_name'])) : sprintf(__('%s Flow %d', 'data-machine'), $pipeline_name, $flow_number);
         
@@ -233,7 +233,7 @@ class DataMachine_Create_Actions {
         }
         
         // Sync existing pipeline steps to new flow
-        $pipeline_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         if (!empty($pipeline_steps)) {
             $flow_config = $this->generate_flow_steps_config($flow_id, $pipeline_steps);
             $db_flows->update_flow($flow_id, ['flow_config' => json_encode($flow_config)]);
@@ -291,7 +291,7 @@ class DataMachine_Create_Actions {
         }
         
         // Get current pipeline steps for execution order
-        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         $next_execution_order = count($current_steps);
         
         // Create new step data
@@ -314,7 +314,7 @@ class DataMachine_Create_Actions {
         }
         
         // Sync to all existing flows
-        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
             $this->sync_step_to_flow($flow_id, $new_step, $db_flows);
@@ -341,7 +341,7 @@ class DataMachine_Create_Actions {
      * Handle ultra-simple job creation.
      *
      * Creates job with minimal data (pipeline_id + flow_id only).
-     * ProcessingOrchestrator handles all complexity at runtime.
+     * dm_execute_step action hook handles all complexity at runtime.
      *
      * @param array $data Creation data
      * @param array $context Context information (unused)
@@ -365,7 +365,7 @@ class DataMachine_Create_Actions {
             return;
         }
         
-        // Create job with minimal data - ProcessingOrchestrator handles everything else
+        // Create job with minimal data - dm_execute_step action hook handles everything else
         $db_jobs = $databases['jobs'];
         $job_id = $db_jobs->create_job([
             'pipeline_id' => $pipeline_id,
@@ -377,12 +377,9 @@ class DataMachine_Create_Actions {
             return;
         }
         
-        // Generate initial flow_step_id for first step (execution_order = 0)
-        $db_flows = $databases['flows'];
-        $flow = $db_flows->get_flow($flow_id);
-        $flow_config = is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+        // Find first step (execution_order = 0) using centralized filter
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
         
-        // Find first step (execution_order = 0)
         $first_flow_step_id = null;
         foreach ($flow_config as $flow_step_id => $config) {
             if (($config['execution_order'] ?? -1) === 0) {
@@ -397,7 +394,7 @@ class DataMachine_Create_Actions {
         }
         
         // Schedule execution with flow_step_id
-        do_action('dm_schedule_next_step', $first_flow_step_id, []);
+        do_action('dm_schedule_next_step', $job_id, $first_flow_step_id, []);
         
         do_action('dm_log', 'debug', "Created job {$job_id} for pipeline {$pipeline_id}, flow {$flow_id}");
         
@@ -450,10 +447,8 @@ class DataMachine_Create_Actions {
      * @since NEXT_VERSION
      */
     private function sync_step_to_flow($flow_id, $new_step, $db_flows) {
-        $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) return;
-        
-        $flow_config = $flow['flow_config'] ?? [];
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        if (empty($flow_config)) return;
         $pipeline_step_id = $new_step['pipeline_step_id'];
         $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
         

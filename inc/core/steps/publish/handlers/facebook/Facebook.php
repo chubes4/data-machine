@@ -187,10 +187,9 @@ class Facebook {
             $graph_api_url = 'https://graph.facebook.com/' . self::FACEBOOK_API_VERSION;
             $url = $graph_api_url . $endpoint;
 
-            // Use dm_send_request action hook for Facebook API call
+            // Use dm_request filter for Facebook API call
             $args = ['body' => $api_params];
-            $result = null;
-            do_action('dm_send_request', 'POST', $url, $args, 'Facebook API', $result);
+            $result = apply_filters('dm_request', null, 'POST', $url, $args, 'Facebook API');
             
             if (!$result['success']) {
                 do_action('dm_log', 'error', 'Facebook API Error: HTTP request failed.', [
@@ -202,8 +201,8 @@ class Facebook {
                 ];
             }
 
-            $body = $result['data']['body'];
-            $http_code = $result['data']['status_code'];
+            $body = $result['data'];
+            $http_code = $result['status_code'];
 
             // Parse JSON response with error handling
             $data = json_decode($body, true);
@@ -253,8 +252,7 @@ class Facebook {
 
                     $comment_url = $graph_api_url . $comment_endpoint;
                     $comment_args = ['body' => $comment_api_params];
-                    $comment_result = null;
-                    do_action('dm_send_request', 'POST', $comment_url, $comment_args, 'Facebook Comments API', $comment_result);
+                    $comment_result = apply_filters('dm_request', null, 'POST', $comment_url, $comment_args, 'Facebook API');
 
                     if (!$comment_result['success']) {
                         do_action('dm_log', 'error', 'Facebook API: Failed to post source link comment.', [
@@ -267,9 +265,9 @@ class Facebook {
                         ];
                     }
                     
-                    $comment_body = $comment_result['data']['body'];
+                    $comment_body = $comment_result['data'];
                     $comment_data = json_decode($comment_body, true);
-                    $comment_http_code = $comment_result['data']['status_code'];
+                    $comment_http_code = $comment_result['status_code'];
 
                     if (json_last_error() !== JSON_ERROR_NONE) {
                         do_action('dm_log', 'error', 'Facebook API: Failed to parse comment response.', [

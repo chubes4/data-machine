@@ -362,23 +362,23 @@ class Bluesky {
 
         // Upload to Bluesky
         $upload_url = rtrim($pds_url, '/') . '/xrpc/com.atproto.repo.uploadBlob';
-        $response = wp_remote_post($upload_url, [
+        $result = apply_filters('dm_request', null, 'POST', $upload_url, [
             'headers' => [
                 'Content-Type' => $mime_type,
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body' => $image_content,
-        ]);
+        ], 'Bluesky API');
 
         unlink($temp_file_path);
         unset($image_content);
 
-        if (is_wp_error($response)) {
-            return $response;
+        if (!$result['success']) {
+            return new \WP_Error('bluesky_upload_request_failed', $result['error']);
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
 
         if ($response_code !== 200) {
             return new \WP_Error('bluesky_upload_failed', __('Image upload failed.', 'data-machine'));
@@ -410,20 +410,20 @@ class Bluesky {
             'record' => $record
         ]);
 
-        $response = wp_remote_post($url, [
+        $result = apply_filters('dm_request', null, 'POST', $url, [
             'headers' => [
                 'Content-Type' => 'application/json',
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body' => $body,
-        ]);
+        ], 'Bluesky API');
 
-        if (is_wp_error($response)) {
-            return $response;
+        if (!$result['success']) {
+            return new \WP_Error('bluesky_post_request_failed', $result['error']);
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
 
         if ($response_code !== 200) {
             return new \WP_Error('bluesky_post_failed', __('Failed to create Bluesky post.', 'data-machine'));

@@ -172,21 +172,42 @@
             
             console.log('Using actual Draft Flow ID:', actualFlowId, 'for pipeline:', pipelineId);
             
-            // Use flow-step-card template for flow steps
-            PipelinesPage.requestTemplate('page/flow-step-card', {
-                step: stepData.step_data,
-                flow_config: [],
-                flow_id: actualFlowId,
-                pipeline_id: pipelineId,
-                is_first_step: isFirstRealFlowStep
-            }).then((flowStepHtml) => {
-                PipelinesPage.addStepToInterface({
-                    html: flowStepHtml,
-                    step_type: stepData.step_type,
-                    flow_id: actualFlowId
-                }, pipelineId, 'flow');
-            }).catch((error) => {
-                console.error('Failed to render flow step template:', error);
+            // Fetch actual flow config using the new centralized filter system
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_get_flow_config',
+                    flow_id: actualFlowId,
+                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        // Now use actual flow config for proper flow_step_id resolution
+                        PipelinesPage.requestTemplate('page/flow-step-card', {
+                            step: stepData.step_data,
+                            flow_config: response.data.flow_config || {},
+                            flow_id: actualFlowId,
+                            pipeline_id: pipelineId,
+                            is_first_step: isFirstRealFlowStep
+                        }).then((flowStepHtml) => {
+                            PipelinesPage.addStepToInterface({
+                                html: flowStepHtml,
+                                step_type: stepData.step_type,
+                                flow_id: actualFlowId
+                            }, pipelineId, 'flow');
+                        }).catch((error) => {
+                            console.error('Failed to render flow step template:', error);
+                        });
+                    } else {
+                        console.error('Failed to get flow config:', response.data);
+                        throw new Error('Failed to get flow config: ' + (response.data?.message || 'Unknown error'));
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX error fetching flow config:', error);
+                    throw new Error('AJAX error fetching flow config: ' + error);
+                }
             });
         },
 

@@ -589,10 +589,10 @@ class WordPress {
         );
 
         // Make the API request
-        $response = wp_remote_request($api_url, $args);
+        $result = apply_filters('dm_request', null, 'POST', $api_url, $args, 'WordPress API');
 
-        if (is_wp_error($response)) {
-            $error_message = __('Failed to send data to remote WordPress site: ', 'data-machine') . $response->get_error_message();
+        if (!$result['success']) {
+            $error_message = __('Failed to send data to remote WordPress site: ', 'data-machine') . $result['error'];
             do_action('dm_log', 'error', $error_message, ['location_id' => $location_id, 'payload' => $payload]);
             return [
                 'success' => false,
@@ -600,8 +600,8 @@ class WordPress {
             ];
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
 
         if ($response_code < 200 || $response_code >= 300) {
             $error_message = __('Remote WordPress site returned an error: ', 'data-machine') . $response_code . ' - ' . $response_body;

@@ -98,9 +98,7 @@ class PipelineModalAjax
         }
 
         // Check if this is the first flow step by counting existing steps in flows
-        $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        $flows = $db_flows ? $db_flows->get_flows_by_pipeline($_POST['pipeline_id'] ?? 0) : [];
+        $flows = apply_filters('dm_get_pipeline_flows', [], $_POST['pipeline_id'] ?? 0);
         $is_first_step = empty($flows) || empty($flows[0]['flow_config'] ?? []);
 
         // Prepare data for template
@@ -133,27 +131,11 @@ class PipelineModalAjax
             return;
         }
 
-        // Get database service
-        $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        if (!$db_flows) {
-            wp_send_json_error(['message' => __('Database service unavailable.', 'data-machine')]);
-            return;
-        }
-
-        // Get flow data
-        $flow = $db_flows->get_flow($flow_id);
-        if (!$flow) {
-            wp_send_json_error(['message' => __('Flow not found.', 'data-machine')]);
-            return;
-        }
-
-        // Get flow configuration (already decoded by database layer)
-        $flow_config = $flow['flow_config'] ?? [];
+        // Get flow configuration using centralized filter
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
         
-        // Validate that flow_config is array (database layer should provide arrays)
-        if (!is_array($flow_config)) {
-            wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
+        if (empty($flow_config)) {
+            wp_send_json_error(['message' => __('Flow configuration not found or empty.', 'data-machine')]);
             return;
         }
 
@@ -482,7 +464,8 @@ class PipelineModalAjax
                 // Find the flow that contains this flow_step_id
                 $flows = $db_flows->get_all_active_flows();
                 foreach ($flows as $flow) {
-                    $flow_config = $flow['flow_config'] ?? [];
+                    $current_flow_id = $flow['flow_id'];
+                    $flow_config = apply_filters('dm_get_flow_config', [], $current_flow_id);
                     if (isset($flow_config[$flow_step_id])) {
                         $flow_step_data = $flow_config[$flow_step_id];
                         $flow_id = $flow_step_data['flow_id'] ?? $flow['flow_id'];
@@ -541,64 +524,18 @@ class PipelineModalAjax
             $saved_handler_settings = $handler_settings->sanitize($raw_settings);
         }
         
-        // For flow context, update or add handler to flow configuration
+        // For flow context, update or add handler to flow configuration using centralized action
         if ($flow_id > 0) {
-            $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-            if (!$db_flows) {
-                wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
-            }
-            
-            // Get current flow
-            $flow = $db_flows->get_flow($flow_id);
-            if (!$flow) {
-                wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
-            }
-            
-            // Get current flow configuration (already decoded by database layer)
-            $flow_config = $flow['flow_config'] ?? [];
-            
-            // Validate that flow_config is array (database layer should provide arrays)
-            if (!is_array($flow_config)) {
-                wp_send_json_error(['message' => __('Invalid flow configuration format.', 'data-machine')]);
-                return;
-            }
-            
-            // Initialize flow_step_id-based step configuration if it doesn't exist
-            if (!isset($flow_config[$flow_step_id])) {
-                $flow_config[$flow_step_id] = [
-                    'flow_step_id' => $flow_step_id,
-                    'step_type' => $step_type,
-                    'pipeline_step_id' => $pipeline_step_id,
-                    'handler' => null
-                ];
-            }
-            
-            // Check if handler already exists
-            $handler_exists = isset($flow_config[$flow_step_id]['handler']) && 
-                             ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
-            
-            // UPDATE existing handler settings OR ADD new handler (single handler per step)
-            $flow_config[$flow_step_id]['handler'] = [
-                'handler_slug' => $handler_slug,
-                'settings' => $saved_handler_settings,
-                'enabled' => true
-            ];
-            
-            // Update flow with new configuration
-            $success = $db_flows->update_flow($flow_id, [
-                'flow_config' => wp_json_encode($flow_config)
-            ]);
+            // Use centralized flow handler management action
+            $success = do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
             
             if (!$success) {
                 wp_send_json_error(['message' => __('Failed to save handler settings', 'data-machine')]);
             }
             
-            // Log the action
-            $action_type = $handler_exists ? 'updated' : 'added';
-            do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
-            
-            $action_message = $handler_exists 
+            // Determine action type for response (simple check - handler exists if settings were previously saved)
+            $action_type = !empty($saved_handler_settings) ? 'updated' : 'added';
+            $action_message = ($action_type === 'updated')
                 ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
                 : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug);
             
@@ -612,7 +549,7 @@ class PipelineModalAjax
                 'pipeline_id' => $pipeline_id,
                 'handler_config' => $handler_info,
                 'handler_settings' => $saved_handler_settings,
-                'action_type' => $handler_exists ? 'updated' : 'added'
+                'action_type' => $action_type
             ]);
             
         } else {

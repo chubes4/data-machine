@@ -265,24 +265,24 @@ class GoogleSheets {
             
             $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range}:append";
             
-            $response = wp_remote_post($api_url, [
+            $result = apply_filters('dm_request', null, 'POST', $api_url, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $access_token,
                     'Content-Type' => 'application/json'
                 ],
                 'body' => wp_json_encode($body),
-            ]);
+            ], 'Google Sheets API');
 
-            if (is_wp_error($response)) {
+            if (!$result['success']) {
                 do_action('dm_log', 'error', 'Google Sheets API request failed.', [
-                    'error' => $response->get_error_message(),
+                    'error' => $result['error'],
                     'spreadsheet_id' => $spreadsheet_id
                 ]);
-                return $response;
+                return new \WP_Error('googlesheets_api_request_failed', $result['error']);
             }
 
-            $response_code = wp_remote_retrieve_response_code($response);
-            $response_body = wp_remote_retrieve_body($response);
+            $response_code = $result['status_code'];
+            $response_body = $result['data'];
 
             if ($response_code !== 200) {
                 $error_data = json_decode($response_body, true);

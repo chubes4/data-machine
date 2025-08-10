@@ -180,7 +180,7 @@ class JobsOperations {
         }
         
         // Get all flows for this pipeline
-        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         if (empty($flows)) {
             return [];
         }

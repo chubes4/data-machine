@@ -10,6 +10,7 @@
  * - job_status: Intelligent job status updates with automatic method selection
  * - flow_schedule: Flow scheduling operations with Action Scheduler integration
  * - pipeline_auto_save: Central pipeline auto-save operations
+ * - flow_handler: Central flow handler management eliminating 50+ line update patterns
  *
  * ARCHITECTURAL BENEFITS:
  * - Intelligent method routing for job status updates
@@ -54,6 +55,9 @@ class DataMachine_Update_Actions {
         
         // Central pipeline auto-save hook - eliminates database service discovery duplication
         add_action('dm_auto_save', [$this, 'handle_pipeline_auto_save'], 10, 1);
+        
+        // Flow handler management action hook - eliminates 50+ line handler update patterns
+        add_action('dm_update_flow_handler', [$this, 'handle_flow_handler_update'], 10, 3);
     }
 
     /**
@@ -195,7 +199,7 @@ class DataMachine_Update_Actions {
         }
         
         // Get current pipeline data
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
             do_action('dm_log', 'error','Pipeline not found for auto-save', [
                 'pipeline_id' => $pipeline_id
@@ -205,7 +209,7 @@ class DataMachine_Update_Actions {
         
         // Always do full save - get current name and steps
         $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $step_configuration = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $step_configuration = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         
         // Full pipeline save (always save everything)
         $success = $db_pipelines->update_pipeline($pipeline_id, [
@@ -225,6 +229,94 @@ class DataMachine_Update_Actions {
         }
         
         return $success;
+    }
+
+    /**
+     * Handle flow handler updates with centralized database operations.
+     *
+     * Eliminates repetitive handler update patterns by providing centralized
+     * handler addition/update functionality with consistent error handling.
+     *
+     * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id)
+     * @param string $handler_slug Handler slug to add/update
+     * @param array $handler_settings Handler configuration settings
+     * @return bool Success status
+     * @since NEXT_VERSION
+     */
+    public function handle_flow_handler_update($flow_step_id, $handler_slug, $handler_settings = []) {
+        // Extract flow_id from flow_step_id (format: pipeline_step_id_flow_id)
+        $parts = explode('_', $flow_step_id);
+        if (count($parts) < 2) {
+            do_action('dm_log', 'error', 'Invalid flow_step_id format for handler update', ['flow_step_id' => $flow_step_id]);
+            return false;
+        }
+        $flow_id = (int)array_pop($parts); // Last part is flow_id
+        
+        // Get database service using filter-based discovery
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow handler update failed - database service unavailable', [
+                'flow_step_id' => $flow_step_id,
+                'handler_slug' => $handler_slug
+            ]);
+            return false;
+        }
+        
+        // Get current flow
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            do_action('dm_log', 'error', 'Flow handler update failed - flow not found', [
+                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id
+            ]);
+            return false;
+        }
+        
+        // Get current flow configuration using centralized filter
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        
+        // Initialize step configuration if it doesn't exist
+        if (!isset($flow_config[$flow_step_id])) {
+            $pipeline_step_id = implode('_', $parts); // Reconstruct pipeline_step_id
+            $flow_config[$flow_step_id] = [
+                'flow_step_id' => $flow_step_id,
+                'pipeline_step_id' => $pipeline_step_id,
+                'flow_id' => $flow_id,
+                'handler' => null
+            ];
+        }
+        
+        // Check if handler already exists
+        $handler_exists = isset($flow_config[$flow_step_id]['handler']) && 
+                         ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
+        
+        // UPDATE existing handler settings OR ADD new handler (single handler per step)
+        $flow_config[$flow_step_id]['handler'] = [
+            'handler_slug' => $handler_slug,
+            'settings' => $handler_settings,
+            'enabled' => true
+        ];
+        
+        // Update flow with new configuration
+        $success = $db_flows->update_flow($flow_id, [
+            'flow_config' => wp_json_encode($flow_config)
+        ]);
+        
+        if (!$success) {
+            do_action('dm_log', 'error', 'Flow handler update failed - database update failed', [
+                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id,
+                'handler_slug' => $handler_slug
+            ]);
+            return false;
+        }
+        
+        // Log the action
+        $action_type = $handler_exists ? 'updated' : 'added';
+        do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
+        
+        return true;
     }
 
     /**

@@ -213,7 +213,7 @@ class PipelinePageAjax
         }
 
         // Get current pipeline steps to determine next execution order
-        $current_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         $next_execution_order = count($current_steps);
 
         // Get step config for label
@@ -239,11 +239,10 @@ class PipelinePageAjax
         }
 
         // Sync new step to all existing flows
-        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-            $flow_config = is_object($flow) ? $flow->flow_config : $flow['flow_config'];
-            $flow_config = $flow_config ?: [];
+            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             
             // Add new step to this flow
             $new_flow_steps = $this->add_flow_steps($flow_id, [$new_step]);
@@ -282,9 +281,9 @@ class PipelinePageAjax
 
         // Generate flow name if not provided
         if (!$flow_name) {
-            $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+            $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
             $pipeline_name = $pipeline['pipeline_name'] ?? __('Pipeline', 'data-machine');
-            $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+            $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
             $flow_number = count($existing_flows) + 1;
             $flow_name = sprintf(__('%s Flow %d', 'data-machine'), $pipeline_name, $flow_number);
         }
@@ -306,7 +305,7 @@ class PipelinePageAjax
         }
 
         // Get existing pipeline steps and create flow steps
-        $pipeline_steps = $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         if (!empty($pipeline_steps)) {
             $flow_config = $this->add_flow_steps($flow_id, $pipeline_steps);
             

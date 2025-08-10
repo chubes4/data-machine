@@ -54,17 +54,17 @@ class WordPressAuth {
             ],
         ];
 
-        $response = wp_remote_get($test_url, $args);
+        $result = apply_filters('dm_request', null, 'GET', $test_url, $args, 'WordPress Authentication');
         
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             do_action('dm_log', 'error', 'WordPress Auth: API validation failed.', [
-                'error' => $response->get_error_message(),
+                'error' => $result['error'],
                 'url' => $test_url
             ]);
             return false;
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
+        $response_code = $result['status_code'];
         return $response_code === 200;
     }
 

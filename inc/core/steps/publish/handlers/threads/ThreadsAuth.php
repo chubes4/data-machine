@@ -187,22 +187,19 @@ class ThreadsAuth {
             'code'          => $code,
         ];
 
-        // Use dm_send_request action hook for Threads token exchange
-        $result = null;
-        do_action('dm_send_request', 'POST', self::TOKEN_URL, [
+        // Use dm_request filter for Threads token exchange
+        $result = apply_filters('dm_request', null, 'POST', self::TOKEN_URL, [
             'body' => $token_params,
-        ], 'Threads Token Exchange', $result);
+        ], 'Threads OAuth');
         
         if (!$result['success']) {
             do_action('dm_log', 'error', 'Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $result['error']]);
             return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $result['error']);
         }
         
-        $response = $result['data'];
-
-        $body = $response['body'];
+        $body = $result['data'];
         $data = json_decode($body, true);
-        $http_code = $response['status_code'];
+        $http_code = $result['status_code'];
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error_description'] ?? $data['error'] ?? 'Failed to retrieve access token from Threads.';
@@ -222,17 +219,16 @@ class ThreadsAuth {
         // The example used GET for this exchange
         $exchange_url = 'https://graph.threads.net/access_token?' . http_build_query($exchange_params);
 
-        $exchange_response = wp_remote_get($exchange_url, [
-        ]);
+        $exchange_result = apply_filters('dm_request', null, 'GET', $exchange_url, [], 'Threads OAuth');
 
-        if (is_wp_error($exchange_response)) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['user_id' => $user_id, 'error' => $exchange_response->get_error_message()]);
-            return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'data-machine'), $exchange_response);
+        if (!$exchange_result['success']) {
+            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['user_id' => $user_id, 'error' => $exchange_result['error']]);
+            return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'data-machine'), $exchange_result['error']);
         }
 
-        $exchange_body = wp_remote_retrieve_body($exchange_response);
+        $exchange_body = $exchange_result['data'];
         $exchange_data = json_decode($exchange_body, true);
-        $exchange_http_code = wp_remote_retrieve_response_code($exchange_response);
+        $exchange_http_code = $exchange_result['status_code'];
 
         if ($exchange_http_code !== 200 || empty($exchange_data['access_token'])) {
             // Fail hard if the exchange doesn't succeed, as we need the long-lived token.
@@ -326,18 +322,18 @@ class ThreadsAuth {
         // Use Facebook Graph API endpoint for /me
         $url = 'https://graph.facebook.com/v19.0/me?fields=id,name'; // Adjust version as needed
         do_action('dm_log', 'debug', 'Facebook Graph API: Fetching authenticating user profile.', ['url' => $url]);
-        $response = wp_remote_get($url, [
+        $result = apply_filters('dm_request', null, 'GET', $url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
-        ]);
+        ], 'Threads Authentication');
 
-        if (is_wp_error($response)) {
-             do_action('dm_log', 'error', 'Facebook Graph API Error: Profile fetch wp_remote_get failed.', ['error' => $response->get_error_message()]);
-            return $response;
+        if (!$result['success']) {
+             do_action('dm_log', 'error', 'Facebook Graph API Error: Profile fetch request failed.', ['error' => $result['error']]);
+            return new \WP_Error('fb_profile_fetch_failed', $result['error']);
         }
 
-        $body = wp_remote_retrieve_body($response);
+        $body = $result['data'];
         $data = json_decode($body, true);
-        $http_code = wp_remote_retrieve_response_code($response);
+        $http_code = $result['status_code'];
 
         if ($http_code !== 200 || isset($data['error'])) {
              $error_message = $data['error']['message'] ?? 'Failed to fetch Facebook user profile.';
@@ -367,15 +363,15 @@ class ThreadsAuth {
          ];
          $url = self::REFRESH_URL . '?' . http_build_query($params);
 
-         $response = wp_remote_get($url, []);
+         $result = apply_filters('dm_request', null, 'GET', $url, [], 'Threads OAuth');
 
-         if (is_wp_error($response)) {
-             return new \WP_Error('threads_refresh_http_error', $response->get_error_message(), $response);
+         if (!$result['success']) {
+             return new \WP_Error('threads_refresh_http_error', $result['error']);
          }
 
-         $body = wp_remote_retrieve_body($response);
+         $body = $result['data'];
          $data = json_decode($body, true);
-         $http_code = wp_remote_retrieve_response_code($response);
+         $http_code = $result['status_code'];
 
          if ($http_code !== 200 || empty($data['access_token'])) {
              $error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to refresh Threads access token.';
@@ -411,15 +407,14 @@ class ThreadsAuth {
         if ($token) {
             // Attempt token revocation with Facebook Graph API (Threads uses Facebook infrastructure)
             $url = self::GRAPH_API_URL . '/me/permissions';
-            $response = wp_remote_request($url, [
-                'method' => 'DELETE',
+            $result = apply_filters('dm_request', null, 'DELETE', $url, [
                 'body' => ['access_token' => $token],
-                ]);
+            ], 'Threads Authentication');
 
             // Log success or failure of revocation, but don't stop deletion
-            if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            if (!$result['success'] || $result['status_code'] !== 200) {
                 // Token revocation failed, but continue with local cleanup
-                $error_details = is_wp_error($response) ? $response->get_error_message() : 'HTTP ' . wp_remote_retrieve_response_code($response);
+                $error_details = !$result['success'] ? $result['error'] : 'HTTP ' . $result['status_code'];
                 do_action('dm_log', 'error', 'Threads token revocation failed during account deletion.', [
                     'error' => $error_details
                 ]);

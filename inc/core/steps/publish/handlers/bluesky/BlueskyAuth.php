@@ -119,24 +119,24 @@ class BlueskyAuth {
 
         do_action('dm_log', 'debug', 'Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
 
-        $response = wp_remote_post($url, [
+        $result = apply_filters('dm_request', null, 'POST', $url, [
             'headers' => [
                 'Content-Type' => 'application/json'
             ],
             'body' => $body,
-        ]);
+        ], 'Bluesky Authentication');
 
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             do_action('dm_log', 'error', 'Bluesky session request failed.', [
                 'handle' => $handle,
-                'error' => $response->get_error_message()
+                'error' => $result['error']
             ]);
             return new \WP_Error('bluesky_session_request_failed', 
-                __('Could not connect to Bluesky server for authentication.', 'data-machine') . ' ' . $response->get_error_message());
+                __('Could not connect to Bluesky server for authentication.', 'data-machine') . ' ' . $result['error']);
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
+        $response_code = $result['status_code'];
+        $response_body = $result['data'];
         
         do_action('dm_log', 'debug', 'Bluesky session response received.', [
             'handle' => $handle,

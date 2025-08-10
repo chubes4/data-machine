@@ -59,18 +59,18 @@ $affected_flows = [];
 $affected_jobs = [];
 
 // Fetch affected data based on deletion type and available database services
-if ($delete_type === 'pipeline' && $db_flows && isset($pipeline_id)) {
+if ($delete_type === 'pipeline' && isset($pipeline_id)) {
     // Pipeline deletion affects all flows in that pipeline
-    $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+    $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
     
     // Get job count for this pipeline if jobs service available
     if ($db_jobs && method_exists($db_jobs, 'get_jobs_for_pipeline')) {
         $jobs_for_pipeline = $db_jobs->get_jobs_for_pipeline($pipeline_id);
         $affected_jobs = is_array($jobs_for_pipeline) ? $jobs_for_pipeline : [];
     }
-} elseif ($delete_type === 'step' && $db_flows && isset($pipeline_id)) {
+} elseif ($delete_type === 'step' && isset($pipeline_id)) {
     // Step deletion affects all flows using this pipeline (same as pipeline impact)
-    $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+    $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
 }
 // Flow deletion doesn't have sub-dependencies, so affected_flows stays empty
 

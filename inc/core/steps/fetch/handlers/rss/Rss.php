@@ -93,13 +93,12 @@ class Rss {
         // Fetch the RSS feed
         do_action('dm_log', 'debug', 'RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'pipeline_id' => $pipeline_id]);
         
-        // Use dm_send_request action hook for feed fetching
+        // Use dm_request filter for feed fetching
         $args = [
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
         ];
 
-        $result = null;
-        do_action('dm_send_request', 'GET', $feed_url, $args, 'RSS Feed', $result);
+        $result = apply_filters('dm_request', null, 'GET', $feed_url, $args, 'RSS Feed');
         
         if (!$result['success']) {
             throw new Exception(sprintf(
@@ -109,7 +108,7 @@ class Rss {
             ));
         }
 
-        $feed_content = $result['data']['body'];
+        $feed_content = $result['data'];
         if (empty($feed_content)) {
             throw new Exception(esc_html__('RSS feed content is empty.', 'data-machine'));
         }
