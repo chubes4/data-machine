@@ -38,16 +38,17 @@ if ( ! defined( 'WPINC' ) ) {
 class DataMachine_Delete_Actions {
 
     /**
-     * Register delete action hooks.
+     * Register delete action hooks using static method.
      *
      * Registers the central dm_delete action hook that routes to specific
      * deletion handlers based on entity type.
      *
      * @since NEXT_VERSION
      */
-    public function register_actions() {
+    public static function register() {
+        $instance = new self();
         // Central deletion action hook - eliminates code duplication across deletion types
-        add_action('dm_delete', [$this, 'handle_delete'], 10, 3);
+        add_action('dm_delete', [$instance, 'handle_delete'], 10, 3);
     }
 
     /**

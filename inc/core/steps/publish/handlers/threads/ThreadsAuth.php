@@ -2,9 +2,9 @@
 /**
  * Handles Threads OAuth 2.0 authentication for the Threads publish handler.
  *
- * Self-contained authentication system that provides all OAuth functionality
- * needed by the Threads publish handler including credential management,
- * OAuth flow handling, and access token management.
+ * Admin-global authentication system providing OAuth functionality with site-level
+ * credential storage, long-lived token management with automatic refresh, and 
+ * Facebook Graph API integration. Uses filter-based HTTP requests.
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/core/handlers/publish/threads
@@ -27,7 +27,6 @@ class ThreadsAuth {
     const API_BASE_URL = 'https://graph.threads.net/v1.0'; // Base for API calls
     const GRAPH_API_URL = 'https://graph.facebook.com/v19.0'; // Facebook Graph API URL for token revocation
     const SCOPES = 'threads_basic,threads_content_publish';
-    const USER_META_KEY = 'data_machine_threads_auth_account';
 
     /**
      * Constructor - parameter-less for pure filter-based architecture
@@ -138,14 +137,14 @@ class ThreadsAuth {
 
     /**
      * Generates the authorization URL to redirect the user to.
+     * Uses admin-global state management for consistent OAuth flow.
      *
-     * @param int $user_id WordPress User ID for state verification.
      * @return string The authorization URL.
      */
-    public function get_authorization_url(int $user_id): string {
-        $state = wp_create_nonce('dm_threads_oauth_state_' . $user_id);
-        // Store state temporarily for verification on callback using transient for admin-only architecture
-        set_transient('dm_threads_oauth_state_' . $user_id, $state, 15 * MINUTE_IN_SECONDS);
+    public function get_authorization_url(): string {
+        $state = wp_create_nonce('dm_threads_oauth_state');
+        // Store state in admin-global transient for verification
+        set_transient('dm_threads_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
 
         $params = [
             'client_id'     => $this->get_client_id(),
@@ -162,20 +161,20 @@ class ThreadsAuth {
      * Handles the OAuth callback from Threads.
      * Verifies state, exchanges code for token, and stores credentials.
      *
-     * @param int    $user_id WordPress User ID.
      * @param string $code    Authorization code from Threads.
      * @param string $state   State parameter from Threads for verification.
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
-    public function handle_callback(int $user_id, string $code, string $state): bool|\WP_Error {
-        do_action('dm_log', 'debug', 'Handling Threads OAuth callback.', ['user_id' => $user_id]);
+    public function handle_callback(string $code, string $state): bool|\WP_Error {
+        do_action('dm_log', 'debug', 'Handling Threads OAuth callback.');
 
-        // 1. Verify state - use transient for admin-only architecture
-        $stored_state = get_transient('dm_threads_oauth_state_' . $user_id);
-        delete_transient('dm_threads_oauth_state_' . $user_id); // Clean up state
-        if (empty($stored_state) || !hash_equals($stored_state, $state)) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: State mismatch.', ['user_id' => $user_id]);
-            return new \WP_Error('threads_oauth_state_mismatch', __('Invalid state parameter during Threads authentication.', 'data-machine'));
+        // 1. Verify state - use admin-global transient verification
+        $stored_state = get_transient('dm_threads_oauth_state');
+        delete_transient('dm_threads_oauth_state');
+        
+        if (empty($stored_state) || !wp_verify_nonce($state, 'dm_threads_oauth_state')) {
+            do_action('dm_log', 'error', 'Threads OAuth Error: State mismatch or expired.');
+            return new \WP_Error('threads_oauth_state_mismatch', __('Invalid or expired state parameter during Threads authentication.', 'data-machine'));
         }
 
         // 2. Exchange code for access token
@@ -193,7 +192,7 @@ class ThreadsAuth {
         ], 'Threads OAuth');
         
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: Token request failed.', ['user_id' => $user_id, 'error' => $result['error']]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Token request failed.', ['error' => $result['error']]);
             return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $result['error']);
         }
         
@@ -203,14 +202,14 @@ class ThreadsAuth {
 
         if ($http_code !== 200 || empty($data['access_token'])) {
             $error_message = $data['error_description'] ?? $data['error'] ?? 'Failed to retrieve access token from Threads.';
-            do_action('dm_log', 'error', 'Threads OAuth Error: Token exchange failed.', ['user_id' => $user_id, 'http_code' => $http_code, 'response' => $body]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Token exchange failed.', ['http_code' => $http_code, 'response' => $body]);
             return new \WP_Error('threads_oauth_token_exchange_failed', $error_message, $data);
         }
 
         $initial_access_token = $data['access_token'];
 
         // 3. Exchange short-lived token for a long-lived one
-        do_action('dm_log', 'debug', 'Threads OAuth: Exchanging short-lived token for long-lived token.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Threads OAuth: Exchanging short-lived token for long-lived token.');
         $exchange_params = [
             'grant_type'    => 'th_exchange_token',
             'client_secret' => $this->get_client_secret(),
@@ -222,7 +221,7 @@ class ThreadsAuth {
         $exchange_result = apply_filters('dm_request', null, 'GET', $exchange_url, [], 'Threads OAuth');
 
         if (!$exchange_result['success']) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['user_id' => $user_id, 'error' => $exchange_result['error']]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['error' => $exchange_result['error']]);
             return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'data-machine'), $exchange_result['error']);
         }
 
@@ -233,12 +232,12 @@ class ThreadsAuth {
         if ($exchange_http_code !== 200 || empty($exchange_data['access_token'])) {
             // Fail hard if the exchange doesn't succeed, as we need the long-lived token.
             $exchange_error_message = $exchange_data['error']['message'] ?? $exchange_data['error_description'] ?? 'Failed to retrieve long-lived access token from Threads.';
-            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange failed (API).', ['user_id' => $user_id, 'http_code' => $exchange_http_code, 'response' => $exchange_body]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: Long-lived token exchange failed (API).', ['http_code' => $exchange_http_code, 'response' => $exchange_body]);
             return new \WP_Error('threads_oauth_exchange_failed', $exchange_error_message, $exchange_data);
         }
 
         // Successfully exchanged for long-lived token
-        do_action('dm_log', 'debug', 'Threads OAuth: Successfully exchanged for long-lived token.', ['user_id' => $user_id]);
+        do_action('dm_log', 'debug', 'Threads OAuth: Successfully exchanged for long-lived token.');
         $long_lived_access_token = $exchange_data['access_token'];
         $long_lived_expires_in = $exchange_data['expires_in'] ?? null; // Should be ~60 days in seconds
         $long_lived_token_type = $exchange_data['token_type'] ?? 'bearer';
@@ -265,11 +264,10 @@ class ThreadsAuth {
         if (!is_wp_error($posting_entity_info) && isset($posting_entity_info['id'])) {
             $account_details['page_id'] = $posting_entity_info['id']; // Store the ID returned by /me as page_id
             $account_details['page_name'] = $posting_entity_info['name'] ?? 'Unknown Page/User';
-            do_action('dm_log', 'debug', 'Fetched posting entity info from /me.', ['user_id' => $user_id, 'posting_entity_id' => $posting_entity_info['id'], 'posting_entity_name' => $account_details['page_name']]);
+            do_action('dm_log', 'debug', 'Fetched posting entity info from /me.', ['posting_entity_id' => $posting_entity_info['id'], 'posting_entity_name' => $account_details['page_name']]);
         } else {
             // Critical error if /me doesn't return the necessary ID
             do_action('dm_log', 'error', 'Threads OAuth Error: Failed to fetch posting entity info from /me endpoint.', [
-                'user_id' => $user_id,
                 'error' => is_wp_error($posting_entity_info) ? $posting_entity_info->get_error_message() : '/me did not return an ID',
             ]);
             $error_message = is_wp_error($posting_entity_info) ? $posting_entity_info->get_error_message() : __('Could not retrieve the necessary profile ID using the access token.', 'data-machine');
@@ -280,7 +278,7 @@ class ThreadsAuth {
 
         // Update site option with all collected details for admin-only architecture
         update_option('threads_auth_data', $account_details);
-        do_action('dm_log', 'debug', 'Threads account authenticated and token stored.', ['user_id' => $user_id, 'page_id' => $account_details['page_id']]);
+        do_action('dm_log', 'debug', 'Threads account authenticated and token stored.', ['page_id' => $account_details['page_id']]);
 
         return true;
     }
@@ -469,12 +467,11 @@ class ThreadsAuth {
 
         // Check user permissions (should be logged in to WP admin)
         if (!current_user_can('manage_options')) {
-             do_action('dm_log', 'error', 'Threads OAuth Error: User does not have permission.', ['user_id' => get_current_user_id()]);
+             do_action('dm_log', 'error', 'Threads OAuth Error: User does not have permission.');
              wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-pipelines')));
              exit;
         }
 
-        $user_id = get_current_user_id();
         $code = sanitize_text_field($_GET['code']);
         $state = sanitize_text_field($_GET['state']);
 
@@ -482,22 +479,22 @@ class ThreadsAuth {
         $app_id = get_option('threads_app_id');
         $app_secret = get_option('threads_app_secret');
         if (empty($app_id) || empty($app_secret)) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: App credentials not configured.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Threads OAuth Error: App credentials not configured.');
             wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Handle the callback
-        $result = $this->handle_callback($user_id, $code, $state);
+        $result = $this->handle_callback($code, $state);
 
         if (is_wp_error($result)) {
             $error_code = $result->get_error_code();
             $error_message = $result->get_error_message();
-            do_action('dm_log', 'error', 'Threads OAuth Callback Failed.', ['user_id' => $user_id, 'error_code' => $error_code, 'error_message' => $error_message]);
+            do_action('dm_log', 'error', 'Threads OAuth Callback Failed.', ['error_code' => $error_code, 'error_message' => $error_message]);
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_message), 60);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=error_token'));
         } else {
-            do_action('dm_log', 'debug', 'Threads OAuth Callback Successful.', ['user_id' => $user_id]);
+            do_action('dm_log', 'debug', 'Threads OAuth Callback Successful.');
             set_transient('dm_oauth_success_threads', 'Threads account connected successfully!', 60);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=success'));
         }

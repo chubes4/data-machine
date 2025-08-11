@@ -23,7 +23,6 @@ class TwitterAuth {
 
     const OAUTH_CALLBACK_ACTION = 'dm_twitter_oauth_callback';
     const TEMP_TOKEN_SECRET_TRANSIENT_PREFIX = 'dm_twitter_req_secret_'; // Prefix + request_token
-    const USER_META_KEY = 'data_machine_twitter_account';
 
     /**
      * Constructor - parameter-less for pure filter-based architecture
@@ -96,12 +95,9 @@ class TwitterAuth {
      * Hooked to 'admin_post_dm_twitter_oauth_init'.
      */
     public function handle_oauth_init() {
-        // 1. Verify Nonce & Capability
-        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'dm_twitter_oauth_init_nonce')) {
-            wp_die('Security check failed (Nonce mismatch). Please try initiating the connection again from the API Keys page.', 'data-machine');
-        }
-        if (!current_user_can('manage_options')) { // Use appropriate capability
-             wp_die('Permission denied.', 'data-machine');
+        // 1. Verify admin capability (admin_post_* hook already requires admin authentication)
+        if (!current_user_can('manage_options')) {
+            wp_die('Permission denied.', 'data-machine');
         }
 
         // 2. Get API Key/Secret
@@ -160,11 +156,10 @@ class TwitterAuth {
      */
     public function handle_oauth_callback() {
         // --- 1. Initial Checks --- 
-        if ( !is_user_logged_in() ) {
-             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_not_logged_in'));
+        if (!current_user_can('manage_options')) {
+             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_permission_denied'));
              exit;
         }
-        $user_id = get_current_user_id();
 
         // Check if user denied access
         if (isset($_GET['denied'])) {

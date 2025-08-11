@@ -39,16 +39,17 @@ if ( ! defined( 'WPINC' ) ) {
 class DataMachine_Create_Actions {
 
     /**
-     * Register create action hooks.
+     * Register create action hooks using static method.
      *
      * Registers the central dm_create action hook that routes to specific
      * creation handlers based on entity type.
      *
      * @since NEXT_VERSION
      */
-    public function register_actions() {
+    public static function register() {
+        $instance = new self();
         // Central creation action hook - eliminates code duplication across all creation types
-        add_action('dm_create', [$this, 'handle_create'], 10, 3);
+        add_action('dm_create', [$instance, 'handle_create'], 10, 3);
     }
 
     /**
@@ -232,11 +233,10 @@ class DataMachine_Create_Actions {
             return;
         }
         
-        // Sync existing pipeline steps to new flow
+        // Sync existing pipeline steps to new flow using centralized action
         $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         if (!empty($pipeline_steps)) {
-            $flow_config = $this->generate_flow_steps_config($flow_id, $pipeline_steps);
-            $db_flows->update_flow($flow_id, ['flow_config' => json_encode($flow_config)]);
+            do_action('dm_sync_steps_to_flow', $flow_id, $pipeline_steps, ['context' => 'create_flow']);
         }
         
         $flow = $db_flows->get_flow($flow_id);
@@ -313,11 +313,11 @@ class DataMachine_Create_Actions {
             return;
         }
         
-        // Sync to all existing flows
+        // Sync to all existing flows using centralized action
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-            $this->sync_step_to_flow($flow_id, $new_step, $db_flows);
+            do_action('dm_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
         }
         
         // Trigger auto-save
@@ -405,62 +405,4 @@ class DataMachine_Create_Actions {
         ]);
     }
 
-    /**
-     * Generate flow steps configuration from pipeline steps.
-     *
-     * Creates flow configuration array with proper flow step IDs and structure
-     * based on pipeline step data.
-     *
-     * @param int $flow_id Flow ID
-     * @param array $pipeline_steps Array of pipeline step data
-     * @return array Flow configuration array
-     * @since NEXT_VERSION
-     */
-    private function generate_flow_steps_config($flow_id, $pipeline_steps) {
-        $flow_config = [];
-        foreach ($pipeline_steps as $step) {
-            $pipeline_step_id = $step['pipeline_step_id'] ?? null;
-            if ($pipeline_step_id) {
-                $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
-                $flow_config[$flow_step_id] = [
-                    'flow_step_id' => $flow_step_id,
-                    'step_type' => $step['step_type'],
-                    'pipeline_step_id' => $pipeline_step_id,
-                    'flow_id' => $flow_id,
-                    'execution_order' => $step['execution_order'],
-                    'handler' => null
-                ];
-            }
-        }
-        return $flow_config;
-    }
-
-    /**
-     * Synchronize new step to existing flow.
-     *
-     * Updates flow configuration to include new step with proper flow step ID
-     * and configuration structure.
-     *
-     * @param int $flow_id Flow ID to sync step to
-     * @param array $new_step New step data
-     * @param object $db_flows Flows database service
-     * @since NEXT_VERSION
-     */
-    private function sync_step_to_flow($flow_id, $new_step, $db_flows) {
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
-        if (empty($flow_config)) return;
-        $pipeline_step_id = $new_step['pipeline_step_id'];
-        $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
-        
-        $flow_config[$flow_step_id] = [
-            'flow_step_id' => $flow_step_id,
-            'step_type' => $new_step['step_type'],
-            'pipeline_step_id' => $pipeline_step_id,
-            'flow_id' => $flow_id,
-            'execution_order' => $new_step['execution_order'],
-            'handler' => null
-        ];
-        
-        $db_flows->update_flow($flow_id, ['flow_config' => json_encode($flow_config)]);
-    }
 }

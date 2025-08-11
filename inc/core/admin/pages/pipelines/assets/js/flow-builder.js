@@ -55,8 +55,25 @@
             const $button = $(e.currentTarget);
             const contextData = $button.data('context');
             
-            if (!contextData || !contextData.handler_slug || !contextData.step_type || !contextData.flow_step_id) {
+            // Different validation based on workflow phase
+            if (!contextData || !contextData.flow_step_id) {
                 console.error('Invalid handler data in button context:', contextData);
+                return;
+            }
+            
+            // Phase 1: "Add Handler" button - only needs step info
+            if (!contextData.handler_slug) {
+                if (!contextData.step_type) {
+                    console.error('Add Handler button requires step_type:', contextData);
+                    return;
+                }
+                // This is the "Add Handler" button - let modal system handle it
+                return;
+            }
+            
+            // Phase 2: "Add Handler Action" button - needs handler_slug after selection
+            if (!contextData.step_type) {
+                console.error('Add Handler Action button requires step_type:', contextData);
                 return;
             }
 
@@ -106,7 +123,7 @@
             // Collect form data from the modal for add-handler-action endpoint
             const $modal = $('#dm-modal');
             const formData = {
-                action: 'dm_add_handler_action',
+                action: 'dm_save_handler_settings',
                 context: JSON.stringify(contextData),
                 nonce: dmPipelineBuilder.pipeline_ajax_nonce
             };

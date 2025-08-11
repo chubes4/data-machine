@@ -2,9 +2,9 @@
 /**
  * Handles Bluesky authentication for the Bluesky publish handler.
  *
- * Self-contained authentication system that provides all authentication functionality
- * needed by the Bluesky publish handler including credential management,
- * session handling, and authenticated API access.
+ * Admin-global authentication system using app password credentials with site-level
+ * storage, session management via Bluesky API, and filter-based HTTP requests.
+ * Provides authenticated API access through session tokens.
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/core/handlers/publish/bluesky
@@ -18,8 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class BlueskyAuth {
-
-    const USER_META_KEY = 'data_machine_bluesky_account';
 
     /**
      * Constructor - parameter-less for pure filter-based architecture

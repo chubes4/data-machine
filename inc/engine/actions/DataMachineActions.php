@@ -22,7 +22,7 @@
  *
  * ORGANIZED ACTIONS (WordPress-native registration):
  * - dm_create, dm_delete: CRUD operations via organized action classes (Create.php, Delete.php)
- * - dm_update_job_status, dm_update_flow_schedule, dm_auto_save, dm_update_flow_handler: Update operations (Update.php)
+ * - dm_update_job_status, dm_update_flow_schedule, dm_auto_save, dm_update_flow_handler, dm_sync_steps_to_flow: Update operations (Update.php)
  * - External Plugin Actions: Plugins register custom actions using standard add_action() patterns
  *
  * EXTENSIBILITY EXAMPLES:
@@ -77,6 +77,7 @@ require_once __DIR__ . '/Engine.php';
  * do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
  * do_action('dm_update_flow_handler', $flow_step_id, 'twitter', $handler_settings);
  * do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly', 'inactive');
+ * do_action('dm_sync_steps_to_flow', $flow_id, [$step_data], ['context' => 'add_step']);
  * do_action('dm_schedule_next_step', $job_id, 1, $pipeline_id, $flow_id, $job_config, $data);
  * do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
  * do_action('dm_ajax_route', 'dm_add_step', 'page');
@@ -115,21 +116,23 @@ function dm_register_core_actions() {
     
     // Central logging hook - eliminates logger service discovery across all components  
     add_action('dm_log', function($operation, $param2 = null, $param3 = null, &$result = null) {
-        // Get logger instance for all operations
-        $logger = new \DataMachine\Engine\Logger();
-        
-        // Handle management operations
-        $management_operations = ['clear_all', 'cleanup'];
+        // Handle management operations that modify state
+        $management_operations = ['clear_all', 'cleanup', 'set_level'];
         if (in_array($operation, $management_operations)) {
             switch ($operation) {
                 case 'clear_all':
-                    $result = $logger->clear_logs();
+                    $result = dm_clear_log_files();
                     return $result;
                     
                 case 'cleanup':
                     $max_size_mb = $param2 ?? 10;
                     $max_age_days = $param3 ?? 30;
-                    $result = $logger->cleanup_log_files($max_size_mb, $max_age_days);
+                    $result = dm_cleanup_log_files($max_size_mb, $max_age_days);
+                    return $result;
+                    
+                case 'set_level':
+                    $new_level = $param2;
+                    $result = dm_set_log_level($new_level);
                     return $result;
             }
         }
@@ -139,20 +142,20 @@ function dm_register_core_actions() {
         $message = $param2;
         $context = $param3 ?? [];
         
-        // Validate log level and logger availability
-        if (!$logger || !method_exists($logger, $level)) {
-            return false;
-        }
-        
         // Valid log levels for the 3-level system: debug, error, warning
         $valid_levels = ['debug', 'error', 'warning', 'info', 'critical'];
         if (!in_array($level, $valid_levels)) {
             return false;
         }
         
-        // Execute logging method dynamically
-        $logger->$level($message, $context);
-        return true;
+        // Execute logging function dynamically
+        $function_name = 'dm_log_' . $level;
+        if (function_exists($function_name)) {
+            $function_name($message, $context);
+            return true;
+        }
+        
+        return false;
     }, 10, 4);
     
     // Universal AJAX routing action hook - eliminates 132 lines of duplication in PipelinesFilters.php
@@ -175,15 +178,10 @@ function dm_register_core_actions() {
     // Register core pipeline execution engine
     dm_register_execution_engine();
     
-    // Register organized action classes - simple WordPress-native pattern
-    $create_actions = new DataMachine_Create_Actions();
-    $create_actions->register_actions();
-    
-    $delete_actions = new DataMachine_Delete_Actions();
-    $delete_actions->register_actions();
-    
-    $update_actions = new DataMachine_Update_Actions();
-    $update_actions->register_actions();
+    // Register organized action classes - static WordPress-native pattern
+    DataMachine_Create_Actions::register();
+    DataMachine_Delete_Actions::register();
+    DataMachine_Update_Actions::register();
     
 }
 

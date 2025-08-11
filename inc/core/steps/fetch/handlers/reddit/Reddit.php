@@ -82,7 +82,7 @@ class Reddit {
 		// No upfront service validation required with filter-based architecture
 
 		// --- Retrieve Reddit OAuth Token & Refresh if needed ---
-		$reddit_account = get_option('dm_reddit_auth_data', []);
+		$reddit_account = get_option('reddit_auth_data', []);
 		$needs_refresh = false;
 		if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['access_token'])) {
 			 if (!empty($reddit_account['refresh_token'])) {
@@ -112,7 +112,7 @@ class Reddit {
 			}
 
 			// Re-fetch updated account data after successful refresh
-			$reddit_account = get_option('dm_reddit_auth_data', []);
+			$reddit_account = get_option('reddit_auth_data', []);
 			if (empty($reddit_account['access_token'])) {
 				do_action('dm_log', 'error', 'Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
 				 throw new Exception(esc_html__( 'Reddit token refresh seemed successful, but failed to retrieve new token data.', 'data-machine' ));

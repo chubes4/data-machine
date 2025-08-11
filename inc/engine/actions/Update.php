@@ -39,25 +39,30 @@ if ( ! defined( 'WPINC' ) ) {
 class DataMachine_Update_Actions {
 
     /**
-     * Register update action hooks.
+     * Register update action hooks using static method.
      *
      * Registers update action hooks that provide intelligent method selection
      * and consistent service discovery patterns.
      *
      * @since NEXT_VERSION
      */
-    public function register_actions() {
+    public static function register() {
+        $instance = new self();
+        
         // Central job status update hook - eliminates confusion about which method to use
-        add_action('dm_update_job_status', [$this, 'handle_job_status_update'], 10, 4);
+        add_action('dm_update_job_status', [$instance, 'handle_job_status_update'], 10, 4);
         
         // Central flow scheduling hook - direct Action Scheduler integration
-        add_action('dm_update_flow_schedule', [$this, 'handle_flow_schedule_update'], 10, 4);
+        add_action('dm_update_flow_schedule', [$instance, 'handle_flow_schedule_update'], 10, 4);
         
         // Central pipeline auto-save hook - eliminates database service discovery duplication
-        add_action('dm_auto_save', [$this, 'handle_pipeline_auto_save'], 10, 1);
+        add_action('dm_auto_save', [$instance, 'handle_pipeline_auto_save'], 10, 1);
         
         // Flow handler management action hook - eliminates 50+ line handler update patterns
-        add_action('dm_update_flow_handler', [$this, 'handle_flow_handler_update'], 10, 3);
+        add_action('dm_update_flow_handler', [$instance, 'handle_flow_handler_update'], 10, 3);
+        
+        // Flow step synchronization action hook - unifies single and bulk step sync operations
+        add_action('dm_sync_steps_to_flow', [$instance, 'handle_flow_steps_sync'], 10, 3);
     }
 
     /**
@@ -315,6 +320,93 @@ class DataMachine_Update_Actions {
         // Log the action
         $action_type = $handler_exists ? 'updated' : 'added';
         do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
+        
+        return true;
+    }
+
+    /**
+     * Handle flow step synchronization for single or multiple steps.
+     *
+     * Unified logic for creating flow step configurations from pipeline steps.
+     * Eliminates code duplication between single step sync and bulk step sync operations.
+     *
+     * @param int $flow_id Flow ID to sync steps to
+     * @param array $steps Array of pipeline step data (single step = array with one element)
+     * @param array $context Context information for logging and debugging
+     * @return bool Success status
+     * @since NEXT_VERSION
+     */
+    public function handle_flow_steps_sync($flow_id, $steps, $context = []) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+        
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow steps sync failed - flows database service unavailable', [
+                'flow_id' => $flow_id,
+                'steps_count' => count($steps),
+                'context' => $context
+            ]);
+            return false;
+        }
+        
+        // Validate flow exists
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            do_action('dm_log', 'error', 'Flow steps sync failed - flow not found', [
+                'flow_id' => $flow_id,
+                'steps_count' => count($steps),
+                'context' => $context
+            ]);
+            return false;
+        }
+        
+        // Get current flow configuration
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        
+        // Process each step
+        foreach ($steps as $step) {
+            $pipeline_step_id = $step['pipeline_step_id'] ?? null;
+            
+            if (!$pipeline_step_id) {
+                do_action('dm_log', 'warning', 'Skipping step sync - missing pipeline_step_id', [
+                    'flow_id' => $flow_id,
+                    'step_data' => $step,
+                    'context' => $context
+                ]);
+                continue;
+            }
+            
+            // Generate flow step ID using existing filter pattern
+            $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
+            
+            // Create flow step configuration
+            $flow_config[$flow_step_id] = [
+                'flow_step_id' => $flow_step_id,
+                'step_type' => $step['step_type'] ?? '',
+                'pipeline_step_id' => $pipeline_step_id,
+                'flow_id' => $flow_id,
+                'execution_order' => $step['execution_order'] ?? 0,
+                'handler' => null
+            ];
+        }
+        
+        // Update flow configuration
+        $success = $db_flows->update_flow($flow_id, [
+            'flow_config' => wp_json_encode($flow_config)
+        ]);
+        
+        if (!$success) {
+            do_action('dm_log', 'error', 'Flow steps sync failed - database update failed', [
+                'flow_id' => $flow_id,
+                'steps_count' => count($steps),
+                'context' => $context
+            ]);
+            return false;
+        }
+        
+        // Log successful sync
+        $context_desc = !empty($context['context']) ? $context['context'] : 'unknown';
+        do_action('dm_log', 'debug', "Synced " . count($steps) . " step(s) to flow {$flow_id} via {$context_desc}");
         
         return true;
     }

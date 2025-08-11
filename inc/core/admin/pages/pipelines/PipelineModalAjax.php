@@ -85,6 +85,7 @@ class PipelineModalAjax
     {
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
+        $pipeline_id = (int) ($_POST['pipeline_id'] ?? 0);
         
         if (empty($step_type)) {
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
@@ -98,18 +99,18 @@ class PipelineModalAjax
         }
 
         // Check if this is the first flow step by counting existing steps in flows
-        $flows = apply_filters('dm_get_pipeline_flows', [], $_POST['pipeline_id'] ?? 0);
+        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $is_first_step = empty($flows) || empty($flows[0]['flow_config'] ?? []);
 
-        // Prepare data for template
+        // Simplified data - let centralized system resolve context requirements
         $template_data = [
             'step' => [
                 'step_type' => $step_type,
                 'step_config' => []  // Empty config for new steps
             ],
-            'flow_config' => [],  // Empty flow config for new steps
             'flow_id' => $flow_id,
-            'is_first_step' => $is_first_step  // Template uses this to determine arrow
+            'pipeline_id' => $pipeline_id,
+            'is_first_step' => $is_first_step
         ];
 
         wp_send_json_success([
@@ -134,14 +135,10 @@ class PipelineModalAjax
         // Get flow configuration using centralized filter
         $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
         
-        if (empty($flow_config)) {
-            wp_send_json_error(['message' => __('Flow configuration not found or empty.', 'data-machine')]);
-            return;
-        }
-
+        // Return success even with empty config (normal for new flows)
         wp_send_json_success([
             'flow_id' => $flow_id,
-            'flow_config' => $flow_config
+            'flow_config' => $flow_config ?? []
         ]);
     }
 
@@ -428,140 +425,243 @@ class PipelineModalAjax
      */
     public function handle_add_handler_action()
     {
-        // Get context data from AJAX request - handle both JSON string and array formats
+        // Pure discovery approach - get only essential data from context
         $context = $_POST['context'] ?? [];
-        
-        // If context is a JSON string, decode it
         if (is_string($context)) {
             $context = json_decode($context, true) ?: [];
         }
         
-        // Enhanced error logging to debug data flow
-        do_action('dm_log', 'debug', 'Handler save context received', [
-            'context_type' => gettype($_POST['context'] ?? null),
-            'context_content' => $context,
-            'post_keys' => array_keys($_POST),
-            'received_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id']))
-        ]);
-        
-        // Get required parameters from context - no fallbacks
+        // Get required context - user clicked on specific flow step
         $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
-        $step_type = sanitize_text_field($context['step_type'] ?? '');
         $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? '');
-        $pipeline_id = (int)sanitize_text_field($context['pipeline_id'] ?? '');
         
-        // Get flow_id and pipeline_step_id from context - should be available directly
-        $flow_id = (int)sanitize_text_field($context['flow_id'] ?? '');
-        $pipeline_step_id = sanitize_text_field($context['pipeline_step_id'] ?? '');
+        if (empty($handler_slug)) {
+            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
+        }
         
-        // Fallback: if not in context, get from flow_config lookup
-        if (!$flow_id || !$pipeline_step_id) {
-            // Get database service to lookup flow config
-            $all_databases = apply_filters('dm_db', []);
-            $db_flows = $all_databases['flows'] ?? null;
-            
-            if ($db_flows && $flow_step_id) {
-                // Find the flow that contains this flow_step_id
-                $flows = $db_flows->get_all_active_flows();
-                foreach ($flows as $flow) {
-                    $current_flow_id = $flow['flow_id'];
-                    $flow_config = apply_filters('dm_get_flow_config', [], $current_flow_id);
-                    if (isset($flow_config[$flow_step_id])) {
-                        $flow_step_data = $flow_config[$flow_step_id];
-                        $flow_id = $flow_step_data['flow_id'] ?? $flow['flow_id'];
-                        $pipeline_step_id = $flow_step_data['pipeline_step_id'] ?? '';
-                        break;
-                    }
-                }
+        if (empty($flow_step_id)) {
+            wp_send_json_error(['message' => __('Flow step ID is required', 'data-machine')]);
+        }
+        
+        // Validate handler exists
+        $all_handlers = apply_filters('dm_handlers', []);
+        $handler_info = null;
+        
+        foreach ($all_handlers as $slug => $config) {
+            if ($slug === $handler_slug) {
+                $handler_info = $config;
+                break;
             }
         }
         
-        if (empty($handler_slug) || empty($step_type) || empty($flow_step_id)) {
-            $error_details = [
-                'handler_slug_empty' => empty($handler_slug),
-                'step_type_empty' => empty($step_type),
-                'flow_step_id_empty' => empty($flow_step_id),
-                'context_keys' => array_keys($context),
-                'post_keys' => array_keys($_POST)
-            ];
+        if (!$handler_info) {
+            wp_send_json_error(['message' => __('Handler not found', 'data-machine')]);
+        }
+        
+        // Process handler settings from form data
+        $saved_handler_settings = $this->process_handler_settings($handler_slug);
+        
+        // Add handler to the specific flow step user clicked on
+        do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
+        
+        wp_send_json_success([
+            'message' => sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug),
+            'handler_slug' => $handler_slug,
+            'flow_step_id' => $flow_step_id,
+            'action_type' => 'added'
+        ]);
+    }
+
+
+
+    /**
+     * Handle AJAX file upload with handler context support
+     */
+    public function handle_upload_file()
+    {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_upload_file')) {
+            wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
+            return;
+        }
+        
+        // Check if file was uploaded
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error(['message' => __('File upload failed.', 'data-machine')]);
+            return;
+        }
+        
+        $file = $_FILES['file'];
+        
+        // Extract flow_step_id from request for proper file isolation
+        // Use the flow_step_id provided by the frontend form
+        $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');
+        
+        if (empty($flow_step_id)) {
+            wp_send_json_error(['message' => __('Missing flow step ID from form data.', 'data-machine')]);
+            return;
+        }
+        
+        try {
+            // Basic validation - file size and dangerous extensions
+            $file_size = filesize($file['tmp_name']);
+            if ($file_size === false) {
+                throw new \Exception(__('Cannot determine file size.', 'data-machine'));
+            }
             
-            do_action('dm_log', 'error', 'Handler slug, step type, and flow step ID validation failed', $error_details);
+            // 32MB limit
+            $max_file_size = 32 * 1024 * 1024;
+            if ($file_size > $max_file_size) {
+                throw new \Exception(sprintf(
+                    __('File too large: %1$s. Maximum allowed size: %2$s', 'data-machine'),
+                    size_format($file_size),
+                    size_format($max_file_size)
+                ));
+            }
+
+            // Block dangerous extensions
+            $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr'];
+            $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             
-            wp_send_json_error([
-                'message' => __('Handler slug, step type, and flow step ID are required', 'data-machine'),
-                'debug_info' => $error_details
+            if (in_array($file_extension, $dangerous_extensions)) {
+                throw new \Exception(__('File type not allowed for security reasons.', 'data-machine'));
+            }
+            
+            // Use repository to store file with handler context
+            $repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
+            if (!$repository) {
+                wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
+                return;
+            }
+            
+            $stored_path = $repository->store_file($file['tmp_name'], $file['name'], $flow_step_id);
+            
+            if (!$stored_path) {
+                wp_send_json_error(['message' => __('Failed to store file.', 'data-machine')]);
+                return;
+            }
+            
+            // Get file info for response
+            $file_info = $repository->get_file_info(basename($stored_path));
+            
+            do_action('dm_log', 'debug', 'File uploaded successfully via AJAX.', [
+                'filename' => $file['name'],
+                'stored_path' => $stored_path,
+                'flow_step_id' => $flow_step_id
             ]);
+            
+            wp_send_json_success([
+                'file_info' => $file_info,
+                'message' => sprintf(__('File "%s" uploaded successfully.', 'data-machine'), $file['name'])
+            ]);
+            
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'File upload failed.', [
+                'filename' => $file['name'],
+                'error' => $e->getMessage(),
+                'flow_step_id' => $flow_step_id
+            ]);
+            
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Handle AJAX request to get files with processing status for a specific handler
+     */
+    public function handle_get_handler_files()
+    {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_upload_file')) {
+            wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
+            return;
         }
         
-        // Get handler configuration via pure discovery
-        $all_handlers = apply_filters('dm_handlers', []);
-        $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
-            return ($handler['type'] ?? '') === $step_type;
-        });
+        // Use the flow_step_id provided by the frontend
+        $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');
         
-        if (!isset($handlers[$handler_slug])) {
-            wp_send_json_error(['message' => __('Invalid handler for this step type', 'data-machine')]);
+        if (empty($flow_step_id)) {
+            wp_send_json_error(['message' => __('Missing flow step ID from request.', 'data-machine')]);
+            return;
         }
         
-        $handler_info = $handlers[$handler_slug];
-        
-        // Get settings class to process form data using pure discovery
+        try {
+            // Get files repository service
+            $repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
+            if (!$repository) {
+                wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
+                return;
+            }
+            
+            // Get all files for this flow step
+            $files = $repository->get_all_files($flow_step_id);
+            
+            // Get processed items service to check processing status
+            $all_databases = apply_filters('dm_db', []);
+            $processed_items_service = $all_databases['processed_items'] ?? null;
+            if (!$processed_items_service) {
+                wp_send_json_error(['message' => __('Processed items service not available.', 'data-machine')]);
+                return;
+            }
+            
+            // Enhance files with processing status
+            $files_with_status = [];
+            
+            foreach ($files as $file) {
+                $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file['path']);
+                
+                $files_with_status[] = [
+                    'filename' => $file['filename'],
+                    'size' => $file['size'],
+                    'size_formatted' => size_format($file['size']),
+                    'modified' => $file['modified'],
+                    'modified_formatted' => date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $file['modified']),
+                    'is_processed' => $is_processed,
+                    'status' => $is_processed ? __('Processed', 'data-machine') : __('Pending', 'data-machine'),
+                    'path' => $file['path']
+                ];
+            }
+            
+            // Generate HTML using template system
+            $html_rows = apply_filters('dm_render_template', '', 'modal/file-status-rows', [
+                'files' => $files_with_status
+            ]);
+            
+            wp_send_json_success([
+                'html' => $html_rows,
+                'total_files' => count($files_with_status),
+                'pending_files' => count(array_filter($files_with_status, fn($f) => !$f['is_processed']))
+            ]);
+            
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Failed to get handler files.', [
+                'error' => $e->getMessage(),
+                'flow_step_id' => $flow_step_id
+            ]);
+            
+            wp_send_json_error(['message' => __('Failed to retrieve files.', 'data-machine')]);
+        }
+    }
+
+    /**
+     * Process handler settings from form data
+     */
+    private function process_handler_settings($handler_slug)
+    {
         $all_settings = apply_filters('dm_handler_settings', []);
         $handler_settings = $all_settings[$handler_slug] ?? null;
-        $saved_handler_settings = [];
         
-        // If handler has settings, sanitize the form data
-        if ($handler_settings && method_exists($handler_settings, 'sanitize')) {
-            $raw_settings = [];
-            
-            // Extract form fields (skip WordPress and system fields)
-            foreach ($_POST as $key => $value) {
-                if (!in_array($key, ['action', 'pipeline_action', 'context', 'nonce', '_wp_http_referer'])) {
-                    $raw_settings[$key] = $value;
-                }
-            }
-            
-            $saved_handler_settings = $handler_settings->sanitize($raw_settings);
+        if (!$handler_settings || !method_exists($handler_settings, 'sanitize')) {
+            return [];
         }
         
-        // For flow context, update or add handler to flow configuration using centralized action
-        if ($flow_id > 0) {
-            // Use centralized flow handler management action
-            $success = do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
-            
-            if (!$success) {
-                wp_send_json_error(['message' => __('Failed to save handler settings', 'data-machine')]);
+        $raw_settings = [];
+        foreach ($_POST as $key => $value) {
+            if (!in_array($key, ['action', 'context', 'nonce', '_wp_http_referer'])) {
+                $raw_settings[$key] = $value;
             }
-            
-            // Determine action type for response (simple check - handler exists if settings were previously saved)
-            $action_type = !empty($saved_handler_settings) ? 'updated' : 'added';
-            $action_message = ($action_type === 'updated')
-                ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
-                : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug);
-            
-            wp_send_json_success([
-                'message' => $action_message,
-                'handler_slug' => $handler_slug,
-                'step_type' => $step_type,
-                'flow_step_id' => $flow_step_id,
-                'flow_id' => $flow_id,
-                'pipeline_step_id' => $pipeline_step_id,
-                'pipeline_id' => $pipeline_id,
-                'handler_config' => $handler_info,
-                'handler_settings' => $saved_handler_settings,
-                'action_type' => $action_type
-            ]);
-            
-        } else {
-            // For pipeline context (template), just confirm the handler is valid
-            wp_send_json_success([
-                'message' => sprintf(__('Handler "%s" configuration saved', 'data-machine'), $handler_info['label'] ?? $handler_slug),
-                'handler_slug' => $handler_slug,
-                'step_type' => $step_type,
-                'pipeline_id' => $pipeline_id,
-                'handler_config' => $handler_info,
-                'handler_settings' => $saved_handler_settings
-            ]);
         }
+        
+        return $handler_settings->sanitize($raw_settings);
     }
 }

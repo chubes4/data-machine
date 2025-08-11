@@ -2,19 +2,17 @@
 /**
  * Data Machine Core Execution Engine
  *
- * Pure end-to-end pipeline execution actions organized by execution order.
- * These 3 actions represent the complete pipeline execution cycle:
+ * Three-action execution engine providing complete pipeline orchestration through
+ * Action Scheduler integration, filter-based service discovery, and functional
+ * step execution. KISS compliance with zero overhead architecture.
  * 
  * EXECUTION FLOW:
- * 1. dm_run_flow_now: Pipeline initiation ("start button")
- * 2. dm_execute_step: Core step execution (the "50 line" functional orchestration)  
- * 3. dm_schedule_next_step: Next step scheduling (called by dm_execute_step)
+ * 1. dm_run_flow_now: Pipeline initiation via organized dm_create action
+ * 2. dm_execute_step: Core functional step execution with DataPacket flow
+ * 3. dm_schedule_next_step: Action Scheduler step transitions
  * 
  * EXECUTION CYCLE:
  * dm_run_flow_now → [creates job] → dm_schedule_next_step → dm_execute_step → dm_schedule_next_step → dm_execute_step...
- * 
- * This represents the pure pipeline execution engine with zero overhead,
- * maximum KISS compliance, and clear execution order visibility.
  *
  * @package DataMachine
  * @since NEXT_VERSION

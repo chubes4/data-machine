@@ -137,6 +137,7 @@ function dm_register_pipelines_admin_page_filters() {
                                 'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
                                 'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
                                 'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
+                                'get_files_nonce' => wp_create_nonce('dm_get_handler_files'),
                                 'strings' => [
                                     'connecting' => __('Connecting...', 'data-machine'),
                                     'disconnecting' => __('Disconnecting...', 'data-machine'),
@@ -146,6 +147,11 @@ function dm_register_pipelines_admin_page_filters() {
                                 ]
                             ]
                         ]
+                    ],
+                    'dm-file-uploads' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/file-uploads.js',
+                        'deps' => ['jquery', 'dm-pipelines-modal'],
+                        'in_footer' => true
                     ],
                     'ai-http-provider-manager' => [
                         'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
@@ -234,6 +240,86 @@ function dm_register_pipelines_admin_page_filters() {
         
         return $modals;
     });
+    
+    // Template requirements registration - use centralized dm_template_requirements system
+    add_filter('dm_template_requirements', function($requirements) {
+        // Pipeline template context requirements - moved from inline filter logic
+        $pipeline_requirements = [
+            // Modal templates
+            'modal/configure-step' => [
+                'required' => ['step_type', 'pipeline_id', 'pipeline_step_id'],
+                'optional' => ['flow_id'],
+                'auto_generate' => ['flow_step_id' => '{pipeline_step_id}_{flow_id}']
+            ],
+            'modal/handler-selection-cards' => [
+                'required' => ['step_type', 'pipeline_id', 'flow_step_id']
+            ],
+            // Handler-specific settings templates - minimal requirements with pure discovery
+            'modal/handler-settings/files' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/rss' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/reddit' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/googlesheets_fetch' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/googlesheets_publish' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/wordpress_fetch' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/wordpress_publish' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/twitter' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/facebook' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/threads' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/handler-settings/bluesky' => [
+                'required' => ['handler_slug']
+            ],
+            'modal/step-selection-cards' => [
+                'required' => ['pipeline_id']
+            ],
+            'modal/flow-schedule' => [
+                'required' => ['flow_id']
+            ],
+            
+            // Page templates
+            'page/pipeline-step-card' => [
+                'required' => ['pipeline_id', 'step', 'is_first_step'],
+                'extract_from_step' => ['pipeline_step_id', 'step_type']
+            ],
+            'page/flow-step-card' => [
+                'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
+                'extract_from_step' => ['pipeline_step_id', 'step_type'],
+                'auto_generate' => [
+                    'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
+                ]
+            ],
+            'page/flow-instance-card' => [
+                'required' => ['flow'],
+                'extract_from_flow' => ['flow_id', 'pipeline_id', 'flow_name']
+            ],
+            'page/pipeline-card' => [
+                'required' => ['pipeline'],
+                'extract_from_pipeline' => ['pipeline_id', 'pipeline_name', 'step_configuration']
+            ]
+        ];
+        
+        // Merge with existing requirements from other components
+        return array_merge($requirements, $pipeline_requirements);
+    }, 10, 1);
 }
 
 /**
@@ -343,13 +429,8 @@ function dm_handle_save_handler_settings() {
     
     // For flow context, add handler to flow configuration using centralized action
     if ($flow_id > 0) {
-        // Use centralized flow handler management action
-        $success = do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
-        
-        if (!$success) {
-            wp_send_json_error(['message' => __('Failed to add handler to flow.', 'data-machine')]);
-            return;
-        }
+        // Use centralized flow handler management action (no return value capture)
+        do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
         
         // Auto-save pipeline after handler settings change
         if ($pipeline_id > 0) {
@@ -367,6 +448,7 @@ function dm_handle_save_handler_settings() {
             'handler_slug' => $handler_slug,
             'step_type' => $step_type,
             'flow_step_id' => $flow_step_id,
+            'flow_id' => $flow_id,
             'pipeline_id' => $pipeline_id,
             'handler_config' => $handler_info,
             'handler_settings' => $saved_handler_settings,
@@ -386,309 +468,5 @@ function dm_handle_save_handler_settings() {
     }
 }
 
-
-// Pipeline template context resolution - handles context for all pipeline/flow templates
-add_filter('dm_render_template', function($content, $template_name, $data = []) {
-    // Pipeline template context requirements
-    $pipeline_template_requirements = [
-        // Modal templates
-        'modal/configure-step' => [
-            'required' => ['step_type', 'pipeline_id', 'pipeline_step_id'],
-            'optional' => ['flow_id'],
-            'auto_generate' => ['flow_step_id' => '{pipeline_step_id}_{flow_id}']
-        ],
-        'modal/handler-selection-cards' => [
-            'required' => ['pipeline_id', 'flow_id', 'step_type']
-        ],
-        // Handler-specific settings templates - support all handlers with WordPress input/output variants
-        'modal/handler-settings/files' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/rss' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/reddit' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/googlesheets_fetch' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/googlesheets_publish' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/wordpress_fetch' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/wordpress_publish' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/twitter' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/facebook' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/threads' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/handler-settings/bluesky' => [
-            'required' => ['handler_slug', 'step_type'],
-            'optional' => ['flow_id', 'pipeline_id', 'pipeline_step_id', 'flow_step_id']
-        ],
-        'modal/step-selection-cards' => [
-            'required' => ['pipeline_id']
-        ],
-        'modal/flow-schedule' => [
-            'required' => ['flow_id']
-        ],
-        
-        // Page templates
-        'page/pipeline-step-card' => [
-            'required' => ['pipeline_id', 'step', 'is_first_step'],
-            'extract_from_step' => ['pipeline_step_id', 'step_type']
-        ],
-        'page/flow-step-card' => [
-            'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
-            'extract_from_step' => ['pipeline_step_id', 'step_type'],
-            'auto_generate' => [
-                'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
-            ]
-        ],
-        'page/flow-instance-card' => [
-            'required' => ['flow'],
-            'extract_from_flow' => ['flow_id', 'pipeline_id', 'flow_name']
-        ],
-        'page/pipeline-card' => [
-            'required' => ['pipeline'],
-            'extract_from_pipeline' => ['pipeline_id', 'pipeline_name', 'step_configuration']
-        ]
-    ];
-    
-    // Resolve context if this template has requirements
-    if (isset($pipeline_template_requirements[$template_name])) {
-        $requirements = $pipeline_template_requirements[$template_name];
-        $data = dm_resolve_pipeline_context($requirements, $data);
-    }
-    
-    return $content; // Continue filter chain
-}, 5, 3);
-
-/**
- * Resolve pipeline template context based on requirements
- * 
- * @param array $requirements Template context requirements
- * @param array $data Current template data
- * @return array Enhanced data with resolved context
- */
-function dm_resolve_pipeline_context($requirements, $data) {
-    // Validate required fields
-    if (!empty($requirements['required'])) {
-        foreach ($requirements['required'] as $field) {
-            if (!dm_has_context_field($field, $data)) {
-                // Log missing required context
-                do_action('dm_log', 'error', "Pipeline template context missing required field: {$field}", [
-                    'requirements' => $requirements,
-                    'available_data_keys' => array_keys($data)
-                ]);
-            }
-        }
-    }
-    
-    // Auto-generate composite IDs
-    if (!empty($requirements['auto_generate'])) {
-        foreach ($requirements['auto_generate'] as $target_field => $pattern) {
-            $data[$target_field] = dm_generate_id_from_pattern($pattern, $data);
-        }
-    }
-    
-    // Extract nested data from objects/arrays
-    if (!empty($requirements['extract_from_step'])) {
-        $data = dm_extract_step_data($data, $requirements['extract_from_step']);
-    }
-    
-    if (!empty($requirements['extract_from_flow'])) {
-        $data = dm_extract_flow_data($data, $requirements['extract_from_flow']);
-    }
-    
-    if (!empty($requirements['extract_from_pipeline'])) {
-        $data = dm_extract_pipeline_data($data, $requirements['extract_from_pipeline']);
-    }
-    
-    return $data;
-}
-
-/**
- * Check if context field exists and has value
- * 
- * @param string $field Field name to check
- * @param array $data Data array to check
- * @return bool True if field exists and has value
- */
-function dm_has_context_field($field, $data) {
-    // Handle nested field access (e.g., 'step.step_id')
-    if (strpos($field, '.') !== false) {
-        $parts = explode('.', $field);
-        $current = $data;
-        
-        foreach ($parts as $part) {
-            if (is_array($current) && isset($current[$part])) {
-                $current = $current[$part];
-            } elseif (is_object($current) && isset($current->$part)) {
-                $current = $current->$part;
-            } else {
-                return false;
-            }
-        }
-        
-        return !empty($current);
-    }
-    
-    return isset($data[$field]) && !empty($data[$field]);
-}
-
-/**
- * Generate ID from pattern using available data
- * 
- * @param string $pattern Pattern like '{step_id}_{flow_id}'
- * @param array $data Available data
- * @return string Generated ID
- */
-function dm_generate_id_from_pattern($pattern, $data) {
-    // Replace {field} patterns with actual values
-    return preg_replace_callback('/\{([^}]+)\}/', function($matches) use ($data) {
-        $field = $matches[1];
-        
-        // Handle nested field access
-        if (strpos($field, '.') !== false) {
-            $parts = explode('.', $field);
-            $value = $data;
-            
-            foreach ($parts as $part) {
-                if (is_array($value) && isset($value[$part])) {
-                    $value = $value[$part];
-                } elseif (is_object($value) && isset($value->$part)) {
-                    $value = $value->$part;
-                } else {
-                    return '';
-                }
-            }
-            
-            return $value;
-        }
-        
-        return $data[$field] ?? '';
-    }, $pattern);
-}
-
-/**
- * Extract step-related data
- * 
- * @param array $data Current data
- * @param array $fields Fields to extract from step
- * @return array Enhanced data
- */
-function dm_extract_step_data($data, $fields) {
-    if (!isset($data['step'])) {
-        return $data;
-    }
-    
-    $step = $data['step'];
-    
-    foreach ($fields as $field) {
-        if (is_array($step) && isset($step[$field])) {
-            $data[$field] = $step[$field];
-        } elseif (is_object($step) && isset($step->$field)) {
-            $data[$field] = $step->$field;
-        }
-    }
-    
-    return $data;
-}
-
-/**
- * Extract flow-related data
- * 
- * @param array $data Current data
- * @param array $fields Fields to extract from flow
- * @return array Enhanced data
- */
-function dm_extract_flow_data($data, $fields) {
-    if (!isset($data['flow'])) {
-        return $data;
-    }
-    
-    $flow = $data['flow'];
-    
-    foreach ($fields as $field) {
-        if (is_array($flow) && isset($flow[$field])) {
-            $data[$field] = $flow[$field];
-        } elseif (is_object($flow) && isset($flow->$field)) {
-            $data[$field] = $flow->$field;
-        }
-    }
-    
-    return $data;
-}
-
-/**
- * Extract pipeline-related data
- * 
- * @param array $data Current data
- * @param array $fields Fields to extract from pipeline
- * @return array Enhanced data
- */
-function dm_extract_pipeline_data($data, $fields) {
-    if (!isset($data['pipeline'])) {
-        return $data;
-    }
-    
-    $pipeline = $data['pipeline'];
-    
-    foreach ($fields as $field) {
-        if (is_array($pipeline) && isset($pipeline[$field])) {
-            $data[$field] = $pipeline[$field];
-        } elseif (is_object($pipeline) && isset($pipeline->$field)) {
-            $data[$field] = $pipeline->$field;
-        }
-    }
-    
-    return $data;
-}
-
-/**
- * Central Flow Step ID Generation Utility
- * 
- * Provides consistent flow_step_id generation across all system components.
- * Flow step IDs use the pattern: {pipeline_step_id}_{flow_id}
- * 
- * @since 0.1.0
- */
-function dm_register_flow_step_id_utility() {
-    add_filter('dm_generate_flow_step_id', function($existing_id, $pipeline_step_id, $flow_id) {
-        // Validate required parameters
-        if (empty($pipeline_step_id) || empty($flow_id)) {
-            do_action('dm_log', 'error', 'Invalid flow step ID generation parameters', [
-                'pipeline_step_id' => $pipeline_step_id,
-                'flow_id' => $flow_id
-            ]);
-            return '';
-        }
-        
-        // Generate consistent flow_step_id using established pattern
-        return $pipeline_step_id . '_' . $flow_id;
-    }, 10, 3);
-}
-
 // Auto-register when file loads - achieving complete self-containment
 dm_register_pipelines_admin_page_filters();
-dm_register_flow_step_id_utility();

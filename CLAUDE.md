@@ -12,6 +12,8 @@ Data Machine is an AI-first WordPress plugin that transforms WordPress sites int
 
 **Architectural Consistency**: All components follow consistent admin-only patterns with zero mixed architectural approaches, user-scoped code, or inconsistent patterns.
 
+**Admin-Only Authentication Architecture**: Complete site-level authentication system with zero user_id dependencies. All OAuth integrations use admin-global storage with `manage_options` capability checks, providing unified authentication for all site administrators.
+
 **Two-Layer Architecture**:
 - **Pipelines**: Reusable workflow templates with step sequences (positions 0-99)
 - **Flows**: Configured instances with handler settings and scheduling (auto-created "Draft Flow" for new pipelines)
@@ -37,7 +39,9 @@ add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_conte
 
 **AI Processing Architecture**: Complete whole-packet processing with rich content support (text, files, mixed content) and handler directive injection.
 
-**Action Hook System**: Central "button press" style hooks eliminate code duplication across components (dm_run_flow_now, dm_update_job_status, dm_execute_step, dm_log, dm_ajax_route, dm_pipeline_auto_save, dm_mark_item_processed).
+**Action Hook System**: Central "button press" style hooks eliminate code duplication across components (dm_run_flow_now, dm_update_job_status, dm_execute_step, dm_log, dm_ajax_route, dm_auto_save, dm_mark_item_processed).
+
+**NO MANUAL SAVE Architecture**: Complete auto-save system eliminates manual save operations. All user interactions trigger automatic pipeline persistence via `dm_auto_save` action hook with real-time status indicators.
 
 ## Database Schema
 
@@ -62,13 +66,8 @@ do_action('dm_log', 'error', 'Message', ['context' => 'data']);
 // Flow execution via dm_run_flow_now action hook (see Action Hook System)
 do_action('dm_run_flow_now', $flow_id, 'manual_execution');
 
-// HTTP requests - Two patterns available
-// 1. Filter-based discovery (most handlers)
+// HTTP requests - Filter-based discovery (all handlers)
 $response = apply_filters('dm_request', [], 'GET', $url, $args);
-// 2. Action hook pattern (Facebook handler only) 
-$result = null;
-do_action('dm_send_request', 'GET', $url, $args, 'API Context', $result);
-// $result['success'] boolean, $result['data'] response, $result['error'] message
 
 // Database services - Collection discovery
 $all_databases = apply_filters('dm_db', []);
@@ -79,13 +78,19 @@ $all_handlers = apply_filters('dm_handlers', []);
 $fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
 $specific_handler = $all_handlers['twitter'] ?? null;
 
-// Authentication, Settings, Directives - Collection patterns
-$all_auth = apply_filters('dm_get_auth_providers', []);
-$all_settings = apply_filters('dm_get_handler_settings', []);
-$all_directives = apply_filters('dm_get_handler_directives', []);
+// Authentication services - Collection discovery with admin-only patterns
+$all_auth = apply_filters('dm_auth_providers', []);
+$twitter_auth = $all_auth['twitter'] ?? null;
+if ($twitter_auth && $twitter_auth->is_authenticated()) {
+    $account_info = $twitter_auth->get_account_details(); // Admin-global authentication
+}
 
-// Context services - Parameter-based discovery
-$job_context = apply_filters('dm_get_context', null, $job_id);
+// Handler Settings and Directives - Collection patterns  
+$all_settings = apply_filters('dm_handler_settings', []);
+$all_directives = apply_filters('dm_handler_directives', []);
+
+// Context services - Available via database collections
+// Use: $all_databases = apply_filters('dm_db', []); to access context services
 
 // Step discovery and configuration
 $all_steps = apply_filters('dm_steps', []);
@@ -100,16 +105,13 @@ $files_repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository()
 
 ## Development Priorities
 
-**Immediate Tasks**:
-1. Implement handler directives for social media handlers (Twitter, Facebook, Threads, Bluesky)
-2. Comprehensive testing of ProcessedItems system across all handlers
-3. Expand template context resolution system for additional handler-specific templates
-
 **Available for Extension**:
-- Handler directive framework (WordPress implementation complete)
+- Handler directive framework (WordPress implementation complete, framework ready for all handlers)
 - Filter-based authentication system (all handlers complete)
 - Pipeline execution engine with DataPacket flow
 - Universal modal and template rendering systems
+- File upload system with AJAX processing and status tracking
+- ProcessedItems duplicate prevention system
 
 ## Development Commands
 
@@ -123,7 +125,7 @@ composer test:unit           # Unit tests only
 composer test:integration    # Integration tests only
 composer test:coverage       # HTML coverage report
 
-# AI HTTP Client (subtree)
+# AI HTTP Client (integrated library)
 cd lib/ai-http-client/ && composer test && composer analyse
 
 # Debugging
@@ -139,11 +141,14 @@ define('WP_DEBUG', true); # Enable debugging
 error_log('Database services: ' . print_r(apply_filters('dm_db', []), true));
 error_log('Handlers: ' . print_r(apply_filters('dm_handlers', []), true));
 error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
+
+# Authentication System Debugging
+error_log('Auth providers: ' . print_r(apply_filters('dm_auth_providers', []), true));
 ```
 
 ## Components
 
-**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Execution Engine (actions/ architecture), AI Client (multi-provider: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration)
+**Core Services**: Logger (3-level system: debug, error, none with runtime configuration), Database, Execution Engine (actions/ architecture), AI HTTP Client (integrated library: OpenAI, Anthropic, Google, Grok, OpenRouter with step-aware configuration and component UI system)
 
 **Handlers**:
 - Fetch: Files, Reddit, RSS, WordPress, Google Sheets (5 handlers)
@@ -153,7 +158,7 @@ error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
 
 **Authentication Implementation Status**:
 - Twitter: ✅ Complete OAuth 1.0a implementation
-- Facebook: ✅ Complete OAuth 2.0 implementation
+- Facebook: ✅ Complete OAuth 2.0 implementation  
 - Threads: ✅ Complete OAuth 2.0 implementation with long-lived token refresh
 - Bluesky: ✅ Complete authentication implementation with app password system
 - Google Sheets: ✅ Complete OAuth 2.0 implementation
@@ -184,29 +189,22 @@ error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
 // Use dm_log action hook for logging operations (preferred)
 do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
 
-// Direct access if needed for configuration
-$logger = new \DataMachine\Engine\Logger();
-
-// Get current level
-$current_level = $logger->get_level(); // Returns 'debug', 'error', or 'none'
-
-// Set new level
-$logger->set_level('error'); // Changes effective immediately
-
-// Available levels
-$levels = \DataMachine\Engine\Logger::get_available_log_levels(); // Returns array with descriptions
+// Logger service discovery via filter-based pattern
+$current_level = apply_filters('dm_log_file', '', 'get_level');
+$levels = apply_filters('dm_log_file', [], 'get_available_levels');
 ```
 
 **Default Configuration**: Log level defaults to `error` (problems only) for production environments while providing full debugging capability when needed.
 
 **Log Management**:
 ```php
-// File operations
-$log_path = $logger->get_log_file_path();
-$log_size = $logger->get_log_file_size(); // Returns MB
-$recent_logs = $logger->get_recent_logs(100); // Last 100 lines
-$logger->clear_logs(); // Remove all log files
-$logger->cleanup_log_files(10, 30); // Auto-cleanup based on size/age
+// File operations via logger service discovery
+$log_path = apply_filters('dm_log_file', '', 'get_path');
+$log_size = apply_filters('dm_log_file', 0, 'get_size'); // Returns MB
+$recent_logs = apply_filters('dm_log_file', [], 'get_recent', 100); // Last 100 lines
+// Log management operations use dm_log action hook
+do_action('dm_log', 'clear_logs'); // Remove all log files
+do_action('dm_log', 'cleanup', 10, 30); // Auto-cleanup based on size/age
 ```
 
 ## DataPacket Structure
@@ -231,21 +229,21 @@ Universal data contract between pipeline steps supporting rich content:
 **Step Implementation with Rich Content**:
 ```php
 class MyStep {
-    public function execute(int $job_id, array $data_packet, array $step_config): array {
-        foreach ($data_packet as $data) {
+    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
+        foreach ($data as $data_item) {
             // Handle text content
-            $content = $data['content']['body'] ?? '';
+            $content = $data_item['content']['body'] ?? '';
             
             // Handle file content
-            $file_path = $data['metadata']['file_path'] ?? '';
+            $file_path = $data_item['metadata']['file_path'] ?? '';
             if ($file_path && file_exists($file_path)) {
                 // Process file content
             }
             
             // Process based on type
-            $type = $data['type'] ?? 'unknown';
+            $type = $data_item['type'] ?? 'unknown';
         }
-        return $data_packet; // Return updated data packet array
+        return $data; // Return updated data packet array
     }
 }
 ```
@@ -270,7 +268,7 @@ class MyStep {
 
 **Step Requirements**:
 - **Parameter-less Constructor**: Steps instantiated without dependencies
-- **Standard Execute Method**: `execute(string $flow_step_id, array $data = [], array $step_config = []): array`
+- **Standard Execute Method**: `execute($flow_step_id, array $data = [], array $step_config = []): array`
 - **Return Updated DataPacket**: Must return modified data packet array for next step
 - **Self-Configuration**: Steps extract needed configuration from step_config parameter
 
@@ -322,18 +320,18 @@ $content = apply_filters('dm_render_template', '', 'page/flow-step-card', [
 
 ## Handler Directive System
 
-**Elegant Filter-Based Architecture**: Handlers register AI-specific directives via `dm_get_handler_directives` filter that AI steps automatically inject into system prompts.
+**Elegant Filter-Based Architecture**: Handlers register AI-specific directives via `dm_handler_directives` filter that AI steps automatically inject into system prompts.
 
 **Implementation Pattern**:
 ```php
 // Handler registration in handler filters file
-add_filter('dm_get_handler_directives', function($directives) {
+add_filter('dm_handler_directives', function($directives) {
     $directives['wordpress_publish'] = 'When publishing to WordPress, format your response as:\nTITLE: [compelling post title]\nCATEGORY: [single category name]\nTAGS: [comma,separated,tags]\nCONTENT:\n[your content here]';
     return $directives;
 });
 
 // Automatic injection in AI step processing
-$all_directives = apply_filters('dm_get_handler_directives', []);
+$all_directives = apply_filters('dm_handler_directives', []);
 $handler_directive = $all_directives[$next_step['handler']['handler_slug']] ?? '';
 if (!empty($handler_directive)) {
     $system_prompt .= "\n\n" . $handler_directive;
@@ -342,7 +340,7 @@ if (!empty($handler_directive)) {
 
 **Current Implementation**:
 - WordPress handler: ✅ Complete directive implementation with structured content formatting
-- Twitter, Facebook, Threads, Bluesky handlers: ⚠️ Framework ready for directive implementation
+- Twitter, Facebook, Threads, Bluesky, Google Sheets handlers: ⭕ Framework ready, no directives implemented
 - AI steps automatically discover and inject appropriate directives based on pipeline step sequence
 - Handlers self-register directives via `dm_handler_directives` filter using consistent registration pattern
 
@@ -351,6 +349,23 @@ if (!empty($handler_directive)) {
 - **Self-Registering**: Handlers declare their own AI requirements via filters
 - **Pipeline-Aware**: AI steps automatically detect next step handler and apply appropriate directive
 - **Extensible**: Any handler can register custom AI directives following the same pattern
+
+**Framework Implementation**:
+- **Filter Registration**: Engine provides `dm_handler_directives` filter discovery
+- **Automatic Discovery**: AI steps query all registered directives via `apply_filters('dm_handler_directives', [])`
+- **Context Injection**: AI steps automatically inject appropriate directive based on next pipeline step
+- **Handler Independence**: Each handler implements own directive registration without cross-dependencies
+
+**Adding New Handler Directives**:
+```php
+// In handler's *Filters.php file
+add_filter('dm_handler_directives', function($directives) {
+    $directives['twitter_publish'] = 'For Twitter, keep posts under 280 characters...';
+    $directives['facebook_publish'] = 'For Facebook, use engaging headlines and...';
+    return $directives;
+});
+```
+
 
 ## Arrow Rendering Architecture
 
@@ -400,7 +415,7 @@ requestTemplate(templateName, templateData) {
     return $.ajax({
         url: dmPipelineBuilder.ajax_url, type: 'POST',
         data: {
-            action: 'dm_pipeline_ajax', pipeline_action: 'get_template',
+            action: 'dm_get_template',
             template: templateName, template_data: JSON.stringify(templateData),
             nonce: dmPipelineBuilder.pipeline_ajax_nonce
         }
@@ -418,6 +433,8 @@ wp_send_json_success(['step_data' => $data]); // NOT step_html
 ```
 
 **Benefits**: Consistent HTML structure, single source of truth, clean separation, seamless `dm_render_template` integration.
+
+**Filter-Based Template Discovery**: Templates discovered from admin page registration and rendered through universal `dm_render_template` filter system with automatic context resolution.
 
 ## Modal System
 
@@ -478,6 +495,32 @@ add_filter('dm_modals', function($modals) {
 ]
 ```
 
+**Context Resolution Process**:
+1. **Template Registration**: Templates register requirements in PipelinesFilters.php
+2. **Data Validation**: Required fields verified before template rendering
+3. **Extraction Processing**: Multi-source data extraction (step, flow, pipeline objects)
+4. **Pattern Generation**: Complex ID patterns resolved using substitution
+5. **Context Assembly**: Final context array prepared for template rendering
+6. **Debug Logging**: Missing fields logged for development troubleshooting
+
+**Implementation Example**:
+```php
+// Template context resolution for flow step cards
+$template_requirements = [
+    'required' => ['flow_id', 'step'],
+    'extract_from_step' => ['pipeline_step_id'],
+    'auto_generate' => ['flow_step_id' => '{step.pipeline_step_id}_{flow_id}']
+];
+
+// Automatic resolution produces:
+$resolved_context = [
+    'flow_id' => 123,
+    'step' => $step_object,
+    'pipeline_step_id' => 'uuid-from-step-object',
+    'flow_step_id' => 'uuid-from-step-object_123' // Auto-generated
+];
+```
+
 ## Files Handler Repository System
 
 **Direct Instantiation Pattern**: Files handler implements dedicated repository for file management with flow-specific isolation.
@@ -496,6 +539,23 @@ $repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
 - **AJAX File Upload**: Secure upload handling with nonce verification
 - **Repository Pattern**: Direct instantiation as Files handler internal infrastructure
 
+**Cleanup System Architecture**:
+- **ActionScheduler Integration**: Weekly cleanup tasks scheduled automatically
+- **Age-Based Cleanup**: Files older than configurable threshold (default: 7 days)
+- **Flow-Aware Deletion**: Only removes files from completed or inactive flows
+- **Storage Management**: Prevents unlimited disk usage from abandoned uploads
+- **Cleanup Logging**: All cleanup operations logged for monitoring
+
+**Cleanup Operations**:
+```php
+// Manual cleanup trigger
+$deleted_count = $repository->cleanup_old_files(7); // Remove files older than 7 days
+
+// Automatic scheduling (handled by FilesFilters.php)
+// Weekly: wp_schedule_event() + 'dm_files_cleanup' hook
+// Executes: $repository->cleanup_old_files() with default settings
+```
+
 **File Management Operations**:
 ```php
 // Store file with handler context
@@ -506,6 +566,41 @@ $files = $repository->get_all_files($flow_step_id);
 
 // Cleanup old files
 $deleted_count = $repository->cleanup_old_files(7); // 7 days
+```
+
+## File Upload System
+
+**AJAX File Upload Architecture**: Complete file upload system with drag-and-drop support, auto-upload functionality, and real-time status tracking integrated with the Files handler.
+
+**Core Components**:
+- **file-uploads.js**: Dedicated JavaScript module handling file upload functionality
+- **file-status-rows.php**: Template for rendering file status with processing indicators
+- **FilesFilters.php**: Backend AJAX handlers for upload processing and status queries
+
+**Upload Features**:
+- **Auto-Upload**: Files automatically upload on selection via file input
+- **Drag-and-Drop**: Optional drag-and-drop zone for file selection
+- **Status Tracking**: Real-time processing status with visual indicators (pending/processed)
+- **File Validation**: Size limits (32MB) and dangerous extension blocking
+- **Flow Isolation**: Files stored with flow_step_id context for proper isolation
+
+**Status Integration**:
+```php
+// File status tracking with ProcessedItems system
+foreach ($files as $file) {
+    $status_class = $file['is_processed'] ? 'processed' : 'pending';
+    $status_icon = $file['is_processed'] ? 'dashicons-yes-alt' : 'dashicons-clock';
+}
+```
+
+**JavaScript Integration**:
+```javascript
+// Auto-initialization on modal load
+$(document).on('dm-core-modal-content-loaded', handleModalOpened);
+// Auto-upload on file selection
+$(document).on('change', '#dm-file-upload', handleFileAutoUpload);
+// File refresh functionality
+$(document).on('click', '.dm-refresh-files', handleRefreshFiles);
 ```
 
 
@@ -536,11 +631,12 @@ do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
 do_action('dm_ajax_route', 'dm_add_step', 'page');
 // Universal processed item marking across all handlers
 do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
+// Central pipeline auto-save operations eliminating database service discovery
+do_action('dm_auto_save', $pipeline_id);
 ```
 
-**HTTP Request System**: Two patterns available for HTTP operations:
-- **Filter Pattern**: `$response = apply_filters('dm_request', [], 'GET', $url, $args);` (most handlers)
-- **Action Pattern**: `dm_send_request` action hook (Facebook handler only)
+**HTTP Request System**: Filter-based discovery for all handlers:
+- **Universal Pattern**: `$response = apply_filters('dm_request', [], 'GET', $url, $args);`
 
 **Architecture Organization**: 
 - **Engine.php**: Core 3-action execution engine
@@ -552,13 +648,16 @@ do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
 ## Critical Rules
 
 **Engine Agnosticism**: NEVER hardcode step types in `/inc/engine/` directory  
-**Discovery Pattern**: Prefer collection-based discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;` for most services. Parameter-based filters are acceptable for context-specific services like `dm_get_context` which requires job_id parameter  
+**Discovery Pattern**: Prefer collection-based discovery `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;` for most services  
 **Service Access**: Always use filter-based discovery patterns - never `new ServiceClass()` direct instantiation  
 **Template Rendering**: Always use `apply_filters('dm_render_template', '', $template, $data)` - never direct template methods - automatic context resolution applied  
 **Action Hooks**: Use central action hooks for common operations - eliminates service discovery duplication
 **Field Naming**: Use `pipeline_step_id` consistently throughout system - matches database schema and UUID4 requirements
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` (reverse order fails)  
-**CSS Namespace**: All admin CSS must use `dm-` prefix  
+**CSS Namespace**: All admin CSS must use `dm-` prefix
+**Authentication Architecture**: NEVER use user_id dependencies - all authentication is admin-global with `manage_options` capability checks
+**OAuth Storage**: Use consistent `{handler}_auth_data` option keys for all OAuth implementations  
+**Authentication Discovery**: Always use `apply_filters('dm_auth_providers', [])` collection pattern - never direct instantiation  
 
 **Database Tables**:
 - `wp_dm_pipelines`: Template definitions with step sequences (pipeline_step_id UUID4 fields consistently used)
@@ -590,14 +689,9 @@ $processed_items_service = $all_databases['processed_items'] ?? null;
 
 **Flow Operations**: Flows support deletion with cascade cleanup of associated jobs. Jobs table displays "Pipeline → Flow" format for clear relationship visibility.
 
-## Component Registration
-
-**Self-Registration Pattern**: Each component registers all services in dedicated `*Filters.php` files using consistent filter-based discovery patterns. See Critical Rules section for complete collection-based discovery guidelines.
-
-
 ## Admin Page Architecture
 
-**Direct Template Rendering Pattern**: AdminMenuAssets.php uses standardized `"page/{$page_slug}-page"` template pattern for unified rendering.
+**Centralized Filter Registration**: Admin pages register via `dm_admin_pages` filter using standardized template patterns for unified rendering.
 
 **Unified Registration**: Admin pages register with assets, templates, and configuration in a single `dm_admin_pages` filter:
 
@@ -613,24 +707,4 @@ add_filter('dm_admin_pages', function($pages) {
 });
 ```
 
-## Universal Template Rendering
-
-**Filter-Based Template Discovery**: Templates discovered from admin page registration and rendered through universal `dm_render_template` filter system.
-
-**Template Usage**:
-```php
-$content = apply_filters('dm_render_template', '', 'modal/handler-settings-form', $data);
-```
-
-**JavaScript Template Integration**: Use template requesting pattern for dynamic HTML updates:
-```javascript
-requestTemplate(template, data) {
-    return $.ajax({
-        action: 'dm_pipeline_ajax', pipeline_action: 'get_template',
-        template: template, template_data: JSON.stringify(data)
-    }).then(response => response.data.html);
-}
-```
-
-**AJAX Handler Pattern**: Return data only, never HTML - JavaScript requests templates separately.
 

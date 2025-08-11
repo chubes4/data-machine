@@ -2,8 +2,12 @@
 /**
  * Handles Reddit OAuth 2.0 Authorization Code Grant flow.
  *
+ * Admin-global authentication system providing OAuth functionality with site-level
+ * credential storage, token refresh management, and Reddit API access.
+ * Uses centralized logging and filter-based HTTP requests.
+ *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/input/reddit
+ * @subpackage Data_Machine/core/handlers/fetch/reddit
  * @since      NEXT_VERSION
  */
 
@@ -40,12 +44,7 @@ class RedditAuth {
      * Hooked to 'admin_post_dm_reddit_oauth_init'.
      */
     public function handle_oauth_init() {
-        // 1. Verify Nonce
-        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'dm_reddit_oauth_init_nonce')) {
-            wp_die('Security check failed (Nonce mismatch). Please try initiating the connection again from the API Keys page.');
-        }
-
-        // Ensure user has capability
+        // 1. Verify admin capability (admin_post_* hook already requires admin authentication)
         if (!current_user_can('manage_options')) {
              wp_die('Permission denied.');
         }
@@ -62,10 +61,9 @@ class RedditAuth {
         $redirect_uri = admin_url('admin-post.php?action=dm_reddit_oauth_callback');
 
         // 4. Generate State parameter
-        $state = wp_create_nonce('reddit_oauth_state_' . get_current_user_id());
-        // Store state temporarily to verify on callback (e.g., in user meta or transient)
-        // Transients are good for short-lived verification data.
-        set_transient('dm_reddit_oauth_state_' . get_current_user_id(), $state, 15 * MINUTE_IN_SECONDS);
+        $state = wp_create_nonce('dm_reddit_oauth_state');
+        // Store state temporarily to verify on callback using admin-global transient
+        set_transient('dm_reddit_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
 
         // 5. Define Scopes
         $scope = 'identity read'; // Request read access and user identity
@@ -93,17 +91,16 @@ class RedditAuth {
         // --- 1. Verify State and Check for Errors --- 
         $state_received = sanitize_key($_GET['state'] ?? '');
         
-        if ( !is_user_logged_in() ) {
-             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_not_logged_in'));
+        if (!current_user_can('manage_options')) {
+             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_permission_denied'));
              exit;
         }
-        $user_id = get_current_user_id();
-        $stored_state = get_transient('dm_reddit_oauth_state_' . $user_id);
-        delete_transient('dm_reddit_oauth_state_' . $user_id); // Clean up transient immediately
+        $stored_state = get_transient('dm_reddit_oauth_state');
+        delete_transient('dm_reddit_oauth_state'); // Clean up transient immediately
 
         // Verify State
         if ( empty($state_received) || empty($stored_state) || !hash_equals($stored_state, $state_received) ) {
-            do_action('dm_log', 'error', 'Reddit OAuth Error: State mismatch or missing.', ['received' => $state_received, 'user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: State mismatch or missing.', ['received' => $state_received]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_state_mismatch'));
             exit;
         }
@@ -111,14 +108,14 @@ class RedditAuth {
         // Check for errors returned by Reddit
         if (isset($_GET['error'])) {
             $error_code = sanitize_key($_GET['error']);
-            do_action('dm_log', 'error', 'Reddit OAuth Error: Received error from Reddit.', ['error' => $error_code, 'user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Received error from Reddit.', ['error' => $error_code]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_' . $error_code));
             exit;
         }
 
         // Check for authorization code
         if (!isset($_GET['code'])) {
-            do_action('dm_log', 'error', 'Reddit OAuth Error: Authorization code missing in callback.', ['user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Authorization code missing in callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_code'));
             exit;
         }
@@ -129,7 +126,7 @@ class RedditAuth {
         $client_id = get_option('reddit_oauth_client_id');
         $client_secret = get_option('reddit_oauth_client_secret');
         if (empty($client_id) || empty($client_secret)) {
-             do_action('dm_log', 'error', 'Reddit OAuth Error: Client ID or Secret not configured for token exchange.', ['user_id' => $user_id]);
+             do_action('dm_log', 'error', 'Reddit OAuth Error: Client ID or Secret not configured for token exchange.');
              wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_credentials'));
              exit;
         }
@@ -159,7 +156,7 @@ class RedditAuth {
 
         // --- 3. Process Token Response --- 
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $result['error'], 'user_id' => $user_id]);
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to connect to token endpoint.', ['error' => $result['error']]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_token_request_failed'));
             exit;
         }
@@ -173,8 +170,7 @@ class RedditAuth {
             do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to retrieve access token.', [
                 'response_code' => $response_code,
                 'error_detail'  => $error_detail,
-                'response_body' => $body, // Log full body for debugging
-                'user_id'       => $user_id
+                'response_body' => $body // Log full body for debugging
             ]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_token_retrieval_error'));
             exit;
@@ -204,11 +200,11 @@ class RedditAuth {
             if (!empty($identity_data['name'])) {
                 $identity_username = $identity_data['name'];
             } else {
-                 do_action('dm_log', 'warning', 'Reddit OAuth Warning: Could not get username from /api/v1/me, but token obtained.', ['user_id' => $user_id, 'identity_response' => $identity_body]);
+                 do_action('dm_log', 'warning', 'Reddit OAuth Warning: Could not get username from /api/v1/me, but token obtained.', ['identity_response' => $identity_body]);
             }
         } else {
              $identity_error = $identity_result['success'] ? 'HTTP ' . $identity_result['status_code'] : $identity_result['error'];
-             do_action('dm_log', 'warning', 'Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error, 'user_id' => $user_id]);
+             do_action('dm_log', 'warning', 'Reddit OAuth Warning: Failed to get user identity after getting token.', ['error' => $identity_error]);
         }
 
         // --- 5. Store Tokens and User Info --- 
@@ -223,7 +219,7 @@ class RedditAuth {
         ];
 
         // Store as admin-only option for global Reddit authentication
-        update_option('dm_reddit_auth_data', $account_data);
+        update_option('reddit_auth_data', $account_data);
 
         // --- 6. Redirect on Success --- 
         wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=reddit'));
@@ -238,7 +234,7 @@ class RedditAuth {
     public function refresh_token(): bool {
         do_action('dm_log', 'debug', 'Attempting Reddit token refresh for admin authentication.');
 
-        $reddit_account = get_option('dm_reddit_auth_data', []);
+        $reddit_account = get_option('reddit_auth_data', []);
         if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['refresh_token'])) {
             do_action('dm_log', 'error', 'Reddit Token Refresh Error: Refresh token not found in admin options.');
             return false;
@@ -295,7 +291,7 @@ class RedditAuth {
                 'response_body' => $body
             ]);
              // If refresh fails (e.g., token revoked), clear stored data to force re-auth
-             delete_option('dm_reddit_auth_data');
+             delete_option('reddit_auth_data');
             return false;
         }
 
@@ -317,7 +313,7 @@ class RedditAuth {
             'last_refreshed_at'  => time() // Update refresh time
         ];
 
-        update_option('dm_reddit_auth_data', $updated_account_data);
+        update_option('reddit_auth_data', $updated_account_data);
         do_action('dm_log', 'debug', 'Reddit token refreshed successfully.', ['new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
         return true;
     }

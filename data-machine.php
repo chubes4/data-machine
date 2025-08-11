@@ -114,7 +114,10 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
 
 // Load centralized filter and action registration
-require_once __DIR__ . '/inc/engine/DataMachineFilters.php';
+require_once __DIR__ . '/inc/engine/filters/DataMachineFilters.php';
+require_once __DIR__ . '/inc/engine/filters/Database.php';
+require_once __DIR__ . '/inc/engine/filters/Admin.php';
+require_once __DIR__ . '/inc/engine/filters/Logger.php';
 require_once __DIR__ . '/inc/engine/actions/DataMachineActions.php';
 
 // PSR-4 Autoloading - no manual includes needed
@@ -130,15 +133,18 @@ function run_data_machine() {
     // Core services use direct instantiation, extensible services use filter-based discovery
     
     
-    // Register parameter-based database service system
+    // Register database service system and data access filters
     dm_register_database_service_system();
+    dm_register_database_filters();
     
-    
-    // Register utility filters for data discovery and transformation
+    // Register utility filters for backend processing  
     dm_register_utility_filters();
     
-    // Register admin extension points for core-to-engine integration
-    dm_register_admin_extension_points();
+    // Register admin system filters for UI/template management
+    dm_register_admin_filters();
+    
+    // Register logger filters for information retrieval
+    dm_register_logger_filters();
     
     // Register core action hooks for centralized operations
     dm_register_core_actions();
@@ -164,8 +170,7 @@ function run_data_machine() {
     // AJAX functionality migrated to other components during architectural refactor
 
     // --- Initialize Admin Interface ---
-    $admin_menu_assets = new \DataMachine\Engine\AdminMenuAssets();
-    $admin_menu_assets->init_hooks();
+    // Admin menu functionality now handled via dm_register_admin_filters()
 
     // Action Scheduler hook registration moved to DataMachineActions.php for architectural consistency
     // dm_execute_step hook serves as the core step execution engine for the entire pipeline system

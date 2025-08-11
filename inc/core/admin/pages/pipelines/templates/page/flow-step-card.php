@@ -14,8 +14,9 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract required data
-$step_type = $step['step_type'] ?? '';
+// Extract required data  
+// $step_type is already extracted by template context resolution via 'extract_from_step'
+$step_type = $step_type ?? '';
 $step_execution_order = $step['execution_order'] ?? 0;
 $flow_id = $flow_id ?? 0;
 $pipeline_id = $pipeline_id ?? 0;

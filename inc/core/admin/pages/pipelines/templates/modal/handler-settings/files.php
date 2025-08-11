@@ -47,11 +47,7 @@ $has_auth_system = isset($all_auth[$handler_slug]);
 ?>
 <div class="dm-handler-settings-container" 
      data-handler-slug="<?php echo esc_attr($handler_slug); ?>" 
-     data-step-type="<?php echo esc_attr($step_type); ?>"
-     data-flow-id="<?php echo esc_attr($flow_id); ?>"
-     data-step-execution-order="<?php echo esc_attr($pipeline_step_id); ?>"
-     data-flow-step-id="<?php echo esc_attr($flow_step_id); ?>"
-     data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
+     data-step-type="<?php echo esc_attr($step_type); ?>">
     <div class="dm-handler-settings-header">
         <h3><?php echo esc_html(sprintf(__('Configure %s Handler', 'data-machine'), $handler_label)); ?></h3>
         <p><?php echo esc_html(sprintf(__('Set up your %s integration settings below.', 'data-machine'), $handler_label)); ?></p>
@@ -76,8 +72,6 @@ $has_auth_system = isset($all_auth[$handler_slug]);
                 <p class="description"><?php esc_html_e('Upload any file type - the pipeline will handle compatibility and processing.', 'data-machine'); ?></p>
                 
                 <div class="dm-file-upload-container" 
-                     data-flow-id="<?php echo esc_attr($flow_id); ?>" 
-                     data-step-execution-order="<?php echo esc_attr($pipeline_step_id); ?>"
                      data-handler-context="<?php echo esc_attr(json_encode(['flow_id' => $flow_id, 'pipeline_step_id' => $pipeline_step_id, 'handler_slug' => $handler_slug])); ?>">
                     
                     <div class="dm-file-selection-area" id="dm-file-drop-zone">

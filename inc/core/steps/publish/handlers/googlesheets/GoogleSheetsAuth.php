@@ -2,9 +2,9 @@
 /**
  * Handles Google Sheets OAuth 2.0 authentication for the Google Sheets publish handler.
  *
- * Self-contained authentication system that provides all OAuth functionality
- * needed by the Google Sheets publish handler including credential management,
- * OAuth flow handling, and authenticated API access.
+ * Admin-global authentication system providing OAuth functionality with site-level
+ * credential storage, refresh token management, and Google Sheets API access.
+ * Uses filter-based HTTP requests and centralized logging.
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/core/handlers/publish/googlesheets
@@ -171,12 +171,9 @@ class GoogleSheetsAuth {
      */
     public function handle_oauth_init() {
         
-        // 1. Verify Nonce & Capability
-        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'dm_googlesheets_oauth_init_nonce')) {
-            wp_die('Security check failed (Nonce mismatch). Please try initiating the connection again from the API Keys page.', 'data-machine');
-        }
+        // 1. Verify admin capability (admin_post_* hook already requires admin authentication)
         if (!current_user_can('manage_options')) {
-             wp_die('Permission denied.', 'data-machine');
+            wp_die('Permission denied.', 'data-machine');
         }
 
         // 2. Get OAuth configuration
@@ -189,8 +186,8 @@ class GoogleSheetsAuth {
         }
 
         // 3. Generate state parameter for security
-        $state = wp_generate_password(32, false);
-        set_transient(self::STATE_TRANSIENT_PREFIX . $state, get_current_user_id(), 15 * MINUTE_IN_SECONDS);
+        $state = wp_create_nonce('dm_googlesheets_oauth_state');
+        set_transient(self::STATE_TRANSIENT_PREFIX . $state, 'admin_authenticated', 15 * MINUTE_IN_SECONDS);
 
         // 4. Build authorization URL
         $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
@@ -208,7 +205,6 @@ class GoogleSheetsAuth {
         $auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($auth_params);
 
         do_action('dm_log', 'debug', 'Redirecting user to Google OAuth authorization.', [
-            'user_id' => get_current_user_id(),
             'auth_url' => $auth_url
         ]);
 
@@ -224,8 +220,8 @@ class GoogleSheetsAuth {
     public function handle_oauth_callback() {
         
         // 1. Initial checks
-        if (!is_user_logged_in()) {
-             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_not_logged_in'));
+        if (!current_user_can('manage_options')) {
+             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_permission_denied'));
              exit;
         }
 
@@ -248,17 +244,16 @@ class GoogleSheetsAuth {
         $state = sanitize_text_field($_GET['state']);
 
         // 2. Verify state parameter
-        $stored_user_id = get_transient(self::STATE_TRANSIENT_PREFIX . $state);
+        $stored_state_marker = get_transient(self::STATE_TRANSIENT_PREFIX . $state);
         delete_transient(self::STATE_TRANSIENT_PREFIX . $state);
 
-        if (empty($stored_user_id) || $stored_user_id != get_current_user_id()) {
+        if (empty($stored_state_marker) || !wp_verify_nonce($state, 'dm_googlesheets_oauth_state')) {
             do_action('dm_log', 'error', 'Invalid or expired state parameter in Google OAuth callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_invalid_state'));
             exit;
         }
 
         // 3. Exchange authorization code for tokens
-        $user_id = get_current_user_id();
         $client_id = get_option('googlesheets_client_id');
         $client_secret = get_option('googlesheets_client_secret');
         $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
