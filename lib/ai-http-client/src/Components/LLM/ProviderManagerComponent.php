@@ -60,8 +60,9 @@ class AI_HTTP_ProviderManager_Component {
             );
         }
         
-        // Validate ai_type value
-        $valid_types = array('llm', 'upscaling', 'generative');
+        // Validate ai_type value using filter-based discovery
+        $ai_types = apply_filters('ai_types', []);
+        $valid_types = array_keys($ai_types);
         if (!in_array($args['ai_type'], $valid_types)) {
             return AI_HTTP_Plugin_Context_Helper::create_admin_error_html(
                 'AI HTTP Provider Manager',
@@ -381,13 +382,16 @@ class AI_HTTP_ProviderManager_Component {
      * Get available providers
      */
     private function get_available_providers($allowed_providers) {
-        $all_providers = array(
-            'openai' => 'OpenAI',
-            'anthropic' => 'Anthropic',
-            'gemini' => 'Google Gemini',
-            'grok' => 'Grok',
-            'openrouter' => 'OpenRouter'
-        );
+        // Use filter-based provider discovery
+        $provider_configs = apply_filters('ai_providers', []);
+        $all_providers = [];
+        
+        // Extract LLM providers with display names
+        foreach ($provider_configs as $key => $config) {
+            if (isset($config['type']) && $config['type'] === 'llm' && isset($config['name'])) {
+                $all_providers[$key] = $config['name'];
+            }
+        }
 
         if (empty($allowed_providers)) {
             return $all_providers;

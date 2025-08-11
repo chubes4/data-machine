@@ -59,8 +59,9 @@ class AI_HTTP_Client {
             return;
         }
         
-        // Validate ai_type
-        $valid_types = array('llm', 'upscaling', 'generative');
+        // Validate ai_type using filter-based discovery
+        $ai_types = apply_filters('ai_types', []);
+        $valid_types = array_keys($ai_types);
         if (!in_array($config['ai_type'], $valid_types)) {
             error_log('AI HTTP Client: Invalid ai_type "' . $config['ai_type'] . '". Must be one of: ' . implode(', ', $valid_types));
             $this->is_configured = false;
@@ -369,25 +370,16 @@ class AI_HTTP_Client {
      * @throws Exception If provider not supported
      */
     private function create_llm_provider($provider_name, $provider_config) {
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return new AI_HTTP_OpenAI_Provider($provider_config);
-            
-            case 'gemini':
-                return new AI_HTTP_Gemini_Provider($provider_config);
-            
-            case 'anthropic':
-                return new AI_HTTP_Anthropic_Provider($provider_config);
-            
-            case 'grok':
-                return new AI_HTTP_Grok_Provider($provider_config);
-            
-            case 'openrouter':
-                return new AI_HTTP_OpenRouter_Provider($provider_config);
-            
-            default:
-                throw new Exception('LLM provider not supported');
+        // Use filter-based provider discovery
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            throw new Exception('LLM provider not supported');
         }
+        
+        $provider_class = $provider_info['class'];
+        return new $provider_class($provider_config);
     }
 
     /**
@@ -399,14 +391,16 @@ class AI_HTTP_Client {
      * @throws Exception If provider not supported
      */
     private function create_upscaling_provider($provider_name, $provider_config) {
-        switch (strtolower($provider_name)) {
-            case 'upsampler':
-                // Note: This class doesn't exist yet, will be created later
-                return new AI_HTTP_Upsampler_Provider($provider_config);
-            
-            default:
-                throw new Exception('Upscaling provider not supported');
+        // Use filter-based provider discovery
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'upscaling') {
+            throw new Exception('Upscaling provider not supported');
         }
+        
+        $provider_class = $provider_info['class'];
+        return new $provider_class($provider_config);
     }
 
     /**
@@ -418,14 +412,16 @@ class AI_HTTP_Client {
      * @throws Exception If provider not supported
      */
     private function create_generative_provider($provider_name, $provider_config) {
-        switch (strtolower($provider_name)) {
-            case 'stable-diffusion':
-                // Note: This class doesn't exist yet, will be created later
-                return new AI_HTTP_StableDiffusion_Provider($provider_config);
-            
-            default:
-                throw new Exception('Generative provider not supported');
+        // Use filter-based provider discovery
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'generative') {
+            throw new Exception('Generative provider not supported');
         }
+        
+        $provider_class = $provider_info['class'];
+        return new $provider_class($provider_config);
     }
 
     /**

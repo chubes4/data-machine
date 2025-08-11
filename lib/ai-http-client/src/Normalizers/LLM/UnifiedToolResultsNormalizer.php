@@ -22,25 +22,21 @@ class AI_HTTP_Unified_Tool_Results_Normalizer {
      * @return array Provider-specific continuation request
      */
     public function normalize_for_continuation($tool_results, $provider_name, $context_data) {
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return $this->normalize_openai_continuation($tool_results, $context_data);
-            
-            case 'anthropic':
-                return $this->normalize_anthropic_continuation($tool_results, $context_data);
-            
-            case 'gemini':
-                return $this->normalize_gemini_continuation($tool_results, $context_data);
-            
-            case 'grok':
-                return $this->normalize_grok_continuation($tool_results, $context_data);
-            
-            case 'openrouter':
-                return $this->normalize_openrouter_continuation($tool_results, $context_data);
-            
-            default:
-                throw new Exception('Tool continuation not supported for specified provider');
+        // Use filter-based provider validation and dynamic method dispatch
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            throw new Exception('Tool continuation not supported for specified provider');
         }
+        
+        // Dynamic method dispatch based on provider name
+        $method = "normalize_" . strtolower($provider_name) . "_continuation";
+        if (!method_exists($this, $method)) {
+            throw new Exception("Tool continuation not implemented for provider: {$provider_name}");
+        }
+        
+        return $this->$method($tool_results, $context_data);
     }
 
     /**
@@ -51,25 +47,21 @@ class AI_HTTP_Unified_Tool_Results_Normalizer {
      * @return array Extracted tool calls in standard format
      */
     public function extract_tool_calls($provider_response, $provider_name) {
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return $this->extract_openai_tool_calls($provider_response);
-            
-            case 'anthropic':
-                return $this->extract_anthropic_tool_calls($provider_response);
-            
-            case 'gemini':
-                return $this->extract_gemini_tool_calls($provider_response);
-            
-            case 'grok':
-                return $this->extract_grok_tool_calls($provider_response);
-            
-            case 'openrouter':
-                return $this->extract_openrouter_tool_calls($provider_response);
-            
-            default:
-                return array();
+        // Use filter-based provider validation and dynamic method dispatch
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            return array();
         }
+        
+        // Dynamic method dispatch based on provider name
+        $method = "extract_" . strtolower($provider_name) . "_tool_calls";
+        if (!method_exists($this, $method)) {
+            return array(); // Graceful fallback if tool extraction not implemented
+        }
+        
+        return $this->$method($provider_response);
     }
 
     /**
@@ -272,35 +264,24 @@ class AI_HTTP_Unified_Tool_Results_Normalizer {
      * @return array Provider-specific tool results
      */
     public function format_tool_results($standard_results, $provider_name) {
-        $formatted = array();
-
-        foreach ($standard_results as $result) {
-            switch (strtolower($provider_name)) {
-                case 'openai':
-                case 'grok':
-                case 'openrouter':
-                    $formatted[] = array(
-                        'tool_call_id' => $result['tool_call_id'] ?? $result['id'] ?? uniqid('tool_'),
-                        'content' => $result['content'] ?? $result['output'] ?? ''
-                    );
-                    break;
-
-                case 'anthropic':
-                    $formatted[] = array(
-                        'tool_use_id' => $result['tool_call_id'] ?? $result['id'] ?? uniqid('tool_'),
-                        'content' => $result['content'] ?? $result['output'] ?? ''
-                    );
-                    break;
-
-                case 'gemini':
-                    $formatted[] = array(
-                        'function_name' => $result['function_name'] ?? 'unknown',
-                        'result' => $result['content'] ?? $result['output'] ?? ''
-                    );
-                    break;
-            }
+        // Use existing ai_providers filter for tool formatting configuration
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm' || !isset($provider_info['tool_format'])) {
+            return array();
         }
-
+        
+        $tool_config = $provider_info['tool_format'];
+        $formatted = array();
+        
+        foreach ($standard_results as $result) {
+            $formatted[] = array(
+                $tool_config['id_field'] => $result['tool_call_id'] ?? $result['id'] ?? uniqid('tool_'),
+                $tool_config['content_field'] => $result['content'] ?? $result['output'] ?? ''
+            );
+        }
+        
         return $formatted;
     }
 }

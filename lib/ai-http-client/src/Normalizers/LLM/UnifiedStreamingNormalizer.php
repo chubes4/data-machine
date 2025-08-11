@@ -21,25 +21,21 @@ class AI_HTTP_Unified_Streaming_Normalizer {
      * @return array Provider-specific streaming request
      */
     public function normalize_streaming_request($standard_request, $provider_name) {
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return $this->normalize_openai_streaming_request($standard_request);
-            
-            case 'anthropic':
-                return $this->normalize_anthropic_streaming_request($standard_request);
-            
-            case 'gemini':
-                return $this->normalize_gemini_streaming_request($standard_request);
-            
-            case 'grok':
-                return $this->normalize_grok_streaming_request($standard_request);
-            
-            case 'openrouter':
-                return $this->normalize_openrouter_streaming_request($standard_request);
-            
-            default:
-                throw new Exception('Streaming not supported for specified provider');
+        // Use filter-based provider validation and dynamic method dispatch
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            throw new Exception('Streaming not supported for specified provider');
         }
+        
+        // Dynamic method dispatch based on provider name
+        $method = "normalize_" . strtolower($provider_name) . "_streaming_request";
+        if (!method_exists($this, $method)) {
+            throw new Exception("Streaming request normalization not implemented for provider: {$provider_name}");
+        }
+        
+        return $this->$method($standard_request);
     }
 
     /**
@@ -50,25 +46,21 @@ class AI_HTTP_Unified_Streaming_Normalizer {
      * @return array|null Processed chunk data or null if not processable
      */
     public function process_streaming_chunk($chunk, $provider_name) {
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return $this->process_openai_chunk($chunk);
-            
-            case 'anthropic':
-                return $this->process_anthropic_chunk($chunk);
-            
-            case 'gemini':
-                return $this->process_gemini_chunk($chunk);
-            
-            case 'grok':
-                return $this->process_grok_chunk($chunk);
-            
-            case 'openrouter':
-                return $this->process_openrouter_chunk($chunk);
-            
-            default:
-                return null;
+        // Use filter-based provider validation and dynamic method dispatch
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            return null;
         }
+        
+        // Dynamic method dispatch based on provider name
+        $method = "process_" . strtolower($provider_name) . "_chunk";
+        if (!method_exists($this, $method)) {
+            return null; // Graceful fallback if chunk processing not implemented
+        }
+        
+        return $this->$method($chunk);
     }
 
     /**

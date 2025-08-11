@@ -158,46 +158,16 @@ class AI_HTTP_WordPressSSEHandler {
             return $this->provider_instances[$cache_key];
         }
 
-        // Load and create appropriate provider class
-        switch ($provider_name) {
-            case 'openai':
-                if (!class_exists('AI_HTTP_OpenAI_Provider')) {
-                    require_once dirname(__DIR__) . '/Providers/openai.php';
-                }
-                $provider = new AI_HTTP_OpenAI_Provider($config);
-                break;
-
-            case 'anthropic':
-                if (!class_exists('AI_HTTP_Anthropic_Provider')) {
-                    require_once dirname(__DIR__) . '/Providers/anthropic.php';
-                }
-                $provider = new AI_HTTP_Anthropic_Provider($config);
-                break;
-
-            case 'gemini':
-                if (!class_exists('AI_HTTP_Gemini_Provider')) {
-                    require_once dirname(__DIR__) . '/Providers/gemini.php';
-                }
-                $provider = new AI_HTTP_Gemini_Provider($config);
-                break;
-
-            case 'grok':
-                if (!class_exists('AI_HTTP_Grok_Provider')) {
-                    require_once dirname(__DIR__) . '/Providers/grok.php';
-                }
-                $provider = new AI_HTTP_Grok_Provider($config);
-                break;
-
-            case 'openrouter':
-                if (!class_exists('AI_HTTP_OpenRouter_Provider')) {
-                    require_once dirname(__DIR__) . '/Providers/openrouter.php';
-                }
-                $provider = new AI_HTTP_OpenRouter_Provider($config);
-                break;
-
-            default:
-                throw new Exception('Unsupported AI provider specified');
+        // Use filter-based provider discovery
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[$provider_name] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            throw new Exception('Unsupported AI provider specified');
         }
+        
+        $provider_class = $provider_info['class'];
+        $provider = new $provider_class($config);
 
         // Cache the instance
         $this->provider_instances[$cache_key] = $provider;

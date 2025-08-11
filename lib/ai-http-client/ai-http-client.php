@@ -106,13 +106,15 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedToolResultsNormalizer.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedModelFetcher.php';
         
-        // 2.7. LLM Provider Base Class and Providers (NEW ARCHITECTURE)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/Base_LLM_Provider.php';
+        // 2.7. LLM Provider Classes (FILTER-BASED ARCHITECTURE)
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openai.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/gemini.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/anthropic.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/grok.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openrouter.php';
+        
+        // 2.8. Filter-based provider registration system
+        require_once AI_HTTP_CLIENT_PATH . '/src/Filters.php';
         
         // 3. Main orchestrator client (NEW UNIFIED ARCHITECTURE)
         require_once AI_HTTP_CLIENT_PATH . '/src/class-client.php';

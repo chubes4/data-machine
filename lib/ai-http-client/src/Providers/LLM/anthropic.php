@@ -12,24 +12,33 @@
 
 defined('ABSPATH') || exit;
 
-class AI_HTTP_Anthropic_Provider extends Base_LLM_Provider {
+class AI_HTTP_Anthropic_Provider {
+
+    private $api_key;
+    private $base_url;
 
     /**
-     * Get default base URL for Anthropic
+     * Constructor
      *
-     * @return string Default base URL
+     * @param array $config Provider configuration
      */
-    protected function get_default_base_url() {
-        return 'https://api.anthropic.com/v1';
+    public function __construct($config = array()) {
+        $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
+        
+        if (isset($config['base_url']) && !empty($config['base_url'])) {
+            $this->base_url = rtrim($config['base_url'], '/');
+        } else {
+            $this->base_url = 'https://api.anthropic.com/v1';
+        }
     }
 
     /**
-     * Get provider name for error messages
+     * Check if provider is configured
      *
-     * @return string Provider name
+     * @return bool True if configured
      */
-    protected function get_provider_name() {
-        return 'Anthropic';
+    public function is_configured() {
+        return !empty($this->api_key);
     }
 
     /**
@@ -37,7 +46,7 @@ class AI_HTTP_Anthropic_Provider extends Base_LLM_Provider {
      *
      * @return array Headers array
      */
-    protected function get_auth_headers() {
+    private function get_auth_headers() {
         return array(
             'x-api-key' => $this->api_key,
             'anthropic-version' => '2023-06-01'
@@ -57,7 +66,21 @@ class AI_HTTP_Anthropic_Provider extends Base_LLM_Provider {
         }
 
         $url = $this->base_url . '/messages';
-        return $this->execute_post_request($url, $provider_request);
+        
+        // Use centralized ai_request filter
+        $headers = $this->get_auth_headers();
+        $headers['Content-Type'] = 'application/json';
+        
+        $result = apply_filters('ai_request', [], 'POST', $url, [
+            'headers' => $headers,
+            'body' => wp_json_encode($provider_request)
+        ], 'Anthropic');
+        
+        if (!$result['success']) {
+            throw new Exception('Anthropic API request failed: ' . $result['error']);
+        }
+        
+        return json_decode($result['data'], true);
     }
 
     /**
@@ -74,7 +97,21 @@ class AI_HTTP_Anthropic_Provider extends Base_LLM_Provider {
         }
 
         $url = $this->base_url . '/messages';
-        return $this->execute_streaming_curl($url, $provider_request, $callback);
+        
+        // Use centralized ai_request filter with streaming=true
+        $headers = $this->get_auth_headers();
+        $headers['Content-Type'] = 'application/json';
+        
+        $result = apply_filters('ai_request', [], 'POST', $url, [
+            'headers' => $headers,
+            'body' => wp_json_encode($provider_request)
+        ], 'Anthropic Streaming', true, $callback);
+        
+        if (!$result['success']) {
+            throw new Exception('Anthropic streaming request failed: ' . $result['error']);
+        }
+
+        return '';
     }
 
     /**
@@ -134,28 +171,17 @@ class AI_HTTP_Anthropic_Provider extends Base_LLM_Provider {
         $body .= file_get_contents($file_path) . "\r\n";
         $body .= "--{$boundary}--\r\n";
 
-        // Send request
-        $response = wp_remote_post($url, [
+        // Send request using centralized ai_request filter
+        $result = apply_filters('ai_request', [], 'POST', $url, [
             'headers' => $headers,
-            'body' => $body,
-        ]);
+            'body' => $body
+        ], 'Anthropic File Upload');
 
-        if (is_wp_error($response)) {
-            throw new Exception('Anthropic file upload failed: ' . $response->get_error_message());
+        if (!$result['success']) {
+            throw new Exception('Anthropic file upload failed: ' . $result['error']);
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-        
-        // Debug logging in development mode
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("[Anthropic Debug] File Upload Response Status: {$response_code}");
-            error_log("[Anthropic Debug] File Upload Response Body: {$response_body}");
-        }
-
-        if ($response_code !== 200) {
-            throw new Exception("Anthropic file upload failed with status {$response_code}: {$response_body}");
-        }
+        $response_body = $result['data'];
 
         $data = json_decode($response_body, true);
         if (!isset($data['id'])) {
@@ -179,22 +205,50 @@ class AI_HTTP_Anthropic_Provider extends Base_LLM_Provider {
 
         $url = $this->base_url . "/files/{$file_id}";
         
-        $response = wp_remote_request($url, [
-            'method' => 'DELETE',
-            'headers' => $this->get_auth_headers(),
-        ]);
+        // Send request using centralized ai_request filter
+        $result = apply_filters('ai_request', [], 'DELETE', $url, [
+            'headers' => $this->get_auth_headers()
+        ], 'Anthropic File Delete');
 
-        if (is_wp_error($response)) {
-            throw new Exception('Anthropic file delete failed: ' . $response->get_error_message());
+        if (!$result['success']) {
+            throw new Exception('Anthropic file delete failed: ' . $result['error']);
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        
-        // Debug logging in development mode
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("[Anthropic Debug] File Delete Response Status: {$response_code}");
-        }
-
-        return $response_code === 200;
+        return $result['status_code'] === 200;
     }
+
+    /**
+     * Get normalized models for UI components
+     * 
+     * @return array Key-value array of model_id => display_name
+     * @throws Exception If API call fails
+     */
+    public function get_normalized_models() {
+        $raw_models = $this->get_raw_models();
+        return $this->normalize_models_response($raw_models);
+    }
+    
+    /**
+     * Normalize Anthropic models API response
+     * 
+     * @param array $raw_models Raw API response
+     * @return array Normalized models array
+     */
+    private function normalize_models_response($raw_models) {
+        $models = array();
+        
+        // Anthropic returns: { "data": [{"id": "claude-3-5-sonnet-20241022", "display_name": "Claude 3.5 Sonnet", ...}, ...] }
+        $data = isset($raw_models['data']) ? $raw_models['data'] : $raw_models;
+        if (is_array($data)) {
+            foreach ($data as $model) {
+                if (isset($model['id'])) {
+                    $display_name = isset($model['display_name']) ? $model['display_name'] : $model['id'];
+                    $models[$model['id']] = $display_name;
+                }
+            }
+        }
+        
+        return $models;
+    }
+    
 }

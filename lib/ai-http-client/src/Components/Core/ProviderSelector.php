@@ -148,13 +148,16 @@ class AI_HTTP_Core_ProviderSelector implements AI_HTTP_Component_Interface {
      * @return array Available providers
      */
     private static function get_available_providers($allowed_providers) {
-        $all_providers = [
-            'openai' => 'OpenAI',
-            'anthropic' => 'Anthropic',
-            'gemini' => 'Google Gemini',
-            'grok' => 'Grok',
-            'openrouter' => 'OpenRouter'
-        ];
+        // Use filter-based provider discovery
+        $provider_configs = apply_filters('ai_providers', []);
+        $all_providers = [];
+        
+        // Extract LLM providers with display names
+        foreach ($provider_configs as $key => $config) {
+            if (isset($config['type']) && $config['type'] === 'llm' && isset($config['name'])) {
+                $all_providers[$key] = $config['name'];
+            }
+        }
         
         if (empty($allowed_providers)) {
             return $all_providers;

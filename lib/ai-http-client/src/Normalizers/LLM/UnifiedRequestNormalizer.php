@@ -53,26 +53,21 @@ class AI_HTTP_Unified_Request_Normalizer {
         // Apply model fallback logic
         $standard_request = $this->apply_model_fallback($standard_request, $provider_config);
         
-        // Route to provider-specific normalization
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return $this->normalize_for_openai($standard_request);
-            
-            case 'anthropic':
-                return $this->normalize_for_anthropic($standard_request);
-            
-            case 'gemini':
-                return $this->normalize_for_gemini($standard_request);
-            
-            case 'grok':
-                return $this->normalize_for_grok($standard_request);
-            
-            case 'openrouter':
-                return $this->normalize_for_openrouter($standard_request);
-            
-            default:
-                throw new Exception('Unsupported provider specified');
+        // Use filter-based provider validation and dynamic method dispatch
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            throw new Exception('Unsupported provider specified');
         }
+        
+        // Dynamic method dispatch based on provider name
+        $method = "normalize_for_" . strtolower($provider_name);
+        if (!method_exists($this, $method)) {
+            throw new Exception("Request normalization not implemented for provider: {$provider_name}");
+        }
+        
+        return $this->$method($standard_request);
     }
 
     /**

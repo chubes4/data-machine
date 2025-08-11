@@ -28,26 +28,21 @@ class AI_HTTP_Unified_Response_Normalizer {
      * @throws Exception If provider not supported
      */
     public function normalize($provider_response, $provider_name) {
-        // Route to provider-specific normalization
-        switch (strtolower($provider_name)) {
-            case 'openai':
-                return $this->normalize_from_openai($provider_response);
-            
-            case 'anthropic':
-                return $this->normalize_from_anthropic($provider_response);
-            
-            case 'gemini':
-                return $this->normalize_from_gemini($provider_response);
-            
-            case 'grok':
-                return $this->normalize_from_grok($provider_response);
-            
-            case 'openrouter':
-                return $this->normalize_from_openrouter($provider_response);
-            
-            default:
-                throw new Exception('Unsupported provider specified');
+        // Use filter-based provider validation and dynamic method dispatch
+        $all_providers = apply_filters('ai_providers', []);
+        $provider_info = $all_providers[strtolower($provider_name)] ?? null;
+        
+        if (!$provider_info || $provider_info['type'] !== 'llm') {
+            throw new Exception('Unsupported provider specified');
         }
+        
+        // Dynamic method dispatch based on provider name
+        $method = "normalize_from_" . strtolower($provider_name);
+        if (!method_exists($this, $method)) {
+            throw new Exception("Response normalization not implemented for provider: {$provider_name}");
+        }
+        
+        return $this->$method($provider_response);
     }
 
     /**
