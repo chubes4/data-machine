@@ -31,6 +31,19 @@ class PipelineModalAjax
      */
     public function handle_get_template()
     {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         // Remove fallbacks - require explicit data
         if (!isset($_POST['template'])) {
             wp_send_json_error(['message' => __('Template parameter is required', 'data-machine')]);
@@ -83,6 +96,19 @@ class PipelineModalAjax
      */
     public function handle_get_flow_step_card()
     {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
         $pipeline_id = (int) ($_POST['pipeline_id'] ?? 0);
@@ -125,6 +151,19 @@ class PipelineModalAjax
      */
     public function handle_get_flow_config()
     {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         $flow_id = (int) sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 
         if (empty($flow_id)) {
@@ -147,6 +186,19 @@ class PipelineModalAjax
      */
     public function handle_configure_step_action()
     {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         // Get context data from AJAX request - no fallbacks
         if (!isset($_POST['context'])) {
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
@@ -360,6 +412,19 @@ class PipelineModalAjax
      */
     public function handle_add_location_action()
     {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         // Get context data from AJAX request
         $context = $_POST['context'] ?? [];
         
@@ -425,6 +490,19 @@ class PipelineModalAjax
      */
     public function handle_add_handler_action()
     {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         // Pure discovery approach - get only essential data from context
         $context = $_POST['context'] ?? [];
         if (is_string($context)) {
@@ -571,11 +649,7 @@ class PipelineModalAjax
      */
     public function handle_get_handler_files()
     {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_upload_file')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
-            return;
-        }
+        // Security handled by dm_ajax_route system
         
         // Use the flow_step_id provided by the frontend
         $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');

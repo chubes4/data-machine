@@ -136,8 +136,12 @@ $handler_configured = !$is_empty && !empty($current_handler);
                         <!-- No handlers configured -->
                         <div class="dm-placeholder-text"><?php esc_html_e('No handlers configured', 'data-machine'); ?></div>
                     <?php elseif ($step_type === 'ai'): ?>
-                        <!-- AI step status - simplified without service call -->
-                        <div class="dm-placeholder-text"><?php esc_html_e('AI processing step configured', 'data-machine'); ?></div>
+                        <!-- AI step status - show model name -->
+                        <?php
+                        $ai_config = apply_filters('ai_config', [], 'data-machine', 'llm', $pipeline_step_id);
+                        $model_name = !empty($ai_config['model']) ? $ai_config['model'] : 'AI processing step configured';
+                        ?>
+                        <div class="dm-placeholder-text"><?php echo esc_html($model_name); ?></div>
                     <?php endif; ?>
                 </div>
             </div>

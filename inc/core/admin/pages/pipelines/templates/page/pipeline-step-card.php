@@ -96,7 +96,24 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
                 </div>
             </div>
             <div class="dm-step-body">
-                <!-- Pipeline context: empty body (structural only) -->
+                <?php if ($step_type === 'ai' && !$is_empty && $pipeline_step_id): ?>
+                    <!-- AI step configuration display -->
+                    <?php
+                    $ai_config = apply_filters('ai_config', [], 'data-machine', 'llm', $pipeline_step_id);
+                    
+                    if (!empty($ai_config)):
+                        $model_name = $ai_config['model'] ?? 'Not configured';
+                        $prompt = $ai_config['system_prompt'] ?? '';
+                        $prompt_excerpt = !empty($prompt) ? (strlen($prompt) > 100 ? substr($prompt, 0, 100) . '...' : $prompt) : 'No prompt set';
+                    ?>
+                        <div class="dm-ai-step-info">
+                            <div class="dm-model-name"><strong><?php echo esc_html($model_name); ?></strong></div>
+                            <div class="dm-prompt-excerpt"><?php echo esc_html($prompt_excerpt); ?></div>
+                        </div>
+                    <?php else: ?>
+                        <div class="dm-placeholder-text"><?php esc_html_e('AI step not configured', 'data-machine'); ?></div>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>

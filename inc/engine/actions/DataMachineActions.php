@@ -160,6 +160,19 @@ function dm_register_core_actions() {
     
     // Universal AJAX routing action hook - eliminates 132 lines of duplication in PipelinesFilters.php
     add_action('dm_ajax_route', function($ajax_action, $handler_type = 'page') {
+        // WordPress-native security: capability check + nonce verification
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
+            return;
+        }
+        
+        // Verify nonce with standard 'dm_pipeline_ajax' action
+        $nonce = wp_unslash($_POST['nonce'] ?? '');
+        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
+            return;
+        }
+        
         $all_pages = apply_filters('dm_admin_pages', []);
         $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
         $handler = $ajax_handlers[$handler_type] ?? null;

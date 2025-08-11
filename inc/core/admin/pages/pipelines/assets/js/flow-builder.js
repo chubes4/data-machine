@@ -124,8 +124,8 @@
             const $modal = $('#dm-modal');
             const formData = {
                 action: 'dm_save_handler_settings',
-                context: JSON.stringify(contextData),
-                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                context: JSON.stringify(contextData)
+                // Note: nonce will be collected automatically from form's hidden handler_settings_nonce field
             };
             
             // Add all form inputs from the modal (including hidden fields)

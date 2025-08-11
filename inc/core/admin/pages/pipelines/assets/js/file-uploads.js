@@ -184,7 +184,27 @@
                 const formData = new FormData();
                 formData.append('action', 'dm_upload_file');
                 formData.append('file', file);
-                formData.append('nonce', dmPipelineModal?.upload_file_nonce || wp?.ajax?.settings?.nonce);
+                
+                // Determine which nonce to use with debug logging
+                let nonce;
+                let nonceSource;
+                if (dmPipelineBuilder?.upload_file_nonce) {
+                    nonce = dmPipelineBuilder.upload_file_nonce;
+                    nonceSource = 'dmPipelineBuilder';
+                } else if (dmPipelineModal?.upload_file_nonce) {
+                    nonce = dmPipelineModal.upload_file_nonce;
+                    nonceSource = 'dmPipelineModal';
+                } else if (wp?.ajax?.settings?.nonce) {
+                    nonce = wp.ajax.settings.nonce;
+                    nonceSource = 'wp.ajax.settings';
+                } else {
+                    console.error('No upload nonce available from any source');
+                    reject(new Error('No upload nonce available'));
+                    return;
+                }
+                
+                console.log('File upload using nonce from:', nonceSource);
+                formData.append('nonce', nonce);
                 
                 // Add handler context if available
                 if (handlerContext && handlerContext.flow_id && handlerContext.pipeline_step_id) {
@@ -258,7 +278,7 @@
                     flow_id: handlerContext.flow_id,
                     pipeline_step_id: handlerContext.pipeline_step_id,
                     handler_slug: handlerContext.handler_slug,
-                    nonce: dmPipelineModal.get_files_nonce
+                    nonce: dmPipelineBuilder?.pipeline_ajax_nonce || dmPipelineModal?.pipeline_ajax_nonce || wp?.ajax?.settings?.nonce
                 }
             }).then((response) => {
                 console.debug('DM File Uploads: Files loaded successfully:', response);

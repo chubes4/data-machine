@@ -292,6 +292,35 @@
                             }
                         });
                         
+                        // Update pipeline step card in the pipeline section
+                        $(`.dm-pipeline-steps .dm-step-container[data-pipeline-step-id="${pipeline_step_id}"]`).each(function() {
+                            const $pipelineStepContainer = $(this);
+                            const step_type = contextData.step_type;
+                            
+                            // Calculate is_first_step for consistent arrow rendering
+                            const $pipelineContainer = $pipelineStepContainer.closest('.dm-pipeline-steps');
+                            const isFirstStep = $pipelineContainer.children('.dm-step-container').first().is($pipelineStepContainer);
+                            
+                            // Request updated pipeline step card template with fresh AI configuration
+                            PipelinesPage.requestTemplate('page/pipeline-step-card', {
+                                step: {
+                                    step_type: step_type,
+                                    execution_order: $pipelineStepContainer.data('step-execution-order') || 0,
+                                    pipeline_step_id: pipeline_step_id,
+                                    is_empty: false
+                                },
+                                pipeline_id: pipeline_id,
+                                is_first_step: isFirstStep
+                            }).then((updatedStepHtml) => {
+                                // Replace the existing pipeline step container with updated version
+                                $pipelineStepContainer.replaceWith(updatedStepHtml);
+                                
+                                console.log('AI configuration updated in pipeline step card:', pipeline_step_id);
+                            }).catch((error) => {
+                                console.error('Failed to update pipeline step card after AI config save:', error);
+                            });
+                        });
+                        
                         // Optional: Emit event for any page updates needed
                         $(document).trigger('dm-step-configured', [contextData, response.data]);
                         

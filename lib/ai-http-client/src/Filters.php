@@ -254,6 +254,30 @@ function ai_http_client_register_provider_filters() {
         ];
     }, 10, 7);
     
+    // Universal AI configuration access filter
+    // Usage: $config = apply_filters('ai_config', [], $plugin_context, $ai_type, $step_id);
+    // For sitewide: $config = apply_filters('ai_config', [], $plugin_context, $ai_type);
+    add_filter('ai_config', function($default, $plugin_context, $ai_type, $step_id = null) {
+        if (empty($plugin_context) || empty($ai_type)) {
+            return $default;
+        }
+        
+        try {
+            $options_manager = new AI_HTTP_Options_Manager($plugin_context, $ai_type);
+            
+            if ($step_id) {
+                // Step-specific configuration
+                return $options_manager->get_step_configuration($step_id);
+            } else {
+                // Sitewide/global configuration  
+                return $options_manager->get_all_providers();
+            }
+        } catch (Exception $e) {
+            // Graceful fallback if options manager fails
+            return $default;
+        }
+    }, 10, 4);
+    
     // TODO: Future provider types (upscaling, generative) can be added here
     // when their provider classes are implemented
 }
