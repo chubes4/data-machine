@@ -99,7 +99,7 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
                 <?php if ($step_type === 'ai' && !$is_empty && $pipeline_step_id): ?>
                     <!-- AI step configuration display -->
                     <?php
-                    $ai_config = apply_filters('ai_config', [], 'data-machine', 'llm', $pipeline_step_id);
+                    $ai_config = apply_filters('ai_config', $pipeline_step_id);
                     
                     if (!empty($ai_config)):
                         $model_name = $ai_config['model'] ?? 'Not configured';

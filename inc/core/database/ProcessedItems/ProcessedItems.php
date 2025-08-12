@@ -1,8 +1,8 @@
 <?php
 /**
- * ProcessedItems database service - prevents duplicate processing at flow level.
+ * ProcessedItems database service - prevents duplicate processing at flow step level.
  *
- * Simple, focused service that tracks processed items by flow_id to prevent
+ * Simple, focused service that tracks processed items by flow_step_id to prevent
  * duplicate processing. Core responsibility: duplicate prevention only.
  *
  * @package    Data_Machine
@@ -102,7 +102,7 @@ class ProcessedItems {
              // If it's a duplicate key error, treat as success (race condition handling)
              if (strpos($db_error, 'Duplicate entry') !== false) {
                  do_action('dm_log', 'debug', "Duplicate key detected during insert - item already processed by another process.", [
-                     'flow_id' => $flow_id,
+                     'flow_step_id' => $flow_step_id,
                      'source_type' => $source_type,
                      'item_identifier' => substr($item_identifier, 0, 100) . '...'
                  ]);
@@ -111,7 +111,7 @@ class ProcessedItems {
              
              // Use Logger Service if available for actual errors
              do_action('dm_log', 'error', "Failed to insert processed item.", [
-                 'flow_id' => $flow_id,
+                 'flow_step_id' => $flow_step_id,
                  'source_type' => $source_type,
                  'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
                  'db_error' => $db_error

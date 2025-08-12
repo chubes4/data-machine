@@ -138,7 +138,7 @@ $handler_configured = !$is_empty && !empty($current_handler);
                     <?php elseif ($step_type === 'ai'): ?>
                         <!-- AI step status - show model name -->
                         <?php
-                        $ai_config = apply_filters('ai_config', [], 'data-machine', 'llm', $pipeline_step_id);
+                        $ai_config = apply_filters('ai_config', $pipeline_step_id);
                         $model_name = !empty($ai_config['model']) ? $ai_config['model'] : 'AI processing step configured';
                         ?>
                         <div class="dm-placeholder-text"><?php echo esc_html($model_name); ?></div>

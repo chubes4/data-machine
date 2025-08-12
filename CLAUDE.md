@@ -49,7 +49,7 @@ add_action('wp_ajax_dm_get_modal_content', [$modal_ajax, 'handle_get_modal_conte
 - **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, created_at, started_at, completed_at
 - **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
 - **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL)
-- **wp_dm_processed_items**: id, flow_id, source_type, item_identifier, processed_timestamp
+- **wp_dm_processed_items**: id, flow_step_id, source_type, item_identifier, processed_timestamp
 - **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
 
 **Table Relationships**:
@@ -663,10 +663,12 @@ do_action('dm_auto_save', $pipeline_id);
 - `wp_dm_pipelines`: Template definitions with step sequences (pipeline_step_id UUID4 fields consistently used)
 - `wp_dm_flows`: Configured instances with handler settings (auto-created "Draft Flow" for new pipelines)
 - `wp_dm_jobs`: Execution records with Action Scheduler integration
-- `wp_dm_processed_items`: Duplicate tracking with flow_id, source_type, item_identifier
+- `wp_dm_processed_items`: Duplicate tracking with flow_step_id, source_type, item_identifier
 - `wp_dm_remote_locations`: Site-to-site authentication for WordPress handlers
 
 ## ProcessedItems Architecture
+
+**Flow Step Level Tracking**: ProcessedItems system tracks duplicate processing at the flow step level using `flow_step_id` for granular control per handler within flows.
 
 **Database Layer Location**: ProcessedItems system located in `/inc/core/database/ProcessedItems/` following consistent database component architecture.
 

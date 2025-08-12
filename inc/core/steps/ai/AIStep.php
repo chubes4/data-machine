@@ -54,13 +54,12 @@ class AIStep {
     public function execute($flow_step_id, array $data = [], array $step_config = []): array {
         $job_id = $step_config['job_id'] ?? 0;
         try {
-            // Create AI HTTP client directly
-            if (!class_exists('\AI_HTTP_Client')) {
-                do_action('dm_log', 'error', 'AI Step: AI HTTP Client class not available', ['job_id' => $job_id]);
+            // Get AI HTTP client via filter
+            $ai_http_client = apply_filters('ai_client', null);
+            if (!$ai_http_client) {
+                do_action('dm_log', 'error', 'AI Step: AI HTTP Client not available', ['job_id' => $job_id]);
                 return [];
             }
-            
-            $ai_http_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
 
             do_action('dm_log', 'debug', 'AI Step: Starting AI processing with step config', ['job_id' => $job_id]);
 
