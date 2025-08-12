@@ -65,14 +65,14 @@ class AI_HTTP_Options_Manager {
         }
         
         $this->ai_type = $ai_type;
-        // Validate plugin context using centralized helper
-        $context_validation = AI_HTTP_Plugin_Context_Helper::validate_for_constructor(
-            $plugin_context,
-            'AI_HTTP_Options_Manager'
-        );
         
-        $this->plugin_context = AI_HTTP_Plugin_Context_Helper::get_context($context_validation);
-        $this->is_configured = AI_HTTP_Plugin_Context_Helper::is_configured($context_validation);
+        // Use direct plugin context validation (simplified approach)
+        if (empty($plugin_context)) {
+            throw new Exception('Plugin context is required for AI_HTTP_Options_Manager');
+        }
+        
+        $this->plugin_context = sanitize_key($plugin_context);
+        $this->is_configured = true; // Assume configured if context provided
     }
 
     /**
