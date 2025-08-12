@@ -231,7 +231,32 @@ function ai_http_client_register_provider_filters() {
             
             if ($step_id) {
                 // Step-specific configuration
-                return $options_manager->get_step_configuration($step_id);
+                $step_config = $options_manager->get_step_configuration($step_id);
+                
+                if (!empty($step_config)) {
+                    // Transform flat step config to provider-keyed structure that templates expect
+                    $provider = $step_config['provider'] ?? 'openai';
+                    
+                    // Get API key from shared storage (step config doesn't store API keys)
+                    $shared_api_keys = get_option(AI_HTTP_Options_Manager::SHARED_API_KEYS_OPTION, array());
+                    
+                    // Build expected structure: provider-keyed config with merged API key
+                    $transformed_config = array(
+                        'selected_provider' => $provider,
+                        $provider => array(
+                            'api_key' => isset($shared_api_keys[$provider]) ? $shared_api_keys[$provider] : '',
+                            'model' => isset($step_config['model']) ? $step_config['model'] : '',
+                            'temperature' => isset($step_config['temperature']) ? $step_config['temperature'] : 0.7,
+                            'system_prompt' => isset($step_config['system_prompt']) ? $step_config['system_prompt'] : '',
+                            'max_tokens' => isset($step_config['max_tokens']) ? $step_config['max_tokens'] : null
+                        )
+                    );
+                    
+                    return $transformed_config;
+                }
+                
+                // Fallback to global config if no step config exists
+                return $options_manager->get_all_providers();
             } else {
                 // Global configuration  
                 return $options_manager->get_all_providers();

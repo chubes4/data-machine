@@ -269,7 +269,7 @@
                                                 step: {
                                                     step_type: step_type,
                                                     execution_order: $flowStepContainer.data('step-execution-order') || 0,
-                                                    step_id: pipeline_step_id,
+                                                    pipeline_step_id: pipeline_step_id,
                                                     is_empty: false
                                                 },
                                                 flow_config: flowResponse.data.flow_config,

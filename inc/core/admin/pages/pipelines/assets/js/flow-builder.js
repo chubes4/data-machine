@@ -302,7 +302,7 @@
                         execution_order: index,
                         step_config: {},
                         is_empty: false,  // Required by step-card template
-                        step_id: stepId   // Use actual pipeline_step_id from DOM data attribute
+                        pipeline_step_id: stepId   // Use actual pipeline_step_id from DOM data attribute
                     });
                 }
             });
@@ -442,7 +442,7 @@
                             step: {
                                 step_type: step_type,
                                 execution_order: $flowStepContainer.data('step-execution-order') || 0,
-                                step_id: $flowStepContainer.data('pipeline-step-id'),
+                                pipeline_step_id: $flowStepContainer.data('pipeline-step-id'),
                                 is_empty: false
                             },
                             flow_config: response.data.flow_config,

@@ -94,6 +94,12 @@ class AI_HTTP_Options_Manager {
         $settings = get_option($this->get_scoped_option_name(self::OPTION_NAME_BASE), array());
         $selected_provider = get_option($this->get_scoped_option_name(self::SELECTED_PROVIDER_OPTION_BASE), 'openai');
         
+        // CRITICAL FIX: Ensure selected provider exists in settings
+        // This allows API key merging to work even if no provider config was explicitly saved
+        if (!isset($settings[$selected_provider])) {
+            $settings[$selected_provider] = array(); // Create empty config for selected provider
+        }
+        
         // Merge with shared API keys
         $shared_api_keys = get_option(self::SHARED_API_KEYS_OPTION, array());
         foreach ($settings as $provider => &$config) {
