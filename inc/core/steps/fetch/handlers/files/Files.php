@@ -34,12 +34,13 @@ class Files {
 	}
 
 	/**
-	 * Get repository instance via direct instantiation
+	 * Get repository instance via filter discovery
 	 *
-	 * @return FilesRepository
+	 * @return FilesRepository|null
 	 */
-	private function get_repository(): FilesRepository {
-		return new FilesRepository();
+	private function get_repository(): ?FilesRepository {
+		$repositories = apply_filters('dm_files_repository', []);
+		return $repositories['files'] ?? null;
 	}
 
 	/**

@@ -72,8 +72,9 @@ $content = apply_filters('dm_render_template', '', 'modal/handler-settings', $da
 // Handler directives
 $all_directives = apply_filters('dm_handler_directives', []);
 
-// Files repository - Direct instantiation
-$files_repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
+// Files repository
+$repositories = apply_filters('dm_files_repository', []);
+$files_repository = $repositories['files'] ?? null;
 ```
 
 
@@ -277,10 +278,11 @@ add_filter('dm_modals', function($modals) {
 
 ## Files Repository
 
-**Direct Instantiation**: Files handler repository with flow-specific isolation and automatic cleanup.
+**Filter-Based Discovery**: Files handler repository with flow-specific isolation and automatic cleanup.
 
 ```php
-$repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
+$repositories = apply_filters('dm_files_repository', []);
+$repository = $repositories['files'] ?? null;
 
 // Operations
 $stored_path = $repository->store_file($tmp_name, $filename, $flow_step_id);

@@ -49,6 +49,7 @@ if ( ! defined( 'WPINC' ) ) {
  * - dm_request: WordPress HTTP request wrapper with logging
  * - dm_scheduler_intervals: Scheduler interval definitions
  * - dm_step_settings: Step configuration discovery (engine-level)
+ * - dm_files_repository: Universal files repository discovery (allows custom storage)
  * 
  * Database filters moved to Database.php:
  * - dm_db, dm_get_*, dm_is_item_processed
@@ -275,6 +276,14 @@ function dm_register_utility_filters() {
         // Engine provides the filter hook infrastructure
         // Step components self-register their configuration capabilities via this same filter
         return $configs;
+    }, 5);
+
+    // Universal files repository discovery system - allows external plugins to implement custom storage
+    // Usage: $all_repositories = apply_filters('dm_files_repository', []); $repository = $all_repositories['files'] ?? null;
+    add_filter('dm_files_repository', function($repositories) {
+        // Engine provides the filter hook infrastructure
+        // File storage components self-register their repository implementations via this same filter
+        return $repositories;
     }, 5);
     
     // Central Flow Step ID Generation Utility

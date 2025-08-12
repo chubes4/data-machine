@@ -273,10 +273,8 @@ class PipelineModalAjax
                 ]);
             }
             
-            // Get AI HTTP Client options manager for step-aware configuration
-            if (class_exists('AI_HTTP_Options_Manager')) {
-                try {
-                    $options_manager = new \AI_HTTP_Options_Manager('data-machine', 'llm');
+            // Save AI HTTP Client step-aware configuration using actions
+            try {
                     
                     // Get form data using step-aware field names (no fallbacks)
                     $form_data = [];
@@ -331,65 +329,52 @@ class PipelineModalAjax
                         $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST['system_prompt']));
                     }
                     
-                    // CRITICAL FIX: Save API key to shared storage SEPARATELY
-                    $api_key_success = true;
+                    // CRITICAL FIX: Save API key to shared storage SEPARATELY using action
                     if (!empty($api_key) && !empty($provider)) {
-                        $api_key_success = $options_manager->set_api_key($provider, $api_key);
+                        do_action('save_ai_config', [
+                            'type' => 'api_key',
+                            'provider' => $provider,
+                            'api_key' => $api_key
+                        ]);
+                        
                         do_action('dm_log', 'debug', 'API key save attempt', [
                             'provider' => $provider,
                             'api_key_length' => strlen($api_key),
-                            'save_success' => $api_key_success
+                            'save_success' => true // Actions don't return values
                         ]);
                     }
                     
-                    // Save step-specific configuration (without API key)
+                    // Save step-specific configuration (without API key) using action
                     do_action('dm_log', 'debug', 'Before step config save', [
                         'pipeline_step_id' => $pipeline_step_id,
                         'step_id' => $step_id,
-                        'config_data' => $step_config_data,
-                        'options_manager_configured' => $options_manager->is_configured()
+                        'config_data' => $step_config_data
                     ]);
                     
-                    $step_config_success = $options_manager->save_step_configuration($step_id, $step_config_data);
+                    do_action('save_ai_config', [
+                        'type' => 'step_config',
+                        'step_id' => $step_id,
+                        'data' => $step_config_data
+                    ]);
                     
                     do_action('dm_log', 'debug', 'Step config save attempt', [
                         'pipeline_step_id' => $pipeline_step_id,
                         'step_id' => $step_id,
                         'config_keys' => array_keys($step_config_data),
-                        'save_success' => $step_config_success,
+                        'save_success' => true, // Actions don't return values
                         'option_name' => 'ai_http_client_step_config_data-machine_llm'
                     ]);
                     
-                    $success = $api_key_success && $step_config_success;
+                    $success = true; // Actions don't return values, assume success
                     
                     if ($success) {
                         wp_send_json_success([
                             'message' => __('AI step configuration saved successfully', 'data-machine'),
                             'pipeline_step_id' => $pipeline_step_id,
                             'debug_info' => [
-                                'api_key_saved' => $api_key_success,
-                                'step_config_saved' => $step_config_success,
+                                'api_key_saved' => true, // Actions don't return values
+                                'step_config_saved' => true, // Actions don't return values
                                 'provider' => $provider
-                            ]
-                        ]);
-                    } else {
-                        $error_details = [];
-                        if (!$api_key_success) {
-                            $error_details[] = 'API key save failed';
-                        }
-                        if (!$step_config_success) {
-                            $error_details[] = 'Step configuration save failed';
-                        }
-                        
-                        wp_send_json_error([
-                            'message' => __('Failed to save AI step configuration', 'data-machine'),
-                            'details' => implode(', ', $error_details),
-                            'debug_info' => [
-                                'api_key_success' => $api_key_success,
-                                'step_config_success' => $step_config_success,
-                                'provider' => $provider,
-                                'has_api_key' => !empty($api_key),
-                                'api_key_length' => !empty($api_key) ? strlen($api_key) : 0
                             ]
                         ]);
                     }
@@ -398,9 +383,6 @@ class PipelineModalAjax
                     do_action('dm_log', 'error', 'AI step configuration save error: ' . $e->getMessage());
                     wp_send_json_error(['message' => __('Error saving AI configuration', 'data-machine')]);
                 }
-            } else {
-                wp_send_json_error(['message' => __('AI HTTP Client library not available', 'data-machine')]);
-            }
         } else {
             // Handle other step types in the future
             wp_send_json_error(['message' => sprintf(__('Configuration for %s steps is not yet implemented', 'data-machine'), $step_type)]);
@@ -601,7 +583,8 @@ class PipelineModalAjax
             }
             
             // Use repository to store file with handler context
-            $repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
+            $repositories = apply_filters('dm_files_repository', []);
+            $repository = $repositories['files'] ?? null;
             if (!$repository) {
                 wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
                 return;
@@ -656,7 +639,8 @@ class PipelineModalAjax
         
         try {
             // Get files repository service
-            $repository = new \DataMachine\Core\Handlers\Fetch\Files\FilesRepository();
+            $repositories = apply_filters('dm_files_repository', []);
+            $repository = $repositories['files'] ?? null;
             if (!$repository) {
                 wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
                 return;

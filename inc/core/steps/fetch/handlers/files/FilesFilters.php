@@ -71,11 +71,16 @@ function dm_register_files_fetch_filters() {
     // DataPacket creation removed - engine uses universal DataPacket constructor
     // Files handler returns properly formatted data for direct constructor usage
     
-    // FilesRepository removed - Files handler uses direct instantiation
+    // Register Files handler repository implementation via engine filter
+    add_filter('dm_files_repository', function($repositories) {
+        $repositories['files'] = new FilesRepository();
+        return $repositories;
+    });
     
     // Action Scheduler cleanup integration
     add_action('dm_cleanup_old_files', function() {
-        $repository = new FilesRepository();
+        $repositories = apply_filters('dm_files_repository', []);
+        $repository = $repositories['files'] ?? null;
         if ($repository) {
             $deleted_count = $repository->cleanup_old_files(7); // Delete files older than 7 days
             
