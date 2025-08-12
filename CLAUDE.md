@@ -32,7 +32,7 @@ add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get
 ## Database Schema
 
 **Core Tables**:
-- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, created_at (DEFAULT CURRENT_TIMESTAMP), started_at, completed_at
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, created_at (DEFAULT CURRENT_TIMESTAMP), completed_at
 - **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at (DEFAULT CURRENT_TIMESTAMP), updated_at
 - **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL)
 - **wp_dm_processed_items**: id, flow_step_id, source_type, item_identifier, processed_timestamp
@@ -70,6 +70,13 @@ $twitter_auth = $all_auth['twitter'] ?? null;
 // Steps and templates
 $all_steps = apply_filters('dm_steps', []);
 $content = apply_filters('dm_render_template', '', 'modal/handler-settings', $data);
+
+// Template context requirements
+$all_requirements = apply_filters('dm_template_requirements', []);
+
+// Flow step configuration
+$step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+$next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $current_flow_step_id);
 
 // Handler directives
 $all_directives = apply_filters('dm_handler_directives', []);
@@ -246,8 +253,10 @@ wp_send_json_success(['step_data' => $data]); // NOT HTML
 
 ## Modal System
 
+**Two-Layer Architecture**: Universal AJAX endpoint (`dm_get_modal_content`) serves all modal content with automatic template discovery.
+
 **Components**:
-- **core-modal.js**: Modal lifecycle, AJAX loading
+- **core-modal.js**: Modal lifecycle, AJAX loading via `dm_get_modal_content`
 - **pipelines-modal.js**: OAuth workflows, file uploads
 - **flow-builder.js**: Flow management, execution
 
@@ -266,14 +275,17 @@ add_filter('dm_modals', function($modals) {
 
 ## Template Context Resolution
 
-**Auto-Generated Context**: Templates register requirements, system auto-generates composite IDs and extracts nested data.
+**Auto-Generated Context**: Templates register requirements via `dm_template_requirements` filter. System auto-generates composite IDs and extracts nested data from request parameters.
 
 ```php
-'page/flow-step-card' => [
-    'required' => ['flow_id', 'step'],
-    'extract_from_step' => ['pipeline_step_id'],
-    'auto_generate' => ['flow_step_id' => '{step.pipeline_step_id}_{flow_id}']
-]
+add_filter('dm_template_requirements', function($requirements) {
+    $requirements['page/flow-step-card'] = [
+        'required' => ['flow_id', 'step'],
+        'extract_from_step' => ['pipeline_step_id'],
+        'auto_generate' => ['flow_step_id' => '{step.pipeline_step_id}_{flow_id}']
+    ];
+    return $requirements;
+});
 ```
 
 ## Files Repository
@@ -300,8 +312,8 @@ $deleted_count = $repository->cleanup_old_files(7); // 7 days
 ```php
 // Execution
 do_action('dm_run_flow_now', $flow_id, 'context');
-do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_datas);
-do_action('dm_schedule_next_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data);
+do_action('dm_execute_step', $job_id, $flow_step_id, $data);
+do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
 // CRUD
 do_action('dm_create', 'job', ['pipeline_id' => $pipeline_id, 'flow_id' => $flow_id]);
