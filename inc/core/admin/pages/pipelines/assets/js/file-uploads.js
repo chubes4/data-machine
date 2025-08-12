@@ -172,7 +172,8 @@
                 .catch(error => {
                     console.error('File upload error:', error);
                     this.showUploadProgress(false);
-                    this.showMessage('File upload failed. Please try again.', 'error');
+                    const errorMessage = error.message || 'File upload failed. Please try again.';
+                    this.showMessage(errorMessage, 'error');
                 });
         },
 
@@ -185,31 +186,23 @@
                 formData.append('action', 'dm_upload_file');
                 formData.append('file', file);
                 
-                // Determine which nonce to use with debug logging
+                // Use pipeline_ajax_nonce for consistent universal AJAX routing
                 let nonce;
-                let nonceSource;
-                if (dmPipelineBuilder?.upload_file_nonce) {
-                    nonce = dmPipelineBuilder.upload_file_nonce;
-                    nonceSource = 'dmPipelineBuilder';
-                } else if (dmPipelineModal?.upload_file_nonce) {
-                    nonce = dmPipelineModal.upload_file_nonce;
-                    nonceSource = 'dmPipelineModal';
-                } else if (wp?.ajax?.settings?.nonce) {
-                    nonce = wp.ajax.settings.nonce;
-                    nonceSource = 'wp.ajax.settings';
+                if (dmPipelineBuilder?.pipeline_ajax_nonce) {
+                    nonce = dmPipelineBuilder.pipeline_ajax_nonce;
+                } else if (dmPipelineModal?.pipeline_ajax_nonce) {
+                    nonce = dmPipelineModal.pipeline_ajax_nonce;
                 } else {
-                    console.error('No upload nonce available from any source');
-                    reject(new Error('No upload nonce available'));
+                    console.error('No pipeline_ajax_nonce available for file upload');
+                    reject(new Error('No pipeline_ajax_nonce available'));
                     return;
                 }
                 
-                console.log('File upload using nonce from:', nonceSource);
                 formData.append('nonce', nonce);
                 
                 // Add handler context if available
-                if (handlerContext && handlerContext.flow_id && handlerContext.pipeline_step_id) {
-                    formData.append('flow_id', handlerContext.flow_id);
-                    formData.append('pipeline_step_id', handlerContext.pipeline_step_id);
+                if (handlerContext && handlerContext.flow_step_id) {
+                    formData.append('flow_step_id', handlerContext.flow_step_id);
                 }
                 
                 $.ajax({
@@ -219,7 +212,13 @@
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        resolve(response);
+                        if (response.success) {
+                            resolve(response);
+                        } else {
+                            const errorMessage = response.data?.message || 'Upload failed';
+                            console.error('File upload server error:', errorMessage, response);
+                            reject(new Error(errorMessage));
+                        }
                     },
                     error: function(xhr, status, error) {
                         reject(error);
@@ -275,8 +274,7 @@
                 type: 'POST',
                 data: {
                     action: 'dm_get_handler_files',
-                    flow_id: handlerContext.flow_id,
-                    pipeline_step_id: handlerContext.pipeline_step_id,
+                    flow_step_id: handlerContext.flow_step_id,
                     handler_slug: handlerContext.handler_slug,
                     nonce: dmPipelineBuilder?.pipeline_ajax_nonce || dmPipelineModal?.pipeline_ajax_nonce || wp?.ajax?.settings?.nonce
                 }

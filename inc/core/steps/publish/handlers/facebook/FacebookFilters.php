@@ -53,6 +53,12 @@ function dm_register_facebook_filters() {
         return $all_settings;
     });
     
+    // Handler directive registration - pure discovery mode
+    add_filter('dm_handler_directives', function($directives) {
+        $directives['facebook'] = 'When posting to Facebook, create engaging content that encourages interaction. Use compelling headlines, appropriate emojis, and ask questions to drive engagement. Format with clear paragraphs and include relevant hashtags.';
+        return $directives;
+    });
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 

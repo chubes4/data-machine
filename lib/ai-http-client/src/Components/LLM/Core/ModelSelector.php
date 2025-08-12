@@ -227,12 +227,12 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
         }
         
         try {
-            $plugin_context = sanitize_key($_POST['plugin_context']);
+            $plugin_context = sanitize_key(wp_unslash($_POST['plugin_context']));
             if (empty($plugin_context)) {
                 wp_send_json_error('Plugin context is required');
             }
             
-            $provider = sanitize_text_field($_POST['provider']);
+            $provider = sanitize_text_field(wp_unslash($_POST['provider']));
             
             // Get provider settings from plugin-scoped WordPress options
             $options_manager = new AI_HTTP_Options_Manager($plugin_context, 'llm');

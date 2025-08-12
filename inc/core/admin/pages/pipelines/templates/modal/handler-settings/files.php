@@ -72,7 +72,7 @@ $has_auth_system = isset($all_auth[$handler_slug]);
                 <p class="description"><?php esc_html_e('Upload any file type - the pipeline will handle compatibility and processing.', 'data-machine'); ?></p>
                 
                 <div class="dm-file-upload-container" 
-                     data-handler-context="<?php echo esc_attr(json_encode(['flow_id' => $flow_id, 'pipeline_step_id' => $pipeline_step_id, 'handler_slug' => $handler_slug])); ?>">
+                     data-handler-context="<?php echo esc_attr(json_encode(['flow_step_id' => $flow_step_id, 'handler_slug' => $handler_slug])); ?>">
                     
                     <div class="dm-file-selection-area" id="dm-file-drop-zone">
                         <div class="dm-file-upload-interface">

@@ -53,6 +53,12 @@ function dm_register_googlesheets_filters() {
         return $all_settings;
     });
     
+    // Handler directive registration - pure discovery mode
+    add_filter('dm_handler_directives', function($directives) {
+        $directives['googlesheets_output'] = 'When outputting to Google Sheets, format your response as structured data with clear column headers. Present information in a tabular format with consistent data types per column. Use concise but descriptive headers and ensure data is properly formatted for spreadsheet analysis.';
+        return $directives;
+    });
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 

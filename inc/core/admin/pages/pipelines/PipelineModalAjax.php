@@ -557,11 +557,6 @@ class PipelineModalAjax
      */
     public function handle_upload_file()
     {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'dm_upload_file')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
-            return;
-        }
         
         // Check if file was uploaded
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {

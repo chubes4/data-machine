@@ -127,6 +127,7 @@ function dm_register_pipelines_admin_page_filters() {
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'admin_post_url' => admin_url('admin-post.php'),
+                                'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
                                 'oauth_nonces' => [
                                     'twitter' => wp_create_nonce('dm_twitter_oauth_init_nonce'),
                                     'googlesheets' => wp_create_nonce('dm_googlesheets_oauth_init_nonce'),

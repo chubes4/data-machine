@@ -82,7 +82,7 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Admin page registration and configuration system.
  * Usage: $all_pages = apply_filters('dm_admin_pages', []);
  * 
- * AdminMenuAssets: $admin_menu_assets = new \DataMachine\Engine\AdminMenuAssets();
+ * Admin Menu Assets: Removed - functionality integrated into filter-based admin page registration
  * Admin menu and asset management system via direct engine instantiation.
  * 
  * EXTENSIBILITY HOOKS:

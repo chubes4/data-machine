@@ -38,19 +38,19 @@ class ProcessedItems {
     // ========================================
 
     /**
-     * Checks if a specific item has already been processed for a given flow and source type.
+     * Checks if a specific item has already been processed for a given flow step and source type.
      *
-     * @param int    $flow_id        The ID of the flow.
+     * @param string $flow_step_id   The ID of the flow step (composite: pipeline_step_id_flow_id).
      * @param string $source_type    The type of the data source (e.g., 'rss', 'reddit').
      * @param string $item_identifier The unique identifier for the item (e.g., GUID, post ID).
      * @return bool True if the item has been processed, false otherwise.
      */
-    public function has_item_been_processed( int $flow_id, string $source_type, string $item_identifier ): bool {
+    public function has_item_been_processed( string $flow_step_id, string $source_type, string $item_identifier ): bool {
         global $wpdb;
 
         $count = $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_id = %d AND source_type = %s AND item_identifier = %s",
-            $flow_id,
+            "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_step_id = %s AND source_type = %s AND item_identifier = %s",
+            $flow_step_id,
             $source_type,
             $item_identifier
         ) );
@@ -61,19 +61,19 @@ class ProcessedItems {
     /**
      * Adds a record indicating an item has been processed.
      *
-     * @param int    $flow_id        The ID of the flow.
+     * @param string $flow_step_id   The ID of the flow step (composite: pipeline_step_id_flow_id).
      * @param string $source_type    The type of the data source.
      * @param string $item_identifier The unique identifier for the item.
      * @return bool True on successful insertion, false otherwise.
      */
-    public function add_processed_item( int $flow_id, string $source_type, string $item_identifier ): bool {
+    public function add_processed_item( string $flow_step_id, string $source_type, string $item_identifier ): bool {
         global $wpdb;
 
         // Check if it exists first to avoid unnecessary insert attempts and duplicate key errors
-        if ($this->has_item_been_processed($flow_id, $source_type, $item_identifier)) {
+        if ($this->has_item_been_processed($flow_step_id, $source_type, $item_identifier)) {
             // Item already processed - return true to indicate success (idempotent behavior)
             do_action('dm_log', 'debug', "Item already processed, skipping duplicate insert.", [
-                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id,
                 'source_type' => $source_type,
                 'item_identifier' => substr($item_identifier, 0, 100) . '...'
             ]);
@@ -137,13 +137,13 @@ class ProcessedItems {
         // Use dbDelta for proper table creation/updates
         $sql = "CREATE TABLE {$this->table_name} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            flow_id BIGINT(20) UNSIGNED NOT NULL,
+            flow_step_id VARCHAR(255) NOT NULL,
             source_type VARCHAR(50) NOT NULL,
             item_identifier VARCHAR(255) NOT NULL,
             processed_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
-            UNIQUE KEY `flow_source_item` (flow_id, source_type, item_identifier(191)),
-            KEY `flow_id` (flow_id),
+            UNIQUE KEY `flow_source_item` (flow_step_id, source_type, item_identifier(191)),
+            KEY `flow_step_id` (flow_step_id),
             KEY `source_type` (source_type)
         ) $charset_collate;";
 

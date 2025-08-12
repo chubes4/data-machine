@@ -53,6 +53,12 @@ function dm_register_bluesky_filters() {
         return $all_settings;
     });
     
+    // Handler directive registration - pure discovery mode
+    add_filter('dm_handler_directives', function($directives) {
+        $directives['bluesky'] = 'When posting to Bluesky, create thoughtful content that promotes meaningful discussion. Use a conversational tone, limit posts to 300 characters for optimal engagement, and include relevant hashtags. Focus on community building and authentic interaction.';
+        return $directives;
+    });
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 

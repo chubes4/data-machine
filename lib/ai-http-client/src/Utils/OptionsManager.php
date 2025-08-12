@@ -438,12 +438,12 @@ class AI_HTTP_Options_Manager {
         }
         
         try {
-            $plugin_context = sanitize_key($_POST['plugin_context']);
+            $plugin_context = sanitize_key(wp_unslash($_POST['plugin_context']));
             if (empty($plugin_context)) {
                 wp_send_json_error('Plugin context is required');
             }
             
-            $step_id = isset($_POST['step_id']) ? sanitize_key($_POST['step_id']) : null;
+            $step_id = isset($_POST['step_id']) ? sanitize_key(wp_unslash($_POST['step_id'])) : null;
             $options_manager = new self($plugin_context, 'llm');
             
             if ($step_id) {
@@ -455,7 +455,7 @@ class AI_HTTP_Options_Manager {
                     'provider' => $provider,
                     'model' => sanitize_text_field(wp_unslash($_POST[$field_prefix . 'model'])),
                     'temperature' => isset($_POST[$field_prefix . 'temperature']) ? floatval($_POST[$field_prefix . 'temperature']) : null,
-                    'system_prompt' => isset($_POST[$field_prefix . 'system_prompt']) ? sanitize_textarea_field($_POST[$field_prefix . 'system_prompt']) : '',
+                    'system_prompt' => isset($_POST[$field_prefix . 'system_prompt']) ? sanitize_textarea_field(wp_unslash($_POST[$field_prefix . 'system_prompt'])) : '',
                 );
                 
                 // Handle step-specific custom fields
@@ -477,8 +477,8 @@ class AI_HTTP_Options_Manager {
                     'api_key' => sanitize_text_field(wp_unslash($_POST['ai_api_key'])),
                     'model' => sanitize_text_field(wp_unslash($_POST['ai_model'])),
                     'temperature' => isset($_POST['ai_temperature']) ? floatval($_POST['ai_temperature']) : null,
-                    'system_prompt' => isset($_POST['ai_system_prompt']) ? sanitize_textarea_field($_POST['ai_system_prompt']) : '',
-                    'instructions' => isset($_POST['instructions']) ? sanitize_textarea_field($_POST['instructions']) : ''
+                    'system_prompt' => isset($_POST['ai_system_prompt']) ? sanitize_textarea_field(wp_unslash($_POST['ai_system_prompt'])) : '',
+                    'instructions' => isset($_POST['instructions']) ? sanitize_textarea_field(wp_unslash($_POST['instructions'])) : ''
                 );
 
                 // Handle custom fields
@@ -515,13 +515,13 @@ class AI_HTTP_Options_Manager {
         }
         
         try {
-            $plugin_context = sanitize_key($_POST['plugin_context']);
+            $plugin_context = sanitize_key(wp_unslash($_POST['plugin_context']));
             if (empty($plugin_context)) {
                 wp_send_json_error('Plugin context is required');
             }
             
             $provider = sanitize_text_field(wp_unslash($_POST['provider']));
-            $step_id = isset($_POST['step_id']) ? sanitize_key($_POST['step_id']) : null;
+            $step_id = isset($_POST['step_id']) ? sanitize_key(wp_unslash($_POST['step_id'])) : null;
             
             $options_manager = new self($plugin_context, 'llm');
             

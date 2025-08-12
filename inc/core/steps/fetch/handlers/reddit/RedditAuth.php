@@ -13,8 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Fetch\Reddit;
 
-use DataMachine\Engine\Logger;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }

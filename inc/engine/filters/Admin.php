@@ -75,7 +75,6 @@ function dm_register_admin_filters() {
      */
     add_filter('dm_admin_pages', function($pages) {
         // Components self-register via this same filter with higher priority
-        // Bootstrap provides discovery infrastructure for AdminMenuAssets
         return $pages;
     }, 5, 1);
     

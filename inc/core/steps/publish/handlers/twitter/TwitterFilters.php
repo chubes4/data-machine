@@ -53,6 +53,12 @@ function dm_register_twitter_filters() {
         return $all_settings;
     });
     
+    // Handler directive registration - pure discovery mode
+    add_filter('dm_handler_directives', function($directives) {
+        $directives['twitter'] = 'When posting to Twitter, format your response as concise, engaging content under 280 characters. Use relevant hashtags and mention handles when appropriate. Keep the tone conversational and engaging.';
+        return $directives;
+    });
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 

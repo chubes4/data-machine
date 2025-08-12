@@ -53,6 +53,12 @@ function dm_register_threads_filters() {
         return $all_settings;
     });
     
+    // Handler directive registration - pure discovery mode
+    add_filter('dm_handler_directives', function($directives) {
+        $directives['threads'] = 'When posting to Threads, create content that encourages conversation and connection. Use a more casual, authentic tone similar to Instagram. Keep posts under 500 characters when possible, use relevant hashtags, and consider adding questions to spark discussion.';
+        return $directives;
+    });
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }
 
