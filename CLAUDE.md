@@ -23,7 +23,7 @@ add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get
 
 ## System Architecture
 
-**Action Hook System**: Central hooks eliminate code duplication (dm_run_flow_now, dm_execute_step, dm_log, dm_ajax_route, dm_auto_save, dm_mark_item_processed).
+**Action Hook System**: Central hooks eliminate code duplication (dm_run_flow_now, dm_execute_step, dm_log, dm_ajax_route, dm_auto_save, dm_mark_item_processed, dm_oauth, dm_update_flow_handler, dm_update_flow_schedule, dm_sync_steps_to_flow).
 
 **Auto-Save**: All interactions trigger automatic persistence via `dm_auto_save` action hook.
 
@@ -32,11 +32,11 @@ add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get
 ## Database Schema
 
 **Core Tables**:
-- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, created_at, started_at, completed_at
-- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at, updated_at
+- **wp_dm_jobs**: job_id, pipeline_id, flow_id, status, created_at (DEFAULT CURRENT_TIMESTAMP), started_at, completed_at
+- **wp_dm_pipelines**: pipeline_id, pipeline_name, step_configuration (longtext NULL), created_at (DEFAULT CURRENT_TIMESTAMP), updated_at
 - **wp_dm_flows**: flow_id, pipeline_id, flow_name, flow_config (longtext NOT NULL), scheduling_config (longtext NOT NULL)
 - **wp_dm_processed_items**: id, flow_step_id, source_type, item_identifier, processed_timestamp
-- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at, updated_at
+- **wp_dm_remote_locations**: location_id, location_name, target_site_url, target_username, password, synced_site_info (JSON), enabled_post_types (JSON), enabled_taxonomies (JSON), last_sync_time, created_at (DEFAULT CURRENT_TIMESTAMP), updated_at
 
 **Table Relationships**:
 - Flows reference Pipelines (many-to-one): `flows.pipeline_id → pipelines.pipeline_id`
@@ -49,6 +49,8 @@ add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get
 // Core actions
 do_action('dm_log', 'error', 'Message', ['context' => 'data']);
 do_action('dm_run_flow_now', $flow_id);
+do_action('dm_oauth', 'store', 'twitter', $credentials);
+do_action('dm_ajax_route', 'dm_add_step', 'page');
 
 // HTTP requests - 5 parameter signature
 $response = apply_filters('dm_request', null, 'POST', $url, $args, 'Context Description');
@@ -91,7 +93,7 @@ composer test:integration    # Integration tests only
 composer test:coverage       # HTML coverage report
 
 # AI HTTP Client (integrated library)
-cd lib/ai-http-client/ && composer test && composer analyse
+cd lib/ai-http-client/ && composer analyse
 
 # Debugging
 window.dmDebugMode = true;   # Browser debugging
@@ -102,12 +104,9 @@ composer dump-autoload      # Fix class loading
 php -l file.php             # Syntax check
 
 # Service Discovery Validation
-define('WP_DEBUG', true); # Enable debugging
 error_log('Database services: ' . print_r(apply_filters('dm_db', []), true));
 error_log('Handlers: ' . print_r(apply_filters('dm_handlers', []), true));
 error_log('Steps: ' . print_r(apply_filters('dm_steps', []), true));
-
-# Authentication System Debugging
 error_log('Auth providers: ' . print_r(apply_filters('dm_auth_providers', []), true));
 ```
 
@@ -132,8 +131,9 @@ error_log('Auth providers: ' . print_r(apply_filters('dm_auth_providers', []), t
 
 ```php
 do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
-do_action('dm_log', 'clear_logs');
+do_action('dm_log', 'clear_all');
 do_action('dm_log', 'cleanup', 10, 30); // 10MB max, 30 days
+do_action('dm_log', 'set_level', 'debug');
 ```
 
 ## DataPacket Structure
@@ -296,22 +296,26 @@ $deleted_count = $repository->cleanup_old_files(7); // 7 days
 
 ## Action Hook System
 
-**Central Hooks** (organized in `/inc/engine/actions/`):
+**Central Hooks** (organized in `/inc/engine/actions/DataMachineActions.php`):
 ```php
 // Execution
-do_action('dm_run_flow_now', $flow_id);
-do_action('dm_execute_step', $job_id, $flow_step_id, $data);
-do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
+do_action('dm_run_flow_now', $flow_id, 'context');
+do_action('dm_execute_step', $job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_datas);
+do_action('dm_schedule_next_step', $job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data);
 
 // CRUD
 do_action('dm_create', 'job', ['pipeline_id' => $pipeline_id, 'flow_id' => $flow_id]);
-do_action('dm_update_job_status', $job_id, 'completed');
+do_action('dm_update_job_status', $job_id, 'completed', 'context', 'old_status');
+do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
+do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly', 'inactive');
+do_action('dm_sync_steps_to_flow', $flow_id, $step_data, ['context' => 'add_step']);
 
 // Utilities
 do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
 do_action('dm_ajax_route', 'dm_add_step', 'page');
 do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
 do_action('dm_auto_save', $pipeline_id);
+do_action('dm_oauth', 'store', 'twitter', $credentials);
 ```
 
 ## Critical Rules
