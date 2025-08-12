@@ -127,15 +127,7 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/AjaxHandler.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PromptManager.php';
         
-        // 4.6. UI Components system (shared components moved to top-level)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentInterface.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/ComponentRegistry.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ProviderSelector.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/Core/ApiKeyInput.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Core/ModelSelector.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/TemperatureSlider.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/Extended/SystemPromptField.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Components/LLM/ProviderManagerComponent.php';
+        // 4.6. Template-based component system (no class files needed - uses WordPress-native templates)
     }
     
     function ai_http_client_wordpress_init() {
