@@ -44,6 +44,7 @@ if (!defined('WPINC')) {
         // Render AI HTTP Client components using template-based filter system
         echo apply_filters('ai_render_component', '', [
             'step_id' => $pipeline_step_id, // Unique step-aware configuration
+            'show_save_button' => false, // Hide built-in save button - Data Machine provides custom save
             'temperature' => [
                 'label' => __('AI Creativity Level', 'data-machine'),
                 'help_text' => __('Controls randomness in AI responses. Higher values = more creative, lower values = more focused.', 'data-machine')

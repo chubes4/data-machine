@@ -505,17 +505,21 @@ function ai_http_client_register_provider_filters() {
             $html .= ai_http_render_template('max-tokens', $template_data);
         }
         
-        // Add save button and nonce
-        $html .= '<p class="submit">';
-        $html .= '<button type="button" class="button button-primary ai-http-save-settings" ';
-        $html .= 'data-plugin-context="' . esc_attr($plugin_context) . '">';
-        $html .= __('Save AI Settings', 'ai-http-client');
-        $html .= '</button>';
-        $html .= '</p>';
+        // Add save button (if enabled) and nonce
+        $show_save_button = $config['show_save_button'] ?? true; // Default to true for backward compatibility
+        
+        if ($show_save_button) {
+            $html .= '<p class="submit">';
+            $html .= '<button type="button" class="button button-primary ai-http-save-settings" ';
+            $html .= 'data-plugin-context="' . esc_attr($plugin_context) . '">';
+            $html .= __('Save AI Settings', 'ai-http-client');
+            $html .= '</button>';
+            $html .= '</p>';
+        }
         
         $html .= '</div>';
         
-        // Add nonce for security
+        // Always add nonce for security (needed even without save button)
         $html .= wp_nonce_field('ai_http_nonce', 'ai_http_nonce_field', true, false);
         
         return $html;

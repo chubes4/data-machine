@@ -34,10 +34,10 @@ $llm_providers = array_filter($all_providers, function($provider) {
     return isset($provider['type']) && $provider['type'] === 'llm';
 });
 
-// Get current API key value
+// Get current API key value (API keys are merged into each provider's config)
 $current_api_key = '';
-if (isset($all_config['shared_api_keys'][$selected_provider])) {
-    $current_api_key = $all_config['shared_api_keys'][$selected_provider];
+if (isset($all_config[$selected_provider]['api_key'])) {
+    $current_api_key = $all_config[$selected_provider]['api_key'];
 }
 
 // Get current model value
