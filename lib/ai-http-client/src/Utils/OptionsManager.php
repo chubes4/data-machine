@@ -340,9 +340,9 @@ class AI_HTTP_Options_Manager {
     }
 
     /**
-     * Get configuration array for AI_HTTP_Client
+     * Get configuration array for AI filters
      *
-     * @return array Configuration ready for AI_HTTP_Client
+     * @return array Configuration ready for ai_request filter
      */
     public function get_client_config() {
         // Return empty config if not properly configured
@@ -466,15 +466,19 @@ class AI_HTTP_Options_Manager {
                     }
                 }
                 
-                // Save step configuration
-                $options_manager->save_step_configuration($step_id, $step_settings);
+                // Save step configuration using action
+                do_action('save_ai_config', [
+                    'type' => 'step_config',
+                    'step_id' => $step_id,
+                    'data' => $step_settings
+                ]);
                 wp_send_json_success('Step settings saved');
                 
             } else {
                 // Global form processing (existing behavior)
                 $provider = sanitize_text_field(wp_unslash($_POST['ai_provider']));
+                $api_key = sanitize_text_field(wp_unslash($_POST['ai_api_key']));
                 $settings = array(
-                    'api_key' => sanitize_text_field(wp_unslash($_POST['ai_api_key'])),
                     'model' => sanitize_text_field(wp_unslash($_POST['ai_model'])),
                     'temperature' => isset($_POST['ai_temperature']) ? floatval($_POST['ai_temperature']) : null,
                     'system_prompt' => isset($_POST['ai_system_prompt']) ? sanitize_textarea_field($_POST['ai_system_prompt']) : '',
@@ -488,8 +492,24 @@ class AI_HTTP_Options_Manager {
                     }
                 }
 
-                $options_manager->save_provider_settings($provider, $settings);
-                $options_manager->set_selected_provider($provider);
+                // Save using actions
+                do_action('save_ai_config', [
+                    'type' => 'api_key',
+                    'provider' => $provider,
+                    'api_key' => $api_key
+                ]);
+                
+                do_action('save_ai_config', [
+                    'type' => 'provider_settings',
+                    'provider' => $provider,
+                    'data' => $settings
+                ]);
+                
+                do_action('save_ai_config', [
+                    'type' => 'selected_provider',
+                    'provider' => $provider
+                ]);
+                
                 wp_send_json_success('Settings saved');
             }
             
@@ -685,7 +705,6 @@ class AI_HTTP_Options_Manager {
             'model' => 'sanitize_text_field', 
             'temperature' => 'floatval',
             'max_tokens' => 'intval',
-            'top_p' => 'floatval',
             'system_prompt' => 'wp_kses_post',
             'tools_enabled' => 'sanitize_tools_array'
         );

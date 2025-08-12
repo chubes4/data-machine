@@ -44,9 +44,11 @@ if (!ai_http_client_version_check()) {
 }
 
 // Prevent multiple inclusions of the same version
-if (class_exists('AI_HTTP_Client')) {
+// Pure filter architecture - no classes needed
+if (defined('AI_HTTP_CLIENT_FILTERS_LOADED')) {
     return;
 }
+define('AI_HTTP_CLIENT_FILTERS_LOADED', true);
 
 // Define component constants
 if (!defined('AI_HTTP_CLIENT_PATH')) {
@@ -94,7 +96,6 @@ if (!function_exists('ai_http_client_init')) {
         // 1. Load dependencies in order
         
         // 2. Shared utilities (moved to top-level)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/PluginContextHelper.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/FileUploadClient.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/ToolExecutor.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/WordPressSSEHandler.php';
@@ -116,8 +117,10 @@ if (!function_exists('ai_http_client_init')) {
         // 2.8. Filter-based provider registration system
         require_once AI_HTTP_CLIENT_PATH . '/src/Filters.php';
         
-        // 3. Main orchestrator client (NEW UNIFIED ARCHITECTURE)
-        require_once AI_HTTP_CLIENT_PATH . '/src/class-client.php';
+        // 2.9. Action-based write operations system
+        require_once AI_HTTP_CLIENT_PATH . '/src/Actions.php';
+        
+        // 3. Pure filter architecture - no client class needed
         
         // 4.5. WordPress management components
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/OptionsManager.php';
@@ -141,34 +144,12 @@ if (!function_exists('ai_http_client_init')) {
             do_action('ai_http_client_loaded');
         }
         
-        // Auto-register AJAX actions for admin context
-        if (is_admin() && function_exists('add_action')) {
-            ai_http_client_register_ajax_actions();
-        }
+        // AJAX actions are now auto-registered via the unified filter system
         
-        // Auto-register provider configuration filters from OptionsManager
-        ai_http_client_register_options_filters();
+        // Provider configuration filters are now auto-registered via the unified filter system
     }
     
-    /**
-     * Register AJAX actions for dynamic component interactions
-     * Only registers in admin context to avoid unnecessary overhead
-     */
-    function ai_http_client_register_ajax_actions() {
-        // Register AJAX endpoints for dynamic component features
-        add_action('wp_ajax_ai_http_save_settings', ['AI_HTTP_Ajax_Handler', 'save_settings']);
-        add_action('wp_ajax_ai_http_load_provider_settings', ['AI_HTTP_Ajax_Handler', 'load_provider_settings']);
-        add_action('wp_ajax_ai_http_get_models', ['AI_HTTP_Ajax_Handler', 'get_models']);
-    }
 
-    /**
-     * Register WordPress filters to provide configuration from OptionsManager
-     */
-    function ai_http_client_register_options_filters() {
-        // Skip filter registration - this function is deprecated in multi-plugin architecture
-        // Filters should be registered by individual plugins with proper plugin context
-        return;
-    }
 }
 
 // Initialize the library

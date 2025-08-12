@@ -286,37 +286,37 @@ function dm_register_database_filters() {
      * Database-aware filter for checking if items have been processed to prevent duplicates.
      * 
      * USAGE:
-     * $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, $source_type, $item_identifier);
+     * $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_identifier);
      * 
      * PARAMETERS:
-     * - $flow_id: Flow identifier for context isolation
+     * - $flow_step_id: Flow step identifier for context isolation (composite: pipeline_step_id_flow_id)
      * - $source_type: Source type (e.g., 'rss', 'files', 'twitter')  
      * - $item_identifier: Unique identifier for the item (e.g., GUID, file path, tweet ID)
      * 
      * EXTENSION EXAMPLE:
-     * add_filter('dm_is_item_processed', function($is_processed, $flow_id, $source_type, $item_identifier) {
+     * add_filter('dm_is_item_processed', function($is_processed, $flow_step_id, $source_type, $item_identifier) {
      *     // Custom duplicate checking logic
-     *     return $is_processed || my_custom_duplicate_check($flow_id, $source_type, $item_identifier);
+     *     return $is_processed || my_custom_duplicate_check($flow_step_id, $source_type, $item_identifier);
      * }, 20, 4);
      */
-    add_filter('dm_is_item_processed', function($default, $flow_id, $source_type, $item_identifier) {
+    add_filter('dm_is_item_processed', function($default, $flow_step_id, $source_type, $item_identifier) {
         $all_databases = apply_filters('dm_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
         
         if (!$processed_items) {
             do_action('dm_log', 'warning', 'ProcessedItems service unavailable for item check', [
-                'flow_id' => $flow_id, 
+                'flow_step_id' => $flow_step_id, 
                 'source_type' => $source_type,
                 'item_identifier' => substr($item_identifier, 0, 50) . '...'
             ]);
             return false;
         }
         
-        $is_processed = $processed_items->has_item_been_processed($flow_id, $source_type, $item_identifier);
+        $is_processed = $processed_items->has_item_been_processed($flow_step_id, $source_type, $item_identifier);
         
         // Optional debug logging for processed item checks
         do_action('dm_log', 'debug', 'Processed item check via filter', [
-            'flow_id' => $flow_id,
+            'flow_step_id' => $flow_step_id,
             'source_type' => $source_type,
             'identifier' => substr($item_identifier, 0, 50) . '...',
             'is_processed' => $is_processed

@@ -42,7 +42,7 @@ define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
  * Usage: do_action('dm_log', 'level', 'message', ['context' => 'data']);
  * 
  * Pipeline Execution: via dm_execute_step action hook (pure functional orchestration)
- * AI HTTP Client: $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
+ * AI HTTP Client: $response = apply_filters('ai_request', $request);
  * 
  * @filter dm_handlers
  * Retrieves all handler instances via pure discovery mode.

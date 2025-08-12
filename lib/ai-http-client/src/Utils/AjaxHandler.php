@@ -40,20 +40,21 @@ class AI_HTTP_Ajax_Handler {
         $step_id = sanitize_text_field(wp_unslash($_POST['step_id'] ?? ''));
         
         try {
-            $options_manager = new AI_HTTP_Options_Manager($plugin_context, 'llm');
-            
             // Collect form data
             $form_data = [];
+            $provider = null;
+            $api_key = null;
             
             // Provider selection
             if (isset($_POST['ai_provider']) || isset($_POST['ai_step_' . $step_id . '_provider'])) {
                 $provider_field = !empty($step_id) ? 'ai_step_' . $step_id . '_provider' : 'ai_provider';
-                $form_data['provider'] = sanitize_text_field(wp_unslash($_POST[$provider_field] ?? ''));
+                $provider = sanitize_text_field(wp_unslash($_POST[$provider_field] ?? ''));
+                $form_data['provider'] = $provider;
             }
             
             // API key (always generic field name)
             if (isset($_POST['ai_api_key'])) {
-                $form_data['api_key'] = sanitize_text_field(wp_unslash($_POST['ai_api_key']));
+                $api_key = sanitize_text_field(wp_unslash($_POST['ai_api_key']));
             }
             
             // Model selection
@@ -74,23 +75,43 @@ class AI_HTTP_Ajax_Handler {
                 $form_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST[$prompt_field] ?? ''));
             }
             
-            // Save configuration
+            // Save configuration using actions
             if (!empty($step_id)) {
                 // Step-aware save
-                $success = $options_manager->save_step_configuration($step_id, $form_data);
+                do_action('save_ai_config', [
+                    'type' => 'step_config',
+                    'step_id' => $step_id,
+                    'data' => $form_data
+                ]);
+                $success = true; // Actions don't return values
             } else {
                 // Global save - save provider selection and settings
-                if (!empty($form_data['provider'])) {
-                    $options_manager->set_selected_provider($form_data['provider']);
+                if (!empty($provider)) {
+                    do_action('save_ai_config', [
+                        'type' => 'selected_provider',
+                        'provider' => $provider
+                    ]);
                 }
                 
-                // Save provider-specific settings
-                if (!empty($form_data['provider'])) {
-                    unset($form_data['provider']); // Don't include provider in settings
-                    $success = $options_manager->save_provider_settings($form_data['provider'] ?? 'openai', $form_data);
-                } else {
-                    $success = true;
+                // Save API key separately if provided
+                if (!empty($api_key) && !empty($provider)) {
+                    do_action('save_ai_config', [
+                        'type' => 'api_key',
+                        'provider' => $provider,
+                        'api_key' => $api_key
+                    ]);
                 }
+                
+                // Save provider-specific settings (without provider and API key)
+                if (!empty($provider)) {
+                    unset($form_data['provider']); // Don't include provider in settings
+                    do_action('save_ai_config', [
+                        'type' => 'provider_settings',
+                        'provider' => $provider,
+                        'data' => $form_data
+                    ]);
+                }
+                $success = true; // Actions don't return values
             }
             
             if ($success) {
@@ -136,11 +157,11 @@ class AI_HTTP_Ajax_Handler {
         try {
             if (!empty($step_id)) {
                 // Step-aware configuration using ai_config filter
-                $step_config = apply_filters('ai_config', [], $plugin_context, 'llm', $step_id);
+                $step_config = apply_filters('ai_config', $step_id);
                 $selected_provider = $step_config['provider'] ?? null;
                 
                 // Get global provider settings using ai_config filter
-                $all_providers_config = apply_filters('ai_config', [], $plugin_context, 'llm');
+                $all_providers_config = apply_filters('ai_config', null);
                 $provider_settings = isset($all_providers_config[$selected_provider]) ? $all_providers_config[$selected_provider] : [];
                 
                 $settings = array_merge($provider_settings, $step_config);
@@ -148,7 +169,7 @@ class AI_HTTP_Ajax_Handler {
                 
             } else {
                 // Global configuration using ai_config filter
-                $all_settings = apply_filters('ai_config', [], $plugin_context, 'llm');
+                $all_settings = apply_filters('ai_config', null);
                 $selected_provider = $all_settings['selected_provider'] ?? null;
                 
                 $provider_to_load = $provider ?: $selected_provider;
@@ -188,12 +209,8 @@ class AI_HTTP_Ajax_Handler {
         }
         
         try {
-            // Use ai_config filter for provider configuration access
-            $all_providers_config = apply_filters('ai_config', [], $plugin_context, 'llm');
-            $provider_config = isset($all_providers_config[$provider]) ? $all_providers_config[$provider] : [];
-            
-            // Use unified model fetcher (same as working ModelSelector)
-            $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($provider, $provider_config);
+            // Use ai_models filter for direct model fetching
+            $models = apply_filters('ai_models', $provider);
             
             if (empty($models)) {
                 wp_send_json_error(['message' => 'No API key configured for ' . $provider . '. Enter API key to load models.']);

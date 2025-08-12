@@ -54,12 +54,7 @@ class AIStep {
     public function execute($flow_step_id, array $data = [], array $step_config = []): array {
         $job_id = $step_config['job_id'] ?? 0;
         try {
-            // Get AI HTTP client via filter
-            $ai_http_client = apply_filters('ai_client', null);
-            if (!$ai_http_client) {
-                do_action('dm_log', 'error', 'AI Step: AI HTTP Client not available', ['job_id' => $job_id]);
-                return [];
-            }
+            // Pure filter architecture - no client instance needed
 
             do_action('dm_log', 'debug', 'AI Step: Starting AI processing with step config', ['job_id' => $job_id]);
 
@@ -245,7 +240,7 @@ class AIStep {
             $step_id = $pipeline_step_id;
             
             // Debug: Log step configuration details before AI request
-            $step_debug_config = $ai_http_client->get_step_configuration($step_id);
+            $step_debug_config = apply_filters('ai_config', $step_id);
             do_action('dm_log', 'debug', 'AI Step: Step configuration retrieved', [
                 'job_id' => $job_id,
                 'pipeline_step_id' => $pipeline_step_id,
@@ -256,9 +251,10 @@ class AIStep {
                 'configured_model' => $step_debug_config['model'] ?? 'NOT_SET'
             ]);
             
-            // Execute AI request using AI HTTP Client's step-aware method
+            // Execute AI request using pure filter with step_id
             // This automatically uses step-specific configuration (provider, model, temperature, etc.)
-            $ai_response = $ai_http_client->send_step_request($step_id, $ai_request);
+            $ai_request['step_id'] = $step_id;
+            $ai_response = apply_filters('ai_request', $ai_request);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');

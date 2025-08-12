@@ -41,32 +41,18 @@ if (!defined('WPINC')) {
             return;
         }
         
-        // Render AI HTTP Client ProviderManagerComponent for complete AI configuration
-        echo \AI_HTTP_ProviderManager_Component::render([
-            'plugin_context' => 'data-machine',
-            'ai_type' => 'llm',
-            'title' => '', // No title since we have our own header
-            'components' => [
-                'core' => ['provider_selector', 'api_key_input', 'model_selector'],
-                'extended' => ['temperature_slider', 'system_prompt_field']
-            ],
-            'show_test_connection' => false,
-            'show_save_button' => false, // Hide built-in save button - we provide our own
-            'wrapper_class' => 'ai-http-provider-manager dm-ai-step-config',
+        // Render AI HTTP Client components using template-based filter system
+        echo apply_filters('ai_render_component', '', [
             'step_id' => $pipeline_step_id, // Unique step-aware configuration
-            'component_configs' => [
-                'temperature_slider' => [
-                    // KISS: Only customize what Data Machine specifically needs
-                    'label' => __('AI Creativity Level', 'data-machine'),
-                    'help_text' => __('Controls randomness in AI responses. Higher values = more creative, lower values = more focused.', 'data-machine')
-                ],
-                'system_prompt_field' => [
-                    'label' => __('AI Processing Instructions', 'data-machine'),
-                    'placeholder' => __('Define how the AI should process data from previous pipeline steps...', 'data-machine'),
-                    'help_text' => __('Instructions that guide AI behavior for this pipeline step. The AI will receive data from all previous steps automatically.', 'data-machine'),
-                    'rows' => 6,
-                    'default_value' => ''
-                ]
+            'temperature' => [
+                'label' => __('AI Creativity Level', 'data-machine'),
+                'help_text' => __('Controls randomness in AI responses. Higher values = more creative, lower values = more focused.', 'data-machine')
+            ],
+            'system_prompt' => [
+                'label' => __('AI Processing Instructions', 'data-machine'),
+                'placeholder' => __('Define how the AI should process data from previous pipeline steps...', 'data-machine'),
+                'help_text' => __('Instructions that guide AI behavior for this pipeline step. The AI will receive data from all previous steps automatically.', 'data-machine'),
+                'rows' => 6
             ]
         ]);
     elseif ($step_config):

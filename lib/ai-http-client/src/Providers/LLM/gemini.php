@@ -106,11 +106,11 @@ class AI_HTTP_Gemini_Provider {
 
         list($url, $modified_request) = $this->build_gemini_url_and_request($provider_request, ':generateContent');
         
-        // Use centralized ai_request filter
+        // Use centralized ai_http filter
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
         
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => wp_json_encode($modified_request)
         ], 'Gemini');
@@ -137,11 +137,11 @@ class AI_HTTP_Gemini_Provider {
 
         list($url, $modified_request) = $this->build_gemini_url_and_request($provider_request, ':streamGenerateContent');
         
-        // Use centralized ai_request filter with streaming=true
+        // Use centralized ai_http filter with streaming=true
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
         
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => wp_json_encode($modified_request)
         ], 'Gemini Streaming', true, $callback);
@@ -166,8 +166,8 @@ class AI_HTTP_Gemini_Provider {
 
         $url = $this->base_url . '/models';
         
-        // Use centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'GET', $url, [
+        // Use centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'GET', $url, [
             'headers' => $this->get_auth_headers()
         ], 'Gemini');
 
@@ -226,8 +226,8 @@ class AI_HTTP_Gemini_Provider {
         $body .= file_get_contents($file_path) . "\r\n";
         $body .= "--{$boundary}--\r\n";
 
-        // Send request using centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        // Send request using centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => $body
         ], 'Gemini File Upload');
@@ -262,8 +262,8 @@ class AI_HTTP_Gemini_Provider {
         $file_name = basename(parse_url($file_uri, PHP_URL_PATH));
         $url = "https://generativelanguage.googleapis.com/v1beta/files/{$file_name}?key=" . $this->api_key;
         
-        // Send request using centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'DELETE', $url, [], 'Gemini File Delete');
+        // Send request using centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'DELETE', $url, [], 'Gemini File Delete');
 
         if (!$result['success']) {
             throw new Exception('Gemini file delete failed: ' . $result['error']);

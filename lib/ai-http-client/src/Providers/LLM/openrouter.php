@@ -105,11 +105,11 @@ class AI_HTTP_OpenRouter_Provider {
 
         $url = $this->base_url . '/chat/completions';
         
-        // Use centralized ai_request filter
+        // Use centralized ai_http filter
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
         
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => wp_json_encode($provider_request)
         ], 'OpenRouter');
@@ -136,11 +136,11 @@ class AI_HTTP_OpenRouter_Provider {
 
         $url = $this->base_url . '/chat/completions';
         
-        // Use centralized ai_request filter with streaming=true
+        // Use centralized ai_http filter with streaming=true
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
         
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => wp_json_encode($provider_request)
         ], 'OpenRouter Streaming', true, $callback);
@@ -165,8 +165,8 @@ class AI_HTTP_OpenRouter_Provider {
 
         $url = $this->base_url . '/models';
         
-        // Use centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'GET', $url, [
+        // Use centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'GET', $url, [
             'headers' => $this->get_auth_headers()
         ], 'OpenRouter');
 
@@ -218,8 +218,8 @@ class AI_HTTP_OpenRouter_Provider {
         $body .= file_get_contents($file_path) . "\r\n";
         $body .= "--{$boundary}--\r\n";
 
-        // Send request using centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        // Send request using centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => $body
         ], 'OpenRouter File Upload');
@@ -252,8 +252,8 @@ class AI_HTTP_OpenRouter_Provider {
 
         $url = $this->base_url . "/files/{$file_id}";
         
-        // Send request using centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'DELETE', $url, [
+        // Send request using centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'DELETE', $url, [
             'headers' => $this->get_auth_headers()
         ], 'OpenRouter File Delete');
 

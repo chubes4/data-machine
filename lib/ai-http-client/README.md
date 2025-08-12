@@ -275,9 +275,7 @@ The admin UI component is fully configurable:
 // Available extended components  
 'extended' => [
     'temperature_slider',    // Temperature control (0-1)
-    'system_prompt_field',   // System prompt textarea
-    'max_tokens_input',      // Max tokens input
-    'top_p_slider'          // Top P control
+    'system_prompt_field'    // System prompt textarea
 ]
 
 // Component-specific configs
@@ -367,6 +365,126 @@ $client_b = new AI_HTTP_Client([
 // Both share the same API keys but have completely different configurations
 ```
 
+## AI Tools Registration System
+
+The library includes a comprehensive tool registration and discovery system that enables plugins to register AI-compatible tools that other plugins can discover and use.
+
+### Tool Registration Pattern
+
+Follow the same self-registration pattern as AI providers:
+
+```php
+// Register tools in your plugin file
+add_filter('ai_tools', function($tools) {
+    $tools['file_processor'] = [
+        'class' => 'DataMachine_FileProcessor_Tool',
+        'plugin_context' => 'data-machine',
+        'category' => 'file_handling',
+        'description' => 'Process uploaded files and extract content',
+        'method' => 'execute', // Optional, defaults to 'execute'
+        'parameters' => [
+            'file_path' => ['type' => 'string', 'required' => true],
+            'format' => ['type' => 'string', 'options' => ['text', 'json'], 'required' => false]
+        ]
+    ];
+    
+    $tools['content_generator'] = [
+        'class' => 'DataMachine_ContentGenerator_Tool',
+        'plugin_context' => 'data-machine', 
+        'category' => 'content_processing',
+        'description' => 'Generate content based on templates and data',
+        'parameters' => [
+            'template' => ['type' => 'string', 'required' => true],
+            'data' => ['type' => 'array', 'required' => true]
+        ]
+    ];
+    
+    return $tools;
+});
+```
+
+### Tool Discovery and Usage
+
+```php
+// Discovery - get all available tools
+$all_tools = apply_filters('ai_tools', []);
+
+// Discovery - plugin-scoped (auto-detected context)
+$my_tools = ai_http_get_tools();
+
+// Discovery - by category across all plugins
+$file_tools = ai_http_get_tools(null, 'file_handling');
+
+// Discovery - specific plugin's tools
+$data_machine_tools = ai_http_get_tools('data-machine');
+
+// Check availability
+if (ai_http_has_tool('file_processor')) {
+    // Tool is available
+}
+
+// Execute tools
+$result = ai_http_execute_tool('file_processor', [
+    'file_path' => '/uploads/document.pdf',
+    'format' => 'text'
+]);
+
+if ($result['success']) {
+    $processed_content = $result['data'];
+}
+```
+
+### AI Requests with Tools
+
+```php
+// Include tools in AI requests
+$tools_to_use = ai_http_get_tools(null, 'file_handling');
+
+$response = apply_filters('ai_request', [
+    'messages' => [
+        ['role' => 'user', 'content' => 'Process this file and summarize it']
+    ]
+], null, null, null, array_keys($tools_to_use));
+```
+
+### Tool Implementation
+
+Tools must implement an executable method (default: `execute`):
+
+```php
+class DataMachine_FileProcessor_Tool {
+    
+    public function execute($parameters) {
+        $file_path = $parameters['file_path'];
+        $format = $parameters['format'] ?? 'text';
+        
+        // Validate file exists
+        if (!file_exists($file_path)) {
+            throw new Exception("File not found: {$file_path}");
+        }
+        
+        // Process file based on format
+        switch ($format) {
+            case 'text':
+                return file_get_contents($file_path);
+            case 'json':
+                return json_decode(file_get_contents($file_path), true);
+            default:
+                throw new Exception("Unsupported format: {$format}");
+        }
+    }
+}
+```
+
+### Benefits
+
+- **Plugin Independence**: Each plugin registers its own tools
+- **Auto-Discovery**: Plugins can discover and use each other's tools
+- **Category Organization**: Tools grouped by functionality
+- **Parameter Validation**: Built-in parameter validation
+- **WordPress Native**: Uses standard filter system
+- **Zero Configuration**: Tools are automatically available once registered
+
 ## Distribution Model
 
 Designed for **flexible distribution**:
@@ -393,7 +511,87 @@ Each provider implements standardized interface:
 
 ## Current Version: 1.1.0
 
-### Constructor Requirements
+### Filter & Action Patterns (Recommended)
+
+**Reading Configuration:**
+```php
+// Global configuration
+$config = apply_filters('ai_config', null);
+
+// Step-specific configuration  
+$step_config = apply_filters('ai_config', $step_id);
+
+// Get models for a provider
+$models = apply_filters('ai_models', $provider_name);
+```
+
+**Tool Discovery & Management:**
+```php
+// Get all registered tools
+$all_tools = apply_filters('ai_tools', []);
+
+// Get plugin-specific tools (auto-detected context)
+$my_tools = ai_http_get_tools();
+
+// Get tools by category
+$file_tools = ai_http_get_tools(null, 'file_handling');
+
+// Check if specific tool is available
+$has_processor = ai_http_has_tool('file_processor');
+
+// Execute a tool
+$result = ai_http_execute_tool('file_processor', [
+    'file_path' => '/path/to/file.txt',
+    'format' => 'json'
+]);
+```
+
+**AI Requests:**
+```php
+// Standard AI request
+$response = apply_filters('ai_request', $request);
+
+// With specific provider
+$response = apply_filters('ai_request', $request, $provider_name);
+
+// With streaming callback
+$response = apply_filters('ai_request', $request, null, $streaming_callback);
+
+// With step-aware configuration and tools
+$response = apply_filters('ai_request', $request, null, null, $step_id, $tools);
+```
+
+**Saving Configuration (Actions):**
+```php
+// Save provider settings
+do_action('save_ai_config', [
+    'type' => 'provider_settings',
+    'provider' => 'openai',
+    'data' => ['model' => 'gpt-4', 'temperature' => 0.7]
+]);
+
+// Save step-specific configuration
+do_action('save_ai_config', [
+    'type' => 'step_config',
+    'step_id' => $step_id,
+    'data' => ['provider' => 'openai', 'model' => 'gpt-4']
+]);
+
+// Save API key
+do_action('save_ai_config', [
+    'type' => 'api_key',
+    'provider' => 'openai',
+    'api_key' => 'sk-...'
+]);
+
+// Set selected provider
+do_action('save_ai_config', [
+    'type' => 'selected_provider',
+    'provider' => 'openai'
+]);
+```
+
+### Legacy Direct Instantiation (Not Recommended)
 
 **OptionsManager Constructor:**
 ```php
@@ -401,16 +599,7 @@ Each provider implements standardized interface:
 $options_manager = new AI_HTTP_Options_Manager('my-plugin-slug', 'llm');
 ```
 
-**Client Constructor:**
-```php
-// REQUIRED - both parameters required
-$client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm'
-]);
-```
-
-**No Defaults:** Explicit configuration required for proper multi-plugin isolation. Library fails fast with clear errors when not configured properly.
+**Note:** Direct instantiation is only needed for advanced use cases. Use filters and actions for standard operations.
 
 **Current Features:**
 - Auto-save settings functionality

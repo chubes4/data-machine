@@ -90,11 +90,11 @@ class AI_HTTP_Anthropic_Provider {
 
         $url = $this->base_url . '/messages';
         
-        // Use centralized ai_request filter
+        // Use centralized ai_http filter
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
         
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => wp_json_encode($provider_request)
         ], 'Anthropic');
@@ -121,11 +121,11 @@ class AI_HTTP_Anthropic_Provider {
 
         $url = $this->base_url . '/messages';
         
-        // Use centralized ai_request filter with streaming=true
+        // Use centralized ai_http filter with streaming=true
         $headers = $this->get_auth_headers();
         $headers['Content-Type'] = 'application/json';
         
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => wp_json_encode($provider_request)
         ], 'Anthropic Streaming', true, $callback);
@@ -194,8 +194,8 @@ class AI_HTTP_Anthropic_Provider {
         $body .= file_get_contents($file_path) . "\r\n";
         $body .= "--{$boundary}--\r\n";
 
-        // Send request using centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'POST', $url, [
+        // Send request using centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'POST', $url, [
             'headers' => $headers,
             'body' => $body
         ], 'Anthropic File Upload');
@@ -228,8 +228,8 @@ class AI_HTTP_Anthropic_Provider {
 
         $url = $this->base_url . "/files/{$file_id}";
         
-        // Send request using centralized ai_request filter
-        $result = apply_filters('ai_request', [], 'DELETE', $url, [
+        // Send request using centralized ai_http filter
+        $result = apply_filters('ai_http', [], 'DELETE', $url, [
             'headers' => $this->get_auth_headers()
         ], 'Anthropic File Delete');
 
