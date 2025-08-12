@@ -102,8 +102,12 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
                     $ai_config = apply_filters('ai_config', $pipeline_step_id);
                     
                     if (!empty($ai_config)):
-                        $model_name = $ai_config['model'] ?? 'Not configured';
-                        $prompt = $ai_config['system_prompt'] ?? '';
+                        // Access provider-keyed configuration structure
+                        $selected_provider = $ai_config['selected_provider'] ?? 'openai';
+                        $provider_config = $ai_config[$selected_provider] ?? [];
+                        
+                        $model_name = $provider_config['model'] ?? 'Not configured';
+                        $prompt = $provider_config['system_prompt'] ?? '';
                         $prompt_excerpt = !empty($prompt) ? (strlen($prompt) > 100 ? substr($prompt, 0, 100) . '...' : $prompt) : 'No prompt set';
                     ?>
                         <div class="dm-ai-step-info">

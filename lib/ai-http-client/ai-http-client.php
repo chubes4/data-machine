@@ -95,24 +95,24 @@ if (!function_exists('ai_http_client_init')) {
         
         // 1. Load dependencies in order
         
-        // 2. Shared utilities (moved to top-level)
+        // 2. Shared utilities
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/FileUploadClient.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/ToolExecutor.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/WordPressSSEHandler.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/ToolExecutor.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/WordPressSSEHandler.php';
         
-        // 2.6. Unified Normalizers (NEW ARCHITECTURE)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedRequestNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedResponseNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedStreamingNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedToolResultsNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/LLM/UnifiedModelFetcher.php';
+        // 2.6. Unified Normalizers
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedRequestNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedResponseNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedStreamingNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedToolResultsNormalizer.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedModelFetcher.php';
         
-        // 2.7. LLM Provider Classes (FILTER-BASED ARCHITECTURE)
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openai.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/gemini.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/anthropic.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/grok.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/LLM/openrouter.php';
+        // 2.7. Provider Classes (FILTER-BASED ARCHITECTURE)
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openai.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/gemini.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/anthropic.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/grok.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openrouter.php';
         
         // 2.8. Filter-based provider registration system
         require_once AI_HTTP_CLIENT_PATH . '/src/Filters.php';
@@ -125,7 +125,7 @@ if (!function_exists('ai_http_client_init')) {
         // 4.5. WordPress management components
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/OptionsManager.php';
         require_once AI_HTTP_CLIENT_PATH . '/src/Utils/AjaxHandler.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/LLM/PromptManager.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/PromptManager.php';
         
         // 4.6. Template-based component system (no class files needed - uses WordPress-native templates)
     }

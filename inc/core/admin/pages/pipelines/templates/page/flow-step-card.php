@@ -139,7 +139,11 @@ $handler_configured = !$is_empty && !empty($current_handler);
                         <!-- AI step status - show model name -->
                         <?php
                         $ai_config = apply_filters('ai_config', $pipeline_step_id);
-                        $model_name = !empty($ai_config['model']) ? $ai_config['model'] : 'AI processing step configured';
+                        
+                        // Access provider-keyed configuration structure
+                        $selected_provider = $ai_config['selected_provider'] ?? 'openai';
+                        $provider_config = $ai_config[$selected_provider] ?? [];
+                        $model_name = !empty($provider_config['model']) ? $provider_config['model'] : 'AI processing step configured';
                         ?>
                         <div class="dm-placeholder-text"><?php echo esc_html($model_name); ?></div>
                     <?php endif; ?>

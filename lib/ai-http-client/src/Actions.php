@@ -41,11 +41,8 @@ function ai_http_client_register_actions() {
             return;
         }
         
-        // Default to LLM type
-        $ai_type = 'llm';
-        
         try {
-            $options_manager = new AI_HTTP_Options_Manager($plugin_context, $ai_type);
+            $options_manager = new AI_HTTP_Options_Manager($plugin_context);
             
             // Route to appropriate save operation based on type
             switch ($config_data['type']) {

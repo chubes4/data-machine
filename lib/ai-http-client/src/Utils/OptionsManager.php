@@ -33,10 +33,6 @@ class AI_HTTP_Options_Manager {
      */
     private $plugin_context;
 
-    /**
-     * AI type for scoped configuration
-     */
-    private $ai_type;
 
     /**
      * Whether the options manager is properly configured
@@ -44,28 +40,11 @@ class AI_HTTP_Options_Manager {
     private $is_configured = false;
 
     /**
-     * Constructor with plugin context and AI type
+     * Constructor with plugin context
      *
      * @param string $plugin_context Plugin context for scoped configuration
-     * @param string $ai_type AI type for scoped configuration ('llm', 'upscaling', 'generative')
      */
-    public function __construct($plugin_context = null, $ai_type = null) {
-        // Require ai_type parameter - no defaults
-        if (empty($ai_type)) {
-            $this->is_configured = false;
-            return;
-        }
-        
-        // Validate ai_type using filter-based discovery
-        $ai_types = apply_filters('ai_types', []);
-        $valid_types = array_keys($ai_types);
-        if (!in_array($ai_type, $valid_types)) {
-            $this->is_configured = false;
-            return;
-        }
-        
-        $this->ai_type = $ai_type;
-        
+    public function __construct($plugin_context = null) {
         // Use direct plugin context validation (simplified approach)
         if (empty($plugin_context)) {
             throw new Exception('Plugin context is required for AI_HTTP_Options_Manager');
@@ -76,13 +55,13 @@ class AI_HTTP_Options_Manager {
     }
 
     /**
-     * Get plugin and AI type scoped option name
+     * Get plugin scoped option name
      *
      * @param string $base_name Base option name
-     * @return string Scoped option name with plugin context and AI type
+     * @return string Scoped option name with plugin context
      */
     private function get_scoped_option_name($base_name) {
-        return $base_name . '_' . $this->plugin_context . '_' . $this->ai_type;
+        return $base_name . '_' . $this->plugin_context;
     }
 
     /**
@@ -450,7 +429,7 @@ class AI_HTTP_Options_Manager {
             }
             
             $step_id = isset($_POST['step_id']) ? sanitize_key(wp_unslash($_POST['step_id'])) : null;
-            $options_manager = new self($plugin_context, 'llm');
+            $options_manager = new self($plugin_context);
             
             if ($step_id) {
                 // Step-aware form processing
@@ -549,7 +528,7 @@ class AI_HTTP_Options_Manager {
             $provider = sanitize_text_field(wp_unslash($_POST['provider']));
             $step_id = isset($_POST['step_id']) ? sanitize_key(wp_unslash($_POST['step_id'])) : null;
             
-            $options_manager = new self($plugin_context, 'llm');
+            $options_manager = new self($plugin_context);
             
             // Use step-aware method if step_id is provided
             if ($step_id) {

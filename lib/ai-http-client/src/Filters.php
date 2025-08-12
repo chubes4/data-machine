@@ -20,30 +20,7 @@ defined('ABSPATH') || exit;
  */
 function ai_http_client_register_provider_filters() {
     
-    // Register supported AI types
-    add_filter('ai_types', function($types) {
-        $types['llm'] = [
-            'name' => 'Large Language Models',
-            'description' => 'Text generation and completion',
-            'status' => 'active'
-        ];
-        
-        $types['upscaling'] = [
-            'name' => 'Image Upscaling',
-            'description' => 'Image resolution enhancement', 
-            'status' => 'planned'
-        ];
-        
-        $types['generative'] = [
-            'name' => 'Image Generation',
-            'description' => 'Text-to-image generation',
-            'status' => 'planned'
-        ];
-        
-        return $types;
-    });
-    
-    // Note: LLM providers now self-register in their individual files
+    // Note: Providers now self-register in their individual files
     // This eliminates central coordination and enables true modular architecture
     
     // Register AI tools filter for plugin-scoped tool registration
@@ -223,11 +200,8 @@ function ai_http_client_register_provider_filters() {
             return [];
         }
         
-        // Default to LLM type
-        $ai_type = 'llm';
-        
         try {
-            $options_manager = new AI_HTTP_Options_Manager($plugin_context, $ai_type);
+            $options_manager = new AI_HTTP_Options_Manager($plugin_context);
             
             if ($step_id) {
                 // Step-specific configuration
@@ -282,13 +256,10 @@ function ai_http_client_register_provider_filters() {
             return [];
         }
         
-        // Default to LLM type
-        $ai_type = 'llm';
-        
         try {
             // Get provider name if not specified
             if (!$provider_name) {
-                $options_manager = new AI_HTTP_Options_Manager($plugin_context, $ai_type);
+                $options_manager = new AI_HTTP_Options_Manager($plugin_context);
                 $provider_name = $options_manager->get_selected_provider();
                 
                 if (empty($provider_name)) {
@@ -300,7 +271,7 @@ function ai_http_client_register_provider_filters() {
             }
             
             // Create provider instance directly
-            $provider = ai_http_create_provider($provider_name, $plugin_context, $ai_type);
+            $provider = ai_http_create_provider($provider_name, $plugin_context);
             if (!$provider) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log("[AI HTTP Client] ai_models filter: Failed to create provider '{$provider_name}'");
@@ -334,8 +305,6 @@ function ai_http_client_register_provider_filters() {
             return ai_http_create_error_response('Could not auto-detect plugin context');
         }
         
-        // Default to LLM type
-        $ai_type = 'llm';
         
         // Validate request format
         if (!is_array($request)) {
@@ -382,7 +351,7 @@ function ai_http_client_register_provider_filters() {
                     }
                 } else {
                     // Global: get provider from global configuration
-                    $options_manager = new AI_HTTP_Options_Manager($plugin_context, $ai_type);
+                    $options_manager = new AI_HTTP_Options_Manager($plugin_context);
                     $provider_name = $options_manager->get_selected_provider();
                     
                     if (empty($provider_name)) {
@@ -398,7 +367,7 @@ function ai_http_client_register_provider_filters() {
             }
             
             // Get provider instance
-            $provider = ai_http_create_provider($provider_name, $plugin_context, $ai_type);
+            $provider = ai_http_create_provider($provider_name, $plugin_context);
             if (!$provider) {
                 return ai_http_create_error_response("Failed to create provider instance for '{$provider_name}'");
             }
@@ -483,18 +452,16 @@ function ai_http_client_register_provider_filters() {
             return '<div class="notice notice-error"><p>Unable to detect plugin context for AI components</p></div>';
         }
         
-        $ai_type = 'llm'; // Default AI type
+        // Extract step_id from config for step-aware configuration loading
+        $step_id = $config['step_id'] ?? '';
         
-        // Get current configuration for auto-populated values
-        $all_config = apply_filters('ai_config', null);
+        // Get current configuration for auto-populated values (step-aware)
+        $all_config = apply_filters('ai_config', $step_id);
         $selected_provider = $all_config['selected_provider'] ?? 'openai';
         $provider_config = $all_config[$selected_provider] ?? [];
         
         // Generate unique ID for form elements
         $unique_id = 'ai_' . sanitize_key($plugin_context) . '_' . uniqid();
-        
-        // Extract step_id from config for step-aware field naming
-        $step_id = $config['step_id'] ?? '';
         
         // Build form HTML with wrapper
         $html = '<div class="ai-http-client-components" data-plugin-context="' . esc_attr($plugin_context) . '">';
@@ -609,15 +576,14 @@ function ai_http_init_normalizers_for_provider($provider_name) {
  *
  * @param string $provider_name Provider name
  * @param string $plugin_context Plugin context
- * @param string $ai_type AI type
  * @return object|false Provider instance or false on failure
  */
-function ai_http_create_provider($provider_name, $plugin_context, $ai_type) {
+function ai_http_create_provider($provider_name, $plugin_context) {
     // Use filter-based provider discovery
     $all_providers = apply_filters('ai_providers', []);
     $provider_info = $all_providers[strtolower($provider_name)] ?? null;
     
-    if (!$provider_info || $provider_info['type'] !== $ai_type) {
+    if (!$provider_info) {
         return false;
     }
     
