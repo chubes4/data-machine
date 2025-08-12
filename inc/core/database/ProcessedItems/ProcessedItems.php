@@ -83,13 +83,13 @@ class ProcessedItems {
         $result = $wpdb->insert(
             $this->table_name,
             array(
-                'flow_id'         => $flow_id,
+                'flow_step_id'    => $flow_step_id,
                 'source_type'     => $source_type,
                 'item_identifier' => $item_identifier,
                 // processed_timestamp defaults to NOW()
             ),
             array(
-                '%d', // flow_id
+                '%s', // flow_step_id
                 '%s', // source_type
                 '%s', // item_identifier
             )
