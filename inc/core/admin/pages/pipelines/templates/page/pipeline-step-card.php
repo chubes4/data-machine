@@ -101,17 +101,22 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
                     <?php
                     $ai_config = apply_filters('ai_config', $pipeline_step_id);
                     
-                    if (!empty($ai_config)):
-                        // Access provider-keyed configuration structure
-                        $selected_provider = $ai_config['selected_provider'] ?? 'openai';
-                        $provider_config = $ai_config[$selected_provider] ?? [];
-                        
-                        $model_name = $provider_config['model'] ?? 'Not configured';
-                        $prompt = $provider_config['system_prompt'] ?? '';
+                    if (!empty($ai_config) && isset($ai_config['selected_provider'])):
+                        // Configuration exists - extract display information
+                        $selected_provider = $ai_config['selected_provider'];
+                        $model_name = $ai_config['model'] ?? 'Model not selected';
+                        $prompt = $ai_config['system_prompt'] ?? '';
                         $prompt_excerpt = !empty($prompt) ? (strlen($prompt) > 100 ? substr($prompt, 0, 100) . '...' : $prompt) : 'No prompt set';
+                        
+                        // Get API key status for selected provider
+                        $has_api_key = !empty($ai_config['providers'][$selected_provider]['api_key'] ?? '');
+                        $status_class = $has_api_key ? 'dm-ai-configured' : 'dm-ai-needs-key';
+                        $status_text = $has_api_key ? '' : ' (API key needed)';
                     ?>
-                        <div class="dm-ai-step-info">
-                            <div class="dm-model-name"><strong><?php echo esc_html($model_name); ?></strong></div>
+                        <div class="dm-ai-step-info <?php echo esc_attr($status_class); ?>">
+                            <div class="dm-model-name">
+                                <strong><?php echo esc_html(ucfirst($selected_provider)); ?>: <?php echo esc_html($model_name); ?><?php echo esc_html($status_text); ?></strong>
+                            </div>
                             <div class="dm-prompt-excerpt"><?php echo esc_html($prompt_excerpt); ?></div>
                         </div>
                     <?php else: ?>

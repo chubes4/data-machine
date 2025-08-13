@@ -117,8 +117,7 @@ if (!function_exists('ai_http_client_init')) {
         // 2.8. Filter-based provider registration system
         require_once AI_HTTP_CLIENT_PATH . '/src/Filters.php';
         
-        // 2.9. Action-based write operations system
-        require_once AI_HTTP_CLIENT_PATH . '/src/Actions.php';
+        // Actions.php removed - plugins handle their own configuration
         
         // 3. Pure filter architecture - no client class needed
         

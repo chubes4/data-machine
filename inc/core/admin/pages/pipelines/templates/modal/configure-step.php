@@ -41,6 +41,18 @@ if (!defined('WPINC')) {
             return;
         }
         
+        // Get step configuration to make saved models available to JavaScript
+        $step_config = apply_filters('dm_get_flow_step_config', [], $pipeline_step_id);
+        
+        // Add hidden fields for saved models per provider
+        if (!empty($step_config['providers'])) {
+            foreach ($step_config['providers'] as $provider => $provider_config) {
+                if (!empty($provider_config['model'])) {
+                    echo '<input type="hidden" id="saved_' . esc_attr($provider) . '_model" value="' . esc_attr($provider_config['model']) . '" />';
+                }
+            }
+        }
+        
         // Render AI HTTP Client components using template-based filter system
         echo apply_filters('ai_render_component', '', [
             'step_id' => $pipeline_step_id, // Unique step-aware configuration

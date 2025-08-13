@@ -535,67 +535,7 @@ function ai_http_upload_file_to_provider($file_path, $purpose = 'user_data', $pr
     return $provider->upload_file($file_path, $purpose);
 }
 
-/**
- * Merge step configuration with request parameters
- *
- * @param array $request Base request
- * @param array $step_config Step configuration
- * @return array Enhanced request
- */
-function ai_http_merge_step_config_with_request($request, $step_config) {
-    // Start with the base request
-    $enhanced_request = $request;
-    
-    // Override with step-specific settings (request params take precedence)
-    if (isset($step_config['model']) && !isset($request['model'])) {
-        $enhanced_request['model'] = $step_config['model'];
-    }
-    
-    if (isset($step_config['temperature']) && !isset($request['temperature'])) {
-        $enhanced_request['temperature'] = $step_config['temperature'];
-    }
-    
-    if (isset($step_config['max_tokens']) && !isset($request['max_tokens'])) {
-        $enhanced_request['max_tokens'] = $step_config['max_tokens'];
-    }
-    
-    
-    // Handle step-specific system prompt
-    if (isset($step_config['system_prompt']) && !empty($step_config['system_prompt'])) {
-        // Ensure messages array exists
-        if (!isset($enhanced_request['messages'])) {
-            $enhanced_request['messages'] = array();
-        }
-        
-        // Check if there's already a system message
-        $has_system_message = false;
-        foreach ($enhanced_request['messages'] as $message) {
-            if (isset($message['role']) && $message['role'] === 'system') {
-                $has_system_message = true;
-                break;
-            }
-        }
-        
-        // Add step system prompt if no system message exists
-        if (!$has_system_message) {
-            array_unshift($enhanced_request['messages'], array(
-                'role' => 'system',
-                'content' => $step_config['system_prompt']
-            ));
-        }
-    }
-    
-    // Handle step-specific tools
-    if (isset($step_config['tools_enabled']) && is_array($step_config['tools_enabled']) && !isset($request['tools'])) {
-        $enhanced_request['tools'] = array();
-        foreach ($step_config['tools_enabled'] as $tool_name) {
-            // Convert tool names to tool definitions
-            $enhanced_request['tools'][] = ai_http_convert_tool_name_to_definition($tool_name);
-        }
-    }
-    
-    return $enhanced_request;
-}
+// Step configuration merge function removed - plugins handle their own step configuration
 
 /**
  * Convert tool name to tool definition
@@ -811,6 +751,6 @@ add_action('init', 'ai_http_client_register_provider_filters');
 // Only registers in admin context to avoid unnecessary overhead
 if (is_admin()) {
     add_action('wp_ajax_ai_http_save_api_key', ['AI_HTTP_Ajax_Handler', 'save_api_key']);
-    add_action('wp_ajax_ai_http_load_provider_settings', ['AI_HTTP_Ajax_Handler', 'load_provider_settings']);
+    add_action('wp_ajax_ai_http_load_provider_settings', ['AI_HTTP_Ajax_Handler', 'load_api_key']);
     add_action('wp_ajax_ai_http_get_models', ['AI_HTTP_Ajax_Handler', 'get_models']);
 }

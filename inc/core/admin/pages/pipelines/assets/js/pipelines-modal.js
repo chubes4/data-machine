@@ -50,6 +50,38 @@
             
             // Schedule form interactions within modal content
             $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
+            
+            // AI step configuration - handle provider switching with saved models
+            $(document).on('dm-modal-opened', this.handleAIStepConfiguration.bind(this));
+        },
+        
+        /**
+         * Handle AI step configuration modal opening
+         * Restores saved model selections when provider is switched
+         */
+        handleAIStepConfiguration: function(e, modalType) {
+            if (modalType !== 'configure-step') return;
+            
+            // Hook into provider change to restore saved models
+            $(document).on('change.ai-step', '.ai-http-provider-manager select[name*="provider"]', function() {
+                const provider = $(this).val();
+                const modelSelect = $('.ai-http-provider-manager select[name*="model"]');
+                
+                // After library loads models, check if we have a saved selection
+                setTimeout(function() {
+                    // Get saved model from hidden field
+                    const savedModel = $('#saved_' + provider + '_model').val();
+                    if (savedModel && modelSelect.find('option[value="' + savedModel + '"]').length) {
+                        modelSelect.val(savedModel);
+                        console.log('DM Pipeline Modal: Restored saved model for ' + provider + ':', savedModel);
+                    }
+                }, 1000); // Give time for models to load via library's AJAX
+            });
+            
+            // Clean up event handler when modal closes
+            $(document).one('dm-modal-closed', function() {
+                $(document).off('change.ai-step');
+            });
         },
 
         /**

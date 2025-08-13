@@ -118,6 +118,7 @@ require_once __DIR__ . '/inc/engine/filters/DataMachineFilters.php';
 require_once __DIR__ . '/inc/engine/filters/Database.php';
 require_once __DIR__ . '/inc/engine/filters/Admin.php';
 require_once __DIR__ . '/inc/engine/filters/Logger.php';
+require_once __DIR__ . '/inc/engine/filters/AI.php';
 require_once __DIR__ . '/inc/engine/actions/DataMachineActions.php';
 
 // PSR-4 Autoloading - no manual includes needed

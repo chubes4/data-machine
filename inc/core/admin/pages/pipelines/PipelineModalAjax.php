@@ -269,7 +269,19 @@ class PipelineModalAjax
                         // API key goes to shared storage, NOT step config
                     }
                     if (isset($_POST[$model_field])) {
-                        $step_config_data['model'] = sanitize_text_field(wp_unslash($_POST[$model_field]));
+                        $model = sanitize_text_field(wp_unslash($_POST[$model_field]));
+                        $step_config_data['model'] = $model;
+                        
+                        // Also store model per provider for provider switching
+                        if (!empty($provider) && !empty($model)) {
+                            if (!isset($step_config_data['providers'])) {
+                                $step_config_data['providers'] = [];
+                            }
+                            if (!isset($step_config_data['providers'][$provider])) {
+                                $step_config_data['providers'][$provider] = [];
+                            }
+                            $step_config_data['providers'][$provider]['model'] = $model;
+                        }
                     }
                     if (isset($_POST[$temperature_field])) {
                         $step_config_data['temperature'] = floatval($_POST[$temperature_field]);
@@ -281,55 +293,95 @@ class PipelineModalAjax
                         $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST['system_prompt']));
                     }
                     
-                    // CRITICAL FIX: Save API key to shared storage SEPARATELY using action
+                    // Save API key directly to WordPress options (library expects individual options)
                     if (!empty($api_key) && !empty($provider)) {
-                        do_action('save_ai_config', [
-                            'type' => 'api_key',
-                            'provider' => $provider,
-                            'api_key' => $api_key
-                        ]);
+                        $option_name = $provider . '_api_key';
+                        update_option($option_name, $api_key);
                         
-                        do_action('dm_log', 'debug', 'API key save attempt', [
+                        do_action('dm_log', 'debug', 'API key saved to WordPress options', [
                             'provider' => $provider,
-                            'api_key_length' => strlen($api_key),
-                            'save_success' => true // Actions don't return values
+                            'option_name' => $option_name,
+                            'api_key_length' => strlen($api_key)
                         ]);
                     }
                     
-                    // Save step-specific configuration (without API key) using action
+                    // Save step configuration to pipeline database
                     do_action('dm_log', 'debug', 'Before step config save', [
                         'pipeline_step_id' => $pipeline_step_id,
                         'step_id' => $step_id,
                         'config_data' => $step_config_data
                     ]);
                     
-                    do_action('save_ai_config', [
-                        'type' => 'step_config',
-                        'step_id' => $step_id,
-                        'data' => $step_config_data
-                    ]);
+                    // Get current pipeline configuration
+                    $all_databases = apply_filters('dm_db', []);
+                    $db_pipelines = $all_databases['pipelines'] ?? null;
                     
-                    do_action('dm_log', 'debug', 'Step config save attempt', [
-                        'pipeline_step_id' => $pipeline_step_id,
-                        'step_id' => $step_id,
-                        'config_keys' => array_keys($step_config_data),
-                        'save_success' => true, // Actions don't return values
-                        'option_name' => 'ai_http_client_step_config_data-machine_llm'
-                    ]);
-                    
-                    $success = true; // Actions don't return values, assume success
-                    
-                    if ($success) {
-                        wp_send_json_success([
-                            'message' => __('AI step configuration saved successfully', 'data-machine'),
-                            'pipeline_step_id' => $pipeline_step_id,
-                            'debug_info' => [
-                                'api_key_saved' => true, // Actions don't return values
-                                'step_config_saved' => true, // Actions don't return values
-                                'provider' => $provider
-                            ]
-                        ]);
+                    if (!$db_pipelines) {
+                        throw new \Exception('Pipeline database service not available');
                     }
+                    
+                    $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+                    if (!$pipeline) {
+                        throw new \Exception('Pipeline not found: ' . $pipeline_id);
+                    }
+                    
+                    // Get current step configuration
+                    $step_configuration = is_string($pipeline['step_configuration']) 
+                        ? json_decode($pipeline['step_configuration'], true) 
+                        : ($pipeline['step_configuration'] ?? []);
+                    
+                    if (!is_array($step_configuration)) {
+                        $step_configuration = [];
+                    }
+                    
+                    // Merge with existing step configuration to preserve provider-specific models
+                    if (isset($step_configuration[$pipeline_step_id])) {
+                        $existing_config = $step_configuration[$pipeline_step_id];
+                        
+                        // Preserve existing provider models
+                        if (isset($existing_config['providers']) && isset($step_config_data['providers'])) {
+                            $step_config_data['providers'] = array_merge(
+                                $existing_config['providers'], 
+                                $step_config_data['providers']
+                            );
+                        } elseif (isset($existing_config['providers']) && !isset($step_config_data['providers'])) {
+                            $step_config_data['providers'] = $existing_config['providers'];
+                        }
+                        
+                        // Merge with existing config
+                        $step_configuration[$pipeline_step_id] = array_merge($existing_config, $step_config_data);
+                    } else {
+                        $step_configuration[$pipeline_step_id] = $step_config_data;
+                    }
+                    
+                    // Save updated pipeline configuration using dm_auto_save
+                    $success = $db_pipelines->update_pipeline($pipeline_id, [
+                        'step_configuration' => json_encode($step_configuration)
+                    ]);
+                    
+                    if (!$success) {
+                        throw new \Exception('Failed to save pipeline step configuration');
+                    }
+                    
+                    // Trigger auto-save for additional processing
+                    do_action('dm_auto_save', $pipeline_id);
+                    
+                    do_action('dm_log', 'debug', 'AI step configuration saved successfully', [
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'pipeline_id' => $pipeline_id,
+                        'provider' => $provider,
+                        'config_keys' => array_keys($step_config_data)
+                    ]);
+                    
+                    wp_send_json_success([
+                        'message' => __('AI step configuration saved successfully', 'data-machine'),
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'debug_info' => [
+                            'api_key_saved' => !empty($api_key),
+                            'step_config_saved' => true,
+                            'provider' => $provider
+                        ]
+                    ]);
                     
                 } catch (Exception $e) {
                     do_action('dm_log', 'error', 'AI step configuration save error: ' . $e->getMessage());

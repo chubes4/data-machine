@@ -53,9 +53,9 @@ class AI_HTTP_Ajax_Handler {
     }
     
     /**
-     * Load provider settings via AJAX - simplified to only return API keys
+     * Load API key for provider via AJAX
      */
-    public static function load_provider_settings() {
+    public static function load_api_key() {
         // Security verification
         if (!check_ajax_referer('ai_http_nonce', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security verification failed', 'ai-http-client')]);
@@ -79,12 +79,12 @@ class AI_HTTP_Ajax_Handler {
             // Get API key from shared storage
             $api_key = get_option($provider . '_api_key', '');
             
-            $settings = [
+            $data = [
                 'provider' => $provider,
                 'api_key' => $api_key
             ];
             
-            wp_send_json_success($settings);
+            wp_send_json_success($data);
             
         } catch (Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);

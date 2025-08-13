@@ -127,14 +127,68 @@ $files = $repo->get_all_files($flow_step_id);
 
 
 
+## Action Hook System
+
+**Central Hooks** (organized in `/inc/engine/actions/DataMachineActions.php`):
+```php
+// Execution
+do_action('dm_run_flow_now', $flow_id, 'context');
+do_action('dm_execute_step', $job_id, $flow_step_id, $data);
+do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
+
+// CRUD
+do_action('dm_create', 'job', ['pipeline_id' => $pipeline_id, 'flow_id' => $flow_id]);
+do_action('dm_update_job_status', $job_id, 'completed', 'context', 'old_status');
+do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
+do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly', 'inactive');
+do_action('dm_sync_steps_to_flow', $flow_id, $step_data, ['context' => 'add_step']);
+
+// Utilities
+do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
+do_action('dm_ajax_route', 'dm_add_step', 'page');
+do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
+do_action('dm_auto_save', $pipeline_id);
+do_action('dm_oauth', 'store', 'twitter', $credentials);
+```
+
 ## Critical Rules
 
 **Engine Agnosticism**: Never hardcode step types in `/inc/engine/`
-**Discovery Pattern**: Filter-based service access only - never direct instantiation
+**Discovery Pattern**: Use `$all_services = apply_filters('dm_get_services', []); $service = $all_services[$key] ?? null;`
+**Service Access**: Filter-based discovery only - never direct instantiation
+**Template Rendering**: Always `apply_filters('dm_render_template', '', $template, $data)`
 **Field Naming**: Use `pipeline_step_id` consistently (UUID4)
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()`
+**CSS Namespace**: All admin CSS uses `dm-` prefix
 **Authentication**: Admin-global only with `manage_options` checks
 **OAuth Storage**: `{handler}_auth_data` option keys
-**CSS Namespace**: All admin CSS uses `dm-` prefix
+
+## Database Architecture
+
+**Tables**:
+- `wp_dm_pipelines`: Template definitions (pipeline_step_id UUID4)
+- `wp_dm_flows`: Configured instances with handler settings
+- `wp_dm_jobs`: Execution records with Action Scheduler integration
+- `wp_dm_processed_items`: Duplicate tracking (flow_step_id, source_type, item_identifier)
+- `wp_dm_remote_locations`: Site-to-site authentication
+
+**ProcessedItems**: Flow-step level tracking via database service collection:
+```php
+$all_databases = apply_filters('dm_db', []);
+$processed_items_service = $all_databases['processed_items'] ?? null;
+```
+
+**Admin Pages**: Register via `dm_admin_pages` filter:
+```php
+add_filter('dm_admin_pages', function($pages) {
+    $pages['jobs'] = [
+        'page_title' => __('Jobs', 'data-machine'),
+        'capability' => 'manage_options',
+        'templates' => __DIR__ . '/templates/',
+        'assets' => ['css' => [...], 'js' => [...]]
+    ];
+    return $pages;
+});
+```
 
 

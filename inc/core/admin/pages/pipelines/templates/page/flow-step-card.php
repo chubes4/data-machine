@@ -136,16 +136,27 @@ $handler_configured = !$is_empty && !empty($current_handler);
                         <!-- No handlers configured -->
                         <div class="dm-placeholder-text"><?php esc_html_e('No handlers configured', 'data-machine'); ?></div>
                     <?php elseif ($step_type === 'ai'): ?>
-                        <!-- AI step status - show model name -->
+                        <!-- AI step status - show configuration from pipeline level -->
                         <?php
                         $ai_config = apply_filters('ai_config', $pipeline_step_id);
                         
-                        // Access provider-keyed configuration structure
-                        $selected_provider = $ai_config['selected_provider'] ?? 'openai';
-                        $provider_config = $ai_config[$selected_provider] ?? [];
-                        $model_name = !empty($provider_config['model']) ? $provider_config['model'] : 'AI processing step configured';
+                        if (!empty($ai_config) && isset($ai_config['selected_provider'])):
+                            $selected_provider = $ai_config['selected_provider'];
+                            $model_name = $ai_config['model'] ?? 'Model not selected';
+                            $has_api_key = !empty($ai_config['providers'][$selected_provider]['api_key'] ?? '');
+                            
+                            if ($has_api_key && !empty($ai_config['model'])) {
+                                $display_text = ucfirst($selected_provider) . ': ' . $model_name;
+                            } elseif (!$has_api_key) {
+                                $display_text = ucfirst($selected_provider) . ' (API key needed)';
+                            } else {
+                                $display_text = ucfirst($selected_provider) . ' (model needed)';
+                            }
+                        else:
+                            $display_text = 'AI step not configured';
+                        endif;
                         ?>
-                        <div class="dm-placeholder-text"><?php echo esc_html($model_name); ?></div>
+                        <div class="dm-placeholder-text"><?php echo esc_html($display_text); ?></div>
                     <?php endif; ?>
                 </div>
             </div>

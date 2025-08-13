@@ -173,39 +173,7 @@ $prompt = AI_HTTP_Prompt_Manager::build_modular_system_prompt(
 );
 ```
 
-### 5. Step-Aware Configuration System
-```php
-// Configure AI behavior for specific use cases
-$client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm'
-]);
-
-// Send request using step-specific configuration
-// Automatically loads pre-configured provider, model, temperature, system prompt, and tools
-$response = $client->send_step_request('content_generation', [
-    'messages' => [
-        ['role' => 'user', 'content' => 'Write a blog post about WordPress development']
-    ]
-]);
-
-// Check if a step is configured
-if ($client->has_step_configuration('content_editing')) {
-    $response = $client->send_step_request('content_editing', $request);
-}
-
-// Get step configuration for debugging
-$step_config = $client->get_step_configuration('content_generation');
-// Returns: ['provider' => 'openai', 'model' => 'gpt-4', 'temperature' => 0.7, 'system_prompt' => '...', 'tools_enabled' => ['edit_content']]
-```
-
-**Step Configuration Benefits:**
-- **Use Case Specific**: Different AI behavior for content generation vs editing vs analysis
-- **Automatic Parameter Injection**: Pre-configured model, temperature, system prompts, and tools
-- **Plugin-Scoped**: Each plugin maintains independent step configurations
-- **Dynamic Tool Loading**: Automatically enables relevant tools per step
-
-### 6. Continuation Support (For Agentic Systems)
+### 5. Continuation Support (For Agentic Systems)
 ```php
 // Send initial request with tools
 $response = $client->send_request([
@@ -518,9 +486,6 @@ Each provider implements standardized interface:
 // Global configuration
 $config = apply_filters('ai_config', null);
 
-// Step-specific configuration  
-$step_config = apply_filters('ai_config', $step_id);
-
 // Get models for a provider
 $models = apply_filters('ai_models', $provider_name);
 ```
@@ -557,39 +522,11 @@ $response = apply_filters('ai_request', $request, $provider_name);
 // With streaming callback
 $response = apply_filters('ai_request', $request, null, $streaming_callback);
 
-// With step-aware configuration and tools
-$response = apply_filters('ai_request', $request, null, null, $step_id, $tools);
+// With tools
+$response = apply_filters('ai_request', $request, null, null, null, $tools);
 ```
 
-**Saving Configuration (Actions):**
-```php
-// Save provider settings
-do_action('save_ai_config', [
-    'type' => 'provider_settings',
-    'provider' => 'openai',
-    'data' => ['model' => 'gpt-4', 'temperature' => 0.7]
-]);
-
-// Save step-specific configuration
-do_action('save_ai_config', [
-    'type' => 'step_config',
-    'step_id' => $step_id,
-    'data' => ['provider' => 'openai', 'model' => 'gpt-4']
-]);
-
-// Save API key
-do_action('save_ai_config', [
-    'type' => 'api_key',
-    'provider' => 'openai',
-    'api_key' => 'sk-...'
-]);
-
-// Set selected provider
-do_action('save_ai_config', [
-    'type' => 'selected_provider',
-    'provider' => 'openai'
-]);
-```
+**Note:** Configuration saving is now handled by individual plugins rather than the library itself.
 
 ### Legacy Direct Instantiation (Not Recommended)
 
