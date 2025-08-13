@@ -39,7 +39,7 @@ class TwitterAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = get_option('twitter_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -54,7 +54,7 @@ class TwitterAuth {
     public function get_connection() {
         do_action('dm_log', 'debug', 'Attempting to get authenticated Twitter connection.');
 
-        $credentials = get_option('twitter_auth_data', []);
+        $credentials = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
             do_action('dm_log', 'error', 'Missing Twitter credentials in options.');
             return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
@@ -229,7 +229,7 @@ class TwitterAuth {
             ];
 
             // Store in site options for admin-only authentication
-            update_option('twitter_auth_data', $account_data);
+            apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
 
             // --- 5. Redirect on Success --- 
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=twitter'));
@@ -249,7 +249,7 @@ class TwitterAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = get_option('twitter_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['access_token_secret'])) {
             return null;
         }
@@ -263,7 +263,7 @@ class TwitterAuth {
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        return delete_option('twitter_auth_data');
+        return apply_filters('dm_oauth', false, 'clear', 'twitter');
     }
 }
 

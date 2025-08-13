@@ -28,22 +28,10 @@ class PipelineModalAjax
     /**
      * Get rendered template with provided data
      * Dedicated endpoint for template rendering to maintain architecture consistency
+     * Security handled by dm_ajax_route system
      */
     public function handle_get_template()
     {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with standard 'dm_pipeline_ajax' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
         // Remove fallbacks - require explicit data
         if (!isset($_POST['template'])) {
             wp_send_json_error(['message' => __('Template parameter is required', 'data-machine')]);
@@ -93,22 +81,10 @@ class PipelineModalAjax
 
     /**
      * Get flow step card data for template rendering
+     * Security handled by dm_ajax_route system
      */
     public function handle_get_flow_step_card()
     {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with standard 'dm_pipeline_ajax' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
         $pipeline_id = (int) ($_POST['pipeline_id'] ?? 0);
@@ -148,22 +124,10 @@ class PipelineModalAjax
 
     /**
      * Get flow configuration for step card updates
+     * Security handled by dm_ajax_route system
      */
     public function handle_get_flow_config()
     {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with standard 'dm_pipeline_ajax' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
         $flow_id = (int) sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 
         if (empty($flow_id)) {
@@ -183,22 +147,10 @@ class PipelineModalAjax
 
     /**
      * Handle step configuration save action
+     * Security handled by dm_ajax_route system
      */
     public function handle_configure_step_action()
     {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with standard 'dm_pipeline_ajax' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
         // Get context data from AJAX request - no fallbacks
         if (!isset($_POST['context'])) {
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
@@ -391,22 +343,10 @@ class PipelineModalAjax
 
     /**
      * Handle add location action for remote locations manager
+     * Security handled by dm_ajax_route system
      */
     public function handle_add_location_action()
     {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with standard 'dm_pipeline_ajax' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
         // Get context data from AJAX request
         $context = $_POST['context'] ?? [];
         
@@ -469,22 +409,10 @@ class PipelineModalAjax
 
     /**
      * Handle add handler action with proper update vs replace logic
+     * Security handled by dm_ajax_route system
      */
     public function handle_add_handler_action()
     {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with standard 'dm_pipeline_ajax' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
         // Pure discovery approach - get only essential data from context
         $context = $_POST['context'] ?? [];
         if (is_string($context)) {
@@ -622,79 +550,6 @@ class PipelineModalAjax
         }
     }
 
-    /**
-     * Handle AJAX request to get files with processing status for a specific handler
-     */
-    public function handle_get_handler_files()
-    {
-        // Security handled by dm_ajax_route system
-        
-        // Use the flow_step_id provided by the frontend
-        $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');
-        
-        if (empty($flow_step_id)) {
-            wp_send_json_error(['message' => __('Missing flow step ID from request.', 'data-machine')]);
-            return;
-        }
-        
-        try {
-            // Get files repository service
-            $repositories = apply_filters('dm_files_repository', []);
-            $repository = $repositories['files'] ?? null;
-            if (!$repository) {
-                wp_send_json_error(['message' => __('File repository service not available.', 'data-machine')]);
-                return;
-            }
-            
-            // Get all files for this flow step
-            $files = $repository->get_all_files($flow_step_id);
-            
-            // Get processed items service to check processing status
-            $all_databases = apply_filters('dm_db', []);
-            $processed_items_service = $all_databases['processed_items'] ?? null;
-            if (!$processed_items_service) {
-                wp_send_json_error(['message' => __('Processed items service not available.', 'data-machine')]);
-                return;
-            }
-            
-            // Enhance files with processing status
-            $files_with_status = [];
-            
-            foreach ($files as $file) {
-                $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file['path']);
-                
-                $files_with_status[] = [
-                    'filename' => $file['filename'],
-                    'size' => $file['size'],
-                    'size_formatted' => size_format($file['size']),
-                    'modified' => $file['modified'],
-                    'modified_formatted' => date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $file['modified']),
-                    'is_processed' => $is_processed,
-                    'status' => $is_processed ? __('Processed', 'data-machine') : __('Pending', 'data-machine'),
-                    'path' => $file['path']
-                ];
-            }
-            
-            // Generate HTML using template system
-            $html_rows = apply_filters('dm_render_template', '', 'modal/file-status-rows', [
-                'files' => $files_with_status
-            ]);
-            
-            wp_send_json_success([
-                'html' => $html_rows,
-                'total_files' => count($files_with_status),
-                'pending_files' => count(array_filter($files_with_status, fn($f) => !$f['is_processed']))
-            ]);
-            
-        } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Failed to get handler files.', [
-                'error' => $e->getMessage(),
-                'flow_step_id' => $flow_step_id
-            ]);
-            
-            wp_send_json_error(['message' => __('Failed to retrieve files.', 'data-machine')]);
-        }
-    }
 
     /**
      * Process handler settings from form data

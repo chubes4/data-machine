@@ -116,7 +116,7 @@ $handler_configured = !$is_empty && !empty($current_handler);
                             ?>
                             <button type="button" class="button button-small dm-modal-open" 
                                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+                                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
                                 <?php esc_html_e('Edit Handler', 'data-machine'); ?>
                             </button>
                         <?php endif; ?>

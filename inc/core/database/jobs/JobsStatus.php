@@ -35,7 +35,7 @@ class JobsStatus {
     }
 
     /**
-     * Update the status and started_at time for a job.
+     * Update the status for a job.
      *
      * @param int    $job_id The job ID.
      * @param string $status The new status (e.g., 'processing').
@@ -50,10 +50,9 @@ class JobsStatus {
             $this->table_name,
             [
                 'status' => $status,
-                'started_at' => current_time( 'mysql', 1 ), // GMT time
             ],
             ['job_id' => $job_id],
-            ['%s', '%s'], // Format for data
+            ['%s'], // Format for data
             ['%d']  // Format for WHERE
         );
         return $updated !== false;

@@ -116,7 +116,7 @@ $response = $client->send_request([
     'image_url' => 'https://example.com/image.jpg',
     'scale_factor' => '4x',
     'quality_settings' => [
-        'creativity' => 7,
+        'temperature' => 0.7,
         'detail' => 8
     ]
 ]);

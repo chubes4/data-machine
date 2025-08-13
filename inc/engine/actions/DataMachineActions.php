@@ -18,7 +18,7 @@
  * - dm_schedule_next_step: Central pipeline step scheduling eliminating Action Scheduler duplication
  * - dm_mark_item_processed: Universal processed item marking across all handlers
  * - dm_log: Central logging operations eliminating logger service discovery
- * - dm_ajax_route: Universal AJAX handler routing eliminating 132 lines of duplication
+ * - dm_ajax_route: Universal AJAX handler routing eliminating duplicated security validation
  *
  * ORGANIZED ACTIONS (WordPress-native registration):
  * - dm_create, dm_delete: CRUD operations via organized action classes (Create.php, Delete.php)
@@ -121,7 +121,9 @@ function dm_register_core_actions() {
         if (in_array($operation, $management_operations)) {
             switch ($operation) {
                 case 'clear_all':
+                    error_log('DM Debug: DataMachineActions clear_all case reached');
                     $result = dm_clear_log_files();
+                    error_log('DM Debug: dm_clear_log_files() returned: ' . ($result ? 'TRUE' : 'FALSE'));
                     return $result;
                     
                 case 'cleanup':

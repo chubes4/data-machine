@@ -75,11 +75,6 @@ class JobsOperations {
         }
         
         $job_id = $wpdb->insert_id;
-        do_action('dm_log', 'debug', 'Successfully created pipeline+flow-based job', [
-            'job_id' => $job_id,
-            'pipeline_id' => $pipeline_id,
-            'flow_id' => $flow_id
-        ]);
         
         return $job_id;
     }

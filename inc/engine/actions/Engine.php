@@ -165,12 +165,15 @@ function dm_register_execution_engine() {
             'data-machine'
         );
         
-        do_action('dm_log', 'debug', 'Next step scheduled via centralized action hook', [
-            'job_id' => $job_id,
-            'flow_step_id' => $flow_step_id,
-            'action_id' => $action_id,
-            'success' => ($action_id !== false)
-        ]);
+        // Only log for step transitions, not initial job scheduling (covered by job creation log)
+        if (!empty($data)) {
+            do_action('dm_log', 'debug', 'Next step scheduled via centralized action hook', [
+                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
+                'action_id' => $action_id,
+                'success' => ($action_id !== false)
+            ]);
+        }
         
         return $action_id !== false;
     }, 10, 3);

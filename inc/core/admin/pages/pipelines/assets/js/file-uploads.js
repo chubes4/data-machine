@@ -34,7 +34,6 @@
         bindEvents: function() {
             // Files handler auto-upload functionality
             $(document).on('change', '#dm-file-upload', this.handleFileAutoUpload.bind(this));
-            $(document).on('click', '.dm-refresh-files', this.handleRefreshFiles.bind(this));
             
             // Simplified drag and drop (optional - can be removed)
             $(document).on('dragover', '#dm-file-drop-zone', this.handleDragOver.bind(this));
@@ -46,36 +45,14 @@
         },
 
         /**
-         * Handle modal content loaded event to load existing files
-         * Triggered by dm-core-modal-content-loaded event from core modal system
+         * Handle modal content loaded event
+         * Files are now loaded directly in the template, no additional loading needed
          */
         handleModalOpened: function(e, title, content) {
-            // Check if this is a files handler modal
-            if ($('#dm-file-upload').length > 0) {
-                // Load existing files immediately
-                this.loadExistingFiles();
-            }
+            // Files are loaded directly in template - no additional action needed
+            // This event is kept for future extensibility if needed
         },
 
-        /**
-         * Handle refresh files button click
-         */
-        handleRefreshFiles: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            
-            // Show loading state on button
-            const originalText = $button.html();
-            $button.html('<span class="dashicons dashicons-update-alt dm-spin"></span> Refreshing...');
-            $button.prop('disabled', true);
-            
-            this.loadExistingFiles().then(() => {
-                // Restore button
-                $button.html(originalText);
-                $button.prop('disabled', false);
-            });
-        },
 
         /**
          * Handle drag over event
@@ -166,8 +143,8 @@
                         this.showMessage(`${failedCount} file(s) failed to upload.`, 'error');
                     }
                     
-                    // Refresh file list
-                    this.loadExistingFiles();
+                    // Add uploaded files to the table
+                    this.addUploadedFilesToTable(results);
                 })
                 .catch(error => {
                     console.error('File upload error:', error);
@@ -245,77 +222,6 @@
         },
 
 
-        /**
-         * Load existing files for current handler context
-         */
-        loadExistingFiles: function() {
-            const handlerContext = this.getHandlerContextFromContainer();
-            if (!handlerContext) {
-                console.warn('DM File Uploads: No handler context available for loading files');
-                this.showFileState('empty');
-                return Promise.resolve();
-            }
-            
-            // Check for required global objects
-            if (!dmPipelineModal || !dmPipelineModal.ajax_url) {
-                console.error('DM File Uploads: dmPipelineModal object or ajax_url not available');
-                this.showFileState('empty');
-                this.showMessage('Configuration error: Unable to load files.', 'error');
-                return Promise.reject('Missing configuration');
-            }
-            
-            // Show loading state
-            this.showFileState('loading');
-            
-            console.debug('DM File Uploads: Loading files for context:', handlerContext);
-            
-            return $.ajax({
-                url: dmPipelineModal.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_get_handler_files',
-                    flow_step_id: handlerContext.flow_step_id,
-                    handler_slug: handlerContext.handler_slug,
-                    nonce: dmPipelineBuilder?.pipeline_ajax_nonce || dmPipelineModal?.pipeline_ajax_nonce || wp?.ajax?.settings?.nonce
-                }
-            }).then((response) => {
-                console.debug('DM File Uploads: Files loaded successfully:', response);
-                if (response.success && response.data) {
-                    this.displayFileStatusTable(response.data);
-                } else {
-                    this.showFileState('empty');
-                    const errorMsg = response.data?.message || 'Unknown error loading files';
-                    console.error('DM File Uploads: Error loading files:', errorMsg);
-                    this.showMessage('Failed to load files: ' + errorMsg, 'error');
-                }
-            }).catch((xhr, status, error) => {
-                this.showFileState('empty');
-                console.error('DM File Uploads: AJAX error loading files:', {xhr, status, error});
-                this.showMessage('Network error: Unable to load files.', 'error');
-            });
-        },
-
-        /**
-         * Display file status table using server-generated HTML
-         */
-        displayFileStatusTable: function(data) {
-            if (!data.files || data.files.length === 0) {
-                this.showFileState('empty');
-                return;
-            }
-            
-            // Show the populated state with table
-            this.showFileState('populated');
-            
-            // Use server-generated HTML directly
-            const $tableBody = $('#dm-file-list-body');
-            if (data.html) {
-                $tableBody.html(data.html);
-            } else {
-                console.warn('DM File Uploads: No HTML received from server');
-                this.showFileState('empty');
-            }
-        },
 
         /**
          * Show different file states (loading, empty, populated)
@@ -361,6 +267,70 @@
             } else {
                 $progressContainer.hide();
             }
+        },
+
+        /**
+         * Add uploaded files to the existing table
+         */
+        addUploadedFilesToTable: function(uploadResults) {
+            const successfulUploads = uploadResults.filter(r => r.status === 'fulfilled' && r.value.success);
+            
+            if (successfulUploads.length === 0) {
+                return;
+            }
+            
+            // Show the table if it's currently hidden
+            this.showFileState('populated');
+            
+            const $tableBody = $('#dm-file-list-body');
+            
+            successfulUploads.forEach(result => {
+                const fileInfo = result.value.data.file_info;
+                if (fileInfo) {
+                    // Create new table row for uploaded file
+                    const $newRow = $(`
+                        <tr class="dm-file-row dm-file-status-pending">
+                            <td class="dm-file-name-col">
+                                <span class="dashicons dashicons-media-default" style="margin-right: 8px;"></span>
+                                <span class="dm-file-name">${fileInfo.filename}</span>
+                            </td>
+                            <td class="dm-file-size-col">${this.formatFileSize(fileInfo.size)}</td>
+                            <td class="dm-file-status-col">
+                                <span class="dashicons dashicons-clock" style="color: #ffb900; margin-right: 4px;"></span>
+                                <span class="dm-file-status">Pending</span>
+                            </td>
+                            <td class="dm-file-date-col">${this.formatDate(Date.now())}</td>
+                            <td class="dm-file-actions-col">
+                                <button type="button" class="button button-small dm-delete-file" data-filename="${fileInfo.filename}" title="Delete file">
+                                    <span class="dashicons dashicons-trash"></span>
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                    
+                    // Add to top of table (newest first)
+                    $tableBody.prepend($newRow);
+                }
+            });
+        },
+
+        /**
+         * Format file size for display
+         */
+        formatFileSize: function(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
+        /**
+         * Format date for display
+         */
+        formatDate: function(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         },
 
         /**

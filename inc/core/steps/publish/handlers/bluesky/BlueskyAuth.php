@@ -34,9 +34,10 @@ class BlueskyAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $handle = get_option('bluesky_username', '');
-        $password = get_option('bluesky_app_password', '');
-        return !empty($handle) && !empty($password);
+        $auth_data = apply_filters('dm_oauth', [], 'retrieve', 'bluesky');
+        return !empty($auth_data) && 
+               !empty($auth_data['username']) && 
+               !empty($auth_data['app_password']);
     }
 
     /**
@@ -47,9 +48,10 @@ class BlueskyAuth {
     public function get_session() {
         do_action('dm_log', 'debug', 'Attempting to get authenticated Bluesky session.');
 
-        // Get credentials from site options (global configuration)
-        $handle = get_option('bluesky_username', '');
-        $password = get_option('bluesky_app_password', '');
+        // Get credentials from centralized OAuth filter
+        $auth_data = apply_filters('dm_oauth', [], 'retrieve', 'bluesky');
+        $handle = $auth_data['username'] ?? '';
+        $password = $auth_data['app_password'] ?? '';
 
         if (empty($handle) || empty($password)) {
             do_action('dm_log', 'error', 'Bluesky handle or app password missing in site options.');
@@ -198,13 +200,14 @@ class BlueskyAuth {
 
     /**
      * Retrieves the stored Bluesky account details.
-     * Uses global site options for admin-global authentication.
+     * Uses centralized OAuth filter for admin-global authentication.
      *
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $handle = get_option('bluesky_username', '');
-        $password = get_option('bluesky_app_password', '');
+        $auth_data = apply_filters('dm_oauth', [], 'retrieve', 'bluesky');
+        $handle = $auth_data['username'] ?? '';
+        $password = $auth_data['app_password'] ?? '';
         
         if (empty($handle) || empty($password)) {
             return null;
@@ -213,21 +216,17 @@ class BlueskyAuth {
         return [
             'handle' => $handle,
             'configured' => true,
-            'last_verified_at' => get_option('bluesky_last_verified', 0)
+            'last_verified_at' => $auth_data['last_verified'] ?? 0
         ];
     }
 
     /**
      * Removes the stored Bluesky account details.
-     * Uses global site options for admin-global authentication.
+     * Uses centralized OAuth filter for admin-global authentication.
      *
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        $result1 = delete_option('bluesky_username');
-        $result2 = delete_option('bluesky_app_password');
-        delete_option('bluesky_last_verified');
-        
-        return $result1 || $result2; // Return true if at least one option was deleted
+        return apply_filters('dm_oauth', false, 'clear', 'bluesky');
     }
 }

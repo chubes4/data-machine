@@ -188,7 +188,7 @@ class AI_HTTP_Tool_Executor {
                 $arguments = json_decode($arguments, true) ?: array();
             }
             
-            $result = self::execute_tool_with_retry($tool_name, $arguments, $call_id);
+            $result = self::execute_tool($tool_name, $arguments, $call_id);
             $results[] = array(
                 'tool_call_id' => $call_id,
                 'tool_name' => $tool_name,
@@ -208,89 +208,6 @@ class AI_HTTP_Tool_Executor {
         return $results;
     }
     
-    /**
-     * Execute tool with retry logic
-     *
-     * @param string $tool_name Tool name
-     * @param array $arguments Tool arguments
-     * @param string $call_id Call ID
-     * @param int $max_retries Maximum number of retries (default: 2)
-     * @return array Tool execution result
-     */
-    public static function execute_tool_with_retry($tool_name, $arguments = array(), $call_id = null, $max_retries = 2) {
-        $last_error = null;
-        
-        for ($attempt = 0; $attempt <= $max_retries; $attempt++) {
-            try {
-                $result = self::execute_tool($tool_name, $arguments, $call_id);
-                
-                // If successful, return immediately
-                if (isset($result['success']) && $result['success']) {
-                    if ($attempt > 0) {
-                        // Debug logging in development mode
-                        if (defined('WP_DEBUG') && WP_DEBUG) {
-                            error_log("AI HTTP Client DEBUG: Tool '{$tool_name}' succeeded on attempt " . ($attempt + 1));
-                        }
-                    }
-                    return $result;
-                }
-                
-                // If failed but not due to timeout/exception, don't retry
-                if (isset($result['error']) && !self::is_retryable_error($result['error'])) {
-                    return $result;
-                }
-                
-                $last_error = isset($result['error']) ? $result['error'] : 'Unknown error';
-                
-            } catch (Exception $e) {
-                $last_error = $e->getMessage();
-                // Debug logging in development mode
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("AI HTTP Client DEBUG: Tool '{$tool_name}' attempt " . ($attempt + 1) . " failed: " . $last_error);
-                }
-            }
-            
-            // Wait before retry (exponential backoff)
-            if ($attempt < $max_retries) {
-                $wait_time = pow(2, $attempt); // 1s, 2s, 4s...
-                sleep($wait_time);
-            }
-        }
-        
-        // All attempts failed
-        return array(
-            'success' => false,
-            'error' => 'Tool execution failed after ' . ($max_retries + 1) . ' attempts. Last error: ' . $last_error,
-            'call_id' => $call_id,
-            'attempts' => $max_retries + 1
-        );
-    }
-    
-    /**
-     * Check if an error is retryable
-     *
-     * @param string $error Error message
-     * @return bool True if error is retryable
-     */
-    private static function is_retryable_error($error) {
-        $retryable_patterns = array(
-            'timeout',
-            'connection',
-            'network',
-            'temporary',
-            'busy',
-            'unavailable'
-        );
-        
-        $error_lower = strtolower($error);
-        foreach ($retryable_patterns as $pattern) {
-            if (strpos($error_lower, $pattern) !== false) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
 
     /**
      * Validate tool arguments against tool definition

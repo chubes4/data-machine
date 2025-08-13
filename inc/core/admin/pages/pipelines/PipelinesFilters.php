@@ -89,7 +89,6 @@ function dm_register_pipelines_admin_page_filters() {
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
                                 'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
-                                'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                 'strings' => [
                                     'error' => __('An error occurred', 'data-machine'),
                                     'success' => __('Success', 'data-machine'),
@@ -137,7 +136,6 @@ function dm_register_pipelines_admin_page_filters() {
                                 ],
                                 'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
                                 'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
-                                'upload_file_nonce' => wp_create_nonce('dm_upload_file'),
                                 'get_files_nonce' => wp_create_nonce('dm_get_handler_files'),
                                 'strings' => [
                                     'connecting' => __('Connecting...', 'data-machine'),
@@ -298,11 +296,11 @@ function dm_register_pipelines_admin_page_filters() {
             
             // Page templates
             'page/pipeline-step-card' => [
-                'required' => ['pipeline_id', 'step', 'is_first_step'],
+                'required' => ['pipeline_id', 'step'],
                 'extract_from_step' => ['pipeline_step_id', 'step_type']
             ],
             'page/flow-step-card' => [
-                'required' => ['flow_id', 'pipeline_id', 'step', 'flow_config'],
+                'required' => ['flow_id', 'step', 'flow_config'],
                 'extract_from_step' => ['pipeline_step_id', 'step_type'],
                 'auto_generate' => [
                     'flow_step_id' => '{step.pipeline_step_id}_{flow_id}'
@@ -359,16 +357,10 @@ function dm_handle_save_handler_settings() {
     $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
     $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
     
-    // Extract flow_id and pipeline_step_id from flow_step_id for backward compatibility
-    $flow_id = null;
-    $pipeline_step_id = null;
-    if ($flow_step_id && strpos($flow_step_id, '_') !== false) {
-        $parts = explode('_', $flow_step_id, 2);
-        if (count($parts) === 2) {
-            $pipeline_step_id = $parts[0];
-            $flow_id = (int)$parts[1];
-        }
-    }
+    // Extract flow_id and pipeline_step_id from flow_step_id using universal filter
+    $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+    $flow_id = $parts['flow_id'] ?? null;
+    $pipeline_step_id = $parts['pipeline_step_id'] ?? null;
     
     do_action('dm_log', 'debug', 'Handler settings extracted parameters', [
         'handler_slug' => $handler_slug,

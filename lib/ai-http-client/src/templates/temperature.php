@@ -21,12 +21,13 @@ if (!empty($step_id)) {
     $field_name = 'ai_step_' . sanitize_key($step_id) . '_temperature';
 }
 
-// Get current temperature value and component configuration
-$current_temp = $provider_config['temperature'] ?? 0.7;
+// Get current temperature value from step config (if step-aware) or all_config (step-scoped)
+// Temperature is STEP-SCOPED, not provider-specific
+$current_temp = isset($all_config['temperature']) ? $all_config['temperature'] : 0.7;
 $label = $config['label'] ?? 'Temperature';
 $help_text = $config['help_text'] ?? 'Controls randomness. Lower values are more focused, higher values are more creative.';
 $min_value = $config['min'] ?? 0;
-$max_value = $config['max'] ?? 2;
+$max_value = $config['max'] ?? 1;
 $step_value = $config['step'] ?? 0.1;
 ?>
 

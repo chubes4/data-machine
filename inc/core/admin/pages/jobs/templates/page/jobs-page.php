@@ -40,7 +40,6 @@ function dm_render_job_row($job) {
     $flow_name = is_array($job) ? ($job['flow_name'] ?? 'Unknown Flow') : ($job->flow_name ?? 'Unknown Flow');
     $status = is_array($job) ? $job['status'] : $job->status;
     $created_at = is_array($job) ? $job['created_at'] : $job->created_at;
-    $started_at = is_array($job) ? ($job['started_at'] ?: '') : ($job->started_at ?: '');
     $completed_at = is_array($job) ? ($job['completed_at'] ?: '') : ($job->completed_at ?: '');
 
     // Format status display
@@ -48,7 +47,6 @@ function dm_render_job_row($job) {
     
     // Format dates
     $created_display = $created_at ? gmdate('M j, Y g:i a', strtotime($created_at)) : '';
-    $started_display = $started_at ? gmdate('M j, Y g:i a', strtotime($started_at)) : '';
     $completed_display = $completed_at ? gmdate('M j, Y g:i a', strtotime($completed_at)) : '';
     
 
@@ -58,7 +56,6 @@ function dm_render_job_row($job) {
         <td><?php echo esc_html($pipeline_name . ' → ' . $flow_name); ?></td>
         <td><span class="dm-job-status--<?php echo $status === 'failed' ? 'failed' : ($status === 'completed' ? 'completed' : 'other'); ?>"><?php echo esc_html($status_display); ?></span></td>
         <td><?php echo esc_html($created_display); ?></td>
-        <td><?php echo esc_html($started_display); ?></td>
         <td><?php echo esc_html($completed_display); ?></td>
     </tr>
     <?php
@@ -85,7 +82,6 @@ function dm_render_job_row($job) {
                         <th><?php esc_html_e('Pipeline / Flow', 'data-machine'); ?></th>
                         <th class="dm-col-status"><?php esc_html_e('Status', 'data-machine'); ?></th>
                         <th class="dm-col-created"><?php esc_html_e('Created At', 'data-machine'); ?></th>
-                        <th class="dm-col-started"><?php esc_html_e('Started At', 'data-machine'); ?></th>
                         <th class="dm-col-completed"><?php esc_html_e('Completed At', 'data-machine'); ?></th>
                     </tr>
                 </thead>

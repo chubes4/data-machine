@@ -49,7 +49,7 @@ class FacebookAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = get_option('facebook_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -74,7 +74,7 @@ class FacebookAuth {
      * @return string|null Page Access token or null if not found/valid.
      */
     public function get_page_access_token(): ?string {
-        $account = get_option('facebook_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
         if (empty($account) || !is_array($account) || empty($account['page_access_token'])) {
             return null;
         }
@@ -95,7 +95,7 @@ class FacebookAuth {
      * @return string|null Page ID or null if not found.
      */
     public function get_page_id(): ?string {
-        $account = get_option('facebook_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -219,7 +219,7 @@ class FacebookAuth {
         ];
 
         // Store details in site options for admin-only architecture
-        update_option('facebook_auth_data', $account_details);
+        apply_filters('dm_oauth', null, 'store', 'facebook', $account_details);
         do_action('dm_log', 'debug',
             'Facebook account authenticated. User and Page credentials stored.',
             [
@@ -419,7 +419,7 @@ class FacebookAuth {
      */
     public function remove_account(): bool {
         // Try to get the stored token to attempt deauthorization
-        $account = get_option('facebook_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['user_access_token'])) {
@@ -442,7 +442,7 @@ class FacebookAuth {
         }
 
         // Always attempt to delete the site option regardless of deauth success
-        return delete_option('facebook_auth_data');
+        return apply_filters('dm_oauth', false, 'clear', 'facebook');
     }
 
     /**
@@ -452,7 +452,7 @@ class FacebookAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = get_option('facebook_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
         if (empty($account) || !is_array($account)) {
             return null;
         }

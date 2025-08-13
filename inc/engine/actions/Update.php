@@ -249,13 +249,13 @@ class DataMachine_Update_Actions {
      * @since NEXT_VERSION
      */
     public function handle_flow_handler_update($flow_step_id, $handler_slug, $handler_settings = []) {
-        // Extract flow_id from flow_step_id (format: pipeline_step_id_flow_id)
-        $parts = explode('_', $flow_step_id);
-        if (count($parts) < 2) {
+        // Extract flow_id from flow_step_id using universal filter
+        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+        if (!$parts) {
             do_action('dm_log', 'error', 'Invalid flow_step_id format for handler update', ['flow_step_id' => $flow_step_id]);
             return false;
         }
-        $flow_id = (int)array_pop($parts); // Last part is flow_id
+        $flow_id = $parts['flow_id'];
         
         // Get database service using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
@@ -384,6 +384,7 @@ class DataMachine_Update_Actions {
                 'flow_step_id' => $flow_step_id,
                 'step_type' => $step['step_type'] ?? '',
                 'pipeline_step_id' => $pipeline_step_id,
+                'pipeline_id' => $flow['pipeline_id'],
                 'flow_id' => $flow_id,
                 'execution_order' => $step['execution_order'] ?? 0,
                 'handler' => null

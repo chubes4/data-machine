@@ -295,104 +295,54 @@ function dm_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): bool {
         return false;
     }
 
-    $cleanup_needed = false;
     $max_size_bytes = $max_size_mb * 1024 * 1024;
     
-    // Check file size
-    if (filesize($log_file) > $max_size_bytes) {
-        $cleanup_needed = true;
-        dm_log_debug("Log file cleanup triggered: Size " . round(filesize($log_file) / 1024 / 1024, 2) . "MB exceeds limit of {$max_size_mb}MB");
-    }
-    
-    // Check file age
-    $file_age_days = (time() - filemtime($log_file)) / DAY_IN_SECONDS;
-    if ($file_age_days > $max_age_days) {
-        $cleanup_needed = true;
-        dm_log_debug("Log file cleanup triggered: Age " . round($file_age_days, 1) . " days exceeds limit of {$max_age_days} days");
-    }
+    $size_exceeds = filesize($log_file) > $max_size_bytes;
+    $age_exceeds = (time() - filemtime($log_file)) / DAY_IN_SECONDS > $max_age_days;
 
-    if ($cleanup_needed) {
-        return dm_rotate_log_file($log_file);
+    if ($size_exceeds && $age_exceeds) {
+        dm_log_debug("Log file cleanup triggered: Size and age limits exceeded");
+        return dm_clear_log_files();
     }
 
     return false;
 }
 
-/**
- * Rotate log file by archiving current file and starting fresh.
- * 
- * @param string $log_file Path to log file
- * @return bool True on success
- */
-function dm_rotate_log_file($log_file): bool {
-    try {
-        $backup_file = $log_file . '.old';
-        
-        // Initialize WP_Filesystem
-        global $wp_filesystem;
-        if (!$wp_filesystem) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            WP_Filesystem();
-        }
-        
-        // Remove old backup if it exists
-        if ($wp_filesystem->exists($backup_file)) {
-            wp_delete_file($backup_file);
-        }
-        
-        // Move current log to backup
-        if ($wp_filesystem->move($log_file, $backup_file)) {
-            dm_log_debug("Log file rotated successfully. Old log archived as data-machine.log.old");
-            return true;
-        } else {
-            dm_log_error("Failed to rotate log file");
-            return false;
-        }
-    } catch (\Exception $e) {
-        dm_log_error("Exception during log file rotation: " . $e->getMessage());
-        return false;
-    }
-}
 
 /**
- * Clear all log files.
+ * Clear log file.
  *
  * @return bool True on success
  */
 function dm_clear_log_files(): bool {
     $log_file = dm_get_log_file_path();
-    $backup_file = $log_file . '.old';
     
-    $success = true;
-    
-    // Initialize WP_Filesystem
-    global $wp_filesystem;
-    if (!$wp_filesystem) {
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        WP_Filesystem();
-    }
+    // Debug: Function entry
+    error_log('DM Debug: dm_clear_log_files() called, log file path: ' . $log_file);
     
     // Clear main log file
-    if ($wp_filesystem->exists($log_file)) {
-        if (!wp_delete_file($log_file)) {
-            $success = false;
+    if (file_exists($log_file)) {
+        // Debug: Before deletion attempt
+        error_log('DM Debug: File exists before deletion: ' . (file_exists($log_file) ? 'YES' : 'NO'));
+        
+        $delete_result = wp_delete_file($log_file);
+        
+        // Debug: Deletion result
+        error_log('DM Debug: wp_delete_file() result: ' . ($delete_result ? 'SUCCESS' : 'FAILED'));
+        
+        // Debug: Check file existence after deletion
+        error_log('DM Debug: File exists after deletion: ' . (file_exists($log_file) ? 'YES' : 'NO'));
+        
+        if ($delete_result) {
+            dm_log_debug('Log file cleared successfully.');
+            return true;
+        } else {
+            dm_log_error('Failed to clear log file.');
+            return false;
         }
     }
     
-    // Clear backup log file
-    if ($wp_filesystem->exists($backup_file)) {
-        if (!wp_delete_file($backup_file)) {
-            $success = false;
-        }
-    }
-    
-    if ($success) {
-        dm_log_debug('Log files cleared successfully.');
-    } else {
-        dm_log_error('Failed to clear some log files.');
-    }
-    
-    return $success;
+    return true;
 }
 
 // ========================================================================

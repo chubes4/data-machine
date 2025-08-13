@@ -228,12 +228,12 @@ function dm_register_database_filters() {
      * RETURNS: Complete step configuration array
      */
     add_filter('dm_get_flow_step_config', function($default, $flow_step_id) {
-        // Extract flow_id from flow_step_id (format: pipeline_step_id_flow_id)
-        $parts = explode('_', $flow_step_id);
-        if (count($parts) < 2) {
+        // Extract flow_id from flow_step_id using universal filter
+        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+        if (!$parts) {
             return [];
         }
-        $flow_id = (int)array_pop($parts); // Last part is flow_id
+        $flow_id = $parts['flow_id'];
         
         // Use centralized flow config filter
         $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);

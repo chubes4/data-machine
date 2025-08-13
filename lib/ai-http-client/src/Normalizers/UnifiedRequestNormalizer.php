@@ -147,7 +147,7 @@ class AI_HTTP_Unified_Request_Normalizer {
 
         // Constrain parameters
         if (isset($request['temperature'])) {
-            $request['temperature'] = max(0, min(2, floatval($request['temperature'])));
+            $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
         }
 
         return $request;
@@ -202,7 +202,7 @@ class AI_HTTP_Unified_Request_Normalizer {
 
         // Gemini temperature in generationConfig
         if (isset($request['temperature'])) {
-            $request['generationConfig']['temperature'] = max(0, min(2, floatval($request['temperature'])));
+            $request['generationConfig']['temperature'] = max(0, min(1, floatval($request['temperature'])));
             unset($request['temperature']);
         }
 
@@ -225,7 +225,7 @@ class AI_HTTP_Unified_Request_Normalizer {
 
         // Standard OpenAI-style constraints
         if (isset($request['temperature'])) {
-            $request['temperature'] = max(0, min(2, floatval($request['temperature'])));
+            $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
         }
 
         if (isset($request['max_tokens'])) {
@@ -246,7 +246,7 @@ class AI_HTTP_Unified_Request_Normalizer {
         
         // OpenRouter uses OpenAI-compatible format
         if (isset($request['temperature'])) {
-            $request['temperature'] = max(0, min(2, floatval($request['temperature'])));
+            $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
         }
 
         if (isset($request['max_tokens'])) {

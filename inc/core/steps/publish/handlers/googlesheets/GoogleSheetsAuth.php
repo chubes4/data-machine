@@ -38,7 +38,7 @@ class GoogleSheetsAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = get_option('googlesheets_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'googlesheets');
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -53,7 +53,7 @@ class GoogleSheetsAuth {
     public function get_service() {
         do_action('dm_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
 
-        $credentials = get_option('googlesheets_auth_data', []);
+        $credentials = apply_filters('dm_oauth', [], 'retrieve', 'googlesheets');
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
             do_action('dm_log', 'error', 'Missing Google Sheets credentials in options.');
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
@@ -153,7 +153,7 @@ class GoogleSheetsAuth {
             'last_refreshed_at' => time()
         ];
 
-        update_option('googlesheets_auth_data', $account_data);
+        apply_filters('dm_oauth', null, 'store', 'googlesheets', $account_data);
     }
 
     /**
@@ -304,7 +304,7 @@ class GoogleSheetsAuth {
             'last_verified_at' => time()
         ];
 
-        update_option('googlesheets_auth_data', $account_data);
+        apply_filters('dm_oauth', null, 'store', 'googlesheets', $account_data);
 
         do_action('dm_log', 'debug', 'Successfully completed Google Sheets OAuth flow.');
 
@@ -320,7 +320,7 @@ class GoogleSheetsAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = get_option('googlesheets_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'googlesheets');
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['refresh_token'])) {
             return null;
         }
@@ -334,6 +334,6 @@ class GoogleSheetsAuth {
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        return delete_option('googlesheets_auth_data');
+        return apply_filters('dm_oauth', false, 'clear', 'googlesheets');
     }
 }

@@ -71,18 +71,17 @@ class WordPressAuth {
     /**
      * Store WordPress API credentials securely.
      *
-     * @param int    $user_id WordPress user ID.
      * @param string $api_url API endpoint URL.
      * @param string $username WordPress username.
      * @param string $api_key Application password.
      * @return bool True on success, false on failure.
      */
-    public function store_credentials(int $user_id, string $api_url, string $username, string $api_key): bool {
-        if (empty($user_id) || empty($api_url) || empty($username) || empty($api_key)) {
+    public function store_credentials(string $api_url, string $username, string $api_key): bool {
+        if (empty($api_url) || empty($username) || empty($api_key)) {
             return false;
         }
 
-        // Store the API key directly
+        // Store the API key directly using centralized oauth filter
         $credentials = [
             'api_url' => esc_url_raw($api_url),
             'username' => sanitize_text_field($username),
@@ -90,21 +89,16 @@ class WordPressAuth {
             'stored_at' => time()
         ];
 
-        return update_user_meta($user_id, 'data_machine_wordpress_publish_credentials', $credentials) !== false;
+        return apply_filters('dm_oauth', false, 'store', 'wordpress_publish', $credentials);
     }
 
     /**
      * Retrieve WordPress API credentials.
      *
-     * @param int $user_id WordPress user ID.
      * @return array|null Credentials array or null if not found.
      */
-    public function get_credentials(int $user_id): ?array {
-        if (empty($user_id)) {
-            return null;
-        }
-
-        $credentials = get_user_meta($user_id, 'data_machine_wordpress_publish_credentials', true);
+    public function get_credentials(): ?array {
+        $credentials = apply_filters('dm_oauth', null, 'get', 'wordpress_publish');
         if (empty($credentials) || !is_array($credentials)) {
             return null;
         }
@@ -121,15 +115,10 @@ class WordPressAuth {
     /**
      * Remove stored WordPress API credentials.
      *
-     * @param int $user_id WordPress user ID.
      * @return bool True on success, false on failure.
      */
-    public function remove_credentials(int $user_id): bool {
-        if (empty($user_id)) {
-            return false;
-        }
-
-        return delete_user_meta($user_id, 'data_machine_wordpress_publish_credentials') !== false;
+    public function remove_credentials(): bool {
+        return apply_filters('dm_oauth', false, 'delete', 'wordpress_publish');
     }
 
 } // End class

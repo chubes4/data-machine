@@ -109,8 +109,6 @@ function dm_register_files_fetch_filters() {
     // AJAX file upload handler
     add_action('wp_ajax_dm_upload_file', fn() => do_action('dm_ajax_route', 'dm_upload_file', 'modal'));
     
-    // AJAX handler for getting files with processing status
-    add_action('wp_ajax_dm_get_handler_files', fn() => do_action('dm_ajax_route', 'dm_get_handler_files', 'modal'));
 }
 
 

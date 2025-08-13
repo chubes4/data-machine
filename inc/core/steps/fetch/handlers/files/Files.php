@@ -94,7 +94,7 @@ class Files {
         }
         
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($flow_id, ['uploaded_files' => $uploaded_files]);
+        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files]);
         
         if (!$next_file) {
             do_action('dm_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
@@ -136,13 +136,13 @@ class Files {
 	}
 
     /**
-     * Find the next unprocessed file for a flow.
+     * Find the next unprocessed file for a flow step.
      *
-     * @param int|null $flow_id Flow ID.
+     * @param string|null $flow_step_id Flow step ID for granular processed items tracking.
      * @param array $config Files configuration.
      * @return array|null File info or null if no unprocessed files.
      */
-    private function find_next_unprocessed_file(?int $flow_id, array $config): ?array {
+    private function find_next_unprocessed_file(?string $flow_step_id, array $config): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
         
         if (empty($uploaded_files)) {
@@ -153,7 +153,13 @@ class Files {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'files', $file_identifier);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file_identifier);
+            
+            do_action('dm_log', 'debug', 'Files Input: Checking file processed status', [
+                'flow_step_id' => $flow_step_id,
+                'file_identifier' => basename($file_identifier),
+                'is_processed' => $is_processed
+            ]);
             
             if (!$is_processed) {
                 return $file;

@@ -82,7 +82,7 @@ class Jobs {
     // ========================================
 
     /**
-     * Update the status and started_at time for a job.
+     * Update the status for a job.
      */
     public function start_job( int $job_id, string $status = 'processing' ): bool {
         return $this->status->start_job($job_id, $status);
@@ -152,7 +152,6 @@ class Jobs {
             flow_id bigint(20) unsigned NOT NULL,
             status varchar(20) NOT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            started_at datetime NULL DEFAULT NULL,
             completed_at datetime NULL DEFAULT NULL,
             PRIMARY KEY  (job_id),
             KEY status (status),

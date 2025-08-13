@@ -21,8 +21,9 @@ if (!empty($step_id)) {
     $field_name = 'ai_step_' . sanitize_key($step_id) . '_system_prompt';
 }
 
-// Get current system prompt value and component configuration
-$current_prompt = $provider_config['system_prompt'] ?? '';
+// Get current system prompt value from step config (if step-aware) or all_config (step-scoped)
+// System prompt is STEP-SCOPED, not provider-specific
+$current_prompt = isset($all_config['system_prompt']) ? $all_config['system_prompt'] : '';
 $label = $config['label'] ?? 'System Prompt';
 $help_text = $config['help_text'] ?? 'Instructions that define the AI\'s behavior and role for this task.';
 $placeholder = $config['placeholder'] ?? 'Enter system instructions for the AI...';

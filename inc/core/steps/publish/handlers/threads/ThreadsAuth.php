@@ -51,7 +51,7 @@ class ThreadsAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = get_option('threads_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -77,7 +77,7 @@ class ThreadsAuth {
      * @return string|null Access token or null if not found/valid.
      */
     public function get_access_token(): ?string {
-        $account = get_option('threads_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
@@ -105,7 +105,7 @@ class ThreadsAuth {
                 $account['access_token'] = $refreshed_data['access_token'];
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
                 // Update the site option immediately
-                update_option('threads_auth_data', $account);
+                apply_filters('dm_oauth', null, 'store', 'threads', $account);
                 return $refreshed_data['access_token']; // Return the new plaintext token
             } else {
                 // If refresh fails and token is already expired, return null
@@ -128,7 +128,7 @@ class ThreadsAuth {
      * @return string|null Page ID or null if not found.
      */
     public function get_page_id(): ?string {
-        $account = get_option('threads_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -277,7 +277,7 @@ class ThreadsAuth {
         // Store token directly
 
         // Update site option with all collected details for admin-only architecture
-        update_option('threads_auth_data', $account_details);
+        apply_filters('dm_oauth', null, 'store', 'threads', $account_details);
         do_action('dm_log', 'debug', 'Threads account authenticated and token stored.', ['page_id' => $account_details['page_id']]);
 
         return true;
@@ -395,7 +395,7 @@ class ThreadsAuth {
      */
     public function remove_account(): bool {
         // Try to get the stored token to attempt revocation
-        $account = get_option('threads_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {
@@ -420,7 +420,7 @@ class ThreadsAuth {
         }
 
         // Always attempt to delete the site option regardless of revocation success
-        return delete_option('threads_auth_data');
+        return apply_filters('dm_oauth', false, 'clear', 'threads');
     }
 
     /**
@@ -430,7 +430,7 @@ class ThreadsAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = get_option('threads_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
         if (empty($account) || !is_array($account)) {
             return null;
         }

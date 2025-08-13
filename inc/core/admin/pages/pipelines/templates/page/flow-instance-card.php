@@ -31,7 +31,7 @@ if (!$last_run) {
     $jobs_db = $all_databases['jobs'] ?? null;
     if ($jobs_db) {
         $jobs = $jobs_db->get_jobs_for_flow($flow_id);
-        $last_run = !empty($jobs) ? ($jobs[0]['completed_at'] ?? $jobs[0]['started_at']) : null;
+        $last_run = !empty($jobs) ? ($jobs[0]['completed_at'] ?? $jobs[0]['created_at']) : null;
     }
 }
 

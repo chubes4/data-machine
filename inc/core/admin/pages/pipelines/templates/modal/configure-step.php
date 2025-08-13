@@ -46,8 +46,8 @@ if (!defined('WPINC')) {
             'step_id' => $pipeline_step_id, // Unique step-aware configuration
             'show_save_button' => false, // Hide built-in save button - Data Machine provides custom save
             'temperature' => [
-                'label' => __('AI Creativity Level', 'data-machine'),
-                'help_text' => __('Controls randomness in AI responses. Higher values = more creative, lower values = more focused.', 'data-machine')
+                'label' => __('Temperature', 'data-machine'),
+                'help_text' => __('Controls randomness in AI responses. 0 = deterministic, 1 = maximum randomness.', 'data-machine')
             ],
             'system_prompt' => [
                 'label' => __('AI Processing Instructions', 'data-machine'),

@@ -261,6 +261,19 @@ function dm_resolve_template_context($requirements, $data, $template_name) {
         $data = dm_extract_pipeline_data($data, $requirements['extract_from_pipeline']);
     }
     
+    // Auto-split flow_step_id if present and individual IDs are missing
+    if (!empty($data['flow_step_id']) && (empty($data['flow_id']) || empty($data['pipeline_step_id']))) {
+        $parts = apply_filters('dm_split_flow_step_id', null, $data['flow_step_id']);
+        if ($parts) {
+            if (empty($data['flow_id'])) {
+                $data['flow_id'] = $parts['flow_id'];
+            }
+            if (empty($data['pipeline_step_id'])) {
+                $data['pipeline_step_id'] = $parts['pipeline_step_id'];
+            }
+        }
+    }
+    
     return $data;
 }
 
@@ -401,6 +414,50 @@ function dm_extract_pipeline_data($data, $fields) {
     
     return $data;
 }
+
+// ========================================================================
+// ID EXTRACTION UTILITIES
+// ========================================================================
+
+/**
+ * Split flow_step_id into individual components
+ * 
+ * Universal filter for extracting individual IDs from composite flow_step_id.
+ * Follows the format: {pipeline_step_id}_{flow_id}
+ * 
+ * USAGE:
+ * $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+ * $pipeline_step_id = $parts['pipeline_step_id'];
+ * $flow_id = $parts['flow_id'];
+ * 
+ * @param null $null Not used - filter pattern consistency
+ * @param string $flow_step_id Composite ID in format {pipeline_step_id}_{flow_id}
+ * @return array|null Array with pipeline_step_id and flow_id, or null if invalid format
+ */
+add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
+    if (empty($flow_step_id) || !is_string($flow_step_id)) {
+        return null;
+    }
+    
+    // Split on last underscore to handle UUIDs with dashes
+    $last_underscore_pos = strrpos($flow_step_id, '_');
+    if ($last_underscore_pos === false) {
+        return null;
+    }
+    
+    $pipeline_step_id = substr($flow_step_id, 0, $last_underscore_pos);
+    $flow_id = substr($flow_step_id, $last_underscore_pos + 1);
+    
+    // Validate flow_id is numeric
+    if (!is_numeric($flow_id)) {
+        return null;
+    }
+    
+    return [
+        'pipeline_step_id' => $pipeline_step_id,
+        'flow_id' => (int)$flow_id
+    ];
+}, 10, 2);
 
 // ========================================================================
 // ADMIN MENU FUNCTIONS

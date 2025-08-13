@@ -187,66 +187,34 @@ function ai_http_client_register_provider_filters() {
         ];
     }, 10, 7);
     
-    // AI configuration filter with auto-discovery
-    // Usage: $config = apply_filters('ai_config', $step_id); // Step-specific config
-    // Usage: $config = apply_filters('ai_config', null); // Global config
-    add_filter('ai_config', function($step_id = null) {
-        // Auto-detect plugin context
-        $plugin_context = ai_http_detect_plugin_context();
-        if (empty($plugin_context)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AI HTTP Client] ai_config filter: Could not auto-detect plugin context');
+    // AI configuration filter - simplified to only return shared API keys
+    // Usage: $config = apply_filters('ai_config', null); // Returns shared API keys only
+    add_filter('ai_config', function($unused_param = null) {
+        // Return only shared API keys from wp_options
+        $all_providers = apply_filters('ai_providers', []);
+        $config = [];
+        
+        foreach ($all_providers as $provider_name => $provider_info) {
+            $api_key = get_option($provider_name . '_api_key', '');
+            if (!empty($api_key)) {
+                $config[$provider_name] = [
+                    'api_key' => $api_key
+                ];
             }
-            return [];
         }
         
-        try {
-            $options_manager = new AI_HTTP_Options_Manager($plugin_context);
-            
-            if ($step_id) {
-                // Step-specific configuration
-                $step_config = $options_manager->get_step_configuration($step_id);
-                
-                if (!empty($step_config)) {
-                    // Transform flat step config to provider-keyed structure that templates expect
-                    $provider = $step_config['provider'] ?? 'openai';
-                    
-                    // Get API key from shared storage (step config doesn't store API keys)
-                    $shared_api_keys = get_option(AI_HTTP_Options_Manager::SHARED_API_KEYS_OPTION, array());
-                    
-                    // Build expected structure: provider-keyed config with merged API key
-                    $transformed_config = array(
-                        'selected_provider' => $provider,
-                        $provider => array(
-                            'api_key' => isset($shared_api_keys[$provider]) ? $shared_api_keys[$provider] : '',
-                            'model' => isset($step_config['model']) ? $step_config['model'] : '',
-                            'temperature' => isset($step_config['temperature']) ? $step_config['temperature'] : 0.7,
-                            'system_prompt' => isset($step_config['system_prompt']) ? $step_config['system_prompt'] : '',
-                            'max_tokens' => isset($step_config['max_tokens']) ? $step_config['max_tokens'] : null
-                        )
-                    );
-                    
-                    return $transformed_config;
-                }
-                
-                // Fallback to global config if no step config exists
-                return $options_manager->get_all_providers();
-            } else {
-                // Global configuration  
-                return $options_manager->get_all_providers();
-            }
-        } catch (Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] ai_config filter: Exception - " . $e->getMessage());
-            }
-            return [];
-        }
+        return $config;
     }, 10, 1);
     
     
-    // AI Models filter with auto-discovery
+    // AI Models filter - simplified to work with API keys only
     // Usage: $models = apply_filters('ai_models', $provider_name);
     add_filter('ai_models', function($provider_name = null) {
+        // Default to openai if no provider specified
+        if (!$provider_name) {
+            $provider_name = 'openai';
+        }
+        
         // Auto-detect plugin context
         $plugin_context = ai_http_detect_plugin_context();
         if (empty($plugin_context)) {
@@ -257,19 +225,6 @@ function ai_http_client_register_provider_filters() {
         }
         
         try {
-            // Get provider name if not specified
-            if (!$provider_name) {
-                $options_manager = new AI_HTTP_Options_Manager($plugin_context);
-                $provider_name = $options_manager->get_selected_provider();
-                
-                if (empty($provider_name)) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('[AI HTTP Client] ai_models filter: No provider configured');
-                    }
-                    return [];
-                }
-            }
-            
             // Create provider instance directly
             $provider = ai_http_create_provider($provider_name, $plugin_context);
             if (!$provider) {
@@ -279,8 +234,8 @@ function ai_http_client_register_provider_filters() {
                 return [];
             }
             
-            // Get models directly from provider
-            return $provider->get_raw_models();
+            // Get models directly from provider (normalized format)
+            return $provider->get_normalized_models();
             
         } catch (Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -339,25 +294,23 @@ function ai_http_client_register_provider_filters() {
         }
         
         try {
-            // Get provider from step config or global options
-            if (!$provider_name) {
-                if ($step_id) {
-                    // Step-aware: get provider from step configuration
-                    $step_config = apply_filters('ai_config', $step_id);
-                    $provider_name = isset($step_config['provider']) ? $step_config['provider'] : null;
-                    
-                    if (!$provider_name) {
-                        return ai_http_create_error_response("No provider configured for step: {$step_id}");
-                    }
-                } else {
-                    // Global: get provider from global configuration
-                    $options_manager = new AI_HTTP_Options_Manager($plugin_context);
-                    $provider_name = $options_manager->get_selected_provider();
-                    
-                    if (empty($provider_name)) {
-                        return ai_http_create_error_response('No provider configured. Please select a provider in your plugin settings.');
+            // Get provider configuration with step-aware configuration first
+            $all_providers_config = apply_filters('ai_config', null, $step_id);
+            
+            // Determine provider name - use step's selected provider if available, otherwise parameter or default
+            if (!$provider_name && $step_id) {
+                // Find the selected provider from step configuration
+                foreach ($all_providers_config as $provider_name_candidate => $provider_data) {
+                    if (is_array($provider_data) && isset($provider_data['is_selected']) && $provider_data['is_selected']) {
+                        $provider_name = $provider_name_candidate;
+                        break;
                     }
                 }
+            }
+            
+            // Fallback to default provider if still not set
+            if (!$provider_name) {
+                $provider_name = 'openai'; // Default provider
             }
             
             // Initialize normalizers for the selected provider
@@ -366,25 +319,12 @@ function ai_http_client_register_provider_filters() {
                 return ai_http_create_error_response("Provider '{$provider_name}' not found or missing normalizers configuration");
             }
             
-            // Get provider instance
-            $provider = ai_http_create_provider($provider_name, $plugin_context);
+            $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
+            
+            // Get provider instance with step-aware configuration
+            $provider = ai_http_create_provider($provider_name, $plugin_context, $provider_config);
             if (!$provider) {
                 return ai_http_create_error_response("Failed to create provider instance for '{$provider_name}'");
-            }
-            
-            // Get provider configuration (step-aware or global)
-            if ($step_id) {
-                // Step-aware: merge step config with provider config
-                $step_config = apply_filters('ai_config', $step_id);
-                $all_providers_config = apply_filters('ai_config', null);
-                $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
-                
-                // Merge step-specific settings with request (step config takes precedence)
-                $request = ai_http_merge_step_config_with_request($request, $step_config);
-            } else {
-                // Global: get provider config only
-                $all_providers_config = apply_filters('ai_config', null);
-                $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
             }
             
             // Normalize request for provider
@@ -442,43 +382,34 @@ function ai_http_client_register_provider_filters() {
         return ob_get_clean();
     }
     
-    // AI Component Rendering filter - single unified component system
+    // AI Component Rendering filter - simplified to return only table rows
     // Usage: echo apply_filters('ai_render_component', '');
     // Usage: echo apply_filters('ai_render_component', '', ['temperature' => true, 'system_prompt' => true]);
     add_filter('ai_render_component', function($html, $config = []) {
-        // Auto-detect plugin context and AI type
+        // Auto-detect plugin context
         $plugin_context = ai_http_detect_plugin_context();
         if (!$plugin_context) {
-            return '<div class="notice notice-error"><p>Unable to detect plugin context for AI components</p></div>';
+            return '<tr><td colspan="2">Unable to detect plugin context for AI components</td></tr>';
         }
         
-        // Extract step_id from config for step-aware configuration loading
-        $step_id = $config['step_id'] ?? '';
-        
-        // Get current configuration for auto-populated values (step-aware)
-        $all_config = apply_filters('ai_config', $step_id);
-        $selected_provider = $all_config['selected_provider'] ?? 'openai';
-        $provider_config = $all_config[$selected_provider] ?? [];
+        // Get shared API keys configuration
+        $all_config = apply_filters('ai_config', null);
+        $selected_provider = 'openai'; // Default provider
         
         // Generate unique ID for form elements
         $unique_id = 'ai_' . sanitize_key($plugin_context) . '_' . uniqid();
         
-        // Build form HTML with wrapper
-        $html = '<div class="ai-http-client-components" data-plugin-context="' . esc_attr($plugin_context) . '">';
-        
-        // Render core components template (always rendered)
+        // Render core components template (always rendered) - returns table rows only
         $template_data = [
             'unique_id' => $unique_id,
             'plugin_context' => $plugin_context,
             'selected_provider' => $selected_provider,
-            'provider_config' => $provider_config,
-            'step_id' => $step_id,
             'all_config' => $all_config
         ];
         
-        $html .= ai_http_render_template('core', $template_data);
+        $html = ai_http_render_template('core', $template_data);
         
-        // Optional components (based on config)
+        // Optional components (based on config) - each returns table rows
         if (!empty($config['temperature'])) {
             $temp_config = is_array($config['temperature']) ? $config['temperature'] : [];
             $template_data['config'] = $temp_config;
@@ -497,22 +428,8 @@ function ai_http_client_register_provider_filters() {
             $html .= ai_http_render_template('max-tokens', $template_data);
         }
         
-        // Add save button (if enabled) and nonce
-        $show_save_button = $config['show_save_button'] ?? true; // Default to true for backward compatibility
-        
-        if ($show_save_button) {
-            $html .= '<p class="submit">';
-            $html .= '<button type="button" class="button button-primary ai-http-save-settings" ';
-            $html .= 'data-plugin-context="' . esc_attr($plugin_context) . '">';
-            $html .= __('Save AI Settings', 'ai-http-client');
-            $html .= '</button>';
-            $html .= '</p>';
-        }
-        
-        $html .= '</div>';
-        
-        // Always add nonce for security (needed even without save button)
-        $html .= wp_nonce_field('ai_http_nonce', 'ai_http_nonce_field', true, false);
+        // Add nonce for AJAX operations
+        $html .= '<tr style="display:none;"><td colspan="2">' . wp_nonce_field('ai_http_nonce', 'ai_http_nonce_field', true, false) . '</td></tr>';
         
         return $html;
     }, 10, 2);
@@ -576,9 +493,10 @@ function ai_http_init_normalizers_for_provider($provider_name) {
  *
  * @param string $provider_name Provider name
  * @param string $plugin_context Plugin context
+ * @param array|null $provider_config Optional provider configuration override
  * @return object|false Provider instance or false on failure
  */
-function ai_http_create_provider($provider_name, $plugin_context) {
+function ai_http_create_provider($provider_name, $plugin_context, $provider_config = null) {
     // Use filter-based provider discovery
     $all_providers = apply_filters('ai_providers', []);
     $provider_info = $all_providers[strtolower($provider_name)] ?? null;
@@ -587,9 +505,11 @@ function ai_http_create_provider($provider_name, $plugin_context) {
         return false;
     }
     
-    // Get provider configuration
-    $all_providers_config = apply_filters('ai_config', null);
-    $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
+    // Get provider configuration if not provided
+    if ($provider_config === null) {
+        $all_providers_config = apply_filters('ai_config', null);
+        $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
+    }
     
     $provider_class = $provider_info['class'];
     return new $provider_class($provider_config);
@@ -606,7 +526,7 @@ function ai_http_create_provider($provider_name, $plugin_context) {
  */
 function ai_http_upload_file_to_provider($file_path, $purpose = 'user_data', $provider_name = 'openai') {
     $plugin_context = ai_http_detect_plugin_context();
-    $provider = ai_http_create_provider($provider_name, $plugin_context, 'llm');
+    $provider = ai_http_create_provider($provider_name, $plugin_context);
     
     if (!$provider) {
         throw new Exception("{$provider_name} provider not available for Files API upload");
@@ -890,7 +810,7 @@ add_action('init', 'ai_http_client_register_provider_filters');
 // Register AJAX actions for dynamic component interactions
 // Only registers in admin context to avoid unnecessary overhead
 if (is_admin()) {
-    add_action('wp_ajax_ai_http_save_settings', ['AI_HTTP_Ajax_Handler', 'save_settings']);
+    add_action('wp_ajax_ai_http_save_api_key', ['AI_HTTP_Ajax_Handler', 'save_api_key']);
     add_action('wp_ajax_ai_http_load_provider_settings', ['AI_HTTP_Ajax_Handler', 'load_provider_settings']);
     add_action('wp_ajax_ai_http_get_models', ['AI_HTTP_Ajax_Handler', 'get_models']);
 }

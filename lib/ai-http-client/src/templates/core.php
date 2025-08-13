@@ -34,11 +34,9 @@ $llm_providers = array_filter($all_providers, function($provider) {
     return isset($provider['type']) && $provider['type'] === 'llm';
 });
 
-// Get current API key value (API keys are merged into each provider's config)
-$current_api_key = '';
-if (isset($all_config[$selected_provider]['api_key'])) {
-    $current_api_key = $all_config[$selected_provider]['api_key'];
-}
+// Get current API key value from shared storage (API keys are not stored in step configs)
+$shared_api_keys = get_option(AI_HTTP_Options_Manager::SHARED_API_KEYS_OPTION, array());
+$current_api_key = isset($shared_api_keys[$selected_provider]) ? $shared_api_keys[$selected_provider] : '';
 
 // Get current model value
 $selected_model = $provider_config['model'] ?? '';
@@ -100,8 +98,12 @@ $selected_model = $provider_config['model'] ?? '';
                         class="regular-text">
                     <?php
                     try {
+                        // Add API key to provider config for model fetching
+                        $provider_config_with_key = $provider_config;
+                        $provider_config_with_key['api_key'] = $current_api_key;
+                        
                         // Use unified model fetcher for dynamic model loading
-                        $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($selected_provider, $provider_config);
+                        $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($selected_provider, $provider_config_with_key);
                         
                         if (empty($models)) {
                             echo '<option value="">' . esc_html__('Enter API key to load models', 'ai-http-client') . '</option>';

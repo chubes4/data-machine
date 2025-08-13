@@ -217,7 +217,7 @@ class RedditAuth {
         ];
 
         // Store as admin-only option for global Reddit authentication
-        update_option('reddit_auth_data', $account_data);
+        apply_filters('dm_oauth', null, 'store', 'reddit', $account_data);
 
         // --- 6. Redirect on Success --- 
         wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=reddit'));
@@ -232,7 +232,7 @@ class RedditAuth {
     public function refresh_token(): bool {
         do_action('dm_log', 'debug', 'Attempting Reddit token refresh for admin authentication.');
 
-        $reddit_account = get_option('reddit_auth_data', []);
+        $reddit_account = apply_filters('dm_oauth', [], 'retrieve', 'reddit');
         if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['refresh_token'])) {
             do_action('dm_log', 'error', 'Reddit Token Refresh Error: Refresh token not found in admin options.');
             return false;
@@ -289,7 +289,7 @@ class RedditAuth {
                 'response_body' => $body
             ]);
              // If refresh fails (e.g., token revoked), clear stored data to force re-auth
-             delete_option('reddit_auth_data');
+             apply_filters('dm_oauth', false, 'clear', 'reddit');
             return false;
         }
 
@@ -311,7 +311,7 @@ class RedditAuth {
             'last_refreshed_at'  => time() // Update refresh time
         ];
 
-        update_option('reddit_auth_data', $updated_account_data);
+        apply_filters('dm_oauth', null, 'store', 'reddit', $updated_account_data);
         do_action('dm_log', 'debug', 'Reddit token refreshed successfully.', ['new_expiry' => gmdate('Y-m-d H:i:s', $new_token_expires_at)]);
         return true;
     }
@@ -322,7 +322,7 @@ class RedditAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = get_option('reddit_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'reddit');
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -336,7 +336,7 @@ class RedditAuth {
      * @return array|null Account details array or null if not authenticated
      */
     public function get_account_details(): ?array {
-        $account = get_option('reddit_auth_data', []);
+        $account = apply_filters('dm_oauth', [], 'retrieve', 'reddit');
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }

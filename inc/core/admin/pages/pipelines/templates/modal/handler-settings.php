@@ -21,9 +21,7 @@ $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
 $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
-// Get individual IDs directly from context
-$flow_id = $context['flow_id'] ?? null;
-$pipeline_step_id = $context['pipeline_step_id'] ?? null;
+// Individual IDs are automatically extracted by template context resolution from flow_step_id
 
 // Template self-discovery - get handler configuration and settings
 $handler_info = [];
@@ -100,8 +98,6 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />
-        <input type="hidden" name="flow_id" value="<?php echo esc_attr($flow_id); ?>" />
-        <input type="hidden" name="pipeline_step_id" value="<?php echo esc_attr($pipeline_step_id); ?>" />
         <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id); ?>" />
         
         <div class="dm-settings-fields">
@@ -109,8 +105,8 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
             // Direct flow_config access for settings persistence
             $current_settings = [];
             
-            // If we have a flow_step_id and flow_id, get the settings from flow_config
-            if (!empty($flow_step_id) && !empty($flow_id)) {
+            // If we have a flow_step_id, get the settings from flow_config
+            if (!empty($flow_step_id)) {
                 $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
                 if (!empty($step_config)) {
                     $current_settings = $step_config['handler']['settings'] ?? [];
