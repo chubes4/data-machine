@@ -192,17 +192,14 @@
             const $pipelineCard = $input.closest('.dm-pipeline-card');
             const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
             
-            
             // Add visual feedback
             const pipelineName = $input.val().trim();
             if (pipelineName.length > 0) {
                 $input.removeClass('dm-invalid');
-                
             } else {
                 $input.addClass('dm-invalid');
             }
         },
-
 
         /**
          * Update flow button state based on pipeline validation

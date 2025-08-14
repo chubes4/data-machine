@@ -39,7 +39,6 @@ $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_pipelines" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_flows" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_jobs" );
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_processed_items" );
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_remote_locations" );
 
 
 // Clear Action Scheduler jobs if available

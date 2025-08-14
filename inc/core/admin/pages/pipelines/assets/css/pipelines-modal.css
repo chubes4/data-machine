@@ -862,50 +862,6 @@
     color: #fff;
 }
 
-/* Remote Locations Manager Modal Styles - moved from page file */
-.dm-remote-locations-modal .dm-location-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    background: #fafafa;
-}
-
-.dm-remote-locations-modal .dm-location-info strong {
-    display: block;
-    margin-bottom: 4px;
-}
-
-.dm-remote-locations-modal .dm-location-info span {
-    display: block;
-    font-size: 12px;
-    color: #666;
-}
-
-.dm-remote-locations-modal .dm-location-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.dm-remote-locations-modal .dm-form-row {
-    margin-bottom: 20px;
-}
-
-.dm-remote-locations-modal .dm-form-actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 12px;
-}
-
-.dm-remote-locations-modal .dm-modal-actions {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
-    text-align: right;
-}
 
 /* ===== RESPONSIVE DESIGN ===== */
 

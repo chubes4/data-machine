@@ -33,31 +33,8 @@ class WordPressSettings {
      * @return array Associative array defining the settings fields.
      */
     public static function get_fields(array $current_config = []): array {
-        // Provide default destination_type if not set (for modal configuration)
-        $destination_type = $current_config['destination_type'] ?? 'local';
-
-        $fields = [
-            'destination_type' => [
-                'type' => 'select',
-                'label' => __('WordPress Destination Type', 'data-machine'),
-                'description' => __('Select where to publish the processed content.', 'data-machine'),
-                'options' => [
-                    'local' => __('Local WordPress', 'data-machine'),
-                    'remote' => __('Remote WordPress (Airdrop)', 'data-machine'),
-                ],
-            ],
-        ];
-
-        // Add conditional fields based on destination type
-        switch ($destination_type) {
-            case 'local':
-                $fields = array_merge($fields, self::get_local_fields());
-                break;
-
-            case 'remote':
-                $fields = array_merge($fields, self::get_remote_fields($current_config));
-                break;
-        }
+        // WordPress publish settings for local WordPress installation only
+        $fields = self::get_local_fields();
 
         // Add common fields for all destination types
         $fields = array_merge($fields, self::get_common_fields());
@@ -177,61 +154,6 @@ class WordPressSettings {
         return $taxonomy_fields;
     }
 
-    /**
-     * Get settings fields specific to remote WordPress publishing.
-     *
-     * @param array $current_config Current configuration.
-     * @return array Settings fields.
-     */
-    private static function get_remote_fields(array $current_config = []): array {
-        // Get remote locations service via filter system
-        $all_databases = apply_filters('dm_db', []);
-        $db_remote_locations = $all_databases['remote_locations'] ?? null;
-        $locations = $db_remote_locations ? $db_remote_locations->get_locations_for_current_user() : [];
-
-        $options = [0 => __('Select a Remote Location', 'data-machine')];
-        foreach ($locations as $loc) {
-            $options[$loc->location_id] = $loc->location_name . ' (' . $loc->target_site_url . ')';
-        }
-
-        return [
-            'location_id' => [
-                'type' => 'select',
-                'label' => __('Remote Location', 'data-machine'),
-                'description' => __('Select the pre-configured remote WordPress site to publish to.', 'data-machine'),
-                'options' => $options,
-            ],
-            'selected_remote_post_type' => [
-                'type' => 'select',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type for the remote site.', 'data-machine'),
-                'options' => ['post' => 'Posts', 'page' => 'Pages'],
-            ],
-            'remote_post_status' => [
-                'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the status for the newly created post on the remote site.', 'data-machine'),
-                'options' => [
-                    'draft' => __('Draft', 'data-machine'),
-                    'publish' => __('Publish', 'data-machine'),
-                    'pending' => __('Pending Review', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                ],
-            ],
-            'selected_remote_category_id' => [
-                'type' => 'select',
-                'label' => __('Category', 'data-machine'),
-                'description' => __('Select a category or let the AI choose based on your prompt.', 'data-machine'),
-                'options' => ['instruct_model' => '-- Instruct Model --'],
-            ],
-            'selected_remote_tag_id' => [
-                'type' => 'select',
-                'label' => __('Tag', 'data-machine'),
-                'description' => __('Select a tag or let the AI choose based on your prompt.', 'data-machine'),
-                'options' => ['instruct_model' => '-- Instruct Model --'],
-            ],
-        ];
-    }
 
     /**
      * Get common settings fields for all destination types.
@@ -259,28 +181,8 @@ class WordPressSettings {
      * @return array Sanitized settings.
      */
     public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
-
-        // Destination type is required - no defaults allowed
-        if (!isset($raw_settings['destination_type'])) {
-            throw new \Exception(esc_html__('WordPress destination_type setting is required.', 'data-machine'));
-        }
-        
-        $sanitized['destination_type'] = sanitize_text_field($raw_settings['destination_type']);
-        if (!in_array($sanitized['destination_type'], ['local', 'remote'])) {
-            throw new \Exception(esc_html__('Invalid destination_type value. Must be "local" or "remote".', 'data-machine'));
-        }
-
-        // Sanitize based on destination type
-        switch ($sanitized['destination_type']) {
-            case 'local':
-                $sanitized = array_merge($sanitized, self::sanitize_local_settings($raw_settings));
-                break;
-
-            case 'remote':
-                $sanitized = array_merge($sanitized, self::sanitize_remote_settings($raw_settings));
-                break;
-        }
+        // Sanitize local WordPress settings
+        $sanitized = self::sanitize_local_settings($raw_settings);
 
         // Sanitize common fields - require explicit values
         if (!isset($raw_settings['post_date_source'])) {
@@ -356,37 +258,6 @@ class WordPressSettings {
         return $sanitized;
     }
 
-    /**
-     * Sanitize remote WordPress settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     */
-    private static function sanitize_remote_settings(array $raw_settings): array {
-        $sanitized = [
-            'location_id' => absint($raw_settings['location_id'] ?? 0),
-            'selected_remote_post_type' => sanitize_text_field($raw_settings['selected_remote_post_type'] ?? 'post'),
-            'remote_post_status' => sanitize_text_field($raw_settings['remote_post_status'] ?? 'draft'),
-        ];
-
-        // Sanitize Remote Category ID/Mode
-        $cat_val = $raw_settings['selected_remote_category_id'] ?? 'instruct_model';
-        if ($cat_val === 'instruct_model') {
-            $sanitized['selected_remote_category_id'] = $cat_val;
-        } else {
-            $sanitized['selected_remote_category_id'] = intval($cat_val);
-        }
-
-        // Sanitize Remote Tag ID/Mode
-        $tag_val = $raw_settings['selected_remote_tag_id'] ?? 'instruct_model';
-        if ($tag_val === 'instruct_model') {
-            $sanitized['selected_remote_tag_id'] = $tag_val;
-        } else {
-            $sanitized['selected_remote_tag_id'] = intval($tag_val);
-        }
-
-        return $sanitized;
-    }
 
     /**
      * Get default values for all settings.
@@ -395,7 +266,6 @@ class WordPressSettings {
      */
     public static function get_defaults(): array {
         $defaults = [
-            'destination_type' => 'local',
             'post_type' => 'post',
             'post_status' => 'draft',
             'post_author' => get_current_user_id(),
@@ -438,10 +308,7 @@ class WordPressSettings {
      * @return bool True if authentication is required, false otherwise.
      */
     public static function requires_authentication(array $current_config = []): bool {
-        // Provide default destination_type if not set (for modal configuration)
-        $destination_type = $current_config['destination_type'] ?? 'local';
-        
-        // Only remote destination requires authentication (Remote Locations)
-        return $destination_type === 'remote';
+        // Local WordPress does not require authentication
+        return false;
     }
 }

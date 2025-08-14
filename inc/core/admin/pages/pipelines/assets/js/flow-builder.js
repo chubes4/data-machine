@@ -140,16 +140,12 @@
                 }
             });
             
-            
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
                 data: formData,
                 success: (response) => {
                     if (response.success) {
-                        // Show success message
-                        if (response.data && response.data.message) {
-                        }
                         
                         // Update the flow step card with the new handler
                         this.updateFlowStepCard(response.data);

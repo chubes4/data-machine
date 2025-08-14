@@ -45,7 +45,6 @@
 
             // Tab switching handled by core modal system based on CSS classes
 
-            // Legacy form submissions removed - all forms converted to direct action pattern
 
             // Modal content visual feedback - handle highlighting for cards
             $(document).on('click', '.dm-step-selection-card', this.handleStepCardVisualFeedback.bind(this));
@@ -115,7 +114,6 @@
             // Build OAuth init URL with proper nonce
             const baseUrl = dmPipelineModal.admin_post_url || (dmPipelineModal.ajax_url.replace('admin-ajax.php', 'admin-post.php'));
             const oauthUrl = baseUrl + '?action=dm_' + handlerSlug + '_oauth_init&_wpnonce=' + dmPipelineModal.oauth_nonces[handlerSlug];
-            
             
             // Redirect to OAuth init URL
             window.location.href = oauthUrl;
@@ -283,8 +281,6 @@
             });
         },
 
-        // Legacy handleFormSubmit method removed - all forms converted to direct action pattern
-
         /**
          * Handle visual feedback for step selection cards
          * Provides visual highlighting when cards are clicked in modal
@@ -327,10 +323,7 @@
             } else {
                 $intervalField.slideUp();
             }
-        },
-
-
-
+        }
 
     });
 

@@ -321,10 +321,6 @@ function activate_data_machine() {
 		$db_jobs->create_table();
 	}
 
-	$db_remote_locations = $all_databases['remote_locations'] ?? null;
-	if ($db_remote_locations) {
-		$db_remote_locations->create_table();
-	}
 
 	// ProcessedItems table creation via pure discovery pattern
 	$db_processed_items = $all_databases['processed_items'] ?? null;
