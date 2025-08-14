@@ -85,27 +85,8 @@ class WordPressSettings {
             $post_type_options[$pt->name] = $pt->label;
         }
 
-        // Get available categories
-        $category_options = [
-            'instruct_model' => '-- Instruct Model --'
-        ];
-        $local_categories = get_terms(['taxonomy' => 'category', 'hide_empty' => false]);
-        if (!is_wp_error($local_categories)) {
-            foreach ($local_categories as $cat) {
-                $category_options[$cat->term_id] = $cat->name;
-            }
-        }
-
-        // Get available tags
-        $tag_options = [
-            'instruct_model' => '-- Instruct Model --'
-        ];
-        $local_tags = get_terms(['taxonomy' => 'post_tag', 'hide_empty' => false]);
-        if (!is_wp_error($local_tags)) {
-            foreach ($local_tags as $tag) {
-                $tag_options[$tag->term_id] = $tag->name;
-            }
-        }
+        // Get dynamic taxonomy fields for all available taxonomies
+        $taxonomy_fields = self::get_taxonomy_fields();
 
         // Get available WordPress users for post authorship
         $user_options = [];
@@ -115,7 +96,7 @@ class WordPressSettings {
             $user_options[$user->ID] = $display_name;
         }
 
-        return [
+        $fields = [
             'post_type' => [
                 'type' => 'select',
                 'label' => __('Post Type', 'data-machine'),
@@ -139,19 +120,61 @@ class WordPressSettings {
                 'description' => __('Select which WordPress user to publish posts under.', 'data-machine'),
                 'options' => $user_options,
             ],
-            'selected_local_category_id' => [
-                'type' => 'select',
-                'label' => __('Category', 'data-machine'),
-                'description' => __('Select a category, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
-                'options' => $category_options,
-            ],
-            'selected_local_tag_id' => [
-                'type' => 'select',
-                'label' => __('Tag', 'data-machine'),
-                'description' => __('Select a single tag, let the AI choose, or instruct the AI using your prompt.', 'data-machine'),
-                'options' => $tag_options,
-            ],
         ];
+
+        // Merge in dynamic taxonomy fields
+        return array_merge($fields, $taxonomy_fields);
+    }
+
+    /**
+     * Get dynamic taxonomy fields for all available public taxonomies.
+     *
+     * @return array Taxonomy field definitions.
+     */
+    private static function get_taxonomy_fields(): array {
+        $taxonomy_fields = [];
+        
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $taxonomy_slug = $taxonomy->name;
+            $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
+            
+            // Build options with skip as default
+            $options = [
+                'skip' => sprintf(__('Skip %s', 'data-machine'), $taxonomy_label),
+                'instruct_model' => sprintf(__('Let AI Choose %s', 'data-machine'), $taxonomy_label)
+            ];
+            
+            // Get terms for this taxonomy
+            $terms = get_terms(['taxonomy' => $taxonomy_slug, 'hide_empty' => false]);
+            if (!is_wp_error($terms) && !empty($terms)) {
+                foreach ($terms as $term) {
+                    $options[$term->term_id] = $term->name;
+                }
+            }
+            
+            // Generate field definition
+            $field_key = "taxonomy_{$taxonomy_slug}_selection";
+            $taxonomy_fields[$field_key] = [
+                'type' => 'select',
+                'label' => $taxonomy_label,
+                'description' => sprintf(
+                    __('Configure %s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %s.', 'data-machine'),
+                    strtolower($taxonomy_label),
+                    $taxonomy->hierarchical ? __('category', 'data-machine') : __('term', 'data-machine')
+                ),
+                'options' => $options,
+            ];
+        }
+        
+        return $taxonomy_fields;
     }
 
     /**
@@ -287,22 +310,49 @@ class WordPressSettings {
             'post_author' => absint($raw_settings['post_author'] ?? get_current_user_id()),
         ];
 
-        // Sanitize Category ID/Mode
-        $cat_val = $raw_settings['selected_local_category_id'] ?? 'instruct_model';
-        if ($cat_val === 'instruct_model') {
-            $sanitized['selected_local_category_id'] = $cat_val;
-        } else {
-            $sanitized['selected_local_category_id'] = intval($cat_val);
-        }
+        // Sanitize dynamic taxonomy selections
+        $sanitized = array_merge($sanitized, self::sanitize_taxonomy_selections($raw_settings));
 
-        // Sanitize Tag ID/Mode
-        $tag_val = $raw_settings['selected_local_tag_id'] ?? 'instruct_model';
-        if ($tag_val === 'instruct_model') {
-            $sanitized['selected_local_tag_id'] = $tag_val;
-        } else {
-            $sanitized['selected_local_tag_id'] = intval($tag_val);
-        }
+        return $sanitized;
+    }
 
+    /**
+     * Sanitize dynamic taxonomy selection settings.
+     *
+     * @param array $raw_settings Raw settings array.
+     * @return array Sanitized taxonomy selections.
+     */
+    private static function sanitize_taxonomy_selections(array $raw_settings): array {
+        $sanitized = [];
+        
+        // Get all public taxonomies to validate against
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $field_key = "taxonomy_{$taxonomy->name}_selection";
+            $raw_value = $raw_settings[$field_key] ?? 'skip';
+            
+            // Sanitize taxonomy selection value
+            if ($raw_value === 'skip' || $raw_value === 'instruct_model') {
+                $sanitized[$field_key] = $raw_value;
+            } else {
+                // Must be a term ID - validate it exists in this taxonomy
+                $term_id = absint($raw_value);
+                $term = get_term($term_id, $taxonomy->name);
+                if (!is_wp_error($term) && $term) {
+                    $sanitized[$field_key] = $term_id;
+                } else {
+                    // Invalid term ID - default to skip
+                    $sanitized[$field_key] = 'skip';
+                }
+            }
+        }
+        
         return $sanitized;
     }
 
@@ -344,15 +394,41 @@ class WordPressSettings {
      * @return array Default values for all settings.
      */
     public static function get_defaults(): array {
-        return [
+        $defaults = [
             'destination_type' => 'local',
             'post_type' => 'post',
             'post_status' => 'draft',
             'post_author' => get_current_user_id(),
-            'selected_local_category_id' => 'instruct_model',
-            'selected_local_tag_id' => 'instruct_model',
             'post_date_source' => 'current_date',
         ];
+
+        // Add dynamic taxonomy defaults (all skip by default)
+        $taxonomy_defaults = self::get_taxonomy_defaults();
+        return array_merge($defaults, $taxonomy_defaults);
+    }
+
+    /**
+     * Get default values for all available taxonomies.
+     *
+     * @return array Default taxonomy selections (all set to 'skip').
+     */
+    private static function get_taxonomy_defaults(): array {
+        $defaults = [];
+        
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $field_key = "taxonomy_{$taxonomy->name}_selection";
+            $defaults[$field_key] = 'skip'; // Default to skip for all taxonomies
+        }
+        
+        return $defaults;
     }
 
     /**

@@ -317,21 +317,11 @@ function dm_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): bool {
 function dm_clear_log_files(): bool {
     $log_file = dm_get_log_file_path();
     
-    // Debug: Function entry
-    error_log('DM Debug: dm_clear_log_files() called, log file path: ' . $log_file);
-    
     // Clear main log file
     if (file_exists($log_file)) {
-        // Debug: Before deletion attempt
-        error_log('DM Debug: File exists before deletion: ' . (file_exists($log_file) ? 'YES' : 'NO'));
         
         $delete_result = wp_delete_file($log_file);
         
-        // Debug: Deletion result
-        error_log('DM Debug: wp_delete_file() result: ' . ($delete_result ? 'SUCCESS' : 'FAILED'));
-        
-        // Debug: Check file existence after deletion
-        error_log('DM Debug: File exists after deletion: ' . (file_exists($log_file) ? 'YES' : 'NO'));
         
         if ($delete_result) {
             dm_log_debug('Log file cleared successfully.');

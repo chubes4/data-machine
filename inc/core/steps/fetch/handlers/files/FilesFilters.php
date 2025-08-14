@@ -51,7 +51,6 @@ function dm_register_files_fetch_filters() {
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         if ($template_name === 'modal/handler-settings/files') {
             // Files handler provides its own template with upload interface
-            // Use the existing files.php template temporarily
             $template_path = dirname(__DIR__, 4) . '/admin/pages/pipelines/templates/modal/handler-settings/files.php';
             if (file_exists($template_path)) {
                 // Extract data for template scope

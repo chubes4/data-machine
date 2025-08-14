@@ -356,6 +356,18 @@ class AIStep {
         $handler_slug = $next_step_config['handler']['handler_slug'];
         $directive = $all_directives[$handler_slug] ?? '';
         
+        // Try to generate dynamic directive based on handler configuration
+        $handler_config = $next_step_config['handler']['settings'] ?? [];
+        $dynamic_directive = apply_filters('dm_generate_handler_directive', $directive, $handler_slug, $handler_config);
+        if (!empty($dynamic_directive)) {
+            $directive = $dynamic_directive;
+            do_action('dm_log', 'debug', 'AI Step: Using dynamic directive', [
+                'job_id' => $job_id,
+                'handler_slug' => $handler_slug,
+                'has_handler_config' => !empty($handler_config)
+            ]);
+        }
+        
         do_action('dm_log', 'debug', 'AI Step: Handler directive discovery result', [
             'job_id' => $job_id,
             'next_flow_step_id' => $next_flow_step_id,

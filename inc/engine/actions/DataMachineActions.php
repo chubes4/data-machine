@@ -124,9 +124,7 @@ function dm_register_core_actions() {
         if (in_array($operation, $management_operations)) {
             switch ($operation) {
                 case 'clear_all':
-                    error_log('DM Debug: DataMachineActions clear_all case reached');
                     $result = dm_clear_log_files();
-                    error_log('DM Debug: dm_clear_log_files() returned: ' . ($result ? 'TRUE' : 'FALSE'));
                     return $result;
                     
                 case 'cleanup':

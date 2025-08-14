@@ -53,11 +53,19 @@ function dm_register_wordpress_publish_filters() {
         return $all_settings;
     });
     
-    // Handler directive registration - pure discovery mode
+    // Handler directive registration - dynamic taxonomy support
     add_filter('dm_handler_directives', function($directives) {
-        $directives['wordpress_publish'] = 'When publishing to WordPress, format your response as:\nTITLE: [compelling post title]\nCATEGORY: [single category name]\nTAGS: [comma,separated,tags]\nCONTENT:\n[your content here]';
+        $directives['wordpress_publish'] = dm_get_wordpress_base_directive();
         return $directives;
     });
+
+    // Dynamic directive generation based on current taxonomy configuration
+    add_filter('dm_generate_handler_directive', function($directive, $handler_slug, $handler_config) {
+        if ($handler_slug === 'wordpress_publish') {
+            return dm_get_dynamic_wordpress_directive($handler_config);
+        }
+        return $directive;
+    }, 10, 3);
     
     // Modal content registration - Pure discovery mode
     add_filter('dm_modals', function($modals) {
@@ -82,6 +90,58 @@ function dm_register_wordpress_publish_filters() {
         
         return $modals;
     });
+}
+
+/**
+ * Get base WordPress directive (fallback when no configuration is available).
+ *
+ * @return string Base WordPress directive.
+ */
+function dm_get_wordpress_base_directive(): string {
+    return 'When publishing to WordPress, format your response as:\nTITLE: [compelling post title]\nCONTENT:\n[your content here]';
+}
+
+/**
+ * Generate dynamic WordPress directive based on enabled taxonomies.
+ *
+ * @param array $handler_config Handler configuration containing taxonomy selections.
+ * @return string Dynamic directive including only enabled taxonomies.
+ */
+function dm_get_dynamic_wordpress_directive(array $handler_config): string {
+    $directive_parts = [
+        'When publishing to WordPress, format your response as:',
+        'TITLE: [compelling post title]'
+    ];
+    
+    // Get all public taxonomies
+    $taxonomies = get_taxonomies(['public' => true], 'objects');
+    
+    foreach ($taxonomies as $taxonomy) {
+        // Skip built-in formats and other non-content taxonomies
+        if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            continue;
+        }
+        
+        $field_key = "taxonomy_{$taxonomy->name}_selection";
+        $selection = $handler_config[$field_key] ?? 'skip';
+        
+        // Only include taxonomies that are not skipped
+        if ($selection !== 'skip') {
+            $taxonomy_label = strtoupper($taxonomy->name);
+            if ($taxonomy->hierarchical) {
+                // Hierarchical taxonomies (like categories) - single selection
+                $directive_parts[] = "{$taxonomy_label}: [single {$taxonomy->name} name]";
+            } else {
+                // Flat taxonomies (like tags) - comma-separated
+                $directive_parts[] = "{$taxonomy_label}: [comma,separated,{$taxonomy->name}]";
+            }
+        }
+    }
+    
+    $directive_parts[] = 'CONTENT:';
+    $directive_parts[] = '[your content here]';
+    
+    return implode("\n", $directive_parts);
 }
 
 // Auto-register when file loads - achieving complete self-containment

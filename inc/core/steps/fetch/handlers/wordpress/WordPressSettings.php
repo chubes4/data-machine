@@ -82,21 +82,10 @@ class WordPressSettings {
             $post_type_options[$post_type->name] = $post_type->label;
         }
 
-        // Get categories
-        $categories = get_categories(['hide_empty' => false]);
-        $category_options = [0 => __('All Categories', 'data-machine')];
-        foreach ($categories as $category) {
-            $category_options[$category->term_id] = $category->name;
-        }
+        // Get dynamic taxonomy filter fields for all available taxonomies
+        $taxonomy_fields = self::get_taxonomy_filter_fields();
 
-        // Get tags
-        $tags = get_tags(['hide_empty' => false]);
-        $tag_options = [0 => __('All Tags', 'data-machine')];
-        foreach ($tags as $tag) {
-            $tag_options[$tag->term_id] = $tag->name;
-        }
-
-        return [
+        $fields = [
             'post_type' => [
                 'type' => 'select',
                 'label' => __('Post Type', 'data-machine'),
@@ -114,18 +103,6 @@ class WordPressSettings {
                     'private' => __('Private', 'data-machine'),
                     'any' => __('Any', 'data-machine'),
                 ],
-            ],
-            'category_id' => [
-                'type' => 'select',
-                'label' => __('Category', 'data-machine'),
-                'description' => __('Filter by a specific category.', 'data-machine'),
-                'options' => $category_options,
-            ],
-            'tag_id' => [
-                'type' => 'select',
-                'label' => __('Tag', 'data-machine'),
-                'description' => __('Filter by a specific tag.', 'data-machine'),
-                'options' => $tag_options,
             ],
             'orderby' => [
                 'type' => 'select',
@@ -148,6 +125,59 @@ class WordPressSettings {
                 ],
             ],
         ];
+
+        // Merge in dynamic taxonomy filter fields
+        return array_merge($fields, $taxonomy_fields);
+    }
+
+    /**
+     * Get dynamic taxonomy filter fields for all available public taxonomies.
+     *
+     * @return array Taxonomy filter field definitions.
+     */
+    private static function get_taxonomy_filter_fields(): array {
+        $taxonomy_fields = [];
+        
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $taxonomy_slug = $taxonomy->name;
+            $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
+            
+            // Build filter options with "All" as default
+            $options = [
+                0 => sprintf(__('All %s', 'data-machine'), $taxonomy_label)
+            ];
+            
+            // Get terms for this taxonomy
+            $terms = get_terms(['taxonomy' => $taxonomy_slug, 'hide_empty' => false]);
+            if (!is_wp_error($terms) && !empty($terms)) {
+                foreach ($terms as $term) {
+                    $options[$term->term_id] = $term->name;
+                }
+            }
+            
+            // Generate field definition
+            $field_key = "taxonomy_{$taxonomy_slug}_filter";
+            $taxonomy_fields[$field_key] = [
+                'type' => 'select',
+                'label' => $taxonomy_label,
+                'description' => sprintf(
+                    __('Filter by specific %s or fetch from all %s.', 'data-machine'),
+                    strtolower($taxonomy_label),
+                    strtolower($taxonomy_label)
+                ),
+                'options' => $options,
+            ];
+        }
+        
+        return $taxonomy_fields;
     }
 
     /**
@@ -307,14 +337,56 @@ class WordPressSettings {
      * @return array Sanitized settings.
      */
     private static function sanitize_local_settings(array $raw_settings): array {
-        return [
+        $sanitized = [
             'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
             'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'publish'),
-            'category_id' => absint($raw_settings['category_id'] ?? 0),
-            'tag_id' => absint($raw_settings['tag_id'] ?? 0),
             'orderby' => sanitize_text_field($raw_settings['orderby'] ?? 'date'),
             'order' => sanitize_text_field($raw_settings['order'] ?? 'DESC'),
         ];
+
+        // Sanitize dynamic taxonomy filter selections
+        $taxonomy_filters = self::sanitize_taxonomy_filters($raw_settings);
+        return array_merge($sanitized, $taxonomy_filters);
+    }
+
+    /**
+     * Sanitize dynamic taxonomy filter settings.
+     *
+     * @param array $raw_settings Raw settings array.
+     * @return array Sanitized taxonomy filter selections.
+     */
+    private static function sanitize_taxonomy_filters(array $raw_settings): array {
+        $sanitized = [];
+        
+        // Get all public taxonomies to validate against
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $field_key = "taxonomy_{$taxonomy->name}_filter";
+            $raw_value = $raw_settings[$field_key] ?? 0;
+            
+            // Sanitize taxonomy filter value (0 = all, or specific term ID)
+            if ($raw_value == 0) {
+                $sanitized[$field_key] = 0; // All terms
+            } else {
+                // Must be a term ID - validate it exists in this taxonomy
+                $term_id = absint($raw_value);
+                $term = get_term($term_id, $taxonomy->name);
+                if (!is_wp_error($term) && $term) {
+                    $sanitized[$field_key] = $term_id;
+                } else {
+                    // Invalid term ID - default to all
+                    $sanitized[$field_key] = 0;
+                }
+            }
+        }
+        
+        return $sanitized;
     }
 
     /**
@@ -352,17 +424,43 @@ class WordPressSettings {
      * @return array Default values for all settings.
      */
     public static function get_defaults(): array {
-        return [
+        $defaults = [
             'source_type' => 'local',
             'post_type' => 'post',
             'post_status' => 'publish',
-            'category_id' => 0,
-            'tag_id' => 0,
             'orderby' => 'date',
             'order' => 'DESC',
             'timeframe_limit' => 'all_time',
             'search' => '',
         ];
+
+        // Add dynamic taxonomy filter defaults (all set to 0 = "All")
+        $taxonomy_defaults = self::get_taxonomy_filter_defaults();
+        return array_merge($defaults, $taxonomy_defaults);
+    }
+
+    /**
+     * Get default values for all available taxonomy filters.
+     *
+     * @return array Default taxonomy filter selections (all set to 0 = "All").
+     */
+    private static function get_taxonomy_filter_defaults(): array {
+        $defaults = [];
+        
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $field_key = "taxonomy_{$taxonomy->name}_filter";
+            $defaults[$field_key] = 0; // Default to "All" for all taxonomy filters
+        }
+        
+        return $defaults;
     }
 
     /**
