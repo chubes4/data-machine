@@ -71,7 +71,7 @@ class DataMachine_Delete_Actions {
         }
         
         // Validate delete type
-        $valid_delete_types = ['pipeline', 'flow', 'step'];
+        $valid_delete_types = ['pipeline', 'flow', 'step', 'processed_items', 'jobs'];
         if (!in_array($delete_type, $valid_delete_types)) {
             wp_send_json_error(['message' => __('Invalid deletion type.', 'data-machine')]);
             return;
@@ -92,9 +92,16 @@ class DataMachine_Delete_Actions {
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
+        $db_jobs = $all_databases['jobs'] ?? null;
         
-        if (!$db_pipelines || !$db_flows) {
+        // Check required services based on delete type
+        if (in_array($delete_type, ['pipeline', 'flow', 'step']) && (!$db_pipelines || !$db_flows)) {
             wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
+            return;
+        }
+        
+        if ($delete_type === 'jobs' && !$db_jobs) {
+            wp_send_json_error(['message' => __('Jobs database service unavailable.', 'data-machine')]);
             return;
         }
         
@@ -115,6 +122,14 @@ class DataMachine_Delete_Actions {
                     return;
                 }
                 $this->handle_step_deletion($target_id, $pipeline_id, $db_pipelines, $db_flows);
+                break;
+                
+            case 'processed_items':
+                $this->handle_processed_items_deletion($target_id, $context);
+                break;
+                
+            case 'jobs':
+                $this->handle_jobs_deletion($target_id, $context, $db_jobs);
                 break;
                 
         }
@@ -139,13 +154,13 @@ class DataMachine_Delete_Actions {
             return;
         }
         
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        $pipeline_name = $pipeline['pipeline_name'];
         $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
         // Delete all flows first (cascade)
         foreach ($affected_flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_id = $flow['flow_id'];
             $success = $db_flows->delete_flow($flow_id);
             if (!$success) {
                 wp_send_json_error(['message' => __('Failed to delete associated flows.', 'data-machine')]);
@@ -193,8 +208,8 @@ class DataMachine_Delete_Actions {
             return;
         }
         
-        $flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
-        $pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
+        $flow_name = $flow['flow_name'];
+        $pipeline_id = $flow['pipeline_id'];
 
         // Delete the flow
         $success = $db_flows->delete_flow($flow_id);
@@ -238,7 +253,7 @@ class DataMachine_Delete_Actions {
             return;
         }
 
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        $pipeline_name = $pipeline['pipeline_name'];
         $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
@@ -262,7 +277,7 @@ class DataMachine_Delete_Actions {
 
         // Update pipeline configuration
         $success = $db_pipelines->update_pipeline($pipeline_id, [
-            'step_configuration' => json_encode($updated_steps)
+            'pipeline_config' => json_encode($updated_steps)
         ]);
         
         if (!$success) {
@@ -272,7 +287,7 @@ class DataMachine_Delete_Actions {
 
         // Sync step deletion to all flows
         foreach ($affected_flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_id = $flow['flow_id'];
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             
             // Remove flow steps for this pipeline step ID
@@ -307,6 +322,154 @@ class DataMachine_Delete_Actions {
             'pipeline_step_id' => $pipeline_step_id,
             'affected_flows' => $flow_count,
             'remaining_steps' => count($remaining_steps)
+        ]);
+    }
+    
+    /**
+     * Handle processed items deletion with flexible criteria
+     * 
+     * Deletes processed items based on the provided criteria. Supports
+     * deletion by job_id, flow_id, source_type, or flow_step_id.
+     * 
+     * @param mixed $target_id Target identifier (job_id, flow_id, source_type, or flow_step_id)
+     * @param array $context Context containing 'delete_by' criteria
+     * @since NEXT_VERSION
+     */
+    private function handle_processed_items_deletion($target_id, $context) {
+        $all_databases = apply_filters('dm_db', []);
+        $processed_items = $all_databases['processed_items'] ?? null;
+        
+        if (!$processed_items) {
+            do_action('dm_log', 'error', 'ProcessedItems service unavailable for cleanup');
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => __('ProcessedItems service unavailable.', 'data-machine')]);
+            }
+            return;
+        }
+        
+        // Build criteria from context
+        $criteria = [];
+        $delete_by = $context['delete_by'] ?? 'job_id';
+        
+        switch ($delete_by) {
+            case 'job_id':
+                $criteria['job_id'] = (int)$target_id;
+                break;
+            case 'flow_id':
+                $criteria['flow_id'] = (int)$target_id;
+                break;
+            case 'source_type':
+                $criteria['source_type'] = (string)$target_id;
+                break;
+            case 'flow_step_id':
+                $criteria['flow_step_id'] = (string)$target_id;
+                break;
+            case 'pipeline_id':
+                $criteria['pipeline_id'] = (int)$target_id;
+                break;
+            default:
+                do_action('dm_log', 'error', 'Invalid delete_by criteria for processed items', [
+                    'delete_by' => $delete_by,
+                    'target_id' => $target_id
+                ]);
+                if (wp_doing_ajax()) {
+                    wp_send_json_error(['message' => __('Invalid deletion criteria.', 'data-machine')]);
+                }
+                return;
+        }
+        
+        $result = $processed_items->delete_processed_items($criteria);
+        
+        do_action('dm_log', 'debug', 'Processed items deletion via dm_delete', [
+            'criteria' => $criteria,
+            'result' => $result
+        ]);
+        
+        // If in AJAX context, send response
+        if (wp_doing_ajax()) {
+            if ($result !== false) {
+                wp_send_json_success([
+                    'message' => sprintf(__('Deleted %d processed items.', 'data-machine'), $result),
+                    'items_deleted' => $result
+                ]);
+            } else {
+                wp_send_json_error(['message' => __('Failed to delete processed items.', 'data-machine')]);
+            }
+        }
+    }
+    
+    /**
+     * Handle jobs deletion with optional processed items cleanup
+     * 
+     * Deletes jobs based on criteria (all or failed) and optionally
+     * cleans up associated processed items for deleted jobs.
+     * 
+     * @param string $clear_type Type of jobs to clear ('all' or 'failed')
+     * @param array $context Context containing cleanup options
+     * @param object $db_jobs Jobs database service
+     * @since NEXT_VERSION
+     */
+    private function handle_jobs_deletion($clear_type, $context, $db_jobs) {
+        $cleanup_processed = !empty($context['cleanup_processed']);
+        
+        // Get job IDs before deletion (for processed items cleanup)
+        $job_ids_to_delete = [];
+        if ($cleanup_processed) {
+            global $wpdb;
+            $jobs_table = $wpdb->prefix . 'dm_jobs';
+            
+            if ($clear_type === 'failed') {
+                $job_ids_to_delete = $wpdb->get_col("SELECT job_id FROM {$jobs_table} WHERE status = 'failed'");
+            } else {
+                $job_ids_to_delete = $wpdb->get_col("SELECT job_id FROM {$jobs_table}");
+            }
+        }
+        
+        // Build deletion criteria
+        $criteria = [];
+        if ($clear_type === 'failed') {
+            $criteria['failed'] = true;
+        } else {
+            $criteria['all'] = true;
+        }
+        
+        // Delete jobs
+        $deleted_count = $db_jobs->delete_jobs($criteria);
+        
+        if ($deleted_count === false) {
+            wp_send_json_error(['message' => __('Failed to delete jobs.', 'data-machine')]);
+            return;
+        }
+        
+        // Clean up processed items if requested
+        $processed_items_deleted = 0;
+        if ($cleanup_processed && !empty($job_ids_to_delete)) {
+            foreach ($job_ids_to_delete as $job_id) {
+                do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
+            }
+            // Note: We don't count processed items deleted as each dm_delete call is independent
+        }
+        
+        $message_parts = [];
+        $message_parts[] = sprintf(__('Deleted %d jobs', 'data-machine'), $deleted_count);
+        
+        if ($cleanup_processed && !empty($job_ids_to_delete)) {
+            $message_parts[] = __('and their associated processed items', 'data-machine');
+        }
+        
+        $message = implode(' ', $message_parts) . '.';
+        
+        do_action('dm_log', 'debug', 'Jobs deletion completed', [
+            'clear_type' => $clear_type,
+            'jobs_deleted' => $deleted_count,
+            'cleanup_processed' => $cleanup_processed,
+            'job_ids_cleaned' => $cleanup_processed ? count($job_ids_to_delete) : 0
+        ]);
+        
+        wp_send_json_success([
+            'message' => $message,
+            'jobs_deleted' => $deleted_count,
+            'processed_items_cleaned' => $cleanup_processed ? count($job_ids_to_delete) : 0
         ]);
     }
 

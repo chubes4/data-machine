@@ -52,7 +52,7 @@ class Files {
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null, int $job_id = 0): array {
         // Validate pipeline ID
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
@@ -162,6 +162,8 @@ class Files {
             ]);
             
             if (!$is_processed) {
+                // Mark file as processed immediately after confirming eligibility
+                do_action('dm_mark_item_processed', $flow_step_id, 'files', $file_identifier, $job_id);
                 return $file;
             }
         }

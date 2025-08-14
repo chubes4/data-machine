@@ -314,9 +314,6 @@
             }).then((flowCardHtml) => {
                 $flowsList.append(flowCardHtml);
                 
-                // Update flow count in pipeline header
-                const flowCount = $pipelineCard.find('.dm-flow-instance-card').length;
-                $pipelineCard.find('.dm-flow-count').text(flowCount + ' flow' + (flowCount > 1 ? 's' : ''));
             }).catch((error) => {
                 console.error('Failed to render flow card template:', error);
             });
@@ -516,11 +513,6 @@
                         $flowCard.fadeOut(300, function() {
                             $(this).remove();
                             
-                            // Update flow count after removal
-                            const pipelineId = response.data.pipeline_id;
-                            if (pipelineId) {
-                                this.updateFlowCount(pipelineId);
-                            }
                         }.bind(this));
                     } else {
                         alert(response.data.message || 'Error deleting flow');
@@ -535,52 +527,6 @@
             });
         },
 
-        /**
-         * Update flow count display after flow deletion
-         * @param {string} pipelineId - The pipeline ID to update counts for
-         */
-        updateFlowCount: function(pipelineId) {
-            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            const $flowCountElement = $pipelineCard.find('.dm-flow-count');
-            const $flowsList = $pipelineCard.find('.dm-flows-list');
-            
-            if ($flowCountElement.length === 0) {
-                return;
-            }
-            
-            // Count remaining flow cards for this pipeline
-            const remainingFlowCount = $pipelineCard.find('.dm-flow-instance-card').length;
-            
-            // Update count display with proper pluralization
-            let countText;
-            if (remainingFlowCount === 0) {
-                countText = dmPipelineBuilder.strings.noFlows || '0 flows';
-                
-                // Add empty state message if flows list is empty
-                if ($flowsList.length && $flowsList.children().length === 0) {
-                    const emptyMessage = '<div class="dm-no-flows-message"><p>' + 
-                        (dmPipelineBuilder.strings.noFlowsMessage || 'No flows configured for this pipeline.') + 
-                        '</p></div>';
-                    $flowsList.html(emptyMessage);
-                }
-            } else if (remainingFlowCount === 1) {
-                countText = '1 flow';
-                
-                // Remove empty state message if it exists
-                $flowsList.find('.dm-no-flows-message').remove();
-            } else {
-                countText = `${remainingFlowCount} flows`;
-                
-                // Remove empty state message if it exists
-                $flowsList.find('.dm-no-flows-message').remove();
-            }
-            
-            $flowCountElement.text(countText);
-            
-            // Add visual feedback for the update
-            $flowCountElement.addClass('dm-count-updated');
-            $flowCountElement.removeClass('dm-count-updated');
-        },
 
         /**
          * Append step directly to flow container (flows don't have empty steps)

@@ -156,43 +156,7 @@ class PipelinePageAjax
     }
 
 
-    /**
-     * Top Layer: Complete pipeline initialization
-     * 
-     * Creates pipeline, adds default empty step, and initializes "Draft Flow".
-     * 
-     * @param string $pipeline_name Optional pipeline name
-     * @return int|false Pipeline ID on success, false on failure
-     */
-    private function create_new_pipeline($pipeline_name = null) {
-        $all_databases = apply_filters('dm_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_pipelines) {
-            return false;
-        }
-
-        // Create pipeline with default name if not provided
-        $pipeline_data = [
-            'pipeline_name' => $pipeline_name ?: __('Draft Pipeline', 'data-machine'),
-            'step_configuration' => []
-        ];
-
-        $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
-        if (!$pipeline_id) {
-            return false;
-        }
-
-        // Create "Draft Flow" for the new pipeline
-        $draft_flow_id = $this->add_flow_to_pipeline($pipeline_id, __('Draft Flow', 'data-machine'));
-        
-        if (!$draft_flow_id) {
-            do_action('dm_log', 'error', "Failed to create Draft Flow for pipeline {$pipeline_id}");
-            // Don't fail pipeline creation if flow creation fails
-        }
-
-        return $pipeline_id;
-    }
+    // create_new_pipeline method removed - functionality moved to centralized Create.php
 
     /**
      * Layer 3: Add step to pipeline and sync to all existing flows
@@ -228,10 +192,14 @@ class PipelinePageAjax
             'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
         ];
 
-        // Add step to pipeline
-        $current_steps[] = $new_step;
+        // Add step to pipeline using associative array with pipeline_step_id as key
+        $pipeline_config = [];
+        foreach ($current_steps as $step) {
+            $pipeline_config[$step['pipeline_step_id']] = $step;
+        }
+        $pipeline_config[$new_step['pipeline_step_id']] = $new_step;
         $success = $db_pipelines->update_pipeline($pipeline_id, [
-            'step_configuration' => json_encode($current_steps)
+            'pipeline_config' => json_encode($pipeline_config)
         ]);
 
         if (!$success) {
@@ -241,7 +209,7 @@ class PipelinePageAjax
         // Sync new step to all existing flows
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_id = $flow['flow_id'];
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             
             // Add new step to this flow
@@ -261,67 +229,7 @@ class PipelinePageAjax
         return $new_step;
     }
 
-    /**
-     * Layer 2: Add flow to pipeline with all existing pipeline steps
-     * 
-     * Creates new flow and populates with all pipeline steps.
-     * 
-     * @param int $pipeline_id Pipeline ID to add flow to
-     * @param string $flow_name Optional flow name (auto-generated if not provided)
-     * @return int|false Flow ID on success, false on failure
-     */
-    private function add_flow_to_pipeline($pipeline_id, $flow_name = null) {
-        $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_flows || !$db_pipelines) {
-            return false;
-        }
-
-        // Generate flow name if not provided
-        if (!$flow_name) {
-            $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
-            $pipeline_name = $pipeline['pipeline_name'] ?? __('Pipeline', 'data-machine');
-            $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-            $flow_number = count($existing_flows) + 1;
-            $flow_name = sprintf(__('%s Flow %d', 'data-machine'), $pipeline_name, $flow_number);
-        }
-
-        // Create flow record
-        $flow_data = [
-            'pipeline_id' => $pipeline_id,
-            'flow_name' => $flow_name,
-            'flow_config' => json_encode([]), // Will be populated with steps
-            'scheduling_config' => json_encode([
-                'status' => 'inactive',
-                'interval' => 'manual'
-            ])
-        ];
-
-        $flow_id = $db_flows->create_flow($flow_data);
-        if (!$flow_id) {
-            return false;
-        }
-
-        // Get existing pipeline steps and create flow steps
-        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        if (!empty($pipeline_steps)) {
-            $flow_config = $this->add_flow_steps($flow_id, $pipeline_steps);
-            
-            // Update flow with populated config
-            $success = $db_flows->update_flow($flow_id, [
-                'flow_config' => json_encode($flow_config)
-            ]);
-            
-            if (!$success) {
-                // Log error but don't fail flow creation
-                do_action('dm_log', 'error', "Failed to populate flow steps for flow {$flow_id}");
-            }
-        }
-
-        return $flow_id;
-    }
+    // add_flow_to_pipeline method removed - functionality moved to centralized Create.php
 
     /**
      * Bottom layer: Create flow steps for given pipeline steps
@@ -370,6 +278,73 @@ class PipelinePageAjax
         
         $flow = $db_flows->get_flow($flow_id);
         return $flow ? (int)($flow['pipeline_id'] ?? 0) : 0;
+    }
+
+    /**
+     * Export selected pipelines
+     */
+    public function handle_export_pipelines() {
+        // Security checks
+        if (!check_ajax_referer('dm_pipeline_ajax', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $pipeline_ids = json_decode(wp_unslash($_POST['pipeline_ids'] ?? '[]'), true);
+        
+        if (empty($pipeline_ids)) {
+            wp_send_json_error(['message' => __('No pipelines selected', 'data-machine')]);
+        }
+        
+        // Trigger export action
+        do_action('dm_export', 'pipelines', $pipeline_ids, ['format' => 'csv']);
+        
+        // Get result via filter
+        $csv_content = apply_filters('dm_export_result', null);
+        
+        if ($csv_content) {
+            wp_send_json_success(['csv' => $csv_content]);
+        } else {
+            wp_send_json_error(['message' => __('Export failed', 'data-machine')]);
+        }
+    }
+
+    /**
+     * Import pipelines from CSV
+     */
+    public function handle_import_pipelines() {
+        // Security checks
+        if (!check_ajax_referer('dm_pipeline_ajax', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $csv_content = wp_unslash($_POST['csv_content'] ?? '');
+        
+        if (empty($csv_content)) {
+            wp_send_json_error(['message' => __('No CSV content provided', 'data-machine')]);
+        }
+        
+        // Trigger import action
+        do_action('dm_import', 'pipelines', $csv_content, ['format' => 'csv']);
+        
+        // Get result via filter
+        $result = apply_filters('dm_import_result', null);
+        
+        if ($result && isset($result['imported'])) {
+            wp_send_json_success([
+                'message' => sprintf(__('Successfully imported %d pipelines', 'data-machine'), count($result['imported'])),
+                'pipeline_ids' => $result['imported']
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Import failed', 'data-machine')]);
+        }
     }
 
     // All deletion logic moved to central dm_delete action in DataMachineActions.php

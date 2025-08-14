@@ -183,7 +183,7 @@ class JobsOperations {
         // Aggregate jobs from all flows
         $all_jobs = [];
         foreach ($flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_id = $flow['flow_id'];
             $flow_jobs = $this->get_jobs_for_flow($flow_id);
             $all_jobs = array_merge($all_jobs, $flow_jobs);
         }
@@ -219,5 +219,45 @@ class JobsOperations {
         ), ARRAY_A);
         
         return $results ?: [];
+    }
+    
+    /**
+     * Delete jobs based on criteria.
+     * 
+     * Provides flexible deletion of jobs by status or all jobs.
+     * Used for cleanup operations and maintenance tasks.
+     *
+     * @param array $criteria Deletion criteria with keys:
+     *                        - 'all': Delete all jobs
+     *                        - 'failed': Delete only failed jobs
+     * @return int|false Number of rows deleted or false on error
+     */
+    public function delete_jobs(array $criteria = []): int|false {
+        global $wpdb;
+        
+        if (empty($criteria)) {
+            do_action('dm_log', 'warning', 'No criteria provided for jobs deletion');
+            return false;
+        }
+        
+        $where = '';
+        $where_args = [];
+        
+        if (!empty($criteria['failed'])) {
+            $where = "WHERE status = 'failed'";
+        }
+        // For 'all', no WHERE clause needed
+        
+        $sql = "DELETE FROM {$this->table_name} {$where}";
+        
+        $result = $wpdb->query($sql);
+        
+        do_action('dm_log', 'debug', 'Deleted jobs', [
+            'criteria' => $criteria,
+            'jobs_deleted' => $result !== false ? $result : 0,
+            'success' => $result !== false
+        ]);
+        
+        return $result;
     }
 }

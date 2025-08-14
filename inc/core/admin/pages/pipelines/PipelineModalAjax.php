@@ -231,21 +231,16 @@ class PipelineModalAjax
                     // Get form data using step-aware field names (no fallbacks)
                     $form_data = [];
                     
-                    // Convert pipeline_step_id to step_id for AI HTTP Client interface boundary
-                    // AI HTTP Client expects step_id for field names and configuration storage
-                    $step_id = $pipeline_step_id;
-                    
-                    // Field names are prefixed with step_id for AI HTTP Client step-aware configuration
-                    $provider_field = "ai_step_{$step_id}_provider";
-                    $api_key_field = 'ai_api_key';  // API key uses generic name
-                    $model_field = "ai_step_{$step_id}_model";
-                    $temperature_field = "ai_step_{$step_id}_temperature";
-                    $system_prompt_field = "ai_step_{$step_id}_system_prompt";
+                    // AI HTTP Client now uses standard field names - Data Machine handles step-specific storage
+                    $provider_field = 'ai_provider';
+                    $api_key_field = 'ai_api_key';
+                    $model_field = 'ai_model';
+                    $temperature_field = 'ai_temperature';
+                    $system_prompt_field = 'ai_system_prompt';
                     
                     // Log received field names for debugging
                     do_action('dm_log', 'debug', 'AI step configuration field mapping', [
                         'pipeline_step_id' => $pipeline_step_id,
-                        'step_id' => $step_id,
                         'expected_fields' => [
                             'provider' => $provider_field,
                             'api_key' => $api_key_field,
@@ -293,14 +288,18 @@ class PipelineModalAjax
                         $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST['system_prompt']));
                     }
                     
-                    // Save API key directly to WordPress options (library expects individual options)
+                    // Save API key via unified ai_provider_api_keys filter (replace per-provider option storage)
                     if (!empty($api_key) && !empty($provider)) {
-                        $option_name = $provider . '_api_key';
-                        update_option($option_name, $api_key);
-                        
-                        do_action('dm_log', 'debug', 'API key saved to WordPress options', [
+                        $all_keys = apply_filters('ai_provider_api_keys', null);
+                        if (!is_array($all_keys)) {
+                            $all_keys = [];
+                        }
+                        $all_keys[$provider] = $api_key;
+                        apply_filters('ai_provider_api_keys', $all_keys);
+
+                        do_action('dm_log', 'debug', 'API key saved via ai_provider_api_keys filter', [
                             'provider' => $provider,
-                            'option_name' => $option_name,
+                            'keys_count' => count($all_keys),
                             'api_key_length' => strlen($api_key)
                         ]);
                     }
@@ -308,7 +307,6 @@ class PipelineModalAjax
                     // Save step configuration to pipeline database
                     do_action('dm_log', 'debug', 'Before step config save', [
                         'pipeline_step_id' => $pipeline_step_id,
-                        'step_id' => $step_id,
                         'config_data' => $step_config_data
                     ]);
                     
@@ -326,17 +324,17 @@ class PipelineModalAjax
                     }
                     
                     // Get current step configuration
-                    $step_configuration = is_string($pipeline['step_configuration']) 
-                        ? json_decode($pipeline['step_configuration'], true) 
-                        : ($pipeline['step_configuration'] ?? []);
+                    $pipeline_config = is_string($pipeline['pipeline_config']) 
+                        ? json_decode($pipeline['pipeline_config'], true) 
+                        : ($pipeline['pipeline_config'] ?? []);
                     
-                    if (!is_array($step_configuration)) {
-                        $step_configuration = [];
+                    if (!is_array($pipeline_config)) {
+                        $pipeline_config = [];
                     }
                     
                     // Merge with existing step configuration to preserve provider-specific models
-                    if (isset($step_configuration[$pipeline_step_id])) {
-                        $existing_config = $step_configuration[$pipeline_step_id];
+                    if (isset($pipeline_config[$pipeline_step_id])) {
+                        $existing_config = $pipeline_config[$pipeline_step_id];
                         
                         // Preserve existing provider models
                         if (isset($existing_config['providers']) && isset($step_config_data['providers'])) {
@@ -349,14 +347,14 @@ class PipelineModalAjax
                         }
                         
                         // Merge with existing config
-                        $step_configuration[$pipeline_step_id] = array_merge($existing_config, $step_config_data);
+                        $pipeline_config[$pipeline_step_id] = array_merge($existing_config, $step_config_data);
                     } else {
-                        $step_configuration[$pipeline_step_id] = $step_config_data;
+                        $pipeline_config[$pipeline_step_id] = $step_config_data;
                     }
                     
                     // Save updated pipeline configuration using dm_auto_save
                     $success = $db_pipelines->update_pipeline($pipeline_id, [
-                        'step_configuration' => json_encode($step_configuration)
+                        'pipeline_config' => json_encode($pipeline_config)
                     ]);
                     
                     if (!$success) {

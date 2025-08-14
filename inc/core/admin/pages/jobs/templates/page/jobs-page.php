@@ -64,7 +64,15 @@ function dm_render_job_row($job) {
 
 <div class="dm-jobs-page">
     
-    <h1><?php esc_html_e('Jobs', 'data-machine'); ?></h1>
+    <div class="dm-page-header">
+        <h1><?php esc_html_e('Jobs', 'data-machine'); ?></h1>
+        <div class="dm-page-actions">
+            <button type="button" class="button button-secondary dm-modal-open" data-template="jobs-admin">
+                <span class="dashicons dashicons-admin-tools"></span>
+                <?php esc_html_e('Admin', 'data-machine'); ?>
+            </button>
+        </div>
+    </div>
     
     <?php if (empty($recent_jobs)): ?>
         <div class="dm-jobs-empty-state">

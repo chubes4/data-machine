@@ -380,10 +380,8 @@ function dm_extract_flow_data($data, $fields) {
     $flow = $data['flow'];
     
     foreach ($fields as $field) {
-        if (is_array($flow) && isset($flow[$field])) {
+        if (isset($flow[$field])) {
             $data[$field] = $flow[$field];
-        } elseif (is_object($flow) && isset($flow->$field)) {
-            $data[$field] = $flow->$field;
         }
     }
     
@@ -405,10 +403,8 @@ function dm_extract_pipeline_data($data, $fields) {
     $pipeline = $data['pipeline'];
     
     foreach ($fields as $field) {
-        if (is_array($pipeline) && isset($pipeline[$field])) {
+        if (isset($pipeline[$field])) {
             $data[$field] = $pipeline[$field];
-        } elseif (is_object($pipeline) && isset($pipeline->$field)) {
-            $data[$field] = $pipeline->$field;
         }
     }
     

@@ -59,7 +59,7 @@
                 // Initialize any AI provider manager components in the modal
                 if (window.AIHttpProviderManager) {
                     const $modal = $('#dm-modal');
-                    const $providerComponents = $modal.find('.ai-http-provider-manager');
+                    const $providerComponents = $modal.find('.ai-http-provider-config');
                     
                     $providerComponents.each(function() {
                         const componentId = $(this).attr('id');
@@ -71,7 +71,6 @@
                                 // CRITICAL: Use AI HTTP Client nonce, not Data Machine pipeline nonce
                                 // AI components require 'ai_http_nonce' action for proper verification
                                 nonce: dmPipelineBuilder.ai_http_nonce,
-                                plugin_context: 'data-machine',
                                 component_id: componentId
                             };
                             

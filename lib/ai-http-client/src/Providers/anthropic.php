@@ -14,23 +14,13 @@ defined('ABSPATH') || exit;
 
 /**
  * Self-register Anthropic provider with complete configuration
- * Includes normalizer specifications for self-contained provider architecture
+ * Self-contained provider architecture - no external normalizers needed
  */
 add_filter('ai_providers', function($providers) {
     $providers['anthropic'] = [
         'class' => 'AI_HTTP_Anthropic_Provider', 
         'type' => 'llm',
-        'name' => 'Anthropic',
-        'normalizers' => [
-            'request' => 'AI_HTTP_Unified_Request_Normalizer',
-            'response' => 'AI_HTTP_Unified_Response_Normalizer',
-            'streaming' => 'AI_HTTP_Unified_Streaming_Normalizer',
-            'tool_results' => 'AI_HTTP_Unified_Tool_Results_Normalizer'
-        ],
-        'tool_format' => [
-            'id_field' => 'tool_use_id',
-            'content_field' => 'content'
-        ]
+        'name' => 'Anthropic'
     ];
     return $providers;
 });
@@ -77,17 +67,21 @@ class AI_HTTP_Anthropic_Provider {
     }
 
     /**
-     * Send raw request to Anthropic API
+     * Send request to Anthropic API
+     * Handles all format conversion internally - receives and returns standard format
      *
-     * @param array $provider_request Already normalized for Anthropic
-     * @return array Raw Anthropic response
+     * @param array $standard_request Standard request format
+     * @return array Standard response format
      * @throws Exception If request fails
      */
-    public function send_raw_request($provider_request) {
+    public function request($standard_request) {
         if (!$this->is_configured()) {
             throw new Exception('Anthropic provider not configured - missing API key');
         }
 
+        // Convert standard format to Anthropic format internally
+        $provider_request = $this->format_request($standard_request);
+        
         $url = $this->base_url . '/messages';
         
         // Use centralized ai_http filter
@@ -103,22 +97,29 @@ class AI_HTTP_Anthropic_Provider {
             throw new Exception('Anthropic API request failed: ' . $result['error']);
         }
         
-        return json_decode($result['data'], true);
+        $raw_response = json_decode($result['data'], true);
+        
+        // Convert Anthropic format to standard format
+        return $this->format_response($raw_response);
     }
 
     /**
-     * Send raw streaming request to Anthropic API
+     * Send streaming request to Anthropic API
+     * Handles all format conversion internally - receives and returns standard format
      *
-     * @param array $provider_request Already normalized for Anthropic
+     * @param array $standard_request Standard request format
      * @param callable $callback Optional callback for each chunk
-     * @return string Full response content
+     * @return array Standard response format
      * @throws Exception If request fails
      */
-    public function send_raw_streaming_request($provider_request, $callback = null) {
+    public function streaming_request($standard_request, $callback = null) {
         if (!$this->is_configured()) {
             throw new Exception('Anthropic provider not configured - missing API key');
         }
 
+        // Convert standard format to Anthropic format internally
+        $provider_request = $this->format_request($standard_request);
+        
         $url = $this->base_url . '/messages';
         
         // Use centralized ai_http filter with streaming=true
@@ -134,7 +135,19 @@ class AI_HTTP_Anthropic_Provider {
             throw new Exception('Anthropic streaming request failed: ' . $result['error']);
         }
 
-        return '';
+        // Return standardized streaming response
+        return [
+            'success' => true,
+            'data' => [
+                'content' => '',
+                'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0],
+                'model' => $standard_request['model'] ?? '',
+                'finish_reason' => 'stop',
+                'tool_calls' => null
+            ],
+            'error' => null,
+            'provider' => 'anthropic'
+        ];
     }
 
     /**
@@ -274,4 +287,164 @@ class AI_HTTP_Anthropic_Provider {
         return $models;
     }
     
+    /**
+     * Format unified request to Anthropic API format
+     *
+     * @param array $unified_request Standard request format
+     * @return array Anthropic-formatted request
+     * @throws Exception If validation fails
+     */
+    private function format_request($unified_request) {
+        $this->validate_unified_request($unified_request);
+        
+        $request = $this->sanitize_common_fields($unified_request);
+        
+        // Anthropic uses standard messages format, just constrain parameters
+        if (isset($request['temperature'])) {
+            $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
+        }
+
+        if (isset($request['max_tokens'])) {
+            $request['max_tokens'] = max(1, intval($request['max_tokens']));
+        }
+
+        // Handle system message extraction for Anthropic
+        if (isset($request['messages'])) {
+            $request = $this->extract_anthropic_system_message($request);
+        }
+
+        return $request;
+    }
+    
+    /**
+     * Format Anthropic response to unified standard format
+     *
+     * @param array $anthropic_response Raw Anthropic response
+     * @return array Standard response format
+     */
+    private function format_response($anthropic_response) {
+        $content = '';
+        $tool_calls = array();
+
+        // Extract content
+        if (isset($anthropic_response['content']) && is_array($anthropic_response['content'])) {
+            foreach ($anthropic_response['content'] as $content_block) {
+                if (isset($content_block['type'])) {
+                    switch ($content_block['type']) {
+                        case 'text':
+                            $content .= $content_block['text'] ?? '';
+                            break;
+                        case 'tool_use':
+                            $tool_calls[] = array(
+                                'id' => $content_block['id'] ?? uniqid('tool_'),
+                                'type' => 'function',
+                                'function' => array(
+                                    'name' => $content_block['name'] ?? '',
+                                    'arguments' => wp_json_encode($content_block['input'] ?? array())
+                                )
+                            );
+                            break;
+                    }
+                }
+            }
+        }
+
+        // Extract usage
+        $usage = array(
+            'prompt_tokens' => isset($anthropic_response['usage']['input_tokens']) ? $anthropic_response['usage']['input_tokens'] : 0,
+            'completion_tokens' => isset($anthropic_response['usage']['output_tokens']) ? $anthropic_response['usage']['output_tokens'] : 0,
+            'total_tokens' => 0
+        );
+        $usage['total_tokens'] = $usage['prompt_tokens'] + $usage['completion_tokens'];
+
+        return array(
+            'success' => true,
+            'data' => array(
+                'content' => $content,
+                'usage' => $usage,
+                'model' => $anthropic_response['model'] ?? '',
+                'finish_reason' => $anthropic_response['stop_reason'] ?? 'unknown',
+                'tool_calls' => !empty($tool_calls) ? $tool_calls : null
+            ),
+            'error' => null,
+            'provider' => 'anthropic',
+            'raw_response' => $anthropic_response
+        );
+    }
+    
+    /**
+     * Validate unified request format
+     *
+     * @param array $request Request to validate
+     * @throws Exception If invalid
+     */
+    private function validate_unified_request($request) {
+        if (!is_array($request)) {
+            throw new Exception('Request must be an array');
+        }
+
+        if (!isset($request['messages']) || !is_array($request['messages'])) {
+            throw new Exception('Request must include messages array');
+        }
+
+        if (empty($request['messages'])) {
+            throw new Exception('Messages array cannot be empty');
+        }
+    }
+    
+    /**
+     * Sanitize common fields
+     *
+     * @param array $request Request to sanitize
+     * @return array Sanitized request
+     */
+    private function sanitize_common_fields($request) {
+        // Sanitize messages
+        if (isset($request['messages'])) {
+            foreach ($request['messages'] as &$message) {
+                if (isset($message['role'])) {
+                    $message['role'] = sanitize_text_field($message['role']);
+                }
+                if (isset($message['content']) && is_string($message['content'])) {
+                    $message['content'] = sanitize_textarea_field($message['content']);
+                }
+            }
+        }
+
+        // Sanitize other common fields
+        if (isset($request['model'])) {
+            $request['model'] = sanitize_text_field($request['model']);
+        }
+
+        return $request;
+    }
+    
+    /**
+     * Extract system message for Anthropic
+     *
+     * @param array $request Request with messages
+     * @return array Request with system extracted
+     */
+    private function extract_anthropic_system_message($request) {
+        $messages = $request['messages'];
+        $system_content = '';
+        $filtered_messages = array();
+
+        foreach ($messages as $message) {
+            if (isset($message['role']) && $message['role'] === 'system') {
+                $system_content .= $message['content'] . "\n";
+            } else {
+                $filtered_messages[] = $message;
+            }
+        }
+
+        $request['messages'] = $filtered_messages;
+        
+        if (!empty(trim($system_content))) {
+            $request['system'] = trim($system_content);
+        }
+
+        return $request;
+    }
+
 }

@@ -14,23 +14,13 @@ defined('ABSPATH') || exit;
 
 /**
  * Self-register Grok provider with complete configuration
- * Includes normalizer specifications for self-contained provider architecture
+ * Self-contained provider architecture - no external normalizers needed
  */
 add_filter('ai_providers', function($providers) {
     $providers['grok'] = [
         'class' => 'AI_HTTP_Grok_Provider',
         'type' => 'llm',
-        'name' => 'Grok',
-        'normalizers' => [
-            'request' => 'AI_HTTP_Unified_Request_Normalizer',
-            'response' => 'AI_HTTP_Unified_Response_Normalizer',
-            'streaming' => 'AI_HTTP_Unified_Streaming_Normalizer',
-            'tool_results' => 'AI_HTTP_Unified_Tool_Results_Normalizer'
-        ],
-        'tool_format' => [
-            'id_field' => 'tool_call_id',
-            'content_field' => 'content'
-        ]
+        'name' => 'Grok'
     ];
     return $providers;
 });
@@ -85,17 +75,21 @@ class AI_HTTP_Grok_Provider {
     }
 
     /**
-     * Send raw request to Grok API
+     * Send request to Grok API
+     * Handles all format conversion internally - receives and returns standard format
      *
-     * @param array $provider_request Already normalized for Grok
-     * @return array Raw Grok response
+     * @param array $standard_request Standard request format
+     * @return array Standard response format
      * @throws Exception If request fails
      */
-    public function send_raw_request($provider_request) {
+    public function request($standard_request) {
         if (!$this->is_configured()) {
             throw new Exception('Grok provider not configured - missing API key');
         }
 
+        // Convert standard format to Grok format internally
+        $provider_request = $this->format_request($standard_request);
+        
         $url = $this->base_url . '/chat/completions';
         
         // Use centralized ai_http filter
@@ -111,22 +105,29 @@ class AI_HTTP_Grok_Provider {
             throw new Exception('Grok API request failed: ' . $result['error']);
         }
         
-        return json_decode($result['data'], true);
+        $raw_response = json_decode($result['data'], true);
+        
+        // Convert Grok format to standard format
+        return $this->format_response($raw_response);
     }
 
     /**
-     * Send raw streaming request to Grok API
+     * Send streaming request to Grok API
+     * Handles all format conversion internally - receives and returns standard format
      *
-     * @param array $provider_request Already normalized for Grok
+     * @param array $standard_request Standard request format
      * @param callable $callback Optional callback for each chunk
-     * @return string Full response content
+     * @return array Standard response format
      * @throws Exception If request fails
      */
-    public function send_raw_streaming_request($provider_request, $callback = null) {
+    public function streaming_request($standard_request, $callback = null) {
         if (!$this->is_configured()) {
             throw new Exception('Grok provider not configured - missing API key');
         }
 
+        // Convert standard format to Grok format internally
+        $provider_request = $this->format_request($standard_request);
+        
         $url = $this->base_url . '/chat/completions';
         
         // Use centralized ai_http filter with streaming=true
@@ -142,7 +143,19 @@ class AI_HTTP_Grok_Provider {
             throw new Exception('Grok streaming request failed: ' . $result['error']);
         }
 
-        return '';
+        // Return standardized streaming response
+        return [
+            'success' => true,
+            'data' => [
+                'content' => '',
+                'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0],
+                'model' => $standard_request['model'] ?? '',
+                'finish_reason' => 'stop',
+                'tool_calls' => null
+            ],
+            'error' => null,
+            'provider' => 'grok'
+        ];
     }
 
     /**
@@ -288,6 +301,123 @@ class AI_HTTP_Grok_Provider {
         }
         
         return $models;
+    }
+    
+    /**
+     * Format unified request to Grok API format (OpenAI-compatible with additions)
+     *
+     * @param array $unified_request Standard request format
+     * @return array Grok-formatted request
+     * @throws Exception If validation fails
+     */
+    private function format_request($unified_request) {
+        $this->validate_unified_request($unified_request);
+        
+        $request = $this->sanitize_common_fields($unified_request);
+        
+        // Grok uses OpenAI-compatible format, just add reasoning_effort if supported
+        if (isset($request['reasoning_effort'])) {
+            $request['reasoning_effort'] = sanitize_text_field($request['reasoning_effort']);
+        }
+
+        // Standard OpenAI-style constraints
+        if (isset($request['temperature'])) {
+            $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
+        }
+
+        if (isset($request['max_tokens'])) {
+            $request['max_tokens'] = max(1, intval($request['max_tokens']));
+        }
+
+        return $request;
+    }
+    
+    /**
+     * Format Grok response to unified standard format (OpenAI-compatible)
+     *
+     * @param array $grok_response Raw Grok response
+     * @return array Standard response format
+     */
+    private function format_response($grok_response) {
+        // Grok uses OpenAI-compatible format, so use standard Chat Completions parsing
+        if (empty($grok_response['choices'])) {
+            throw new Exception('Invalid Grok response: missing choices');
+        }
+
+        $choice = $grok_response['choices'][0];
+        $message = $choice['message'];
+
+        // Extract content and tool calls
+        $content = isset($message['content']) ? $message['content'] : '';
+        $tool_calls = isset($message['tool_calls']) ? $message['tool_calls'] : null;
+
+        // Extract usage
+        $usage = array(
+            'prompt_tokens' => isset($grok_response['usage']['prompt_tokens']) ? $grok_response['usage']['prompt_tokens'] : 0,
+            'completion_tokens' => isset($grok_response['usage']['completion_tokens']) ? $grok_response['usage']['completion_tokens'] : 0,
+            'total_tokens' => isset($grok_response['usage']['total_tokens']) ? $grok_response['usage']['total_tokens'] : 0
+        );
+
+        return array(
+            'success' => true,
+            'data' => array(
+                'content' => $content,
+                'usage' => $usage,
+                'model' => isset($grok_response['model']) ? $grok_response['model'] : '',
+                'finish_reason' => isset($choice['finish_reason']) ? $choice['finish_reason'] : 'unknown',
+                'tool_calls' => $tool_calls
+            ),
+            'error' => null,
+            'provider' => 'grok',
+            'raw_response' => $grok_response
+        );
+    }
+    
+    /**
+     * Validate unified request format
+     *
+     * @param array $request Request to validate
+     * @throws Exception If invalid
+     */
+    private function validate_unified_request($request) {
+        if (!is_array($request)) {
+            throw new Exception('Request must be an array');
+        }
+
+        if (!isset($request['messages']) || !is_array($request['messages'])) {
+            throw new Exception('Request must include messages array');
+        }
+
+        if (empty($request['messages'])) {
+            throw new Exception('Messages array cannot be empty');
+        }
+    }
+    
+    /**
+     * Sanitize common fields
+     *
+     * @param array $request Request to sanitize
+     * @return array Sanitized request
+     */
+    private function sanitize_common_fields($request) {
+        // Sanitize messages
+        if (isset($request['messages'])) {
+            foreach ($request['messages'] as &$message) {
+                if (isset($message['role'])) {
+                    $message['role'] = sanitize_text_field($message['role']);
+                }
+                if (isset($message['content']) && is_string($message['content'])) {
+                    $message['content'] = sanitize_textarea_field($message['content']);
+                }
+            }
+        }
+
+        // Sanitize other common fields
+        if (isset($request['model'])) {
+            $request['model'] = sanitize_text_field($request['model']);
+        }
+
+        return $request;
     }
     
 }

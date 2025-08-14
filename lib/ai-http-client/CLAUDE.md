@@ -97,7 +97,7 @@ AI_HTTP_Client
 │   ├── request_normalizer->normalize() -> Converts to provider format
 │   ├── provider->send_raw_request() -> Pure API call
 │   └── response_normalizer->normalize() -> Converts to standard format
-└── Plugin-scoped OptionsManager -> Retrieves configuration by plugin_context + ai_type
+└── Filter-based configuration -> Direct filter access for API keys and settings
 ```
 
 ### Loading System
@@ -164,10 +164,11 @@ $client = new AI_HTTP_Client([
 ]);
 ```
 
-### OptionsManager Usage
+### Filter-Based Configuration
 ```php
-// REQUIRED parameters - both plugin_context and ai_type required
-$options = new AI_HTTP_Options_Manager('my-plugin-slug', 'llm');
+// Direct filter access for API keys and configuration
+$api_keys = apply_filters('ai_provider_api_keys', null);
+$config = apply_filters('ai_config', null);
 ```
 
 ### Component Rendering

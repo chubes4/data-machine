@@ -143,7 +143,7 @@
                     
                     // Include pipeline_step_id if available (required for existing steps)
                     if (pipelineStepId) {
-                        stepData.step_id = pipelineStepId;
+                        stepData.pipeline_step_id = pipelineStepId;
                     }
                     
                     // Include label if available
@@ -157,7 +157,7 @@
             
             return {
                 pipeline_name: pipelineName.trim(),
-                step_configuration: stepConfiguration
+                pipeline_config: stepConfiguration
             };
         },
 
@@ -173,7 +173,7 @@
                 };
             }
             
-            if (pipelineData.step_configuration.length === 0) {
+            if (pipelineData.pipeline_config.length === 0) {
                 return {
                     isValid: false,
                     message: dmPipelineBuilder.strings.atLeastOneStep || 'At least one step is required'

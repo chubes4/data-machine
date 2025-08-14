@@ -139,22 +139,20 @@ $handler_configured = !$is_empty && !empty($current_handler);
                         <!-- AI step status - show configuration from pipeline level -->
                         <?php
                         $ai_config = apply_filters('ai_config', $pipeline_step_id);
-                        
-                        if (!empty($ai_config) && isset($ai_config['selected_provider'])):
+                        $show_config = false;
+                        if (!empty($ai_config) && isset($ai_config['selected_provider'])) {
                             $selected_provider = $ai_config['selected_provider'];
-                            $model_name = $ai_config['model'] ?? 'Model not selected';
+                            $model_name = $ai_config['model'] ?? '';
                             $has_api_key = !empty($ai_config['providers'][$selected_provider]['api_key'] ?? '');
-                            
-                            if ($has_api_key && !empty($ai_config['model'])) {
-                                $display_text = ucfirst($selected_provider) . ': ' . $model_name;
-                            } elseif (!$has_api_key) {
-                                $display_text = ucfirst($selected_provider) . ' (API key needed)';
-                            } else {
-                                $display_text = ucfirst($selected_provider) . ' (model needed)';
+                            if ($selected_provider && $model_name && $has_api_key) {
+                                $show_config = true;
                             }
-                        else:
+                        }
+                        if ($show_config) {
+                            $display_text = ucfirst($selected_provider) . ': ' . $model_name;
+                        } else {
                             $display_text = 'AI step not configured';
-                        endif;
+                        }
                         ?>
                         <div class="dm-placeholder-text"><?php echo esc_html($display_text); ?></div>
                     <?php endif; ?>

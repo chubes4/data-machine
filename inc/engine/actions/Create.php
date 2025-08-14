@@ -146,7 +146,7 @@ class DataMachine_Create_Actions {
         // Create pipeline with default configuration
         $pipeline_data = [
             'pipeline_name' => $pipeline_name,
-            'step_configuration' => []
+            'pipeline_config' => []
         ];
         
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
@@ -214,7 +214,7 @@ class DataMachine_Create_Actions {
         }
         
         // Generate flow name
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
+        $pipeline_name = $pipeline['pipeline_name'];
         $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_number = count($existing_flows) + 1;
         $flow_name = isset($data['flow_name']) ? sanitize_text_field(wp_unslash($data['flow_name'])) : sprintf(__('%s Flow %d', 'data-machine'), $pipeline_name, $flow_number);
@@ -302,10 +302,14 @@ class DataMachine_Create_Actions {
             'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
         ];
         
-        // Add to pipeline
-        $current_steps[] = $new_step;
+        // Add to pipeline using associative array with pipeline_step_id as key
+        $pipeline_config = [];
+        foreach ($current_steps as $step) {
+            $pipeline_config[$step['pipeline_step_id']] = $step;
+        }
+        $pipeline_config[$new_step['pipeline_step_id']] = $new_step;
         $success = $db_pipelines->update_pipeline($pipeline_id, [
-            'step_configuration' => json_encode($current_steps)
+            'pipeline_config' => json_encode($pipeline_config)
         ]);
         
         if (!$success) {
@@ -316,7 +320,7 @@ class DataMachine_Create_Actions {
         // Sync to all existing flows using centralized action
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
-            $flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
+            $flow_id = $flow['flow_id'];
             do_action('dm_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
         }
         

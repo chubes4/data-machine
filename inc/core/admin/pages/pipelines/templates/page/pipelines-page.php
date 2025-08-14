@@ -33,6 +33,9 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
             <button type="button" class="button button-primary dm-add-new-pipeline-btn">
                 <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
             </button>
+            <button type="button" class="button dm-import-export-btn">
+                <?php esc_html_e('Import / Export', 'data-machine'); ?>
+            </button>
         </div>
     </div>
 
@@ -44,7 +47,7 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
                 <?php foreach (array_reverse($all_pipelines) as $pipeline): ?>
                     <?php 
                     // Load flows for this pipeline
-                    $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : $pipeline['pipeline_id'];
+                    $pipeline_id = $pipeline['pipeline_id'];
                     $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
                     
                     echo apply_filters('dm_render_template', '', 'page/pipeline-card', [

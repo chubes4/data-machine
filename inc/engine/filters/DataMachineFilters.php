@@ -30,8 +30,36 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+/**
+ * Register Import/Export filters
+ */
+function dm_register_importexport_filters() {
+    
+    /**
+     * Register import/export modal
+     */
+    add_filter('dm_modals', function($modals) {
+        $modals['import-export'] = [
+            'title' => __('Import / Export Pipelines', 'data-machine'),
+            'template' => 'modal/import-export',
+            'size' => 'large'
+        ];
+        return $modals;
+    }, 10, 1);
+    
+    /**
+     * Importer service discovery (returns action handler instance)
+     */
+    add_filter('dm_importer', function($service) {
+        if ($service === null) {
+            require_once DATA_MACHINE_PATH . 'inc/engine/actions/ImportExport.php';
+            return new DataMachine_ImportExport_Actions();
+        }
+        return $service;
+    }, 10, 1);
+}
 
-
+dm_register_importexport_filters();
 
 
 

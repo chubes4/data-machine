@@ -20,22 +20,21 @@ $pipeline_name = '';
 $pipeline_steps = [];
 
 if (isset($pipeline) && !empty($pipeline)) {
-    $pipeline_id = is_object($pipeline) ? $pipeline->pipeline_id : ($pipeline['pipeline_id'] ?? null);
-    $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : ($pipeline['pipeline_name'] ?? '');
-    $step_config = is_object($pipeline) ? $pipeline->step_configuration : ($pipeline['step_configuration'] ?? '');
+    $pipeline_id = $pipeline['pipeline_id'] ?? null;
+    $pipeline_name = $pipeline['pipeline_name'] ?? '';
+    $step_config = $pipeline['pipeline_config'] ?? '';
     $pipeline_steps = !empty($step_config) ? json_decode($step_config, true) : [];
     $pipeline_steps = is_array($pipeline_steps) ? $pipeline_steps : [];
     
-    // Validate all pipeline steps have required pipeline_step_id - fail fast if missing
-    foreach ($pipeline_steps as $key => $step) {
-        if (empty($step['pipeline_step_id'])) {
-            do_action('dm_log', 'error', 'Pipeline step missing required pipeline_step_id - data corruption detected', [
+    // Validate all pipeline steps have valid UUID keys - the key IS the pipeline_step_id
+    foreach ($pipeline_steps as $pipeline_step_id => $step) {
+        if (empty($pipeline_step_id) || !is_string($pipeline_step_id)) {
+            do_action('dm_log', 'error', 'Pipeline step has invalid pipeline_step_id key - data corruption detected', [
                 'pipeline_id' => $pipeline_id,
-                'step_index' => $key,
-                'execution_order' => $step['execution_order'] ?? $key,
+                'pipeline_step_id' => $pipeline_step_id,
                 'step_data' => $step
             ]);
-            throw new \RuntimeException("Pipeline {$pipeline_id} step at index {$key} missing required pipeline_step_id - cannot render pipeline");
+            throw new \RuntimeException("Pipeline {$pipeline_id} step with invalid pipeline_step_id key - cannot render pipeline");
         }
     }
 }
@@ -51,10 +50,6 @@ $is_new_pipeline = empty($pipeline_id);
             <input type="text" class="dm-pipeline-title-input" 
                    value="<?php echo esc_attr($pipeline_name); ?>" 
                    placeholder="<?php esc_attr_e('Enter pipeline name...', 'data-machine'); ?>" />
-            <div class="dm-pipeline-meta">
-                <span class="dm-step-count"><?php echo esc_html(sprintf(__('%d steps', 'data-machine'), $step_count)); ?></span>
-                <span class="dm-flow-count"><?php esc_html_e('0 flows', 'data-machine'); ?></span>
-            </div>
         </div>
         <div class="dm-pipeline-actions">
             <div class="dm-auto-save-status" style="display: none;">

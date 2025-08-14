@@ -36,13 +36,13 @@ class Pipelines {
 	/**
 	 * Create a new pipeline.
 	 *
-	 * @param array $pipeline_data Pipeline data with pipeline_name and step_configuration.
+	 * @param array $pipeline_data Pipeline data with pipeline_name and pipeline_config.
 	 * @return int|false The pipeline ID on success, false on failure.
 	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
 		global $wpdb;
 		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] ?? '' );
-		$step_configuration = $pipeline_data['step_configuration'] ?? [];
+		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
 
 		// Validate required fields
 		if ( empty( $pipeline_name ) ) {
@@ -52,16 +52,16 @@ class Pipelines {
 			return false;
 		}
 
-		// Ensure step_configuration is JSON
-		if ( is_array( $step_configuration ) ) {
-			$step_configuration_json = wp_json_encode( $step_configuration );
+		// Ensure pipeline_config is JSON
+		if ( is_array( $pipeline_config ) ) {
+			$pipeline_config_json = wp_json_encode( $pipeline_config );
 		} else {
-			$step_configuration_json = $step_configuration;
+			$pipeline_config_json = $pipeline_config;
 		}
 
 		$data = [
 			'pipeline_name' => $pipeline_name,
-			'step_configuration' => $step_configuration_json,
+			'pipeline_config' => $pipeline_config_json,
 			'created_at' => current_time( 'mysql', 1 ),
 			'updated_at' => current_time( 'mysql', 1 )
 		];
@@ -91,9 +91,9 @@ class Pipelines {
 	 * Retrieve a specific pipeline by its ID.
 	 *
 	 * @param int $pipeline_id The ID of the pipeline.
-	 * @return object|null The pipeline object or null if not found.
+	 * @return array|null The pipeline array or null if not found.
 	 */
-	public function get_pipeline( int $pipeline_id ): ?object {
+	public function get_pipeline( int $pipeline_id ): ?array {
 		global $wpdb;
 
 		if ( empty( $pipeline_id ) ) {
@@ -105,20 +105,21 @@ class Pipelines {
 			$pipeline_id
 		);
 
-		$pipeline = $wpdb->get_row( $sql );
+		$pipeline = $wpdb->get_row( $sql, ARRAY_A );
 		return $pipeline;
 	}
 
 	/**
 	 * Retrieve all pipelines.
 	 *
-	 * @return array Array of pipeline objects.
+	 * @return array Array of pipeline arrays.
 	 */
 	public function get_all_pipelines(): array {
 		global $wpdb;
 
 		$results = $wpdb->get_results(
-			"SELECT * FROM {$this->table_name} ORDER BY pipeline_name ASC"
+			"SELECT * FROM {$this->table_name} ORDER BY pipeline_name ASC",
+			ARRAY_A
 		);
 
 		return $results ?: [];
@@ -148,14 +149,14 @@ class Pipelines {
 			$format[] = '%s';
 		}
 
-		if ( isset( $pipeline_data['step_configuration'] ) ) {
-			$step_configuration = $pipeline_data['step_configuration'];
+		if ( isset( $pipeline_data['pipeline_config'] ) ) {
+			$pipeline_config = $pipeline_data['pipeline_config'];
 			
-			// Ensure step_configuration is JSON
-			if ( is_array( $step_configuration ) ) {
-				$update_data['step_configuration'] = wp_json_encode( $step_configuration );
+			// Ensure pipeline_config is JSON
+			if ( is_array( $pipeline_config ) ) {
+				$update_data['pipeline_config'] = wp_json_encode( $pipeline_config );
 			} else {
-				$update_data['step_configuration'] = $step_configuration;
+				$update_data['pipeline_config'] = $pipeline_config;
 			}
 			$format[] = '%s';
 		}
@@ -211,7 +212,7 @@ class Pipelines {
 
 		// Get pipeline info for logging before deletion
 		$pipeline = $this->get_pipeline( $pipeline_id );
-		$pipeline_name = $pipeline ? $pipeline->pipeline_name : 'Unknown';
+		$pipeline_name = $pipeline ? $pipeline['pipeline_name'] : 'Unknown';
 
 		$deleted = $wpdb->delete(
 			$this->table_name,
@@ -264,45 +265,45 @@ class Pipelines {
 			return [];
 		}
 
-		$step_configuration = [];
-		if ( ! empty( $pipeline->step_configuration ) ) {
-			$decoded = json_decode( $pipeline->step_configuration, true );
-			$step_configuration = is_array( $decoded ) ? $decoded : [];
+		$pipeline_config = [];
+		if ( ! empty( $pipeline['pipeline_config'] ) ) {
+			$decoded = json_decode( $pipeline['pipeline_config'], true );
+			$pipeline_config = is_array( $decoded ) ? $decoded : [];
 		}
 
 		return [
-			'steps' => $step_configuration,
+			'steps' => $pipeline_config,
 			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $pipeline->pipeline_name ?? '',
-			'created_at' => $pipeline->created_at ?? '',
-			'updated_at' => $pipeline->updated_at ?? ''
+			'pipeline_name' => $pipeline['pipeline_name'] ?? '',
+			'created_at' => $pipeline['created_at'] ?? '',
+			'updated_at' => $pipeline['updated_at'] ?? ''
 		];
 	}
 
 	/**
-	 * Get pipeline step configuration.
+	 * Get pipeline configuration.
 	 *
 	 * @param int $pipeline_id The ID of the pipeline.
-	 * @return array Array of pipeline steps configuration.
+	 * @return array Array of pipeline configuration.
 	 */
-	public function get_pipeline_step_configuration( int $pipeline_id ): array {
+	public function get_pipeline_config( int $pipeline_id ): array {
 		global $wpdb;
 
 		if ( empty( $pipeline_id ) ) {
 			return [];
 		}
 
-		$step_configuration_json = $wpdb->get_var( $wpdb->prepare(
-			"SELECT step_configuration FROM {$this->table_name} WHERE pipeline_id = %d",
+		$pipeline_config_json = $wpdb->get_var( $wpdb->prepare(
+			"SELECT pipeline_config FROM {$this->table_name} WHERE pipeline_id = %d",
 			$pipeline_id
 		) );
 
-		if ( empty( $step_configuration_json ) ) {
+		if ( empty( $pipeline_config_json ) ) {
 			return [];
 		}
 
-		$step_configuration = json_decode( $step_configuration_json, true );
-		return is_array( $step_configuration ) ? $step_configuration : [];
+		$pipeline_config = json_decode( $pipeline_config_json, true );
+		return is_array( $pipeline_config ) ? $pipeline_config : [];
 	}
 
 	/**
@@ -395,7 +396,7 @@ class Pipelines {
 		$sql = "CREATE TABLE $table_name (
 			pipeline_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			pipeline_name varchar(255) NOT NULL,
-			step_configuration longtext NULL,
+			pipeline_config longtext NULL,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			PRIMARY KEY  (pipeline_id),
@@ -406,10 +407,65 @@ class Pipelines {
 
 		dbDelta( $sql );
 
+		// Run migration to rename column if needed
+		static::migrate_step_configuration_column();
+
 		// Log table creation
 		do_action( 'dm_log', 'debug', 'Created pipelines database table', [
 			'table_name' => $table_name,
 			'action' => 'create_table'
 		] );
+	}
+
+	/**
+	 * Migrate step_configuration column to pipeline_config for existing installations.
+	 *
+	 * @since 0.15.0
+	 */
+	public static function migrate_step_configuration_column() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'dm_pipelines';
+
+		// Check if table exists
+		$table_exists = $wpdb->get_var( $wpdb->prepare(
+			"SHOW TABLES LIKE %s",
+			$table_name
+		) );
+
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		// Check if old column exists
+		$old_column_exists = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+			 WHERE TABLE_SCHEMA = %s 
+			 AND TABLE_NAME = %s 
+			 AND COLUMN_NAME = 'step_configuration'",
+			DB_NAME,
+			$table_name
+		) );
+
+		// Check if new column exists
+		$new_column_exists = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+			 WHERE TABLE_SCHEMA = %s 
+			 AND TABLE_NAME = %s 
+			 AND COLUMN_NAME = 'pipeline_config'",
+			DB_NAME,
+			$table_name
+		) );
+
+		// If old column exists and new doesn't, rename it
+		if ( $old_column_exists && ! $new_column_exists ) {
+			$wpdb->query(
+				"ALTER TABLE {$table_name} CHANGE COLUMN step_configuration pipeline_config longtext NULL"
+			);
+
+			do_action( 'dm_log', 'debug', 'Migrated step_configuration column to pipeline_config', [
+				'table_name' => $table_name,
+				'action' => 'column_migration'
+			] );
+		}
 	}
 }

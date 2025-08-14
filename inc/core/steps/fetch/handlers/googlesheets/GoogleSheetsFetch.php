@@ -50,12 +50,15 @@ class GoogleSheetsFetch {
      * @return array Array containing 'processed_items' key with standardized data packets for sheet rows.
      * @throws Exception If data cannot be retrieved or is invalid.
      */
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+    public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null, int $job_id = 0): array {
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
         }
+        
+        // Extract flow_step_id from handler config for processed items tracking
+        $flow_step_id = $handler_config['flow_step_id'] ?? null;
 
         // Access config from handler config structure
         $config = $handler_config['googlesheets_fetch'] ?? [];
@@ -179,6 +182,11 @@ class GoogleSheetsFetch {
                     'pipeline_id' => $pipeline_id
                 ]);
                 continue;
+            }
+            
+            // Mark item as processed immediately after confirming eligibility
+            if ($flow_step_id) {
+                do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $row_identifier, $job_id);
             }
 
             // Build content string

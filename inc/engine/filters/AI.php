@@ -32,34 +32,27 @@ function dm_register_ai_filters() {
     // AI Configuration System - Data Machine step-aware configuration
     // Provides configuration for AI HTTP Client by reading from pipeline database and WordPress options
     // Usage: Applied automatically when pipeline_step_id is provided in ai_request filter
-    add_filter('ai_config', function($pipeline_step_id = null) {
-        // Get shared API keys from WordPress options (library expects individual options)
-        $providers = ['openai', 'anthropic', 'openrouter', 'google', 'grok'];
-        $shared_api_keys = [];
-        
-        foreach ($providers as $provider) {
-            $api_key = get_option($provider . '_api_key', '');
-            if (!empty($api_key)) {
-                $shared_api_keys[$provider] = ['api_key' => $api_key];
-            }
-        }
-        
-        // If no pipeline_step_id provided, only return shared API keys
+    add_filter('ai_config', function($default, $pipeline_step_id = null) {
+        // Get shared API keys via unified filter
+        $shared_api_keys = apply_filters('ai_provider_api_keys', null);
+        $shared_api_keys = is_array($shared_api_keys) ? $shared_api_keys : [];
+
+        // If no pipeline_step_id provided, only return shared API keys in expected structure
         if (!$pipeline_step_id) {
             do_action('dm_log', 'debug', 'AI Config: Returning shared API keys only', [
                 'providers_with_keys' => array_keys($shared_api_keys)
             ]);
-            return $shared_api_keys;
+            return array_map(function($key) { return ['api_key' => $key]; }, $shared_api_keys);
         }
         
         // Get step configuration from pipeline database using pipeline_step_id
-        // First, find which pipeline contains this step
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
         if (!$db_pipelines) {
             do_action('dm_log', 'error', 'AI Config: Pipeline database service not available');
-            return $shared_api_keys;
+            // Return shared keys in expected structure
+            return array_map(function($key) { return ['api_key' => $key]; }, $shared_api_keys);
         }
         
         // Get all pipelines and search for the one containing this step
@@ -67,12 +60,12 @@ function dm_register_ai_filters() {
         $step_config = null;
         
         foreach ($pipelines as $pipeline) {
-            $step_configuration = is_string($pipeline['step_configuration']) 
-                ? json_decode($pipeline['step_configuration'], true) 
-                : ($pipeline['step_configuration'] ?? []);
+            $pipeline_config = is_string($pipeline['pipeline_config']) 
+                ? json_decode($pipeline['pipeline_config'], true) 
+                : ($pipeline['pipeline_config'] ?? []);
                 
-            if (isset($step_configuration[$pipeline_step_id])) {
-                $step_config = $step_configuration[$pipeline_step_id];
+            if (!empty($pipeline_step_id) && is_scalar($pipeline_step_id) && isset($pipeline_config[$pipeline_step_id])) {
+                $step_config = $pipeline_config[$pipeline_step_id];
                 break;
             }
         }
@@ -81,11 +74,19 @@ function dm_register_ai_filters() {
             do_action('dm_log', 'debug', 'AI Config: No step configuration found in pipeline database', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
-            return $shared_api_keys;
+            
+            // Return properly structured default config for unconfigured steps
+            return [
+                'selected_provider' => '',
+                'providers' => array_map(function($key) { return ['api_key' => $key]; }, $shared_api_keys),
+                'temperature' => 0.7,
+                'system_prompt' => '',
+                'model' => ''
+            ];
         }
         
         // Extract AI configuration from step config
-        $selected_provider = $step_config['provider'] ?? 'openai';
+        $selected_provider = $step_config['provider'] ?? '';
         $temperature = isset($step_config['temperature']) ? (float) $step_config['temperature'] : 0.7;
         $system_prompt = $step_config['system_prompt'] ?? '';
         
@@ -98,9 +99,9 @@ function dm_register_ai_filters() {
         ];
         
         // Add all providers with API keys and saved models
-        foreach ($shared_api_keys as $provider_name => $provider_data) {
+        foreach ($shared_api_keys as $provider_name => $api_key_value) {
             $config['providers'][$provider_name] = [
-                'api_key' => $provider_data['api_key']
+                'api_key' => $api_key_value
             ];
             
             // Add saved model for this provider if exists in step config
@@ -113,11 +114,23 @@ function dm_register_ai_filters() {
         }
         
         // Add top-level model for currently selected provider (for template compatibility)
-        if (isset($config['providers'][$selected_provider]['model'])) {
+        if ($selected_provider && isset($config['providers'][$selected_provider]['model'])) {
             $config['model'] = $config['providers'][$selected_provider]['model'];
         } elseif (isset($step_config['model'])) {
             $config['model'] = $step_config['model'];
+        } else {
+            $config['model'] = '';
         }
+        
+        // Compute additional debug info before returning
+        $providers_with_keys = array();
+        foreach ($config['providers'] as $pname => $pdata) {
+            if (!empty($pdata['api_key'])) {
+                $providers_with_keys[] = $pname;
+            }
+        }
+        $selected_provider_has_key = $selected_provider && !empty($config['providers'][$selected_provider]['api_key'] ?? '');
+        $selected_provider_model_present = $selected_provider && isset($config['providers'][$selected_provider]['model']) && !empty($config['providers'][$selected_provider]['model']);
         
         do_action('dm_log', 'debug', 'AI Config: Retrieved step configuration from pipeline database', [
             'pipeline_step_id' => $pipeline_step_id,
@@ -125,13 +138,14 @@ function dm_register_ai_filters() {
             'has_temperature' => ($temperature !== null),
             'has_system_prompt' => !empty($system_prompt),
             'has_model' => !empty($config['model']),
+            'selected_provider_has_key' => $selected_provider_has_key,
+            'selected_provider_model_present' => $selected_provider_model_present,
+            'providers_with_keys' => $providers_with_keys,
             'providers_count' => count($config['providers'])
         ]);
         
         return $config;
-    }, 20, 1); // Priority 20 to override library's priority 5
-    
-    // save_ai_config action removed - Data Machine handles configuration saving directly in PipelineModalAjax.php
+    }, 20, 2);
 }
 
 // Initialize AI filters on WordPress init

@@ -102,19 +102,6 @@ class Jobs {
         return $this->status->update_job_status($job_id, $status);
     }
 
-    /**
-     * Check if there are any active jobs for a specific flow.
-     */
-    public function has_active_jobs_for_flow( int $flow_id, ?int $exclude_job_id = null ): bool {
-        return $this->status->has_active_jobs_for_flow($flow_id, $exclude_job_id);
-    }
-
-    /**
-     * Check if there are any active jobs for a specific pipeline.
-     */
-    public function has_active_jobs_for_pipeline( int $pipeline_id, ?int $exclude_job_id = null ): bool {
-        return $this->status->has_active_jobs_for_pipeline($pipeline_id, $exclude_job_id);
-    }
 
     /**
      * Get all jobs for a specific pipeline (for deletion impact analysis).
@@ -128,6 +115,13 @@ class Jobs {
      */
     public function get_jobs_for_flow( int $flow_id ): array {
         return $this->operations->get_jobs_for_flow($flow_id);
+    }
+    
+    /**
+     * Delete jobs based on criteria.
+     */
+    public function delete_jobs(array $criteria = []): int|false {
+        return $this->operations->delete_jobs($criteria);
     }
 
 

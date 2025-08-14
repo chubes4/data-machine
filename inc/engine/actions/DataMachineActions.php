@@ -48,6 +48,7 @@ if ( ! defined( 'WPINC' ) ) {
 // Include organized action classes
 require_once __DIR__ . '/Delete.php';
 require_once __DIR__ . '/Create.php';
+require_once __DIR__ . '/ImportExport.php';
 require_once __DIR__ . '/Update.php';
 require_once __DIR__ . '/Engine.php';
 
@@ -87,24 +88,26 @@ require_once __DIR__ . '/Engine.php';
 function dm_register_core_actions() {
     
     // Central processed items marking hook - eliminates service discovery duplication across all handlers
-    add_action('dm_mark_item_processed', function($flow_id, $source_type, $item_identifier) {
+    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id = 0) {
         $all_databases = apply_filters('dm_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
         
         if (!$processed_items) {
                 do_action('dm_log', 'error','ProcessedItems service unavailable for item marking', [
-                'flow_id' => $flow_id, 
+                'flow_step_id' => $flow_step_id, 
                 'source_type' => $source_type,
-                'identifier' => substr($item_identifier, 0, 50) . '...'
+                'identifier' => substr($item_identifier, 0, 50) . '...',
+                'job_id' => $job_id
             ]);
             return false;
         }
         
-        $success = $processed_items->add_processed_item($flow_id, $source_type, $item_identifier);
+        $success = $processed_items->add_processed_item($flow_step_id, $source_type, $item_identifier, $job_id);
         
         // Centralized logging for processed item tracking
         do_action('dm_log', 'debug', 'Item marked as processed via hook', [
-            'flow_id' => $flow_id,
+            'flow_step_id' => $flow_step_id,
+            'job_id' => $job_id,
             'source_type' => $source_type,
             'identifier' => substr($item_identifier, 0, 50) . '...',
             'success' => $success
@@ -197,6 +200,7 @@ function dm_register_core_actions() {
     DataMachine_Create_Actions::register();
     DataMachine_Delete_Actions::register();
     DataMachine_Update_Actions::register();
+    DataMachine_ImportExport_Actions::register();
     
 }
 

@@ -7,23 +7,18 @@
  *
  * Available variables:
  * @var string $unique_id - Unique form identifier
- * @var string $plugin_context - Plugin context for configuration isolation
  * @var array $provider_config - Provider configuration data
- * @var string $step_id - Optional step ID for step-aware field naming
  * @var array $config - Component-specific configuration
  */
 
 defined('ABSPATH') || exit;
 
-// Generate step-aware field name
+// Use standard field name - AI HTTP Client no longer stores step-specific configuration
 $field_name = 'ai_system_prompt';
-if (!empty($step_id)) {
-    $field_name = 'ai_step_' . sanitize_key($step_id) . '_system_prompt';
-}
 
-// Get current system prompt value from step config (if step-aware) or all_config (step-scoped)
+// Get current system prompt value from passed config (step-scoped)
 // System prompt is STEP-SCOPED, not provider-specific
-$current_prompt = isset($all_config['system_prompt']) ? $all_config['system_prompt'] : '';
+$current_prompt = isset($config['value']) ? $config['value'] : '';
 $label = $config['label'] ?? 'System Prompt';
 $help_text = $config['help_text'] ?? 'Instructions that define the AI\'s behavior and role for this task.';
 $placeholder = $config['placeholder'] ?? 'Enter system instructions for the AI...';

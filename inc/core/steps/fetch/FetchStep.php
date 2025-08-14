@@ -140,8 +140,9 @@ class FetchStep {
             }
 
             // Execute handler - handlers return arrays, use universal conversion
-            // Pass flow_id for processed items tracking
-            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $flow_id);
+            // Pass flow_id for processed items tracking and job_id for item marking
+            $job_id = $step_config['job_id'] ?? 0;
+            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $flow_id, $job_id);
 
             // Convert handler output to data entry for the data packet array
             $context = [

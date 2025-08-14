@@ -7,26 +7,17 @@
  *
  * Available variables:
  * @var string $unique_id - Unique form identifier
- * @var string $plugin_context - Plugin context for configuration isolation
  * @var string $selected_provider - Currently selected provider
  * @var array $provider_config - Provider configuration data
- * @var string $step_id - Optional step ID for step-aware field naming
  * @var array $all_config - Complete provider configuration
  */
 
 defined('ABSPATH') || exit;
 
-// Generate step-aware field names
+// Use standard field names - AI HTTP Client no longer stores step-specific configuration
 $provider_field = 'ai_provider';
 $api_key_field = 'ai_api_key';
 $model_field = 'ai_model';
-
-if (!empty($step_id)) {
-    $step_key = sanitize_key($step_id);
-    $provider_field = 'ai_step_' . $step_key . '_provider';
-    $api_key_field = 'ai_step_' . $step_key . '_api_key';
-    $model_field = 'ai_step_' . $step_key . '_model';
-}
 
 // Get available providers
 $all_providers = apply_filters('ai_providers', []);
@@ -34,15 +25,16 @@ $llm_providers = array_filter($all_providers, function($provider) {
     return isset($provider['type']) && $provider['type'] === 'llm';
 });
 
-// Get current API key value from shared storage (API keys are not stored in step configs)
-$shared_api_keys = get_option(AI_HTTP_Options_Manager::SHARED_API_KEYS_OPTION, array());
-$current_api_key = isset($shared_api_keys[$selected_provider]) ? $shared_api_keys[$selected_provider] : '';
+
+// Get current API key value from shared storage using the ai_provider_api_keys filter
+$shared_api_keys = apply_filters('ai_provider_api_keys', null);
+$current_api_key = (is_array($shared_api_keys) && isset($shared_api_keys[$selected_provider])) ? $shared_api_keys[$selected_provider] : '';
 
 // Get current model value
 $selected_model = $provider_config['model'] ?? '';
 ?>
 
-<table class="form-table ai-http-provider-config" data-plugin-context="<?php echo esc_attr($plugin_context); ?>">
+<table id="<?php echo esc_attr($unique_id); ?>" class="form-table ai-http-provider-config">
     <!-- Provider Selector -->
     <tr class="form-field">
         <th scope="row">
@@ -95,6 +87,7 @@ $selected_model = $provider_config['model'] ?? '';
                         data-component-id="<?php echo esc_attr($unique_id); ?>" 
                         data-component-type="model_selector" 
                         data-provider="<?php echo esc_attr($selected_provider); ?>" 
+                        data-selected-model="<?php echo esc_attr($selected_model); ?>"
                         class="regular-text">
                     <?php
                     try {
@@ -102,16 +95,20 @@ $selected_model = $provider_config['model'] ?? '';
                         $provider_config_with_key = $provider_config;
                         $provider_config_with_key['api_key'] = $current_api_key;
                         
-                        // Use unified model fetcher for dynamic model loading
-                        $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($selected_provider, $provider_config_with_key);
+                        // Use filter-based model fetching for dynamic model loading
+                        $models = apply_filters('ai_models', $selected_provider, $provider_config_with_key);
                         
                         if (empty($models)) {
                             echo '<option value="">' . esc_html__('Enter API key to load models', 'ai-http-client') . '</option>';
                         } else {
                             foreach ($models as $model_id => $model_name) {
                                 $selected_attr = ($selected_model === $model_id) ? 'selected' : '';
+                                // Ensure model_name is always a string for display
+                                $display_name = is_array($model_name) ? 
+                                    ($model_name['name'] ?? $model_name['id'] ?? $model_id) : 
+                                    (string)$model_name;
                                 echo '<option value="' . esc_attr($model_id) . '" ' . $selected_attr . '>';
-                                echo esc_html($model_name);
+                                echo esc_html($display_name);
                                 echo '</option>';
                             }
                         }

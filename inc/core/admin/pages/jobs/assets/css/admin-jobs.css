@@ -93,3 +93,131 @@
     font-size: 11px;
     color: #646970;
 }
+
+/* Page header with admin button */
+.dm-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dm-page-header h1 {
+    margin: 0;
+    padding: 0;
+}
+
+.dm-page-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.dm-admin-btn .dashicons {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+
+/* Jobs Admin Modal Styles */
+.dm-jobs-admin-modal {
+    max-width: 600px;
+}
+
+.dm-admin-section {
+    margin-bottom: 2rem;
+}
+
+.dm-admin-section h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.dm-form-field {
+    margin: 1.5rem 0;
+}
+
+.dm-form-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.dm-form-field select {
+    width: 100%;
+    max-width: 400px;
+}
+
+.dm-form-field .description {
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 13px;
+}
+
+.dm-form-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dm-form-actions .spinner {
+    float: none;
+    margin: 0;
+}
+
+.dm-admin-notice {
+    margin-top: 1rem;
+    padding: 12px;
+    border-left: 4px solid;
+    background: #fff;
+}
+
+.dm-admin-notice.success {
+    border-left-color: #46b450;
+    background-color: #f0f8f0;
+    color: #2e7d32;
+}
+
+.dm-admin-notice.error {
+    border-left-color: #dc3232;
+    background-color: #fef5f5;
+    color: #a94442;
+}
+
+.dm-admin-notice.warning {
+    border-left-color: #ffb900;
+    background-color: #fffbf0;
+    color: #856404;
+}
+
+/* Clear Jobs Section Styles */
+.dm-admin-section + .dm-admin-section {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 2rem;
+    margin-top: 2rem;
+}
+
+.dm-form-field fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dm-form-field fieldset label {
+    display: inline;
+    font-weight: normal;
+    margin-right: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.dm-form-field fieldset input[type="radio"] {
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+.dm-form-field input[type="checkbox"] {
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}

@@ -7,19 +7,14 @@
  *
  * Available variables:
  * @var string $unique_id - Unique form identifier
- * @var string $plugin_context - Plugin context for configuration isolation
  * @var array $provider_config - Provider configuration data
- * @var string $step_id - Optional step ID for step-aware field naming
  * @var array $config - Component-specific configuration
  */
 
 defined('ABSPATH') || exit;
 
-// Generate step-aware field name
+// Use standard field name - AI HTTP Client no longer stores step-specific configuration
 $field_name = 'ai_max_tokens';
-if (!empty($step_id)) {
-    $field_name = 'ai_step_' . sanitize_key($step_id) . '_max_tokens';
-}
 
 // Get current max tokens value and component configuration
 $current_max_tokens = $provider_config['max_tokens'] ?? '';

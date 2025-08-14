@@ -14,23 +14,13 @@ defined('ABSPATH') || exit;
 
 /**
  * Self-register OpenAI provider with complete configuration
- * Includes normalizer specifications for self-contained provider architecture
+ * Self-contained provider architecture - no external normalizers needed
  */
 add_filter('ai_providers', function($providers) {
     $providers['openai'] = [
         'class' => 'AI_HTTP_OpenAI_Provider',
         'type' => 'llm',
-        'name' => 'OpenAI',
-        'normalizers' => [
-            'request' => 'AI_HTTP_Unified_Request_Normalizer',
-            'response' => 'AI_HTTP_Unified_Response_Normalizer',
-            'streaming' => 'AI_HTTP_Unified_Streaming_Normalizer',
-            'tool_results' => 'AI_HTTP_Unified_Tool_Results_Normalizer'
-        ],
-        'tool_format' => [
-            'id_field' => 'tool_call_id',
-            'content_field' => 'content'
-        ]
+        'name' => 'OpenAI'
     ];
     return $providers;
 });
@@ -39,8 +29,9 @@ class AI_HTTP_OpenAI_Provider {
 
     private $api_key;
     private $base_url;
-
     private $organization;
+    private $files_api_callback = null;
+    private $last_response_id = null;
 
     /**
      * Constructor
@@ -86,18 +77,23 @@ class AI_HTTP_OpenAI_Provider {
     }
 
     /**
-     * Send raw request to OpenAI API
+     * Send request to OpenAI API
+     * Handles all format conversion internally - receives and returns standard format
      *
-     * @param array $provider_request Already normalized for OpenAI
-     * @return array Raw OpenAI response
+     * @param array $standard_request Standard request format
+     * @return array Standard response format
      * @throws Exception If request fails
      */
-    public function send_raw_request($provider_request) {
+    public function request($standard_request) {
         if (!$this->is_configured()) {
             throw new Exception('OpenAI provider not configured - missing API key');
         }
 
+        // Convert standard format to OpenAI format internally
+        $provider_request = $this->format_request($standard_request);
+        
         $url = $this->base_url . '/responses';
+        
         // Debug logging in development mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('AI HTTP Client DEBUG: OpenAI request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
@@ -116,23 +112,31 @@ class AI_HTTP_OpenAI_Provider {
             throw new Exception('OpenAI API request failed: ' . $result['error']);
         }
         
-        return json_decode($result['data'], true);
+        $raw_response = json_decode($result['data'], true);
+        
+        // Convert OpenAI format to standard format
+        return $this->format_response($raw_response);
     }
 
     /**
-     * Send raw streaming request to OpenAI API
+     * Send streaming request to OpenAI API
+     * Handles all format conversion internally - receives and returns standard format
      *
-     * @param array $provider_request Already normalized for OpenAI
+     * @param array $standard_request Standard request format
      * @param callable $callback Optional callback for each chunk
-     * @return string Full response content
+     * @return array Standard response format
      * @throws Exception If request fails
      */
-    public function send_raw_streaming_request($provider_request, $callback = null) {
+    public function streaming_request($standard_request, $callback = null) {
         if (!$this->is_configured()) {
             throw new Exception('OpenAI provider not configured - missing API key');
         }
 
+        // Convert standard format to OpenAI format internally
+        $provider_request = $this->format_request($standard_request);
+        
         $url = $this->base_url . '/responses';
+        
         // Debug logging in development mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('AI HTTP Client DEBUG: OpenAI streaming request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
@@ -151,7 +155,19 @@ class AI_HTTP_OpenAI_Provider {
             throw new Exception('OpenAI streaming request failed: ' . $result['error']);
         }
 
-        return '';
+        // Return standardized streaming response
+        return [
+            'success' => true,
+            'data' => [
+                'content' => '',
+                'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0],
+                'model' => $standard_request['model'] ?? '',
+                'finish_reason' => 'stop',
+                'tool_calls' => null
+            ],
+            'error' => null,
+            'provider' => 'openai'
+        ];
     }
 
     /**
@@ -297,6 +313,431 @@ class AI_HTTP_OpenAI_Provider {
         }
         
         return $models;
+    }
+    
+    /**
+     * Set Files API callback for file uploads
+     *
+     * @param callable $callback Function that takes (file_path, purpose, provider_name) and returns file_id
+     */
+    public function set_files_api_callback($callback) {
+        $this->files_api_callback = $callback;
+    }
+    
+    /**
+     * Set last response ID for continuation
+     *
+     * @param string $response_id Response ID from OpenAI
+     */
+    public function set_last_response_id($response_id) {
+        $this->last_response_id = $response_id;
+    }
+    
+    /**
+     * Format unified request to OpenAI Responses API format
+     *
+     * @param array $unified_request Standard request format
+     * @return array OpenAI-formatted request
+     * @throws Exception If validation fails
+     */
+    private function format_request($unified_request) {
+        $this->validate_unified_request($unified_request);
+        
+        $request = $this->sanitize_common_fields($unified_request);
+        
+        // Convert messages to input for Responses API
+        if (isset($request['messages'])) {
+            $request['input'] = $this->normalize_openai_messages($request['messages']);
+            unset($request['messages']);
+        }
+
+        // Convert max_tokens to max_output_tokens for Responses API
+        if (isset($request['max_tokens'])) {
+            $request['max_output_tokens'] = intval($request['max_tokens']);
+            unset($request['max_tokens']);
+        }
+
+        // Handle tools
+        if (isset($request['tools'])) {
+            $request['tools'] = $this->normalize_openai_tools($request['tools']);
+        }
+
+        // Constrain parameters
+        if (isset($request['temperature'])) {
+            $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
+        }
+
+        return $request;
+    }
+    
+    /**
+     * Format OpenAI response to unified standard format
+     *
+     * @param array $openai_response Raw OpenAI response
+     * @return array Standard response format
+     * @throws Exception If response format invalid
+     */
+    private function format_response($openai_response) {
+        // Handle OpenAI Responses API format (primary)
+        if (isset($openai_response['object']) && $openai_response['object'] === 'response') {
+            return $this->normalize_openai_responses_api($openai_response);
+        }
+        
+        // Handle Chat Completions API format (fallback)
+        if (isset($openai_response['choices'])) {
+            return $this->normalize_openai_chat_completions($openai_response);
+        }
+        
+        // Handle streaming format
+        if (isset($openai_response['content']) && !isset($openai_response['choices'])) {
+            return $this->normalize_openai_streaming($openai_response);
+        }
+        
+        throw new Exception('Invalid OpenAI response format');
+    }
+    
+    /**
+     * Validate unified request format
+     *
+     * @param array $request Request to validate
+     * @throws Exception If invalid
+     */
+    private function validate_unified_request($request) {
+        if (!is_array($request)) {
+            throw new Exception('Request must be an array');
+        }
+
+        if (!isset($request['messages']) || !is_array($request['messages'])) {
+            throw new Exception('Request must include messages array');
+        }
+
+        if (empty($request['messages'])) {
+            throw new Exception('Messages array cannot be empty');
+        }
+    }
+    
+    /**
+     * Sanitize common fields
+     *
+     * @param array $request Request to sanitize
+     * @return array Sanitized request
+     */
+    private function sanitize_common_fields($request) {
+        // Sanitize messages
+        if (isset($request['messages'])) {
+            foreach ($request['messages'] as &$message) {
+                if (isset($message['role'])) {
+                    $message['role'] = sanitize_text_field($message['role']);
+                }
+                if (isset($message['content']) && is_string($message['content'])) {
+                    $message['content'] = sanitize_textarea_field($message['content']);
+                }
+            }
+        }
+
+        // Sanitize other common fields
+        if (isset($request['model'])) {
+            $request['model'] = sanitize_text_field($request['model']);
+        }
+
+        return $request;
+    }
+    
+    /**
+     * Normalize OpenAI messages for multi-modal support
+     *
+     * @param array $messages Array of messages
+     * @return array OpenAI-formatted messages
+     */
+    private function normalize_openai_messages($messages) {
+        $normalized = array();
+
+        foreach ($messages as $message) {
+            if (!isset($message['role']) || !isset($message['content'])) {
+                $normalized[] = $message;
+                continue;
+            }
+
+            $normalized_message = array('role' => $message['role']);
+
+            // Handle multi-modal content (images, files) or content arrays
+            if (isset($message['images']) || isset($message['image_urls']) || isset($message['files']) || is_array($message['content'])) {
+                $normalized_message['content'] = $this->build_openai_multimodal_content($message);
+            } else {
+                $normalized_message['content'] = $message['content'];
+            }
+
+            // Preserve other fields (tool_calls, etc.)
+            foreach ($message as $key => $value) {
+                if (!in_array($key, array('role', 'content', 'images', 'image_urls', 'files'))) {
+                    $normalized_message[$key] = $value;
+                }
+            }
+
+            $normalized[] = $normalized_message;
+        }
+
+        return $normalized;
+    }
+    
+    /**
+     * Build OpenAI multi-modal content with direct file upload
+     *
+     * @param array $message Message with multi-modal content
+     * @return array OpenAI multi-modal content format
+     */
+    private function build_openai_multimodal_content($message) {
+        $content = array();
+
+        // Handle content array format (from AIStep)
+        if (is_array($message['content'])) {
+            foreach ($message['content'] as $content_item) {
+                if (isset($content_item['type'])) {
+                    switch ($content_item['type']) {
+                        case 'text':
+                            $content[] = array(
+                                'type' => 'input_text',
+                                'text' => $content_item['text']
+                            );
+                            break;
+                        case 'file':
+                            // FILES API INTEGRATION
+                            try {
+                                $file_path = $content_item['file_path'];
+                                $file_id = $this->upload_file_via_files_api($file_path);
+                                
+                                $mime_type = $content_item['mime_type'] ?? mime_content_type($file_path);
+                                
+                                if (strpos($mime_type, 'image/') === 0) {
+                                    $content[] = array(
+                                        'type' => 'input_image',
+                                        'file_id' => $file_id
+                                    );
+                                } else {
+                                    $content[] = array(
+                                        'type' => 'input_file',
+                                        'file_id' => $file_id
+                                    );
+                                }
+                            } catch (Exception $e) {
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log('[OpenAI Provider] Files API upload failed: ' . $e->getMessage());
+                                }
+                            }
+                            break;
+                        default:
+                            $content[] = $content_item;
+                            break;
+                    }
+                }
+            }
+        } else {
+            // Add text content for string format
+            if (!empty($message['content'])) {
+                $content[] = array(
+                    'type' => 'input_text',
+                    'text' => $message['content']
+                );
+            }
+        }
+
+        return $content;
+    }
+    
+    /**
+     * Upload file via Files API callback
+     *
+     * @param string $file_path Path to file to upload
+     * @return string File ID from Files API
+     * @throws Exception If upload fails
+     */
+    private function upload_file_via_files_api($file_path) {
+        if (!$this->files_api_callback) {
+            throw new Exception('Files API callback not set - cannot upload files');
+        }
+
+        if (!file_exists($file_path)) {
+            throw new Exception("File not found: {$file_path}");
+        }
+
+        return call_user_func($this->files_api_callback, $file_path, 'user_data', 'openai');
+    }
+    
+    /**
+     * Normalize OpenAI tools
+     *
+     * @param array $tools Array of tools
+     * @return array OpenAI-formatted tools
+     */
+    private function normalize_openai_tools($tools) {
+        $normalized = array();
+
+        foreach ($tools as $tool) {
+            // Handle nested format (Chat Completions) - convert to flat format (Responses API)
+            if (isset($tool['type']) && $tool['type'] === 'function' && isset($tool['function'])) {
+                $normalized[] = array(
+                    'name' => sanitize_text_field($tool['function']['name']),
+                    'type' => 'function',
+                    'description' => sanitize_textarea_field($tool['function']['description']),
+                    'parameters' => $tool['function']['parameters'] ?? array()
+                );
+            } 
+            // Handle flat format - pass through with sanitization
+            elseif (isset($tool['name']) && isset($tool['description'])) {
+                $normalized[] = array(
+                    'name' => sanitize_text_field($tool['name']),
+                    'type' => 'function',
+                    'description' => sanitize_textarea_field($tool['description']),
+                    'parameters' => $tool['parameters'] ?? array()
+                );
+            }
+        }
+
+        return $normalized;
+    }
+    
+    /**
+     * Normalize OpenAI Responses API format
+     *
+     * @param array $response Raw Responses API response
+     * @return array Standard format
+     */
+    private function normalize_openai_responses_api($response) {
+        // Extract response ID for continuation
+        $response_id = isset($response['id']) ? $response['id'] : null;
+        if ($response_id) {
+            $this->set_last_response_id($response_id);
+        }
+        
+        // Extract content and tool calls from output
+        $content = '';
+        $tool_calls = array();
+        
+        if (isset($response['output']) && is_array($response['output'])) {
+            foreach ($response['output'] as $output_item) {
+                // Handle message type output items
+                if (isset($output_item['type']) && $output_item['type'] === 'message') {
+                    if (isset($output_item['content']) && is_array($output_item['content'])) {
+                        foreach ($output_item['content'] as $content_item) {
+                            if (isset($content_item['type']) && $content_item['type'] === 'output_text') {
+                                $content .= isset($content_item['text']) ? $content_item['text'] : '';
+                            }
+                        }
+                    }
+                }
+                // Handle direct content types (fallback)
+                elseif (isset($output_item['type'])) {
+                    switch ($output_item['type']) {
+                        case 'content':
+                        case 'output_text':
+                            $content .= isset($output_item['text']) ? $output_item['text'] : '';
+                            break;
+                        case 'function_call':
+                            if (isset($output_item['status']) && $output_item['status'] === 'completed') {
+                                $tool_calls[] = array(
+                                    'id' => $output_item['id'] ?? uniqid('tool_'),
+                                    'type' => 'function',
+                                    'function' => array(
+                                        'name' => $output_item['function_call']['name'],
+                                        'arguments' => wp_json_encode($output_item['function_call']['arguments'] ?? array())
+                                    )
+                                );
+                            }
+                            break;
+                    }
+                }
+            }
+        }
+
+        // Extract usage
+        $usage = array(
+            'prompt_tokens' => isset($response['usage']['input_tokens']) ? $response['usage']['input_tokens'] : 0,
+            'completion_tokens' => isset($response['usage']['output_tokens']) ? $response['usage']['output_tokens'] : 0,
+            'total_tokens' => isset($response['usage']['total_tokens']) ? $response['usage']['total_tokens'] : 0
+        );
+
+        return array(
+            'success' => true,
+            'data' => array(
+                'content' => $content,
+                'usage' => $usage,
+                'model' => isset($response['model']) ? $response['model'] : '',
+                'finish_reason' => isset($response['status']) ? $response['status'] : 'unknown',
+                'tool_calls' => !empty($tool_calls) ? $tool_calls : null,
+                'response_id' => $response_id
+            ),
+            'error' => null,
+            'provider' => 'openai',
+            'raw_response' => $response
+        );
+    }
+    
+    /**
+     * Normalize OpenAI Chat Completions API format
+     *
+     * @param array $response Raw Chat Completions response
+     * @return array Standard format
+     */
+    private function normalize_openai_chat_completions($response) {
+        if (empty($response['choices'])) {
+            throw new Exception('Invalid OpenAI response: missing choices');
+        }
+
+        $choice = $response['choices'][0];
+        $message = $choice['message'];
+
+        // Extract content and tool calls
+        $content = isset($message['content']) ? $message['content'] : '';
+        $tool_calls = isset($message['tool_calls']) ? $message['tool_calls'] : null;
+
+        // Extract usage
+        $usage = array(
+            'prompt_tokens' => isset($response['usage']['prompt_tokens']) ? $response['usage']['prompt_tokens'] : 0,
+            'completion_tokens' => isset($response['usage']['completion_tokens']) ? $response['usage']['completion_tokens'] : 0,
+            'total_tokens' => isset($response['usage']['total_tokens']) ? $response['usage']['total_tokens'] : 0
+        );
+
+        return array(
+            'success' => true,
+            'data' => array(
+                'content' => $content,
+                'usage' => $usage,
+                'model' => isset($response['model']) ? $response['model'] : '',
+                'finish_reason' => isset($choice['finish_reason']) ? $choice['finish_reason'] : 'unknown',
+                'tool_calls' => $tool_calls
+            ),
+            'error' => null,
+            'provider' => 'openai',
+            'raw_response' => $response
+        );
+    }
+    
+    /**
+     * Normalize OpenAI streaming response format
+     *
+     * @param array $response Streaming response
+     * @return array Standard format
+     */
+    private function normalize_openai_streaming($response) {
+        $content = isset($response['content']) ? $response['content'] : '';
+        
+        return array(
+            'success' => true,
+            'data' => array(
+                'content' => $content,
+                'usage' => array(
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0,
+                    'total_tokens' => 0
+                ),
+                'model' => isset($response['model']) ? $response['model'] : '',
+                'finish_reason' => 'stop',
+                'tool_calls' => null
+            ),
+            'error' => null,
+            'provider' => 'openai',
+            'raw_response' => $response
+        );
     }
 
 }

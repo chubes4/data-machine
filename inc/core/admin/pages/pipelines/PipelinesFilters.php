@@ -59,6 +59,11 @@ function dm_register_pipelines_admin_page_filters() {
                         'file' => 'lib/ai-http-client/assets/css/components.css',
                         'deps' => [],
                         'media' => 'all'
+                    ],
+                    'dm-import-export' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/css/import-export.css',
+                        'deps' => [],
+                        'media' => 'all'
                     ]
                 ],
                 'js' => [
@@ -156,6 +161,11 @@ function dm_register_pipelines_admin_page_filters() {
                         'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
                         'deps' => ['jquery'],
                         'in_footer' => true
+                    ],
+                    'dm-import-export' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/import-export.js',
+                        'deps' => ['jquery', 'dm-core-modal'],
+                        'in_footer' => true
                     ]
                 ]
             ],
@@ -181,6 +191,10 @@ function dm_register_pipelines_admin_page_filters() {
     add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
     add_action('wp_ajax_dm_delete_pipeline', fn() => do_action('dm_ajax_route', 'dm_delete_pipeline', 'page')); 
     add_action('wp_ajax_dm_delete_flow', fn() => do_action('dm_ajax_route', 'dm_delete_flow', 'page'));
+    
+    // Import/Export AJAX endpoints
+    add_action('wp_ajax_dm_export_pipelines', fn() => do_action('dm_ajax_route', 'dm_export_pipelines', 'page'));
+    add_action('wp_ajax_dm_import_pipelines', fn() => do_action('dm_ajax_route', 'dm_import_pipelines', 'page'));
     
     // Modal actions (UI/template operations) - using universal AJAX routing
     add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
@@ -312,7 +326,7 @@ function dm_register_pipelines_admin_page_filters() {
             ],
             'page/pipeline-card' => [
                 'required' => ['pipeline'],
-                'extract_from_pipeline' => ['pipeline_id', 'pipeline_name', 'step_configuration']
+                'extract_from_pipeline' => ['pipeline_id', 'pipeline_name', 'pipeline_config']
             ]
         ];
         

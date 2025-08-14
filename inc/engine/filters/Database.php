@@ -182,7 +182,7 @@ function dm_register_database_filters() {
             return [];
         }
 
-        return $db_pipelines->get_pipeline_step_configuration($pipeline_id);
+        return $db_pipelines->get_pipeline_config($pipeline_id);
     }, 10, 2);
 
     /**
@@ -213,6 +213,46 @@ function dm_register_database_filters() {
             // All pipelines access  
             return $db_pipelines->get_all_pipelines();
         }
+    }, 10, 2);
+    
+    /**
+     * Pipeline Step Configuration Loading System
+     * 
+     * Get configuration for a specific pipeline step by pipeline_step_id.
+     * 
+     * USAGE:
+     * $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+     * 
+     * RETURNS: Single step configuration array or empty array if not found
+     */
+    add_filter('dm_get_pipeline_step_config', function($default, $pipeline_step_id) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            do_action('dm_log', 'error', 'Pipeline step config access failed - database service unavailable', ['pipeline_step_id' => $pipeline_step_id]);
+            return [];
+        }
+        
+        if (empty($pipeline_step_id)) {
+            return [];
+        }
+        
+        // Search all pipelines to find the one containing this step
+        $pipelines = $db_pipelines->get_all_pipelines();
+        foreach ($pipelines as $pipeline) {
+            $pipeline_config = is_string($pipeline['pipeline_config']) 
+                ? json_decode($pipeline['pipeline_config'], true) 
+                : ($pipeline['pipeline_config'] ?? []);
+                
+            if (isset($pipeline_config[$pipeline_step_id])) {
+                return $pipeline_config[$pipeline_step_id];
+            }
+        }
+        
+        // Step not found in any pipeline
+        do_action('dm_log', 'debug', 'Pipeline step not found in any pipeline', ['pipeline_step_id' => $pipeline_step_id]);
+        return [];
     }, 10, 2);
     
     /**

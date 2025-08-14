@@ -1,19 +1,19 @@
 # AI HTTP Client for WordPress
 
-A professional WordPress library for **multi-type AI provider communication** with plugin-scoped configuration. Supports LLM, Upscaling, and Generative AI in a single unified library.
+A professional WordPress library for **AI provider communication** with **filter-based architecture** and shared API key management across plugins.
 
 ## Why This Library?
 
-This is for WordPress plugin developers who want to ship AI features fast across multiple AI types.
+This is for WordPress plugin developers who want to ship AI features fast with maximum extensibility.
 
-**Complete Multi-Type Solution:**
-- ✅ **Multi-Type AI Support** - LLM, Upscaling, Generative AI via `ai_type` parameter
-- ✅ **Multi-Plugin Support** - Multiple plugins can use different AI providers simultaneously
-- ✅ **Shared API Keys** - Efficient key management across plugins and AI types
+**Filter-Based Architecture:**
+- ✅ **WordPress Native** - Complete WordPress filter system integration
+- ✅ **Provider Self-Registration** - Providers register via filters, zero central coordination
+- ✅ **Third-Party Extensible** - Any plugin can register new providers via filters
+- ✅ **Shared API Keys** - Efficient key storage across all plugins
 - ✅ **No Hardcoded Defaults** - Library fails fast with clear errors when not configured
-- ✅ **Type-Specific Features** - Streaming for LLM, async processing for upscaling
-- ✅ **Unified Interface** - Same client class for all AI types
-- ✅ **WordPress-Native** - Uses `wp_remote_post`, plugin-scoped options
+- ✅ **Streaming Support** - Real-time streaming for all providers
+- ✅ **Model Auto-Fetching** - Dynamic model discovery from provider APIs
 - ✅ **Zero Styling** - You control the design
 
 ## Installation
@@ -59,41 +59,32 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
 ```
 
-### 2. Add Admin UI Component (Multi-Type AI System)
+### 2. Add Admin UI Component (Filter-Based)
 ```php
-// LLM Admin UI - REQUIRES both plugin_context AND ai_type
-echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug',  // REQUIRED
-    'ai_type' => 'llm'  // REQUIRED: 'llm', 'upscaling', 'generative'
+// Core AI provider interface - returns table rows for embedding in your forms
+echo apply_filters('ai_render_component', '');
+
+// With customized components
+echo apply_filters('ai_render_component', '', [
+    'selected_provider' => 'openai',
+    'selected_model' => 'gpt-4',
+    'temperature' => true,
+    'system_prompt' => true,
+    'temperature_value' => 0.7
 ]);
 
-// Upscaling Admin UI 
-echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug',  // REQUIRED
-    'ai_type' => 'upscaling'  // REQUIRED
-]);
-
-// Customized LLM component
-echo AI_HTTP_ProviderManager_Component::render([
-    'plugin_context' => 'my-plugin-slug',  // REQUIRED
-    'ai_type' => 'llm',  // REQUIRED
-    'components' => [
-        'core' => ['provider_selector', 'api_key_input', 'model_selector'],
-        'extended' => ['temperature_slider', 'system_prompt_field']
-    ]
-]);
+// Wrap in your own table
+echo '<table class="form-table">';
+echo apply_filters('ai_render_component', '', $config);
+echo '</table>';
 ```
 
-### 3. Send AI Requests (Multi-Type AI System)
+### 3. Send AI Requests (Filter-Based)
 
-#### LLM Requests
+#### Standard Requests
 ```php
-// REQUIRES both plugin_context AND ai_type
-$client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm'  // REQUIRED
-]);
-$response = $client->send_request([
+// Simple AI request using filter system
+$response = apply_filters('ai_request', [
     'messages' => [
         ['role' => 'user', 'content' => 'Hello AI!']
     ],
@@ -105,51 +96,29 @@ if ($response['success']) {
 }
 ```
 
-#### Upscaling Requests
+#### Advanced Requests
 ```php
-// Upscaling client
-$client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'upscaling'  // REQUIRED
-]);
-$response = $client->send_request([
-    'image_url' => 'https://example.com/image.jpg',
-    'scale_factor' => '4x',
-    'quality_settings' => [
-        'temperature' => 0.7,
-        'detail' => 8
+// With specific provider
+$response = apply_filters('ai_request', $request, 'anthropic');
+
+// With streaming callback
+$response = apply_filters('ai_request', $request, null, function($chunk) {
+    echo esc_html($chunk);
+    flush();
+});
+
+// With tools (function calling)
+$tools = [
+    [
+        'name' => 'get_weather',
+        'description' => 'Get current weather',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => ['location' => ['type' => 'string']]
+        ]
     ]
-]);
-
-if ($response['success']) {
-    $job_id = $response['data']['job_id'];
-    // Handle async processing
-}
-```
-
-#### Multi-Type Plugin Usage
-```php
-// Single plugin using multiple AI types
-$llm_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'llm'
-]);
-
-$upscaling_client = new AI_HTTP_Client([
-    'plugin_context' => 'my-plugin-slug',
-    'ai_type' => 'upscaling'
-]);
-
-// Use text AI to analyze image
-$analysis = $llm_client->send_request([
-    'messages' => [['role' => 'user', 'content' => 'Describe this image for enhancement']]
-]);
-
-// Use upscaling AI to enhance image
-$enhanced = $upscaling_client->send_request([
-    'image_url' => 'https://example.com/image.jpg',
-    'scale_factor' => '4x'
-]);
+];
+$response = apply_filters('ai_request', $request, null, null, $tools);
 ```
 
 ### 4. Modular Prompt System
@@ -201,17 +170,17 @@ All providers use individual classes with filter-based registration and support 
 
 ## Architecture
 
-**"Round Plug" Design** - Standardized input → Black box processing → Standardized output
+**Filter-Based Design** - WordPress-native filter system for provider registration and discovery
 
-**Multi-Plugin Architecture** - Complete plugin isolation with shared API key efficiency
+**Self-Contained Providers** - Each provider is fully self-contained with filter registration
 
-**Filter-Based Architecture** - Individual provider classes register via WordPress filters, shared normalizers handle all provider differences
+**Shared API Keys** - Efficient storage across all plugins with zero duplication
 
 **WordPress-Native** - Uses WordPress HTTP API, options system, and admin patterns
 
 **Production-Ready** - Debug logging only enabled when `WP_DEBUG` is true, ensuring clean production logs
 
-**Modular Prompts** - Dynamic prompt building with tool registration, context injection, and granular control
+**Extensible** - Third-party plugins can easily register new providers via filters
 
 ### Multi-Plugin Benefits
 
@@ -223,38 +192,35 @@ All providers use individual classes with filter-based registration and support 
 
 ### Key Components
 
-- **AI_HTTP_Client** - Main orchestrator using unified normalizers
-- **Unified Normalizers** - Shared logic for request/response conversion, streaming, and tools
-- **Simple Providers** - Pure API communication classes (one per provider)
-- **Admin UI** - Complete WordPress admin interface with zero styling
+- **Filter System** - WordPress-native provider registration and discovery
+- **Self-Contained Providers** - Each provider handles its own formatting and registration
+- **Admin Filters** - Complete WordPress admin interface via `ai_render_component` filter
+- **Shared API Storage** - Centralized API key management via `ai_provider_api_keys` filter
 
-## Component Configuration
+## Core Filters & Actions
 
-The admin UI component is fully configurable:
+The library provides WordPress-native filter patterns for all operations:
 
 ```php
-// Available core components
-'core' => [
-    'provider_selector',  // Dropdown to select provider
-    'api_key_input',     // Secure API key input
-    'model_selector'     // Dynamic model dropdown
-]
+// Provider Discovery
+$providers = apply_filters('ai_providers', []);
 
-// Available extended components  
-'extended' => [
-    'temperature_slider',    // Temperature control (0-1)
-    'system_prompt_field'    // System prompt textarea
-]
+// API Key Management  
+$keys = apply_filters('ai_provider_api_keys', null);           // Get all keys
+apply_filters('ai_provider_api_keys', $updated_keys);          // Update keys
 
-// Component-specific configs
-'component_configs' => [
-    'temperature_slider' => [
-        'min' => 0,
-        'max' => 1, 
-        'step' => 0.1,
-        'default_value' => 0.7
-    ]
-]
+// Configuration Access
+$config = apply_filters('ai_config', null);                   // Get provider config
+
+// Model Fetching
+$models = apply_filters('ai_models', $provider_name, $config);
+
+// Admin Interface
+echo apply_filters('ai_render_component', '', [
+    'selected_provider' => 'openai',
+    'temperature' => true,
+    'system_prompt' => true
+]);
 ```
 
 ## Modular Prompt System
@@ -465,78 +431,86 @@ Designed for **flexible distribution**:
 
 ### Adding New Providers
 
-1. Create provider class in `src/Providers/LLM/` (e.g., `newprovider.php`)
-2. Register provider via `ai_providers` WordPress filter in `src/Filters.php`
-3. Add normalization logic to `UnifiedRequestNormalizer` and `UnifiedResponseNormalizer`
-4. Add provider loading to `ai-http-client.php`
+Creating new providers is trivial with the filter-based architecture:
 
-Each provider implements standardized interface:
-- `send_raw_request($provider_request)` - Send API request
-- `send_raw_streaming_request($provider_request, $callback)` - Send streaming request
-- `get_raw_models()` - Fetch available models
-- `is_configured()` - Check if provider is configured
-- `upload_file($file_path, $purpose)` - Files API integration
-
-## Current Version: 1.1.0
-
-### Filter & Action Patterns (Recommended)
-
-**Reading Configuration:**
 ```php
-// Global configuration
-$config = apply_filters('ai_config', null);
+// 1. Create provider class (e.g., Claude)
+class AI_HTTP_Claude_Provider {
+    public function __construct($config) { /* ... */ }
+    public function is_configured() { /* ... */ }
+    public function request($request) { /* ... */ }
+    public function streaming_request($request, $callback) { /* ... */ }
+    public function get_raw_models() { /* ... */ }
+    public function get_normalized_models() { /* ... */ }
+    public function upload_file($file_path, $purpose) { /* ... */ }
+}
 
-// Get models for a provider
-$models = apply_filters('ai_models', $provider_name);
+// 2. Self-register via filter (in your provider file)
+add_filter('ai_providers', function($providers) {
+    $providers['claude'] = [
+        'class' => 'AI_HTTP_Claude_Provider',
+        'type' => 'llm',
+        'name' => 'Claude'
+    ];
+    return $providers;
+});
 ```
 
-**Tool Discovery & Management:**
+**That's it!** The provider is now:
+- ✅ Auto-discoverable by all plugins
+- ✅ Available in admin UI dropdowns  
+- ✅ Model fetching works via AJAX
+- ✅ Filter-based access for all operations
+- ✅ Shared API key storage
+
+## Current Version: 1.2.0
+
+### Filter Patterns (WordPress Native)
+
+**Provider Discovery:**
 ```php
-// Get all registered tools
-$all_tools = apply_filters('ai_tools', []);
+// Get all available providers
+$providers = apply_filters('ai_providers', []);
 
-// Get plugin-specific tools (auto-detected context)
-$my_tools = ai_http_get_tools();
+// Get provider configuration
+$config = apply_filters('ai_config', null);
+```
 
-// Get tools by category
-$file_tools = ai_http_get_tools(null, 'file_handling');
+**API Key Management:**
+```php
+// Get all API keys
+$keys = apply_filters('ai_provider_api_keys', null);
 
-// Check if specific tool is available
-$has_processor = ai_http_has_tool('file_processor');
+// Update API keys (automatically saves to WordPress options)
+apply_filters('ai_provider_api_keys', $updated_keys);
+```
 
-// Execute a tool
-$result = ai_http_execute_tool('file_processor', [
-    'file_path' => '/path/to/file.txt',
-    'format' => 'json'
-]);
+**Model Fetching:**
+```php
+// Get models for a provider (with API key)
+$models = apply_filters('ai_models', $provider_name, ['api_key' => $api_key]);
 ```
 
 **AI Requests:**
 ```php
-// Standard AI request
+// Standard request
 $response = apply_filters('ai_request', $request);
 
-// With specific provider
+// With specific provider  
 $response = apply_filters('ai_request', $request, $provider_name);
 
 // With streaming callback
 $response = apply_filters('ai_request', $request, null, $streaming_callback);
 
 // With tools
-$response = apply_filters('ai_request', $request, null, null, null, $tools);
+$response = apply_filters('ai_request', $request, null, null, $tools);
 ```
 
-**Note:** Configuration saving is now handled by individual plugins rather than the library itself.
-
-### Legacy Direct Instantiation (Not Recommended)
-
-**OptionsManager Constructor:**
+**Admin Interface:**
 ```php
-// REQUIRED - both parameters required
-$options_manager = new AI_HTTP_Options_Manager('my-plugin-slug', 'llm');
+// Render AI provider UI components
+echo apply_filters('ai_render_component', '', $config);
 ```
-
-**Note:** Direct instantiation is only needed for advanced use cases. Use filters and actions for standard operations.
 
 **Current Features:**
 - Auto-save settings functionality

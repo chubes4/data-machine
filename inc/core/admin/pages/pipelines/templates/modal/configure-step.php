@@ -41,21 +41,30 @@ if (!defined('WPINC')) {
             return;
         }
         
-        // Get step configuration to make saved models available to JavaScript
-        $step_config = apply_filters('dm_get_flow_step_config', [], $pipeline_step_id);
+        // Get saved step configuration from pipeline database
+        $saved_step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
         
-        // Add hidden fields for saved models per provider
-        if (!empty($step_config['providers'])) {
-            foreach ($step_config['providers'] as $provider => $provider_config) {
-                if (!empty($provider_config['model'])) {
-                    echo '<input type="hidden" id="saved_' . esc_attr($provider) . '_model" value="' . esc_attr($provider_config['model']) . '" />';
-                }
-            }
+        // Extract saved values with defaults - use first available provider instead of hardcoding OpenAI
+        $all_providers = apply_filters('ai_providers', []);
+        $llm_providers = array_filter($all_providers, function($provider) {
+            return isset($provider['type']) && $provider['type'] === 'llm';
+        });
+        // No default: only use saved value, otherwise empty
+        $selected_provider = isset($saved_step_config['provider']) ? $saved_step_config['provider'] : '';
+        $selected_model = $saved_step_config['model'] ?? '';
+        $temperature_value = isset($saved_step_config['temperature']) ? (float)$saved_step_config['temperature'] : 0.7;
+        $system_prompt_value = $saved_step_config['system_prompt'] ?? '';
+        
+        // Check for provider-specific models
+        if (empty($selected_model) && !empty($saved_step_config['providers'][$selected_provider]['model'])) {
+            $selected_model = $saved_step_config['providers'][$selected_provider]['model'];
         }
-        
         // Render AI HTTP Client components using template-based filter system
         echo apply_filters('ai_render_component', '', [
-            'step_id' => $pipeline_step_id, // Unique step-aware configuration
+            'selected_provider' => $selected_provider,
+            'selected_model' => $selected_model,
+            'temperature_value' => $temperature_value,
+            'system_prompt_value' => $system_prompt_value,
             'show_save_button' => false, // Hide built-in save button - Data Machine provides custom save
             'temperature' => [
                 'label' => __('Temperature', 'data-machine'),

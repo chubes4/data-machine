@@ -8,6 +8,7 @@
  */
 
 jQuery(document).ready(function($) {
+    // Refresh logs functionality (legacy)
     $('#dm-refresh-logs').on('click', function() {
         var $button = $(this);
         var originalText = $button.text();
@@ -35,4 +36,7 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // Modal functionality handled by core modal system automatically
+    // No additional JavaScript needed - core-modal.js handles dm-modal-open buttons
 });

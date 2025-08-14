@@ -147,61 +147,7 @@ class JobsStatus {
         return $updated !== false;
     }
 
-    /**
-     * Check if there are any active (pending or running) jobs for a specific flow.
-     *
-     * @param int $flow_id The ID of the flow to check.
-     * @param int $exclude_job_id Optional job ID to exclude from the check.
-     * @return bool True if there are active jobs, false otherwise.
-     */
-    public function has_active_jobs_for_flow( int $flow_id, ?int $exclude_job_id = null ): bool {
-        global $wpdb;
 
-        if ( $exclude_job_id ) {
-            $count = $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->table_name} 
-                 WHERE flow_id = %d AND job_id != %d AND status IN ('pending', 'running', 'processing_output')",
-                absint( $flow_id ),
-                absint( $exclude_job_id )
-            ) );
-        } else {
-            $count = $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->table_name} 
-                 WHERE flow_id = %d AND status IN ('pending', 'running', 'processing_output')",
-                absint( $flow_id )
-            ) );
-        }
-
-        return $count > 0;
-    }
-
-    /**
-     * Check if there are any active (pending or running) jobs for a specific pipeline.
-     *
-     * @param int $pipeline_id The ID of the pipeline to check.
-     * @param int $exclude_job_id Optional job ID to exclude from the check.
-     * @return bool True if there are active jobs, false otherwise.
-     */
-    public function has_active_jobs_for_pipeline( int $pipeline_id, ?int $exclude_job_id = null ): bool {
-        global $wpdb;
-
-        if ( $exclude_job_id ) {
-            $count = $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->table_name} 
-                 WHERE pipeline_id = %d AND job_id != %d AND status IN ('pending', 'running', 'processing_output')",
-                absint( $pipeline_id ),
-                absint( $exclude_job_id )
-            ) );
-        } else {
-            $count = $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->table_name} 
-                 WHERE pipeline_id = %d AND status IN ('pending', 'running', 'processing_output')",
-                absint( $pipeline_id )
-            ) );
-        }
-
-        return $count > 0;
-    }
 
     /**
      * Get a specific job record by its ID.

@@ -15,12 +15,12 @@ if (!defined('WPINC')) {
 }
 
 // Extract flow data
-$flow_id = is_object($flow) ? $flow->flow_id : $flow['flow_id'];
-$flow_name = is_object($flow) ? $flow->flow_name : $flow['flow_name'];
-$pipeline_id = is_object($flow) ? $flow->pipeline_id : $flow['pipeline_id'];
+$flow_id = $flow['flow_id'];
+$flow_name = $flow['flow_name'];
+$pipeline_id = $flow['pipeline_id'];
 
 // Get scheduling info (already decoded by database service)
-$scheduling_config = is_object($flow) ? $flow->scheduling_config : $flow['scheduling_config'];
+$scheduling_config = $flow['scheduling_config'];
 $schedule_interval = $scheduling_config['interval'] ?? 'manual';
 
 // Get last run time
@@ -89,7 +89,9 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
     <div class="dm-flow-steps-section">
         <div class="dm-flow-steps">
             <?php if (!empty($pipeline_steps)): ?>
-                <?php foreach ($pipeline_steps as $index => $step): ?>
+                <?php 
+                $flow_step_count = 0; // Track actual flow steps rendered (non-empty steps only)
+                foreach ($pipeline_steps as $index => $step): ?>
                     <?php 
                     // Skip empty steps entirely - they don't belong in flow instances
                     if (!($step['is_empty'] ?? false)) {
@@ -98,8 +100,9 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
                             'flow_config' => $flow_config,
                             'flow_id' => $flow_id,
                             'pipeline_id' => $pipeline_id,
-                            'is_first_step' => ($index === 0)
+                            'is_first_step' => ($flow_step_count === 0) // First non-empty step is first flow step
                         ]);
+                        $flow_step_count++; // Increment only for rendered steps
                     }
                     ?>
                 <?php endforeach; ?>

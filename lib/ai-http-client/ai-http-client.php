@@ -96,16 +96,8 @@ if (!function_exists('ai_http_client_init')) {
         // 1. Load dependencies in order
         
         // 2. Shared utilities
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/FileUploadClient.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/ToolExecutor.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/WordPressSSEHandler.php';
         
-        // 2.6. Unified Normalizers
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedRequestNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedResponseNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedStreamingNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedToolResultsNormalizer.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Normalizers/UnifiedModelFetcher.php';
+        // Note: Unified Normalizers removed - providers now self-contained
         
         // 2.7. Provider Classes (FILTER-BASED ARCHITECTURE)
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openai.php';
@@ -115,16 +107,18 @@ if (!function_exists('ai_http_client_init')) {
         require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openrouter.php';
         
         // 2.8. Filter-based provider registration system
-        require_once AI_HTTP_CLIENT_PATH . '/src/Filters.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Filters/Models.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Filters/Tools.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Filters/Admin.php';
+        require_once AI_HTTP_CLIENT_PATH . '/src/Filters/Requests.php';
+        
+        // Note: Streaming.php removed - streaming handled directly in Requests.php
         
         // Actions.php removed - plugins handle their own configuration
         
         // 3. Pure filter architecture - no client class needed
         
         // 4.5. WordPress management components
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/OptionsManager.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/AjaxHandler.php';
-        require_once AI_HTTP_CLIENT_PATH . '/src/Utils/PromptManager.php';
         
         // 4.6. Template-based component system (no class files needed - uses WordPress-native templates)
     }

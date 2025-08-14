@@ -235,25 +235,19 @@ class AIStep {
                 'messages' => $messages
             ];
             
-            // Convert pipeline_step_id to step_id for AI HTTP Client interface boundary
-            // AI HTTP Client expects step_id parameter - direct assignment since both are UUID4 strings
-            $step_id = $pipeline_step_id;
-            
             // Debug: Log step configuration details before AI request
-            $step_debug_config = apply_filters('ai_config', $step_id);
+            $step_debug_config = apply_filters('ai_config', $pipeline_step_id);
             do_action('dm_log', 'debug', 'AI Step: Step configuration retrieved', [
                 'job_id' => $job_id,
                 'pipeline_step_id' => $pipeline_step_id,
-                'step_id' => $step_id,
                 'step_config_exists' => !empty($step_debug_config),
                 'step_config_keys' => array_keys($step_debug_config),
                 'configured_provider' => $step_debug_config['provider'] ?? 'NOT_SET',
                 'configured_model' => $step_debug_config['model'] ?? 'NOT_SET'
             ]);
             
-            // Execute AI request using pure filter with step_id
-            // This automatically uses step-specific configuration (provider, model, temperature, etc.)
-            $ai_request['step_id'] = $step_id;
+            // Execute AI request using pure filter
+            // Data Machine handles all step-specific configuration separately
             $ai_response = apply_filters('ai_request', $ai_request);
 
             if (!$ai_response['success']) {

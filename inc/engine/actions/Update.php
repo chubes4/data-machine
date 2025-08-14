@@ -103,6 +103,11 @@ class DataMachine_Update_Actions {
             $success = $db_jobs->complete_job($job_id, $new_status);
             $method_used = 'complete_job';
             
+            // Clean up processed items if job failed (allows retry without processed item conflicts)
+            if ($new_status === 'failed' && $success) {
+                do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
+            }
+            
         } else {
             // Intermediate status change - use simple update
             $success = $db_jobs->update_job_status($job_id, $new_status);
@@ -213,13 +218,13 @@ class DataMachine_Update_Actions {
         }
         
         // Always do full save - get current name and steps
-        $pipeline_name = is_object($pipeline) ? $pipeline->pipeline_name : $pipeline['pipeline_name'];
-        $step_configuration = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        $pipeline_name = $pipeline['pipeline_name'];
+        $pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         
         // Full pipeline save (always save everything)
         $success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_name' => $pipeline_name,
-            'step_configuration' => json_encode($step_configuration)
+            'pipeline_config' => json_encode($pipeline_config)
         ]);
         
         // Log auto-save results

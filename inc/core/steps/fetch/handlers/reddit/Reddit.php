@@ -50,13 +50,16 @@ class Reddit {
 	 * @return array Array containing 'processed_items' key with standardized data packets for Reddit data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null, int $job_id = 0): array {
 		do_action('dm_log', 'debug', 'Reddit Fetch: Entering get_fetch_data.', ['pipeline_id' => $pipeline_id]);
 
 		if ( empty( $pipeline_id ) ) {
 			do_action('dm_log', 'error', 'Reddit Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
 			throw new Exception(esc_html__( 'Missing pipeline ID provided to Reddit handler.', 'data-machine' ));
 		}
+		
+		// Extract flow_step_id from handler config for processed items tracking
+		$flow_step_id = $handler_config['flow_step_id'] ?? null;
 
 		// Get services via filter-based access (current architecture)
 		$oauth_reddit = $this->oauth_reddit; // Internal auth instance
@@ -319,6 +322,11 @@ class Reddit {
 
 				// --- Item is ELIGIBLE! ---
 				do_action('dm_log', 'debug', 'Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+				
+				// Mark item as processed immediately after confirming eligibility
+				if ($flow_step_id) {
+					do_action('dm_mark_item_processed', $flow_step_id, 'reddit', $current_item_id, $job_id);
+				}
 
 				// Prepare content string (Title and selftext/body)
 				$title = $item_data['title'] ?? '';

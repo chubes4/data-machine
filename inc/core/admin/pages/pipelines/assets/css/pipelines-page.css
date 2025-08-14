@@ -57,13 +57,6 @@
     outline: none;
 }
 
-.dm-pipeline-meta {
-    display: flex;
-    gap: 15px;
-    margin-top: 5px;
-    color: #666;
-    font-size: 13px;
-}
 
 /* Pipeline sections */
 .dm-pipeline-steps-section,
