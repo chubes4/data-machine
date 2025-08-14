@@ -67,29 +67,7 @@ function dm_register_wordpress_publish_filters() {
         return $directive;
     }, 10, 3);
     
-    // Modal content registration - Pure discovery mode
-    add_filter('dm_modals', function($modals) {
-        // Get WordPress settings for modal content
-        $all_settings = apply_filters('dm_handler_settings', []);
-        $handler_settings = $all_settings['wordpress_publish'] ?? null;
-        
-        // Handler-specific modal removed - core modal handles generic 'handler-settings'
-        
-        // Remote Locations Manager modal (WordPress uses Remote Locations, not OAuth)
-        $modals['remote-locations-manager'] = [
-            'content' => apply_filters('dm_render_template', '', 'modal/remote-locations-manager', [
-                'handler_slug' => 'wordpress_publish',
-                'handler_settings' => [
-                    'label' => __('WordPress', 'data-machine'),
-                    'description' => __('Create and update WordPress posts and pages', 'data-machine')
-                ],
-                'step_type' => 'publish'
-            ]),
-            'title' => __('WordPress Remote Locations', 'data-machine')
-        ];
-        
-        return $modals;
-    });
+    // WordPress handler does not register any modals - site-local publishing only
 }
 
 /**

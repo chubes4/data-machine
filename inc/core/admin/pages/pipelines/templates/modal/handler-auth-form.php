@@ -77,7 +77,7 @@ $current_config = $is_configured ? apply_filters('dm_oauth', [], 'get_config', $
         <p><?php echo esc_html(sprintf(__('Enter your %s API credentials to enable authentication.', 'data-machine'), $handler_label)); ?></p>
         
         <form class="dm-auth-config-form" data-handler="<?php echo esc_attr($handler_slug); ?>">
-            <?php wp_nonce_field('dm_save_auth_config', 'auth_config_nonce'); ?>
+            <?php wp_nonce_field('dm_ajax_actions', 'nonce'); ?>
             <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
             
             <?php foreach ($config_fields as $field_name => $field_config): ?>

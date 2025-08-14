@@ -105,7 +105,7 @@ if ($flow_step_id) {
     <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
         <!-- Hidden fields for handler settings form -->
-        <input type="hidden" name="handler_settings_nonce" value="<?php echo wp_create_nonce('dm_save_handler_settings'); ?>" />
+        <input type="hidden" name="handler_settings_nonce" value="<?php echo wp_create_nonce('dm_ajax_actions'); ?>" />
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />

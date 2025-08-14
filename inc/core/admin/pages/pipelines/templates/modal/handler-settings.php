@@ -56,6 +56,11 @@ $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handle
 $all_auth = apply_filters('dm_auth_providers', []);
 $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
 
+// WordPress handler never requires authentication (site-local publishing)
+if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
+    $has_auth_system = false;
+}
+
 ?>
 <div class="dm-handler-settings-container">
     <div class="dm-handler-settings-header">
@@ -70,23 +75,10 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
                 <span class="dashicons dashicons-admin-network"></span>
                 <span><?php echo esc_html(sprintf(__('%s requires authentication to function properly.', 'data-machine'), $handler_label)); ?></span>
             </div>
-            <?php 
-            // Determine auth template based on handler type
-            $auth_template = 'modal/handler-auth-form';
-            if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
-                $auth_template = 'remote-locations-manager';
-            }
-            ?>
             <button type="button" class="button button-secondary dm-modal-content" 
-                    data-template="<?php echo esc_attr($auth_template); ?>"
+                    data-template="modal/handler-auth-form"
                     data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
-                <?php 
-                if ($auth_template === 'remote-locations-manager') {
-                    esc_html_e('Manage Remote Locations', 'data-machine');
-                } else {
-                    esc_html_e('Manage Authentication', 'data-machine');
-                }
-                ?>
+                <?php esc_html_e('Manage Authentication', 'data-machine'); ?>
             </button>
         </div>
     <?php endif; ?>
@@ -94,7 +86,7 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
     <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
         <!-- Hidden fields for handler settings form -->
-        <input type="hidden" name="handler_settings_nonce" value="<?php echo wp_create_nonce('dm_save_handler_settings'); ?>" />
+        <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('dm_ajax_actions'); ?>" />
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />

@@ -64,23 +64,24 @@ function dm_register_execution_engine() {
 
     // 2. CORE STEP EXECUTION - Pure functional pipeline orchestration (the heart)
     add_action( 'dm_execute_step', function( $job_id, $flow_step_id, $data = null ) {
+        // Set global job context for processed items tracking
+        global $dm_current_job_id;
+        $dm_current_job_id = $job_id;
+        
         try {
-            // Load complete step configuration using flow_step_id
-            $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-            if (!$step_config) {
-                do_action('dm_log', 'error', 'Failed to load step configuration', [
+            // Load complete flow step configuration using flow_step_id
+            $flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+            if (!$flow_step_config) {
+                do_action('dm_log', 'error', 'Failed to load flow step configuration', [
                     'job_id' => $job_id,
                     'flow_step_id' => $flow_step_id
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
                 return false;
             }
-            
-            // Add job_id directly to step_config - no more extraction needed!
-            $step_config['job_id'] = $job_id;
 
             // Get step class via direct discovery
-            $step_type = $step_config['step_type'] ?? '';
+            $step_type = $flow_step_config['step_type'] ?? '';
             $all_steps = apply_filters('dm_steps', []);
             $step_definition = $all_steps[$step_type] ?? null;
             
@@ -98,8 +99,8 @@ function dm_register_execution_engine() {
             // Create step instance (parameter-less constructor)
             $flow_step = new $step_class();
             
-            // Execute step with complete configuration
-            $data = $flow_step->execute( $flow_step_id, $data ?: [], $step_config );
+            // Execute step without job_id - Engine provides job context globally
+            $data = $flow_step->execute( $flow_step_id, $data ?: [], $flow_step_config );
             
             // Success = non-empty data packet array, failure = empty array
             $step_success = ! empty( $data );
@@ -139,6 +140,10 @@ function dm_register_execution_engine() {
             ]);
             do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
             return false;
+        } finally {
+            // Clear job context after step execution
+            global $dm_current_job_id;
+            $dm_current_job_id = null;
         }
     }, 10, 3 );
 

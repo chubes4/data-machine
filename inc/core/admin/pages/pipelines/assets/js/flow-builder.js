@@ -207,7 +207,7 @@
                 data: {
                     action: 'dm_add_flow',
                     pipeline_id: pipelineId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
@@ -298,7 +298,7 @@
                 data: {
                     action: 'dm_run_flow_now',
                     flow_id: flowId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
@@ -381,7 +381,7 @@
                 data: {
                     action: 'dm_get_flow_config',
                     flow_id: flow_id,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success && response.data.flow_config) {
@@ -458,7 +458,7 @@
                 data: {
                     action: 'dm_delete_flow',
                     flow_id: flowId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
@@ -493,7 +493,7 @@
                 data: {
                     action: 'dm_get_flow_config',
                     flow_id: flowId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {

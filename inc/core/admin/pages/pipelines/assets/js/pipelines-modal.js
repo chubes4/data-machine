@@ -151,7 +151,7 @@
                 data: {
                     action: 'dm_disconnect_account',
                     handler_slug: handlerSlug,
-                    nonce: dmPipelineModal.disconnect_nonce
+                    nonce: dmPipelineModal.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
@@ -195,7 +195,7 @@
                 data: {
                     action: 'dm_test_connection',
                     handler_slug: handlerSlug,
-                    nonce: dmPipelineModal.test_connection_nonce
+                    nonce: dmPipelineModal.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {

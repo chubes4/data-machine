@@ -323,6 +323,41 @@ class AI_HTTP_OpenRouter_Provider {
         
         $request = $this->sanitize_common_fields($unified_request);
         
+        // Convert file content to base64 format for OpenRouter/OpenAI compatibility
+        if (isset($request['messages']) && is_array($request['messages'])) {
+            foreach ($request['messages'] as &$message) {
+                if (isset($message['content']) && is_array($message['content'])) {
+                    foreach ($message['content'] as &$content_part) {
+                        // Handle file content conversion
+                        if (isset($content_part['type']) && $content_part['type'] === 'file' && 
+                            isset($content_part['file_path'])) {
+                            
+                            $file_path = $content_part['file_path'];
+                            
+                            // Use universal base64 conversion filter
+                            $base64_data_url = apply_filters('ai_file_to_base64', '', $file_path);
+                            
+                            if (!empty($base64_data_url)) {
+                                // Convert to OpenAI-compatible image_url format
+                                $content_part = [
+                                    'type' => 'image_url',
+                                    'image_url' => [
+                                        'url' => $base64_data_url
+                                    ]
+                                ];
+                            } else {
+                                // Remove invalid file content if conversion failed
+                                $content_part = [
+                                    'type' => 'text',
+                                    'text' => '[File could not be processed: ' . basename($file_path) . ']'
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         // OpenRouter uses OpenAI-compatible format
         if (isset($request['temperature'])) {
             $request['temperature'] = max(0, min(1, floatval($request['temperature'])));

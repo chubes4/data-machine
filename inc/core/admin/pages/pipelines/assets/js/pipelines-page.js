@@ -28,7 +28,7 @@
                         action: 'dm_get_template',
                         template: templateName,
                         template_data: JSON.stringify(templateData),
-                        nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                        nonce: dmPipelineBuilder.dm_ajax_nonce
                     },
                     success: (response) => {
                         if (response.success) {
@@ -198,7 +198,7 @@
             
             // Add base parameters
             formData.append('action', 'dm_configure_step_action');
-            formData.append('nonce', dmPipelineBuilder.pipeline_ajax_nonce);
+            formData.append('nonce', dmPipelineBuilder.dm_ajax_nonce);
             
             // Add context data
             formData.append('context', JSON.stringify(contextData));
@@ -253,7 +253,7 @@
                                     data: {
                                         action: 'dm_get_flow_config',
                                         flow_id: flow_id,
-                                        nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                                        nonce: dmPipelineBuilder.dm_ajax_nonce
                                     },
                                     success: (flowResponse) => {
                                         if (flowResponse.success && flowResponse.data.flow_config) {

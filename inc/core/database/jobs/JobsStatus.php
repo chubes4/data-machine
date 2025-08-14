@@ -69,7 +69,7 @@ class JobsStatus {
     public function complete_job( int $job_id, string $status ): bool {
         global $wpdb;
         // Update validation to include all final statuses
-        $valid_statuses = ['completed', 'failed', 'completed_with_errors', 'completed_no_items'];
+        $valid_statuses = ['completed', 'failed', 'completed_no_items'];
 
         if ( empty( $job_id ) || !in_array( $status, $valid_statuses ) ) {
             return false;

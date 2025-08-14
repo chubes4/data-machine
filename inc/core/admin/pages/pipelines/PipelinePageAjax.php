@@ -285,7 +285,7 @@ class PipelinePageAjax
      */
     public function handle_export_pipelines() {
         // Security checks
-        if (!check_ajax_referer('dm_pipeline_ajax', 'nonce', false)) {
+        if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
         }
         
@@ -317,7 +317,7 @@ class PipelinePageAjax
      */
     public function handle_import_pipelines() {
         // Security checks
-        if (!check_ajax_referer('dm_pipeline_ajax', 'nonce', false)) {
+        if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
         }
         

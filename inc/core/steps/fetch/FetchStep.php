@@ -33,35 +33,34 @@ class FetchStep {
      * - Receives data packet array (may be empty for first step)
      * - Adds fetch data to the array and returns updated array
      * 
-     * @param int $job_id The job ID to process
+     * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job  
-     * @param array $step_config Step configuration including handler settings
+     * @param array $flow_step_config Flow step configuration including handler settings
      * @return array Updated data packet array with fetch data added
      */
-    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
-        $job_id = $step_config['job_id'] ?? 0;
+    public function execute($flow_step_id, array $data = [], array $flow_step_config = []): array {
         $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
         try {
             // Fetch steps generate data from external sources 
             do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'existing_items' => count($data)
             ]);
             
             // Use step configuration directly - no job config introspection needed
-            if (empty($step_config)) {
-                do_action('dm_log', 'error', 'Fetch Step: No step configuration provided', ['job_id' => $job_id]);
+            if (empty($flow_step_config)) {
+                do_action('dm_log', 'error', 'Fetch Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return [];
             }
 
-            $handler_data = $step_config['handler'] ?? null;
+            $handler_data = $flow_step_config['handler'] ?? null;
             
             if (!$handler_data || empty($handler_data['handler_slug'])) {
                 do_action('dm_log', 'error', 'Fetch Step: Fetch step requires handler configuration', [
-                    'job_id' => $job_id,
-                    'available_step_config' => array_keys($step_config),
+                    'flow_step_id' => $flow_step_id,
+                    'available_flow_step_config' => array_keys($flow_step_config),
                     'handler_data' => $handler_data
                 ]);
                 return [];
@@ -71,13 +70,13 @@ class FetchStep {
             $handler_settings = $handler_data['settings'] ?? [];
             
             // Add flow_step_id to handler settings for proper file isolation
-            $handler_settings['flow_step_id'] = $step_config['flow_step_id'] ?? null;
+            $handler_settings['flow_step_id'] = $flow_step_config['flow_step_id'] ?? null;
 
             // Execute single handler - one step, one handler, per flow
-            $fetch_entry = $this->execute_handler($handler, $step_config, $handler_settings);
+            $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings);
 
             if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
-                do_action('dm_log', 'error', 'Fetch handler returned no content', ['job_id' => $job_id]);
+                do_action('dm_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);
                 return $data; // Return unchanged array
             }
 
@@ -85,7 +84,7 @@ class FetchStep {
             array_unshift($data, $fetch_entry);
 
             do_action('dm_log', 'debug', 'Fetch Step: Data collection completed', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'handler' => $handler,
                 'content_length' => strlen($fetch_entry['content']['body'] ?? '') + strlen($fetch_entry['content']['title'] ?? ''),
                 'source_type' => $fetch_entry['metadata']['source_type'] ?? '',
@@ -96,7 +95,7 @@ class FetchStep {
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Fetch Step: Exception during data collection', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -110,17 +109,17 @@ class FetchStep {
      * Execute fetch handler directly using pure auto-discovery
      * 
      * @param string $handler_name Fetch handler name
-     * @param array $step_config Step configuration including pipeline/flow IDs
+     * @param array $flow_step_config Flow step configuration including pipeline/flow IDs
      * @param array $handler_settings Handler settings
      * @return array|null Fetch entry array or null on failure
      */
-    private function execute_handler(string $handler_name, array $step_config, array $handler_settings): ?array {
+    private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings): ?array {
         // Get handler object directly from handler system
         $handler = $this->get_handler_object($handler_name);
         if (!$handler) {
             do_action('dm_log', 'error', 'Fetch Step: Handler not found or invalid', [
                 'handler' => $handler_name,
-                'step_config' => array_keys($step_config)
+                'flow_step_config' => array_keys($flow_step_config)
             ]);
             return null;
         }
@@ -128,21 +127,20 @@ class FetchStep {
         try {
             // Handler is already instantiated from the registry
 
-            // Get pipeline and flow IDs from step_config (provided by orchestrator)
-            $pipeline_id = $step_config['pipeline_id'] ?? null;
-            $flow_id = $step_config['flow_id'] ?? null;
+            // Get pipeline and flow IDs from flow_step_config (provided by orchestrator)
+            $pipeline_id = $flow_step_config['pipeline_id'] ?? null;
+            $flow_id = $flow_step_config['flow_id'] ?? null;
             
             if (!$pipeline_id) {
                 do_action('dm_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
-                    'step_config_keys' => array_keys($step_config)
+                    'flow_step_config_keys' => array_keys($flow_step_config)
                 ]);
                 return null;
             }
 
             // Execute handler - handlers return arrays, use universal conversion
-            // Pass flow_id for processed items tracking and job_id for item marking
-            $job_id = $step_config['job_id'] ?? 0;
-            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $flow_id, $job_id);
+            // Pass flow_id for processed items tracking
+            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $flow_id);
 
             // Convert handler output to data entry for the data packet array
             $context = [

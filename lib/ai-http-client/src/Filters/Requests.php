@@ -25,6 +25,78 @@ function ai_http_client_register_provider_filters() {
     // This eliminates central coordination and enables true modular architecture
     
     
+    // Universal file-to-base64 conversion filter for AI providers
+    // Usage: $base64_data_url = apply_filters('ai_file_to_base64', '', $file_path, $options);
+    // Returns: "data:image/jpeg;base64,/9j/4AAQ..." format or empty string on failure
+    add_filter('ai_file_to_base64', function($default, $file_path, $options = []) {
+        // Validate file path
+        if (empty($file_path) || !is_string($file_path)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[AI HTTP Client] Base64 conversion failed: Invalid file path');
+            }
+            return '';
+        }
+        
+        // Check if file exists and is readable
+        if (!file_exists($file_path) || !is_readable($file_path)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[AI HTTP Client] Base64 conversion failed: File not accessible - {$file_path}");
+            }
+            return '';
+        }
+        
+        // Get file size and check limits (default 10MB max)
+        $max_size = $options['max_size'] ?? (10 * 1024 * 1024);
+        $file_size = filesize($file_path);
+        if ($file_size > $max_size) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[AI HTTP Client] Base64 conversion failed: File too large ({$file_size} bytes) - {$file_path}");
+            }
+            return '';
+        }
+        
+        // Get MIME type
+        $mime_type = mime_content_type($file_path);
+        if (!$mime_type) {
+            // Fallback to WordPress MIME type detection
+            $file_info = wp_check_filetype($file_path);
+            $mime_type = $file_info['type'] ?? 'application/octet-stream';
+        }
+        
+        // Validate supported MIME types (images by default)
+        $supported_types = $options['supported_types'] ?? [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'
+        ];
+        
+        if (!in_array($mime_type, $supported_types)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[AI HTTP Client] Base64 conversion failed: Unsupported MIME type ({$mime_type}) - {$file_path}");
+            }
+            return '';
+        }
+        
+        // Read and encode file content
+        $file_content = file_get_contents($file_path);
+        if ($file_content === false) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("[AI HTTP Client] Base64 conversion failed: Could not read file content - {$file_path}");
+            }
+            return '';
+        }
+        
+        // Create base64 data URL
+        $base64_content = base64_encode($file_content);
+        $data_url = "data:{$mime_type};base64,{$base64_content}";
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[AI HTTP Client] Base64 conversion successful - File: " . basename($file_path) . 
+                     ", MIME: {$mime_type}, Size: {$file_size} bytes, Base64 length: " . strlen($base64_content));
+        }
+        
+        return $data_url;
+    }, 10, 3);
+    
     // Internal HTTP request handling for AI API calls
     // Usage: $result = apply_filters('ai_http', [], 'POST', $url, $args, 'Provider Context', false, $callback);
     // For streaming: $result = apply_filters('ai_http', [], 'POST', $url, $args, 'Provider Context', true, $callback);
@@ -166,6 +238,11 @@ function ai_http_client_register_provider_filters() {
             error_log("[AI HTTP Client] {$context} response status: {$status_code}");
             // Don't log full response body as it may be large, just length
             error_log("[AI HTTP Client] {$context} response body length: " . strlen($body));
+            
+            // For error responses, log the actual error message for debugging
+            if ($status_code >= 400) {
+                error_log("[AI HTTP Client] {$context} error response body: " . $body);
+            }
         }
 
         // For AI APIs, most operations expect 200, but some may expect 201, 202, etc.

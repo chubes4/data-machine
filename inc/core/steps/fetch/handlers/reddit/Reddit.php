@@ -50,7 +50,7 @@ class Reddit {
 	 * @return array Array containing 'processed_items' key with standardized data packets for Reddit data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null, int $job_id = 0): array {
+	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
 		do_action('dm_log', 'debug', 'Reddit Fetch: Entering get_fetch_data.', ['pipeline_id' => $pipeline_id]);
 
 		if ( empty( $pipeline_id ) ) {
@@ -322,7 +322,7 @@ class Reddit {
 				
 				// Mark item as processed immediately after confirming eligibility
 				if ($flow_step_id) {
-					do_action('dm_mark_item_processed', $flow_step_id, 'reddit', $current_item_id, $job_id);
+					do_action('dm_mark_item_processed', $flow_step_id, 'reddit', $current_item_id);
 				}
 
 				// Prepare content string (Title and selftext/body)

@@ -49,7 +49,7 @@
                 action: 'dm_get_modal_content',
                 template: template,
                 context: context,
-                nonce: dmCoreModal.get_modal_content_nonce
+                nonce: dmCoreModal.dm_ajax_nonce
             };
             
             

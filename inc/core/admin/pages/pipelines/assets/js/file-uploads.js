@@ -163,15 +163,15 @@
                 formData.append('action', 'dm_upload_file');
                 formData.append('file', file);
                 
-                // Use pipeline_ajax_nonce for consistent universal AJAX routing
+                // Use dm_ajax_nonce for consistent universal AJAX routing
                 let nonce;
-                if (dmPipelineBuilder?.pipeline_ajax_nonce) {
-                    nonce = dmPipelineBuilder.pipeline_ajax_nonce;
-                } else if (dmPipelineModal?.pipeline_ajax_nonce) {
-                    nonce = dmPipelineModal.pipeline_ajax_nonce;
+                if (dmPipelineBuilder?.dm_ajax_nonce) {
+                    nonce = dmPipelineBuilder.dm_ajax_nonce;
+                } else if (dmPipelineModal?.dm_ajax_nonce) {
+                    nonce = dmPipelineModal.dm_ajax_nonce;
                 } else {
-                    console.error('No pipeline_ajax_nonce available for file upload');
-                    reject(new Error('No pipeline_ajax_nonce available'));
+                    console.error('No dm_ajax_nonce available for file upload');
+                    reject(new Error('No dm_ajax_nonce available'));
                     return;
                 }
                 

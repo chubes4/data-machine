@@ -97,17 +97,49 @@ do_action('dm_cleanup_old_files');
 
 ## Database Schema
 
-**Tables**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`, `wp_dm_remote_locations`
+**Tables**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 
 **Relationships**: flows.pipeline_id → pipelines.pipeline_id, jobs.flow_id → flows.flow_id
 
 ## Components
 
-**Handlers**: Files, Reddit, RSS, WordPress, Google Sheets, Facebook, Threads, Twitter, Bluesky, OpenAI, Anthropic, Google, Grok, OpenRouter
+**Handlers**: 
+- **Fetch**: Files, Reddit, RSS, Google Sheets, WordPress
+- **Publish**: Bluesky, Twitter, Threads, Facebook, Google Sheets, WordPress  
+- **AI Processing**: OpenAI, Anthropic, Google, Grok, OpenRouter (via AI step)
 
 **Services**: Logger, Database, Engine, Auth, Templates, Files Repository, Import/Export
 
 **Principles**: Filter-based discovery, self-registering via `*Filters.php`, engine agnostic, position-based execution, DataPacket flow
+
+## AI Provider Integration
+
+**AI HTTP Client Library**: Multi-provider AI integration via `lib/ai-http-client` with filter-based architecture.
+
+**Supported Providers**:
+- **OpenAI**: GPT models via OpenAI API
+- **Anthropic**: Claude models via Messages API  
+- **Google**: Gemini models via Google AI API
+- **Grok**: xAI models via Grok API
+- **OpenRouter**: Access to 200+ models via unified API (GPT, Claude, Gemini, Llama, etc.)
+
+**Integration Pattern**:
+```php
+// AI requests via filter system
+$result = apply_filters('ai_request', null, [
+    'messages' => [['role' => 'user', 'content' => $prompt]],
+    'model' => 'gpt-4',
+    'max_tokens' => 1000
+], 'openrouter');
+```
+
+**Provider Discovery**:
+```php
+$providers = apply_filters('ai_providers', []);
+$models = apply_filters('ai_models', $provider, $config);
+```
+
+**Configuration**: API keys and provider settings managed via WordPress options with filter-based access patterns.
 
 ## Development
 
@@ -204,7 +236,15 @@ do_action('dm_import', 'pipelines', $csv_data, ['source' => 'upload']);
 do_action('dm_export', 'pipelines', [$pipeline_id1, $pipeline_id2], ['format' => 'csv']);
 ```
 
-**CSV Schema**: `pipeline_id, pipeline_name, step_position, step_type, step_config, flow_id, flow_name, handler, settings`
+**CSV Schema**: 
+```csv
+pipeline_id, pipeline_name, step_position, step_type, step_config, flow_id, flow_name, handler, settings
+```
+
+**Row Types**:
+- **Pipeline Structure**: Basic pipeline steps with empty flow columns (`flow_id=""`, `handler=""`) 
+- **Flow Configuration**: Handler assignments for specific flows with populated flow columns
+- **Import Logic**: Creates pipelines by name, parses step_config as JSON, ignores flow columns
 
 **Export Workflow**:
 ```php
@@ -250,7 +290,7 @@ add_action('wp_ajax_dm_action_name', fn() => do_action('dm_ajax_route', 'dm_acti
 
 **Handler Types**: `page` (page AJAX handlers), `modal` (modal content handlers)
 
-**Security**: Automatic `manage_options` + nonce verification with `dm_pipeline_ajax` action
+**Security**: Automatic `manage_options` + nonce verification with universal `dm_ajax_actions` nonce
 
 **Complete AJAX Actions**:
 ```php
@@ -276,7 +316,8 @@ add_action('wp_ajax_dm_get_flow_config', fn() => do_action('dm_ajax_route', 'dm_
 add_action('wp_ajax_dm_configure_step_action', fn() => do_action('dm_ajax_route', 'dm_configure_step_action', 'modal'));
 add_action('wp_ajax_dm_add_location_action', fn() => do_action('dm_ajax_route', 'dm_add_location_action', 'modal'));
 add_action('wp_ajax_dm_add_handler_action', fn() => do_action('dm_ajax_route', 'dm_add_handler_action', 'modal'));
-add_action('wp_ajax_dm_save_handler_settings', $direct_handler); // Direct handler
+add_action('wp_ajax_dm_save_handler_settings', fn() => do_action('dm_ajax_route', 'dm_save_handler_settings', 'modal'));
+add_action('wp_ajax_dm_save_auth_config', fn() => do_action('dm_ajax_route', 'dm_save_auth_config', 'modal'));
 
 // File Management
 add_action('wp_ajax_dm_upload_file', fn() => do_action('dm_ajax_route', 'dm_upload_file', 'modal'));
@@ -286,9 +327,9 @@ add_action('wp_ajax_dm_export_pipelines', fn() => do_action('dm_ajax_route', 'dm
 add_action('wp_ajax_dm_import_pipelines', fn() => do_action('dm_ajax_route', 'dm_import_pipelines', 'page'));
 
 // Jobs Administration
-add_action('wp_ajax_dm_clear_processed_items_manual', $direct_handler);
-add_action('wp_ajax_dm_get_pipeline_flows_for_select', $direct_handler);
-add_action('wp_ajax_dm_clear_jobs_manual', $direct_handler);
+add_action('wp_ajax_dm_clear_processed_items_manual', fn() => do_action('dm_ajax_route', 'dm_clear_processed_items_manual', 'modal'));
+add_action('wp_ajax_dm_get_pipeline_flows_for_select', fn() => do_action('dm_ajax_route', 'dm_get_pipeline_flows_for_select', 'modal'));
+add_action('wp_ajax_dm_clear_jobs_manual', fn() => do_action('dm_ajax_route', 'dm_clear_jobs_manual', 'modal'));
 ```
 
 ## Jobs Administration System
@@ -313,13 +354,13 @@ add_filter('dm_modals', function($modals) {
 **Clear Operations**:
 ```php
 // Clear processed items by pipeline or specific flow
-add_action('wp_ajax_dm_clear_processed_items_manual', $handler);
+add_action('wp_ajax_dm_clear_processed_items_manual', fn() => do_action('dm_ajax_route', 'dm_clear_processed_items_manual', 'modal'));
 
 // Clear jobs with optional processed items cleanup
-add_action('wp_ajax_dm_clear_jobs_manual', $handler);
+add_action('wp_ajax_dm_clear_jobs_manual', fn() => do_action('dm_ajax_route', 'dm_clear_jobs_manual', 'modal'));
 
 // Dynamic flow selection based on pipeline
-add_action('wp_ajax_dm_get_pipeline_flows_for_select', $handler);
+add_action('wp_ajax_dm_get_pipeline_flows_for_select', fn() => do_action('dm_ajax_route', 'dm_get_pipeline_flows_for_select', 'modal'));
 ```
 
 **JavaScript Integration**:
@@ -540,6 +581,11 @@ try {
 }
 ```
 
+**Job Status Model**: Binary success/failure system with automatic retry capability:
+- **completed**: Job succeeded completely
+- **failed**: Job failed, pipeline stops, processed items preserved for retry
+- **completed_no_items**: No eligible items found to process
+
 ## Critical Rules
 
 **Engine Agnosticism**: Never hardcode step types in `/inc/engine/`
@@ -556,10 +602,14 @@ try {
 
 **Field Naming**: Use `pipeline_step_id` consistently (UUID4)
 
-**Error Recovery**: Steps should return original data on failure, not empty arrays
+**Job Failure System**: Engine exceptions immediately fail jobs - no partial success states. Steps should return original data on failure within their own logic, but engine-level exceptions result in job failure.
 
 **Logging Context**: Always include relevant IDs in log context for debugging
 
 **Performance**: Use `apply_filters()` patterns for lazy loading and memory efficiency
 
 **Debugging**: Enable `window.dmDebugMode = true` for JavaScript debugging and `WP_DEBUG` for PHP logging
+
+**Nonce Security**: Universal `dm_ajax_actions` nonce consolidates all AJAX security validation
+
+**AJAX Consistency**: All AJAX endpoints route through `dm_ajax_route` for unified security and error handling

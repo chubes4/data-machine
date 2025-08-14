@@ -247,7 +247,7 @@ class Pipelines {
 	/**
 	 * Get pipeline configuration including steps and metadata.
 	 *
-	 * Returns the complete pipeline configuration structure expected by ProcessingOrchestrator.
+	 * Returns the complete pipeline configuration structure for step execution.
 	 * The returned array contains a 'steps' key with the pipeline step configuration.
 	 *
 	 * @param int $pipeline_id The ID of the pipeline.

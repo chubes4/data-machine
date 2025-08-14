@@ -380,12 +380,21 @@ class DataMachine_Delete_Actions {
         
         $result = $processed_items->delete_processed_items($criteria);
         
-        do_action('dm_log', 'debug', 'Processed items deletion via dm_delete', [
-            'criteria' => $criteria,
-            'result' => $result
-        ]);
+        // Always log the result for debugging (both AJAX and non-AJAX contexts)
+        if ($result !== false) {
+            do_action('dm_log', 'debug', 'Processed items deletion successful via dm_delete', [
+                'criteria' => $criteria,
+                'items_deleted' => $result,
+                'context' => wp_doing_ajax() ? 'AJAX' : 'non-AJAX'
+            ]);
+        } else {
+            do_action('dm_log', 'error', 'Processed items deletion failed via dm_delete', [
+                'criteria' => $criteria,
+                'context' => wp_doing_ajax() ? 'AJAX' : 'non-AJAX'
+            ]);
+        }
         
-        // If in AJAX context, send response
+        // Send JSON response only if in AJAX context
         if (wp_doing_ajax()) {
             if ($result !== false) {
                 wp_send_json_success([
@@ -396,6 +405,9 @@ class DataMachine_Delete_Actions {
                 wp_send_json_error(['message' => __('Failed to delete processed items.', 'data-machine')]);
             }
         }
+        
+        // Return result for non-AJAX usage (like job failure cleanup)
+        return $result;
     }
     
     /**

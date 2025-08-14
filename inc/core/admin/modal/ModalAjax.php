@@ -53,7 +53,7 @@ class ModalAjax
     public function handle_get_modal_content()
     {
         // WordPress security verification
-        if (!check_ajax_referer('dm_get_modal_content', 'nonce', false)) {
+        if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
             wp_send_json_error([
                 'message' => __('Security verification failed', 'data-machine')
             ]);

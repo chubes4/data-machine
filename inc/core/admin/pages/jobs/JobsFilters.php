@@ -60,7 +60,7 @@ function dm_register_jobs_admin_page_filters() {
                             'object' => 'dmCoreModal',
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
-                                'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
                                 'strings' => [
                                     'loading' => __('Loading...', 'data-machine'),
                                     'error' => __('Error', 'data-machine'),
@@ -92,9 +92,7 @@ function dm_register_jobs_admin_page_filters() {
                             'object' => 'dmJobsModal',
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
-                                'clear_processed_items_nonce' => wp_create_nonce('dm_clear_processed_items_manual'),
-                                'clear_jobs_nonce' => wp_create_nonce('dm_clear_jobs_manual'),
-                                'get_pipeline_flows_nonce' => wp_create_nonce('dm_get_pipeline_flows_for_select'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
                                 'strings' => [
                                     'loading' => __('Loading...', 'data-machine'),
                                     'error' => __('An error occurred', 'data-machine')
@@ -133,7 +131,7 @@ add_filter('dm_modals', function($modals) {
  */
 add_action('wp_ajax_dm_clear_processed_items_manual', function() {
     // Security checks
-    if (!check_ajax_referer('dm_clear_processed_items_manual', 'nonce', false)) {
+    if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
         wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
     }
     
@@ -176,7 +174,7 @@ add_action('wp_ajax_dm_clear_processed_items_manual', function() {
  */
 add_action('wp_ajax_dm_get_pipeline_flows_for_select', function() {
     // Security checks
-    if (!check_ajax_referer('dm_get_pipeline_flows_for_select', 'nonce', false)) {
+    if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
         wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
     }
     
@@ -212,7 +210,7 @@ add_action('wp_ajax_dm_get_pipeline_flows_for_select', function() {
  */
 add_action('wp_ajax_dm_clear_jobs_manual', function() {
     // Security checks
-    if (!check_ajax_referer('dm_clear_jobs_manual', 'nonce', false)) {
+    if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
         wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
     }
     

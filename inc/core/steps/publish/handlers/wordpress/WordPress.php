@@ -34,8 +34,20 @@ class WordPress {
      * @return array Result array on success or failure.
      */
     public function handle_publish($data_entry): array {
+        // Debug: Log the data entry structure being received
+        do_action('dm_log', 'debug', 'WordPress handler received data entry', [
+            'has_content' => isset($data_entry->content),
+            'has_metadata' => isset($data_entry->metadata),
+            'has_publish_config' => isset($data_entry->publish_config),
+            'content_keys' => isset($data_entry->content) ? array_keys((array)$data_entry->content) : [],
+            'data_entry_type' => $data_entry->type ?? 'unknown'
+        ]);
+        
         // Validate data entry structure - fail fast if structure violated
         if (!isset($data_entry->content)) {
+            do_action('dm_log', 'error', 'WordPress handler validation failed - content missing', [
+                'data_entry_structure' => array_keys((array)$data_entry)
+            ]);
             return ['success' => false, 'error' => 'Data entry structure violation: content object missing'];
         }
         
@@ -175,10 +187,56 @@ class WordPress {
         // Insert the post
         $post_id = wp_insert_post($post_data, true);
 
+        // Comprehensive error checking for wp_insert_post
         if (is_wp_error($post_id)) {
+            $error_message = __('Failed to create local post:', 'data-machine') . ' ' . $post_id->get_error_message();
+            do_action('dm_log', 'error', 'WordPress publish failed - wp_insert_post error', [
+                'error_message' => $post_id->get_error_message(),
+                'error_code' => $post_id->get_error_code(),
+                'post_data' => [
+                    'title' => $post_data['post_title'],
+                    'status' => $post_data['post_status'],
+                    'type' => $post_data['post_type'],
+                    'author' => $post_data['post_author']
+                ]
+            ]);
             return [
                 'success' => false,
-                'error' => __('Failed to create local post:', 'data-machine') . ' ' . $post_id->get_error_message()
+                'error' => $error_message
+            ];
+        }
+
+        // Check if post_id is valid (wp_insert_post can return 0 on failure)
+        if (!$post_id || $post_id === 0) {
+            do_action('dm_log', 'error', 'WordPress publish failed - wp_insert_post returned 0', [
+                'post_data' => [
+                    'title' => $post_data['post_title'],
+                    'status' => $post_data['post_status'],
+                    'type' => $post_data['post_type'],
+                    'author' => $post_data['post_author']
+                ]
+            ]);
+            return [
+                'success' => false,
+                'error' => __('Failed to create post - wp_insert_post returned invalid ID', 'data-machine')
+            ];
+        }
+
+        // Verify post was actually created
+        $created_post = get_post($post_id);
+        if (!$created_post) {
+            do_action('dm_log', 'error', 'WordPress publish failed - post not found after creation', [
+                'post_id' => $post_id,
+                'post_data' => [
+                    'title' => $post_data['post_title'],
+                    'status' => $post_data['post_status'],
+                    'type' => $post_data['post_type'],
+                    'author' => $post_data['post_author']
+                ]
+            ]);
+            return [
+                'success' => false,
+                'error' => __('Post creation verification failed - post not found after insert', 'data-machine')
             ];
         }
 

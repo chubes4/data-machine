@@ -46,35 +46,34 @@ class AIStep {
      * - Processes latest input and adds AI response to the array
      * - Returns updated array with AI output added
      * 
-     * @param int $job_id The job ID to process
+     * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job
-     * @param array $step_config The merged step configuration including pipeline and flow settings
+     * @param array $flow_step_config The merged step configuration including pipeline and flow settings
      * @return array Updated data packet array with AI output added
      */
-    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
-        $job_id = $step_config['job_id'] ?? 0;
+    public function execute($flow_step_id, array $data = [], array $flow_step_config = []): array {
         try {
             // Pure filter architecture - no client instance needed
 
-            do_action('dm_log', 'debug', 'AI Step: Starting AI processing with step config', ['job_id' => $job_id]);
+            do_action('dm_log', 'debug', 'AI Step: Starting AI processing with step config', ['flow_step_id' => $flow_step_id]);
 
             // Use step configuration directly - no pipeline introspection needed
-            if (empty($step_config)) {
-                do_action('dm_log', 'error', 'AI Step: No step configuration provided', ['job_id' => $job_id]);
+            if (empty($flow_step_config)) {
+                do_action('dm_log', 'error', 'AI Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return [];
             }
 
             // AI configuration managed by AI HTTP Client - no validation needed here
-            $title = $step_config['title'] ?? 'AI Processing';
+            $title = $flow_step_config['title'] ?? 'AI Processing';
 
             // Process ALL data packet entries (oldest to newest for logical message flow)
             if (empty($data)) {
-                do_action('dm_log', 'error', 'AI Step: No data found in data packet array', ['job_id' => $job_id]);
+                do_action('dm_log', 'error', 'AI Step: No data found in data packet array', ['flow_step_id' => $flow_step_id]);
                 return $data;
             }
             
             do_action('dm_log', 'debug', 'AI Step: Processing all data packet inputs', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'total_inputs' => count($data)
             ]);
 
@@ -87,7 +86,7 @@ class AIStep {
                 $metadata = $input['metadata'] ?? [];
                 
                 do_action('dm_log', 'debug', 'AI Step: Processing data packet input', [
-                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id,
                     'index' => $index,
                     'input_type' => $input_type,
                     'has_file_path' => !empty($metadata['file_path'])
@@ -97,7 +96,7 @@ class AIStep {
                 $file_path = $metadata['file_path'] ?? '';
                 if ($file_path && file_exists($file_path)) {
                     do_action('dm_log', 'debug', 'AI Step: Adding file message', [
-                        'job_id' => $job_id,
+                        'flow_step_id' => $flow_step_id,
                         'file_path' => $file_path,
                         'mime_type' => $metadata['mime_type'] ?? 'unknown'
                     ]);
@@ -141,13 +140,13 @@ class AIStep {
                         ];
                         
                         do_action('dm_log', 'debug', 'AI Step: Added text message', [
-                            'job_id' => $job_id,
+                            'flow_step_id' => $flow_step_id,
                             'source_type' => $source_type,
                             'content_length' => strlen($enhanced_content)
                         ]);
                     } else {
                         do_action('dm_log', 'debug', 'AI Step: Skipping empty content input', [
-                            'job_id' => $job_id,
+                            'flow_step_id' => $flow_step_id,
                             'input_type' => $input_type
                         ]);
                     }
@@ -157,14 +156,14 @@ class AIStep {
             // Ensure we have at least one message
             if (empty($messages)) {
                 do_action('dm_log', 'error', 'AI Step: No processable content found in any data packet inputs', [
-                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id,
                     'total_inputs' => count($data)
                 ]);
                 return $data;
             }
             
             do_action('dm_log', 'debug', 'AI Step: All inputs processed into messages', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'total_messages' => count($messages)
             ]);
             
@@ -172,21 +171,21 @@ class AIStep {
 
             // Use pipeline step ID from pipeline configuration - required for AI HTTP Client step-aware configuration
             // Pipeline steps must have stable UUID4 pipeline_step_ids for consistent AI settings
-            if (empty($step_config['pipeline_step_id'])) {
+            if (empty($flow_step_config['pipeline_step_id'])) {
                 do_action('dm_log', 'error', 'AI Step: Missing required pipeline_step_id from pipeline configuration', [
-                    'job_id' => $job_id,
-                    'step_config' => $step_config
+                    'flow_step_id' => $flow_step_id,
+                    'flow_step_config' => $flow_step_config
                 ]);
                 throw new \RuntimeException("AI Step requires pipeline_step_id from pipeline configuration for step-aware AI client operation");
             }
-            $pipeline_step_id = $step_config['pipeline_step_id'];
+            $pipeline_step_id = $flow_step_config['pipeline_step_id'];
             
             // Add handler directive for next step if available
-            do_action('dm_log', 'debug', 'AI Step: Calling directive discovery', ['job_id' => $job_id]);
-            $handler_directive = $this->get_next_step_directive($step_config, $job_id);
+            do_action('dm_log', 'debug', 'AI Step: Calling directive discovery', ['flow_step_id' => $flow_step_id]);
+            $handler_directive = $this->get_next_step_directive($flow_step_config, $flow_step_id);
             
             do_action('dm_log', 'debug', 'AI Step: Directive integration', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'directive_received' => !empty($handler_directive),
                 'directive_length' => strlen($handler_directive),
                 'directive_content' => $handler_directive
@@ -200,7 +199,7 @@ class AIStep {
                         $original_content = $message['content'];
                         $message['content'] .= "\n\n" . $handler_directive;
                         do_action('dm_log', 'debug', 'AI Step: Added directive to existing system message', [
-                            'job_id' => $job_id,
+                            'flow_step_id' => $flow_step_id,
                             'original_system_message' => $original_content,
                             'final_system_message' => $message['content']
                         ]);
@@ -216,29 +215,47 @@ class AIStep {
                         'content' => $handler_directive
                     ]);
                     do_action('dm_log', 'debug', 'AI Step: Created new system message with directive', [
-                        'job_id' => $job_id,
+                        'flow_step_id' => $flow_step_id,
                         'directive_content' => $handler_directive
                     ]);
                 }
                 
                 do_action('dm_log', 'debug', 'AI Step: Handler directive successfully integrated', [
-                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id,
                     'directive_length' => strlen($handler_directive),
                     'system_message_found' => $system_message_found
                 ]);
             } else {
-                do_action('dm_log', 'debug', 'AI Step: No handler directive to integrate', ['job_id' => $job_id]);
+                do_action('dm_log', 'debug', 'AI Step: No handler directive to integrate', ['flow_step_id' => $flow_step_id]);
             }
             
-            // Prepare AI request with messages for step-aware processing
+            // Get step configuration for AI request
+            $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+            
+            // Prepare AI request with messages and step configuration
             $ai_request = [
                 'messages' => $messages
             ];
             
+            // Add model parameter if configured
+            if (!empty($step_ai_config['model'])) {
+                $ai_request['model'] = $step_ai_config['model'];
+            }
+            
+            // Add temperature parameter if configured
+            if (isset($step_ai_config['temperature'])) {
+                $ai_request['temperature'] = (float)$step_ai_config['temperature'];
+            }
+            
+            // Add max_tokens parameter if configured
+            if (!empty($step_ai_config['max_tokens'])) {
+                $ai_request['max_tokens'] = (int)$step_ai_config['max_tokens'];
+            }
+            
             // Debug: Log step configuration details before AI request
-            $step_debug_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+            $step_debug_config = $step_ai_config;
             do_action('dm_log', 'debug', 'AI Step: Step configuration retrieved', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'pipeline_step_id' => $pipeline_step_id,
                 'step_config_exists' => !empty($step_debug_config),
                 'step_config_keys' => array_keys($step_debug_config),
@@ -251,11 +268,28 @@ class AIStep {
             if (empty($provider_name)) {
                 $error_message = 'AI step not configured: No provider selected';
                 do_action('dm_log', 'error', 'AI Step: No provider configured', [
-                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id,
                     'pipeline_step_id' => $pipeline_step_id
                 ]);
                 throw new \Exception($error_message);
             }
+            
+            // Debug: Log the exact request being sent to AI provider
+            do_action('dm_log', 'debug', 'AI Step: Sending request to provider', [
+                'flow_step_id' => $flow_step_id,
+                'provider' => $provider_name,
+                'request_structure' => [
+                    'has_messages' => isset($ai_request['messages']),
+                    'message_count' => count($ai_request['messages'] ?? []),
+                    'has_model' => isset($ai_request['model']),
+                    'model_value' => $ai_request['model'] ?? 'NOT_SET',
+                    'has_temperature' => isset($ai_request['temperature']),
+                    'temperature_value' => $ai_request['temperature'] ?? 'NOT_SET',
+                    'has_max_tokens' => isset($ai_request['max_tokens']),
+                    'max_tokens_value' => $ai_request['max_tokens'] ?? 'NOT_SET',
+                    'all_request_keys' => array_keys($ai_request)
+                ]
+            ]);
             
             // Execute AI request using pure filter with provider name
             $ai_response = apply_filters('ai_request', $ai_request, $provider_name);
@@ -263,7 +297,7 @@ class AIStep {
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
                 do_action('dm_log', 'error', 'AI Step: Processing failed', [
-                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id,
                     'error' => $ai_response['error'] ?? 'Unknown error',
                     'provider' => $ai_response['provider'] ?? 'Unknown'
                 ]);
@@ -298,7 +332,7 @@ class AIStep {
             array_unshift($data, $ai_entry);
 
             do_action('dm_log', 'debug', 'AI Step: Processing completed successfully', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'ai_content_length' => strlen($ai_content),
                 'model' => $ai_response['data']['model'] ?? 'unknown',
                 'provider' => $ai_response['provider'] ?? 'unknown',
@@ -310,7 +344,7 @@ class AIStep {
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'AI Step: Exception during processing', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -322,22 +356,22 @@ class AIStep {
     /**
      * Get handler directive for the next step in the pipeline
      * 
-     * @param array $step_config Step configuration containing pipeline info
-     * @param int $job_id Job ID for logging
+     * @param array $flow_step_config Flow step configuration containing pipeline info
+     * @param string $flow_step_id Flow step ID for logging
      * @return string Handler directive or empty string
      */
-    private function get_next_step_directive(array $step_config, int $job_id): string {
+    private function get_next_step_directive(array $flow_step_config, string $flow_step_id): string {
         // Get current flow step ID from the step config
-        $current_flow_step_id = $step_config['flow_step_id'] ?? '';
+        $current_flow_step_id = $flow_step_config['flow_step_id'] ?? '';
         if (!$current_flow_step_id) {
-            do_action('dm_log', 'debug', 'AI Step: No flow_step_id available for directive discovery', ['job_id' => $job_id]);
+            do_action('dm_log', 'debug', 'AI Step: No flow_step_id available for directive discovery', ['flow_step_id' => $flow_step_id]);
             return '';
         }
         
         // Use parameter-based filter to find next flow step
         $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $current_flow_step_id);
         if (!$next_flow_step_id) {
-            do_action('dm_log', 'debug', 'AI Step: No next step found - end of pipeline', ['job_id' => $job_id]);
+            do_action('dm_log', 'debug', 'AI Step: No next step found - end of pipeline', ['flow_step_id' => $flow_step_id]);
             return '';
         }
         
@@ -345,7 +379,7 @@ class AIStep {
         $next_step_config = apply_filters('dm_get_flow_step_config', [], $next_flow_step_id);
         if (!$next_step_config || !isset($next_step_config['handler']['handler_slug'])) {
             do_action('dm_log', 'debug', 'AI Step: Next step has no handler configured', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'next_flow_step_id' => $next_flow_step_id
             ]);
             return '';
@@ -362,14 +396,14 @@ class AIStep {
         if (!empty($dynamic_directive)) {
             $directive = $dynamic_directive;
             do_action('dm_log', 'debug', 'AI Step: Using dynamic directive', [
-                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
                 'handler_slug' => $handler_slug,
                 'has_handler_config' => !empty($handler_config)
             ]);
         }
         
         do_action('dm_log', 'debug', 'AI Step: Handler directive discovery result', [
-            'job_id' => $job_id,
+            'flow_step_id' => $flow_step_id,
             'next_flow_step_id' => $next_flow_step_id,
             'handler_slug' => $handler_slug,
             'has_directive' => !empty($directive)

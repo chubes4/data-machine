@@ -88,7 +88,22 @@ require_once __DIR__ . '/Engine.php';
 function dm_register_core_actions() {
     
     // Central processed items marking hook - eliminates service discovery duplication across all handlers
-    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id = 0) {
+    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier) {
+        // Get job_id from Engine's global context
+        global $dm_current_job_id;
+        $job_id = $dm_current_job_id;
+        // Validate required job_id from Engine context
+        if (empty($job_id) || !is_numeric($job_id) || $job_id <= 0) {
+            do_action('dm_log', 'error', 'dm_mark_item_processed called without valid Engine job context', [
+                'flow_step_id' => $flow_step_id,
+                'source_type' => $source_type,
+                'item_identifier' => substr($item_identifier, 0, 50) . '...',
+                'job_id' => $job_id,
+                'job_id_type' => gettype($job_id)
+            ]);
+            return;
+        }
+        
         $all_databases = apply_filters('dm_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
         
@@ -169,9 +184,9 @@ function dm_register_core_actions() {
             return;
         }
         
-        // Verify nonce with standard 'dm_pipeline_ajax' action
+        // Verify nonce with universal 'dm_ajax_actions' action
         $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_pipeline_ajax')) {
+        if (!wp_verify_nonce($nonce, 'dm_ajax_actions')) {
             wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
             return;
         }

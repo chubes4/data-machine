@@ -69,7 +69,7 @@
                     action: 'dm_add_step',
                     step_type: stepType,
                     pipeline_id: pipelineId,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
@@ -247,7 +247,7 @@
                 type: 'POST',
                 data: {
                     action: 'dm_create_pipeline',
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success) {
@@ -339,7 +339,7 @@
             
             // Prepare AJAX data based on deletion type
             const ajaxData = {
-                nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                nonce: dmPipelineBuilder.dm_ajax_nonce
             };
             
             // Set action and parameters based on deletion type

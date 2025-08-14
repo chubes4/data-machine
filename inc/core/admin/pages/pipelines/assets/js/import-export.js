@@ -86,7 +86,7 @@
                 data: {
                     action: 'dm_export_pipelines',
                     pipeline_ids: JSON.stringify(selectedIds),
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: function(response) {
                     if (response.success) {
@@ -111,7 +111,7 @@
                 data: {
                     action: 'dm_import_pipelines',
                     csv_content: dmImportExport.csvContent,
-                    nonce: dmPipelineBuilder.pipeline_ajax_nonce
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: function(response) {
                     if (response.success) {

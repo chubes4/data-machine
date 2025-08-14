@@ -125,8 +125,8 @@ class WordPressSettings {
             
             // Build options with skip as default
             $options = [
-                'skip' => sprintf(__('Skip %s', 'data-machine'), $taxonomy_label),
-                'instruct_model' => sprintf(__('Let AI Choose %s', 'data-machine'), $taxonomy_label)
+                'skip' => __('Skip', 'data-machine'),
+                'instruct_model' => __('AI Decides', 'data-machine')
             ];
             
             // Get terms for this taxonomy

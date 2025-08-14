@@ -52,7 +52,7 @@ class Files {
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null, int $job_id = 0): array {
+	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
         // Validate pipeline ID
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
@@ -94,7 +94,7 @@ class Files {
         }
         
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files]);
+        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files], $job_id);
         
         if (!$next_file) {
             do_action('dm_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
@@ -142,7 +142,7 @@ class Files {
      * @param array $config Files configuration.
      * @return array|null File info or null if no unprocessed files.
      */
-    private function find_next_unprocessed_file(?string $flow_step_id, array $config): ?array {
+    private function find_next_unprocessed_file(?string $flow_step_id, array $config, int $job_id = 0): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
         
         if (empty($uploaded_files)) {
@@ -163,7 +163,7 @@ class Files {
             
             if (!$is_processed) {
                 // Mark file as processed immediately after confirming eligibility
-                do_action('dm_mark_item_processed', $flow_step_id, 'files', $file_identifier, $job_id);
+                do_action('dm_mark_item_processed', $flow_step_id, 'files', $file_identifier);
                 return $file;
             }
         }

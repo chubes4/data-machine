@@ -98,7 +98,7 @@ class DataMachine_Update_Actions {
             $success = $db_jobs->start_job($job_id, $new_status);
             $method_used = 'start_job';
             
-        } elseif ($context === 'complete' || in_array($new_status, ['completed', 'failed', 'completed_with_errors', 'completed_no_items'])) {
+        } elseif ($context === 'complete' || in_array($new_status, ['completed', 'failed', 'completed_no_items'])) {
             // Job is ending - use complete_job for timestamp
             $success = $db_jobs->complete_job($job_id, $new_status);
             $method_used = 'complete_job';

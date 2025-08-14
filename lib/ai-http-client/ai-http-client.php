@@ -25,18 +25,10 @@ if (!defined('AI_HTTP_CLIENT_URL')) {
 
 /**
  * Initialize AI HTTP Client library
- * Loads all components using Composer autoloading
+ * Loads all components using WordPress native loading
  */
 function ai_http_client_init() {
-    // Load Composer autoloader (required)
-    $composer_autoload = AI_HTTP_CLIENT_PATH . '/vendor/autoload.php';
-    
-    if (!file_exists($composer_autoload)) {
-        error_log('AI HTTP Client: Composer autoloader not found. Run composer install.');
-        return;
-    }
-    
-    require_once $composer_autoload;
+    // No external dependencies - WordPress native loading only
     
     // Load providers and filters
     require_once AI_HTTP_CLIENT_PATH . '/src/Providers/openai.php';

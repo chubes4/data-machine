@@ -437,10 +437,15 @@ class PipelineModalAjax
         // Add handler to the specific flow step user clicked on
         do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
         
+        // Extract flow_id for JavaScript response
+        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+        $flow_id = $parts['flow_id'] ?? null;
+        
         wp_send_json_success([
             'message' => sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug),
             'handler_slug' => $handler_slug,
             'flow_step_id' => $flow_step_id,
+            'flow_id' => $flow_id,
             'action_type' => 'added'
         ]);
     }
@@ -535,6 +540,82 @@ class PipelineModalAjax
         }
     }
 
+
+    /**
+     * Handle save handler settings action
+     * Security handled by dm_ajax_route system
+     */
+    public function handle_save_handler_settings()
+    {
+        // Enhanced debugging for save handler process
+        do_action('dm_log', 'debug', 'Save handler settings request received', [
+            'post_keys' => array_keys($_POST),
+            'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action'])),
+            'has_nonce' => isset($_POST['handler_settings_nonce']),
+            'user_can_manage' => current_user_can('manage_options')
+        ]);
+        
+        // Note: nonce verification handled by dm_ajax_route system
+        
+        // Get and validate required form data
+        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
+        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+        $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
+        $pipeline_id = sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        
+        if (empty($handler_slug) || empty($step_type) || empty($flow_step_id) || empty($pipeline_id)) {
+            wp_send_json_error([
+                'message' => __('Required fields are missing.', 'data-machine'),
+                'missing_data' => [
+                    'handler_slug' => empty($handler_slug),
+                    'step_type' => empty($step_type), 
+                    'flow_step_id' => empty($flow_step_id),
+                    'pipeline_id' => empty($pipeline_id)
+                ]
+            ]);
+            return;
+        }
+        
+        // Validate handler exists
+        $all_handlers = apply_filters('dm_handlers', []);
+        if (!isset($all_handlers[$handler_slug])) {
+            wp_send_json_error(['message' => __('Invalid handler.', 'data-machine')]);
+            return;
+        }
+        
+        // Process handler settings using existing method
+        $handler_settings = $this->process_handler_settings($handler_slug);
+        
+        do_action('dm_log', 'debug', 'Handler settings processed', [
+            'handler_slug' => $handler_slug,
+            'flow_step_id' => $flow_step_id,
+            'settings_count' => count($handler_settings)
+        ]);
+        
+        // Save handler settings to flow step
+        try {
+            do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
+            
+            // Extract flow_id for JavaScript response
+            $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+            $flow_id = $parts['flow_id'] ?? null;
+            
+            wp_send_json_success([
+                'message' => sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug),
+                'handler_slug' => $handler_slug,
+                'flow_step_id' => $flow_step_id,
+                'flow_id' => $flow_id
+            ]);
+            
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Handler settings save failed: ' . $e->getMessage(), [
+                'handler_slug' => $handler_slug,
+                'flow_step_id' => $flow_step_id
+            ]);
+            
+            wp_send_json_error(['message' => __('Failed to save handler settings.', 'data-machine')]);
+        }
+    }
 
     /**
      * Process handler settings from form data

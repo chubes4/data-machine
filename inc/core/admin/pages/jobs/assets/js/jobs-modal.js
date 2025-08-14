@@ -86,7 +86,7 @@
                     type: 'POST',
                     data: {
                         action: 'dm_get_pipeline_flows_for_select',
-                        nonce: dmJobsModal.get_pipeline_flows_nonce,
+                        nonce: dmJobsModal.dm_ajax_nonce,
                         pipeline_id: pipelineId
                     },
                     success: function(response) {
@@ -162,7 +162,7 @@
                 type: 'POST',
                 data: {
                     action: 'dm_clear_processed_items_manual',
-                    nonce: dmJobsModal.clear_processed_items_nonce,
+                    nonce: dmJobsModal.dm_ajax_nonce,
                     clear_type: clearType,
                     target_id: targetId
                 },
@@ -237,7 +237,7 @@
                 type: 'POST',
                 data: {
                     action: 'dm_clear_jobs_manual',
-                    nonce: dmJobsModal.clear_jobs_nonce,
+                    nonce: dmJobsModal.dm_ajax_nonce,
                     clear_jobs_type: clearType,
                     cleanup_processed: cleanupProcessed ? '1' : ''
                 },

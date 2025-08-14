@@ -75,7 +75,7 @@ function dm_register_pipelines_admin_page_filters() {
                             'object' => 'dmCoreModal',
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
-                                'get_modal_content_nonce' => wp_create_nonce('dm_get_modal_content'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
                                 'strings' => [
                                     'loading' => __('Loading...', 'data-machine'),
                                     'error' => __('Error', 'data-machine'),
@@ -92,7 +92,7 @@ function dm_register_pipelines_admin_page_filters() {
                             'object' => 'dmPipelineBuilder',
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
-                                'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
                                 'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
                                 'strings' => [
                                     'error' => __('An error occurred', 'data-machine'),
@@ -131,7 +131,7 @@ function dm_register_pipelines_admin_page_filters() {
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'admin_post_url' => admin_url('admin-post.php'),
-                                'pipeline_ajax_nonce' => wp_create_nonce('dm_pipeline_ajax'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
                                 'oauth_nonces' => [
                                     'twitter' => wp_create_nonce('dm_twitter_oauth_init_nonce'),
                                     'googlesheets' => wp_create_nonce('dm_googlesheets_oauth_init_nonce'),
@@ -205,14 +205,12 @@ function dm_register_pipelines_admin_page_filters() {
     add_action('wp_ajax_dm_add_handler_action', fn() => do_action('dm_ajax_route', 'dm_add_handler_action', 'modal'));
     
     // Handler settings AJAX endpoint - handles "Add Handler to Flow" form submissions
-    add_action('wp_ajax_dm_save_handler_settings', function() {
-        dm_handle_save_handler_settings();
-    });
+    add_action('wp_ajax_dm_save_handler_settings', fn() => do_action('dm_ajax_route', 'dm_save_handler_settings', 'modal'));
     
     // Auth configuration AJAX endpoint - handles auth config form submissions
     add_action('wp_ajax_dm_save_auth_config', function() {
         // Security verification
-        if (!check_ajax_referer('dm_save_auth_config', 'auth_config_nonce', false)) {
+        if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
         }
 
@@ -304,145 +302,7 @@ function dm_register_pipelines_admin_page_filters() {
     });
 }
 
-/**
- * Handle AJAX request to save handler settings and add handler to flow
- * 
- * This endpoint handles the "Add Handler to Flow" button submissions from handler settings modals.
- * According to architecture, handlers don't need to be configured before being added to flows.
- */
-function dm_handle_save_handler_settings() {
-    
-    // Enhanced debugging for save handler process
-    do_action('dm_log', 'debug', 'Save handler settings request received', [
-        'post_keys' => array_keys($_POST),
-        'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action'])),
-        'has_nonce' => isset($_POST['handler_settings_nonce']),
-        'user_can_manage' => current_user_can('manage_options')
-    ]);
-    
-    // Verify nonce
-    if (!wp_verify_nonce($_POST['handler_settings_nonce'] ?? '', 'dm_save_handler_settings')) {
-        do_action('dm_log', 'error', 'Handler settings nonce verification failed');
-        wp_send_json_error(['message' => __('Security check failed.', 'data-machine')]);
-        return;
-    }
-    
-    // Verify user capabilities
-    if (!current_user_can('manage_options')) {
-        do_action('dm_log', 'error', 'Handler settings insufficient permissions');
-        wp_send_json_error(['message' => __('Insufficient permissions.', 'data-machine')]);
-        return;
-    }
-    
-    // Get form data
-    $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
-    $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-    $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
-    $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
-    
-    // Extract flow_id and pipeline_step_id from flow_step_id using universal filter
-    $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
-    $flow_id = $parts['flow_id'] ?? null;
-    $pipeline_step_id = $parts['pipeline_step_id'] ?? null;
-    
-    do_action('dm_log', 'debug', 'Handler settings extracted parameters', [
-        'handler_slug' => $handler_slug,
-        'step_type' => $step_type,
-        'flow_step_id' => $flow_step_id,
-        'pipeline_step_id' => $pipeline_step_id,
-        'flow_id' => $flow_id,
-        'pipeline_id' => $pipeline_id
-    ]);
-    
-    if (empty($handler_slug) || empty($step_type) || empty($flow_step_id)) {
-        $error_details = [
-            'handler_slug_empty' => empty($handler_slug),
-            'step_type_empty' => empty($step_type),
-            'flow_step_id_empty' => empty($flow_step_id),
-            'post_keys' => array_keys($_POST)
-        ];
-        
-        do_action('dm_log', 'error', 'Handler slug, step type, and flow step ID validation failed', $error_details);
-        
-        wp_send_json_error([
-            'message' => __('Handler slug, step type, and flow step ID are required.', 'data-machine'),
-            'debug_info' => $error_details
-        ]);
-        return;
-    }
-    
-    // Get handler configuration via pure discovery
-    $all_handlers = apply_filters('dm_handlers', []);
-    $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
-        return ($handler['type'] ?? '') === $step_type;
-    });
-    
-    if (!isset($handlers[$handler_slug])) {
-        wp_send_json_error(['message' => __('Invalid handler for this step type.', 'data-machine')]);
-        return;
-    }
-    
-    $handler_info = $handlers[$handler_slug];
-    
-    // Get settings class to process form data using pure discovery
-    $all_settings = apply_filters('dm_handler_settings', []);
-    $handler_settings = $all_settings[$handler_slug] ?? null;
-    $saved_handler_settings = [];
-    
-    // If handler has settings, sanitize the form data
-    if ($handler_settings && method_exists($handler_settings, 'sanitize')) {
-        $raw_settings = [];
-        
-        // Extract form fields (skip WordPress and system fields)
-        foreach ($_POST as $key => $value) {
-            if (!in_array($key, ['action', 'handler_settings_nonce', '_wp_http_referer', 'handler_slug', 'step_type', 'flow_id', 'pipeline_id'])) {
-                $raw_settings[$key] = $value;
-            }
-        }
-        
-        $saved_handler_settings = $handler_settings->sanitize($raw_settings);
-    }
-    
-    // For flow context, add handler to flow configuration using centralized action
-    if ($flow_id > 0) {
-        // Use centralized flow handler management action (no return value capture)
-        do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
-        
-        // Auto-save pipeline after handler settings change
-        if ($pipeline_id > 0) {
-            do_action('dm_auto_save', $pipeline_id);
-        }
-        
-        // Determine action type for response (simple check - handler exists if settings were previously saved)
-        $action_type = !empty($saved_handler_settings) ? 'updated' : 'added';
-        $action_message = ($action_type === 'updated')
-            ? sprintf(__('Handler "%s" settings updated successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
-            : sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug);
-        
-        wp_send_json_success([
-            'message' => $action_message,
-            'handler_slug' => $handler_slug,
-            'step_type' => $step_type,
-            'flow_step_id' => $flow_step_id,
-            'flow_id' => $flow_id,
-            'pipeline_id' => $pipeline_id,
-            'handler_config' => $handler_info,
-            'handler_settings' => $saved_handler_settings,
-            'action_type' => $action_type
-        ]);
-        
-    } else {
-        // For pipeline context (template), just confirm the handler is valid
-        wp_send_json_success([
-            'message' => sprintf(__('Handler "%s" configuration saved.', 'data-machine'), $handler_info['label'] ?? $handler_slug),
-            'handler_slug' => $handler_slug,
-            'step_type' => $step_type,
-            'pipeline_id' => $pipeline_id,
-            'handler_config' => $handler_info,
-            'handler_settings' => $saved_handler_settings
-        ]);
-    }
-}
+// Handler settings functionality moved to PipelineModalAjax class to follow dm_ajax_route pattern
 
 // Auto-register when file loads - achieving complete self-containment
 dm_register_pipelines_admin_page_filters();
