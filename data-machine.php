@@ -166,10 +166,6 @@ function run_data_machine() {
 
     // Admin initialization handled by engine extension points and core components
 
-    // Import/export functionality migrated to other handlers
-
-    // AJAX functionality migrated to other components during architectural refactor
-
     // --- Initialize Admin Interface ---
     // Admin menu functionality now handled via dm_register_admin_filters()
 

@@ -209,6 +209,55 @@ function dm_register_pipelines_admin_page_filters() {
         dm_handle_save_handler_settings();
     });
     
+    // Auth configuration AJAX endpoint - handles auth config form submissions
+    add_action('wp_ajax_dm_save_auth_config', function() {
+        // Security verification
+        if (!check_ajax_referer('dm_save_auth_config', 'auth_config_nonce', false)) {
+            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+
+        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
+        if (empty($handler_slug)) {
+            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
+        }
+
+        // Get auth provider instance to validate fields
+        $all_auth = apply_filters('dm_auth_providers', []);
+        $auth_instance = $all_auth[$handler_slug] ?? null;
+        if (!$auth_instance || !method_exists($auth_instance, 'get_config_fields')) {
+            wp_send_json_error(['message' => __('Auth provider not found or invalid', 'data-machine')]);
+        }
+
+        // Get field definitions for validation
+        $config_fields = $auth_instance->get_config_fields();
+        $config_data = [];
+
+        // Validate and sanitize each field
+        foreach ($config_fields as $field_name => $field_config) {
+            $value = sanitize_text_field(wp_unslash($_POST[$field_name] ?? ''));
+            
+            // Check required fields
+            if (($field_config['required'] ?? false) && empty($value)) {
+                wp_send_json_error(['message' => sprintf(__('%s is required', 'data-machine'), $field_config['label'])]);
+            }
+            
+            $config_data[$field_name] = $value;
+        }
+
+        // Save configuration using dm_oauth filter
+        $saved = apply_filters('dm_oauth', null, 'store_config', $handler_slug, $config_data);
+        
+        if ($saved) {
+            wp_send_json_success(['message' => __('Configuration saved successfully', 'data-machine')]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to save configuration', 'data-machine')]);
+        }
+    });
+    
     
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     

@@ -39,6 +39,9 @@
             $(document).on('click', '.dm-connect-account', this.handleConnect.bind(this));
             $(document).on('click', '.dm-disconnect-account', this.handleDisconnect.bind(this));
             $(document).on('click', '.dm-test-connection', this.handleTestConnection.bind(this));
+            
+            // Auth configuration form handler
+            $(document).on('submit', '.dm-auth-config-form', this.handleAuthConfigSave.bind(this));
 
             // Tab switching handled by core modal system based on CSS classes
 
@@ -73,7 +76,6 @@
                     const savedModel = $('#saved_' + provider + '_model').val();
                     if (savedModel && modelSelect.find('option[value="' + savedModel + '"]').length) {
                         modelSelect.val(savedModel);
-                        console.log('DM Pipeline Modal: Restored saved model for ' + provider + ':', savedModel);
                     }
                 }, 1000); // Give time for models to load via library's AJAX
             });
@@ -114,7 +116,6 @@
             const baseUrl = dmPipelineModal.admin_post_url || (dmPipelineModal.ajax_url.replace('admin-ajax.php', 'admin-post.php'));
             const oauthUrl = baseUrl + '?action=dm_' + handlerSlug + '_oauth_init&_wpnonce=' + dmPipelineModal.oauth_nonces[handlerSlug];
             
-            console.log('DM Pipeline Modal: Initiating OAuth for handler:', handlerSlug);
             
             // Redirect to OAuth init URL
             window.location.href = oauthUrl;
@@ -215,6 +216,72 @@
             });
         },
 
+        /**
+         * Handle auth configuration form submission
+         */
+        handleAuthConfigSave: function(e) {
+            e.preventDefault();
+            
+            const $form = $(e.currentTarget);
+            const $submitButton = $form.find('button[type="submit"]');
+            const handlerSlug = $form.data('handler');
+            
+            if (!handlerSlug) {
+                console.error('DM Pipeline Modal: No handler slug found on config form');
+                return;
+            }
+            
+            // Show loading state
+            const originalText = $submitButton.text();
+            $submitButton.text(dmPipelineModal.strings?.saving || 'Saving...').prop('disabled', true);
+            
+            // Serialize form data
+            const formData = $form.serialize();
+            
+            // Make AJAX call to save configuration
+            $.ajax({
+                url: dmPipelineModal.ajax_url,
+                type: 'POST',
+                data: formData + '&action=dm_save_auth_config',
+                success: (response) => {
+                    if (response.success) {
+                        // Show success message
+                        const message = response.data?.message || 'Configuration saved successfully';
+                        
+                        // Create temporary success message element
+                        const $success = $('<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>');
+                        $form.before($success);
+                        
+                        // Auto-remove after 3 seconds
+                        setTimeout(() => {
+                            $success.fadeOut(300, function() {
+                                $(this).remove();
+                            });
+                        }, 3000);
+                        
+                        // Reload modal content to show auth status instead of config form
+                        setTimeout(() => {
+                            const currentTemplate = $('.dm-modal-content').data('template') || 'modal/handler-auth-form';
+                            const currentContext = $('.dm-modal-content').data('context') || {};
+                            
+                            // Reload the auth modal content
+                            dmCoreModal.loadContent(currentTemplate, currentContext);
+                        }, 1000);
+                        
+                    } else {
+                        const message = response.data?.message || 'Failed to save configuration';
+                        alert(message);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('DM Pipeline Modal: Config save error:', error);
+                    alert('Error saving configuration');
+                },
+                complete: () => {
+                    $submitButton.text(originalText).prop('disabled', false);
+                }
+            });
+        },
 
         // Legacy handleFormSubmit method removed - all forms converted to direct action pattern
 

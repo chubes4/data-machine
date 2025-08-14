@@ -119,7 +119,6 @@ class WordPress {
         $order = sanitize_text_field($config['order'] ?? 'DESC');
 
         // Direct config parsing
-        $process_limit = max(1, absint($config['item_count'] ?? 1));
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search = trim($config['search'] ?? '');
 
@@ -139,7 +138,7 @@ class WordPress {
         $query_args = [
             'post_type' => $post_type,
             'post_status' => $post_status,
-            'posts_per_page' => $process_limit * 2, // Fetch more to account for already processed items
+            'posts_per_page' => 10, // Simple limit to find first eligible item
             'orderby' => $orderby,
             'order' => $order,
             'no_found_rows' => true, // Performance optimization
@@ -176,19 +175,14 @@ class WordPress {
         }
 
         // Find first unprocessed post
-        $eligible_items_packets = [];
         foreach ($posts as $post) {
-            if (count($eligible_items_packets) >= $process_limit) {
-                break;
-            }
-
             $post_id = $post->ID;
             $is_processed = ($flow_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_id, 'wordpress_local', $post_id) : false;
             if ($is_processed) {
                 continue;
             }
             
-            // Mark item as processed immediately after confirming eligibility
+            // Found first eligible item - mark as processed and return
             if ($flow_step_id) {
                 do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
             }
@@ -203,7 +197,7 @@ class WordPress {
             $source_name = $site_name ?: 'Local WordPress';
             $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 
-            // Create standardized packet
+            // Create standardized packet and return immediately
             $input_data = [
                 'data' => [
                     'content_string' => $content_string,
@@ -219,15 +213,13 @@ class WordPress {
                     'original_date_gmt' => $post->post_date_gmt
                 ]
             ];
-            $eligible_items_packets[] = $input_data;
+            
+            // Return first eligible item immediately
+            return [$input_data];
         }
 
-        if (empty($eligible_items_packets)) {
-            return [];
-        }
-
-        // Return only the first item for "one coin, one operation" model
-        return [$eligible_items_packets[0]];
+        // No eligible items found
+        return [];
     }
 
     /**
@@ -244,14 +236,13 @@ class WordPress {
         $data_path = $config['data_path'] ?? '';
         
         // Direct config parsing
-        $process_limit = max(1, absint($config['item_count'] ?? 1));
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search_term = trim($config['search'] ?? '');
         
         // Always order by date descending
         $orderby = 'date';
         $order = 'desc';
-        $fetch_batch_size = min(100, max(10, $process_limit * 2));
+        $fetch_batch_size = 10; // Simple batch size for finding first eligible item
 
         $cutoff_timestamp = null;
         if ($timeframe_limit !== 'all_time') {
@@ -277,14 +268,13 @@ class WordPress {
         }
         $next_page_url = add_query_arg(array_filter($query_params, function($value) { return $value !== null && $value !== ''; }), $api_endpoint_url);
 
-        $eligible_items_packets = [];
         $pages_fetched = 0;
-        $max_pages = 10;
+        $max_pages = 5; // Simple pagination safety limit
         $hit_time_limit_boundary = false;
 
         do_action('dm_log', 'debug', 'WordPress REST Input: Initial fetch URL', ['url' => $next_page_url, 'module_id' => $pipeline_id]);
 
-        while ($next_page_url && count($eligible_items_packets) < $process_limit && $pages_fetched < $max_pages) {
+        while ($next_page_url && $pages_fetched < $max_pages) {
             $pages_fetched++;
             do_action('dm_log', 'debug', 'WordPress REST Input: Fetching page', ['page' => $pages_fetched, 'url' => $next_page_url, 'module_id' => $pipeline_id]);
 
@@ -407,11 +397,9 @@ class WordPress {
                         'original_date_gmt' => $original_date_string_for_meta,
                     ]
                 ];
-                do_action('dm_log', 'debug', 'WordPress REST Input: Adding eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $pipeline_id]);
-                array_push($eligible_items_packets, $input_data);
-                if (count($eligible_items_packets) >= $process_limit) {
-                    break;
-                }
+                do_action('dm_log', 'debug', 'WordPress REST Input: Found first eligible item', ['item_id' => $current_item_id, 'title' => $title, 'module_id' => $pipeline_id]);
+                // Return first eligible item immediately
+                return [$input_data];
             }
             
             $next_page_url = null;
@@ -424,18 +412,14 @@ class WordPress {
                     }
                 }
             }
-            if (count($eligible_items_packets) >= $process_limit || $hit_time_limit_boundary) {
+            if ($hit_time_limit_boundary) {
                 break;
             }
         }
         
-        if (empty($eligible_items_packets)) {
-            do_action('dm_log', 'debug', __('No new items found matching the criteria from the API endpoint.', 'data-machine'));
-            return [];
-        }
-
-        // Return only the first item for "one coin, one operation" model
-        return [$eligible_items_packets[0]];
+        // No eligible items found
+        do_action('dm_log', 'debug', __('No new items found matching the criteria from the API endpoint.', 'data-machine'));
+        return [];
     }
 
     /**
@@ -470,9 +454,8 @@ class WordPress {
         $remote_password = $location->password ?? null;
 
         // Direct config parsing
-        $process_limit = max(1, absint($config['item_count'] ?? 1));
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
-        $fetch_batch_size = min(100, max(10, $process_limit * 2));
+        $fetch_batch_size = 10; // Simple batch size for finding first eligible item
 
         if (empty($endpoint_url_base) || !filter_var($endpoint_url_base, FILTER_VALIDATE_URL)) {
             /* translators: %s: Remote Location name */
@@ -496,15 +479,12 @@ class WordPress {
         $order = $config['rest_order'] ?? 'DESC';
         $search = $config['search'] ?? null;
 
-        $eligible_items_packets = [];
         $current_page = 1;
-        $max_pages = 10;
+        $max_pages = 5; // Simple pagination safety limit
         $hit_time_limit_boundary = false;
-        $items_added_this_page = 0;
         $auth_header = 'Basic ' . base64_encode($remote_user . ':' . $remote_password);
 
-        while (count($eligible_items_packets) < $process_limit && $current_page <= $max_pages && !$hit_time_limit_boundary) {
-            $items_added_this_page = 0; // Reset counter for each page
+        while ($current_page <= $max_pages && !$hit_time_limit_boundary) {
             $query_params = [
                 'post_type' => $post_type,
                 'post_status' => $post_status,
@@ -615,12 +595,8 @@ class WordPress {
                         'original_date_gmt' => $post['post_date_gmt'] ?? null
                     ]
                 ];
-                array_push($eligible_items_packets, $input_data);
-                $items_added_this_page++;
-
-                if (count($eligible_items_packets) >= $process_limit) {
-                    break;
-                }
+                // Found first eligible item - return immediately
+                return [$input_data];
             }
 
             // Check if we should stop pagination early
@@ -630,26 +606,16 @@ class WordPress {
                 break;
             }
 
-            // Stop if we've hit process limit or time boundary
-            if (count($eligible_items_packets) >= $process_limit || $hit_time_limit_boundary) {
-                break;
-            }
-
-            // Stop after 1 empty page (no new items added) for efficiency
-            if ($items_added_this_page === 0) {
-                do_action('dm_log', 'debug', 'Handler: No new items on page, stopping pagination for efficiency', ['current_page' => $current_page, 'items_found_so_far' => count($eligible_items_packets)]);
+            // Stop if we've hit time boundary
+            if ($hit_time_limit_boundary) {
                 break;
             }
 
             $current_page++;
         }
 
-        if (empty($eligible_items_packets)) {
-            return [];
-        }
-
-        // Return only the first item for "one coin, one operation" model
-        return [$eligible_items_packets[0]];
+        // No eligible items found
+        return [];
     }
 
     /**

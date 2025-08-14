@@ -41,12 +41,6 @@
                 return;
             }
             
-            // Debug logging
-            console.log('[DM Modal Debug] Opening modal with template:', template);
-            console.log('[DM Modal Debug] Context:', context);
-            console.log('[DM Modal Debug] dmCoreModal object:', dmCoreModal);
-            console.log('[DM Modal Debug] ajax_url:', dmCoreModal.ajax_url);
-            console.log('[DM Modal Debug] nonce:', dmCoreModal.get_modal_content_nonce);
             
             // Show loading state
             this.showLoading();
@@ -58,21 +52,14 @@
                 nonce: dmCoreModal.get_modal_content_nonce
             };
             
-            console.log('[DM Modal Debug] AJAX data:', ajaxData);
             
             // Make AJAX call to universal modal content handler
-            console.log('[DM Modal Debug] Making AJAX call to:', dmCoreModal.ajax_url);
             
             $.ajax({
                 url: dmCoreModal.ajax_url,
                 type: 'POST',
                 data: ajaxData,
-                beforeSend: function(xhr, settings) {
-                    console.log('[DM Modal Debug] AJAX beforeSend - URL:', settings.url);
-                    console.log('[DM Modal Debug] AJAX beforeSend - Data:', settings.data);
-                },
                 success: (response) => {
-                    console.log('[DM Modal Debug] AJAX success:', response);
                     // Check if response is HTML (server error) instead of JSON
                     if (typeof response === 'string' && response.includes('<!DOCTYPE html>')) {
                         console.error('[DM Modal] Server returned HTML instead of JSON - Raw response:', response);

@@ -40,13 +40,6 @@ class RssSettings {
                 'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'data-machine'),
                 'required' => true,
             ],
-            'item_count' => [
-                'type' => 'number',
-                'label' => __('Items to Process', 'data-machine'),
-                'description' => __('Maximum number of *new* RSS items to process per run.', 'data-machine'),
-                'min' => 1,
-                'max' => 50,
-            ],
             'timeframe_limit' => [
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
@@ -83,8 +76,6 @@ class RssSettings {
         }
         $sanitized['feed_url'] = $feed_url;
         
-        // Item count
-        $sanitized['item_count'] = max(1, min(50, absint($raw_settings['item_count'] ?? 1)));
         
         // Timeframe limit
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
@@ -109,7 +100,6 @@ class RssSettings {
     public static function get_defaults(): array {
         return [
             'feed_url' => '',
-            'item_count' => 1,
             'timeframe_limit' => 'all_time',
             'search' => '',
         ];

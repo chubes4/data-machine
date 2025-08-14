@@ -36,6 +36,38 @@ class ThreadsAuth {
     }
 
     /**
+     * Get configuration fields required for Threads authentication
+     *
+     * @return array Configuration field definitions
+     */
+    public function get_config_fields(): array {
+        return [
+            'app_id' => [
+                'label' => __('App ID', 'data-machine'),
+                'type' => 'text',
+                'required' => true,
+                'description' => __('Your Threads application App ID from developers.facebook.com', 'data-machine')
+            ],
+            'app_secret' => [
+                'label' => __('App Secret', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your Threads application App Secret from developers.facebook.com', 'data-machine')
+            ]
+        ];
+    }
+
+    /**
+     * Check if Threads authentication is properly configured
+     *
+     * @return bool True if OAuth credentials are configured, false otherwise
+     */
+    public function is_configured(): bool {
+        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        return !empty($config['app_id']) && !empty($config['app_secret']);
+    }
+
+    /**
      * Registers the necessary WordPress action hooks for OAuth callback flow.
      * This should be called from the main plugin setup.
      */
@@ -289,7 +321,8 @@ class ThreadsAuth {
      * @return string
      */
     private function get_client_id() {
-        return get_option('threads_app_id', '');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        return $config['app_id'] ?? '';
     }
 
     /**
@@ -298,7 +331,8 @@ class ThreadsAuth {
      * @return string
      */
     private function get_client_secret() {
-        return get_option('threads_app_secret', '');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        return $config['app_secret'] ?? '';
     }
 
     /**
@@ -476,8 +510,9 @@ class ThreadsAuth {
         $state = sanitize_text_field($_GET['state']);
 
         // Retrieve stored app credentials from global options
-        $app_id = get_option('threads_app_id');
-        $app_secret = get_option('threads_app_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        $app_id = $config['app_id'] ?? '';
+        $app_secret = $config['app_secret'] ?? '';
         if (empty($app_id) || empty($app_secret)) {
             do_action('dm_log', 'error', 'Threads OAuth Error: App credentials not configured.');
             wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-pipelines')));

@@ -1,37 +1,23 @@
 # AI HTTP Client for WordPress
 
-A professional WordPress library for **AI provider communication** with **filter-based architecture** and shared API key management across plugins.
+A streamlined WordPress library for **AI provider communication** using **pure filter architecture**.
 
 ## Why This Library?
 
-This is for WordPress plugin developers who want to ship AI features fast with maximum extensibility.
+Simplified AI integration for WordPress plugin developers.
 
-**Filter-Based Architecture:**
+**Pure Filter Architecture:**
 - ✅ **WordPress Native** - Complete WordPress filter system integration
-- ✅ **Provider Self-Registration** - Providers register via filters, zero central coordination
-- ✅ **Third-Party Extensible** - Any plugin can register new providers via filters
-- ✅ **Shared API Keys** - Efficient key storage across all plugins
-- ✅ **No Hardcoded Defaults** - Library fails fast with clear errors when not configured
-- ✅ **Streaming Support** - Real-time streaming for all providers
+- ✅ **Self-Contained Providers** - Each provider handles its own format conversion
+- ✅ **Shared API Keys** - Efficient key storage via filters
+- ✅ **No Legacy Support** - Clean, modern implementation
+- ✅ **Streaming Support** - Real-time streaming via centralized HTTP filter
 - ✅ **Model Auto-Fetching** - Dynamic model discovery from provider APIs
-- ✅ **Zero Styling** - You control the design
+- ✅ **Zero Styling** - Template-based UI components
 
 ## Installation
 
-### Method 1: Composer (New)
-```bash
-composer require chubes4/ai-http-client
-```
-
-Then in your code:
-```php
-require_once __DIR__ . '/vendor/autoload.php';
-// Library automatically loads via Composer autoloader
-```
-
-### Method 2: Git Subtree (Recommended for WordPress)
-Install as a subtree in your plugin for automatic updates:
-
+### Method 1: Git Subtree (Recommended)
 ```bash
 # From your plugin root directory
 git subtree add --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
@@ -40,46 +26,21 @@ git subtree add --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-c
 git subtree pull --prefix=lib/ai-http-client https://github.com/chubes4/ai-http-client.git main --squash
 ```
 
-### Method 3: Direct Download
+### Method 2: Direct Download
 Download and place in your plugin's `/lib/ai-http-client/` directory.
+
+**Requirements**: Composer autoloader must be available (run `composer install` in library directory).
 
 ## Quick Start
 
 ### 1. Include the Library
 
-**With Composer:**
 ```php
-require_once __DIR__ . '/vendor/autoload.php';
-// No additional includes needed
-```
-
-**Without Composer (Git Subtree/Manual):**
-```php
-// In your plugin
+// In your plugin main file
 require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php';
 ```
 
-### 2. Add Admin UI Component (Filter-Based)
-```php
-// Core AI provider interface - returns table rows for embedding in your forms
-echo apply_filters('ai_render_component', '');
-
-// With customized components
-echo apply_filters('ai_render_component', '', [
-    'selected_provider' => 'openai',
-    'selected_model' => 'gpt-4',
-    'temperature' => true,
-    'system_prompt' => true,
-    'temperature_value' => 0.7
-]);
-
-// Wrap in your own table
-echo '<table class="form-table">';
-echo apply_filters('ai_render_component', '', $config);
-echo '</table>';
-```
-
-### 3. Send AI Requests (Filter-Based)
+### 2. Send AI Requests (Filter-Based)
 
 #### Standard Requests
 ```php

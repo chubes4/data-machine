@@ -34,6 +34,38 @@ class FacebookAuth {
     }
 
     /**
+     * Get configuration fields required for Facebook authentication
+     *
+     * @return array Configuration field definitions
+     */
+    public function get_config_fields(): array {
+        return [
+            'app_id' => [
+                'label' => __('App ID', 'data-machine'),
+                'type' => 'text',
+                'required' => true,
+                'description' => __('Your Facebook application App ID from developers.facebook.com', 'data-machine')
+            ],
+            'app_secret' => [
+                'label' => __('App Secret', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your Facebook application App Secret from developers.facebook.com', 'data-machine')
+            ]
+        ];
+    }
+
+    /**
+     * Check if Facebook authentication is properly configured
+     *
+     * @return bool True if OAuth credentials are configured, false otherwise
+     */
+    public function is_configured(): bool {
+        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        return !empty($config['app_id']) && !empty($config['app_secret']);
+    }
+
+    /**
      * Registers the necessary WordPress action hooks for OAuth callback flow.
      * This should be called from the main plugin setup.
      */
@@ -268,7 +300,8 @@ class FacebookAuth {
      * @return string
      */
     private function get_client_secret() {
-        return get_option('facebook_app_secret', '');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        return $config['app_secret'] ?? '';
     }
 
     /**
@@ -495,8 +528,9 @@ class FacebookAuth {
         $state = sanitize_text_field($_GET['state']);
 
         // Retrieve stored app credentials from global options
-        $app_id = get_option('facebook_app_id');
-        $app_secret = get_option('facebook_app_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        $app_id = $config['app_id'] ?? '';
+        $app_secret = $config['app_secret'] ?? '';
         if (empty($app_id) || empty($app_secret)) {
             do_action('dm_log', 'error', 'Facebook OAuth Error: App credentials not configured.');
             wp_redirect(add_query_arg('auth_error', 'config_missing', admin_url('admin.php?page=dm-pipelines')));

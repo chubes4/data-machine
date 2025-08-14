@@ -26,7 +26,43 @@ class RedditAuth {
         // No parameters needed - all services accessed via filters
     }
 
+    /**
+     * Get configuration fields required for Reddit authentication
+     *
+     * @return array Configuration field definitions
+     */
+    public function get_config_fields(): array {
+        return [
+            'client_id' => [
+                'label' => __('Client ID', 'data-machine'),
+                'type' => 'text',
+                'required' => true,
+                'description' => __('Your Reddit application Client ID from reddit.com/prefs/apps', 'data-machine')
+            ],
+            'client_secret' => [
+                'label' => __('Client Secret', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your Reddit application Client Secret from reddit.com/prefs/apps', 'data-machine')
+            ],
+            'developer_username' => [
+                'label' => __('Developer Username', 'data-machine'),
+                'type' => 'text',
+                'required' => false,
+                'description' => __('Your Reddit username (defaults to DataMachinePlugin)', 'data-machine')
+            ]
+        ];
+    }
 
+    /**
+     * Check if Reddit authentication is properly configured
+     *
+     * @return bool True if OAuth credentials are configured, false otherwise
+     */
+    public function is_configured(): bool {
+        $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
+        return !empty($config['client_id']) && !empty($config['client_secret']);
+    }
 
     /**
      * Registers the necessary WordPress action hooks.
@@ -47,8 +83,9 @@ class RedditAuth {
              wp_die('Permission denied.');
         }
 
-        // 2. Get Client ID
-        $client_id = get_option('reddit_oauth_client_id');
+        // 2. Get Client ID from configuration
+        $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
+        $client_id = $config['client_id'] ?? '';
         if (empty($client_id)) {
             // Redirect back with error
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_client_id'));
@@ -121,8 +158,9 @@ class RedditAuth {
         $code = sanitize_key($_GET['code']);
 
         // --- 2. Exchange Code for Tokens --- 
-        $client_id = get_option('reddit_oauth_client_id');
-        $client_secret = get_option('reddit_oauth_client_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
+        $client_id = $config['client_id'] ?? '';
+        $client_secret = $config['client_secret'] ?? '';
         if (empty($client_id) || empty($client_secret)) {
              do_action('dm_log', 'error', 'Reddit OAuth Error: Client ID or Secret not configured for token exchange.');
              wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_credentials'));
@@ -131,7 +169,7 @@ class RedditAuth {
 
         $token_url = 'https://www.reddit.com/api/v1/access_token';
         $redirect_uri = admin_url('admin-post.php?action=dm_reddit_oauth_callback'); // Must match exactly
-        $developer_username = get_option('reddit_developer_username', 'DataMachinePlugin'); // Fallback needed
+        $developer_username = $config['developer_username'] ?? 'DataMachinePlugin'; // Fallback needed
 
         // Prepare request arguments
         $args = [
@@ -245,13 +283,14 @@ class RedditAuth {
         }
 
         // Get credentials needed for Basic Auth
-        $client_id = get_option('reddit_oauth_client_id');
-        $client_secret = get_option('reddit_oauth_client_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
+        $client_id = $config['client_id'] ?? '';
+        $client_secret = $config['client_secret'] ?? '';
         if (empty($client_id) || empty($client_secret)) {
              do_action('dm_log', 'error', 'Reddit Token Refresh Error: Client ID or Secret not configured.');
              return false; // Cannot proceed
         }
-        $developer_username = get_option('reddit_developer_username', 'DataMachinePlugin');
+        $developer_username = $config['developer_username'] ?? 'DataMachinePlugin';
 
         // --- Make Refresh Request ---
         $token_url = 'https://www.reddit.com/api/v1/access_token';

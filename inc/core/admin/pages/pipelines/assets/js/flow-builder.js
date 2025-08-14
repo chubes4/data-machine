@@ -94,7 +94,6 @@
          */
         addHandlerToFlowStep: function(contextData) {
             // Enhanced validation with detailed logging
-            console.log('Adding handler to flow step with context:', contextData);
             
             if (!contextData) {
                 console.error('No context data provided to addHandlerToFlowStep');
@@ -141,7 +140,6 @@
                 }
             });
             
-            console.log('Form data being sent:', formData);
             
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
@@ -151,7 +149,6 @@
                     if (response.success) {
                         // Show success message
                         if (response.data && response.data.message) {
-                            console.log('Handler added successfully:', response.data.message);
                         }
                         
                         // Update the flow step card with the new handler
@@ -187,7 +184,6 @@
                 return;
             }
             
-            console.log('Using actual Draft Flow ID:', actualFlowId, 'for pipeline:', pipelineId);
             
             // Fetch actual flow config using the new centralized filter system
             $.ajax({
@@ -400,7 +396,6 @@
         handleModalSaved: function(e, data) {
             // For handler operations, update the specific step card
             if (data && data.handler_slug && data.step_type && data.flow_step_id) {
-                console.log('Handler saved, updating step card for:', data.step_type, 'with handler:', data.handler_slug);
                 this.updateFlowStepCard(data);
             }
         },
@@ -449,7 +444,6 @@
                             // Replace the existing step container with updated version
                             $flowStepContainer.replaceWith(updatedStepHtml);
                             
-                            console.log('Step card updated successfully for handler:', handler_slug);
                         }).catch((error) => {
                             console.error('Failed to render updated step card template:', error);
                             throw new Error('Failed to render updated step card template: ' + error);

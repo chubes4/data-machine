@@ -144,7 +144,6 @@ class Reddit {
 		$config = $handler_config['reddit'] ?? [];
 		$subreddit = trim( $config['subreddit'] ?? '' );
 		$sort = $config['sort_by'] ?? 'hot';
-		$process_limit = max(1, absint( $config['item_count'] ?? 1 ));
 		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
 		$min_upvotes = isset($config['min_upvotes']) ? absint($config['min_upvotes']) : 0;
 		$fetch_batch_size = 100; // Max items per Reddit API request
@@ -186,15 +185,13 @@ class Reddit {
 		}
 		// --- End Configuration ---
 
-		$eligible_items_packets = [];
 		$after_param = null; // For Reddit API pagination
 		$total_checked = 0;
-		$max_checks = 500; // Safety break
+		$max_pages = 5; // Simple pagination safety limit
 		$pages_fetched = 0;
-		$max_pages = 10; // Limit pages to prevent excessive calls
 
-		// Loop to fetch pages until enough items are found or limits are hit
-		while (count($eligible_items_packets) < $process_limit && $total_checked < $max_checks && $pages_fetched < $max_pages) {
+		// Simple pagination - look for first eligible item across pages if needed
+		while ($pages_fetched < $max_pages) {
 			$pages_fetched++;
 			// Construct the Reddit JSON API URL with pagination using the OAuth domain
 			$reddit_url = sprintf(
@@ -483,12 +480,10 @@ class Reddit {
 					],
 					'metadata' => $metadata
 				];
-				array_push($eligible_items_packets, $input_data);
-
-				if (count($eligible_items_packets) >= $process_limit) {
-					do_action('dm_log', 'debug', 'Reddit Input: Reached process limit.', ['limit' => $process_limit, 'pipeline_id' => $pipeline_id]);
-					break; // Stop processing this batch
-				}
+				// Found first eligible item - return immediately
+				return [
+					'processed_items' => [$input_data]
+				];
 			} // End foreach ($response_data...)
 
 			// Stop pagination if we hit the time limit boundary in the batch
@@ -506,18 +501,15 @@ class Reddit {
 
 		} // End while loop
 
-		$found_count = count($eligible_items_packets);
-		do_action('dm_log', 'debug', 'Reddit Input: Finished fetching.', ['found_count' => $found_count, 'total_checked' => $total_checked, 'pages_fetched' => $pages_fetched, 'pipeline_id' => $pipeline_id]);
+		// No eligible items found across all pages
+		do_action('dm_log', 'debug', 'Reddit Input: No eligible items found.', [
+			'total_checked' => $total_checked,
+			'pages_fetched' => $pages_fetched,
+			'pipeline_id' => $pipeline_id
+		]);
 
-		if (empty($eligible_items_packets)) {
-			return [
-				'processed_items' => []
-			];
-		}
-
-		// Return processed items array
 		return [
-			'processed_items' => $eligible_items_packets
+			'processed_items' => []
 		];
 	}
 
@@ -538,7 +530,6 @@ class Reddit {
 			throw new Exception(esc_html__('Invalid sort parameter provided in settings.', 'data-machine'));
 		}
 		$sanitized['sort_by'] = $sort_by;
-		$sanitized['item_count'] = min(100, max(1, absint($raw_settings['item_count'] ?? 1)));
 		$valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
 		$timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
 		if (!in_array($timeframe, $valid_timeframes)) {

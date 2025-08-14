@@ -51,13 +51,6 @@ class RedditSettings {
                     'rising' => 'Rising',
                 ],
             ],
-            'item_count' => [
-                'type' => 'number',
-                'label' => __('Posts to Fetch', 'data-machine'),
-                'description' => __('Number of recent posts to check per run. The system will process the first new post found. Max 100.', 'data-machine'),
-                'min' => 1,
-                'max' => 100,
-            ],
             'timeframe_limit' => [
                 'type' => 'select',
                 'label' => __('Process Posts Within', 'data-machine'),
@@ -115,7 +108,6 @@ class RedditSettings {
             throw new Exception(esc_html__('Invalid sort parameter provided in settings.', 'data-machine'));
         }
         $sanitized['sort_by'] = $sort_by;
-        $sanitized['item_count'] = min(100, max(1, absint($raw_settings['item_count'] ?? 1)));
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
         $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
         if (!in_array($timeframe, $valid_timeframes)) {
@@ -141,7 +133,6 @@ class RedditSettings {
         return [
             'subreddit' => '',
             'sort_by' => 'hot',
-            'item_count' => 1,
             'timeframe_limit' => 'all_time',
             'min_upvotes' => 0,
             'min_comment_count' => 0,

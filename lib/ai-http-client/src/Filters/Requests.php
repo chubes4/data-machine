@@ -215,22 +215,20 @@ function ai_http_client_register_provider_filters() {
         }
         
         try {
-            // Get provider configuration
-            $all_providers_config = apply_filters('ai_config', null);
-            
-            // Determine provider name - use parameter or default
+            // Provider name is now required - library no longer auto-discovers providers
             if (!$provider_name) {
-                // Find the selected provider from configuration
-                foreach ($all_providers_config as $provider_name_candidate => $provider_data) {
-                    if (is_array($provider_data) && isset($provider_data['is_selected']) && $provider_data['is_selected']) {
-                        $provider_name = $provider_name_candidate;
-                        break;
-                    }
-                }
+                return ai_http_create_error_response('Provider name must be specified for AI requests');
             }
-        
             
-            $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
+            // Build provider config from shared API keys
+            $shared_api_keys = apply_filters('ai_provider_api_keys', null);
+            $api_key = $shared_api_keys[$provider_name] ?? '';
+            
+            if (empty($api_key)) {
+                return ai_http_create_error_response("No API key configured for provider '{$provider_name}'");
+            }
+            
+            $provider_config = ['api_key' => $api_key];
             
             // Get provider instance
             $provider = ai_http_create_provider($provider_name, $provider_config);
@@ -290,8 +288,10 @@ function ai_http_create_provider($provider_name, $provider_config = null) {
     }
     // Get provider configuration if not provided
     if ($provider_config === null) {
-        $all_providers_config = apply_filters('ai_config', null);
-        $provider_config = isset($all_providers_config[$provider_name]) ? $all_providers_config[$provider_name] : [];
+        // Build minimal config from shared API keys
+        $shared_api_keys = apply_filters('ai_provider_api_keys', null);
+        $api_key = $shared_api_keys[$provider_name] ?? '';
+        $provider_config = $api_key ? ['api_key' => $api_key] : [];
     }
     // Debug: log provider name and config
     if (defined('WP_DEBUG') && WP_DEBUG) {

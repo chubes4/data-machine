@@ -76,7 +76,6 @@
                             
                             // Initialize the component
                             window.AIHttpProviderManager.init(componentId, config);
-                            console.log('[DM Pipeline Shared] Initialized AI provider manager:', componentId);
                         }
                     });
                 }
@@ -229,7 +228,6 @@
                 contentType: false,
                 success: (response) => {
                     if (response.success) {
-                        console.log('Step configuration saved successfully:', response.data);
                         
                         // Close the modal
                         if (window.dmCoreModal && window.dmCoreModal.closeModal) {
@@ -278,7 +276,6 @@
                                                 // Replace the existing step container with updated version
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
                                                 
-                                                console.log('AI configuration updated in flow step card:', pipeline_step_id);
                                             }).catch((error) => {
                                                 console.error('Failed to update flow step card after AI config save:', error);
                                             });
@@ -314,7 +311,6 @@
                                 // Replace the existing pipeline step container with updated version
                                 $pipelineStepContainer.replaceWith(updatedStepHtml);
                                 
-                                console.log('AI configuration updated in pipeline step card:', pipeline_step_id);
                             }).catch((error) => {
                                 console.error('Failed to update pipeline step card after AI config save:', error);
                             });

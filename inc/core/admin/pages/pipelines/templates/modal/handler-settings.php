@@ -72,7 +72,7 @@ $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_
             </div>
             <?php 
             // Determine auth template based on handler type
-            $auth_template = 'handler-auth';
+            $auth_template = 'modal/handler-auth-form';
             if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
                 $auth_template = 'remote-locations-manager';
             }

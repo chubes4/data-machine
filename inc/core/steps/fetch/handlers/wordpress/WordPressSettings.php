@@ -243,13 +243,6 @@ class WordPressSettings {
      */
     private static function get_common_fields(): array {
         return [
-            'item_count' => [
-                'type' => 'number',
-                'label' => __('Items to Process', 'data-machine'),
-                'description' => __('Maximum number of *new* items to process per run.', 'data-machine'),
-                'min' => 1,
-                'max' => 100,
-            ],
             'timeframe_limit' => [
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
@@ -301,7 +294,6 @@ class WordPressSettings {
         }
 
         // Sanitize common fields
-        $sanitized['item_count'] = max(1, absint($raw_settings['item_count'] ?? 1));
         $sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
         $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
 
@@ -368,7 +360,6 @@ class WordPressSettings {
             'tag_id' => 0,
             'orderby' => 'date',
             'order' => 'DESC',
-            'item_count' => 1,
             'timeframe_limit' => 'all_time',
             'search' => '',
         ];

@@ -27,25 +27,6 @@ add_filter('ai_provider_api_keys', function($keys = null) {
     }
 });
 
-// AI configuration filter - simplified to only return shared API keys
-// Usage: $config = apply_filters('ai_config', null); // Returns shared API keys only
-add_filter('ai_config', function($unused_param = null) {
-    // Return only shared API keys from wp_options
-    $all_providers = apply_filters('ai_providers', []);
-    $config = [];
-    
-    foreach ($all_providers as $provider_name => $provider_info) {
-        $all_keys = apply_filters('ai_provider_api_keys', null);
-        $api_key = $all_keys[$provider_name] ?? '';
-        if (!empty($api_key)) {
-            $config[$provider_name] = [
-                'api_key' => $api_key
-            ];
-        }
-    }
-    
-    return $config;
-}, 10, 1);
 
 /**
  * Render template with proper variable scoping
@@ -76,9 +57,6 @@ function ai_http_render_template($template_name, $data = []) {
 // Usage: echo apply_filters('ai_render_component', '', ['selected_provider' => 'anthropic', 'selected_model' => 'claude-3-sonnet']);
 add_filter('ai_render_component', function($html, $config = []) {
     
-    // Get shared API keys configuration
-    $all_config = apply_filters('ai_config', null);
-    
     // Use provided configuration or defaults
     $selected_provider = $config['selected_provider'] ?? 'openai';
     $selected_model = $config['selected_model'] ?? '';
@@ -92,7 +70,6 @@ add_filter('ai_render_component', function($html, $config = []) {
     $template_data = [
         'unique_id' => $unique_id,
         'selected_provider' => $selected_provider,
-        'all_config' => $all_config,
         'provider_config' => [
             'model' => $selected_model,
             'temperature' => $temperature_value,

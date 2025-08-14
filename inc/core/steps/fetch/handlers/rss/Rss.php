@@ -70,7 +70,6 @@ class Rss {
             throw new Exception(esc_html__('Invalid RSS feed URL format.', 'data-machine'));
         }
 
-        $process_limit = max(1, absint($config['item_count'] ?? 1));
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search_term = trim($config['search'] ?? '');
         $search_keywords = [];
@@ -160,8 +159,7 @@ class Rss {
             return ['processed_items' => []];
         }
 
-        // Process items
-        $eligible_items_packets = [];
+        // Process items - find first eligible item only
         $total_checked = 0;
 
         foreach ($items as $item) {
@@ -216,8 +214,8 @@ class Rss {
                 }
             }
 
-            // Item is eligible - create standardized packet
-            do_action('dm_log', 'debug', 'RSS Input: Found eligible RSS item.', ['guid' => $guid, 'title' => $title, 'pipeline_id' => $pipeline_id]);
+            // Found first eligible item - create standardized packet and return
+            do_action('dm_log', 'debug', 'RSS Input: Found eligible RSS item.', ['guid' => $guid, 'title' => $title, 'total_checked' => $total_checked, 'pipeline_id' => $pipeline_id]);
             
             // Mark item as processed immediately after confirming eligibility
             if ($flow_step_id) {
@@ -270,22 +268,17 @@ class Rss {
                 'metadata' => $metadata
             ];
             
-            $eligible_items_packets[] = $input_data;
-            
-            if (count($eligible_items_packets) >= $process_limit) {
-                do_action('dm_log', 'debug', 'RSS Input: Reached process limit.', ['limit' => $process_limit, 'pipeline_id' => $pipeline_id]);
-                break;
-            }
+            // Return first eligible item immediately
+            return ['processed_items' => [$input_data]];
         }
 
-        $found_count = count($eligible_items_packets);
-        do_action('dm_log', 'debug', 'RSS Input: Finished processing RSS feed.', [
-            'found_count' => $found_count,
+        // No eligible items found
+        do_action('dm_log', 'debug', 'RSS Input: No eligible items found in RSS feed.', [
             'total_checked' => $total_checked,
             'pipeline_id' => $pipeline_id
         ]);
 
-        return ['processed_items' => $eligible_items_packets];
+        return ['processed_items' => []];
     }
 
     /**
@@ -471,38 +464,6 @@ class Rss {
     }
 
 
-    /**
-     * Sanitize settings for the RSS fetch handler.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Feed URL is required
-        $feed_url = esc_url_raw($raw_settings['feed_url'] ?? '');
-        if (empty($feed_url)) {
-            throw new \InvalidArgumentException(esc_html__('RSS Feed URL is required.', 'data-machine'));
-        }
-        $sanitized['feed_url'] = $feed_url;
-        
-        // Item count
-        $sanitized['item_count'] = max(1, min(50, absint($raw_settings['item_count'] ?? 1)));
-        
-        // Timeframe limit
-        $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
-        $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        if (!in_array($timeframe, $valid_timeframes)) {
-            throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
-        }
-        $sanitized['timeframe_limit'] = $timeframe;
-        
-        // Search terms
-        $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
-        
-        return $sanitized;
-    }
 
     /**
      * Get the user-friendly label for this handler.

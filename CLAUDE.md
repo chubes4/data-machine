@@ -94,6 +94,8 @@ do_action('dm_cleanup_old_files');
 
 **Admin-Only**: Site-level auth, zero user_id dependencies, `manage_options` checks.
 
+**Execution Model**: One-item-at-a-time processing. Each flow execution processes exactly one eligible item per run, ensuring predictable resource usage and clear job tracking.
+
 ## Database Schema
 
 **Tables**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`, `wp_dm_remote_locations`
@@ -149,10 +151,11 @@ error_log(print_r(apply_filters('dm_db', []), true));
 ```
 
 **Processing Flow**:
-1. Fetch steps create initial DataPackets
+1. Fetch steps find first eligible item and create single DataPacket
 2. AI steps transform content while preserving metadata
-3. Publish steps consume DataPackets for final output
-4. Each step can add metadata without modifying existing data
+3. Publish steps consume DataPacket for final output
+4. Each execution processes exactly one item through all steps
+5. Each step can add metadata without modifying existing data
 
 ## Step Implementation
 
@@ -160,11 +163,12 @@ error_log(print_r(apply_filters('dm_db', []), true));
 ```php
 class MyStep {
     public function execute($flow_step_id, array $data = [], array $step_config = []): array {
+        // Process single item (data array contains exactly one DataPacket)
         foreach ($data as $item) {
             $content = $item['content']['body'] ?? '';
             // Process content based on step type
         }
-        return $data; // Return modified DataPacket array
+        return $data; // Return modified single-item DataPacket array
     }
 }
 ```

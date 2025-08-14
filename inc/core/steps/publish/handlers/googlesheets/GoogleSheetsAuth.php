@@ -46,6 +46,38 @@ class GoogleSheetsAuth {
     }
 
     /**
+     * Get configuration fields required for Google Sheets authentication
+     *
+     * @return array Configuration field definitions
+     */
+    public function get_config_fields(): array {
+        return [
+            'client_id' => [
+                'label' => __('Client ID', 'data-machine'),
+                'type' => 'text',
+                'required' => true,
+                'description' => __('Your Google application Client ID from console.cloud.google.com', 'data-machine')
+            ],
+            'client_secret' => [
+                'label' => __('Client Secret', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your Google application Client Secret from console.cloud.google.com', 'data-machine')
+            ]
+        ];
+    }
+
+    /**
+     * Check if Google Sheets authentication is properly configured
+     *
+     * @return bool True if OAuth credentials are configured, false otherwise
+     */
+    public function is_configured(): bool {
+        $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
+        return !empty($config['client_id']) && !empty($config['client_secret']);
+    }
+
+    /**
      * Gets an authenticated Google Sheets API access token.
      *
      * @return string|\WP_Error Access token string or WP_Error on failure.
@@ -88,8 +120,9 @@ class GoogleSheetsAuth {
      */
     private function refresh_access_token(string $refresh_token) {
         
-        $client_id = get_option('googlesheets_client_id');
-        $client_secret = get_option('googlesheets_client_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
+        $client_id = $config['client_id'] ?? '';
+        $client_secret = $config['client_secret'] ?? '';
         
         if (empty($client_id) || empty($client_secret)) {
             do_action('dm_log', 'error', 'Missing Google OAuth client credentials.');
@@ -177,8 +210,9 @@ class GoogleSheetsAuth {
         }
 
         // 2. Get OAuth configuration
-        $client_id = get_option('googlesheets_client_id');
-        $client_secret = get_option('googlesheets_client_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
+        $client_id = $config['client_id'] ?? '';
+        $client_secret = $config['client_secret'] ?? '';
         
         if (empty($client_id) || empty($client_secret)) {
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_missing_oauth_config'));
@@ -254,8 +288,9 @@ class GoogleSheetsAuth {
         }
 
         // 3. Exchange authorization code for tokens
-        $client_id = get_option('googlesheets_client_id');
-        $client_secret = get_option('googlesheets_client_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
+        $client_id = $config['client_id'] ?? '';
+        $client_secret = $config['client_secret'] ?? '';
         $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
 
         $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [

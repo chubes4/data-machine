@@ -138,13 +138,14 @@ $handler_configured = !$is_empty && !empty($current_handler);
                     <?php elseif ($step_type === 'ai'): ?>
                         <!-- AI step status - show configuration from pipeline level -->
                         <?php
-                        $ai_config = apply_filters('ai_config', $pipeline_step_id);
+                        $ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
                         $show_config = false;
                         if (!empty($ai_config) && isset($ai_config['selected_provider'])) {
                             $selected_provider = $ai_config['selected_provider'];
                             $model_name = $ai_config['model'] ?? '';
-                            $has_api_key = !empty($ai_config['providers'][$selected_provider]['api_key'] ?? '');
-                            if ($selected_provider && $model_name && $has_api_key) {
+                            // Only check if provider and model are present
+                            // Library will handle API key validation during actual requests
+                            if ($selected_provider && $model_name) {
                                 $show_config = true;
                             }
                         }

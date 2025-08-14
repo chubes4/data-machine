@@ -236,7 +236,7 @@ class AIStep {
             ];
             
             // Debug: Log step configuration details before AI request
-            $step_debug_config = apply_filters('ai_config', $pipeline_step_id);
+            $step_debug_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
             do_action('dm_log', 'debug', 'AI Step: Step configuration retrieved', [
                 'job_id' => $job_id,
                 'pipeline_step_id' => $pipeline_step_id,
@@ -246,9 +246,19 @@ class AIStep {
                 'configured_model' => $step_debug_config['model'] ?? 'NOT_SET'
             ]);
             
-            // Execute AI request using pure filter
-            // Data Machine handles all step-specific configuration separately
-            $ai_response = apply_filters('ai_request', $ai_request);
+            // Get provider name from step configuration for AI request
+            $provider_name = $step_debug_config['selected_provider'] ?? '';
+            if (empty($provider_name)) {
+                $error_message = 'AI step not configured: No provider selected';
+                do_action('dm_log', 'error', 'AI Step: No provider configured', [
+                    'job_id' => $job_id,
+                    'pipeline_step_id' => $pipeline_step_id
+                ]);
+                throw new \Exception($error_message);
+            }
+            
+            // Execute AI request using pure filter with provider name
+            $ai_response = apply_filters('ai_request', $ai_request, $provider_name);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');

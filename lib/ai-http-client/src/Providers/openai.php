@@ -383,11 +383,6 @@ class AI_HTTP_OpenAI_Provider {
             return $this->normalize_openai_responses_api($openai_response);
         }
         
-        // Handle Chat Completions API format (fallback)
-        if (isset($openai_response['choices'])) {
-            return $this->normalize_openai_chat_completions($openai_response);
-        }
-        
         // Handle streaming format
         if (isset($openai_response['content']) && !isset($openai_response['choices'])) {
             return $this->normalize_openai_streaming($openai_response);
@@ -672,45 +667,6 @@ class AI_HTTP_OpenAI_Provider {
         );
     }
     
-    /**
-     * Normalize OpenAI Chat Completions API format
-     *
-     * @param array $response Raw Chat Completions response
-     * @return array Standard format
-     */
-    private function normalize_openai_chat_completions($response) {
-        if (empty($response['choices'])) {
-            throw new Exception('Invalid OpenAI response: missing choices');
-        }
-
-        $choice = $response['choices'][0];
-        $message = $choice['message'];
-
-        // Extract content and tool calls
-        $content = isset($message['content']) ? $message['content'] : '';
-        $tool_calls = isset($message['tool_calls']) ? $message['tool_calls'] : null;
-
-        // Extract usage
-        $usage = array(
-            'prompt_tokens' => isset($response['usage']['prompt_tokens']) ? $response['usage']['prompt_tokens'] : 0,
-            'completion_tokens' => isset($response['usage']['completion_tokens']) ? $response['usage']['completion_tokens'] : 0,
-            'total_tokens' => isset($response['usage']['total_tokens']) ? $response['usage']['total_tokens'] : 0
-        );
-
-        return array(
-            'success' => true,
-            'data' => array(
-                'content' => $content,
-                'usage' => $usage,
-                'model' => isset($response['model']) ? $response['model'] : '',
-                'finish_reason' => isset($choice['finish_reason']) ? $choice['finish_reason'] : 'unknown',
-                'tool_calls' => $tool_calls
-            ),
-            'error' => null,
-            'provider' => 'openai',
-            'raw_response' => $response
-        );
-    }
     
     /**
      * Normalize OpenAI streaming response format

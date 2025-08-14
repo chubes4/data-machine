@@ -47,6 +47,38 @@ class TwitterAuth {
     }
 
     /**
+     * Get configuration fields required for Twitter authentication
+     *
+     * @return array Configuration field definitions
+     */
+    public function get_config_fields(): array {
+        return [
+            'api_key' => [
+                'label' => __('API Key', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your Twitter application API key from developer.twitter.com', 'data-machine')
+            ],
+            'api_secret' => [
+                'label' => __('API Secret', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your Twitter application API secret from developer.twitter.com', 'data-machine')
+            ]
+        ];
+    }
+
+    /**
+     * Check if Twitter authentication is properly configured
+     *
+     * @return bool True if API credentials are configured, false otherwise
+     */
+    public function is_configured(): bool {
+        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        return !empty($config['api_key']) && !empty($config['api_secret']);
+    }
+
+    /**
      * Gets an authenticated TwitterOAuth connection object.
      *
      * @return TwitterOAuth|\WP_Error Authenticated connection object or WP_Error on failure.
@@ -64,8 +96,9 @@ class TwitterAuth {
         $access_token = $credentials['access_token'];
         $access_token_secret = $credentials['access_token_secret'];
 
-        $consumer_key = get_option('twitter_api_key');
-        $consumer_secret = get_option('twitter_api_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $consumer_key = $config['api_key'] ?? '';
+        $consumer_secret = $config['api_secret'] ?? '';
         if (empty($consumer_key) || empty($consumer_secret)) {
             do_action('dm_log', 'error', 'Missing Twitter API key/secret in site options.');
             return new \WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
@@ -100,9 +133,10 @@ class TwitterAuth {
             wp_die('Permission denied.', 'data-machine');
         }
 
-        // 2. Get API Key/Secret
-        $apiKey = get_option('twitter_api_key');
-        $apiSecret = get_option('twitter_api_secret');
+        // 2. Get API Key/Secret from configuration
+        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $apiKey = $config['api_key'] ?? '';
+        $apiSecret = $config['api_secret'] ?? '';
         if (empty($apiKey) || empty($apiSecret)) {
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_app_keys'));
             exit;
@@ -192,8 +226,9 @@ class TwitterAuth {
             exit;
         }
 
-        $apiKey = get_option('twitter_api_key');
-        $apiSecret = get_option('twitter_api_secret');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $apiKey = $config['api_key'] ?? '';
+        $apiSecret = $config['api_secret'] ?? '';
         if (empty($apiKey) || empty($apiSecret)) {
             do_action('dm_log', 'error', 'Twitter OAuth Error: API Key/Secret missing during callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_app_keys'));

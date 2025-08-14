@@ -334,14 +334,40 @@ function dm_register_utility_filters() {
     }, 10, 3);
     
     // Central OAuth operations filter - eliminates handler-specific OAuth code duplication
-    // Usage: apply_filters('dm_oauth', [], 'retrieve', 'twitter'); apply_filters('dm_oauth', null, 'store', 'twitter', $data);
+    // Account data: apply_filters('dm_oauth', [], 'retrieve', 'twitter'); apply_filters('dm_oauth', null, 'store', 'twitter', $data);
+    // Config data: apply_filters('dm_oauth', [], 'get_config', 'twitter'); apply_filters('dm_oauth', null, 'store_config', 'twitter', $config);
     add_filter('dm_oauth', function($result, $operation, $handler, $data = null) {
         switch ($operation) {
             case 'store':
-                return update_option("{$handler}_auth_data", $data);
+                // Store account data (access tokens, etc.)
+                $current = get_option("{$handler}_auth_data", []);
+                $current['account'] = $data;
+                return update_option("{$handler}_auth_data", $current);
             case 'retrieve':
-                return get_option("{$handler}_auth_data", []);
+                // Retrieve account data
+                $auth_data = get_option("{$handler}_auth_data", []);
+                return $auth_data['account'] ?? [];
             case 'clear':
+                // Clear account data only
+                $current = get_option("{$handler}_auth_data", []);
+                unset($current['account']);
+                return update_option("{$handler}_auth_data", $current);
+            case 'store_config':
+                // Store configuration data (API keys, client secrets, etc.)
+                $current = get_option("{$handler}_auth_data", []);
+                $current['config'] = $data;
+                return update_option("{$handler}_auth_data", $current);
+            case 'get_config':
+                // Retrieve configuration data
+                $auth_data = get_option("{$handler}_auth_data", []);
+                return $auth_data['config'] ?? [];
+            case 'clear_config':
+                // Clear configuration data only
+                $current = get_option("{$handler}_auth_data", []);
+                unset($current['config']);
+                return update_option("{$handler}_auth_data", $current);
+            case 'clear_all':
+                // Clear both config and account data
                 return delete_option("{$handler}_auth_data");
             default:
                 do_action('dm_log', 'error', 'Invalid OAuth operation', [

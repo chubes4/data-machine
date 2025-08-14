@@ -10,14 +10,11 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-// Delete global plugin options (standardized storage)
-delete_option( 'openai_api_key' );
-delete_option( 'bluesky_username' );
-delete_option( 'bluesky_app_password' );
-delete_option( 'twitter_api_key' );
-delete_option( 'reddit_api_key' );
-delete_option( 'threads_app_credentials' );
-delete_option( 'facebook_app_credentials' );
+// Delete authentication data (unified dm_oauth system)
+$auth_providers = ['twitter', 'facebook', 'threads', 'googlesheets', 'reddit', 'bluesky', 'wordpress_publish', 'wordpress_fetch'];
+foreach ($auth_providers as $provider) {
+    delete_option("{$provider}_auth_data");
+}
 
 // Delete AI HTTP Client library options for this plugin context
 delete_option( 'ai_http_client_providers_data-machine' );

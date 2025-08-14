@@ -99,15 +99,15 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
                 <?php if ($step_type === 'ai' && !$is_empty && $pipeline_step_id): ?>
                     <!-- AI step configuration display -->
                     <?php
-                    $ai_config = apply_filters('ai_config', $pipeline_step_id);
+                    $ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
                     $show_config = false;
                     if (!empty($ai_config) && isset($ai_config['selected_provider'])) {
                         $selected_provider = $ai_config['selected_provider'];
                         $model_name = $ai_config['model'] ?? '';
                         $prompt = $ai_config['system_prompt'] ?? '';
-                        $has_api_key = !empty($ai_config['providers'][$selected_provider]['api_key'] ?? '');
-                        // Only show as configured if provider, model, and API key are all present
-                        if ($selected_provider && $model_name && $has_api_key) {
+                        // Only show as configured if provider and model are present
+                        // Library will handle API key validation during actual requests
+                        if ($selected_provider && $model_name) {
                             $show_config = true;
                         }
                     }
