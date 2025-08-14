@@ -14,17 +14,13 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract required data  
-// $step_type is already extracted by template context resolution via 'extract_from_step'
-$step_type = $step_type ?? '';
+// Extract required data from passed variables and step array
+$step_type = $step['step_type'] ?? '';
 $step_execution_order = $step['execution_order'] ?? 0;
-$flow_id = $flow_id ?? 0;
-$pipeline_id = $pipeline_id ?? 0;
-$is_first_step = $is_first_step ?? false;
+$pipeline_step_id = $step['pipeline_step_id'] ?? null;
 $is_empty = $step['is_empty'] ?? false;
 
-// Handle empty steps gracefully (matching pipeline-step-card pattern)
-$pipeline_step_id = $step['pipeline_step_id'] ?? null;
+// Handle flow step ID generation
 $flow_step_id = null;
 
 if (!$is_empty) {

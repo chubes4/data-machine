@@ -42,8 +42,7 @@ $handler_settings = apply_filters('dm_handler_settings', []);
 $handler_directives = apply_filters('dm_handler_directives', []);
 $step_settings = apply_filters('dm_step_settings', []);
 
-// Template System
-$template_requirements = apply_filters('dm_template_requirements', []);
+// System Configuration
 $scheduler_intervals = apply_filters('dm_scheduler_intervals', []);
 
 // Flow ID Utilities
