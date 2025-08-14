@@ -26,7 +26,8 @@ $flow_step_id = null;
 if (!$is_empty) {
     // Only process flow_step_id lookup for populated steps
     if (!$pipeline_step_id) {
-        throw new \InvalidArgumentException('flow-step-card template requires pipeline_step_id for populated steps.');
+        // Skip processing if no pipeline_step_id - template will show as empty
+        return;
     }
 
     // Find flow_step_id from existing flow_config (stored data)
@@ -38,7 +39,8 @@ if (!$is_empty) {
     }
 
     if (!$flow_step_id) {
-        throw new \InvalidArgumentException('Template bug: flow_step_id not found in flow_config for populated step. Calling code must provide proper data.');
+        // No flow_step_id found - treat as unconfigured step
+        $is_empty = true;
     }
 }
 

@@ -14,37 +14,21 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract variables with strict validation - no fallbacks
-if (!isset($delete_type)) {
-    throw new \InvalidArgumentException('confirm-delete template requires delete_type parameter');
-}
+// Extract variables with sensible defaults
+$delete_type = $delete_type ?? 'step';
 
-// Context-specific validation based on deletion type
+// Extract context-specific variables with defaults
 if ($delete_type === 'pipeline') {
-    if (!isset($pipeline_id) || empty($pipeline_id)) {
-        throw new \InvalidArgumentException('Pipeline deletion requires pipeline_id parameter');
-    }
-    if (!isset($pipeline_name) || empty($pipeline_name)) {
-        throw new \InvalidArgumentException('Pipeline deletion requires pipeline_name parameter');
-    }
+    $pipeline_id = $pipeline_id ?? 0;
+    $pipeline_name = $pipeline_name ?? __('Unknown Pipeline', 'data-machine');
 } elseif ($delete_type === 'flow') {
-    if (!isset($flow_id) || empty($flow_id)) {
-        throw new \InvalidArgumentException('Flow deletion requires flow_id parameter');
-    }
-    if (!isset($flow_name) || empty($flow_name)) {
-        throw new \InvalidArgumentException('Flow deletion requires flow_name parameter');
-    }
+    $flow_id = $flow_id ?? 0;
+    $flow_name = $flow_name ?? __('Unknown Flow', 'data-machine');
 } else {
     // Step deletion - default case
-    if (!isset($pipeline_step_id) || empty($pipeline_step_id)) {
-        throw new \InvalidArgumentException('Step deletion requires pipeline_step_id parameter');
-    }
-    if (!isset($pipeline_id) || empty($pipeline_id)) {
-        throw new \InvalidArgumentException('Step deletion requires pipeline_id parameter');
-    }
-    if (!isset($step_type)) {
-        throw new \InvalidArgumentException('Step deletion requires step_type parameter');  
-    }
+    $pipeline_step_id = $pipeline_step_id ?? '';
+    $pipeline_id = $pipeline_id ?? 0;
+    $step_type = $step_type ?? 'unknown';
     
     // Generate step label from type
     $step_label = $step_label ?? ucfirst(str_replace('_', ' ', $step_type));

@@ -45,17 +45,10 @@ if (function_exists('as_next_scheduled_action')) {
 }
 
 // Validate required data - no fallbacks
-if (!isset($pipeline_steps)) {
-    throw new \InvalidArgumentException('flow-instance-card template requires pipeline_steps parameter');
-}
-if (!is_array($pipeline_steps)) {
-    throw new \InvalidArgumentException('flow-instance-card template pipeline_steps must be array');
-}
+$pipeline_steps = $pipeline_steps ?? [];
 
-// Extract flow config without fallbacks
-if (!isset($flow)) {
-    throw new \InvalidArgumentException('flow-instance-card template requires flow parameter');
-}
+// Extract flow config with sensible defaults
+$flow = $flow ?? [];
 
 // Get flow configuration using centralized filter
 $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);

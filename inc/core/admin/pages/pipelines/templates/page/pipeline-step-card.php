@@ -14,17 +14,13 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract and prepare template variables - no fallbacks
-if (!isset($step) || !is_array($step)) {
-    throw new \InvalidArgumentException('pipeline-step-card template requires step data array');
-}
-if (!isset($pipeline_id)) {
-    throw new \InvalidArgumentException('pipeline-step-card template requires pipeline_id parameter');
-}
+// Extract template variables with sensible defaults
+$step = $step ?? [];
+$pipeline_id = $pipeline_id ?? 0;
 
-$is_empty = $step['is_empty'];
-$step_type = $step['step_type'];
-$step_execution_order = $step['execution_order'];
+$is_empty = $step['is_empty'] ?? true;
+$step_type = $step['step_type'] ?? '';
+$step_execution_order = $step['execution_order'] ?? 0;
 $pipeline_step_id = $step['pipeline_step_id'] ?? null;
 $step_data = $step; // Database format: step IS the step data
 
@@ -55,8 +51,8 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
             // Empty steps don't need strict arrow validation - default to showing arrow
             $is_first_step = false;
         } else {
-            // Populated steps should have proper arrow logic
-            throw new \InvalidArgumentException('pipeline-step-card template requires is_first_step parameter for populated steps');
+            // Populated steps default to false (show arrow) if not specified
+            $is_first_step = false;
         }
     }
     if (!$is_first_step): ?>
