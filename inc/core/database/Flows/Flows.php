@@ -209,10 +209,7 @@ class Flows {
             $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true);
         }
         
-        do_action('dm_log', 'debug', 'Retrieved flows for pipeline', [
-            'pipeline_id' => $pipeline_id,
-            'flow_count' => count($flows)
-        ]);
+        // Flows retrieved successfully - no logging needed for routine database queries
         
         return $flows;
     }

@@ -1,615 +1,225 @@
 # CLAUDE.md
 
-Data Machine: AI-first WordPress plugin transforming sites into content processing platforms via Pipeline+Flow architecture and multi-provider AI integration.
+Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and multi-provider AI integration.
 
-## Quick Reference
+## Core Patterns
 
-**Core Filters**:
+**Essential Filters**:
 ```php
-// Services
-$databases = apply_filters('dm_db', []);
+// Service Discovery
 $handlers = apply_filters('dm_handlers', []);
 $steps = apply_filters('dm_steps', []);
-$auth = apply_filters('dm_auth_providers', []);
+$databases = apply_filters('dm_db', []);
 
-// Operations
-apply_filters('dm_render_template', '', $template, $data);
-apply_filters('dm_request', null, 'POST', $url, $args, 'context');
-apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
-apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
-apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
-
-// Database Access
+// Data Access
 apply_filters('dm_get_pipelines', [], $pipeline_id);
-apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
 apply_filters('dm_get_flow_config', [], $flow_id);
 apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_id);
 
-// Repositories & Services
+// Templates & Files
+apply_filters('dm_render_template', '', $template, $data);
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
-$importer = apply_filters('dm_importer', null);
-$modals = apply_filters('dm_modals', []);
-$admin_pages = apply_filters('dm_admin_pages', []);
 
-// Import/Export
-$import_result = apply_filters('dm_import_result', []);
-$export_result = apply_filters('dm_export_result', '');
-
-// Handler Configuration
-$handler_settings = apply_filters('dm_handler_settings', []);
-$handler_directives = apply_filters('dm_handler_directives', []);
-$step_settings = apply_filters('dm_step_settings', []);
-
-// System Configuration
-$scheduler_intervals = apply_filters('dm_scheduler_intervals', []);
-
-// Flow ID Utilities
-$flow_step_parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
-
-// OAuth Management
-apply_filters('dm_oauth', null, 'operation', 'provider', $data);
+// AI Integration
+$result = apply_filters('ai_request', null, $messages, 'openrouter');
 ```
 
-**Core Actions**:
+**Essential Actions**:
 ```php
 // Execution
 do_action('dm_run_flow_now', $flow_id, 'context');
 do_action('dm_execute_step', $job_id, $flow_step_id, $data);
-do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
-// CRUD Operations
-do_action('dm_create', 'type', $data, $context);
-do_action('dm_update_job_status', $job_id, 'status', 'context', 'old_status');
-do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $settings);
-do_action('dm_update_flow_schedule', $flow_id, 'status', 'interval', 'old_status');
-do_action('dm_sync_steps_to_flow', $flow_id, $step_data, ['context' => 'add_step']);
-do_action('dm_delete', 'type', $id, $options);
+// CRUD
+do_action('dm_create', 'pipeline', ['pipeline_name' => $name]);
+do_action('dm_update_flow_handler', $flow_step_id, $handler, $settings);
+do_action('dm_delete', 'pipeline', $pipeline_id, ['cascade' => true]);
 
-// Import/Export
-do_action('dm_import', 'pipelines', $csv_data, ['source' => 'upload']);
-do_action('dm_export', 'pipelines', [$pipeline_id], ['format' => 'csv']);
-
-// Item Processing
-do_action('dm_mark_item_processed', $flow_step_id, 'source_type', $item_id, $job_id);
-
-// System Operations
-do_action('dm_log', 'level', 'message', ['context' => 'data']);
+// System
+do_action('dm_log', 'error', $message, ['context' => $data]);
 do_action('dm_ajax_route', 'action_name', 'page|modal');
-do_action('dm_auto_save', $pipeline_id);
-do_action('dm_oauth', 'operation', 'provider', $credentials);
-do_action('dm_cleanup_old_files');
 ```
 
-## Core Architecture
+## Architecture
 
-**Filter-Based Design**: Self-registering components via `*Filters.php` files. All services via `apply_filters()` patterns.
+**Filter-Based**: Self-registering components via `*Filters.php`. All services discoverable via `apply_filters()`.
 
-**Pipeline+Flow System**: 
-- **Pipelines**: Reusable workflow templates (steps 0-99, UUID4 pipeline_step_id)
+**Pipeline+Flow**: 
+- **Pipelines**: Reusable templates (steps 0-99, UUID4 IDs)
 - **Flows**: Configured instances with handlers/scheduling
-- **Auto-Creation**: New pipelines create "Draft Flow"
+- **Execution**: One-item-at-a-time processing
 
-**Admin-Only**: Site-level auth, zero user_id dependencies, `manage_options` checks.
+**Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 
-**Execution Model**: One-item-at-a-time processing. Each flow execution processes exactly one eligible item per run, ensuring predictable resource usage and clear job tracking.
+**Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress), Publish (Bluesky, Twitter, Threads, Facebook), AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
 
-## Database Schema
+**Admin-Only**: Site-level auth, `manage_options` checks, zero user dependencies
 
-**Tables**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
+## AI Integration
 
-**Relationships**: flows.pipeline_id → pipelines.pipeline_id, jobs.flow_id → flows.flow_id
+**Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
-## Components
-
-**Handlers**: 
-- **Fetch**: Files, Reddit, RSS, Google Sheets, WordPress
-- **Publish**: Bluesky, Twitter, Threads, Facebook, Google Sheets, WordPress  
-- **AI Processing**: OpenAI, Anthropic, Google, Grok, OpenRouter (via AI step)
-
-**Services**: Logger, Database, Engine, Auth, Templates, Files Repository, Import/Export
-
-**Principles**: Filter-based discovery, self-registering via `*Filters.php`, engine agnostic, position-based execution, DataPacket flow
-
-## AI Provider Integration
-
-**AI HTTP Client Library**: Multi-provider AI integration via `lib/ai-http-client` with filter-based architecture.
-
-**Supported Providers**:
-- **OpenAI**: GPT models via OpenAI API
-- **Anthropic**: Claude models via Messages API  
-- **Google**: Gemini models via Google AI API
-- **Grok**: xAI models via Grok API
-- **OpenRouter**: Access to 200+ models via unified API (GPT, Claude, Gemini, Llama, etc.)
-
-**Integration Pattern**:
+**Usage**:
 ```php
-// AI requests via filter system
 $result = apply_filters('ai_request', null, [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'gpt-4',
-    'max_tokens' => 1000
+    'model' => 'gpt-4'
 ], 'openrouter');
 ```
 
-**Provider Discovery**:
-```php
-$providers = apply_filters('ai_providers', []);
-$models = apply_filters('ai_models', $provider, $config);
-```
+**Discovery**: `apply_filters('ai_providers', [])`, `apply_filters('ai_models', $provider, $config)`
 
-**Configuration**: API keys and provider settings managed via WordPress options with filter-based access patterns.
+## DataPacket
 
-## Development
-
-```bash
-# Setup & Testing
-composer install && composer dump-autoload
-composer test && composer test:coverage
-
-# Debugging
-window.dmDebugMode = true;   # Browser debugging
-define('WP_DEBUG', true);    # Enable error_log
-
-# Validation
-error_log(print_r(apply_filters('dm_db', []), true));
-```
-
-## DataPacket Structure
-
-**Standard Format**:
 ```php
 [
     'type' => 'rss|files|ai|wordpress|twitter|reddit|googlesheets',
-    'content' => [
-        'body' => $content,
-        'title' => $title,
-        'excerpt' => $excerpt // Optional
-    ],
+    'content' => ['body' => $content, 'title' => $title, 'excerpt' => $excerpt],
     'metadata' => [
         'source_type' => 'rss|files|etc',
-        'file_path' => '/path/to/file', // For file sources
-        'model' => 'gpt-4', // For AI sources  
-        'provider' => 'openai', // For AI sources
-        'url' => $original_url, // For web sources
-        'author' => $author_name, // When available
-        'published' => $publish_date, // When available
-        'item_id' => $unique_identifier // For deduplication
+        'item_id' => $unique_identifier,
+        'url' => $original_url,
+        'model' => 'gpt-4', // AI sources
+        'provider' => 'openai' // AI sources
     ],
     'timestamp' => time()
 ]
 ```
 
-**Processing Flow**:
-1. Fetch steps find first eligible item and create single DataPacket
-2. AI steps transform content while preserving metadata
-3. Publish steps consume DataPacket for final output
-4. Each execution processes exactly one item through all steps
-5. Each step can add metadata without modifying existing data
+**Flow**: Fetch creates DataPacket → AI transforms content → Publish consumes
 
 ## Step Implementation
 
-**Base Step Pattern**:
 ```php
 class MyStep {
     public function execute($flow_step_id, array $data = [], array $step_config = []): array {
-        // Process single item (data array contains exactly one DataPacket)
         foreach ($data as $item) {
             $content = $item['content']['body'] ?? '';
-            // Process content based on step type
+            // Process content
         }
-        return $data; // Return modified single-item DataPacket array
+        return $data;
     }
 }
-```
 
-**Step Registration**:
-```php
 add_filter('dm_steps', function($steps) {
-    $steps['my_step'] = [
-        'name' => __('My Step', 'textdomain'),
-        'description' => __('Custom processing step', 'textdomain'),
-        'class' => 'MyStep',
-        'position' => 50
-    ];
+    $steps['my_step'] = ['name' => __('My Step'), 'class' => 'MyStep', 'position' => 50];
     return $steps;
 });
 ```
 
-**Step Configuration**:
-```php
-add_filter('dm_step_settings', function($configs) {
-    $configs['my_step'] = [
-        'template' => 'step-settings/my-step',
-        'fields' => ['setting1', 'setting2']
-    ];
-    return $configs;
-});
-```
+## Import/Export
 
-## Import/Export System
-
-**Core Actions**:
 ```php
 do_action('dm_import', 'pipelines', $csv_data, ['source' => 'upload']);
-do_action('dm_export', 'pipelines', [$pipeline_id1, $pipeline_id2], ['format' => 'csv']);
+do_action('dm_export', 'pipelines', [$pipeline_id], ['format' => 'csv']);
 ```
 
-**CSV Schema**: 
-```csv
-pipeline_id, pipeline_name, step_position, step_type, step_config, flow_id, flow_name, handler, settings
-```
+**CSV Schema**: `pipeline_id, pipeline_name, step_position, step_type, step_config, flow_id, flow_name, handler, settings`
 
-**Row Types**:
-- **Pipeline Structure**: Basic pipeline steps with empty flow columns (`flow_id=""`, `handler=""`) 
-- **Flow Configuration**: Handler assignments for specific flows with populated flow columns
-- **Import Logic**: Creates pipelines by name, parses step_config as JSON, ignores flow columns
+## AJAX System
 
-**Export Workflow**:
-```php
-// Pipeline structure + flow configurations in single CSV
-// Includes pipeline steps and configured handlers for each flow
-$csv = apply_filters('dm_export_result', '');
-```
+**Centralized Security**: `dm_ajax_route` handles all AJAX with automatic `manage_options` + nonce checks
 
-**Import Workflow**:
-```php
-// Creates pipelines by name (checks existing)
-// Parses step configurations and recreates pipeline structure
-// Auto-creates flows as needed during import process
-$result = apply_filters('dm_import_result', []); // ['imported' => [$pipeline_ids]]
-```
-
-**Modal Interface**:
-```php
-// Tab-based modal: Export (checkbox table) + Import (drag-drop CSV)
-add_filter('dm_modals', function($modals) {
-    $modals['import-export'] = [
-        'title' => __('Import/Export Pipelines', 'data-machine'),
-        'template' => 'modal/import-export'
-    ];
-    return $modals;
-});
-```
-
-**Implementation**:
-- **Handler**: `/inc/engine/actions/ImportExport.php` - contains complete logic
-- **UI**: Tab interface with pipeline selection table and drag-drop upload
-- **Security**: `manage_options` capability checks, CSV parsing validation
-- **Integration**: Works with existing pipeline/flow creation system via `dm_create` actions
-
-## AJAX Routing System
-
-**Centralized Security**: Universal `dm_ajax_route` action eliminates security duplication across AJAX handlers.
-
-**Registration Pattern**:
 ```php
 add_action('wp_ajax_dm_action_name', fn() => do_action('dm_ajax_route', 'dm_action_name', 'page'));
 ```
 
-**Handler Types**: `page` (page AJAX handlers), `modal` (modal content handlers)
+**Handler Types**: `page` (admin pages), `modal` (modal content)
 
-**Security**: Automatic `manage_options` + nonce verification with universal `dm_ajax_actions` nonce
+## Jobs Administration
 
-**Complete AJAX Actions**:
+**Modal**: Clear processed items, clear jobs (failed/all), development testing
+
 ```php
-// Pipeline Management
-add_action('wp_ajax_dm_add_step', fn() => do_action('dm_ajax_route', 'dm_add_step', 'page'));
-add_action('wp_ajax_dm_create_pipeline', fn() => do_action('dm_ajax_route', 'dm_create_pipeline', 'page'));
-add_action('wp_ajax_dm_delete_pipeline', fn() => do_action('dm_ajax_route', 'dm_delete_pipeline', 'page'));
-add_action('wp_ajax_dm_delete_step', fn() => do_action('dm_ajax_route', 'dm_delete_step', 'page'));
-
-// Flow Management  
-add_action('wp_ajax_dm_add_flow', fn() => do_action('dm_ajax_route', 'dm_add_flow', 'page'));
-add_action('wp_ajax_dm_delete_flow', fn() => do_action('dm_ajax_route', 'dm_delete_flow', 'page'));
-add_action('wp_ajax_dm_save_flow_schedule', fn() => do_action('dm_ajax_route', 'dm_save_flow_schedule', 'page'));
-add_action('wp_ajax_dm_run_flow_now', fn() => do_action('dm_ajax_route', 'dm_run_flow_now', 'page'));
-
-// Modal Content
-add_action('wp_ajax_dm_get_modal_content', $handler); // Core modal system
-add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
-add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', 'dm_get_flow_step_card', 'modal'));
-add_action('wp_ajax_dm_get_flow_config', fn() => do_action('dm_ajax_route', 'dm_get_flow_config', 'modal'));
-
-// Configuration
-add_action('wp_ajax_dm_configure_step_action', fn() => do_action('dm_ajax_route', 'dm_configure_step_action', 'modal'));
-add_action('wp_ajax_dm_add_location_action', fn() => do_action('dm_ajax_route', 'dm_add_location_action', 'modal'));
-add_action('wp_ajax_dm_add_handler_action', fn() => do_action('dm_ajax_route', 'dm_add_handler_action', 'modal'));
-add_action('wp_ajax_dm_save_handler_settings', fn() => do_action('dm_ajax_route', 'dm_save_handler_settings', 'modal'));
-add_action('wp_ajax_dm_save_auth_config', fn() => do_action('dm_ajax_route', 'dm_save_auth_config', 'modal'));
-
-// File Management
-add_action('wp_ajax_dm_upload_file', fn() => do_action('dm_ajax_route', 'dm_upload_file', 'modal'));
-
-// Import/Export
-add_action('wp_ajax_dm_export_pipelines', fn() => do_action('dm_ajax_route', 'dm_export_pipelines', 'page'));
-add_action('wp_ajax_dm_import_pipelines', fn() => do_action('dm_ajax_route', 'dm_import_pipelines', 'page'));
-
-// Jobs Administration
-add_action('wp_ajax_dm_clear_processed_items_manual', fn() => do_action('dm_ajax_route', 'dm_clear_processed_items_manual', 'modal'));
-add_action('wp_ajax_dm_get_pipeline_flows_for_select', fn() => do_action('dm_ajax_route', 'dm_get_pipeline_flows_for_select', 'modal'));
-add_action('wp_ajax_dm_clear_jobs_manual', fn() => do_action('dm_ajax_route', 'dm_clear_jobs_manual', 'modal'));
+do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
+do_action('dm_delete', 'jobs', null, ['status' => 'failed']);
 ```
 
-## Jobs Administration System
+## Templates
 
-**Modal Interface**:
-```php
-// Administrative tools for job processing and testing workflows
-add_filter('dm_modals', function($modals) {
-    $modals['jobs-admin'] = [
-        'title' => __('Jobs Administration', 'data-machine'),
-        'template' => 'modal/jobs-admin'
-    ];
-    return $modals;
-});
-```
-
-**Core Features**:
-- **Clear Processed Items**: Remove deduplication records to allow reprocessing
-- **Clear Jobs**: Delete job execution history (failed jobs or all jobs)
-- **Development Testing**: Iterative prompt refinement and configuration testing
-
-**Clear Operations**:
-```php
-// Clear processed items by pipeline or specific flow
-add_action('wp_ajax_dm_clear_processed_items_manual', fn() => do_action('dm_ajax_route', 'dm_clear_processed_items_manual', 'modal'));
-
-// Clear jobs with optional processed items cleanup
-add_action('wp_ajax_dm_clear_jobs_manual', fn() => do_action('dm_ajax_route', 'dm_clear_jobs_manual', 'modal'));
-
-// Dynamic flow selection based on pipeline
-add_action('wp_ajax_dm_get_pipeline_flows_for_select', fn() => do_action('dm_ajax_route', 'dm_get_pipeline_flows_for_select', 'modal'));
-```
-
-**JavaScript Integration**:
-```javascript
-// Modal content initialization
-$(document).on('dm-core-modal-content-loaded', function(e, title, content) {
-    if (content.includes('dm-clear-processed-items-form')) {
-        dmJobsModal.init(); // Initialize jobs-specific handlers
-    }
-});
-
-// Event emission for page updates
-$(document).on('dm-jobs-processed-items-cleared', function(e, data) {
-    // Page can refresh job listings or update UI
-});
-$(document).on('dm-jobs-cleared', function(e, data) {
-    // Page can refresh job listings
-});
-```
-
-**UI Pattern**:
-- **Progressive Disclosure**: Form fields show/hide based on operation type
-- **Confirmation Dialogs**: Destructive operations require user confirmation
-- **Loading States**: Visual feedback during AJAX operations
-- **Result Display**: Success/error messages with appropriate styling
-
-**Implementation**: Modal content managed by `jobs-modal.js`, form validation and AJAX handling, integrates with existing jobs framework
-
-## Template System
-
-**Template Rendering**:
 ```php
 apply_filters('dm_render_template', '', $template, $data);
+$modals = apply_filters('dm_modals', []);
+$admin_pages = apply_filters('dm_admin_pages', []);
 ```
 
-**Modal System**: Universal `dm_get_modal_content` endpoint with auto-discovery via `dm_modals` filter
+## Usage Examples
 
-**Admin Pages**: Register via `dm_admin_pages` filter with templates/assets configuration
-
-**Template Requirements**:
+**Pipeline Creation**:
 ```php
-add_filter('dm_template_requirements', function($requirements) {
-    $requirements['my-template'] = [
-        'required_fields' => ['field1', 'field2'],
-        'optional_fields' => ['field3']
-    ];
-    return $requirements;
-});
-```
-
-## Workflow Examples
-
-**Complete Pipeline Creation**:
-```php
-// 1. Create pipeline
 do_action('dm_create', 'pipeline', ['pipeline_name' => 'RSS to Twitter']);
-
-// 2. Add steps
 do_action('dm_create', 'step', ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
-do_action('dm_create', 'step', ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
-do_action('dm_create', 'step', ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]);
-
-// 3. Configure flow handlers
-do_action('dm_update_flow_handler', $fetch_flow_step_id, 'rss', $rss_settings);
-do_action('dm_update_flow_handler', $publish_flow_step_id, 'twitter', $twitter_settings);
-
-// 4. Activate scheduling
+do_action('dm_update_flow_handler', $flow_step_id, 'rss', $settings);
 do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly');
 ```
 
-**Manual Flow Execution**:
+**Execution & Testing**:
 ```php
-// Trigger immediate execution
 do_action('dm_run_flow_now', $flow_id, 'manual_trigger');
-
-// Monitor via jobs page or programmatically
-$job_status = apply_filters('dm_get_job_status', null, $job_id);
-```
-
-**Development Testing**:
-```php
-// Clear processed items for reprocessing
 do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
-
-// Clear failed jobs
-do_action('dm_delete', 'jobs', null, ['status' => 'failed']);
-
-// Debug logging
-do_action('dm_log', 'debug', 'Custom debug message', [
-    'context' => 'development',
-    'data' => $debug_data
-]);
 ```
 
 ## Files Repository
 
-**Flow-Isolated Storage**:
+**Flow-Isolated Storage**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
+
 ```php
 $repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 $repo->store_file($tmp_name, $filename, $flow_step_id);
-$files = $repo->get_all_files($flow_step_id);
-$repo->delete_file($filename, $flow_step_id);
 $repo->cleanup_flow_files($flow_step_id);
-```
-
-**Auto-Cleanup**: Files removed when flows deleted
-
-**Storage Structure**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
-
-**File Operations**:
-```php
-// Manual cleanup
-do_action('dm_cleanup_old_files');
-
-// Repository filter registration
-add_filter('dm_files_repository', function($repositories) {
-    $repositories['files'] = new FilesRepository();
-    return $repositories;
-});
-```
-
-## Action Hook System
-
-**Execution Engine**:
-```php
-do_action('dm_run_flow_now', $flow_id, 'context');
-do_action('dm_execute_step', $job_id, $flow_step_id, $data);
-do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
-```
-
-**CRUD Operations**:
-```php
-// Create
-do_action('dm_create', 'pipeline', ['pipeline_name' => $name], ['source' => 'user']);
-do_action('dm_create', 'flow', ['pipeline_id' => $id, 'flow_name' => $name]);
-do_action('dm_create', 'step', ['step_type' => 'ai', 'pipeline_id' => $id]);
-do_action('dm_create', 'job', ['pipeline_id' => $id, 'flow_id' => $id]);
-
-// Update
-do_action('dm_update_job_status', $job_id, 'completed', 'execution', 'running');
-do_action('dm_update_flow_handler', $flow_step_id, 'twitter', $handler_settings);
-do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly', 'inactive');
-do_action('dm_sync_steps_to_flow', $flow_id, $step_data, ['context' => 'add_step']);
-
-// Delete
-do_action('dm_delete', 'pipeline', $pipeline_id, ['cascade' => true]);
-do_action('dm_delete', 'flow', $flow_id, ['cleanup_files' => true]);
-do_action('dm_delete', 'step', $pipeline_step_id, ['context' => 'user']);
-do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
-```
-
-**Data Management**:
-```php
-do_action('dm_mark_item_processed', $flow_step_id, 'rss', $item_guid, $job_id);
-do_action('dm_auto_save', $pipeline_id);
-```
-
-**System Operations**:
-```php
-do_action('dm_log', 'error', 'Message', ['context' => 'execution', 'job_id' => $id]);
-do_action('dm_ajax_route', 'dm_action_name', 'page');
-do_action('dm_oauth', 'store', 'twitter', $credentials);
 do_action('dm_cleanup_old_files');
 ```
 
-## Integration Patterns
+## Development
+
+**Debug**:
+```bash
+composer install && composer test
+window.dmDebugMode = true; # Browser
+define('WP_DEBUG', true);  # PHP
+```
+
+**Service Validation**:
+```php
+error_log(print_r(apply_filters('dm_db', []), true));
+```
+
+## Extension Patterns
 
 **Handler Registration**:
 ```php
 add_filter('dm_handlers', function($handlers) {
     $handlers['my_handler'] = [
-        'name' => __('My Handler', 'textdomain'),
-        'steps' => ['fetch', 'publish'], // Available step types
-        'auth_required' => true,
-        'settings_template' => 'handler-settings/my-handler'
+        'name' => __('My Handler'),
+        'steps' => ['fetch', 'publish'],
+        'auth_required' => true
     ];
     return $handlers;
 });
 ```
 
-**Authentication Provider**:
-```php
-add_filter('dm_auth_providers', function($providers) {
-    $providers['my_service'] = [
-        'name' => __('My Service', 'textdomain'),
-        'type' => 'oauth2', // or 'api_key'
-        'fields' => ['client_id', 'client_secret'],
-        'auth_class' => 'MyServiceAuth'
-    ];
-    return $providers;
-});
-```
-
-**Handler Directives (AI Instructions)**:
-```php
-add_filter('dm_handler_directives', function($directives) {
-    $directives['my_handler'] = [
-        'format_instructions' => 'Format for My Service: ...',
-        'constraints' => 'Character limits: ...',
-        'examples' => 'Example output: ...'
-    ];
-    return $directives;
-});
-```
-
-**Error Handling Pattern**:
+**Error Handling**:
 ```php
 try {
     $result = $this->process_data($data);
-    do_action('dm_log', 'debug', 'Processing completed', ['items' => count($result)]);
     return $result;
 } catch (Exception $e) {
-    do_action('dm_log', 'error', 'Processing failed: ' . $e->getMessage(), [
-        'flow_step_id' => $flow_step_id,
-        'exception' => $e
-    ]);
-    return $data; // Return original data on failure
+    do_action('dm_log', 'error', $e->getMessage(), ['flow_step_id' => $flow_step_id]);
+    return $data; // Return original on failure
 }
 ```
 
-**Job Status Model**: Binary success/failure system with automatic retry capability:
-- **completed**: Job succeeded completely
-- **failed**: Job failed, pipeline stops, processed items preserved for retry
-- **completed_no_items**: No eligible items found to process
+**Job Status**: `completed`, `failed`, `completed_no_items`
 
-## Critical Rules
+## Rules
 
-**Engine Agnosticism**: Never hardcode step types in `/inc/engine/`
-
-**Service Discovery**: Filter-based access only - `$service = apply_filters('dm_service', [])['key'] ?? null`
-
+**Engine Agnosticism**: No hardcoded step types in `/inc/engine/`
+**Service Discovery**: Filter-based only - `$service = apply_filters('dm_service', [])['key'] ?? null`
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()`
-
-**CSS Namespace**: All admin CSS uses `dm-` prefix
-
-**Authentication**: Admin-global only with `manage_options` checks
-
-**OAuth Storage**: `{handler}_auth_data` option keys
-
-**Field Naming**: Use `pipeline_step_id` consistently (UUID4)
-
-**Job Failure System**: Engine exceptions immediately fail jobs - no partial success states. Steps should return original data on failure within their own logic, but engine-level exceptions result in job failure.
-
-**Logging Context**: Always include relevant IDs in log context for debugging
-
-**Performance**: Use `apply_filters()` patterns for lazy loading and memory efficiency
-
-**Debugging**: Enable `window.dmDebugMode = true` for JavaScript debugging and `WP_DEBUG` for PHP logging
-
-**Nonce Security**: Universal `dm_ajax_actions` nonce consolidates all AJAX security validation
-
-**AJAX Consistency**: All AJAX endpoints route through `dm_ajax_route` for unified security and error handling
+**CSS Namespace**: `dm-` prefix
+**Authentication**: `manage_options` checks only
+**OAuth Storage**: `{handler}_auth_data` options
+**Field Naming**: `pipeline_step_id` (UUID4)
+**Job Failure**: Engine exceptions fail jobs immediately
+**Logging**: Include relevant IDs in context
+**AJAX Security**: Universal `dm_ajax_actions` nonce

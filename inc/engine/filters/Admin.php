@@ -1,22 +1,6 @@
 <?php
 /**
- * Data Machine Admin System - Filter Discovery Hub
- *
- * DEVELOPER OVERVIEW: This file serves as the central registry and documentation
- * for ALL admin-related filters in Data Machine. Developers can quickly see
- * how to extend the admin interface and understand the plugin's architecture.
- *
- * ARCHITECTURAL PURPOSE: Separates admin/UI logic from backend processing logic.
- * All frontend rendering, template systems, modal management, and admin page
- * registration filters are centralized here for developer discoverability.
- *
- * EXTENSION PATTERNS: External plugins can extend Data Machine's admin interface
- * by registering to the same filters shown below. All filters use discovery-based
- * architecture with low-priority bootstrap for component self-registration.
- *
- * @package DataMachine
- * @subpackage Engine\Filters
- * @since 0.1.0
+ * Admin filter registration and discovery hub
  */
 
 // If this file is called directly, abort.
@@ -161,8 +145,7 @@ function dm_register_admin_filters() {
             return ob_get_clean();
         }
         
-        // Log error and return empty string - no user-facing error display
-        do_action('dm_log', 'error', "Template not found: {$template_name}");
+        // Return empty string when template truly not found
         return '';
     }, 10, 3);
     

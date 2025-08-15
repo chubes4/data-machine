@@ -21,22 +21,27 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
 <div class="dm-admin-wrap dm-pipelines-page">
     <!-- Page Header -->
     <div class="dm-admin-header">
-        <h1 class="dm-admin-title">
-            <?php esc_html_e('Pipeline + Flow Management', 'data-machine'); ?>
-        </h1>
-        <p class="dm-admin-subtitle">
-            <?php esc_html_e('Configure automated workflow pipelines', 'data-machine'); ?>
-        </p>
+        <div class="dm-admin-header-left">
+            <h1 class="dm-admin-title">
+                <?php esc_html_e('Pipeline + Flow Management', 'data-machine'); ?>
+            </h1>
+            <p class="dm-admin-subtitle">
+                <?php esc_html_e('Configure automated workflow pipelines', 'data-machine'); ?>
+            </p>
+        </div>
         
-        <!-- Add New Pipeline Button -->
-        <div class="dm-add-pipeline-section">
-            <button type="button" class="button button-primary dm-add-new-pipeline-btn">
-                <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
-            </button>
+        <div class="dm-admin-header-right">
             <button type="button" class="button dm-import-export-btn">
                 <?php esc_html_e('Import / Export', 'data-machine'); ?>
             </button>
         </div>
+    </div>
+    
+    <!-- Add New Pipeline Button -->
+    <div class="dm-add-pipeline-section">
+        <button type="button" class="button button-primary dm-add-new-pipeline-btn">
+            <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
+        </button>
     </div>
 
     <!-- Universal Pipeline Cards Container -->

@@ -17,9 +17,10 @@ defined('ABSPATH') || exit;
 $field_name = 'ai_max_tokens';
 
 // Get current max tokens value and component configuration
+// Max tokens is OPTIONAL - no default value provided, only use if explicitly configured
 $current_max_tokens = $provider_config['max_tokens'] ?? '';
-$label = $config['label'] ?? 'Max Tokens';
-$help_text = $config['help_text'] ?? 'Maximum number of tokens to generate. Leave empty for provider default.';
+$label = $config['label'] ?? 'Max Tokens (Optional)';
+$help_text = $config['help_text'] ?? 'Maximum number of tokens to generate. Leave empty to use provider defaults. Note: Not supported by all models (e.g., OpenAI reasoning models).';
 $placeholder = $config['placeholder'] ?? 'e.g., 1000';
 $min_value = $config['min'] ?? 1;
 $max_value = $config['max'] ?? 4096;

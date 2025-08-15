@@ -60,7 +60,7 @@ add_filter('ai_render_component', function($html, $config = []) {
     // Use provided configuration or defaults
     $selected_provider = $config['selected_provider'] ?? 'openai';
     $selected_model = $config['selected_model'] ?? '';
-    $temperature_value = $config['temperature_value'] ?? 0.7;
+    $temperature_value = $config['temperature_value'] ?? '';  // No default - truly optional
     $system_prompt_value = $config['system_prompt_value'] ?? '';
     
     // Generate unique ID for form elements

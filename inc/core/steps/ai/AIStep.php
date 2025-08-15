@@ -242,16 +242,6 @@ class AIStep {
                 $ai_request['model'] = $step_ai_config['model'];
             }
             
-            // Add temperature parameter if configured
-            if (isset($step_ai_config['temperature'])) {
-                $ai_request['temperature'] = (float)$step_ai_config['temperature'];
-            }
-            
-            // Add max_tokens parameter if configured
-            if (!empty($step_ai_config['max_tokens'])) {
-                $ai_request['max_tokens'] = (int)$step_ai_config['max_tokens'];
-            }
-            
             // Debug: Log step configuration details before AI request
             $step_debug_config = $step_ai_config;
             do_action('dm_log', 'debug', 'AI Step: Step configuration retrieved', [
@@ -283,10 +273,6 @@ class AIStep {
                     'message_count' => count($ai_request['messages'] ?? []),
                     'has_model' => isset($ai_request['model']),
                     'model_value' => $ai_request['model'] ?? 'NOT_SET',
-                    'has_temperature' => isset($ai_request['temperature']),
-                    'temperature_value' => $ai_request['temperature'] ?? 'NOT_SET',
-                    'has_max_tokens' => isset($ai_request['max_tokens']),
-                    'max_tokens_value' => $ai_request['max_tokens'] ?? 'NOT_SET',
                     'all_request_keys' => array_keys($ai_request)
                 ]
             ]);

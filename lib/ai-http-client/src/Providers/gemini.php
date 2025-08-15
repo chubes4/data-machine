@@ -338,14 +338,15 @@ class AI_HTTP_Gemini_Provider {
             unset($request['messages']);
         }
 
-        // Gemini uses maxOutputTokens
-        if (isset($request['max_tokens'])) {
+        // Process optional parameters (only if explicitly provided)
+        // Max tokens parameter (OPTIONAL - only if explicitly provided)
+        if (isset($request['max_tokens']) && !empty($request['max_tokens'])) {
             $request['generationConfig']['maxOutputTokens'] = max(1, intval($request['max_tokens']));
             unset($request['max_tokens']);
         }
 
-        // Gemini temperature in generationConfig
-        if (isset($request['temperature'])) {
+        // Temperature parameter (OPTIONAL - only if explicitly provided) 
+        if (isset($request['temperature']) && !empty($request['temperature'])) {
             $request['generationConfig']['temperature'] = max(0, min(1, floatval($request['temperature'])));
             unset($request['temperature']);
         }

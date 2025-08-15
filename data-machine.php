@@ -30,24 +30,9 @@ define( 'DATA_MACHINE_VERSION', '0.1.0' );
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
- * Data Machine WordPress Hook Documentation
+ * Filter-based architecture with service discovery patterns
  * 
- * This plugin follows a pure filter-based architecture with extensive hook integration.
- * All services, components, and functionality are accessible through WordPress filters.
- * 
- * CORE SERVICE FILTERS:
- * 
- * @action dm_log
- * Central logging action for all components throughout the plugin.
- * Usage: do_action('dm_log', 'level', 'message', ['context' => 'data']);
- * 
- * Pipeline Execution: via dm_execute_step action hook (pure functional orchestration)
- * AI HTTP Client: $response = apply_filters('ai_request', $request);
- * 
- * @filter dm_handlers
- * Retrieves all handler instances via pure discovery mode.
- * Usage: $all_handlers = apply_filters('dm_handlers', []);
- * Filter by type: array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'publish')
+ * Core patterns: apply_filters('dm_handlers', []), do_action('dm_log', $level, $msg, $context)
  * 
  * @filter dm_auth_providers
  * Authentication provider registration and retrieval system.
@@ -120,6 +105,7 @@ require_once __DIR__ . '/inc/engine/filters/Admin.php';
 require_once __DIR__ . '/inc/engine/filters/Logger.php';
 require_once __DIR__ . '/inc/engine/filters/AI.php';
 require_once __DIR__ . '/inc/engine/actions/DataMachineActions.php';
+require_once __DIR__ . '/inc/core/admin/filters/StatusDetection.php';
 
 // PSR-4 Autoloading - no manual includes needed
 

@@ -53,7 +53,7 @@ function dm_register_ai_step_filters() {
      */
     add_filter('dm_steps', function($steps) {
         $steps['ai'] = [
-            'label' => __('AI Processing', 'data-machine'),
+            'label' => __('AI', 'data-machine'),
             'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
             'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
             'consume_all_packets' => true,

@@ -72,7 +72,6 @@ function dm_register_ai_filters() {
             // Return empty config for unconfigured steps - no API keys needed
             return [
                 'selected_provider' => '',
-                'temperature' => 0.7,
                 'system_prompt' => '',
                 'model' => ''
             ];
@@ -80,25 +79,16 @@ function dm_register_ai_filters() {
         
         // Extract AI configuration from step config
         $selected_provider = $step_config['provider'] ?? '';
-        $temperature = isset($step_config['temperature']) ? (float) $step_config['temperature'] : 0.7;
         $system_prompt = $step_config['system_prompt'] ?? '';
         
         // Build clean configuration structure - no API keys needed
         $config = [
             'selected_provider' => $selected_provider,
-            'temperature' => $temperature,
             'system_prompt' => $system_prompt,
             'model' => $step_config['model'] ?? ''
         ];
         
-        // Simple debug logging - no API key info needed
-        do_action('dm_log', 'debug', 'AI Config: Retrieved step configuration from pipeline database', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'selected_provider' => $selected_provider,
-            'has_temperature' => ($temperature !== null),
-            'has_system_prompt' => !empty($system_prompt),
-            'has_model' => !empty($config['model'])
-        ]);
+        // Config retrieved successfully - no logging needed for routine filter calls
         
         return $config;
     }, 20, 2);

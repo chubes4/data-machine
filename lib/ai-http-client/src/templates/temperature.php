@@ -17,10 +17,10 @@ defined('ABSPATH') || exit;
 $field_name = 'ai_temperature';
 
 // Get current temperature value from passed config (step-scoped)
-// Temperature is STEP-SCOPED, not provider-specific
-$current_temp = isset($config['value']) ? $config['value'] : 0.7;
-$label = $config['label'] ?? 'Temperature';
-$help_text = $config['help_text'] ?? 'Controls randomness. Lower values are more focused, higher values are more creative.';
+// Temperature is OPTIONAL - no default value provided, only use if explicitly configured
+$current_temp = isset($config['value']) ? $config['value'] : '';
+$label = $config['label'] ?? 'Temperature (Optional)';
+$help_text = $config['help_text'] ?? 'Controls randomness. Leave empty to use provider defaults. Note: Not supported by all models (e.g., OpenAI reasoning models).';
 $min_value = $config['min'] ?? 0;
 $max_value = $config['max'] ?? 1;
 $step_value = $config['step'] ?? 0.1;

@@ -17,11 +17,24 @@ if (!defined('WPINC')) {
 // Context auto-resolved by PipelineContextManager filter before template renders
 // All required context variables are available: $step_type, $pipeline_id, $pipeline_step_id
 
+// Get step title from registered step configuration
+$all_steps = apply_filters('dm_steps', []);
+$step_config_data = $all_steps[$step_type] ?? null;
+$step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_type));
+
 ?>
 <div class="dm-configure-step-container">
     <div class="dm-configure-step-header">
-        <h3><?php echo esc_html(sprintf(__('Configure %s Step', 'data-machine'), ucfirst($step_type))); ?></h3>
+        <h3><?php echo esc_html(sprintf(__('Configure %s Step', 'data-machine'), $step_title)); ?></h3>
         <p><?php echo esc_html(sprintf(__('Set up your %s step configuration below.', 'data-machine'), $step_type)); ?></p>
+        <?php if ($step_type === 'ai'): ?>
+            <div class="dm-step-settings-note">
+                <p class="description">
+                    <strong><?php esc_html_e('Note:', 'data-machine'); ?></strong>
+                    <?php esc_html_e('These settings will apply to all AI steps at this position across all flows in this pipeline.', 'data-machine'); ?>
+                </p>
+            </div>
+        <?php endif; ?>
     </div>
     
     <?php
@@ -52,7 +65,6 @@ if (!defined('WPINC')) {
         // No default: only use saved value, otherwise empty
         $selected_provider = isset($saved_step_config['provider']) ? $saved_step_config['provider'] : '';
         $selected_model = $saved_step_config['model'] ?? '';
-        $temperature_value = isset($saved_step_config['temperature']) ? (float)$saved_step_config['temperature'] : 0.7;
         $system_prompt_value = $saved_step_config['system_prompt'] ?? '';
         
         // Check for provider-specific models
@@ -63,13 +75,8 @@ if (!defined('WPINC')) {
         echo apply_filters('ai_render_component', '', [
             'selected_provider' => $selected_provider,
             'selected_model' => $selected_model,
-            'temperature_value' => $temperature_value,
             'system_prompt_value' => $system_prompt_value,
             'show_save_button' => false, // Hide built-in save button - Data Machine provides custom save
-            'temperature' => [
-                'label' => __('Temperature', 'data-machine'),
-                'help_text' => __('Controls randomness in AI responses. 0 = deterministic, 1 = maximum randomness.', 'data-machine')
-            ],
             'system_prompt' => [
                 'label' => __('AI Processing Instructions', 'data-machine'),
                 'placeholder' => __('Define how the AI should process data from previous pipeline steps...', 'data-machine'),

@@ -59,10 +59,73 @@ $available_handlers = array_filter($all_handlers, function($handler) use ($step_
     return ($handler['type'] ?? '') === $step_type;
 });
 
-$step_title = $is_empty ? '' : ucfirst(str_replace('_', ' ', $step_type));
+// Get step title from registered step configuration
+$step_title = '';
+if (!$is_empty) {
+    $all_steps = apply_filters('dm_steps', []);
+    $step_config = $all_steps[$step_type] ?? null;
+    $step_title = $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type));
+}
+
 $has_handlers = !$is_empty && !empty($available_handlers);
 $step_uses_handlers = !$is_empty && ($step_type !== 'ai'); // AI steps don't use traditional handlers
 $handler_configured = !$is_empty && !empty($current_handler);
+
+// Status detection
+$status_class = '';
+if (!$is_empty) {
+    $status = 'green'; // Default to green
+    
+    // AI step status
+    if ($step_type === 'ai' && $pipeline_step_id) {
+        $status = apply_filters('dm_detect_status', 'green', 'ai_step', [
+            'pipeline_step_id' => $pipeline_step_id
+        ]);
+    }
+    // Handler-based step status
+    elseif ($step_uses_handlers) {
+        if (!$handler_configured) {
+            $status = 'red'; // No handler configured
+        } else {
+            // Check if configured handler requires authentication
+            $handler_slug = $current_handler['handler_slug'] ?? '';
+            $all_auth = apply_filters('dm_auth_providers', []);
+            $requires_auth = isset($all_auth[$handler_slug]);
+            
+            if ($requires_auth) {
+                $auth_status = apply_filters('dm_detect_status', 'green', 'handler_auth', [
+                    'handler_slug' => $handler_slug
+                ]);
+                if ($auth_status === 'red') {
+                    $status = 'red'; // Authentication required but missing
+                }
+            }
+            
+            // Check for WordPress draft mode (only if still green)
+            if ($status === 'green' && $handler_slug === 'wordpress_publish') {
+                $draft_status = apply_filters('dm_detect_status', 'green', 'wordpress_draft', [
+                    'flow_step_id' => $flow_step_id
+                ]);
+                if ($draft_status === 'yellow') {
+                    $status = 'yellow'; // Warning: set to draft mode
+                }
+            }
+            
+            // Check for files handler status (only if still green)
+            if ($status === 'green' && $handler_slug === 'files') {
+                $files_status = apply_filters('dm_detect_status', 'green', 'files_status', [
+                    'flow_step_id' => $flow_step_id
+                ]);
+                if ($files_status === 'red') {
+                    $status = 'red'; // No files or all processed
+                }
+            }
+        }
+    }
+    
+    // Apply status class for all statuses (including green)
+    $status_class = ' dm-step-card--status-' . $status;
+}
 
 ?>
 <div class="dm-step-container" 
@@ -78,7 +141,7 @@ $handler_configured = !$is_empty && !empty($current_handler);
         </div>
     <?php endif; ?>
 
-    <div class="dm-step-card<?php echo $is_empty ? ' dm-step-card--empty' : ''; ?>">
+    <div class="dm-step-card<?php echo $is_empty ? ' dm-step-card--empty' : ''; ?><?php echo esc_attr($status_class); ?>">
         <?php if ($is_empty): ?>
             <!-- Empty step - Add Step button -->
             <div class="dm-step-empty-content">

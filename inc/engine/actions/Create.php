@@ -1,25 +1,6 @@
 <?php
 /**
- * Data Machine Create Actions
- *
- * Centralized creation operations for all entity types - pipelines, flows, steps, and jobs.
- * Eliminates code duplication across creation types through unified validation, 
- * error handling, and service discovery patterns.
- *
- * SUPPORTED CREATION TYPES:
- * - pipeline: New pipeline with auto-generated Draft Flow
- * - flow: New flow with pipeline step synchronization
- * - step: New pipeline step with flow synchronization
- * - job: Job creation via existing flow execution system
- *
- * ARCHITECTURAL BENEFITS:
- * - Consistent permission checking across all creation operations
- * - Unified validation patterns for different entity types
- * - Filter-based service discovery for database operations
- * - Centralized logging and error handling
- *
- * @package DataMachine
- * @since NEXT_VERSION
+ * Centralized creation for pipelines, flows, steps, jobs via dm_create action
  */
 
 // If this file is called directly, abort.
@@ -143,10 +124,10 @@ class DataMachine_Create_Actions {
         // Extract pipeline name with fallback
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : __('Draft Pipeline', 'data-machine');
         
-        // Create pipeline with default configuration
+        // Create pipeline with default configuration (empty associative array)
         $pipeline_data = [
             'pipeline_name' => $pipeline_name,
-            'pipeline_config' => []
+            'pipeline_config' => '{}' // Empty JSON object, not array
         ];
         
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);

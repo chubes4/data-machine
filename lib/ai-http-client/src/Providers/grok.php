@@ -320,12 +320,14 @@ class AI_HTTP_Grok_Provider {
             $request['reasoning_effort'] = sanitize_text_field($request['reasoning_effort']);
         }
 
-        // Standard OpenAI-style constraints
-        if (isset($request['temperature'])) {
+        // Process optional parameters (only if explicitly provided)
+        // Temperature parameter (OPTIONAL - only if explicitly provided)
+        if (isset($request['temperature']) && !empty($request['temperature'])) {
             $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
         }
 
-        if (isset($request['max_tokens'])) {
+        // Max tokens parameter (OPTIONAL - only if explicitly provided)
+        if (isset($request['max_tokens']) && !empty($request['max_tokens'])) {
             $request['max_tokens'] = max(1, intval($request['max_tokens']));
         }
 

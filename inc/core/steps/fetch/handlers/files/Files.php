@@ -94,7 +94,7 @@ class Files {
         }
         
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files], $job_id);
+        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files]);
         
         if (!$next_file) {
             do_action('dm_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
@@ -142,7 +142,7 @@ class Files {
      * @param array $config Files configuration.
      * @return array|null File info or null if no unprocessed files.
      */
-    private function find_next_unprocessed_file(?string $flow_step_id, array $config, int $job_id = 0): ?array {
+    private function find_next_unprocessed_file(?string $flow_step_id, array $config): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
         
         if (empty($uploaded_files)) {

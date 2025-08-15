@@ -13,6 +13,25 @@
     padding: 20px;
 }
 
+/* Admin header layout */
+.dm-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dm-admin-header-left {
+    flex: 1;
+}
+
+.dm-admin-header-right {
+    flex-shrink: 0;
+    margin-left: 20px;
+    align-self: flex-start;
+    margin-top: 10px;
+}
+
 /* Pipeline cards */
 .dm-pipeline-card {
     background: #fff;
@@ -223,7 +242,6 @@
 
 /* Flow step containers - uniform sizing, just different styling */
 .dm-flow-steps .dm-step-card {
-    border-color: #ccc;
     background: #f9f9f9;
     display: flex;
     flex-direction: column;
@@ -422,4 +440,17 @@
     background-color: #fff0f0;
     color: #dc3232;
     border: 1px solid #ffb5b5;
+}
+
+/* Status detection border colors */
+.dm-step-card--status-red {
+    border-left: 4px solid #dc3232;
+}
+
+.dm-step-card--status-yellow {
+    border-left: 4px solid #f0a000;
+}
+
+.dm-step-card--status-green {
+    border-left: 4px solid #00a32a;
 }

@@ -165,6 +165,53 @@ if (isset($providers['openai'])) {
 }
 ```
 
+## Optional Parameters & Model Compatibility
+
+### Temperature Parameter
+- **Support**: Optional across all providers
+- **Default**: Not sent to API unless explicitly configured
+- **Model Restrictions**: 
+  - OpenAI reasoning models (o1*, o3*, o4*): Not supported - will cause API errors if sent
+  - All other models: Supported (typically 0.0 - 2.0 range)
+- **Recommendation**: Only configure if you need specific creativity control
+
+### Max Tokens Parameter  
+- **Support**: Optional across all providers
+- **Default**: Not sent to API unless explicitly configured
+- **Model Restrictions**:
+  - OpenAI reasoning models (o1*, o3*, o4*): Not supported - will cause API errors if sent
+  - Some models: Have different parameter names (auto-converted by providers)
+- **Provider Handling**: Automatically converted to provider-specific format when provided
+
+### Safe Usage Pattern
+```php
+// RECOMMENDED: Only include optional parameters when explicitly needed
+$request = [
+    'messages' => [['role' => 'user', 'content' => 'Hello']],
+    'model' => 'gpt-4'  // Required parameters only
+    // temperature: not included - uses provider default
+    // max_tokens: not included - uses provider default
+];
+
+$response = apply_filters('ai_request', $request, 'openai');
+
+// ADVANCED: Include optional parameters only when necessary
+$request_with_options = [
+    'messages' => [['role' => 'user', 'content' => 'Hello']],
+    'model' => 'gpt-4',
+    'temperature' => 0.7,  // Only include if you need specific temperature
+    'max_tokens' => 1000   // Only include if you need token limit
+];
+
+// Library will only send parameters that are explicitly provided and not empty
+$response = apply_filters('ai_request', $request_with_options, 'openai');
+```
+
+### Model-Specific Behavior
+- **Traditional Models** (gpt-4, claude, gemini): Accept temperature and max_tokens
+- **Reasoning Models** (o1*, o3*, o4*): Reject temperature and max_tokens with API errors
+- **Provider Handling**: Library only sends parameters if explicitly provided and non-empty
+
 ## Distribution & Integration
 
 ### WordPress Plugin Integration

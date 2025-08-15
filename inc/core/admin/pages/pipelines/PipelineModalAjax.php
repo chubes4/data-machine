@@ -235,7 +235,6 @@ class PipelineModalAjax
                     $provider_field = 'ai_provider';
                     $api_key_field = 'ai_api_key';
                     $model_field = 'ai_model';
-                    $temperature_field = 'ai_temperature';
                     $system_prompt_field = 'ai_system_prompt';
                     
                     // Log received field names for debugging
@@ -244,8 +243,7 @@ class PipelineModalAjax
                         'expected_fields' => [
                             'provider' => $provider_field,
                             'api_key' => $api_key_field,
-                            'model' => $model_field,
-                            'temperature' => $temperature_field
+                            'model' => $model_field
                         ],
                         'received_post_keys' => array_keys($_POST)
                     ]);
@@ -277,9 +275,6 @@ class PipelineModalAjax
                             }
                             $step_config_data['providers'][$provider]['model'] = $model;
                         }
-                    }
-                    if (isset($_POST[$temperature_field])) {
-                        $step_config_data['temperature'] = floatval($_POST[$temperature_field]);
                     }
                     if (isset($_POST[$system_prompt_field])) {
                         $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST[$system_prompt_field]));

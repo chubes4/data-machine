@@ -41,11 +41,6 @@ function dm_register_wordpress_fetch_filters() {
         return $handlers;
     });
     
-    // Authentication registration - pure discovery mode
-    add_filter('dm_auth_providers', function($providers) {
-        $providers['wordpress_fetch'] = new WordPressAuth();
-        return $providers;
-    });
     
     // Settings registration - pure discovery mode
     add_filter('dm_handler_settings', function($all_settings) {

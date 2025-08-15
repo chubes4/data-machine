@@ -127,7 +127,15 @@ class DataMachine_ImportExport_Actions {
             $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
             
             $position = 0;
-            foreach ($pipeline_config as $step) {
+            // Sort steps by execution_order for consistent export
+            $sorted_steps = $pipeline_config;
+            if (is_array($sorted_steps)) {
+                uasort($sorted_steps, function($a, $b) {
+                    return ($a['execution_order'] ?? 0) <=> ($b['execution_order'] ?? 0);
+                });
+            }
+            
+            foreach ($sorted_steps as $step) {
                 // Export pipeline structure
                 fputcsv($output, [
                     $pipeline_id,

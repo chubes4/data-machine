@@ -351,19 +351,21 @@ class AI_HTTP_OpenAI_Provider {
             unset($request['messages']);
         }
 
-        // Convert max_tokens to max_output_tokens for Responses API
-        if (isset($request['max_tokens'])) {
+        // Convert max_tokens to max_output_tokens for Responses API (OPTIONAL - only if explicitly provided)
+        // Note: Not supported by reasoning models (o1*, o3*, o4*) - will cause API errors if sent
+        if (isset($request['max_tokens']) && !empty($request['max_tokens'])) {
             $request['max_output_tokens'] = intval($request['max_tokens']);
             unset($request['max_tokens']);
         }
 
-        // Handle tools
+        // Handle tools (OPTIONAL - only if explicitly provided)
         if (isset($request['tools'])) {
             $request['tools'] = $this->normalize_openai_tools($request['tools']);
         }
 
-        // Constrain parameters
-        if (isset($request['temperature'])) {
+        // Process temperature parameter (OPTIONAL - only if explicitly provided)
+        // Note: Not supported by reasoning models (o1*, o3*, o4*) - will cause API errors if sent
+        if (isset($request['temperature']) && !empty($request['temperature'])) {
             $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
         }
 

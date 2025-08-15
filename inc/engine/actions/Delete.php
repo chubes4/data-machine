@@ -1,24 +1,6 @@
 <?php
 /**
- * Data Machine Delete Actions
- *
- * Centralized deletion operations for all entity types - pipelines, flows, and steps.
- * Eliminates code duplication across deletion types through unified validation, 
- * error handling, and service discovery patterns.
- *
- * SUPPORTED DELETION TYPES:
- * - pipeline: Cascade deletion of pipeline and associated flows
- * - flow: Single flow deletion with job preservation
- * - step: Pipeline step removal with flow synchronization
- *
- * ARCHITECTURAL BENEFITS:
- * - Consistent permission checking across all deletion operations
- * - Unified validation patterns for different entity types
- * - Filter-based service discovery for database operations
- * - Centralized logging and error handling
- *
- * @package DataMachine
- * @since NEXT_VERSION
+ * Deletion system for pipelines, flows, steps with cascade support via dm_delete action
  */
 
 // If this file is called directly, abort.
@@ -264,7 +246,8 @@ class DataMachine_Delete_Actions {
         
         foreach ($current_steps as $step) {
             if (($step['pipeline_step_id'] ?? '') !== $pipeline_step_id) {
-                $updated_steps[] = $step;
+                // Preserve associative array format with pipeline_step_id as key
+                $updated_steps[$step['pipeline_step_id']] = $step;
             } else {
                 $step_found = true;
             }
