@@ -331,6 +331,18 @@ class AI_HTTP_Grok_Provider {
             $request['max_tokens'] = max(1, intval($request['max_tokens']));
         }
 
+        // Handle tools (OPTIONAL - only if explicitly provided)
+        // Grok uses OpenAI-compatible format, so tools can be passed through directly
+        if (isset($request['tools']) && is_array($request['tools'])) {
+            $request['tools'] = $this->normalize_grok_tools($request['tools']);
+        }
+
+        // Handle tool_choice (OPTIONAL - only if explicitly provided)
+        if (isset($request['tool_choice']) && !empty($request['tool_choice'])) {
+            // Grok supports OpenAI-compatible tool_choice values
+            $request['tool_choice'] = $request['tool_choice'];
+        }
+
         return $request;
     }
     
@@ -351,7 +363,23 @@ class AI_HTTP_Grok_Provider {
 
         // Extract content and tool calls
         $content = isset($message['content']) ? $message['content'] : '';
-        $tool_calls = isset($message['tool_calls']) ? $message['tool_calls'] : null;
+        $raw_tool_calls = isset($message['tool_calls']) ? $message['tool_calls'] : array();
+        
+        // Convert OpenAI-style tool calls to standard format
+        $tool_calls = array();
+        if (!empty($raw_tool_calls)) {
+            foreach ($raw_tool_calls as $tool_call) {
+                if (isset($tool_call['function']['name'])) {
+                    $arguments = isset($tool_call['function']['arguments']) ? $tool_call['function']['arguments'] : '{}';
+                    $decoded_args = json_decode($arguments, true);
+                    
+                    $tool_calls[] = array(
+                        'name' => $tool_call['function']['name'],
+                        'parameters' => $decoded_args ? $decoded_args : array()
+                    );
+                }
+            }
+        }
 
         // Extract usage
         $usage = array(
@@ -420,6 +448,61 @@ class AI_HTTP_Grok_Provider {
         }
 
         return $request;
+    }
+
+    /**
+     * Convert standard tools format to Grok tools format (OpenAI-compatible)
+     *
+     * @param array $standard_tools Standard tools array
+     * @return array Grok-formatted tools (OpenAI-compatible)
+     */
+    private function normalize_grok_tools($standard_tools) {
+        $grok_tools = array();
+        
+        foreach ($standard_tools as $tool) {
+            if (isset($tool['name'], $tool['description'])) {
+                $grok_tool = array(
+                    'type' => 'function',
+                    'function' => array(
+                        'name' => $tool['name'],
+                        'description' => $tool['description']
+                    )
+                );
+                
+                // Convert parameters to OpenAI JSON Schema format
+                if (isset($tool['parameters']) && is_array($tool['parameters'])) {
+                    $properties = array();
+                    $required = array();
+                    
+                    foreach ($tool['parameters'] as $param_name => $param_config) {
+                        $properties[$param_name] = array();
+                        
+                        if (isset($param_config['type'])) {
+                            $properties[$param_name]['type'] = $param_config['type'];
+                        }
+                        if (isset($param_config['description'])) {
+                            $properties[$param_name]['description'] = $param_config['description'];
+                        }
+                        if (isset($param_config['required']) && $param_config['required']) {
+                            $required[] = $param_name;
+                        }
+                    }
+                    
+                    $grok_tool['function']['parameters'] = array(
+                        'type' => 'object',
+                        'properties' => $properties
+                    );
+                    
+                    if (!empty($required)) {
+                        $grok_tool['function']['parameters']['required'] = $required;
+                    }
+                }
+                
+                $grok_tools[] = $grok_tool;
+            }
+        }
+        
+        return $grok_tools;
     }
     
 }

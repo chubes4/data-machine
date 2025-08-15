@@ -310,6 +310,19 @@ class AI_HTTP_Anthropic_Provider {
             $request['max_tokens'] = max(1, intval($request['max_tokens']));
         }
 
+        // Handle tools (OPTIONAL - only if explicitly provided)
+        if (isset($request['tools']) && is_array($request['tools'])) {
+            $request['tools'] = $this->normalize_anthropic_tools($request['tools']);
+        }
+
+        // Handle tool_choice (OPTIONAL - only if explicitly provided)
+        if (isset($request['tool_choice']) && !empty($request['tool_choice'])) {
+            // Anthropic supports "auto", "any", or specific tool selection
+            if ($request['tool_choice'] === 'required') {
+                $request['tool_choice'] = 'any'; // Convert standard "required" to Anthropic "any"
+            }
+        }
+
         // Handle system message extraction for Anthropic
         if (isset($request['messages'])) {
             $request = $this->extract_anthropic_system_message($request);
@@ -337,13 +350,10 @@ class AI_HTTP_Anthropic_Provider {
                             $content .= $content_block['text'] ?? '';
                             break;
                         case 'tool_use':
+                            // Convert Anthropic tool_use to standard format
                             $tool_calls[] = array(
-                                'id' => $content_block['id'] ?? uniqid('tool_'),
-                                'type' => 'function',
-                                'function' => array(
-                                    'name' => $content_block['name'] ?? '',
-                                    'arguments' => wp_json_encode($content_block['input'] ?? array())
-                                )
+                                'name' => $content_block['name'] ?? '',
+                                'parameters' => $content_block['input'] ?? array()
                             );
                             break;
                     }
@@ -447,6 +457,58 @@ class AI_HTTP_Anthropic_Provider {
         }
 
         return $request;
+    }
+
+    /**
+     * Convert standard tools format to Anthropic tools format
+     *
+     * @param array $standard_tools Standard tools array
+     * @return array Anthropic-formatted tools
+     */
+    private function normalize_anthropic_tools($standard_tools) {
+        $anthropic_tools = array();
+        
+        foreach ($standard_tools as $tool) {
+            if (isset($tool['name'], $tool['description'])) {
+                $anthropic_tool = array(
+                    'name' => $tool['name'],
+                    'description' => $tool['description']
+                );
+                
+                // Convert parameters to Anthropic input_schema format
+                if (isset($tool['parameters']) && is_array($tool['parameters'])) {
+                    $properties = array();
+                    $required = array();
+                    
+                    foreach ($tool['parameters'] as $param_name => $param_config) {
+                        $properties[$param_name] = array();
+                        
+                        if (isset($param_config['type'])) {
+                            $properties[$param_name]['type'] = $param_config['type'];
+                        }
+                        if (isset($param_config['description'])) {
+                            $properties[$param_name]['description'] = $param_config['description'];
+                        }
+                        if (isset($param_config['required']) && $param_config['required']) {
+                            $required[] = $param_name;
+                        }
+                    }
+                    
+                    $anthropic_tool['input_schema'] = array(
+                        'type' => 'object',
+                        'properties' => $properties
+                    );
+                    
+                    if (!empty($required)) {
+                        $anthropic_tool['input_schema']['required'] = $required;
+                    }
+                }
+                
+                $anthropic_tools[] = $anthropic_tool;
+            }
+        }
+        
+        return $anthropic_tools;
     }
 
 }

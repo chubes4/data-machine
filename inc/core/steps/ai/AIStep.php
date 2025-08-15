@@ -279,6 +279,14 @@ class AIStep {
                 ];
             }
             
+            // Debug: Log the tools being sent to AI provider
+            do_action('dm_log', 'debug', 'AI Step: Tools being sent to AI provider', [
+                'flow_step_id' => $flow_step_id,
+                'tools_count' => count($ai_provider_tools),
+                'tools_array' => $ai_provider_tools,
+                'ai_request_structure' => array_keys($ai_request)
+            ]);
+            
             // Execute AI request using pure filter with provider name and clean tools
             $ai_response = apply_filters('ai_request', $ai_request, $provider_name, null, $ai_provider_tools);
 

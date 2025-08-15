@@ -94,8 +94,17 @@ class AI_HTTP_OpenAI_Provider {
         
         $url = $this->base_url . '/responses';
         
-        // Debug logging in development mode
+        // Debug logging for tool requests
         if (defined('WP_DEBUG') && WP_DEBUG) {
+            do_action('dm_log', 'debug', 'OpenAI Provider: Final request to API', [
+                'url' => $url,
+                'has_tools' => isset($provider_request['tools']),
+                'tools_count' => isset($provider_request['tools']) ? count($provider_request['tools']) : 0,
+                'tools_array' => $provider_request['tools'] ?? 'NOT_SET',
+                'has_tool_choice' => isset($provider_request['tool_choice']),
+                'tool_choice_value' => $provider_request['tool_choice'] ?? 'NOT_SET',
+                'request_keys' => array_keys($provider_request)
+            ]);
         }
         
         // Use centralized ai_http filter
@@ -112,6 +121,18 @@ class AI_HTTP_OpenAI_Provider {
         }
         
         $raw_response = json_decode($result['data'], true);
+        
+        // Debug: Log raw OpenAI response to see what we actually get back
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            do_action('dm_log', 'debug', 'OpenAI Provider: Raw response from API', [
+                'response_structure' => array_keys($raw_response ?? []),
+                'has_output' => isset($raw_response['output']),
+                'output_count' => isset($raw_response['output']) ? count($raw_response['output']) : 0,
+                'output_items' => $raw_response['output'] ?? 'NOT_SET',
+                'status' => $raw_response['status'] ?? 'NOT_SET',
+                'error' => $raw_response['error'] ?? 'NOT_SET'
+            ]);
+        }
         
         // Convert OpenAI format to standard format
         return $this->format_response($raw_response);
@@ -672,10 +693,45 @@ class AI_HTTP_OpenAI_Provider {
                 if (isset($output_item['type']) && $output_item['type'] === 'message') {
                     if (isset($output_item['content']) && is_array($output_item['content'])) {
                         foreach ($output_item['content'] as $content_item) {
-                            if (isset($content_item['type']) && $content_item['type'] === 'output_text') {
-                                $content .= isset($content_item['text']) ? $content_item['text'] : '';
+                            if (isset($content_item['type'])) {
+                                switch ($content_item['type']) {
+                                    case 'output_text':
+                                        $content .= isset($content_item['text']) ? $content_item['text'] : '';
+                                        break;
+                                    case 'tool_call':
+                                        // Convert OpenAI Responses API format to standard format
+                                        $function_name = $content_item['name'] ?? '';
+                                        $function_arguments = $content_item['arguments'] ?? array();
+                                        
+                                        if (!empty($function_name)) {
+                                            $tool_calls[] = array(
+                                                'name' => $function_name,
+                                                'parameters' => $function_arguments
+                                            );
+                                        }
+                                        break;
+                                }
                             }
                         }
+                    }
+                }
+                // Handle direct function_call type (actual OpenAI Responses API format)
+                elseif (isset($output_item['type']) && $output_item['type'] === 'function_call') {
+                    // Extract function name and arguments from direct function_call
+                    $function_name = $output_item['name'] ?? '';
+                    $function_arguments_json = $output_item['arguments'] ?? '{}';
+                    
+                    // Parse JSON arguments
+                    $function_arguments = json_decode($function_arguments_json, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $function_arguments = array();
+                    }
+                    
+                    if (!empty($function_name)) {
+                        $tool_calls[] = array(
+                            'name' => $function_name,
+                            'parameters' => $function_arguments
+                        );
                     }
                 }
                 // Handle direct content types (fallback)
@@ -684,18 +740,6 @@ class AI_HTTP_OpenAI_Provider {
                         case 'content':
                         case 'output_text':
                             $content .= isset($output_item['text']) ? $output_item['text'] : '';
-                            break;
-                        case 'function_call':
-                            if (isset($output_item['status']) && $output_item['status'] === 'completed') {
-                                $tool_calls[] = array(
-                                    'id' => $output_item['id'] ?? uniqid('tool_'),
-                                    'type' => 'function',
-                                    'function' => array(
-                                        'name' => $output_item['name'] ?? '',
-                                        'arguments' => wp_json_encode($output_item['arguments'] ?? array())
-                                    )
-                                );
-                            }
                             break;
                     }
                 }
@@ -708,6 +752,17 @@ class AI_HTTP_OpenAI_Provider {
             'completion_tokens' => isset($response['usage']['output_tokens']) ? $response['usage']['output_tokens'] : 0,
             'total_tokens' => isset($response['usage']['total_tokens']) ? $response['usage']['total_tokens'] : 0
         );
+
+        // Debug: Log final parsed response before returning to AIStep
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            do_action('dm_log', 'debug', 'OpenAI Provider: Final parsed response', [
+                'content_length' => strlen($content),
+                'content_preview' => substr($content, 0, 100) . '...',
+                'tool_calls_count' => count($tool_calls),
+                'tool_calls' => $tool_calls,
+                'finish_reason' => isset($response['status']) ? $response['status'] : 'unknown'
+            ]);
+        }
 
         return array(
             'success' => true,

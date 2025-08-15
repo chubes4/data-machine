@@ -351,6 +351,20 @@ class AI_HTTP_Gemini_Provider {
             unset($request['temperature']);
         }
 
+        // Handle tools (OPTIONAL - only if explicitly provided)
+        if (isset($request['tools']) && is_array($request['tools'])) {
+            $request['tools'] = $this->normalize_gemini_tools($request['tools']);
+        }
+
+        // Handle tool_choice (OPTIONAL - only if explicitly provided)
+        if (isset($request['tool_choice']) && !empty($request['tool_choice'])) {
+            // Gemini uses toolConfig for tool selection
+            if ($request['tool_choice'] === 'required') {
+                $request['toolConfig'] = array('functionCallingConfig' => array('mode' => 'ANY'));
+            }
+            unset($request['tool_choice']);
+        }
+
         return $request;
     }
     
@@ -374,13 +388,10 @@ class AI_HTTP_Gemini_Provider {
                         $content .= $part['text'];
                     }
                     if (isset($part['functionCall'])) {
+                        // Convert Gemini functionCall to standard format
                         $tool_calls[] = array(
-                            'id' => uniqid('tool_'),
-                            'type' => 'function',
-                            'function' => array(
-                                'name' => $part['functionCall']['name'] ?? '',
-                                'arguments' => wp_json_encode($part['functionCall']['args'] ?? array())
-                            )
+                            'name' => $part['functionCall']['name'] ?? '',
+                            'parameters' => $part['functionCall']['args'] ?? array()
                         );
                     }
                 }
@@ -487,6 +498,58 @@ class AI_HTTP_Gemini_Provider {
         }
 
         return $contents;
+    }
+
+    /**
+     * Convert standard tools format to Gemini tools format
+     *
+     * @param array $standard_tools Standard tools array
+     * @return array Gemini-formatted tools
+     */
+    private function normalize_gemini_tools($standard_tools) {
+        $gemini_tools = array();
+        
+        foreach ($standard_tools as $tool) {
+            if (isset($tool['name'], $tool['description'])) {
+                $gemini_function = array(
+                    'name' => $tool['name'],
+                    'description' => $tool['description']
+                );
+                
+                // Convert parameters to Gemini parameters format
+                if (isset($tool['parameters']) && is_array($tool['parameters'])) {
+                    $properties = array();
+                    $required = array();
+                    
+                    foreach ($tool['parameters'] as $param_name => $param_config) {
+                        $properties[$param_name] = array();
+                        
+                        if (isset($param_config['type'])) {
+                            $properties[$param_name]['type'] = $param_config['type'];
+                        }
+                        if (isset($param_config['description'])) {
+                            $properties[$param_name]['description'] = $param_config['description'];
+                        }
+                        if (isset($param_config['required']) && $param_config['required']) {
+                            $required[] = $param_name;
+                        }
+                    }
+                    
+                    $gemini_function['parameters'] = array(
+                        'type' => 'object',
+                        'properties' => $properties
+                    );
+                    
+                    if (!empty($required)) {
+                        $gemini_function['parameters']['required'] = $required;
+                    }
+                }
+                
+                $gemini_tools[] = array('functionDeclarations' => array($gemini_function));
+            }
+        }
+        
+        return $gemini_tools;
     }
     
 }
