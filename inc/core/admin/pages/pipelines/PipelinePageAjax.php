@@ -89,7 +89,6 @@ class PipelinePageAjax
     public function handle_save_flow_schedule()
     {
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
-        $schedule_status = sanitize_text_field(wp_unslash($_POST['schedule_status'] ?? 'inactive'));
         $schedule_interval = sanitize_text_field(wp_unslash($_POST['schedule_interval'] ?? 'manual'));
 
         if (empty($flow_id)) {
@@ -111,10 +110,9 @@ class PipelinePageAjax
 
         // Parse existing scheduling config
         $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
-        $old_status = $scheduling_config['status'] ?? 'inactive';
+        $old_interval = $scheduling_config['interval'] ?? 'manual';
 
         // Update scheduling config
-        $scheduling_config['status'] = $schedule_status;
         $scheduling_config['interval'] = $schedule_interval;
 
         // Update database
@@ -127,7 +125,7 @@ class PipelinePageAjax
         }
 
         // Handle Action Scheduler scheduling via central action hook
-        do_action('dm_update_flow_schedule', $flow_id, $schedule_status, $schedule_interval, $old_status);
+        do_action('dm_update_flow_schedule', $flow_id, $schedule_interval, $old_interval);
 
         // Auto-save pipeline after flow schedule change
         $pipeline_id = (int)$flow['pipeline_id'];
@@ -136,9 +134,8 @@ class PipelinePageAjax
         }
 
         wp_send_json_success([
-            'message' => sprintf(__('Schedule saved successfully. Flow is now %s.', 'data-machine'), $schedule_status),
+            'message' => sprintf(__('Schedule saved successfully. Flow is now %s.', 'data-machine'), $schedule_interval),
             'flow_id' => $flow_id,
-            'schedule_status' => $schedule_status,
             'schedule_interval' => $schedule_interval
         ]);
     }

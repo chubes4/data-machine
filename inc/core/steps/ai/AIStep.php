@@ -199,54 +199,15 @@ class AIStep {
                 ]);
             }
             
-            // Add handler directive for next step if available
-            do_action('dm_log', 'debug', 'AI Step: Calling directive discovery', ['flow_step_id' => $flow_step_id]);
-            $handler_directive = $this->get_next_step_directive($flow_step_config, $flow_step_id);
+            // Get available tools for next step handler
+            do_action('dm_log', 'debug', 'AI Step: Calling tool discovery', ['flow_step_id' => $flow_step_id]);
+            $available_tools = $this->get_next_step_tools($flow_step_config, $flow_step_id);
             
-            do_action('dm_log', 'debug', 'AI Step: Directive integration', [
+            do_action('dm_log', 'debug', 'AI Step: Tool discovery result', [
                 'flow_step_id' => $flow_step_id,
-                'directive_received' => !empty($handler_directive),
-                'directive_length' => strlen($handler_directive),
-                'directive_content' => $handler_directive
+                'tools_found' => count($available_tools),
+                'tool_names' => array_keys($available_tools)
             ]);
-            
-            if (!empty($handler_directive)) {
-                // Add directive to system message or create one if none exists
-                $system_message_found = false;
-                foreach ($messages as &$message) {
-                    if ($message['role'] === 'system') {
-                        $original_content = $message['content'];
-                        $message['content'] .= "\n\n" . $handler_directive;
-                        do_action('dm_log', 'debug', 'AI Step: Added directive to existing system message', [
-                            'flow_step_id' => $flow_step_id,
-                            'original_system_message' => $original_content,
-                            'final_system_message' => $message['content']
-                        ]);
-                        $system_message_found = true;
-                        break;
-                    }
-                }
-                
-                // If no system message exists, create one with the directive
-                if (!$system_message_found) {
-                    array_unshift($messages, [
-                        'role' => 'system',
-                        'content' => $handler_directive
-                    ]);
-                    do_action('dm_log', 'debug', 'AI Step: Created new system message with directive', [
-                        'flow_step_id' => $flow_step_id,
-                        'directive_content' => $handler_directive
-                    ]);
-                }
-                
-                do_action('dm_log', 'debug', 'AI Step: Handler directive successfully integrated', [
-                    'flow_step_id' => $flow_step_id,
-                    'directive_length' => strlen($handler_directive),
-                    'system_message_found' => $system_message_found
-                ]);
-            } else {
-                do_action('dm_log', 'debug', 'AI Step: No handler directive to integrate', ['flow_step_id' => $flow_step_id]);
-            }
             
             // Final message structure validation and logging
             do_action('dm_log', 'debug', 'AI Step: Final message structure before request', [
@@ -266,6 +227,11 @@ class AIStep {
             // Add model parameter if configured
             if (!empty($step_ai_config['model'])) {
                 $ai_request['model'] = $step_ai_config['model'];
+            }
+            
+            // Add tool_choice when tools are available to force AI to use tools
+            if (!empty($available_tools)) {
+                $ai_request['tool_choice'] = 'required';
             }
             
             // Debug: Log step configuration details before AI request
@@ -303,8 +269,18 @@ class AIStep {
                 ]
             ]);
             
-            // Execute AI request using pure filter with provider name
-            $ai_response = apply_filters('ai_request', $ai_request, $provider_name);
+            // Transform tools from Data Machine format to AI provider format  
+            $ai_provider_tools = [];
+            foreach ($available_tools as $tool_name => $tool_config) {
+                $ai_provider_tools[] = [
+                    'name' => $tool_name,
+                    'description' => $tool_config['description'] ?? '',
+                    'parameters' => $tool_config['parameters'] ?? []
+                ];
+            }
+            
+            // Execute AI request using pure filter with provider name and clean tools
+            $ai_response = apply_filters('ai_request', $ai_request, $provider_name, null, $ai_provider_tools);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
@@ -317,34 +293,99 @@ class AIStep {
             }
 
 
-            // Extract AI content and add to data packet array
+            // Process tool calls if present, otherwise handle as text response
+            $tool_calls = $ai_response['data']['tool_calls'] ?? [];
             $ai_content = $ai_response['data']['content'] ?? '';
             
-            // Create AI response entry
-            $content_lines = explode("\n", trim($ai_content), 2);
-            $ai_title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : 'AI Generated Content';
-            
-            $ai_entry = [
-                'type' => 'ai',
-                'content' => [
-                    'title' => $ai_title,
-                    'body' => $ai_content
-                ],
-                'metadata' => [
-                    'model' => $ai_response['data']['model'] ?? 'unknown',
-                    'provider' => $ai_response['provider'] ?? 'unknown',
-                    'usage' => $ai_response['data']['usage'] ?? [],
-                    'step_title' => $title,
-                    'source_type' => $latest_input['metadata']['source_type'] ?? 'unknown'
-                ],
-                'timestamp' => time()
-            ];
-            
-            // Allow handlers to parse AI response content for structured data
-            $ai_entry = apply_filters('dm_parse_ai_response', $ai_entry, $ai_content, $flow_step_id);
-            
-            // Add AI response to front of data packet array (newest first)
-            array_unshift($data, $ai_entry);
+            if (!empty($tool_calls)) {
+                // Process tool calls
+                do_action('dm_log', 'debug', 'AI Step: Processing tool calls', [
+                    'flow_step_id' => $flow_step_id,
+                    'tool_call_count' => count($tool_calls),
+                    'tool_names' => array_column($tool_calls, 'name')
+                ]);
+                
+                foreach ($tool_calls as $tool_call) {
+                    $tool_name = $tool_call['name'] ?? '';
+                    $tool_parameters = $tool_call['parameters'] ?? [];
+                    
+                    if (empty($tool_name)) {
+                        do_action('dm_log', 'warning', 'AI Step: Tool call missing name', [
+                            'flow_step_id' => $flow_step_id,
+                            'tool_call' => $tool_call
+                        ]);
+                        continue;
+                    }
+                    
+                    // Execute tool using AI HTTP Client library
+                    $tool_result = ai_http_execute_tool($tool_name, $tool_parameters);
+                    
+                    do_action('dm_log', 'debug', 'AI Step: Tool execution result', [
+                        'flow_step_id' => $flow_step_id,
+                        'tool_name' => $tool_name,
+                        'tool_success' => $tool_result['success'] ?? false,
+                        'tool_error' => $tool_result['error'] ?? null
+                    ]);
+                    
+                    if ($tool_result['success']) {
+                        // Create tool execution entry in data packet
+                        $tool_entry = [
+                            'type' => 'tool_result',
+                            'content' => [
+                                'title' => "Tool: {$tool_name}",
+                                'body' => 'Tool executed successfully'
+                            ],
+                            'metadata' => [
+                                'tool_name' => $tool_name,
+                                'tool_parameters' => $tool_parameters,
+                                'tool_result' => $tool_result['data'] ?? [],
+                                'model' => $ai_response['data']['model'] ?? 'unknown',
+                                'provider' => $ai_response['provider'] ?? 'unknown',
+                                'step_title' => $title
+                            ],
+                            'timestamp' => time()
+                        ];
+                        
+                        // Add tool result to data packet
+                        array_unshift($data, $tool_entry);
+                    } else {
+                        do_action('dm_log', 'error', 'AI Step: Tool execution failed', [
+                            'flow_step_id' => $flow_step_id,
+                            'tool_name' => $tool_name,
+                            'error' => $tool_result['error'] ?? 'Unknown error'
+                        ]);
+                    }
+                }
+            } else {
+                // Handle as traditional text response
+                do_action('dm_log', 'debug', 'AI Step: Processing text response', [
+                    'flow_step_id' => $flow_step_id,
+                    'content_length' => strlen($ai_content)
+                ]);
+                
+                // Create AI response entry
+                $content_lines = explode("\n", trim($ai_content), 2);
+                $ai_title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : 'AI Generated Content';
+                
+                $ai_entry = [
+                    'type' => 'ai',
+                    'content' => [
+                        'title' => $ai_title,
+                        'body' => $ai_content
+                    ],
+                    'metadata' => [
+                        'model' => $ai_response['data']['model'] ?? 'unknown',
+                        'provider' => $ai_response['provider'] ?? 'unknown',
+                        'usage' => $ai_response['data']['usage'] ?? [],
+                        'step_title' => $title,
+                        'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'
+                    ],
+                    'timestamp' => time()
+                ];
+                
+                // Add AI response to front of data packet array (newest first)
+                array_unshift($data, $ai_entry);
+            }
 
             do_action('dm_log', 'debug', 'AI Step: Processing completed successfully', [
                 'flow_step_id' => $flow_step_id,
@@ -369,25 +410,25 @@ class AIStep {
     }
     
     /**
-     * Get handler directive for the next step in the pipeline
+     * Get available tools for the next step handler in the pipeline
      * 
      * @param array $flow_step_config Flow step configuration containing pipeline info
      * @param string $flow_step_id Flow step ID for logging
-     * @return string Handler directive or empty string
+     * @return array Available tools array for next step handler
      */
-    private function get_next_step_directive(array $flow_step_config, string $flow_step_id): string {
+    private function get_next_step_tools(array $flow_step_config, string $flow_step_id): array {
         // Get current flow step ID from the step config
         $current_flow_step_id = $flow_step_config['flow_step_id'] ?? '';
         if (!$current_flow_step_id) {
-            do_action('dm_log', 'debug', 'AI Step: No flow_step_id available for directive discovery', ['flow_step_id' => $flow_step_id]);
-            return '';
+            do_action('dm_log', 'debug', 'AI Step: No flow_step_id available for tool discovery', ['flow_step_id' => $flow_step_id]);
+            return [];
         }
         
         // Use parameter-based filter to find next flow step
         $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $current_flow_step_id);
         if (!$next_flow_step_id) {
             do_action('dm_log', 'debug', 'AI Step: No next step found - end of pipeline', ['flow_step_id' => $flow_step_id]);
-            return '';
+            return [];
         }
         
         // Use parameter-based filter to get next step configuration
@@ -397,34 +438,34 @@ class AIStep {
                 'flow_step_id' => $flow_step_id,
                 'next_flow_step_id' => $next_flow_step_id
             ]);
-            return '';
+            return [];
         }
         
-        // Use discovery pattern to get all handler directives
-        $all_directives = apply_filters('dm_handler_directives', []);
+        // Get all tools from AI HTTP Client library
+        $all_tools = apply_filters('ai_tools', []);
         $handler_slug = $next_step_config['handler']['handler_slug'];
-        $directive = $all_directives[$handler_slug] ?? '';
         
-        // Try to generate dynamic directive based on handler configuration
-        $handler_config = $next_step_config['handler']['settings'] ?? [];
-        $dynamic_directive = apply_filters('dm_generate_handler_directive', $directive, $handler_slug, $handler_config);
-        if (!empty($dynamic_directive)) {
-            $directive = $dynamic_directive;
-            do_action('dm_log', 'debug', 'AI Step: Using dynamic directive', [
-                'flow_step_id' => $flow_step_id,
-                'handler_slug' => $handler_slug,
-                'has_handler_config' => !empty($handler_config)
-            ]);
+        // Filter tools for next step handler only
+        $available_tools = [];
+        foreach ($all_tools as $tool_name => $tool_config) {
+            if (isset($tool_config['handler']) && $tool_config['handler'] === $handler_slug) {
+                // Apply dynamic configuration if available
+                $handler_config = $next_step_config['handler']['settings'] ?? [];
+                $dynamic_tool = apply_filters('dm_generate_handler_tool', $tool_config, $handler_slug, $handler_config);
+                
+                $available_tools[$tool_name] = $dynamic_tool ?: $tool_config;
+            }
         }
         
-        do_action('dm_log', 'debug', 'AI Step: Handler directive discovery result', [
+        do_action('dm_log', 'debug', 'AI Step: Tool discovery result', [
             'flow_step_id' => $flow_step_id,
             'next_flow_step_id' => $next_flow_step_id,
             'handler_slug' => $handler_slug,
-            'has_directive' => !empty($directive)
+            'tools_found' => count($available_tools),
+            'tool_names' => array_keys($available_tools)
         ]);
         
-        return $directive;
+        return $available_tools;
     }
 
 

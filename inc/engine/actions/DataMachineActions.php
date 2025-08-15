@@ -66,7 +66,7 @@ require_once __DIR__ . '/Engine.php';
  * - dm_auto_save($pipeline_id): Central pipeline auto-save operations
  * - dm_mark_item_processed($flow_id, $source_type, $item_identifier): Universal processed item marking
  * - dm_update_flow_handler($flow_step_id, $handler_slug, $handler_settings): Central flow handler management (Update.php)
- * - dm_update_flow_schedule($flow_id, $schedule_status, $schedule_interval, $old_status): Engine-level flow scheduling
+ * - dm_update_flow_schedule($flow_id, $schedule_interval, $old_interval): Engine-level flow scheduling
  * - dm_schedule_next_step($job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data): Central step scheduling
  * - dm_log($level, $message, $context): Central logging with automatic logger discovery and validation
  * 
@@ -77,7 +77,7 @@ require_once __DIR__ . '/Engine.php';
  * do_action('dm_auto_save', $pipeline_id);
  * do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
  * do_action('dm_update_flow_handler', $flow_step_id, 'twitter', $handler_settings);
- * do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly', 'inactive');
+ * do_action('dm_update_flow_schedule', $flow_id, 'hourly', 'manual');
  * do_action('dm_sync_steps_to_flow', $flow_id, [$step_data], ['context' => 'add_step']);
  * do_action('dm_schedule_next_step', $job_id, 1, $pipeline_id, $flow_id, $job_config, $data);
  * do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);

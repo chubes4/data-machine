@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @since NEXT_VERSION
  */
-class UpdateActions {
+class Update {
 
     /**
      * Register update action hooks using static method.
@@ -55,7 +55,7 @@ class UpdateActions {
         add_action('dm_update_job_status', [$instance, 'handle_job_status_update'], 10, 4);
         
         // Central flow scheduling hook - direct Action Scheduler integration
-        add_action('dm_update_flow_schedule', [$instance, 'handle_flow_schedule_update'], 10, 4);
+        add_action('dm_update_flow_schedule', [$instance, 'handle_flow_schedule_update'], 10, 3);
         
         // Central pipeline auto-save hook - eliminates database service discovery duplication
         add_action('dm_auto_save', [$instance, 'handle_pipeline_auto_save'], 10, 1);
@@ -133,16 +133,20 @@ class UpdateActions {
      * Handle flow schedule updates with Action Scheduler integration.
      *
      * Provides direct Action Scheduler integration eliminating wrapper patterns.
-     * Handles both schedule activation and deactivation with comprehensive logging.
+     * Uses interval-only logic: manual = run-now only, others = scheduled.
      *
      * @param int $flow_id Flow ID to update scheduling for
-     * @param string $schedule_status New schedule status ('active', 'inactive')
      * @param string $schedule_interval Schedule interval key
-     * @param string $old_status Previous schedule status
+     * @param string $old_interval Previous schedule interval
      * @since NEXT_VERSION
      */
-    public function handle_flow_schedule_update($flow_id, $schedule_status, $schedule_interval, $old_status) {
-        if ($schedule_status === 'active' && $schedule_interval !== 'manual') {
+    public function handle_flow_schedule_update($flow_id, $schedule_interval, $old_interval = '') {
+        // Always unschedule first to prevent duplicates
+        if (function_exists('as_unschedule_action')) {
+            as_unschedule_action('dm_run_flow_now', [$flow_id], 'data-machine');
+        }
+        
+        if ($schedule_interval !== 'manual') {
             // Get interval seconds using simple conversion
             $interval_seconds = $this->get_schedule_interval_seconds($schedule_interval);
             if (!$interval_seconds) {
@@ -170,21 +174,11 @@ class UpdateActions {
                     'success' => ($action_id !== false)
                 ]);
             }
-        } elseif ($old_status === 'active') {
-            // Direct Action Scheduler deactivation using universal action
-            if (function_exists('as_unschedule_action')) {
-                $result = as_unschedule_action(
-                    'dm_run_flow_now',
-                    [$flow_id],
-                    'data-machine'
-                );
-                
-                do_action('dm_log', 'debug', 'Flow scheduling deactivated via direct Action Scheduler', [
-                    'flow_id' => $flow_id,
-                    'previous_status' => $old_status,
-                    'success' => ($result !== false)
-                ]);
-            }
+        } else {
+            do_action('dm_log', 'debug', 'Flow scheduling set to manual (run-now only)', [
+                'flow_id' => $flow_id,
+                'interval' => $schedule_interval
+            ]);
         }
     }
 

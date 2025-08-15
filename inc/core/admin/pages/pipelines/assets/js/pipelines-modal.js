@@ -50,8 +50,6 @@
             $(document).on('click', '.dm-step-selection-card', this.handleStepCardVisualFeedback.bind(this));
             $(document).on('click', '.dm-handler-selection-card', this.handleHandlerCardVisualFeedback.bind(this));
             
-            // Schedule form interactions within modal content
-            $(document).on('change', 'input[name="schedule_status"]', this.handleScheduleStatusChange.bind(this));
             
             // AI step configuration - handle provider switching with saved models
             $(document).on('dm-modal-opened', this.handleAIStepConfiguration.bind(this));
@@ -313,17 +311,6 @@
          * Handle schedule status radio button change within modal
          * Shows/hides interval field based on active/inactive status
          */
-        handleScheduleStatusChange: function(e) {
-            const $form = $(e.target).closest('.dm-flow-schedule-form');
-            const status = e.target.value;
-            const $intervalField = $form.find('.dm-schedule-interval-field');
-            
-            if (status === 'active') {
-                $intervalField.slideDown();
-            } else {
-                $intervalField.slideUp();
-            }
-        }
 
     });
 

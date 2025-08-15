@@ -26,6 +26,94 @@ class WordPress {
         // No constructor dependencies - all services accessed via filters
     }
 
+    /**
+     * Handle AI tool call for WordPress publishing.
+     *
+     * @param array $parameters Structured parameters from AI tool call.
+     * @return array Tool execution result.
+     */
+    public function handle_tool_call(array $parameters): array {
+        do_action('dm_log', 'debug', 'WordPress Tool: Handling tool call', [
+            'parameters' => $parameters,
+            'parameter_keys' => array_keys($parameters)
+        ]);
+
+        // Validate required parameters
+        if (empty($parameters['title']) || empty($parameters['content'])) {
+            $error_msg = 'WordPress tool call missing required parameters';
+            do_action('dm_log', 'error', $error_msg, [
+                'provided_parameters' => array_keys($parameters),
+                'required_parameters' => ['title', 'content']
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_publish'
+            ];
+        }
+
+        // Prepare post data
+        $post_data = [
+            'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
+            'post_content' => wp_kses_post(wp_unslash($parameters['content'])),
+            'post_status' => 'publish',
+            'post_type' => 'post'
+        ];
+
+        // Insert the post
+        $post_id = wp_insert_post($post_data);
+
+        if (is_wp_error($post_id)) {
+            $error_msg = 'WordPress post creation failed: ' . $post_id->get_error_message();
+            do_action('dm_log', 'error', $error_msg, [
+                'post_data' => $post_data,
+                'wp_error' => $post_id->get_error_data()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_publish'
+            ];
+        }
+
+        // Handle taxonomies if provided
+        $taxonomy_results = [];
+        if (!empty($parameters['category'])) {
+            $category_result = $this->assign_category($post_id, $parameters['category']);
+            $taxonomy_results['category'] = $category_result;
+        }
+
+        if (!empty($parameters['tags'])) {
+            $tags_result = $this->assign_tags($post_id, $parameters['tags']);
+            $taxonomy_results['tags'] = $tags_result;
+        }
+
+        // Handle other taxonomies dynamically
+        foreach ($parameters as $param_name => $param_value) {
+            if (!in_array($param_name, ['title', 'content', 'category', 'tags']) && !empty($param_value)) {
+                $taxonomy_result = $this->assign_taxonomy($post_id, $param_name, $param_value);
+                $taxonomy_results[$param_name] = $taxonomy_result;
+            }
+        }
+
+        do_action('dm_log', 'debug', 'WordPress Tool: Post created successfully', [
+            'post_id' => $post_id,
+            'post_url' => get_permalink($post_id),
+            'taxonomy_results' => $taxonomy_results
+        ]);
+
+        return [
+            'success' => true,
+            'data' => [
+                'post_id' => $post_id,
+                'post_url' => get_permalink($post_id),
+                'taxonomy_results' => $taxonomy_results
+            ],
+            'tool_name' => 'wordpress_publish'
+        ];
+    }
 
     /**
      * Handles publishing the AI output to WordPress (local or remote).
@@ -524,6 +612,158 @@ class WordPress {
         }
         
         return $blocks;
+    }
+
+    /**
+     * Assign category to post.
+     *
+     * @param int $post_id Post ID.
+     * @param string $category_name Category name.
+     * @return array Assignment result.
+     */
+    private function assign_category(int $post_id, string $category_name): array {
+        $category_name = sanitize_text_field($category_name);
+        
+        // Get or create category
+        $category = get_term_by('name', $category_name, 'category');
+        if (!$category) {
+            $category_result = wp_insert_term($category_name, 'category');
+            if (is_wp_error($category_result)) {
+                return [
+                    'success' => false,
+                    'error' => $category_result->get_error_message()
+                ];
+            }
+            $category_id = $category_result['term_id'];
+        } else {
+            $category_id = $category->term_id;
+        }
+        
+        // Assign category to post
+        $result = wp_set_object_terms($post_id, [$category_id], 'category');
+        if (is_wp_error($result)) {
+            return [
+                'success' => false,
+                'error' => $result->get_error_message()
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'category_id' => $category_id,
+            'category_name' => $category_name
+        ];
+    }
+
+    /**
+     * Assign tags to post.
+     *
+     * @param int $post_id Post ID.
+     * @param array $tag_names Array of tag names.
+     * @return array Assignment result.
+     */
+    private function assign_tags(int $post_id, array $tag_names): array {
+        $sanitized_tags = array_map('sanitize_text_field', $tag_names);
+        $tag_ids = [];
+        
+        foreach ($sanitized_tags as $tag_name) {
+            if (empty($tag_name)) continue;
+            
+            // Get or create tag
+            $tag = get_term_by('name', $tag_name, 'post_tag');
+            if (!$tag) {
+                $tag_result = wp_insert_term($tag_name, 'post_tag');
+                if (is_wp_error($tag_result)) {
+                    do_action('dm_log', 'warning', 'Failed to create tag', [
+                        'tag_name' => $tag_name,
+                        'error' => $tag_result->get_error_message()
+                    ]);
+                    continue;
+                }
+                $tag_ids[] = $tag_result['term_id'];
+            } else {
+                $tag_ids[] = $tag->term_id;
+            }
+        }
+        
+        if (!empty($tag_ids)) {
+            $result = wp_set_object_terms($post_id, $tag_ids, 'post_tag');
+            if (is_wp_error($result)) {
+                return [
+                    'success' => false,
+                    'error' => $result->get_error_message()
+                ];
+            }
+        }
+        
+        return [
+            'success' => true,
+            'tag_count' => count($tag_ids),
+            'tags' => $sanitized_tags
+        ];
+    }
+
+    /**
+     * Assign custom taxonomy to post.
+     *
+     * @param int $post_id Post ID.
+     * @param string $taxonomy_name Taxonomy name.
+     * @param mixed $taxonomy_value Taxonomy value (string or array).
+     * @return array Assignment result.
+     */
+    private function assign_taxonomy(int $post_id, string $taxonomy_name, $taxonomy_value): array {
+        // Validate taxonomy exists
+        if (!taxonomy_exists($taxonomy_name)) {
+            return [
+                'success' => false,
+                'error' => "Taxonomy '{$taxonomy_name}' does not exist"
+            ];
+        }
+        
+        $taxonomy_obj = get_taxonomy($taxonomy_name);
+        $term_ids = [];
+        
+        // Handle array of terms or single term
+        $terms = is_array($taxonomy_value) ? $taxonomy_value : [$taxonomy_value];
+        
+        foreach ($terms as $term_name) {
+            $term_name = sanitize_text_field($term_name);
+            if (empty($term_name)) continue;
+            
+            // Get or create term
+            $term = get_term_by('name', $term_name, $taxonomy_name);
+            if (!$term) {
+                $term_result = wp_insert_term($term_name, $taxonomy_name);
+                if (is_wp_error($term_result)) {
+                    do_action('dm_log', 'warning', 'Failed to create taxonomy term', [
+                        'taxonomy' => $taxonomy_name,
+                        'term_name' => $term_name,
+                        'error' => $term_result->get_error_message()
+                    ]);
+                    continue;
+                }
+                $term_ids[] = $term_result['term_id'];
+            } else {
+                $term_ids[] = $term->term_id;
+            }
+        }
+        
+        if (!empty($term_ids)) {
+            $result = wp_set_object_terms($post_id, $term_ids, $taxonomy_name);
+            if (is_wp_error($result)) {
+                return [
+                    'success' => false,
+                    'error' => $result->get_error_message()
+                ];
+            }
+        }
+        
+        return [
+            'success' => true,
+            'taxonomy' => $taxonomy_name,
+            'term_count' => count($term_ids),
+            'terms' => $terms
+        ];
     }
 }
 

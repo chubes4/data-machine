@@ -223,7 +223,7 @@ class Flows {
         
         $flows = $this->wpdb->get_results(
             "SELECT * FROM {$this->table_name} 
-             WHERE JSON_EXTRACT(scheduling_config, '$.status') = 'active' 
+             WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' 
              ORDER BY flow_id DESC",
             ARRAY_A
         );
@@ -429,7 +429,7 @@ class Flows {
         $flows = $this->wpdb->get_results(
             $this->wpdb->prepare(
                 "SELECT * FROM {$this->table_name} 
-                 WHERE JSON_EXTRACT(scheduling_config, '$.status') = 'active'
+                 WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual'
                  AND (
                      JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL
                      OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s
@@ -472,11 +472,11 @@ class Flows {
      * @return bool True if ready for execution
      */
     private function is_flow_ready_for_execution(array $scheduling_config, string $current_time): bool {
-        if (!isset($scheduling_config['interval']) || !isset($scheduling_config['status'])) {
+        if (!isset($scheduling_config['interval'])) {
             return false;
         }
         
-        if ($scheduling_config['status'] !== 'active') {
+        if ($scheduling_config['interval'] === 'manual') {
             return false;
         }
         

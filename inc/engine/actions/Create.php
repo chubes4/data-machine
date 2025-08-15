@@ -19,7 +19,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @since NEXT_VERSION
  */
-class CreateActions {
+class Create {
 
     /**
      * Register create action hooks using static method.
@@ -143,7 +143,7 @@ class CreateActions {
             'pipeline_id' => $pipeline_id,
             'flow_name' => __('Draft Flow', 'data-machine'),
             'flow_config' => json_encode([]),
-            'scheduling_config' => json_encode(['status' => 'inactive', 'interval' => 'manual'])
+            'scheduling_config' => json_encode(['interval' => 'manual'])
         ];
         
         $flow_id = $db_flows->create_flow($flow_data);
@@ -207,7 +207,7 @@ class CreateActions {
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
             'flow_config' => json_encode([]),
-            'scheduling_config' => json_encode(['status' => 'inactive', 'interval' => 'manual'])
+            'scheduling_config' => json_encode(['interval' => 'manual'])
         ];
         
         $flow_id = $db_flows->create_flow($flow_data);

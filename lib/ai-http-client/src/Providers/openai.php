@@ -573,21 +573,80 @@ class AI_HTTP_OpenAI_Provider {
                     'name' => sanitize_text_field($tool['function']['name']),
                     'type' => 'function',
                     'description' => sanitize_textarea_field($tool['function']['description']),
-                    'parameters' => $tool['function']['parameters'] ?? array()
+                    'parameters' => $this->convert_to_openai_schema($tool['function']['parameters'] ?? array())
                 );
             } 
-            // Handle flat format - pass through with sanitization
+            // Handle flat format - convert library standard to OpenAI JSON Schema
             elseif (isset($tool['name']) && isset($tool['description'])) {
                 $normalized[] = array(
                     'name' => sanitize_text_field($tool['name']),
                     'type' => 'function',
                     'description' => sanitize_textarea_field($tool['description']),
-                    'parameters' => $tool['parameters'] ?? array()
+                    'parameters' => $this->convert_to_openai_schema($tool['parameters'] ?? array())
                 );
             }
         }
 
         return $normalized;
+    }
+    
+    /**
+     * Convert library standardized parameters to OpenAI JSON Schema format
+     * 
+     * Converts from library format:
+     * ['param' => ['type' => 'string', 'required' => true, 'description' => 'desc']]
+     * 
+     * To OpenAI JSON Schema format:
+     * ['type' => 'object', 'properties' => ['param' => ['type' => 'string', 'description' => 'desc']], 'required' => ['param']]
+     *
+     * @param array $library_parameters Library standardized parameters
+     * @return array OpenAI JSON Schema formatted parameters
+     */
+    private function convert_to_openai_schema($library_parameters) {
+        // Handle already-formatted JSON Schema (pass through)
+        if (isset($library_parameters['type']) && $library_parameters['type'] === 'object') {
+            return $library_parameters;
+        }
+        
+        // Convert library standard format to OpenAI JSON Schema
+        $properties = array();
+        $required = array();
+        
+        foreach ($library_parameters as $param_name => $param_config) {
+            if (!is_array($param_config)) {
+                continue;
+            }
+            
+            // Extract type and description
+            $properties[$param_name] = array();
+            if (isset($param_config['type'])) {
+                $properties[$param_name]['type'] = $param_config['type'];
+            }
+            if (isset($param_config['description'])) {
+                $properties[$param_name]['description'] = $param_config['description'];
+            }
+            if (isset($param_config['enum'])) {
+                $properties[$param_name]['enum'] = $param_config['enum'];
+            }
+            
+            // Handle required flag
+            if (isset($param_config['required']) && $param_config['required']) {
+                $required[] = $param_name;
+            }
+        }
+        
+        // Return OpenAI JSON Schema format
+        $schema = array(
+            'type' => 'object',
+            'properties' => $properties
+        );
+        
+        // Only add required array if there are required parameters
+        if (!empty($required)) {
+            $schema['required'] = $required;
+        }
+        
+        return $schema;
     }
     
     /**
@@ -632,8 +691,8 @@ class AI_HTTP_OpenAI_Provider {
                                     'id' => $output_item['id'] ?? uniqid('tool_'),
                                     'type' => 'function',
                                     'function' => array(
-                                        'name' => $output_item['function_call']['name'],
-                                        'arguments' => wp_json_encode($output_item['function_call']['arguments'] ?? array())
+                                        'name' => $output_item['name'] ?? '',
+                                        'arguments' => wp_json_encode($output_item['arguments'] ?? array())
                                     )
                                 );
                             }

@@ -19,7 +19,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @since NEXT_VERSION
  */
-class DeleteActions {
+class Delete {
 
     /**
      * Register delete action hooks using static method.

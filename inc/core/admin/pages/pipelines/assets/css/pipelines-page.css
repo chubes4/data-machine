@@ -208,15 +208,6 @@
     font-weight: 600;
 }
 
-.dm-status-inactive {
-    background: #f1f1f1;
-    color: #666;
-}
-
-.dm-status-active {
-    background: #d4edda;
-    color: #155724;
-}
 
 /* Flow steps section */
 .dm-flow-steps-section {
