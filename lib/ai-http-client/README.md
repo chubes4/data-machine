@@ -303,14 +303,11 @@ add_filter('ai_tools', function($tools) {
 // Discovery - get all available tools
 $all_tools = apply_filters('ai_tools', []);
 
-// Discovery - plugin-scoped (auto-detected context)
-$my_tools = ai_http_get_tools();
+// Discovery - all tools
+$all_tools = ai_http_get_tools();
 
-// Discovery - by category across all plugins
-$file_tools = ai_http_get_tools(null, 'file_handling');
-
-// Discovery - specific plugin's tools
-$data_machine_tools = ai_http_get_tools('data-machine');
+// Discovery - by category
+$file_tools = ai_http_get_tools('file_handling');
 
 // Check availability
 if (ai_http_has_tool('file_processor')) {
@@ -332,7 +329,7 @@ if ($result['success']) {
 
 ```php
 // Include tools in AI requests
-$tools_to_use = ai_http_get_tools(null, 'file_handling');
+$tools_to_use = ai_http_get_tools('file_handling');
 
 $response = apply_filters('ai_request', [
     'messages' => [
