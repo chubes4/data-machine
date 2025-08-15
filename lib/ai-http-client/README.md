@@ -81,43 +81,6 @@ $tools = [
 $response = apply_filters('ai_request', $request, null, null, $tools);
 ```
 
-### 4. Modular Prompt System
-```php
-// Register tool definitions for your AI agent
-AI_HTTP_Prompt_Manager::register_tool_definition(
-    'edit_content',
-    "Use this tool to edit content with specific instructions...",
-    ['priority' => 1, 'category' => 'content']
-);
-
-// Build dynamic system prompts with context
-$prompt = AI_HTTP_Prompt_Manager::build_modular_system_prompt(
-    $base_prompt,
-    ['post_id' => 123, 'user_role' => 'editor'],
-    [
-        'include_tools' => true,
-        'tool_context' => 'my_plugin',
-        'enabled_tools' => ['edit_content', 'read_content']
-    ]
-);
-```
-
-### 5. Continuation Support (For Agentic Systems)
-```php
-// Send initial request with tools
-$response = $client->send_request([
-    'messages' => [['role' => 'user', 'content' => 'What is the weather?']],
-    'tools' => $tool_schemas
-]);
-
-// Continue with tool results (OpenAI - use response ID)
-$response_id = $client->get_last_response_id();
-$continuation = $client->continue_with_tool_results($response_id, $tool_results);
-
-// Continue with tool results (Anthropic - use conversation history)
-$continuation = $client->continue_with_tool_results($conversation_history, $tool_results, 'anthropic');
-```
-
 ## Supported Providers
 
 All providers use individual classes with filter-based registration and support **dynamic model fetching** - no hardcoded model lists. Models are fetched live from each provider's API.
@@ -175,6 +138,9 @@ $config = apply_filters('ai_config', null);                   // Get provider co
 // Model Fetching
 $models = apply_filters('ai_models', $provider_name, $config);
 
+// Tool Discovery
+$tools = apply_filters('ai_tools', []);
+
 // Admin Interface
 echo apply_filters('ai_render_component', '', [
     'selected_provider' => 'openai',
@@ -182,41 +148,6 @@ echo apply_filters('ai_render_component', '', [
     'system_prompt' => true
 ]);
 ```
-
-## Modular Prompt System
-
-Build dynamic AI prompts with context awareness and tool management:
-
-```php
-// Register tool definitions that can be dynamically included
-AI_HTTP_Prompt_Manager::register_tool_definition(
-    'tool_name',
-    'Tool description and usage instructions...',
-    ['priority' => 1, 'category' => 'content_editing']
-);
-
-// Set which tools are enabled for different contexts
-AI_HTTP_Prompt_Manager::set_enabled_tools(['tool1', 'tool2'], 'my_plugin_context');
-
-// Build complete system prompts with context and tools
-$prompt = AI_HTTP_Prompt_Manager::build_modular_system_prompt(
-    $base_prompt,
-    $context_data,
-    [
-        'include_tools' => true,
-        'tool_context' => 'my_plugin_context',
-        'enabled_tools' => ['specific_tool'],
-        'sections' => ['custom_section' => 'Additional content...']
-    ]
-);
-```
-
-**Features:**
-- **Tool Registration** - Register tool descriptions that can be dynamically included
-- **Context Awareness** - Inject dynamic context data into prompts
-- **Granular Control** - Enable/disable tools per plugin or use case
-- **Filter Integration** - WordPress filters for prompt customization
-- **Variable Replacement** - Template variable substitution
 
 ## Multi-Plugin Configuration
 
