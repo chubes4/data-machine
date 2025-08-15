@@ -22,12 +22,14 @@ $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 
 // AI Integration
 $result = apply_filters('ai_request', $request, 'openrouter');
+$tools = apply_filters('ai_tools', []);
 
 // OAuth Operations
 apply_filters('dm_oauth', [], 'retrieve', 'handler');
 apply_filters('dm_oauth', null, 'store', 'handler', $data);
 apply_filters('dm_oauth', [], 'get_config', 'handler');
 apply_filters('dm_oauth', null, 'store_config', 'handler', $config);
+apply_filters('dm_oauth', false, 'clear', 'handler');
 ```
 
 **Essential Actions**:
@@ -38,6 +40,9 @@ do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 
 // CRUD
 do_action('dm_create', 'pipeline', ['pipeline_name' => $name]);
+do_action('dm_create', 'flow', ['flow_name' => $name, 'pipeline_id' => $id]);
+do_action('dm_create', 'step', ['step_type' => 'fetch', 'pipeline_id' => $id]);
+do_action('dm_create', 'job', ['pipeline_id' => $id, 'flow_id' => $flow_id]);
 do_action('dm_update_flow_handler', $flow_step_id, $handler, $settings);
 do_action('dm_delete', 'pipeline', $pipeline_id, ['cascade' => true]);
 
@@ -57,7 +62,7 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 - **Flows**: Configured instances with handlers/scheduling
 - **Execution**: One-item-at-a-time processing with Action Scheduler
 
-**Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
+**Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items` (deduplication tracking)
 
 **Handlers**:
 - **Fetch**: Files, RSS, Reddit, Google Sheets, WordPress
@@ -80,6 +85,8 @@ $result = apply_filters('ai_request', [
 
 **Discovery**: `apply_filters('ai_providers', [])`, `apply_filters('ai_models', $provider, $config)`
 
+**AI Tools**: `apply_filters('ai_tools', [])`, `ai_http_execute_tool($tool_name, $parameters)`
+
 ## Handler Matrix
 
 | **Fetch** | **Auth** | **Features** |
@@ -97,6 +104,7 @@ $result = apply_filters('ai_request', [
 | Threads | OAuth2 | Text posts, media |
 | Facebook | OAuth2 | Page posts, media |
 | Google Sheets | OAuth2 | Row insertion, data logging |
+| WordPress | None | Post creation, content publishing |
 
 ## DataPacket
 
