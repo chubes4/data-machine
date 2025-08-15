@@ -6,47 +6,16 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-## Features
+**Features**: Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Visual Pipeline Builder, Sequential Processing, Content Publishing (Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets), Filter Architecture, Two-Layer Design
 
-- **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter
-- **Visual Pipeline Builder**: AJAX-driven workflow construction
-- **Sequential Processing**: Chain AI models with cumulative context
-- **Content Publishing**: Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets
-- **Filter Architecture**: WordPress-native extensibility patterns
-- **Two-Layer Design**: Pipeline templates + Flow instances
+## Architecture
 
-## Pipeline+Flow Architecture
+**Pipeline+Flow**: Pipelines are reusable step templates, Flows are configured handler instances
 
-**Pipeline Template**:
-```
-Step 1: Fetch (RSS)     → Content source
-Step 2: Fetch (Reddit)  → Additional context  
-Step 3: AI (Analysis)   → Process all inputs
-Step 4: AI (Summary)    → Create final content
-Step 5: Publish         → Distribute content
-```
-
-**Flow Instances**:
-```
-Flow A: Daily Tech News
-├── RSS: TechCrunch
-├── Reddit: r/technology
-├── AI: GPT-4 analysis
-├── AI: Claude summary
-└── Publish: Twitter
-
-Flow B: Weekly Gaming
-├── RSS: Gaming news
-├── Reddit: r/gaming  
-├── AI: Same pipeline config
-└── Publish: Facebook
-```
-
-**Architecture**:
-- **Pipeline**: Reusable step templates
-- **Flow**: Configured handler instances
-- **AI Steps**: Pipeline-level configuration
-- **Handlers**: Flow-level configuration
+**Example**: RSS → AI Analysis → Publish to Twitter
+- **Pipeline**: Template with 3 steps
+- **Flow A**: TechCrunch RSS + GPT-4 + Twitter
+- **Flow B**: Gaming RSS + Claude + Facebook
 
 ## Quick Start
 
@@ -58,198 +27,15 @@ Flow B: Weekly Gaming
 
 ### Your First Pipeline+Flow
 1. **Create Pipeline**: Data Machine → Pipelines → Create New
-   - Auto-creates "Draft Flow" instance
-   - Add steps via modal interface
-   - Configure step settings
-2. **Configure Flow**: Customize handlers and scheduling
-   - Set RSS feeds, AI models, publish targets
-   - Configure timing (daily, weekly, manual)
-3. **Execute**: Run flow and monitor results
+2. **Add Steps**: Configure via modal interface
+3. **Configure Flow**: Set handlers and scheduling
+4. **Execute**: Run and monitor results
 
-## Architecture
-
-**Two-Layer System**:
-- **Pipelines**: Reusable step templates (positions 0-99)
-- **Flows**: Configured handler instances with scheduling
-
-**Processing**:
-- **Sequential Execution**: Steps run in order within each flow
-- **Context Accumulation**: Each step receives ALL previous data
-- **DataPacket Flow**: Uniform data contract between steps
-
-```php
-public function execute(string $flow_step_id, array $data, array $step_config): array {
-    // Process data packets
-    foreach ($data as $packet) {
-        $content = $packet->content['body'];
-    }
-    return $data; // Updated data packet array
-}
-```
-
-## Filter-Based Architecture
-
-Pure discovery patterns with collection-based component registration:
-
-```php
-// Core actions
-do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
-do_action('dm_run_flow_now', $flow_id);
-
-// Service discovery
-$all_databases = apply_filters('dm_db', []);
-$all_handlers = apply_filters('dm_handlers', []);
-$all_steps = apply_filters('dm_steps', []);
-
-// HTTP requests
-$response = apply_filters('dm_request', null, 'POST', $url, $args, 'Context');
-
-// Template rendering
-$content = apply_filters('dm_render_template', '', 'modal/settings', $data);
-```
-
-## Key Features
-
-**Multi-Source Processing**: Sequential data collection from RSS, Reddit, WordPress, files with cumulative context.
-
-**Multi-AI Workflows**: Chain different AI providers (GPT-4 → Claude → Gemini) with full context preservation.
-
-**Universal Modal System**: Filter-based modals with template discovery and WordPress security.
-
-**AJAX Pipeline Builder**: Real-time step configuration with handler discovery and validation.
-
-### Handlers
+## Handlers
 
 **Fetch**: Files, Reddit, RSS, WordPress, Google Sheets
-**Publish**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets  
+**Publish**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets
 **AI**: OpenAI, Anthropic, Google, Grok, OpenRouter
-
-
-
-## Examples
-
-### Service Discovery
-
-```php
-// Core actions
-do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
-do_action('dm_run_flow_now', $flow_id);
-
-// Service discovery
-$all_databases = apply_filters('dm_db', []);
-$all_handlers = apply_filters('dm_handlers', []);
-$all_auth = apply_filters('dm_auth_providers', []);
-
-// Type filtering
-$fetch_handlers = array_filter($all_handlers, fn($h) => ($h['type'] ?? '') === 'fetch');
-```
-
-
-
-
-### Handler Examples
-
-
-```php
-// Handler registration
-add_filter('dm_handlers', function($handlers) {
-    $handlers['my_handler'] = [
-        'type' => 'fetch',
-        'class' => \MyPlugin\Handlers\MyFetchHandler::class,
-        'label' => __('My Handler', 'my-plugin')
-    ];
-    return $handlers;
-});
-```
-
-
-
-
-### Modal Registration
-
-```php
-add_filter('dm_modals', function($modals) {
-    $modals['my-modal'] = [
-        'template' => 'modal/my-modal',
-        'title' => __('My Modal', 'my-plugin')
-    ];
-    return $modals;
-});
-```
-
-
-
-
-
-### AJAX Integration
-
-```javascript
-requestTemplate(templateName, templateData) {
-    return $.ajax({
-        url: this.ajax_url, type: 'POST',
-        data: {
-            action: 'dm_get_template',
-            template: templateName,
-            template_data: JSON.stringify(templateData),
-            nonce: this.nonce
-        }
-    }).then(response => response.data.html);
-}
-```
-
-
-## Extension Development
-
-### Custom Handler
-
-```php
-class MyFetchHandler {
-    public function fetch_data(array $step_config): array {
-        do_action('dm_log', 'debug', 'Fetching data');
-        // Custom fetch logic
-        return $data_packets;
-    }
-}
-
-add_filter('dm_handlers', function($handlers) {
-    $handlers['my_handler'] = [
-        'type' => 'fetch',
-        'class' => \MyPlugin\Handlers\MyFetchHandler::class,
-        'label' => __('My Handler', 'my-plugin')
-    ];
-    return $handlers;
-});
-```
-
-### Custom Step
-
-```php
-add_filter('dm_steps', function($steps) {
-    $steps['custom_processing'] = [
-        'label' => __('Custom Processing', 'my-plugin'),
-        'class' => '\MyPlugin\Steps\CustomProcessingStep'
-    ];
-    return $steps;
-});
-
-class CustomProcessingStep {
-    public function execute(int $job_id, array $data, array $step_config): array {
-        do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
-        // Custom processing logic
-        return $data;
-    }
-}
-```
-
-## AI Integration
-
-**Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter
-
-**Sequential Processing**: Chain different models with cumulative context.
-
-```php
-$ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' => 'llm']);
-```
 
 
 ## Development
@@ -258,22 +44,10 @@ $ai_client = new \AI_HTTP_Client(['plugin_context' => 'data-machine', 'ai_type' 
 
 **Setup**:
 ```bash
-composer install && composer dump-autoload
-composer test
+composer install && composer test
 ```
 
-**Debugging**:
-```javascript
-window.dmDebugMode = true;  // Browser debugging
-```
-
-```php
-define('WP_DEBUG', true);  // PHP debugging
-do_action('dm_log', 'debug', 'Processing step', ['job_id' => $job_id]);
-```
-
-
-
+**Debug**: `window.dmDebugMode = true;` (browser), `define('WP_DEBUG', true);` (PHP)
 
 ## License
 

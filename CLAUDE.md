@@ -21,7 +21,13 @@ apply_filters('dm_render_template', '', $template, $data);
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 
 // AI Integration
-$result = apply_filters('ai_request', null, $messages, 'openrouter');
+$result = apply_filters('ai_request', $request, 'openrouter');
+
+// OAuth Operations
+apply_filters('dm_oauth', [], 'retrieve', 'handler');
+apply_filters('dm_oauth', null, 'store', 'handler', $data);
+apply_filters('dm_oauth', [], 'get_config', 'handler');
+apply_filters('dm_oauth', null, 'store_config', 'handler', $config);
 ```
 
 **Essential Actions**:
@@ -42,16 +48,21 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 ## Architecture
 
-**Filter-Based**: Self-registering components via `*Filters.php`. All services discoverable via `apply_filters()`.
+**Action-Based Engine**: Three-action execution system - `dm_run_flow_now`, `dm_execute_step`, `dm_schedule_next_step`
+
+**Filter-Based Discovery**: Self-registering components via `*Filters.php`. All services discoverable via `apply_filters()`
 
 **Pipeline+Flow**: 
 - **Pipelines**: Reusable templates (steps 0-99, UUID4 IDs)
 - **Flows**: Configured instances with handlers/scheduling
-- **Execution**: One-item-at-a-time processing
+- **Execution**: One-item-at-a-time processing with Action Scheduler
 
 **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 
-**Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress), Publish (Bluesky, Twitter, Threads, Facebook), AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
+**Handlers**:
+- **Fetch**: Files, RSS, Reddit, Google Sheets, WordPress
+- **Publish**: Bluesky, Twitter, Threads, Facebook, Google Sheets  
+- **AI**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
 **Admin-Only**: Site-level auth, `manage_options` checks, zero user dependencies
 
@@ -61,13 +72,31 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 **Usage**:
 ```php
-$result = apply_filters('ai_request', null, [
+$result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
     'model' => 'gpt-4'
 ], 'openrouter');
 ```
 
 **Discovery**: `apply_filters('ai_providers', [])`, `apply_filters('ai_models', $provider, $config)`
+
+## Handler Matrix
+
+| **Fetch** | **Auth** | **Features** |
+|-----------|----------|--------------|
+| Files | None | Local/remote file processing |
+| RSS | None | Feed parsing, deduplication |
+| Reddit | OAuth2 | Subreddit posts, comments |
+| Google Sheets | OAuth2 | Spreadsheet data extraction |
+| WordPress | None | Post/page content retrieval |
+
+| **Publish** | **Auth** | **Features** |
+|-------------|----------|--------------|
+| Bluesky | App Password | Text posts, media upload |
+| Twitter | OAuth 1.0a | Tweets, media, threads |
+| Threads | OAuth2 | Text posts, media |
+| Facebook | OAuth2 | Page posts, media |
+| Google Sheets | OAuth2 | Row insertion, data logging |
 
 ## DataPacket
 
@@ -87,6 +116,14 @@ $result = apply_filters('ai_request', null, [
 ```
 
 **Flow**: Fetch creates DataPacket → AI transforms content → Publish consumes
+
+## Admin Workflow
+
+1. **Pipelines Page**: Create/manage pipeline templates
+2. **Add Steps**: Configure step positions and types via modals
+3. **Flow Configuration**: Set handlers, authentication, scheduling
+4. **Job Management**: Monitor execution, clear processed items
+5. **Testing**: Manual execution with `dm_run_flow_now`
 
 ## Step Implementation
 
@@ -110,8 +147,8 @@ add_filter('dm_steps', function($steps) {
 ## Import/Export
 
 ```php
-do_action('dm_import', 'pipelines', $csv_data, ['source' => 'upload']);
-do_action('dm_export', 'pipelines', [$pipeline_id], ['format' => 'csv']);
+do_action('dm_import', 'pipelines', $csv_data);
+do_action('dm_export', 'pipelines', [$pipeline_id]);
 ```
 
 **CSV Schema**: `pipeline_id, pipeline_name, step_position, step_type, step_config, flow_id, flow_name, handler, settings`
@@ -211,6 +248,29 @@ try {
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
 
+## OAuth Integration
+
+**Central Operations**: Unified `dm_oauth` filter for all handlers
+
+```php
+// Account Management
+$account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
+apply_filters('dm_oauth', false, 'clear', 'twitter');
+
+// Configuration Management
+$config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+apply_filters('dm_oauth', null, 'store_config', 'twitter', $config_data);
+```
+
+**Handler Requirements**:
+- **Reddit**: OAuth2 (read access)
+- **Twitter**: OAuth 1.0a (read/write)
+- **Facebook**: OAuth2 (pages_manage_posts)
+- **Threads**: OAuth2 (threads_basic, threads_content_publish)
+- **Google Sheets**: OAuth2 (spreadsheets scope)
+- **Bluesky**: App Password (username/password)
+
 ## Rules
 
 **Engine Agnosticism**: No hardcoded step types in `/inc/engine/`
@@ -218,7 +278,7 @@ try {
 **Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()`
 **CSS Namespace**: `dm-` prefix
 **Authentication**: `manage_options` checks only
-**OAuth Storage**: `{handler}_auth_data` options
+**OAuth Storage**: Unified `dm_oauth` filter system
 **Field Naming**: `pipeline_step_id` (UUID4)
 **Job Failure**: Engine exceptions fail jobs immediately
 **Logging**: Include relevant IDs in context
