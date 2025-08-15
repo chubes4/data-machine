@@ -118,19 +118,19 @@ class WordPress {
         if (!isset($config['post_author'])) {
             return ['success' => false, 'error' => 'Local WordPress configuration missing: post_author required'];
         }
-        if (!isset($config['selected_local_category_id'])) {
-            return ['success' => false, 'error' => 'Local WordPress configuration missing: selected_local_category_id required'];
+        if (!isset($config['taxonomy_category_selection'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: taxonomy_category_selection required'];
         }
-        if (!isset($config['selected_local_tag_id'])) {
-            return ['success' => false, 'error' => 'Local WordPress configuration missing: selected_local_tag_id required'];
+        if (!isset($config['taxonomy_post_tag_selection'])) {
+            return ['success' => false, 'error' => 'Local WordPress configuration missing: taxonomy_post_tag_selection required'];
         }
         
         // Get settings from validated config
         $post_type = $config['post_type'];
         $post_status = $config['post_status'];
         $post_author = $config['post_author'];
-        $category_id = $config['selected_local_category_id'];
-        $tag_id = $config['selected_local_tag_id'];
+        $category_id = $config['taxonomy_category_selection'];
+        $tag_id = $config['taxonomy_post_tag_selection'];
 
         // Use structured content directly from data entry (no parsing needed)
         $parsed_data = [

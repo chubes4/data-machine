@@ -53,7 +53,7 @@ function dm_register_importexport_filters() {
     add_filter('dm_importer', function($service) {
         if ($service === null) {
             require_once DATA_MACHINE_PATH . 'inc/engine/actions/ImportExport.php';
-            return new DataMachine_ImportExport_Actions();
+            return new \DataMachine\Engine\Actions\ImportExportActions();
         }
         return $service;
     }, 10, 1);
@@ -132,11 +132,12 @@ function dm_register_utility_filters() {
             return ['success' => false, 'error' => __('Invalid HTTP method', 'data-machine')];
         }
 
-        // Default args with Data Machine user agent
+        // Default args with Data Machine user agent and timeout
         $args = wp_parse_args($args, [
             'user-agent' => sprintf('DataMachine/%s (+%s)', 
                 defined('DATA_MACHINE_VERSION') ? DATA_MACHINE_VERSION : '1.0', 
-                home_url())
+                home_url()),
+            'timeout' => 60  // 60-second timeout for external API calls
         ]);
 
         // Set method for non-GET requests
@@ -377,6 +378,15 @@ function dm_register_utility_filters() {
                 return false;
         }
     }, 10, 4);
+    
+    /**
+     * AI API Error Logging Hook
+     * Listens for AI HTTP Client errors and logs them via dm_log
+     */
+    add_action('ai_api_error', function($error_data) {
+        // Log AI API errors through Data Machine's logging system
+        do_action('dm_log', 'error', $error_data['message'], $error_data);
+    });
     
     
 }

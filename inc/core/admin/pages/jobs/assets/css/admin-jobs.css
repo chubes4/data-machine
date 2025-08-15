@@ -221,3 +221,19 @@
     margin-right: 0.5rem;
     vertical-align: middle;
 }
+
+/* Utility classes for inline style replacement */
+.dm-hidden {
+    display: none;
+}
+
+.dm-section-border {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #ddd;
+}
+
+.dm-muted-text {
+    color: #666;
+    font-style: italic;
+}

@@ -1,4 +1,6 @@
 <?php
+namespace DataMachine\Engine\Actions;
+
 /**
  * Centralized creation for pipelines, flows, steps, jobs via dm_create action
  */
@@ -17,7 +19,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @since NEXT_VERSION
  */
-class DataMachine_Create_Actions {
+class CreateActions {
 
     /**
      * Register create action hooks using static method.

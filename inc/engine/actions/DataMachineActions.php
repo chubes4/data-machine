@@ -210,10 +210,10 @@ function dm_register_core_actions() {
     dm_register_execution_engine();
     
     // Register organized action classes - static WordPress-native pattern
-    DataMachine_Create_Actions::register();
-    DataMachine_Delete_Actions::register();
-    DataMachine_Update_Actions::register();
-    DataMachine_ImportExport_Actions::register();
+    \DataMachine\Engine\Actions\CreateActions::register();
+    \DataMachine\Engine\Actions\DeleteActions::register();
+    \DataMachine\Engine\Actions\UpdateActions::register();
+    \DataMachine\Engine\Actions\ImportExportActions::register();
     
 }
 

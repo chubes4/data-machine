@@ -57,15 +57,15 @@
             const $flowWrapper = $('#dm-flow-select-wrapper');
             
             if (clearType === 'pipeline') {
-                $pipelineWrapper.show();
-                $flowWrapper.hide();
+                $pipelineWrapper.removeClass('dm-hidden');
+                $flowWrapper.addClass('dm-hidden');
                 $('#dm-clear-flow-select').html('<option value="">— Select a Pipeline First —</option>').val('');
             } else if (clearType === 'flow') {
-                $pipelineWrapper.show();
-                $flowWrapper.show();
+                $pipelineWrapper.removeClass('dm-hidden');
+                $flowWrapper.removeClass('dm-hidden');
             } else {
-                $pipelineWrapper.hide();
-                $flowWrapper.hide();
+                $pipelineWrapper.addClass('dm-hidden');
+                $flowWrapper.addClass('dm-hidden');
             }
         },
 
@@ -154,7 +154,7 @@
             
             // Show loading state
             this.setLoadingState($button, $spinner, true);
-            $result.hide();
+            $result.addClass('dm-hidden');
             
             // Make AJAX request
             $.ajax({
@@ -172,7 +172,7 @@
                         
                         // Reset form
                         $form[0].reset();
-                        $('#dm-pipeline-select-wrapper, #dm-flow-select-wrapper').hide();
+                        $('#dm-pipeline-select-wrapper, #dm-flow-select-wrapper').addClass('dm-hidden');
                         
                         // Emit event for page to update if needed
                         $(document).trigger('dm-jobs-processed-items-cleared', [response.data]);
@@ -229,7 +229,7 @@
             
             // Show loading state
             this.setLoadingState($button, $spinner, true);
-            $result.hide();
+            $result.addClass('dm-hidden');
             
             // Make AJAX request
             $.ajax({
@@ -267,10 +267,9 @@
          * Show result message with appropriate styling
          */
         showResult: function($result, type, message) {
-            $result.removeClass('success error warning')
+            $result.removeClass('success error warning dm-hidden')
                 .addClass(type)
-                .html(message)
-                .show();
+                .html(message);
         },
 
         /**

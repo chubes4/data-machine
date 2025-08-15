@@ -96,6 +96,12 @@ function dm_register_ai_step_filters() {
 }
 
 /**
+ * Register AI response parsing filter
+ * Allows handlers to register custom parsing logic for AI-generated structured content
+ */
+add_filter('dm_parse_ai_response', '__return_empty_array');
+
+/**
  * Auto-register AI step filters when this file is loaded.
  * 
  * This follows the self-registration pattern established throughout Data Machine.

@@ -1,4 +1,6 @@
 <?php
+namespace DataMachine\Engine\Actions;
+
 /**
  * Data Machine Update Actions
  *
@@ -36,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @since NEXT_VERSION
  */
-class DataMachine_Update_Actions {
+class UpdateActions {
 
     /**
      * Register update action hooks using static method.
@@ -103,15 +105,15 @@ class DataMachine_Update_Actions {
             $success = $db_jobs->complete_job($job_id, $new_status);
             $method_used = 'complete_job';
             
-            // Clean up processed items if job failed (allows retry without processed item conflicts)
-            if ($new_status === 'failed' && $success) {
-                do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
-            }
-            
         } else {
             // Intermediate status change - use simple update
             $success = $db_jobs->update_job_status($job_id, $new_status);
             $method_used = 'update_job_status';
+        }
+        
+        // Clean up processed items if job failed (allows retry without processed item conflicts)
+        if ($new_status === 'failed' && $success) {
+            do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
         }
         
         // Centralized logging

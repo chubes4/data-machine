@@ -96,7 +96,6 @@ class AI_HTTP_OpenAI_Provider {
         
         // Debug logging in development mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('AI HTTP Client DEBUG: OpenAI request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
         }
         
         // Use centralized ai_http filter
@@ -139,7 +138,6 @@ class AI_HTTP_OpenAI_Provider {
         
         // Debug logging in development mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('AI HTTP Client DEBUG: OpenAI streaming request to ' . $url . ' with payload: ' . wp_json_encode($provider_request));
         }
 
         // Use centralized ai_http filter with streaming=true
@@ -518,7 +516,6 @@ class AI_HTTP_OpenAI_Provider {
                                 }
                             } catch (Exception $e) {
                                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                                    error_log('[OpenAI Provider] Files API upload failed: ' . $e->getMessage());
                                 }
                             }
                             break;

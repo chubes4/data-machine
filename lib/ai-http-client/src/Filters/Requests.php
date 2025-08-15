@@ -32,7 +32,6 @@ function ai_http_client_register_provider_filters() {
         // Validate file path
         if (empty($file_path) || !is_string($file_path)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[AI HTTP Client] Base64 conversion failed: Invalid file path');
             }
             return '';
         }
@@ -40,7 +39,6 @@ function ai_http_client_register_provider_filters() {
         // Check if file exists and is readable
         if (!file_exists($file_path) || !is_readable($file_path)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] Base64 conversion failed: File not accessible - {$file_path}");
             }
             return '';
         }
@@ -50,7 +48,6 @@ function ai_http_client_register_provider_filters() {
         $file_size = filesize($file_path);
         if ($file_size > $max_size) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] Base64 conversion failed: File too large ({$file_size} bytes) - {$file_path}");
             }
             return '';
         }
@@ -70,7 +67,6 @@ function ai_http_client_register_provider_filters() {
         
         if (!in_array($mime_type, $supported_types)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] Base64 conversion failed: Unsupported MIME type ({$mime_type}) - {$file_path}");
             }
             return '';
         }
@@ -79,7 +75,6 @@ function ai_http_client_register_provider_filters() {
         $file_content = file_get_contents($file_path);
         if ($file_content === false) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] Base64 conversion failed: Could not read file content - {$file_path}");
             }
             return '';
         }
@@ -90,8 +85,6 @@ function ai_http_client_register_provider_filters() {
         
         // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("[AI HTTP Client] Base64 conversion successful - File: " . basename($file_path) . 
-                     ", MIME: {$mime_type}, Size: {$file_size} bytes, Base64 length: " . strlen($base64_content));
         }
         
         return $data_url;
@@ -106,15 +99,15 @@ function ai_http_client_register_provider_filters() {
         $method = strtoupper($method);
         if (!in_array($method, $valid_methods)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("AI HTTP Client: Invalid HTTP method '{$method}' for {$context}");
             }
             return ['success' => false, 'error' => 'Invalid HTTP method'];
         }
 
-        // Default args with AI HTTP Client user agent
+        // Default args with AI HTTP Client user agent and timeout
         $args = wp_parse_args($args, [
             'user-agent' => sprintf('AI-HTTP-Client/%s (+WordPress)', 
-                defined('AI_HTTP_CLIENT_VERSION') ? AI_HTTP_CLIENT_VERSION : '1.0')
+                defined('AI_HTTP_CLIENT_VERSION') ? AI_HTTP_CLIENT_VERSION : '1.0'),
+            'timeout' => 60  // 60-second timeout for AI operations
         ]);
 
         // Set method for non-GET requests
@@ -122,26 +115,6 @@ function ai_http_client_register_provider_filters() {
             $args['method'] = $method;
         }
 
-        // Debug logging - request initiation
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $stream_mode = $streaming ? 'streaming' : 'standard';
-            error_log("[AI HTTP Client] {$method} {$stream_mode} request to {$context}: {$url}");
-            
-            // Log headers (sanitize API keys)
-            if (isset($args['headers'])) {
-                $sanitized_headers = $args['headers'];
-                foreach ($sanitized_headers as $key => $value) {
-                    if (stripos($key, 'authorization') !== false || stripos($key, 'key') !== false) {
-                        if (empty($value)) {
-                            $sanitized_headers[$key] = '[EMPTY]';
-                        } else {
-                            $sanitized_headers[$key] = '[REDACTED_LENGTH_' . strlen($value) . ']';
-                        }
-                    }
-                }
-                error_log("[AI HTTP Client] Request headers: " . json_encode($sanitized_headers));
-            }
-        }
 
         // Handle streaming requests with cURL
         if ($streaming) {
@@ -171,6 +144,7 @@ function ai_http_client_register_provider_filters() {
                 CURLOPT_POST => ($method !== 'GET'),
                 CURLOPT_POSTFIELDS => ($method !== 'GET') ? $body : null,
                 CURLOPT_HTTPHEADER => $formatted_headers,
+                CURLOPT_TIMEOUT => 60,  // 60-second timeout for streaming
                 CURLOPT_WRITEFUNCTION => function($ch, $data) use ($callback, &$response_body) {
                     $response_body .= $data; // Capture response for error logging
                     if ($callback && is_callable($callback)) {
@@ -189,12 +163,23 @@ function ai_http_client_register_provider_filters() {
             $error = curl_error($ch);
             curl_close($ch);
 
-            // Debug logging for streaming
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] {$context} streaming response status: {$http_code}");
-                if (!empty($error)) {
-                    error_log("[AI HTTP Client] {$context} cURL error: {$error}");
-                }
+            // Handle streaming errors
+            if (!empty($error)) {
+                // Fire hook for cURL errors
+                do_action('ai_api_error', [
+                    'message' => "Connection error to {$context}: {$error}",
+                    'provider' => $context,
+                    'error_type' => 'curl_error',
+                    'details' => $error
+                ]);
+            } elseif ($http_code >= 400) {
+                // Fire hook for HTTP error responses
+                do_action('ai_api_error', [
+                    'message' => "HTTP {$http_code} error from {$context}",
+                    'provider' => $context,
+                    'http_code' => $http_code,
+                    'error_type' => 'http_error'
+                ]);
             }
 
             if ($result === false || !empty($error)) {
@@ -221,9 +206,13 @@ function ai_http_client_register_provider_filters() {
         if (is_wp_error($response)) {
             $error_message = "Failed to connect to {$context}: " . $response->get_error_message();
             
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] Connection failed to {$context}: " . $response->get_error_message());
-            }
+            // Fire hook for connection errors
+            do_action('ai_api_error', [
+                'message' => $error_message,
+                'provider' => $context,
+                'error_type' => 'connection_error',
+                'wp_error' => $response->get_error_message()
+            ]);
             
             return ['success' => false, 'error' => $error_message];
         }
@@ -233,16 +222,15 @@ function ai_http_client_register_provider_filters() {
         $body = wp_remote_retrieve_body($response);
         $headers = wp_remote_retrieve_headers($response);
 
-        // Debug logging - response details  
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("[AI HTTP Client] {$context} response status: {$status_code}");
-            // Don't log full response body as it may be large, just length
-            error_log("[AI HTTP Client] {$context} response body length: " . strlen($body));
-            
-            // For error responses, log the actual error message for debugging
-            if ($status_code >= 400) {
-                error_log("[AI HTTP Client] {$context} error response body: " . $body);
-            }
+        // Fire hook for non-200 responses with raw provider response
+        if ($status_code >= 400) {
+            do_action('ai_api_error', [
+                'message' => "HTTP {$status_code} error from {$context}",
+                'provider' => $context,
+                'http_code' => $status_code,
+                'response_body' => $body,
+                'error_type' => 'api_error'
+            ]);
         }
 
         // For AI APIs, most operations expect 200, but some may expect 201, 202, etc.
@@ -369,11 +357,6 @@ function ai_http_create_provider($provider_name, $provider_config = null) {
         $shared_api_keys = apply_filters('ai_provider_api_keys', null);
         $api_key = $shared_api_keys[$provider_name] ?? '';
         $provider_config = $api_key ? ['api_key' => $api_key] : [];
-    }
-    // Debug: log provider name and config
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('[AI HTTP Client][ai_http_create_provider] Provider: ' . $provider_name);
-        error_log('[AI HTTP Client][ai_http_create_provider] Config: ' . print_r($provider_config, true));
     }
     
     // Get provider class and create instance

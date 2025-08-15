@@ -1,4 +1,6 @@
 <?php
+namespace DataMachine\Engine\Actions;
+
 /**
  * Deletion system for pipelines, flows, steps with cascade support via dm_delete action
  */
@@ -17,7 +19,7 @@ if ( ! defined( 'WPINC' ) ) {
  *
  * @since NEXT_VERSION
  */
-class DataMachine_Delete_Actions {
+class DeleteActions {
 
     /**
      * Register delete action hooks using static method.

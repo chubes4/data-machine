@@ -22,7 +22,6 @@ add_filter('ai_models', function($provider_name = null) {
         $provider = ai_http_create_provider($provider_name, $provider_config);
         if (!$provider) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("[AI HTTP Client] ai_models filter: Failed to create provider '{$provider_name}'");
             }
             return [];
         }
@@ -30,7 +29,6 @@ add_filter('ai_models', function($provider_name = null) {
         return $provider->get_normalized_models();
     } catch (Exception $e) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("[AI HTTP Client] ai_models filter: Failed to fetch models - " . $e->getMessage());
         }
         return [];
     }

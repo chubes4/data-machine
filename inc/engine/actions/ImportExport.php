@@ -1,4 +1,6 @@
 <?php
+namespace DataMachine\Engine\Actions;
+
 /**
  * Data Machine Import/Export Actions
  * 
@@ -14,21 +16,21 @@ if (!defined('WPINC')) {
     die;
 }
 
-class DataMachine_ImportExport_Actions {
+class ImportExportActions {
     
     /**
      * Register import/export action hooks
      */
     public static function register() {
         $instance = new self();
-        add_action('dm_import', [$instance, 'handle_import'], 10, 3);
-        add_action('dm_export', [$instance, 'handle_export'], 10, 3);
+        add_action('dm_import', [$instance, 'handle_import'], 10, 2);
+        add_action('dm_export', [$instance, 'handle_export'], 10, 2);
     }
     
     /**
      * Handle dm_import action
      */
-    public function handle_import($type, $data, $context = []) {
+    public function handle_import($type, $data) {
         // Capability check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Import requires manage_options capability');
@@ -95,7 +97,7 @@ class DataMachine_ImportExport_Actions {
     /**
      * Handle dm_export action
      */
-    public function handle_export($type, $ids, $context = []) {
+    public function handle_export($type, $ids) {
         // Capability check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Export requires manage_options capability');

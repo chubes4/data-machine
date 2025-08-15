@@ -300,7 +300,7 @@ class PipelinePageAjax
         }
         
         // Trigger export action
-        do_action('dm_export', 'pipelines', $pipeline_ids, ['format' => 'csv']);
+        do_action('dm_export', 'pipelines', $pipeline_ids);
         
         // Get result via filter
         $csv_content = apply_filters('dm_export_result', null);
@@ -332,7 +332,7 @@ class PipelinePageAjax
         }
         
         // Trigger import action
-        do_action('dm_import', 'pipelines', $csv_content, ['format' => 'csv']);
+        do_action('dm_import', 'pipelines', $csv_content);
         
         // Get result via filter
         $result = apply_filters('dm_import_result', null);

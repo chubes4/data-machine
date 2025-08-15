@@ -55,7 +55,7 @@ if ($db_pipelines) {
                     </select>
                 </div>
                 
-                <div class="dm-form-field" id="dm-pipeline-select-wrapper" style="display: none;">
+                <div class="dm-form-field dm-hidden" id="dm-pipeline-select-wrapper">
                     <label for="dm-clear-pipeline-select">
                         <?php esc_html_e('Select Pipeline', 'data-machine'); ?>
                     </label>
@@ -72,7 +72,7 @@ if ($db_pipelines) {
                     </p>
                 </div>
                 
-                <div class="dm-form-field" id="dm-flow-select-wrapper" style="display: none;">
+                <div class="dm-form-field dm-hidden" id="dm-flow-select-wrapper">
                     <label for="dm-clear-flow-select">
                         <?php esc_html_e('Select Flow', 'data-machine'); ?>
                     </label>
@@ -91,7 +91,7 @@ if ($db_pipelines) {
                     <span class="spinner"></span>
                 </div>
                 
-                <div class="dm-admin-notice" id="dm-clear-result" style="display: none;"></div>
+                <div class="dm-admin-notice dm-hidden" id="dm-clear-result"></div>
             </form>
         </div>
         
@@ -135,16 +135,8 @@ if ($db_pipelines) {
                     <span class="spinner"></span>
                 </div>
                 
-                <div class="dm-admin-notice" id="dm-clear-jobs-result" style="display: none;"></div>
+                <div class="dm-admin-notice dm-hidden" id="dm-clear-jobs-result"></div>
             </form>
         </div>
-
-    <!-- Future Admin Sections -->
-    <div class="dm-admin-section dm-admin-section--future" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #ddd;">
-        <h3><?php esc_html_e('Additional Tools', 'data-machine'); ?></h3>
-        <p class="description" style="color: #666; font-style: italic;">
-            <?php esc_html_e('More administrative tools will be added here in future updates, including bulk job operations, performance monitoring, and database maintenance.', 'data-machine'); ?>
-        </p>
-    </div>
 </div>
 

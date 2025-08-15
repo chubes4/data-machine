@@ -126,16 +126,12 @@ extract($template_vars);
 include AI_HTTP_CLIENT_PATH . '/src/templates/core.php';
 ```
 
-### Debug Logging
-- **Conditional Logging**: Debug logs only appear when `WP_DEBUG` is `true` in WordPress configuration
-- **Production Safety**: Prevents unnecessary log generation in production environments
-- **Comprehensive Coverage**: Provides detailed information for:
-  - API request/response cycles in providers (OpenAI, Anthropic, etc.)
-  - Tool execution and validation in ToolExecutor
-  - Streaming SSE events and connection handling in WordPressSSEHandler
-  - System events during development and troubleshooting
-- **WordPress Native**: Uses WordPress native `error_log()` function for consistent logging
-- **Performance Optimized**: Debug checks use `defined('WP_DEBUG') && WP_DEBUG` pattern to minimize overhead
+### Error Reporting
+- **No Built-in Logging**: Library does not log by default - clean and lightweight
+- **Hook-Based Errors**: Uses `ai_api_error` action hook for error reporting
+- **Plugin Integration**: Consuming plugins choose how to handle errors
+- **Raw Error Data**: Provides complete error context including provider responses
+- **Production Ready**: No debug output unless plugins explicitly add logging
 
 ### Security Considerations
 - API keys stored in WordPress options with proper sanitization
@@ -235,9 +231,55 @@ $result = apply_filters('ai_request', null, [
 
 ### Production Deployment
 **WordPress Configuration Requirements**:
-- **Set `WP_DEBUG` to `false`** in production environments to disable debug logging
 - Ensure proper WordPress security settings and API key protection
 - Verify all provider API keys are properly configured before deployment
+
+## Error Handling & Logging
+
+### ai_api_error Hook
+The library provides a clean error handling hook instead of debug logging:
+
+**Hook Structure**:
+```php
+do_action('ai_api_error', [
+    'message' => 'Human-readable error message',
+    'provider' => 'provider_name', // e.g., 'OpenAI', 'Anthropic'
+    'error_type' => 'error_category', // 'api_error', 'connection_error', 'curl_error'
+    'http_code' => 400, // For HTTP errors
+    'response_body' => 'raw_response', // For API errors
+    'details' => 'additional_context' // For connection errors
+]);
+```
+
+**Error Types**:
+- `api_error`: HTTP 4xx/5xx responses from providers (includes raw response body)
+- `connection_error`: WordPress HTTP errors (timeouts, network issues)  
+- `curl_error`: cURL failures in streaming requests
+- `http_error`: HTTP status errors in streaming
+
+**Usage Examples**:
+```php
+// Plugin integration - log to custom system
+add_action('ai_api_error', function($error_data) {
+    error_log("AI Error: " . $error_data['message']);
+    // Or integrate with your plugin's logging system
+    do_action('my_plugin_log', 'error', $error_data['message'], $error_data);
+});
+
+// Debug mode - detailed logging
+add_action('ai_api_error', function($error_data) {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("AI API Error Details: " . wp_json_encode($error_data));
+    }
+});
+```
+
+**Benefits**:
+- ✅ No built-in logging - clean library by default
+- ✅ Plugin developers choose how to handle errors
+- ✅ Raw provider responses available for debugging
+- ✅ Structured error data for programmatic handling
+- ✅ Hook fires only on actual errors, not successful requests
 
 ## Current Version: 1.1.1
 

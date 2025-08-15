@@ -105,7 +105,7 @@ require_once __DIR__ . '/inc/engine/filters/Admin.php';
 require_once __DIR__ . '/inc/engine/filters/Logger.php';
 require_once __DIR__ . '/inc/engine/filters/AI.php';
 require_once __DIR__ . '/inc/engine/actions/DataMachineActions.php';
-require_once __DIR__ . '/inc/core/admin/filters/StatusDetection.php';
+require_once __DIR__ . '/inc/engine/filters/StatusDetection.php';
 
 // PSR-4 Autoloading - no manual includes needed
 

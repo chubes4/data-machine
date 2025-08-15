@@ -180,6 +180,25 @@ class AIStep {
             }
             $pipeline_step_id = $flow_step_config['pipeline_step_id'];
             
+            // Get step configuration for AI request (need this before directive integration)
+            $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+            
+            // Add system prompt from pipeline configuration FIRST (before directive integration)
+            if (!empty($step_ai_config['system_prompt'])) {
+                $system_prompt_message = [
+                    'role' => 'system',
+                    'content' => $step_ai_config['system_prompt']
+                ];
+                
+                // Add as first message since no system messages exist yet at this point
+                array_unshift($messages, $system_prompt_message);
+                
+                do_action('dm_log', 'debug', 'AI Step: Added system prompt from pipeline config', [
+                    'flow_step_id' => $flow_step_id,
+                    'system_prompt_length' => strlen($step_ai_config['system_prompt'])
+                ]);
+            }
+            
             // Add handler directive for next step if available
             do_action('dm_log', 'debug', 'AI Step: Calling directive discovery', ['flow_step_id' => $flow_step_id]);
             $handler_directive = $this->get_next_step_directive($flow_step_config, $flow_step_id);
@@ -229,8 +248,15 @@ class AIStep {
                 do_action('dm_log', 'debug', 'AI Step: No handler directive to integrate', ['flow_step_id' => $flow_step_id]);
             }
             
-            // Get step configuration for AI request
-            $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+            // Final message structure validation and logging
+            do_action('dm_log', 'debug', 'AI Step: Final message structure before request', [
+                'flow_step_id' => $flow_step_id,
+                'total_messages' => count($messages),
+                'message_roles' => array_column($messages, 'role'),
+                'system_messages_count' => count(array_filter($messages, function($msg) { return $msg['role'] === 'system'; })),
+                'first_message_role' => $messages[0]['role'] ?? 'none',
+                'first_message_preview' => isset($messages[0]['content']) ? substr($messages[0]['content'], 0, 100) . '...' : 'none'
+            ]);
             
             // Prepare AI request with messages and step configuration
             $ai_request = [
@@ -313,6 +339,9 @@ class AIStep {
                 ],
                 'timestamp' => time()
             ];
+            
+            // Allow handlers to parse AI response content for structured data
+            $ai_entry = apply_filters('dm_parse_ai_response', $ai_entry, $ai_content, $flow_step_id);
             
             // Add AI response to front of data packet array (newest first)
             array_unshift($data, $ai_entry);

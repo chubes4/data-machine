@@ -407,9 +407,6 @@ class Pipelines {
 
 		dbDelta( $sql );
 
-		// Run migration to rename column if needed
-		static::migrate_step_configuration_column();
-
 		// Log table creation
 		do_action( 'dm_log', 'debug', 'Created pipelines database table', [
 			'table_name' => $table_name,

@@ -77,6 +77,9 @@ function dm_register_execution_engine() {
                     'flow_step_id' => $flow_step_id
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+                // Clear job context after cleanup actions complete
+                global $dm_current_job_id;
+                $dm_current_job_id = null;
                 return false;
             }
 
@@ -91,6 +94,9 @@ function dm_register_execution_engine() {
                     'step_type' => $step_type
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+                // Clear job context after cleanup actions complete
+                global $dm_current_job_id;
+                $dm_current_job_id = null;
                 return false;
             }
             
@@ -120,6 +126,15 @@ function dm_register_execution_engine() {
                     'class' => $step_class
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+                // Clear job context after cleanup actions complete
+                global $dm_current_job_id;
+                $dm_current_job_id = null;
+            }
+
+            // Clear job context after successful execution (no cleanup needed)
+            if ($step_success) {
+                global $dm_current_job_id;
+                $dm_current_job_id = null;
             }
 
             return $step_success;
@@ -131,6 +146,9 @@ function dm_register_execution_engine() {
                 'trace' => $e->getTraceAsString()
             ]);
             do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+            // Clear job context after cleanup actions complete
+            global $dm_current_job_id;
+            $dm_current_job_id = null;
             return false;
         } catch ( \Throwable $e ) {
             do_action('dm_log', 'error', 'Fatal error in pipeline step execution', [
@@ -139,11 +157,10 @@ function dm_register_execution_engine() {
                 'trace' => $e->getTraceAsString()
             ]);
             do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-            return false;
-        } finally {
-            // Clear job context after step execution
+            // Clear job context after cleanup actions complete
             global $dm_current_job_id;
             $dm_current_job_id = null;
+            return false;
         }
     }, 10, 3 );
 
