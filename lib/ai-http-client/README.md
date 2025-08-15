@@ -48,8 +48,7 @@ require_once plugin_dir_path(__FILE__) . 'lib/ai-http-client/ai-http-client.php'
 $response = apply_filters('ai_request', [
     'messages' => [
         ['role' => 'user', 'content' => 'Hello AI!']
-    ],
-    'max_tokens' => 100
+    ]
 ]);
 
 if ($response['success']) {
