@@ -31,7 +31,7 @@ Create an automated content pipeline in 5 minutes:
 1. **Create Pipeline**: "Tech News Bot"
 2. **Add Fetch Step**: RSS handler → `https://techcrunch.com/feed/`
 3. **Add AI Step**: OpenAI → "Summarize this article in one engaging tweet"
-4. **Add Publish Step**: Twitter handler
+4. **Add Publish Step**: Twitter handler (with URL reply option)
 5. **Schedule Flow**: Every 2 hours
 6. **Activate**: Your bot starts posting automatically
 
@@ -43,9 +43,9 @@ Create an automated content pipeline in 5 minutes:
 Pipeline: "Multi-Platform Content"
 ├── Fetch: RSS (TechCrunch)
 ├── AI: GPT-4 ("Create platform-specific content")
-├── Publish: Twitter (short version)
-├── Publish: Facebook (detailed post)
-└── Publish: WordPress (full article)
+├── Publish: Twitter (280 chars + URL reply)
+├── Publish: Facebook (with comment mode)
+└── Publish: WordPress (with taxonomies)
 ```
 
 ### Agentic Tool Calling
@@ -54,8 +54,8 @@ Pipeline: "Multi-Platform Content"
 Pipeline: "Smart Publishing"
 ├── Fetch: RSS (news feed)
 └── AI: Claude + Tools ("Analyze content and publish to appropriate platforms")
-    → AI discovers: wordpress_publish, twitter_publish tools
-    → AI executes: Publishes to WordPress with categories, tweets summary
+    → AI discovers: wordpress_publish, twitter_publish, facebook_publish tools
+    → AI executes: Creates WordPress post with categories/tags, tweets with URL reply, posts to Facebook with comment link
 ```
 
 ### Reddit Monitor
@@ -89,16 +89,28 @@ Pipeline: "Document Processor"
 
 ### Filter Integration
 ```php
-// Custom pipeline execution
+// Pipeline execution and management
 do_action('dm_run_flow_now', $flow_id);
+do_action('dm_create', 'pipeline', ['pipeline_name' => 'My Pipeline']);
+do_action('dm_create', 'flow', ['flow_name' => 'My Flow', 'pipeline_id' => $id]);
 
-// Custom data processing
-$results = apply_filters('dm_get_pipelines', [], $pipeline_id);
+// Data access
+$pipelines = apply_filters('dm_get_pipelines', [], $pipeline_id);
+$flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+$is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'rss', $item_id);
 
-// AI request integration
+// AI integration with tool calling
 $response = apply_filters('ai_request', [
-    'messages' => [['role' => 'user', 'content' => $prompt]]
+    'messages' => [['role' => 'user', 'content' => $prompt]],
+    'model' => 'gpt-4'
 ], 'openrouter');
+
+$available_tools = apply_filters('ai_tools', []);
+
+// Service discovery
+$handlers = apply_filters('dm_handlers', []);
+$steps = apply_filters('dm_steps', []);
+$auth_providers = apply_filters('dm_auth_providers', []);
 ```
 
 ### Extension Development
@@ -106,28 +118,45 @@ $response = apply_filters('ai_request', [
 // Custom fetch handler
 add_filter('dm_handlers', function($handlers) {
     $handlers['my_api'] = [
-        'name' => 'My API',
-        'steps' => ['fetch'],
-        'class' => 'MyAPIHandler'
+        'type' => 'fetch',
+        'class' => 'MyAPIHandler',
+        'label' => 'My API',
+        'description' => 'Fetch data from custom API'
     ];
     return $handlers;
 });
 
-// Custom AI step
-add_filter('dm_steps', function($steps) {
-    $steps['custom_ai'] = [
-        'name' => 'Custom AI Processing',
-        'class' => 'CustomAIStep',
-        'position' => 50
+// Custom publish handler with AI tool integration
+add_filter('dm_handlers', function($handlers) {
+    $handlers['my_publisher'] = [
+        'type' => 'publish',
+        'class' => 'MyPublisher',
+        'label' => 'My Publisher',
+        'description' => 'Publish to custom platform'
     ];
-    return $steps;
+    return $handlers;
+});
+
+// Register AI tool for agentic publishing
+add_filter('ai_tools', function($tools) {
+    $tools['my_publish'] = [
+        'class' => 'MyPublisher',
+        'method' => 'handle_tool_call',
+        'handler' => 'my_publisher',
+        'description' => 'Publish content to my platform',
+        'parameters' => [
+            'content' => ['type' => 'string', 'required' => true],
+            'title' => ['type' => 'string', 'required' => false]
+        ]
+    ];
+    return $tools;
 });
 ```
 
 ## Handlers
 
 **Fetch**: Files, RSS, Reddit, WordPress, Google Sheets
-**Publish**: Facebook, Threads, Twitter, WordPress, Bluesky, Google Sheets  
+**Publish**: Facebook (with comment mode), Threads, Twitter (with URL replies), WordPress (with taxonomies), Bluesky, Google Sheets  
 **AI**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
 ### Authentication
@@ -137,15 +166,41 @@ add_filter('dm_steps', function($steps) {
 - **API Keys**: AI providers
 - **None**: Files, RSS, WordPress
 
+### Enhanced Publishing Features
+
+**WordPress Publishing**:
+- Automatic taxonomy assignment (categories, tags, custom taxonomies)
+- Gutenberg block creation from structured content
+- Post date handling from source content
+- Media integration with metadata
+
+**Twitter Publishing**:
+- Smart character limit handling (280 chars)
+- URL reply functionality (post URLs as separate reply tweets)
+- Image upload with alt text support
+- Rate limit optimization
+
+**Facebook Publishing**:
+- Multiple link handling modes: `append`, `replace`, `comment`, `none`
+- Comment mode posts URLs as Facebook comments
+- Media upload support
+- Page and profile posting
+
+**Agentic Tool Calling**:
+- AI models automatically discover available publisher tools
+- Dynamic tool parameter generation based on handler configuration
+- Context-aware publishing with platform-specific optimizations
+- Error handling with graceful fallbacks
+
 ## Use Cases
 
-- **Content Marketing**: Auto-post across social platforms
-- **News Monitoring**: Track trends and generate alerts
-- **Document Processing**: Extract data from files
-- **Social Media Management**: Automated posting and engagement
-- **Content Repurposing**: Transform content for different platforms
-- **Research Automation**: Collect and analyze data sources
-- **Workflow Integration**: Connect WordPress with external services
+- **Content Marketing**: Auto-post across social platforms with platform-specific optimizations
+- **News Monitoring**: Track trends and generate alerts with source attribution
+- **Document Processing**: Extract and structure data from files
+- **Social Media Management**: Automated posting with URL handling and media support
+- **Content Repurposing**: Transform content for different platforms with taxonomy assignment
+- **Research Automation**: Collect and analyze data sources with structured output
+- **Workflow Integration**: Connect WordPress with external services using native patterns
 
 ## Development
 
