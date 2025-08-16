@@ -30,6 +30,10 @@ apply_filters('dm_oauth', null, 'store', 'handler', $data);
 apply_filters('dm_oauth', [], 'get_config', 'handler');
 apply_filters('dm_oauth', null, 'store_config', 'handler', $config);
 apply_filters('dm_oauth', false, 'clear', 'handler');
+
+// Status Detection & Tool Generation
+apply_filters('dm_detect_status', 'green', 'context', $data);
+apply_filters('dm_generate_handler_tool', $tool, $handler_slug, $handler_config);
 ```
 
 **Essential Actions**:
@@ -76,7 +80,7 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 **Handlers**:
 - **Fetch**: Files, RSS, Reddit, Google Sheets, WordPress
-- **Publish**: Bluesky, Twitter, Threads, Facebook, Google Sheets  
+- **Publish**: Bluesky, Twitter, Threads, Facebook, Google Sheets, WordPress
 - **AI**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
 **Admin-Only**: Site-level auth, `manage_options` checks, zero user dependencies
@@ -97,29 +101,159 @@ $result = apply_filters('ai_request', [
 
 ## Agentic Tool Calling
 
+**Pure Tool Pattern**: All publish handlers use ONLY `handle_tool_call()` method - no `handle_publish()` methods exist
+
 **Dynamic Discovery**: AI models discover and use handler capabilities automatically via `apply_filters('ai_tools', [])`
 
 **Tool Registration**:
 ```php
+// Static tool registration (basic)
 add_filter('ai_tools', function($tools) {
-    $tools['wordpress_publish'] = [
-        'class' => 'HandlerClass',
-        'method' => 'handle_tool_call',
-        'description' => 'Publish content to WordPress',
-        'parameters' => [
-            'title' => ['type' => 'string', 'required' => true],
-            'content' => ['type' => 'string', 'required' => true]
-        ]
-    ];
+    $tools['twitter_publish'] = dm_get_twitter_tool();
     return $tools;
 });
+
+// Dynamic tool generation (configuration-aware)
+add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+    if ($handler_slug === 'twitter') {
+        return dm_get_twitter_tool($handler_config);
+    }
+    return $tool;
+}, 10, 3);
+
+// Tool definition with dynamic parameters
+function dm_get_twitter_tool(array $handler_config = []): array {
+    $tool = [
+        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Twitter\\Twitter',
+        'method' => 'handle_tool_call',
+        'handler' => 'twitter',
+        'description' => 'Post content to Twitter (280 character limit)',
+        'parameters' => [
+            'content' => ['type' => 'string', 'required' => true],
+            'title' => ['type' => 'string', 'required' => false]
+        ]
+    ];
+    
+    // Store configuration for execution
+    if (!empty($handler_config)) {
+        $tool['handler_config'] = $handler_config;
+    }
+    
+    // Add conditional parameters based on user configuration
+    if ($handler_config['twitter_include_source'] ?? true) {
+        $tool['parameters']['source_url'] = ['type' => 'string', 'required' => false];
+    }
+    if ($handler_config['twitter_enable_images'] ?? true) {
+        $tool['parameters']['image_url'] = ['type' => 'string', 'required' => false];
+    }
+    
+    return $tool;
+}
+```
+
+**Handler Implementation**:
+```php
+class Twitter {
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        // Get handler configuration from tool definition
+        $handler_config = $tool_def['handler_config'] ?? [];
+        
+        // Extract parameters
+        $content = $parameters['content'] ?? '';
+        $title = $parameters['title'] ?? '';
+        $source_url = $parameters['source_url'] ?? null;
+        $image_url = $parameters['image_url'] ?? null;
+        
+        // Use configuration to control behavior
+        $include_source = $handler_config['twitter_include_source'] ?? true;
+        $enable_images = $handler_config['twitter_enable_images'] ?? true;
+        
+        // Execute publishing logic with hardcoded character limits
+        // Twitter: 280, Bluesky: 300, Threads: 500
+        
+        return [
+            'success' => true,
+            'data' => ['tweet_id' => $id, 'tweet_url' => $url],
+            'tool_name' => 'twitter_publish'
+        ];
+    }
+}
 ```
 
 **Tool Execution**: `ai_http_execute_tool($tool_name, $parameters)` - Class method execution with WordPress action fallback
 
 **Context-Aware**: Next step handlers automatically register tools for AI step discovery
 
-**AI Integration**: Models receive available tools and execute them during processing without hardcoded logic
+**Configuration Integration**: Handler settings passed through tool definitions for dynamic parameter generation
+
+**Character Limits**: Hardcoded per platform (Twitter: 280, Bluesky: 300, Threads: 500)
+
+**Enhanced Social Features**:
+
+**Twitter URL Reply**: Post source URLs as separate reply tweets
+```php
+'twitter_include_source' => true,    // Enable URL parameter access
+'twitter_enable_images' => true,     // Enable image upload capability
+'twitter_url_as_reply' => false,     // Post URLs as reply tweets (default: inline)
+
+// Reply mode result includes both tweets
+return [
+    'success' => true,
+    'data' => [
+        'tweet_id' => $tweet_id,
+        'tweet_url' => $tweet_url,
+        'reply_tweet_id' => $reply_tweet_id,     // Only when reply mode
+        'reply_tweet_url' => $reply_tweet_url,   // Only when reply mode
+        'content' => $tweet_text
+    ]
+];
+```
+
+**Facebook Comment Mode**: Post URLs as separate comments
+```php
+'link_handling' => 'append',    // Add URL to post content (default)
+'link_handling' => 'replace',   // Replace post content with URL only
+'link_handling' => 'comment',   // Post URL as Facebook comment
+'link_handling' => 'none',      // No URL inclusion
+
+// Comment mode result includes both post and comment
+return [
+    'success' => true,
+    'data' => [
+        'post_id' => $post_id,
+        'post_url' => $post_url,
+        'comment_id' => $comment_id,         // Only when comment mode
+        'comment_url' => $comment_url,       // Only when comment mode
+        'content' => $post_text
+    ]
+];
+```
+
+**WordPress Taxonomy Assignment**: Dynamic category/tag/custom taxonomy support
+```php
+// Tool definition with taxonomy parameters
+'parameters' => [
+    'title' => ['type' => 'string', 'required' => true],
+    'content' => ['type' => 'string', 'required' => true],
+    'category' => ['type' => 'string', 'required' => false],
+    'tags' => ['type' => 'array', 'required' => false],
+    // Custom taxonomies dynamically added based on post type
+];
+
+// Result includes taxonomy assignments
+return [
+    'success' => true,
+    'data' => [
+        'post_id' => $post_id,
+        'post_url' => $post_url,
+        'taxonomy_results' => [
+            'category' => ['success' => true, 'category_id' => 5],
+            'tags' => ['success' => true, 'tag_count' => 3],
+            'custom_taxonomy' => ['success' => true, 'term_count' => 1]
+        ]
+    ]
+];
+```
 
 ## Handler Matrix
 
@@ -134,11 +268,11 @@ add_filter('ai_tools', function($tools) {
 | **Publish** | **Auth** | **Features** |
 |-------------|----------|--------------|
 | Bluesky | App Password | Text posts, media upload |
-| Twitter | OAuth 1.0a | Tweets, media, threads |
+| Twitter | OAuth 1.0a | Tweets, media, URL replies |
 | Threads | OAuth2 | Text posts, media |
-| Facebook | OAuth2 | Page posts, media |
+| Facebook | OAuth2 | Page posts, media, URL comments |
 | Google Sheets | OAuth2 | Row insertion, data logging |
-| WordPress | None | Post creation, content publishing |
+| WordPress | None | Post creation, taxonomy assignment, content publishing |
 
 ## DataPacket Array
 
@@ -364,11 +498,39 @@ apply_filters('dm_oauth', null, 'store_config', 'twitter', $config_data);
 - **Google Sheets**: OAuth2 (spreadsheets scope)
 - **Bluesky**: App Password (username/password)
 
+## Status Detection
+
+**UI Status Indicators**: `dm_detect_status` filter provides red/yellow/green status
+
+```php
+// AI step configuration status
+$status = apply_filters('dm_detect_status', 'green', 'ai_step', [
+    'pipeline_step_id' => $pipeline_step_id
+]);
+
+// Handler authentication status
+$auth_status = apply_filters('dm_detect_status', 'green', 'handler_auth', [
+    'handler_slug' => $handler_slug
+]);
+
+// WordPress draft mode detection
+$draft_status = apply_filters('dm_detect_status', 'green', 'wordpress_draft', [
+    'flow_step_id' => $flow_step_id
+]);
+
+// Files handler status
+$files_status = apply_filters('dm_detect_status', 'green', 'files_status', [
+    'flow_step_id' => $flow_step_id
+]);
+```
+
+**Status Values**: `'red'` (error/missing), `'yellow'` (warning), `'green'` (ready)
+
 ## Rules
 
 **Engine Agnosticism**: No hardcoded step types in `/inc/engine/`
 **Service Discovery**: Filter-based only - `$service = apply_filters('dm_service', [])['key'] ?? null`
-**Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()`
+**Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` - security pattern enforced across all handlers
 **CSS Namespace**: `dm-` prefix
 **Authentication**: `manage_options` checks only
 **OAuth Storage**: Unified `dm_oauth` filter system
@@ -376,3 +538,4 @@ apply_filters('dm_oauth', null, 'store_config', 'twitter', $config_data);
 **Job Failure**: Engine exceptions fail jobs immediately
 **Logging**: Include relevant IDs in context
 **AJAX Security**: Universal `dm_ajax_actions` nonce
+**Tool Generation**: `dm_generate_handler_tool` enables configuration-aware tool definitions
