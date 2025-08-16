@@ -35,8 +35,9 @@ apply_filters('dm_oauth', false, 'clear', 'handler');
 **Essential Actions**:
 ```php
 // Execution
-do_action('dm_run_flow_now', $flow_id, 'context');
+do_action('dm_run_flow_now', $flow_id);
 do_action('dm_execute_step', $job_id, $flow_step_id, $data);
+do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
 // CRUD
 do_action('dm_create', 'pipeline', ['pipeline_name' => $name]);
@@ -57,12 +58,12 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 **Execution Cycle**:
 1. `dm_run_flow_now` → Creates job via `dm_create` action
-2. `dm_execute_step` → Functional step execution with DataPacket processing
+2. `dm_execute_step` → Functional step execution with global job context
 3. `dm_schedule_next_step` → Action Scheduler step transitions
 
 **Job Status Management**: `completed`, `failed`, `completed_no_items` - engine exceptions fail jobs immediately
 
-**One-Item Processing**: Each step processes single data items sequentially via Action Scheduler
+**Array-Based Processing**: Steps process arrays of data entries sequentially via Action Scheduler
 
 **Filter-Based Discovery**: Self-registering components via `*Filters.php`. All services discoverable via `apply_filters()`
 
@@ -96,29 +97,29 @@ $result = apply_filters('ai_request', [
 
 ## Agentic Tool Calling
 
-**Dynamic Tool Discovery**: AI models discover and use handler capabilities automatically
+**Dynamic Discovery**: AI models discover and use handler capabilities automatically via `apply_filters('ai_tools', [])`
 
 **Tool Registration**:
 ```php
 add_filter('ai_tools', function($tools) {
-    $tools['handler_name'] = [
+    $tools['wordpress_publish'] = [
         'class' => 'HandlerClass',
         'method' => 'handle_tool_call',
-        'handler' => 'handler_slug',
-        'description' => 'Tool description for AI',
+        'description' => 'Publish content to WordPress',
         'parameters' => [
-            'param' => ['type' => 'string', 'required' => true, 'description' => 'Parameter description']
+            'title' => ['type' => 'string', 'required' => true],
+            'content' => ['type' => 'string', 'required' => true]
         ]
     ];
     return $tools;
 });
 ```
 
-**Dynamic Tool Generation**: Handlers create context-aware tools via `dm_generate_handler_tool`
+**Tool Execution**: `ai_http_execute_tool($tool_name, $parameters)` - Class method execution with WordPress action fallback
 
-**Tool Execution**: `ai_http_execute_tool($tool_name, $parameters)` - Class method or WordPress action fallback
+**Context-Aware**: Next step handlers automatically register tools for AI step discovery
 
-**AI Integration**: Models automatically receive available tools and execute them during processing
+**AI Integration**: Models receive available tools and execute them during processing without hardcoded logic
 
 ## Handler Matrix
 
@@ -139,24 +140,52 @@ add_filter('ai_tools', function($tools) {
 | Google Sheets | OAuth2 | Row insertion, data logging |
 | WordPress | None | Post creation, content publishing |
 
-## DataPacket
+## DataPacket Array
 
 ```php
+// Fetch DataPacket
 [
-    'type' => 'rss|files|ai|wordpress|twitter|reddit|googlesheets',
-    'content' => ['body' => $content, 'title' => $title, 'excerpt' => $excerpt],
+    'type' => 'fetch',
+    'handler' => 'rss',
+    'content' => ['title' => $title, 'body' => $content],
     'metadata' => [
-        'source_type' => 'rss|files|etc',
-        'item_id' => $unique_identifier,
-        'url' => $original_url,
-        'model' => 'gpt-4', // AI sources
-        'provider' => 'openai' // AI sources
+        'source_type' => 'rss',
+        'pipeline_id' => $pipeline_id,
+        'flow_id' => $flow_id
     ],
+    'attachments' => [],
+    'timestamp' => time()
+]
+
+// AI DataPacket
+[
+    'type' => 'ai',
+    'content' => ['title' => $title, 'body' => $content],
+    'metadata' => [
+        'model' => 'gpt-4',
+        'provider' => 'openai',
+        'usage' => [],
+        'source_type' => 'rss'
+    ],
+    'timestamp' => time()
+]
+
+// Publish DataPacket
+[
+    'type' => 'publish',
+    'handler' => 'twitter',
+    'content' => ['title' => 'Publish Complete', 'body' => $result_json],
+    'metadata' => [
+        'handler_used' => 'twitter',
+        'publish_success' => true,
+        'flow_step_id' => $flow_step_id
+    ],
+    'result' => $handler_result,
     'timestamp' => time()
 ]
 ```
 
-**Flow**: Fetch creates DataPacket → AI transforms content → Publish consumes
+**Flow**: Fetch creates entry → AI adds entry → Publish adds entry → Array accumulates all processing history
 
 ## Admin Workflow
 
@@ -171,10 +200,16 @@ add_filter('ai_tools', function($tools) {
 ```php
 class MyStep {
     public function execute($flow_step_id, array $data = [], array $step_config = []): array {
-        foreach ($data as $item) {
-            $content = $item['content']['body'] ?? '';
-            // Process content
-        }
+        // Global job context available via $GLOBALS['dm_current_job_id']
+        $processed_entry = [
+            'type' => 'my_step',
+            'content' => ['title' => $title, 'body' => $processed_content],
+            'metadata' => ['source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'],
+            'timestamp' => time()
+        ];
+        
+        // Add new entry to front of array
+        array_unshift($data, $processed_entry);
         return $data;
     }
 }
@@ -301,6 +336,8 @@ try {
     return $data; // Return original on failure
 }
 ```
+
+**Global Job Context**: `$GLOBALS['dm_current_job_id']` available during step execution
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
 

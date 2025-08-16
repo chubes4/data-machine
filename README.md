@@ -90,7 +90,7 @@ Pipeline: "Document Processor"
 ### Filter Integration
 ```php
 // Custom pipeline execution
-do_action('dm_run_flow_now', $flow_id, 'api_trigger');
+do_action('dm_run_flow_now', $flow_id);
 
 // Custom data processing
 $results = apply_filters('dm_get_pipelines', [], $pipeline_id);
