@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
- * Description:     A powerful WordPress plugin that automatically collects data from various sources using OpenAI API, fact-checks it, and publishes the results to multiple platforms including WordPress, Twitter, Facebook, Threads, and Bluesky.
+ * Description:     AI-first WordPress plugin for content processing workflows. Visual pipeline builder with multi-provider AI integration and agentic tool calling.
  * Version:         0.1.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net

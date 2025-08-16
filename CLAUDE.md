@@ -53,14 +53,23 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 ## Architecture
 
-**Action-Based Engine**: Three-action execution system - `dm_run_flow_now`, `dm_execute_step`, `dm_schedule_next_step`
+**Action-Based Engine**: Three-action execution cycle drives all pipeline processing
+
+**Execution Cycle**:
+1. `dm_run_flow_now` → Creates job via `dm_create` action
+2. `dm_execute_step` → Functional step execution with DataPacket processing
+3. `dm_schedule_next_step` → Action Scheduler step transitions
+
+**Job Status Management**: `completed`, `failed`, `completed_no_items` - engine exceptions fail jobs immediately
+
+**One-Item Processing**: Each step processes single data items sequentially via Action Scheduler
 
 **Filter-Based Discovery**: Self-registering components via `*Filters.php`. All services discoverable via `apply_filters()`
 
 **Pipeline+Flow**: 
 - **Pipelines**: Reusable templates (steps 0-99, UUID4 IDs)
 - **Flows**: Configured instances with handlers/scheduling
-- **Execution**: One-item-at-a-time processing with Action Scheduler
+- **Execution**: Sequential item processing through Action Scheduler queue
 
 **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items` (deduplication tracking)
 
@@ -85,7 +94,31 @@ $result = apply_filters('ai_request', [
 
 **Discovery**: `apply_filters('ai_providers', [])`, `apply_filters('ai_models', $provider, $config)`
 
-**AI Tools**: `apply_filters('ai_tools', [])`, `ai_http_execute_tool($tool_name, $parameters)`
+## Agentic Tool Calling
+
+**Dynamic Tool Discovery**: AI models discover and use handler capabilities automatically
+
+**Tool Registration**:
+```php
+add_filter('ai_tools', function($tools) {
+    $tools['handler_name'] = [
+        'class' => 'HandlerClass',
+        'method' => 'handle_tool_call',
+        'handler' => 'handler_slug',
+        'description' => 'Tool description for AI',
+        'parameters' => [
+            'param' => ['type' => 'string', 'required' => true, 'description' => 'Parameter description']
+        ]
+    ];
+    return $tools;
+});
+```
+
+**Dynamic Tool Generation**: Handlers create context-aware tools via `dm_generate_handler_tool`
+
+**Tool Execution**: `ai_http_execute_tool($tool_name, $parameters)` - Class method or WordPress action fallback
+
+**AI Integration**: Models automatically receive available tools and execute them during processing
 
 ## Handler Matrix
 
@@ -206,14 +239,29 @@ do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
 
 ## Files Repository
 
-**Flow-Isolated Storage**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
+**Flow-Isolated Architecture**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
 
+**Path Patterns**:
+- Flow isolation prevents cross-contamination
+- UUID-based flow_step_id ensures unique namespaces
+- Automatic cleanup on flow deletion
+
+**Operations**:
 ```php
 $repo = apply_filters('dm_files_repository', [])['files'] ?? null;
+
+// Storage
 $repo->store_file($tmp_name, $filename, $flow_step_id);
-$repo->cleanup_flow_files($flow_step_id);
-do_action('dm_cleanup_old_files');
+$repo->get_file_path($filename, $flow_step_id);
+$repo->file_exists($filename, $flow_step_id);
+
+// Cleanup
+$repo->cleanup_flow_files($flow_step_id);        // Single flow
+do_action('dm_cleanup_old_files');               // Global maintenance
+$repo->delete_file($filename, $flow_step_id);    // Single file
 ```
+
+**Maintenance**: Automatic cleanup via `dm_cleanup_old_files` action for orphaned files
 
 ## Development
 

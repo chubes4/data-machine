@@ -6,7 +6,7 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Visual Pipeline Builder, Sequential Processing, Content Publishing (Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets), Filter Architecture, Two-Layer Design
+**Features**: Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Agentic Tool Calling, Visual Pipeline Builder, Sequential Processing, Content Publishing (Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets), Filter Architecture
 
 ## Architecture
 
@@ -46,6 +46,16 @@ Pipeline: "Multi-Platform Content"
 ├── Publish: Twitter (short version)
 ├── Publish: Facebook (detailed post)
 └── Publish: WordPress (full article)
+```
+
+### Agentic Tool Calling
+```php
+// AI automatically discovers and uses publisher capabilities
+Pipeline: "Smart Publishing"
+├── Fetch: RSS (news feed)
+└── AI: Claude + Tools ("Analyze content and publish to appropriate platforms")
+    → AI discovers: wordpress_publish, twitter_publish tools
+    → AI executes: Publishes to WordPress with categories, tweets summary
 ```
 
 ### Reddit Monitor
