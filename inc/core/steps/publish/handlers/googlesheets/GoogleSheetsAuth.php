@@ -261,7 +261,7 @@ class GoogleSheetsAuth {
 
         // Check for error parameter
         if (isset($_GET['error'])) {
-            $error = sanitize_text_field($_GET['error']);
+            $error = sanitize_text_field(wp_unslash($_GET['error']));
             do_action('dm_log', 'warning', 'Google OAuth error returned.', ['error' => $error]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_oauth_error'));
             exit;
@@ -274,8 +274,8 @@ class GoogleSheetsAuth {
             exit;
         }
 
-        $code = sanitize_text_field($_GET['code']);
-        $state = sanitize_text_field($_GET['state']);
+        $code = sanitize_text_field(wp_unslash($_GET['code']));
+        $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // 2. Verify state parameter
         $stored_state_marker = get_transient(self::STATE_TRANSIENT_PREFIX . $state);

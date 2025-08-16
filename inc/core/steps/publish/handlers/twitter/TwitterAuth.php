@@ -197,7 +197,7 @@ class TwitterAuth {
 
         // Check if user denied access
         if (isset($_GET['denied'])) {
-            $denied_token = sanitize_text_field($_GET['denied']);
+            $denied_token = sanitize_text_field(wp_unslash($_GET['denied']));
             // Clean up transient if we can identify it (optional)
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
             do_action('dm_log', 'warning', 'Twitter OAuth Warning: User denied access.', ['denied_token' => $denied_token]);
@@ -212,8 +212,8 @@ class TwitterAuth {
             exit;
         }
 
-        $oauth_token = sanitize_text_field($_GET['oauth_token']);
-        $oauth_verifier = sanitize_text_field($_GET['oauth_verifier']);
+        $oauth_token = sanitize_text_field(wp_unslash($_GET['oauth_token']));
+        $oauth_verifier = sanitize_text_field(wp_unslash($_GET['oauth_verifier']));
 
         // --- 2. Retrieve Temp Secret & Credentials --- 
         $oauth_token_secret = get_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);

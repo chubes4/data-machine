@@ -482,8 +482,8 @@ class ThreadsAuth {
 
         // Check for error response first (user might deny access)
         if (isset($_GET['error'])) {
-            $error = sanitize_text_field($_GET['error']);
-            $error_description = isset($_GET['error_description']) ? sanitize_text_field($_GET['error_description']) : 'No description provided.';
+            $error = sanitize_text_field(wp_unslash($_GET['error']));
+            $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : 'No description provided.';
             do_action('dm_log', 'error', 'Threads OAuth Error (Callback Init): User denied access or error occurred.', ['error' => $error, 'description' => $error_description]);
             // Add an admin notice by storing in transient and display on API keys page
             set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_description), 60);
@@ -506,8 +506,8 @@ class ThreadsAuth {
              exit;
         }
 
-        $code = sanitize_text_field($_GET['code']);
-        $state = sanitize_text_field($_GET['state']);
+        $code = sanitize_text_field(wp_unslash($_GET['code']));
+        $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // Retrieve stored app credentials from global options
         $config = apply_filters('dm_oauth', [], 'get_config', 'threads');

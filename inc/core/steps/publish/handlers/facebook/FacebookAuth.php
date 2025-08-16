@@ -503,8 +503,8 @@ class FacebookAuth {
 
         // Check for error parameter first (user might deny access)
         if (isset($_GET['error'])) {
-            $error = sanitize_text_field($_GET['error']);
-            $error_description = isset($_GET['error_description']) ? sanitize_text_field($_GET['error_description']) : 'User denied access or an error occurred.';
+            $error = sanitize_text_field(wp_unslash($_GET['error']));
+            $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : 'User denied access or an error occurred.';
             do_action('dm_log', 'warning', 'Facebook OAuth Error in callback:', ['error' => $error, 'description' => $error_description]);
             wp_redirect(add_query_arg('auth_error', $error, admin_url('admin.php?page=dm-pipelines')));
             exit;
@@ -524,8 +524,8 @@ class FacebookAuth {
              exit;
         }
 
-        $code = sanitize_text_field($_GET['code']);
-        $state = sanitize_text_field($_GET['state']);
+        $code = sanitize_text_field(wp_unslash($_GET['code']));
+        $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // Retrieve stored app credentials from global options
         $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');

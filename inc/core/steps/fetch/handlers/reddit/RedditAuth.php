@@ -124,7 +124,7 @@ class RedditAuth {
      */
     public function handle_oauth_callback() {
         // --- 1. Verify State and Check for Errors --- 
-        $state_received = sanitize_key($_GET['state'] ?? '');
+        $state_received = sanitize_key(wp_unslash($_GET['state'] ?? ''));
         
         if (!current_user_can('manage_options')) {
              wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_permission_denied'));
@@ -142,7 +142,7 @@ class RedditAuth {
 
         // Check for errors returned by Reddit
         if (isset($_GET['error'])) {
-            $error_code = sanitize_key($_GET['error']);
+            $error_code = sanitize_key(wp_unslash($_GET['error']));
             do_action('dm_log', 'error', 'Reddit OAuth Error: Received error from Reddit.', ['error' => $error_code]);
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_' . $error_code));
             exit;
@@ -155,7 +155,7 @@ class RedditAuth {
             exit;
         }
         // Security: Use sanitize_key() for OAuth authorization codes (tokens should be treated as keys)
-        $code = sanitize_key($_GET['code']);
+        $code = sanitize_key(wp_unslash($_GET['code']));
 
         // --- 2. Exchange Code for Tokens --- 
         $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
