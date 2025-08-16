@@ -59,7 +59,95 @@ function dm_register_googlesheets_filters() {
         return $directives;
     });
     
+    // Google Sheets tool registration with AI HTTP Client library
+    add_filter('ai_tools', function($tools) {
+        $tools['googlesheets_append'] = dm_get_googlesheets_tool();
+        return $tools;
+    });
+
+    // Dynamic tool generation based on current configuration
+    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+        if ($handler_slug === 'googlesheets_output') {
+            return dm_get_googlesheets_tool($handler_config);
+        }
+        return $tool;
+    }, 10, 3);
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
+}
+
+/**
+ * Get Google Sheets tool definition with dynamic parameters based on configuration.
+ *
+ * @param array $handler_config Optional handler configuration for dynamic parameters.
+ * @return array Google Sheets tool configuration.
+ */
+function dm_get_googlesheets_tool(array $handler_config = []): array {
+    // Debug logging for tool generation
+    if (!empty($handler_config)) {
+        do_action('dm_log', 'debug', 'Google Sheets Tool: Generating with configuration', [
+            'handler_config_keys' => array_keys($handler_config),
+            'spreadsheet_id' => !empty($handler_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing'
+        ]);
+    }
+    
+    // Base tool definition
+    $tool = [
+        'class' => 'DataMachine\\Core\\Handlers\\Publish\\GoogleSheets\\GoogleSheets',
+        'method' => 'handle_tool_call',
+        'handler' => 'googlesheets_output',
+        'description' => 'Append data to Google Sheets spreadsheet',
+        'parameters' => [
+            'content' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'Content to append to the spreadsheet'
+            ],
+            'title' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Optional title/headline for the entry'
+            ],
+            'source_url' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Optional source URL for reference'
+            ],
+            'source_type' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Type of source (e.g., rss, reddit, manual)'
+            ],
+            'job_id' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Optional job ID for tracking'
+            ]
+        ]
+    ];
+    
+    // Store handler configuration for execution time
+    if (!empty($handler_config)) {
+        $tool['handler_config'] = $handler_config;
+    }
+    
+    // Get configuration values for description
+    $spreadsheet_id = $handler_config['googlesheets_spreadsheet_id'] ?? '';
+    $worksheet_name = $handler_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
+    
+    // Update description based on configuration
+    if (!empty($spreadsheet_id)) {
+        $tool['description'] = "Append data to Google Sheets worksheet '{$worksheet_name}'";
+    }
+    
+    do_action('dm_log', 'debug', 'Google Sheets Tool: Generation complete', [
+        'parameter_count' => count($tool['parameters']),
+        'parameter_names' => array_keys($tool['parameters']),
+        'has_spreadsheet_id' => !empty($spreadsheet_id),
+        'worksheet_name' => $worksheet_name
+    ]);
+    
+    return $tool;
 }
 
 // Auto-register when file loads - achieving complete self-containment

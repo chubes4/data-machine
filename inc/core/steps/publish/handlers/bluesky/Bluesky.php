@@ -34,7 +34,11 @@ class Bluesky {
         $this->auth = $all_auth['bluesky'] ?? null;
         
         if ($this->auth === null) {
-            throw new \RuntimeException('Bluesky authentication service not available. Required service missing from dm_auth_providers filter.');
+            do_action('dm_log', 'error', 'Bluesky Handler: Authentication service not available', [
+                'missing_service' => 'bluesky',
+                'available_providers' => array_keys($all_auth)
+            ]);
+            // Handler will return error in handle_tool_call() when auth is null
         }
     }
 
@@ -48,44 +52,66 @@ class Bluesky {
     }
 
     /**
-     * Handles posting the AI output to Bluesky.
+     * Handle AI tool call for Bluesky publishing.
      *
-     * @param object $data Universal DataPacket JSON object with all content and metadata.
-     * @return array Result array on success or failure.
+     * @param array $parameters Structured parameters from AI tool call.
+     * @param array $tool_def Tool definition including handler configuration.
+     * @return array Tool execution result.
      */
-    public function handle_publish($data): array {
-        // Access structured content directly from DataPacket (no parsing needed)
-        $title = $data->content->title ?? '';
-        $content = $data->content->body ?? '';
-        
-        // Get publish config from DataPacket (set by PublishStep)
-        $publish_config = $data->publish_config ?? [];
-        
-        // Extract metadata from DataPacket
-        $input_metadata = [
-            'source_url' => $data->metadata->source_url ?? null,
-            'image_source_url' => !empty($data->attachments->images) ? $data->attachments->images[0]->url : null
-        ];
-        
-        do_action('dm_log', 'debug', 'Starting Bluesky output handling.');
-        
-        // 1. Get config - publish_config is the handler_settings directly
-        $include_source = $publish_config['bluesky_include_source'] ?? true;
-        $enable_images = $publish_config['bluesky_enable_images'] ?? true;
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        do_action('dm_log', 'debug', 'Bluesky Tool: Handling tool call', [
+            'parameters' => $parameters,
+            'parameter_keys' => array_keys($parameters),
+            'has_handler_config' => !empty($tool_def['handler_config']),
+            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+        ]);
 
-        // 2. Get authenticated session using internal BlueskyAuth
+        // Validate required parameters
+        if (empty($parameters['content'])) {
+            $error_msg = 'Bluesky tool call missing required content parameter';
+            do_action('dm_log', 'error', $error_msg, [
+                'provided_parameters' => array_keys($parameters),
+                'required_parameters' => ['content']
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'bluesky_publish'
+            ];
+        }
+
+        // Get handler configuration from tool definition
+        $handler_config = $tool_def['handler_config'] ?? [];
+        
+        do_action('dm_log', 'debug', 'Bluesky Tool: Using handler configuration', [
+            'include_source' => $handler_config['bluesky_include_source'] ?? 'fallback',
+            'enable_images' => $handler_config['bluesky_enable_images'] ?? 'fallback'
+        ]);
+
+        // Extract parameters
+        $title = $parameters['title'] ?? '';
+        $content = $parameters['content'] ?? '';
+        $source_url = $parameters['source_url'] ?? null;
+        $image_url = $parameters['image_url'] ?? null;
+        
+        // Get config from handler settings (300 character limit is hardcoded)
+        $include_source = $handler_config['bluesky_include_source'] ?? true;
+        $enable_images = $handler_config['bluesky_enable_images'] ?? true;
+
+        // Get authenticated session
         $session = $this->auth->get_session();
-
-        // 3. Handle authentication errors
         if (is_wp_error($session)) {
-             do_action('dm_log', 'error', 'Bluesky Output Error: Failed to get authenticated session.', [
-                'error_code' => $session->get_error_code(),
-                'error_message' => $session->get_error_message(),
-             ]);
-             return [
-                 'success' => false,
-                 'error' => $session->get_error_message()
-             ];
+            $error_msg = 'Bluesky authentication failed: ' . $session->get_error_message();
+            do_action('dm_log', 'error', $error_msg, [
+                'error_code' => $session->get_error_code()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'bluesky_publish'
+            ];
         }
 
         $access_token = $session['accessJwt'] ?? null;
@@ -93,136 +119,88 @@ class Bluesky {
         $pds_url = $session['pds_url'] ?? null;
 
         if (empty($access_token) || empty($did) || empty($pds_url)) {
-            do_action('dm_log', 'error', 'Bluesky session data incomplete after authentication.');
             return [
                 'success' => false,
-                'error' => __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'data-machine')
+                'error' => 'Bluesky session data incomplete',
+                'tool_name' => 'bluesky_publish'
             ];
         }
 
-        // Validate content from DataPacket
-        if (empty($title) && empty($content)) {
-            do_action('dm_log', 'warning', 'Bluesky Output: DataPacket content is empty.');
-            return [
-                'success' => false,
-                'error' => __('Cannot post empty content to Bluesky.', 'data-machine')
-            ];
-        }
-
-        // 5. Format post content
+        // Format post content (Bluesky's character limit is 300)
         $post_text = $title ? $title . ": " . $content : $content;
-        $source_url = $input_metadata['source_url'] ?? null;
-        $bluesky_char_limit = 300;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
-        $link_prefix = "\n\n";
-        $link_text = '';
-
-        // Prepare link text if source is included and valid
-        if ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
-            $link_text = $link_prefix . $source_url;
-        }
-
-        // Calculate character count (URLs count as 22 chars in Bluesky)
-        $link_text_len = 0;
-        if (!empty($link_text)) {
-            $prefix_len = mb_strlen($link_prefix, 'UTF-8');
-            $url_char_count = 22; // Bluesky counts all URLs as 22 characters
-            $link_text_len = $prefix_len + $url_char_count;
-        }
-        $available_main_text_len = $bluesky_char_limit - $link_text_len;
-
-        // Truncate main content if necessary
-        if ($available_main_text_len >= $ellipsis_len) {
-            $main_text_len = mb_strlen($post_text, 'UTF-8');
-            if ($main_text_len > $available_main_text_len) {
-                $post_text = mb_substr($post_text, 0, $available_main_text_len - $ellipsis_len, 'UTF-8') . $ellipsis;
-            }
-            $final_post_text = $post_text . $link_text;
+        $link = ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) ? "\n\n" . $source_url : '';
+        $link_length = $link ? (mb_strlen("\n\n", 'UTF-8') + 22) : 0; // URLs count as 22 chars in Bluesky
+        $available_chars = 300 - $link_length;
+        
+        if ($available_chars < $ellipsis_len) {
+            $post_text = mb_substr($link, 0, 300);
         } else {
-            // Not enough space for main text + link, hard truncate
-            $final_post_text = mb_substr($link_text, 0, $bluesky_char_limit, 'UTF-8');
-        }
-
-        $final_post_text = trim($final_post_text);
-
-        if (empty($final_post_text)) {
-             do_action('dm_log', 'error', 'Bluesky Output: Formatted post content is empty after processing.');
-             return [
-                 'success' => false,
-                 'error' => __('Formatted post content is empty after processing.', 'data-machine')
-             ];
-        }
-
-        // 6. Detect link facets
-        $facets = $this->detect_link_facets($final_post_text);
-
-        // 7. Handle image upload (optional)
-        $embed_data = null;
-        $image_source_url = $input_metadata['image_source_url'] ?? null;
-        $image_alt_text = $title ?: substr($content, 0, 50); // Use title or content summary as alt text
-
-        if ($enable_images && !empty($image_source_url) && filter_var($image_source_url, FILTER_VALIDATE_URL)) {
-            do_action('dm_log', 'debug', 'Attempting to upload image to Bluesky.', ['image_url' => $image_source_url]);
-            
-            $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_source_url, $image_alt_text);
-            
-            if (!is_wp_error($uploaded_image_blob) && isset($uploaded_image_blob['blob'])) {
-                do_action('dm_log', 'debug', 'Bluesky image uploaded successfully.');
-                $embed_data = [
-                    '$type' => 'app.bsky.embed.images',
-                    'images' => [
-                        [
-                            'alt'   => $image_alt_text,
-                            'image' => $uploaded_image_blob['blob']
-                        ]
-                    ]
-                ];
-            } else {
-                // Fail immediately if image upload fails when images are enabled
-                $error_message = is_wp_error($uploaded_image_blob) ? $uploaded_image_blob->get_error_message() : 'Image upload failed with unknown error.';
-                do_action('dm_log', 'error', 'Bluesky image upload failed when images are enabled.', [
-                    'error_message' => $error_message,
-                    'image_url' => $image_source_url
-                ]);
-                return [
-                    'success' => false,
-                    'error' => __('Image upload failed when images are enabled: ', 'data-machine') . $error_message
-                ];
+            if (mb_strlen($post_text, 'UTF-8') > $available_chars) {
+                $post_text = mb_substr($post_text, 0, $available_chars - $ellipsis_len) . $ellipsis;
             }
+            $post_text .= $link;
+        }
+        $post_text = trim($post_text);
+
+        if (empty($post_text)) {
+            return [
+                'success' => false,
+                'error' => 'Formatted post content is empty',
+                'tool_name' => 'bluesky_publish'
+            ];
         }
 
-        // 8. Create post record
-        $current_time = gmdate("Y-m-d\TH:i:s.v\Z");
-        $record = [
-            '$type'     => 'app.bsky.feed.post',
-            'text'      => $final_post_text,
-            'createdAt' => $current_time,
-            'langs'     => ['en'],
-        ];
-
-        // Add facets if detected
-        if (!empty($facets)) {
-            $record['facets'] = $facets;
-        }
-
-        // Add embed if image was processed
-        if (!empty($embed_data)) {
-            $record['embed'] = $embed_data;
-        }
-
-        // 9. Post to Bluesky
         try {
+            // Detect link facets
+            $facets = $this->detect_link_facets($post_text);
+
+            // Create post record
+            $current_time = gmdate("Y-m-d\TH:i:s.v\Z");
+            $record = [
+                '$type' => 'app.bsky.feed.post',
+                'text' => $post_text,
+                'createdAt' => $current_time,
+                'langs' => ['en'],
+            ];
+
+            // Add facets if detected
+            if (!empty($facets)) {
+                $record['facets'] = $facets;
+            }
+
+            // Handle image upload if provided and enabled
+            if ($enable_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+                $image_alt_text = $title ?: substr($content, 0, 50);
+                $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_url, $image_alt_text);
+                
+                if (!is_wp_error($uploaded_image_blob) && isset($uploaded_image_blob['blob'])) {
+                    $record['embed'] = [
+                        '$type' => 'app.bsky.embed.images',
+                        'images' => [
+                            [
+                                'alt' => $image_alt_text,
+                                'image' => $uploaded_image_blob['blob']
+                            ]
+                        ]
+                    ];
+                }
+            }
+
+            // Create post
             $post_result = $this->create_bluesky_post($pds_url, $access_token, $did, $record);
 
             if (is_wp_error($post_result)) {
-                do_action('dm_log', 'error', 'Failed to create Bluesky post.', [
-                    'error_code' => $post_result->get_error_code(),
-                    'error_message' => $post_result->get_error_message()
+                $error_msg = 'Bluesky API error: ' . $post_result->get_error_message();
+                do_action('dm_log', 'error', $error_msg, [
+                    'error_code' => $post_result->get_error_code()
                 ]);
+
                 return [
                     'success' => false,
-                    'error' => $post_result->get_error_message()
+                    'error' => $error_msg,
+                    'tool_name' => 'bluesky_publish'
                 ];
             }
 
@@ -230,34 +208,36 @@ class Bluesky {
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
             
             if (is_wp_error($post_url)) {
-                do_action('dm_log', 'error', 'Failed to build post URL.', [
-                    'error_code' => $post_url->get_error_code(),
-                    'error_message' => $post_url->get_error_message()
-                ]);
-                return [
-                    'success' => false,
-                    'error' => $post_url->get_error_message()
-                ];
+                $post_url = 'https://bsky.app/'; // Fallback URL
             }
-
-            do_action('dm_log', 'debug', 'Successfully posted to Bluesky.', ['post_uri' => $post_uri]);
+            
+            do_action('dm_log', 'debug', 'Bluesky Tool: Post created successfully', [
+                'post_uri' => $post_uri,
+                'post_url' => $post_url
+            ]);
 
             return [
                 'success' => true,
-                'status' => 'success',
-                'output_url' => $post_url,
-                'message' => __('Successfully posted to Bluesky.', 'data-machine'),
-                'raw_response' => $post_result
+                'data' => [
+                    'post_uri' => $post_uri,
+                    'post_url' => $post_url,
+                    'content' => $post_text
+                ],
+                'tool_name' => 'bluesky_publish'
             ];
-
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Bluesky Output Exception: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Bluesky Tool: Exception during posting', [
+                'exception' => $e->getMessage()
+            ]);
+            
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'tool_name' => 'bluesky_publish'
             ];
         }
     }
+
 
     /**
      * Returns the user-friendly label for this publish handler.

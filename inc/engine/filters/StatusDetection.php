@@ -5,11 +5,11 @@
  * Centralized status detection for UI components using filter-based architecture.
  * Provides red/yellow/green status indicators for step cards and other UI elements.
  *
- * @package DataMachine\Core\Admin\Filters
+ * @package DataMachine\Engine\Filters
  * @since 1.0.0
  */
 
-namespace DataMachine\Core\Admin\Filters;
+namespace DataMachine\Engine\Filters;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {

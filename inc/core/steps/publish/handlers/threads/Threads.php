@@ -30,61 +30,68 @@ class Threads {
         // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['threads'] ?? null;
+        
+        if ($this->auth === null) {
+            do_action('dm_log', 'error', 'Threads Handler: Authentication service not available', [
+                'missing_service' => 'threads',
+                'available_providers' => array_keys($all_auth)
+            ]);
+            // Handler will return error in handle_tool_call() when auth is null
+        }
     }
 
     /**
-     * Handles posting the AI output to Threads.
+     * Handle AI tool call for Threads publishing.
      *
-     * @param object $data Universal DataPacket JSON object with all content and metadata.
-     * @return array Result array on success or failure.
+     * @param array $parameters Structured parameters from AI tool call.
+     * @param array $tool_def Tool definition including handler configuration.
+     * @return array Tool execution result.
      */
-    public function handle_publish($data): array {
-        // Access structured content directly from DataPacket (no parsing needed)
-        $title = $data->content->title ?? '';
-        $content = $data->content->body ?? '';
-        
-        // Get publish config from DataPacket (set by PublishStep)
-        $publish_config = $data->publish_config ?? [];
-        
-        // Extract metadata from DataPacket
-        $input_metadata = [
-            'source_url' => $data->metadata->source_url ?? null,
-            'image_source_url' => !empty($data->attachments->images) ? $data->attachments->images[0]->url : null
-        ];
-        
-        do_action('dm_log', 'debug', 'Threads Output: Starting Threads publication.');
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        do_action('dm_log', 'debug', 'Threads Tool: Handling tool call', [
+            'parameters' => $parameters,
+            'parameter_keys' => array_keys($parameters),
+            'has_handler_config' => !empty($tool_def['handler_config']),
+            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+        ]);
 
-        // Get config - publish_config is the handler_settings directly
-        $threads_config = $publish_config;
-        if (!is_array($threads_config)) $threads_config = [];
-
-        // Validate content from DataPacket
-        if (empty($title) && empty($content)) {
-            do_action('dm_log', 'error', 'Threads Output: DataPacket content is empty.');
+        // Validate required parameters
+        if (empty($parameters['content'])) {
+            $error_msg = 'Threads tool call missing required content parameter';
+            do_action('dm_log', 'error', $error_msg, [
+                'provided_parameters' => array_keys($parameters),
+                'required_parameters' => ['content']
+            ]);
+            
             return [
                 'success' => false,
-                'error' => __('Cannot post empty content to Threads.', 'data-machine')
+                'error' => $error_msg,
+                'tool_name' => 'threads_publish'
             ];
         }
+
+        // Get handler configuration from tool definition
+        $handler_config = $tool_def['handler_config'] ?? [];
         
-        // Prepare post content
-        $post_content = $content;
-        if (!empty($title) && strpos($content, $title) === false) {
-            $post_content = $title . "\n\n" . $content;
-        }
+        do_action('dm_log', 'debug', 'Threads Tool: Using handler configuration', [
+            'include_images' => $handler_config['include_images'] ?? 'fallback'
+        ]);
 
-        // Apply character limit (Threads has a character limit)
-        $max_length = 500; // Threads character limit
-        if (strlen($post_content) > $max_length) {
-            $post_content = substr($post_content, 0, $max_length - 3) . '...';
-        }
+        // Extract parameters
+        $title = $parameters['title'] ?? '';
+        $content = $parameters['content'] ?? '';
+        $image_url = $parameters['image_url'] ?? null;
+        
+        // Get config from handler settings (500 character limit is hardcoded)
+        $include_images = $handler_config['include_images'] ?? true;
 
-        // Get authenticated access token using auth service (handles refresh automatically)
+        // Get authenticated access token
         $access_token = $this->auth->get_access_token();
         if (empty($access_token)) {
             return [
                 'success' => false,
-                'error' => __('Threads account not connected or access token expired. Please reconnect your Threads account in API Keys.', 'data-machine')
+                'error' => 'Threads authentication failed - no access token',
+                'tool_name' => 'threads_publish'
             ];
         }
 
@@ -93,75 +100,99 @@ class Threads {
         if (empty($page_id)) {
             return [
                 'success' => false,
-                'error' => __('Threads page ID not available. Please reconnect your Threads account.', 'data-machine')
+                'error' => 'Threads page ID not available',
+                'tool_name' => 'threads_publish'
             ];
         }
 
-        // Use page_id as the Threads user ID for API calls
-        $user_id_threads = $page_id;
+        // Format post content (Threads' character limit is 500)
+        $post_text = $title ? $title . "\n\n" . $content : $content;
+        $ellipsis = '...';
+        $max_length = 500;
+        
+        if (strlen($post_text) > $max_length) {
+            $post_text = substr($post_text, 0, $max_length - strlen($ellipsis)) . $ellipsis;
+        }
+
+        if (empty($post_text)) {
+            return [
+                'success' => false,
+                'error' => 'Formatted post content is empty',
+                'tool_name' => 'threads_publish'
+            ];
+        }
 
         try {
             // Prepare media container data
             $container_data = [
                 'media_type' => 'TEXT',
-                'text' => $post_content
+                'text' => $post_text
             ];
 
-            // Check if we have an image to include
-            $image_url = $input_metadata['image_source_url'] ?? null;
-            if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+            // Handle image if provided and enabled
+            if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
                 $container_data['media_type'] = 'IMAGE';
                 $container_data['image_url'] = $image_url;
             }
 
             // Step 1: Create media container
-            $container_response = $this->create_media_container($user_id_threads, $container_data, $access_token);
+            $container_response = $this->create_media_container($page_id, $container_data, $access_token);
             if (!$container_response['success']) {
+                $error_msg = 'Threads API error: Failed to create media container - ' . $container_response['error'];
+                do_action('dm_log', 'error', $error_msg);
+
                 return [
                     'success' => false,
-                    'error' => __('Failed to create Threads media container: ', 'data-machine') . $container_response['error']
+                    'error' => $error_msg,
+                    'tool_name' => 'threads_publish'
                 ];
             }
 
             $creation_id = $container_response['creation_id'];
             
             // Step 2: Publish the media container
-            $publish_response = $this->publish_media_container($user_id_threads, $creation_id, $access_token);
+            $publish_response = $this->publish_media_container($page_id, $creation_id, $access_token);
             if (!$publish_response['success']) {
+                $error_msg = 'Threads API error: Failed to publish - ' . $publish_response['error'];
+                do_action('dm_log', 'error', $error_msg);
+
                 return [
                     'success' => false,
-                    'error' => __('Failed to publish to Threads: ', 'data-machine') . $publish_response['error']
+                    'error' => $error_msg,
+                    'tool_name' => 'threads_publish'
                 ];
             }
 
             $media_id = $publish_response['media_id'];
-            // Build post URL using page_id since we don't have username in new architecture
             $post_url = "https://www.threads.net/t/{$media_id}";
-
-            do_action('dm_log', 'debug', 'Threads Output: Successfully published to Threads.', [
-                'media_id' => $media_id
+            
+            do_action('dm_log', 'debug', 'Threads Tool: Post created successfully', [
+                'media_id' => $media_id,
+                'post_url' => $post_url
             ]);
 
             return [
                 'success' => true,
-                'status' => 'success',
-                'message' => __('Successfully published to Threads!', 'data-machine'),
-                'threads_media_id' => $media_id,
-                'threads_url' => $post_url,
-                'content_published' => $post_content
+                'data' => [
+                    'media_id' => $media_id,
+                    'post_url' => $post_url,
+                    'content' => $post_text
+                ],
+                'tool_name' => 'threads_publish'
             ];
-
-        } catch (Exception $e) {
-            do_action('dm_log', 'error', 'Threads Output: Exception during publication.', [
-                'error' => $e->getMessage()
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Threads Tool: Exception during posting', [
+                'exception' => $e->getMessage()
             ]);
             
             return [
                 'success' => false,
-                'error' => __('Threads publishing failed: ', 'data-machine') . $e->getMessage()
+                'error' => $e->getMessage(),
+                'tool_name' => 'threads_publish'
             ];
         }
     }
+
 
 
     /**

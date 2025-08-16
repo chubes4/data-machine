@@ -107,6 +107,9 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     // Start with base tool
     $tool = dm_get_wordpress_base_tool();
     
+    // Store handler configuration in tool definition for access during execution
+    $tool['handler_config'] = $handler_config;
+    
     // Input validation
     if (!is_array($handler_config)) {
         do_action('dm_log', 'error', 'WordPress Tool: Invalid handler config type', [

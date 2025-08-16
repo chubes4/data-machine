@@ -144,20 +144,58 @@
         },
         
         /**
-         * Get actual flow ID for flow operations
+         * Get actual flow ID using filter-based data access
          */
         getActualFlowId: function(pipelineId) {
-            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            const $firstFlowCard = $pipelineCard.find('.dm-flow-instance-card').first();
-            return $firstFlowCard.data('flow-id');
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: dmPipelineBuilder.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_get_flow_data',
+                        pipeline_id: pipelineId,
+                        nonce: dmPipelineBuilder.dm_ajax_nonce
+                    },
+                    success: (response) => {
+                        if (response.success && response.data.first_flow_id) {
+                            resolve(response.data.first_flow_id);
+                        } else {
+                            reject('No flow found for pipeline');
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        reject('AJAX error: ' + error);
+                    }
+                });
+            });
         },
         
         /**
-         * Update step count for pipeline
+         * Update step count using filter-based data access
          */
         updateStepCount: function($pipelineCard) {
-            const stepCount = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
-            $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
+            const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
+            
+            if (pipelineId > 0) {
+                $.ajax({
+                    url: dmPipelineBuilder.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_get_pipeline_data',
+                        pipeline_id: pipelineId,
+                        nonce: dmPipelineBuilder.dm_ajax_nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            const stepCount = response.data.step_count || 0;
+                            $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        console.error('Failed to update step count:', error);
+                    }
+                });
+            }
         },
         
         /**
@@ -271,6 +309,7 @@
                                                 },
                                                 flow_config: flowResponse.data.flow_config,
                                                 flow_id: flow_id,
+                                                pipeline_id: pipeline_id,
                                                 is_first_step: isFirstStep
                                             }).then((updatedStepHtml) => {
                                                 // Replace the existing step container with updated version

@@ -184,15 +184,15 @@ class WordPressSettings {
         // Sanitize local WordPress settings
         $sanitized = self::sanitize_local_settings($raw_settings);
 
-        // Sanitize common fields - require explicit values
-        if (!isset($raw_settings['post_date_source'])) {
-            throw new \Exception(esc_html__('WordPress post_date_source setting is required.', 'data-machine'));
-        }
-        
+        // Sanitize common fields - provide defaults for missing values
         $valid_date_sources = ['current_date', 'source_date'];
-        $date_source = sanitize_text_field($raw_settings['post_date_source']);
+        $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
         if (!in_array($date_source, $valid_date_sources)) {
-            throw new \Exception(esc_html__('Invalid post date source parameter provided in settings.', 'data-machine'));
+            do_action('dm_log', 'error', 'WordPress Settings: Invalid post_date_source parameter provided', [
+                'provided_value' => $date_source,
+                'valid_options' => $valid_date_sources
+            ]);
+            $date_source = 'current_date'; // Fall back to default
         }
         $sanitized['post_date_source'] = $date_source;
 

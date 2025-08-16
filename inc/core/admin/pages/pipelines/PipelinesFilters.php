@@ -140,12 +140,10 @@ function dm_register_pipelines_admin_page_filters() {
                                     'threads' => wp_create_nonce('dm_threads_oauth_init_nonce')
                                 ],
                                 'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
-                                'test_connection_nonce' => wp_create_nonce('dm_test_connection'),
                                 'get_files_nonce' => wp_create_nonce('dm_get_handler_files'),
                                 'strings' => [
                                     'connecting' => __('Connecting...', 'data-machine'),
                                     'disconnecting' => __('Disconnecting...', 'data-machine'),
-                                    'testing' => __('Testing...', 'data-machine'),
                                     'saving' => __('Saving...', 'data-machine'),
                                     'confirmDisconnect' => __('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.', 'data-machine')
                                 ]
@@ -206,6 +204,12 @@ function dm_register_pipelines_admin_page_filters() {
     
     // Handler settings AJAX endpoint - handles "Add Handler to Flow" form submissions
     add_action('wp_ajax_dm_save_handler_settings', fn() => do_action('dm_ajax_route', 'dm_save_handler_settings', 'modal'));
+    
+    // Account disconnection AJAX endpoint - handles disconnect button clicks
+    add_action('wp_ajax_dm_disconnect_account', fn() => do_action('dm_ajax_route', 'dm_disconnect_account', 'modal'));
+    
+    // OAuth status check AJAX endpoint - handles authentication status polling
+    add_action('wp_ajax_dm_check_oauth_status', fn() => do_action('dm_ajax_route', 'dm_check_oauth_status', 'modal'));
     
     // Auth configuration AJAX endpoint - handles auth config form submissions
     add_action('wp_ajax_dm_save_auth_config', function() {
@@ -296,6 +300,17 @@ function dm_register_pipelines_admin_page_filters() {
         $modals['handler-settings'] = [
             'dynamic_template' => true, // Flag for dynamic template resolution
             'title' => __('Handler Settings', 'data-machine')
+        ];
+        
+        // OAuth result modals (removed oauth-loading as it's unnecessary)
+        $modals['oauth-success'] = [
+            'template' => 'modal/oauth-success',
+            'title' => __('Connection Successful', 'data-machine')
+        ];
+        
+        $modals['oauth-error'] = [
+            'template' => 'modal/oauth-error',
+            'title' => __('Connection Failed', 'data-machine')
         ];
         
         return $modals;

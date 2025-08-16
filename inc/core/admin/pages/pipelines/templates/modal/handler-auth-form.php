@@ -14,12 +14,27 @@ if (!defined('WPINC')) {
     die;
 }
 
+// Extract context data consistently with template system
+$handler_slug = $context['handler_slug'] ?? ($handler_slug ?? null);
+$step_type = $context['step_type'] ?? ($step_type ?? null);
+$flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
+$pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
+
 $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
 
 // Authentication discovery via pure discovery mode
 $all_auth = apply_filters('dm_auth_providers', []);
 $auth_instance = $all_auth[$handler_slug] ?? null;
 $has_auth = ($auth_instance !== null);
+
+// Prepare global context data for navigation buttons
+$context_data = [
+    'handler_slug' => $handler_slug,
+    'step_type' => $step_type ?? '',
+    'flow_step_id' => $flow_step_id ?? '',
+    'pipeline_id' => $pipeline_id ?? ''
+];
+$context_json = htmlspecialchars(json_encode($context_data), ENT_QUOTES, 'UTF-8');
 
 if (!$has_auth) {
     ?>
@@ -39,9 +54,12 @@ if (!$has_auth) {
                 $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
             }
             ?>
+            <?php
+            // Use global context data already prepared above
+            ?>
             <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
+                    data-context='<?php echo $context_json; ?>'>
                 <?php esc_html_e('Back to Settings', 'data-machine'); ?>
             </button>
         </div>
@@ -157,17 +175,22 @@ $current_config = $is_configured ? apply_filters('dm_oauth', [], 'get_config', $
         <!-- Authentication Actions -->
         <div class="dm-auth-actions">
             <?php if ($is_authenticated): ?>
-                <button type="button" class="button button-secondary dm-test-connection" 
-                        data-handler="<?php echo esc_attr($handler_slug); ?>">
-                    <?php esc_html_e('Test Connection', 'data-machine'); ?>
-                </button>
                 <button type="button" class="button button-secondary dm-disconnect-account" 
                         data-handler="<?php echo esc_attr($handler_slug); ?>">
                     <?php esc_html_e('Disconnect', 'data-machine'); ?>
                 </button>
             <?php else: ?>
-                <button type="button" class="button button-primary dm-connect-account" 
+                <?php
+                // Generate OAuth URL for direct window opening
+                $oauth_nonces = apply_filters('dm_get_oauth_nonces', []);
+                $oauth_nonce = $oauth_nonces[$handler_slug] ?? wp_create_nonce('dm_' . $handler_slug . '_oauth_init_nonce');
+                
+                $base_url = admin_url('admin-post.php');
+                $oauth_url = $base_url . '?action=dm_' . $handler_slug . '_oauth_init&_wpnonce=' . $oauth_nonce . '&modal_context=1';
+                ?>
+                <button type="button" class="button button-primary dm-connect-oauth" 
                         data-handler="<?php echo esc_attr($handler_slug); ?>"
+                        data-oauth-url="<?php echo esc_attr($oauth_url); ?>"
                         <?php if (!$is_configured): ?>disabled title="<?php esc_attr_e('Configure API credentials first', 'data-machine'); ?>"<?php endif; ?>>
                     <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
                 </button>
@@ -202,7 +225,7 @@ $current_config = $is_configured ? apply_filters('dm_oauth', [], 'get_config', $
         ?>
         <button type="button" class="button button-secondary dm-modal-content" 
                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
+                data-context='<?php echo $context_json; ?>'>
             <?php esc_html_e('Back to Settings', 'data-machine'); ?>
         </button>
     </div>

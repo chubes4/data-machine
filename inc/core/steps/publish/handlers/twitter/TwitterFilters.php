@@ -59,7 +59,109 @@ function dm_register_twitter_filters() {
         return $directives;
     });
     
+    // Twitter tool registration with AI HTTP Client library
+    add_filter('ai_tools', function($tools) {
+        $tools['twitter_publish'] = dm_get_twitter_tool();
+        return $tools;
+    });
+
+    // Dynamic tool generation based on current configuration
+    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+        if ($handler_slug === 'twitter') {
+            return dm_get_twitter_tool($handler_config);
+        }
+        return $tool;
+    }, 10, 3);
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
+}
+
+/**
+ * Get Twitter tool definition with dynamic parameters based on configuration.
+ *
+ * @param array $handler_config Optional handler configuration for dynamic parameters.
+ * @return array Twitter tool configuration.
+ */
+function dm_get_twitter_tool(array $handler_config = []): array {
+    // Debug logging for tool generation
+    if (!empty($handler_config)) {
+        do_action('dm_log', 'debug', 'Twitter Tool: Generating with configuration', [
+            'handler_config_keys' => array_keys($handler_config),
+            'handler_config_values' => $handler_config
+        ]);
+    }
+    
+    // Base tool definition
+    $tool = [
+        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Twitter\\Twitter',
+        'method' => 'handle_tool_call',
+        'handler' => 'twitter',
+        'description' => 'Post content to Twitter (280 character limit)',
+        'parameters' => [
+            'content' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'Tweet content (will be formatted and truncated if needed)'
+            ],
+            'title' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Optional title to prepend to content'
+            ]
+        ]
+    ];
+    
+    // Store handler configuration for execution time
+    if (!empty($handler_config)) {
+        $tool['handler_config'] = $handler_config;
+    }
+    
+    // Get configuration values with defaults
+    $include_source = $handler_config['twitter_include_source'] ?? true;
+    $enable_images = $handler_config['twitter_enable_images'] ?? true;
+    $url_as_reply = $handler_config['twitter_url_as_reply'] ?? false;
+    
+    // Add conditional parameters based on configuration
+    if ($include_source) {
+        $description = $url_as_reply ? 'Optional source URL to post as reply tweet' : 'Optional source URL to append to tweet';
+        $tool['parameters']['source_url'] = [
+            'type' => 'string',
+            'required' => false,
+            'description' => $description
+        ];
+    }
+    
+    if ($enable_images) {
+        $tool['parameters']['image_url'] = [
+            'type' => 'string',
+            'required' => false,
+            'description' => 'Optional image URL to attach to tweet'
+        ];
+    }
+    
+    // Update description based on enabled features
+    $description_parts = ['Post content to Twitter (280 character limit)'];
+    if ($include_source) {
+        if ($url_as_reply) {
+            $description_parts[] = 'source URLs will be posted as reply tweets';
+        } else {
+            $description_parts[] = 'source URLs will be appended';
+        }
+    }
+    if ($enable_images) {
+        $description_parts[] = 'images will be uploaded if provided';
+    }
+    $tool['description'] = implode(', ', $description_parts);
+    
+    do_action('dm_log', 'debug', 'Twitter Tool: Generation complete', [
+        'parameter_count' => count($tool['parameters']),
+        'parameter_names' => array_keys($tool['parameters']),
+        'include_source' => $include_source,
+        'enable_images' => $enable_images,
+        'url_as_reply' => $url_as_reply
+    ]);
+    
+    return $tool;
 }
 
 // Auto-register when file loads - achieving complete self-containment

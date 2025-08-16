@@ -66,6 +66,19 @@ class PublishStep {
             $handler = $handler_data['handler_slug'];
             $handler_settings = $handler_data['settings'] ?? [];
 
+            // Check if AI already executed the tool for this handler
+            $tool_result_entry = $this->find_tool_result_for_handler($data, $handler);
+            if ($tool_result_entry) {
+                do_action('dm_log', 'debug', 'Publish Step: Tool already executed by AI step', [
+                    'flow_step_id' => $flow_step_id,
+                    'handler' => $handler,
+                    'tool_name' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
+                ]);
+                
+                // Create success entry from tool result and return
+                return $this->create_publish_entry_from_tool_result($tool_result_entry, $data, $handler, $flow_step_id);
+            }
+
             // Publish steps use latest data entry (first in array)
             $latest_data = $data[0] ?? null;
             if (!$latest_data) {
@@ -226,6 +239,70 @@ class PublishStep {
 
     // PublishStep receives cumulative data packet array from engine via $data parameter
 
+    /**
+     * Find tool_result entry for the specified handler in the data packet.
+     * 
+     * @param array $data Data packet array
+     * @param string $handler Handler slug to look for
+     * @return array|null Tool result entry or null if not found
+     */
+    private function find_tool_result_for_handler(array $data, string $handler): ?array {
+        foreach ($data as $entry) {
+            if (($entry['type'] ?? '') === 'tool_result') {
+                $tool_name = $entry['metadata']['tool_name'] ?? '';
+                // Match tool name to handler (e.g., 'wordpress_publish' matches 'wordpress_publish' handler)
+                if ($tool_name === $handler) {
+                    return $entry;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Create publish entry from successful tool result.
+     * 
+     * @param array $tool_result_entry The tool result entry from AI step
+     * @param array $data Current data packet
+     * @param string $handler Handler slug
+     * @param string $flow_step_id Flow step ID
+     * @return array Updated data packet with publish entry
+     */
+    private function create_publish_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
+        $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
+        
+        // Create publish data entry for the data packet array
+        $publish_entry = [
+            'type' => 'publish',
+            'handler' => $handler,
+            'content' => [
+                'title' => 'Publish Complete (via AI Tool)',
+                'body' => json_encode($tool_result_data, JSON_PRETTY_PRINT)
+            ],
+            'metadata' => [
+                'handler_used' => $handler,
+                'publish_success' => true,
+                'executed_via' => 'ai_tool_call',
+                'flow_step_id' => $flow_step_id,
+                'source_type' => $tool_result_entry['metadata']['source_type'] ?? 'unknown',
+                'tool_execution_data' => $tool_result_data
+            ],
+            'result' => $tool_result_data,
+            'timestamp' => time()
+        ];
+        
+        // Add publish entry to front of data packet array (newest first)
+        array_unshift($data, $publish_entry);
+        
+        do_action('dm_log', 'debug', 'Publish Step: Completed successfully via AI tool call', [
+            'flow_step_id' => $flow_step_id,
+            'handler' => $handler,
+            'tool_result_keys' => array_keys($tool_result_data),
+            'total_items_in_packet' => count($data)
+        ]);
+
+        return $data;
+    }
 
 }
 

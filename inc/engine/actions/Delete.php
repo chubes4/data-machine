@@ -363,6 +363,14 @@ class Delete {
                 return;
         }
         
+        // Debug logging before deletion attempt
+        do_action('dm_log', 'debug', 'Attempting processed items deletion', [
+            'target_id' => $target_id,
+            'context' => $context,
+            'criteria' => $criteria,
+            'delete_by' => $context['delete_by'] ?? 'unknown'
+        ]);
+        
         $result = $processed_items->delete_processed_items($criteria);
         
         // Always log the result for debugging (both AJAX and non-AJAX contexts)
@@ -420,6 +428,14 @@ class Delete {
             } else {
                 $job_ids_to_delete = $wpdb->get_col("SELECT job_id FROM {$jobs_table}");
             }
+            
+            // Debug logging for job IDs collection
+            do_action('dm_log', 'debug', 'Collected job IDs for processed items cleanup', [
+                'clear_type' => $clear_type,
+                'job_ids_count' => count($job_ids_to_delete),
+                'job_ids' => $job_ids_to_delete,
+                'query' => $clear_type === 'failed' ? "SELECT job_id FROM {$jobs_table} WHERE status = 'failed'" : "SELECT job_id FROM {$jobs_table}"
+            ]);
         }
         
         // Build deletion criteria

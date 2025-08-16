@@ -127,7 +127,8 @@ function ai_http_execute_tool($tool_name, $parameters = []) {
         if (method_exists($tool_class, $method)) {
             try {
                 $tool_instance = new $tool_class();
-                $result = call_user_func([$tool_instance, $method], $parameters);
+                // Pass both parameters and tool definition (for handler_config access)
+                $result = call_user_func([$tool_instance, $method], $parameters, $tool_def);
                 
                 return [
                     'success' => true,

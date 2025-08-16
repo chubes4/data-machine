@@ -56,6 +56,7 @@ class FacebookSettings {
                 'options' => [
                     'append' => __('Append to content', 'data-machine'),
                     'replace' => __('Replace content', 'data-machine'),
+                    'comment' => __('Post as comment', 'data-machine'),
                     'none' => __('No links', 'data-machine')
                 ],
             ]
@@ -74,8 +75,12 @@ class FacebookSettings {
         $sanitized['include_images'] = isset($raw_settings['include_images']) && $raw_settings['include_images'] == '1';
         $sanitized['include_videos'] = isset($raw_settings['include_videos']) && $raw_settings['include_videos'] == '1';
         $link_handling = $raw_settings['link_handling'] ?? 'append';
-        if (!in_array($link_handling, ['append', 'replace', 'none'])) {
-            throw new Exception(esc_html__('Invalid link handling parameter provided in settings.', 'data-machine'));
+        if (!in_array($link_handling, ['append', 'replace', 'comment', 'none'])) {
+            do_action('dm_log', 'error', 'Facebook Settings: Invalid link_handling parameter provided', [
+                'provided_value' => $link_handling,
+                'valid_options' => ['append', 'replace', 'comment', 'none']
+            ]);
+            $link_handling = 'append'; // Fall back to default
         }
         $sanitized['link_handling'] = $link_handling;
         return $sanitized;

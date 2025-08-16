@@ -44,116 +44,147 @@ class GoogleSheets {
     }
 
     /**
-     * Handles appending the AI output to Google Sheets.
+     * Handle AI tool call for Google Sheets publishing.
      *
-     * @param object $data Universal DataPacket JSON object with all content and metadata.
-     * @return array Result array on success or failure.
+     * @param array $parameters Structured parameters from AI tool call.
+     * @param array $tool_def Tool definition including handler configuration.
+     * @return array Tool execution result.
      */
-    public function handle_publish($data): array {
-        // Access structured content directly from DataPacket (no parsing needed)
-        $title = $data->content->title ?? '';
-        $content = $data->content->body ?? '';
-        
-        // Get publish config from DataPacket (set by PublishStep)
-        $publish_config = $data->publish_config ?? [];
-        
-        // Extract metadata from DataPacket
-        $input_metadata = [
-            'source_url' => $data->metadata->source_url ?? null,
-            'source_type' => $data->metadata->source_type ?? 'unknown',
-            'created_at' => $data->metadata->created_at ?? current_time('c'),
-            'job_id' => $data->metadata->job_id ?? null
-        ];
-        
-        do_action('dm_log', 'debug', 'Starting Google Sheets output handling.');
-        
-        // 1. Get configuration - publish_config is the handler_settings directly
-        $spreadsheet_id = $publish_config['googlesheets_spreadsheet_id'] ?? '';
-        $worksheet_name = $publish_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
-        $column_mapping = $publish_config['googlesheets_column_mapping'] ?? $this->get_default_column_mapping();
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        do_action('dm_log', 'debug', 'Google Sheets Tool: Handling tool call', [
+            'parameters' => $parameters,
+            'parameter_keys' => array_keys($parameters),
+            'has_handler_config' => !empty($tool_def['handler_config']),
+            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+        ]);
 
-        // 2. Validate required configuration
+        // Validate required parameters
+        if (empty($parameters['content'])) {
+            $error_msg = 'Google Sheets tool call missing required content parameter';
+            do_action('dm_log', 'error', $error_msg, [
+                'provided_parameters' => array_keys($parameters),
+                'required_parameters' => ['content']
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'googlesheets_append'
+            ];
+        }
+
+        // Get handler configuration from tool definition
+        $handler_config = $tool_def['handler_config'] ?? [];
+        
+        do_action('dm_log', 'debug', 'Google Sheets Tool: Using handler configuration', [
+            'spreadsheet_id' => !empty($handler_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing',
+            'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'fallback'
+        ]);
+
+        // Extract parameters
+        $title = $parameters['title'] ?? '';
+        $content = $parameters['content'] ?? '';
+        $source_url = $parameters['source_url'] ?? null;
+        $source_type = $parameters['source_type'] ?? 'ai_tool';
+        $job_id = $parameters['job_id'] ?? null;
+        
+        // Get config from handler settings
+        $spreadsheet_id = $handler_config['googlesheets_spreadsheet_id'] ?? '';
+        $worksheet_name = $handler_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
+        $column_mapping = $handler_config['googlesheets_column_mapping'] ?? $this->get_default_column_mapping();
+
+        // Validate spreadsheet ID
         if (empty($spreadsheet_id)) {
-            do_action('dm_log', 'error', 'Google Sheets Output: Spreadsheet ID is required.');
             return [
                 'success' => false,
-                'error' => __('Google Sheets spreadsheet ID is required in configuration.', 'data-machine')
+                'error' => 'Google Sheets spreadsheet ID is required',
+                'tool_name' => 'googlesheets_append'
             ];
         }
 
-        // 3. Get authenticated Google Sheets service
+        // Get authenticated service
         $sheets_service = $this->auth->get_service();
-
-        // 4. Handle authentication errors
         if (is_wp_error($sheets_service)) {
-             do_action('dm_log', 'error', 'Google Sheets Output Error: Failed to get authenticated service.', [
-                'error_code' => $sheets_service->get_error_code(),
-                'error_message' => $sheets_service->get_error_message(),
-             ]);
-             return [
-                 'success' => false,
-                 'error' => $sheets_service->get_error_message()
-             ];
-        }
-
-        // 5. Validate content from DataPacket
-        if (empty($title) && empty($content)) {
-            do_action('dm_log', 'warning', 'Google Sheets Output: DataPacket content is empty.');
+            $error_msg = 'Google Sheets authentication failed: ' . $sheets_service->get_error_message();
+            do_action('dm_log', 'error', $error_msg, [
+                'error_code' => $sheets_service->get_error_code()
+            ]);
+            
             return [
                 'success' => false,
-                'error' => __('Cannot append empty content to Google Sheets.', 'data-machine')
+                'error' => $error_msg,
+                'tool_name' => 'googlesheets_append'
             ];
         }
 
-        // 6. Prepare row data based on column mapping
-        $row_data = $this->prepare_row_data($title, $content, $input_metadata, $column_mapping);
-
-        if (empty($row_data)) {
-            do_action('dm_log', 'error', 'Google Sheets Output: Failed to prepare row data.');
-            return [
-                'success' => false,
-                'error' => __('Failed to prepare data for Google Sheets.', 'data-machine')
-            ];
-        }
-
-        // 7. Append data to Google Sheets
         try {
+            // Prepare metadata for row data
+            $metadata = [
+                'source_url' => $source_url,
+                'source_type' => $source_type,
+                'created_at' => current_time('c'),
+                'job_id' => $job_id
+            ];
+
+            // Prepare row data based on column mapping
+            $row_data = $this->prepare_row_data($title, $content, $metadata, $column_mapping);
+
+            if (empty($row_data)) {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to prepare data for Google Sheets',
+                    'tool_name' => 'googlesheets_append'
+                ];
+            }
+
+            // Append data to Google Sheets
             $result = $this->append_to_sheet($sheets_service, $spreadsheet_id, $worksheet_name, $row_data);
 
             if (is_wp_error($result)) {
-                do_action('dm_log', 'error', 'Failed to append data to Google Sheets.', [
-                    'spreadsheet_id' => $spreadsheet_id,
+                $error_msg = 'Google Sheets API error: ' . $result->get_error_message();
+                do_action('dm_log', 'error', $error_msg, [
                     'error_code' => $result->get_error_code(),
-                    'error_message' => $result->get_error_message()
+                    'spreadsheet_id' => $spreadsheet_id
                 ]);
+
                 return [
                     'success' => false,
-                    'error' => $result->get_error_message()
+                    'error' => $error_msg,
+                    'tool_name' => 'googlesheets_append'
                 ];
             }
 
             $sheet_url = "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}";
-            do_action('dm_log', 'debug', 'Successfully appended data to Google Sheets.', [
+            
+            do_action('dm_log', 'debug', 'Google Sheets Tool: Data appended successfully', [
                 'spreadsheet_id' => $spreadsheet_id,
-                'worksheet' => $worksheet_name
+                'worksheet_name' => $worksheet_name,
+                'sheet_url' => $sheet_url
             ]);
 
             return [
                 'success' => true,
-                'status' => 'success',
-                'output_url' => $sheet_url,
-                'message' => sprintf(__('Successfully added data to Google Sheets: %s', 'data-machine'), $worksheet_name),
-                'raw_response' => $result
+                'data' => [
+                    'spreadsheet_id' => $spreadsheet_id,
+                    'worksheet_name' => $worksheet_name,
+                    'sheet_url' => $sheet_url,
+                    'row_data' => $row_data
+                ],
+                'tool_name' => 'googlesheets_append'
             ];
-
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Google Sheets Output Exception: ' . $e->getMessage());
+            do_action('dm_log', 'error', 'Google Sheets Tool: Exception during append operation', [
+                'exception' => $e->getMessage()
+            ]);
+            
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'tool_name' => 'googlesheets_append'
             ];
         }
     }
+
 
     /**
      * Returns the user-friendly label for this publish handler.

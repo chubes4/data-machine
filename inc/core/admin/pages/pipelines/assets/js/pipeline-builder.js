@@ -29,8 +29,6 @@
             // Direct data attribute handler for step selection
             $(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
             
-            // Pipeline name input change handler for validation
-            $(document).on('input', '.dm-pipeline-title-input', this.handlePipelineNameChange.bind(this));
             
             // Add New Pipeline button click handler
             $(document).on('click', '.dm-add-new-pipeline-btn', this.handleAddNewPipelineClick.bind(this));
@@ -112,8 +110,6 @@
                     FlowBuilder.updateFlowSteps(stepData, pipelineId);
                 }
                 
-                // Update flow button validation after adding step
-                this.updateFlowButtonState();
             }).catch((error) => {
                 console.error('Failed to render pipeline step template:', error);
                 alert('Error rendering step template');
@@ -122,43 +118,30 @@
 
 
         /**
-         * Collect pipeline data from the UI
+         * Get pipeline data using filters (reliable thanks to dm_auto_save)
          */
-        collectPipelineData: function($pipelineCard) {
-            const pipelineName = $pipelineCard.find('.dm-pipeline-title-input').val() || '';
-            const stepConfiguration = [];
-            
-            // Collect step data from pipeline step containers (not flow steps)
-            $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
-                const $step = $(this);
-                const stepType = $step.data('step-type');
-                const pipelineStepId = $step.data('pipeline-step-id'); // Read pipeline_step_id from DOM
-                const stepLabel = $step.find('.dm-step-title').text().trim(); // Read label from DOM
-                
-                if (stepType) {
-                    const stepData = {
-                        step_type: stepType,
-                        execution_order: index
-                    };
-                    
-                    // Include pipeline_step_id if available (required for existing steps)
-                    if (pipelineStepId) {
-                        stepData.pipeline_step_id = pipelineStepId;
+        getPipelineData: function(pipelineId) {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: dmPipelineBuilder.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_get_pipeline_data',
+                        pipeline_id: pipelineId,
+                        nonce: dmPipelineBuilder.dm_ajax_nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            resolve(response.data);
+                        } else {
+                            reject(response.data?.message || 'Failed to get pipeline data');
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        reject('AJAX error: ' + error);
                     }
-                    
-                    // Include label if available
-                    if (stepLabel) {
-                        stepData.label = stepLabel;
-                    }
-                    
-                    stepConfiguration.push(stepData);
-                }
+                });
             });
-            
-            return {
-                pipeline_name: pipelineName.trim(),
-                pipeline_config: stepConfiguration
-            };
         },
 
 
@@ -184,51 +167,7 @@
         },
 
 
-        /**
-         * Handle pipeline name input change for validation
-         */
-        handlePipelineNameChange: function(e) {
-            const $input = $(e.currentTarget);
-            const $pipelineCard = $input.closest('.dm-pipeline-card');
-            const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
-            
-            // Add visual feedback
-            const pipelineName = $input.val().trim();
-            if (pipelineName.length > 0) {
-                $input.removeClass('dm-invalid');
-            } else {
-                $input.addClass('dm-invalid');
-            }
-        },
 
-        /**
-         * Update flow button state based on pipeline validation
-         */
-        updateFlowButtonState: function() {
-            $('.dm-pipeline-card').each(function() {
-                const $pipelineCard = $(this);
-                const $nameInput = $pipelineCard.find('.dm-pipeline-title-input');
-                const $flowButton = $pipelineCard.find('.dm-add-flow-btn');
-                
-                // Get current values
-                const pipelineName = $nameInput.val() ? $nameInput.val().trim() : '';
-                const stepCount = $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').length;
-                const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
-                
-                // Enable/disable flow button based on validation (name + steps + valid pipeline ID)
-                const canAddFlows = pipelineName.length > 0 && stepCount > 0 && pipelineId > 0;
-                
-                if ($flowButton.length > 0) {
-                    $flowButton.prop('disabled', !canAddFlows);
-                    
-                    if (canAddFlows) {
-                        $flowButton.attr('title', '');
-                    } else {
-                        $flowButton.attr('title', 'Pipeline needs name and steps to add flows');
-                    }
-                }
-            });
-        },
 
         /**
          * Handle Add New Pipeline button click - create draft pipeline and render card

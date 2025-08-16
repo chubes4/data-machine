@@ -613,6 +613,183 @@ class PipelineModalAjax
     }
 
     /**
+     * Get complete pipeline data using filters
+     * Security handled by dm_ajax_route system
+     */
+    public function handle_get_pipeline_data()
+    {
+        $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+
+        if (empty($pipeline_id)) {
+            wp_send_json_error(['message' => __('Pipeline ID is required.', 'data-machine')]);
+            return;
+        }
+
+        // Get pipeline data using filters - reliable thanks to dm_auto_save
+        $pipeline_data = apply_filters('dm_get_pipelines', [], $pipeline_id);
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        $pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+
+        wp_send_json_success([
+            'pipeline_id' => $pipeline_id,
+            'pipeline_data' => $pipeline_data,
+            'pipeline_steps' => $pipeline_steps ?? [],
+            'pipeline_flows' => $pipeline_flows ?? [],
+            'step_count' => count($pipeline_steps ?? [])
+        ]);
+    }
+
+    /**
+     * Get flow data for validation and operations
+     * Security handled by dm_ajax_route system
+     */
+    public function handle_get_flow_data()
+    {
+        $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+
+        if (empty($pipeline_id)) {
+            wp_send_json_error(['message' => __('Pipeline ID is required.', 'data-machine')]);
+            return;
+        }
+
+        // Get flow data using filters
+        $pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+        $first_flow_id = null;
+        
+        if (!empty($pipeline_flows)) {
+            $first_flow_id = $pipeline_flows[0]['flow_id'] ?? null;
+        }
+
+        wp_send_json_success([
+            'pipeline_id' => $pipeline_id,
+            'flows' => $pipeline_flows ?? [],
+            'flow_count' => count($pipeline_flows ?? []),
+            'first_flow_id' => $first_flow_id
+        ]);
+    }
+
+    /**
+     * Handle account disconnection for OAuth handlers
+     * Security handled by dm_ajax_route system
+     */
+    public function handle_disconnect_account()
+    {
+        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
+        
+        if (empty($handler_slug)) {
+            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
+        }
+
+        // Validate handler exists and supports authentication
+        $all_auth = apply_filters('dm_auth_providers', []);
+        $auth_instance = $all_auth[$handler_slug] ?? null;
+        
+        if (!$auth_instance) {
+            wp_send_json_error(['message' => __('Authentication provider not found', 'data-machine')]);
+        }
+
+        // Clear OAuth credentials using dm_oauth filter
+        $cleared = apply_filters('dm_oauth', false, 'clear', $handler_slug);
+        
+        if ($cleared) {
+            do_action('dm_log', 'debug', 'Account disconnected successfully', [
+                'handler_slug' => $handler_slug
+            ]);
+            
+            wp_send_json_success([
+                'message' => sprintf(__('%s account disconnected successfully', 'data-machine'), ucfirst($handler_slug))
+            ]);
+        } else {
+            do_action('dm_log', 'error', 'Failed to disconnect account', [
+                'handler_slug' => $handler_slug
+            ]);
+            
+            wp_send_json_error(['message' => __('Failed to disconnect account', 'data-machine')]);
+        }
+    }
+
+    /**
+     * Check OAuth authentication status for polling
+     * Security handled by dm_ajax_route system
+     */
+    public function handle_check_oauth_status()
+    {
+        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
+        
+        if (empty($handler_slug)) {
+            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
+        }
+
+        // Get auth provider instance
+        $all_auth = apply_filters('dm_auth_providers', []);
+        $auth_instance = $all_auth[$handler_slug] ?? null;
+        
+        if (!$auth_instance) {
+            wp_send_json_error(['message' => __('Authentication provider not found', 'data-machine')]);
+        }
+
+        // Check authentication status
+        $is_authenticated = $auth_instance->is_authenticated();
+        
+        if ($is_authenticated) {
+            // Get account details for success response
+            $account_details = null;
+            if (method_exists($auth_instance, 'get_account_details')) {
+                $account_details = $auth_instance->get_account_details();
+            }
+            
+            wp_send_json_success([
+                'authenticated' => true,
+                'account_details' => $account_details,
+                'handler_slug' => $handler_slug
+            ]);
+        } else {
+            // Check for recent OAuth errors stored in transients
+            $error_transient = get_transient('dm_oauth_error_' . $handler_slug);
+            $success_transient = get_transient('dm_oauth_success_' . $handler_slug);
+            
+            if ($error_transient) {
+                // Clear the error transient since we're handling it
+                delete_transient('dm_oauth_error_' . $handler_slug);
+                
+                wp_send_json_success([
+                    'authenticated' => false,
+                    'error' => true,
+                    'error_code' => 'oauth_failed',
+                    'error_message' => $error_transient,
+                    'handler_slug' => $handler_slug
+                ]);
+            } elseif ($success_transient) {
+                // Clear the success transient and re-check auth status
+                delete_transient('dm_oauth_success_' . $handler_slug);
+                
+                // Force re-check authentication status as success transient might indicate completion
+                $is_authenticated = $auth_instance->is_authenticated();
+                
+                if ($is_authenticated) {
+                    $account_details = null;
+                    if (method_exists($auth_instance, 'get_account_details')) {
+                        $account_details = $auth_instance->get_account_details();
+                    }
+                    
+                    wp_send_json_success([
+                        'authenticated' => true,
+                        'account_details' => $account_details,
+                        'handler_slug' => $handler_slug
+                    ]);
+                }
+            }
+            
+            // Still not authenticated, continue polling
+            wp_send_json_success([
+                'authenticated' => false,
+                'error' => false,
+                'handler_slug' => $handler_slug
+            ]);
+        }
+    }
+
+    /**
      * Process handler settings from form data
      */
     private function process_handler_settings($handler_slug)

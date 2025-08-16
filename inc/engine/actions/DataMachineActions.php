@@ -88,18 +88,28 @@ require_once __DIR__ . '/Engine.php';
 function dm_register_core_actions() {
     
     // Central processed items marking hook - eliminates service discovery duplication across all handlers
-    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier) {
-        // Get job_id from Engine's global context
-        global $dm_current_job_id;
-        $job_id = $dm_current_job_id;
-        // Validate required job_id from Engine context
+    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id = null) {
+        // If job_id not provided as parameter, fall back to global (backwards compatibility)
+        if ($job_id === null) {
+            global $dm_current_job_id;
+            $job_id = $dm_current_job_id;
+            
+            // Log deprecated usage
+            do_action('dm_log', 'warning', 'dm_mark_item_processed called without job_id parameter - using deprecated global fallback', [
+                'flow_step_id' => $flow_step_id,
+                'source_type' => $source_type
+            ]);
+        }
+        
+        // Validate required job_id
         if (empty($job_id) || !is_numeric($job_id) || $job_id <= 0) {
-            do_action('dm_log', 'error', 'dm_mark_item_processed called without valid Engine job context', [
+            do_action('dm_log', 'error', 'dm_mark_item_processed called without valid job_id', [
                 'flow_step_id' => $flow_step_id,
                 'source_type' => $source_type,
                 'item_identifier' => substr($item_identifier, 0, 50) . '...',
                 'job_id' => $job_id,
-                'job_id_type' => gettype($job_id)
+                'job_id_type' => gettype($job_id),
+                'parameter_provided' => func_num_args() >= 4
             ]);
             return;
         }

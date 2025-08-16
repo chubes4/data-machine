@@ -55,29 +55,17 @@
             const $button = $(e.currentTarget);
             const contextData = $button.data('context');
             
-            // Different validation based on workflow phase
-            if (!contextData || !contextData.flow_step_id) {
+            if (!contextData?.flow_step_id) {
                 console.error('Invalid handler data in button context:', contextData);
                 return;
             }
             
-            // Phase 1: "Add Handler" button - only needs step info
+            // Add Handler button - let modal system handle it
             if (!contextData.handler_slug) {
-                if (!contextData.step_type) {
-                    console.error('Add Handler button requires step_type:', contextData);
-                    return;
-                }
-                // This is the "Add Handler" button - let modal system handle it
                 return;
             }
             
-            // Phase 2: "Add Handler Action" button - needs handler_slug after selection
-            if (!contextData.step_type) {
-                console.error('Add Handler Action button requires step_type:', contextData);
-                return;
-            }
-
-            // Add handler to the specific flow step
+            // Add Handler Action button - execute handler addition
             this.addHandlerToFlowStep(contextData);
         },
 
@@ -93,29 +81,10 @@
          * Add selected handler to flow step using direct AJAX
          */
         addHandlerToFlowStep: function(contextData) {
-            // Enhanced validation with detailed logging
-            
-            if (!contextData) {
-                console.error('No context data provided to addHandlerToFlowStep');
-                alert('Invalid handler context data');
-                return;
-            }
-            
-            if (!contextData.handler_slug) {
-                console.error('Missing handler_slug in context:', contextData);
-                alert('Handler type is required');
-                return;
-            }
-            
-            if (!contextData.step_type) {
-                console.error('Missing step_type in context:', contextData);
-                alert('Step type is required');
-                return;
-            }
-            
-            if (!contextData.flow_step_id) {
-                console.error('Missing flow_step_id in context:', contextData);
-                alert('Flow step ID is required');
+            // Simple validation - get it right the first time
+            if (!contextData?.handler_slug || !contextData?.step_type || !contextData?.flow_step_id) {
+                console.error('Missing required context data:', contextData);
+                alert('Missing required handler context data');
                 return;
             }
             
@@ -162,26 +131,35 @@
         },
 
         /**
-         * Update flow steps using identical template request pattern as pipeline steps
+         * Update flow steps using filter-based data access
          * Called by pipeline-builder when a step is added to the pipeline structure
          */
         updateFlowSteps: function(stepData, pipelineId) {
-            // Check if this is the first real flow step (only empty step container exists)
-            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-            const nonEmptyFlowSteps = $pipelineCard.find('.dm-flow-steps .dm-step-container:not(:has(.dm-step-card--empty))').length;
-            const isFirstRealFlowStep = nonEmptyFlowSteps === 0;
-            
-            // Get the actual Draft Flow ID from the first flow instance card in this pipeline
-            const $firstFlowCard = $pipelineCard.find('.dm-flow-instance-card').first();
-            const actualFlowId = $firstFlowCard.data('flow-id');
-            
-            if (!actualFlowId) {
-                console.error('No Draft Flow ID found for pipeline', pipelineId);
-                return;
-            }
-            
-            // Fetch actual flow config with retry mechanism to handle sync timing
-            this.fetchFlowConfigWithRetry(actualFlowId, stepData, pipelineId, isFirstRealFlowStep, 3);
+            // Get flow data using filters - reliable thanks to dm_auto_save
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_get_flow_data',
+                    pipeline_id: pipelineId,
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success && response.data.first_flow_id) {
+                        const flowId = response.data.first_flow_id;
+                        const isFirstStep = response.data.flow_count === 0 || 
+                                          (response.data.flows[0] && Object.keys(response.data.flows[0].flow_config || {}).length === 0);
+                        
+                        // Fetch flow config with reliable flow ID
+                        this.fetchFlowConfig(flowId, stepData, pipelineId, isFirstStep);
+                    } else {
+                        console.error('No flow found for pipeline', pipelineId);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('Failed to get flow data:', error);
+                }
+            });
         },
 
         /**
@@ -245,33 +223,35 @@
                 $noFlows.remove();
             }
 
-            // Collect pipeline steps from DOM (required by flow-instance-card template)
-            const pipelineSteps = [];
-            $pipelineCard.find('.dm-pipeline-steps .dm-step-container:not(:has(.dm-step-card--empty))').each(function(index) {
-                const $step = $(this);
-                const stepType = $step.data('step-type');
-                const stepId = $step.data('pipeline-step-id'); // Read actual pipeline_step_id from DOM
-                
-                if (stepType) {
-                    pipelineSteps.push({
-                        step_type: stepType,
-                        execution_order: index,
-                        step_config: {},
-                        is_empty: false,  // Required by step-card template
-                        pipeline_step_id: stepId   // Use actual pipeline_step_id from DOM data attribute
-                    });
+            // Get pipeline steps using filters instead of DOM parsing
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_get_pipeline_data',
+                    pipeline_id: pipelineId,
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        const pipelineSteps = response.data.pipeline_steps || [];
+                        
+                        // Request flow instance card template with filter-based pipeline steps
+                        PipelinesPage.requestTemplate('page/flow-instance-card', {
+                            flow: flowData.flow_data,
+                            pipeline_steps: pipelineSteps
+                        }).then((flowCardHtml) => {
+                            $flowsList.append(flowCardHtml);
+                        }).catch((error) => {
+                            console.error('Failed to render flow card template:', error);
+                        });
+                    } else {
+                        console.error('Failed to get pipeline steps for flow card:', response.data?.message);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('Failed to get pipeline data for flow card:', error);
                 }
-            });
-
-            // Request flow instance card template with required pipeline_steps parameter
-            PipelinesPage.requestTemplate('page/flow-instance-card', {
-                flow: flowData.flow_data,
-                pipeline_steps: pipelineSteps
-            }).then((flowCardHtml) => {
-                $flowsList.append(flowCardHtml);
-                
-            }).catch((error) => {
-                console.error('Failed to render flow card template:', error);
             });
         },
 
@@ -371,7 +351,7 @@
             
             if (!$flowStepContainer.length) {
                 console.error('Flow step container not found for flow_step_id:', flow_step_id);
-                throw new Error(`Flow step container not found for flow_step_id: ${flow_step_id}`);
+                return;
             }
 
             // Get updated flow configuration from database
@@ -399,23 +379,20 @@
                             },
                             flow_config: response.data.flow_config,
                             flow_id: flow_id,
+                            pipeline_id: $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id'),
                             is_first_step: isFirstStep
                         }).then((updatedStepHtml) => {
                             // Replace the existing step container with updated version
                             $flowStepContainer.replaceWith(updatedStepHtml);
-                            
                         }).catch((error) => {
                             console.error('Failed to render updated step card template:', error);
-                            throw new Error('Failed to render updated step card template: ' + error);
                         });
                     } else {
                         console.error('Failed to get updated flow configuration:', response.data?.message);
-                        throw new Error('Failed to get updated flow configuration: ' + (response.data?.message || 'Unknown error'));
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Failed to get flow configuration:', error);
-                    throw new Error('Failed to get flow configuration: ' + error);
                 }
             });
         },
@@ -483,10 +460,9 @@
 
 
         /**
-         * Fetch flow config with retry mechanism to handle sync timing issues
-         * This solves the bug where flow sync hasn't completed when template is requested
+         * Fetch flow config - simple, direct approach
          */
-        fetchFlowConfigWithRetry: function(flowId, stepData, pipelineId, isFirstStep, maxRetries, retryCount = 0) {
+        fetchFlowConfig: function(flowId, stepData, pipelineId, isFirstStep) {
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
@@ -499,20 +475,6 @@
                     if (response.success) {
                         const flowConfig = response.data.flow_config || {};
                         
-                        // Check if we have a flow step for this pipeline step
-                        const pipelineStepId = stepData.step_data?.pipeline_step_id;
-                        const hasMatchingFlowStep = Object.values(flowConfig).some(step => 
-                            step.pipeline_step_id === pipelineStepId
-                        );
-                        
-                        // If sync not complete and retries available, wait and retry
-                        if (!hasMatchingFlowStep && retryCount < maxRetries - 1) {
-                            setTimeout(() => {
-                                this.fetchFlowConfigWithRetry(flowId, stepData, pipelineId, isFirstStep, maxRetries, retryCount + 1);
-                            }, 300);
-                            return;
-                        }
-                        
                         const templateData = {
                             step: stepData.step_data,
                             flow_config: flowConfig,
@@ -521,7 +483,6 @@
                             is_first_step: isFirstStep
                         };
                         
-                        // Now use actual flow config for proper flow_step_id resolution
                         PipelinesPage.requestTemplate('page/flow-step-card', templateData).then((flowStepHtml) => {
                             PipelinesPage.addStepToInterface({
                                 html: flowStepHtml,
@@ -533,12 +494,10 @@
                         });
                     } else {
                         console.error('Failed to get flow config:', response.data);
-                        throw new Error('Failed to get flow config: ' + (response.data?.message || 'Unknown error'));
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('AJAX error fetching flow config:', error);
-                    throw new Error('AJAX error fetching flow config: ' + error);
                 }
             });
         },

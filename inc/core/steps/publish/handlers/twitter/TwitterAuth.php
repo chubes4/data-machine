@@ -142,8 +142,11 @@ class TwitterAuth {
             exit;
         }
 
-        // 4. Define Callback URL
+        // 4. Define Callback URL (preserve modal context if present)
         $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
+        if (isset($_GET['modal_context']) && $_GET['modal_context'] === '1') {
+            $callback_url .= '&modal_context=1';
+        }
 
         try {
             // 3. Instantiate TwitterOAuth
@@ -267,13 +270,34 @@ class TwitterAuth {
             apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
 
             // --- 5. Redirect on Success --- 
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=twitter'));
-            exit;
+            // Check if this is a modal context request
+            $modal_context = isset($_GET['modal_context']) && $_GET['modal_context'] === '1';
+            
+            if ($modal_context) {
+                // Modal context - show simple success page that closes window
+                $this->show_modal_oauth_result('success', 'twitter');
+                exit;
+            } else {
+                // Traditional context - redirect to pipelines page
+                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=twitter'));
+                exit;
+            }
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Twitter OAuth Exception during callback: ' . $e->getMessage());
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_callback_exception'));
-            exit;
+            
+            // Check if this is a modal context request
+            $modal_context = isset($_GET['modal_context']) && $_GET['modal_context'] === '1';
+            
+            if ($modal_context) {
+                // Modal context - show simple error page
+                $this->show_modal_oauth_result('error', 'twitter', 'callback_exception', $e->getMessage());
+                exit;
+            } else {
+                // Traditional context - redirect to pipelines page
+                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_callback_exception'));
+                exit;
+            }
         }
     }
 
@@ -299,6 +323,83 @@ class TwitterAuth {
      */
     public function remove_account(): bool {
         return apply_filters('dm_oauth', false, 'clear', 'twitter');
+    }
+
+    /**
+     * Show modal OAuth result page for popup window
+     * This page communicates completion to parent window and closes itself
+     */
+    private function show_modal_oauth_result($result, $handler_slug, $error_code = null, $error_message = null) {
+        // Set transients for the polling mechanism to pick up
+        if ($result === 'success') {
+            set_transient('dm_oauth_success_' . $handler_slug, 'Authentication completed successfully', 30);
+        } else {
+            $error_text = $error_message ?: sprintf('Authentication failed with error: %s', $error_code);
+            set_transient('dm_oauth_error_' . $handler_slug, $error_text, 30);
+        }
+
+        // Output simple HTML page that closes the popup
+        ?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title><?php echo esc_html(sprintf('%s Authentication %s', ucfirst($handler_slug), ucfirst($result))); ?></title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    text-align: center;
+                    padding: 40px 20px;
+                    background: #f8f9fa;
+                }
+                .result-container {
+                    max-width: 400px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 30px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                .icon {
+                    font-size: 48px;
+                    margin-bottom: 20px;
+                }
+                .success { color: #28a745; }
+                .error { color: #dc3545; }
+                h1 { margin: 0 0 15px 0; font-size: 24px; }
+                p { margin: 0 0 20px 0; color: #666; }
+                .closing { font-style: italic; color: #999; }
+            </style>
+        </head>
+        <body>
+            <div class="result-container">
+                <?php if ($result === 'success'): ?>
+                    <div class="icon success">✓</div>
+                    <h1><?php esc_html_e('Authentication Successful!', 'data-machine'); ?></h1>
+                    <p><?php echo esc_html(sprintf(__('Your %s account has been connected successfully.', 'data-machine'), ucfirst($handler_slug))); ?></p>
+                <?php else: ?>
+                    <div class="icon error">✗</div>
+                    <h1><?php esc_html_e('Authentication Failed', 'data-machine'); ?></h1>
+                    <p><?php echo esc_html($error_message ?: __('There was a problem connecting your account.', 'data-machine')); ?></p>
+                <?php endif; ?>
+                <p class="closing"><?php esc_html_e('This window will close automatically...', 'data-machine'); ?></p>
+            </div>
+            
+            <script>
+                // Close the popup window after a brief delay
+                setTimeout(function() {
+                    window.close();
+                }, 2000);
+                
+                // Try to close immediately as well (in case user interacts)
+                try {
+                    window.close();
+                } catch(e) {
+                    // Some browsers prevent immediate close
+                }
+            </script>
+        </body>
+        </html>
+        <?php
     }
 }
 

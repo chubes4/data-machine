@@ -36,9 +36,8 @@
          */
         bindEvents: function() {
             // OAuth connection handlers - respond to PHP-generated buttons
-            $(document).on('click', '.dm-connect-account', this.handleConnect.bind(this));
+            $(document).on('click', '.dm-connect-oauth', this.handleOAuthConnect.bind(this));
             $(document).on('click', '.dm-disconnect-account', this.handleDisconnect.bind(this));
-            $(document).on('click', '.dm-test-connection', this.handleTestConnection.bind(this));
             
             // Auth configuration form handler
             $(document).on('submit', '.dm-auth-config-form', this.handleAuthConfigSave.bind(this));
@@ -84,37 +83,60 @@
         },
 
         /**
-         * Handle OAuth connect button click
-         * Button created by PHP modal template with data-handler attribute
+         * Handle direct OAuth connect button click
+         * Opens OAuth window immediately without intermediate loading modal
          */
-        handleConnect: function(e) {
+        handleOAuthConnect: function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
             const handlerSlug = $button.data('handler');
+            const oauthUrl = $button.data('oauth-url');
             
-            if (!handlerSlug) {
-                console.error('DM Pipeline Modal: No handler slug found on connect button');
+            if (!handlerSlug || !oauthUrl) {
+                console.error('DM Pipeline Modal: Missing handler or OAuth URL');
+                alert('OAuth configuration missing. Please refresh and try again.');
                 return;
             }
             
-            // Check if we have OAuth nonces available
-            if (!dmPipelineModal.oauth_nonces || !dmPipelineModal.oauth_nonces[handlerSlug]) {
-                console.error('DM Pipeline Modal: No OAuth nonce available for handler:', handlerSlug);
-                alert('OAuth configuration missing. Please check plugin settings.');
-                return;
-            }
-            
-            // Show loading state
+            // Show loading state on button
             const originalText = $button.text();
             $button.text(dmPipelineModal.strings?.connecting || 'Connecting...').prop('disabled', true);
             
-            // Build OAuth init URL with proper nonce
-            const baseUrl = dmPipelineModal.admin_post_url || (dmPipelineModal.ajax_url.replace('admin-ajax.php', 'admin-post.php'));
-            const oauthUrl = baseUrl + '?action=dm_' + handlerSlug + '_oauth_init&_wpnonce=' + dmPipelineModal.oauth_nonces[handlerSlug];
+            // Open OAuth window immediately
+            const oauthWindow = window.open(oauthUrl, 'oauth_window', 'width=600,height=700,scrollbars=yes,resizable=yes');
             
-            // Redirect to OAuth init URL
-            window.location.href = oauthUrl;
+            if (!oauthWindow) {
+                // Popup blocked
+                alert('Popup blocked! Please allow popups and try again.');
+                $button.text(originalText).prop('disabled', false);
+                return;
+            }
+            
+            // Monitor OAuth window for completion
+            const checkInterval = setInterval(() => {
+                if (oauthWindow.closed) {
+                    clearInterval(checkInterval);
+                    
+                    // Restore button state
+                    $button.text(originalText).prop('disabled', false);
+                    
+                    // Refresh modal content to show updated auth status
+                    this.refreshAuthModal();
+                }
+            }, 1000);
+        },
+
+        /**
+         * Refresh auth modal content to show updated authentication status
+         */
+        refreshAuthModal: function() {
+            // Get current modal context and refresh the content
+            const $modalContent = $('.dm-modal-content').first();
+            if ($modalContent.length && $modalContent.data('template') === 'modal/handler-auth-form') {
+                const context = $modalContent.data('context') || {};
+                dmCoreModal.open('modal/handler-auth-form', context);
+            }
         },
 
         /**
@@ -168,49 +190,6 @@
             });
         },
 
-        /**
-         * Handle test connection button click
-         */
-        handleTestConnection: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const handlerSlug = $button.data('handler');
-            
-            if (!handlerSlug) {
-                console.error('DM Pipeline Modal: No handler slug found on test connection button');
-                return;
-            }
-            
-            // Show loading state
-            const originalText = $button.text();
-            $button.text(dmPipelineModal.strings?.testing || 'Testing...').prop('disabled', true);
-            
-            // Make AJAX call to test connection
-            $.ajax({
-                url: dmPipelineModal.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_test_connection',
-                    handler_slug: handlerSlug,
-                    nonce: dmPipelineModal.dm_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        alert(response.data?.message || 'Connection test successful');
-                    } else {
-                        alert(response.data?.message || 'Connection test failed');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('DM Pipeline Modal: AJAX Error:', error);
-                    alert('Error connecting to server');
-                },
-                complete: () => {
-                    $button.text(originalText).prop('disabled', false);
-                }
-            });
-        },
 
         /**
          * Handle auth configuration form submission

@@ -36,7 +36,11 @@ class Facebook {
         $this->auth = $all_auth['facebook'] ?? null;
         
         if ($this->auth === null) {
-            throw new \RuntimeException('Facebook authentication service not available. Required service missing from dm_auth_providers filter.');
+            do_action('dm_log', 'error', 'Facebook Handler: Authentication service not available', [
+                'missing_service' => 'facebook',
+                'available_providers' => array_keys($all_auth)
+            ]);
+            // Handler will return error in handle_tool_call() when auth is null
         }
     }
 
@@ -50,296 +54,332 @@ class Facebook {
     }
 
     /**
-     * Handles posting the AI output to Facebook.
+     * Handle AI tool call for Facebook publishing.
      *
-     * @param object $data Universal DataPacket JSON object with all content and metadata.
-     * @return array Result array on success or failure.
+     * @param array $parameters Structured parameters from AI tool call.
+     * @param array $tool_def Tool definition including handler configuration.
+     * @return array Tool execution result.
      */
-    public function handle_publish($data): array {
-        // Access structured content directly from DataPacket (no parsing needed)
-        $title = $data->content->title ?? '';
-        $content = $data->content->body ?? '';
-        
-        // Get publish config from DataPacket (set by PublishStep)
-        $publish_config = $data->publish_config ?? [];
-        
-        // Extract metadata from DataPacket
-        $input_metadata = [
-            'source_url' => $data->metadata->source_url ?? null,
-            'image_source_url' => !empty($data->attachments->images) ? $data->attachments->images[0]->url : null
-        ];
-        
-        do_action('dm_log', 'debug', 'Starting Facebook output handling.');
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        do_action('dm_log', 'debug', 'Facebook Tool: Handling tool call', [
+            'parameters' => $parameters,
+            'parameter_keys' => array_keys($parameters),
+            'has_handler_config' => !empty($tool_def['handler_config']),
+            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+        ]);
 
-        // 1. Get config - publish_config is the handler_settings directly
-        $target_id = trim($publish_config['facebook_target_id'] ?? '');
-        $include_images = (bool) ($publish_config['include_images'] ?? true);
-        $include_videos = (bool) ($publish_config['include_videos'] ?? true);
-        $link_handling = $publish_config['link_handling'] ?? 'auto';
-        
-        if (empty($target_id)) {
+        // Validate required parameters
+        if (empty($parameters['content'])) {
+            $error_msg = 'Facebook tool call missing required content parameter';
+            do_action('dm_log', 'error', $error_msg, [
+                'provided_parameters' => array_keys($parameters),
+                'required_parameters' => ['content']
+            ]);
+            
             return [
                 'success' => false,
-                'error' => __('Facebook target_id configuration is required.', 'data-machine')
-            ];
-        }
-        
-        if (empty($target_id)) {
-            return [
-                'success' => false,
-                'error' => __('Facebook target_id cannot be empty.', 'data-machine')
-            ];
-        }
-        
-        if (!in_array($link_handling, ['append', 'replace', 'none'])) {
-            return [
-                'success' => false,
-                'error' => __('Invalid Facebook link_handling configuration. Must be "append", "replace", or "none".', 'data-machine')
+                'error' => $error_msg,
+                'tool_name' => 'facebook_publish'
             ];
         }
 
-        // 2. Get authenticated Page credentials using internal FacebookAuth
+        // Get handler configuration from tool definition
+        $handler_config = $tool_def['handler_config'] ?? [];
+        
+        do_action('dm_log', 'debug', 'Facebook Tool: Using handler configuration', [
+            'facebook_target_id' => $handler_config['facebook_target_id'] ?? 'fallback',
+            'include_images' => $handler_config['include_images'] ?? 'fallback',
+            'include_videos' => $handler_config['include_videos'] ?? 'fallback',
+            'link_handling' => $handler_config['link_handling'] ?? 'fallback'
+        ]);
+
+        // Extract parameters
+        $title = $parameters['title'] ?? '';
+        $content = $parameters['content'] ?? '';
+        $source_url = $parameters['source_url'] ?? null;
+        $image_url = $parameters['image_url'] ?? null;
+        
+        // Get config from handler settings
+        $target_id = trim($handler_config['facebook_target_id'] ?? '');
+        $include_images = $handler_config['include_images'] ?? true;
+        $include_videos = $handler_config['include_videos'] ?? true;
+        $link_handling = $handler_config['link_handling'] ?? 'append';
+
+        // Validate target ID
+        if (empty($target_id)) {
+            return [
+                'success' => false,
+                'error' => 'Facebook target ID is required',
+                'tool_name' => 'facebook_publish'
+            ];
+        }
+
+        // Get authenticated credentials
         $page_id = $this->auth->get_page_id();
         $page_access_token = $this->auth->get_page_access_token();
 
-        if (empty($page_id) || empty($page_access_token)) {
-            do_action('dm_log', 'error', 'Facebook Output: Failed to get Page ID or Page Access Token.', [
-                'page_id_found' => !empty($page_id), 
-                'token_found' => !empty($page_access_token)
-            ]);
+        if (empty($page_access_token)) {
             return [
                 'success' => false,
-                'error' => __('Failed to retrieve Facebook Page credentials. Please check authentication on the API Keys page.', 'data-machine')
-            ];
-        }
-        
-        do_action('dm_log', 'debug', 'Facebook Output: Retrieved Page credentials.', ['page_id' => $page_id]);
-
-        // 4. Validate content from DataPacket
-        $source_link = $input_metadata['source_url'] ?? null;
-        $post_content = $title ? $title . ": " . $content : $content;
-
-        if (empty($title) && empty($content)) {
-            do_action('dm_log', 'warning', 'Facebook Output: DataPacket content is empty.');
-            return [
-                'success' => false,
-                'error' => __('Cannot post empty content to Facebook.', 'data-machine')
+                'error' => 'Facebook authentication failed - no access token',
+                'tool_name' => 'facebook_publish'
             ];
         }
 
-        // 5. Determine post type and prepare API parameters
-        $image_url = $input_metadata['image_source_url'] ?? null;
-        $video_url = null;
-        
-        // Extract video URL if video handling is enabled
-        if ($include_videos && !empty($input_metadata['video_source_url'])) {
-            $video_url = esc_url($input_metadata['video_source_url']);
-        }
-
-        // Note: Using dm_send_request action hook for all HTTP operations
-
-        // Determine post type and prepare API parameters - no silent fallbacks
-        if (!empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
-            if (!$this->is_image_accessible($image_url)) {
-                return [
-                    'success' => false,
-                    'error' => sprintf(__('Facebook image URL not accessible: %s', 'data-machine'), $image_url)
-                ];
-            }
-            
-            if (!$include_images) {
-                return [
-                    'success' => false,
-                    'error' => __('Facebook handler configured to exclude images but image URL provided in content. Enable images or remove image from content.', 'data-machine')
-                ];
-            }
-            
-            // Image Post
-            $endpoint = "/{$page_id}/photos";
-            $api_params = [
-                'caption' => $post_content,
-                'url' => $image_url
-            ];
-        } elseif (!empty($video_url) && filter_var($video_url, FILTER_VALIDATE_URL)) {
-            if (!$include_videos) {
-                return [
-                    'success' => false,
-                    'error' => __('Facebook handler configured to exclude videos but video URL provided in content. Enable videos or remove video from content.', 'data-machine')
-                ];
-            }
-            
-            // Video Post - append video link to content
-            do_action('dm_log', 'debug', 'Facebook API: Including video link in text post.', ['video_url' => $video_url]);
-            $post_content .= "\n\nVideo: " . $video_url;
-            $endpoint = "/{$page_id}/feed";
-            $api_params = ['message' => $post_content];
-        } else {
-            // Text-Only Post
-            $endpoint = "/{$page_id}/feed";
-            $api_params = ['message' => $post_content];
-        }
-
-        // Add the Page Access Token to parameters
-        $api_params['access_token'] = $page_access_token;
-
-        // 6. Post to Facebook using HTTP service
         try {
-            $graph_api_url = 'https://graph.facebook.com/' . self::FACEBOOK_API_VERSION;
-            $url = $graph_api_url . $endpoint;
-
-            // Use dm_request filter for Facebook API call
-            $args = ['body' => $api_params];
-            $result = apply_filters('dm_request', null, 'POST', $url, $args, 'Facebook API');
+            // Format post content
+            $post_text = $title ? $title . "\n\n" . $content : $content;
             
-            if (!$result['success']) {
-                do_action('dm_log', 'error', 'Facebook API Error: HTTP request failed.', [
-                    'error' => $result['error'], 
-                ]);
+            // Handle links based on configuration (exclude comment mode - handled after post creation)
+            if (!empty($source_url) && $link_handling !== 'none' && $link_handling !== 'comment') {
+                if ($link_handling === 'append') {
+                    $post_text .= "\n\n" . $source_url;
+                } elseif ($link_handling === 'replace') {
+                    $post_text = $source_url;
+                }
+            }
+
+            // Prepare Facebook API request
+            $post_data = [
+                'message' => $post_text,
+                'access_token' => $page_access_token
+            ];
+
+            // Handle image upload if provided and enabled
+            if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+                $image_result = $this->upload_image_to_facebook($image_url, $page_access_token, $target_id);
+                if ($image_result && isset($image_result['id'])) {
+                    $post_data['object_attachment'] = $image_result['id'];
+                }
+            }
+
+            // Make API request to Facebook
+            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$target_id}/feed";
+            $response = wp_remote_post($api_url, [
+                'body' => $post_data,
+                'timeout' => 30
+            ]);
+
+            if (is_wp_error($response)) {
+                $error_msg = 'Facebook API request failed: ' . $response->get_error_message();
+                do_action('dm_log', 'error', $error_msg);
+                
                 return [
                     'success' => false,
-                    'error' => $result['error']
+                    'error' => $error_msg,
+                    'tool_name' => 'facebook_publish'
                 ];
             }
 
-            $body = $result['data'];
-            $http_code = $result['status_code'];
+            $response_body = wp_remote_retrieve_body($response);
+            $response_data = json_decode($response_body, true);
 
-            // Parse JSON response with error handling
-            $data = json_decode($body, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $error_message = sprintf(__('Invalid JSON from Facebook API: %s', 'data-machine'), json_last_error_msg());
-                return [
-                    'success' => false,
-                    'error' => $error_message
-                ];
-            }
-
-            // Check for API errors returned in the body
-            if (isset($data['error'])) {
-                $error_message = $data['error']['message'] ?? 'Unknown Facebook API error.';
-                $error_type = $data['error']['type'] ?? 'APIError';
-                $error_code_fb = $data['error']['code'] ?? 'UnknownCode';
-                do_action('dm_log', 'error', 'Facebook API Error: Received error response.', [
-                    'http_code' => $http_code, 
-                    'fb_error' => $data['error'], 
-                ]);
-                return [
-                    'success' => false,
-                    'error' => $error_message
-                ];
-            }
-
-            // Check for successful HTTP status code and presence of post ID
-            $post_id = $data['id'] ?? ($data['post_id'] ?? null);
-
-            if ($http_code >= 200 && $http_code < 300 && !empty($post_id)) {
-                // Construct the URL to the post
-                $output_url = "https://www.facebook.com/" . $post_id;
-
-                do_action('dm_log', 'debug', 'Facebook post published successfully.', [
-                    'post_id' => $post_id, 
-                    'output_url' => $output_url
+            if (isset($response_data['id'])) {
+                $post_id = $response_data['id'];
+                $post_url = "https://www.facebook.com/{$target_id}/posts/{$post_id}";
+                
+                do_action('dm_log', 'debug', 'Facebook Tool: Post created successfully', [
+                    'post_id' => $post_id,
+                    'post_url' => $post_url
                 ]);
 
-                // Post source link as comment - fail if configured to do so
-                if (!empty($source_link) && filter_var($source_link, FILTER_VALIDATE_URL)) {
-                    $comment_message = "Source: " . $source_link;
-                    $comment_endpoint = "/{$post_id}/comments";
-                    $comment_api_params = [
-                        'message' => $comment_message,
-                        'access_token' => $page_access_token,
-                    ];
+                // Handle URL as comment if configured
+                $comment_result = null;
+                if ($link_handling === 'comment' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
+                    $comment_result = $this->post_comment($post_id, $source_url, $page_access_token);
+                }
 
-                    $comment_url = $graph_api_url . $comment_endpoint;
-                    $comment_args = ['body' => $comment_api_params];
-                    $comment_result = apply_filters('dm_request', null, 'POST', $comment_url, $comment_args, 'Facebook API');
+                $result_data = [
+                    'post_id' => $post_id,
+                    'post_url' => $post_url,
+                    'content' => $post_text
+                ];
 
-                    if (!$comment_result['success']) {
-                        do_action('dm_log', 'error', 'Facebook API: Failed to post source link comment.', [
-                            'post_id' => $post_id,
-                            'error' => $comment_result['error'],
-                        ]);
-                        return [
-                            'success' => false,
-                            'error' => sprintf(__('Facebook post successful but source comment failed: %s', 'data-machine'), $comment_result['error'])
-                        ];
-                    }
-                    
-                    $comment_body = $comment_result['data'];
-                    $comment_data = json_decode($comment_body, true);
-                    $comment_http_code = $comment_result['status_code'];
-
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        do_action('dm_log', 'error', 'Facebook API: Failed to parse comment response.', [
-                            'post_id' => $post_id,
-                            'error' => json_last_error_msg(),
-                        ]);
-                        return [
-                            'success' => false,
-                            'error' => sprintf(__('Facebook post successful but source comment parsing failed: %s', 'data-machine'), json_last_error_msg())
-                        ];
-                    }
-                    
-                    if (isset($comment_data['error'])) {
-                        $error_message = $comment_data['error']['message'] ?? 'Unknown comment API error';
-                        do_action('dm_log', 'error', 'Facebook API: Source link comment API error.', [
-                            'post_id' => $post_id,
-                            'http_code' => $comment_http_code,
-                            'fb_error' => $comment_data['error'],
-                        ]);
-                        return [
-                            'success' => false,
-                            'error' => sprintf(__('Facebook post successful but source comment failed: %s', 'data-machine'), $error_message)
-                        ];
-                    }
-                    
-                    if ($comment_http_code < 200 || $comment_http_code >= 300 || !isset($comment_data['id'])) {
-                        do_action('dm_log', 'error', 'Facebook API: Unexpected comment response.', [
-                            'post_id' => $post_id,
-                            'http_code' => $comment_http_code,
-                            'response' => $comment_data
-                        ]);
-                        return [
-                            'success' => false,
-                            'error' => sprintf(__('Facebook post successful but source comment had unexpected response (HTTP %d)', 'data-machine'), $comment_http_code)
-                        ];
-                    }
-                    
-                    do_action('dm_log', 'debug', 'Facebook API: Successfully posted source link as comment.', [
-                        'post_id' => $post_id, 
-                        'comment_id' => $comment_data['id']
+                // Add comment information if a comment was posted
+                if ($comment_result && $comment_result['success']) {
+                    $result_data['comment_id'] = $comment_result['comment_id'];
+                    $result_data['comment_url'] = $comment_result['comment_url'];
+                } elseif ($comment_result && !$comment_result['success']) {
+                    // Comment failed but main post succeeded - log but don't fail the whole operation
+                    do_action('dm_log', 'warning', 'Facebook Tool: Main post created but comment failed', [
+                        'post_id' => $post_id,
+                        'comment_error' => $comment_result['error']
                     ]);
                 }
 
                 return [
                     'success' => true,
-                    'status' => 'success',
-                    'post_id' => $post_id,
-                    'output_url' => $output_url,
-                    /* translators: %s: Facebook post ID */
-                    'message' => sprintf(__('Successfully posted to Facebook: %s', 'data-machine'), $post_id),
-                    'raw_response' => $data
+                    'data' => $result_data,
+                    'tool_name' => 'facebook_publish'
                 ];
             } else {
-                // Handle cases where response is successful but doesn't contain expected ID
-                do_action('dm_log', 'error', 'Facebook API Error: Unexpected response format or missing post ID.', [
-                    'http_code' => $http_code, 
-                    'response_body' => $body, 
+                $error_msg = 'Facebook API error: ' . ($response_data['error']['message'] ?? 'Unknown error');
+                do_action('dm_log', 'error', $error_msg, [
+                    'response_data' => $response_data
                 ]);
+
                 return [
                     'success' => false,
-                    'error' => __('Unexpected response format or missing Post ID from Facebook.', 'data-machine')
+                    'error' => $error_msg,
+                    'tool_name' => 'facebook_publish'
+                ];
+            }
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Facebook Tool: Exception during posting', [
+                'exception' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'tool_name' => 'facebook_publish'
+            ];
+        }
+    }
+
+    /**
+     * Post a comment on a Facebook post.
+     *
+     * @param string $post_id Facebook post ID to comment on.
+     * @param string $source_url URL to post in the comment.
+     * @param string $access_token Facebook access token.
+     * @return array Result of comment posting operation.
+     */
+    private function post_comment(string $post_id, string $source_url, string $access_token): array {
+        do_action('dm_log', 'debug', 'Facebook Tool: Posting URL as comment', [
+            'post_id' => $post_id,
+            'source_url' => $source_url
+        ]);
+
+        try {
+            // Post comment using Facebook Graph API
+            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$post_id}/comments";
+            $comment_data = [
+                'message' => $source_url,
+                'access_token' => $access_token
+            ];
+
+            $response = wp_remote_post($api_url, [
+                'body' => $comment_data,
+                'timeout' => 30
+            ]);
+
+            if (is_wp_error($response)) {
+                $error_msg = 'Facebook comment API request failed: ' . $response->get_error_message();
+                do_action('dm_log', 'warning', $error_msg, [
+                    'post_id' => $post_id
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => $error_msg
                 ];
             }
 
+            $response_body = wp_remote_retrieve_body($response);
+            $response_data = json_decode($response_body, true);
+
+            if (isset($response_data['id'])) {
+                $comment_id = $response_data['id'];
+                $comment_url = "https://www.facebook.com/{$post_id}/?comment_id={$comment_id}";
+                
+                do_action('dm_log', 'debug', 'Facebook Tool: Comment posted successfully', [
+                    'comment_id' => $comment_id,
+                    'comment_url' => $comment_url,
+                    'post_id' => $post_id
+                ]);
+
+                return [
+                    'success' => true,
+                    'comment_id' => $comment_id,
+                    'comment_url' => $comment_url
+                ];
+            } else {
+                $error_msg = 'Facebook comment API error: ' . ($response_data['error']['message'] ?? 'Unknown error');
+                do_action('dm_log', 'warning', 'Facebook Tool: Comment posting failed', [
+                    'response_data' => $response_data,
+                    'post_id' => $post_id
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $error_msg
+                ];
+            }
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Facebook Output Exception: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            do_action('dm_log', 'warning', 'Facebook Tool: Exception during comment posting', [
+                'exception' => $e->getMessage(),
+                'post_id' => $post_id
             ]);
+            
             return [
                 'success' => false,
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Upload image to Facebook and return photo object.
+     *
+     * @param string $image_url Image URL to upload.
+     * @param string $access_token Facebook access token.
+     * @param string $target_id Facebook target ID.
+     * @return array|null Photo object or null on failure.
+     */
+    private function upload_image_to_facebook(string $image_url, string $access_token, string $target_id): ?array {
+        do_action('dm_log', 'debug', 'Attempting to upload image to Facebook.', ['image_url' => $image_url]);
+        
+        if (!function_exists('download_url')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+        
+        $temp_image_path = download_url($image_url);
+        if (is_wp_error($temp_image_path)) {
+            do_action('dm_log', 'warning', 'Failed to download image for Facebook upload.', [
+                'url' => $image_url, 
+                'error' => $temp_image_path->get_error_message()
+            ]);
+            return null;
+        }
+
+        try {
+            // Upload to Facebook
+            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$target_id}/photos";
+            $photo_data = [
+                'source' => new \CURLFile($temp_image_path),
+                'published' => 'false', // Upload but don't publish yet
+                'access_token' => $access_token
+            ];
+
+            $response = wp_remote_post($api_url, [
+                'body' => $photo_data,
+                'timeout' => 60
+            ]);
+
+            if (is_wp_error($response)) {
+                do_action('dm_log', 'error', 'Facebook image upload failed: ' . $response->get_error_message());
+                return null;
+            }
+
+            $response_body = wp_remote_retrieve_body($response);
+            $response_data = json_decode($response_body, true);
+
+            if (isset($response_data['id'])) {
+                do_action('dm_log', 'debug', 'Successfully uploaded image to Facebook.', ['photo_id' => $response_data['id']]);
+                return $response_data;
+            } else {
+                do_action('dm_log', 'error', 'Facebook image upload failed.', ['response' => $response_data]);
+                return null;
+            }
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Facebook image upload exception: ' . $e->getMessage());
+            return null;
+        } finally {
+            if ($temp_image_path && file_exists($temp_image_path)) {
+                wp_delete_file($temp_image_path);
+                do_action('dm_log', 'debug', 'Temporary image file cleaned up.', ['image_url' => $image_url]);
+            }
         }
     }
 
@@ -364,31 +404,24 @@ class Facebook {
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
         
-        // facebook_target_id is required - no defaults allowed
-        if (!isset($raw_settings['facebook_target_id'])) {
-            throw new Exception(esc_html__('Facebook target_id setting is required.', 'data-machine'));
-        }
-        $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id']);
+        // facebook_target_id - provide default if missing
+        $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
         
-        // include_images is required - no defaults allowed
-        if (!isset($raw_settings['include_images'])) {
-            throw new Exception(esc_html__('Facebook include_images setting is required.', 'data-machine'));
-        }
-        $sanitized['include_images'] = (bool) $raw_settings['include_images'];
+        // include_images - provide default if missing
+        $sanitized['include_images'] = isset($raw_settings['include_images']) ? (bool) $raw_settings['include_images'] : false;
         
-        // include_videos is required - no defaults allowed  
-        if (!isset($raw_settings['include_videos'])) {
-            throw new Exception(esc_html__('Facebook include_videos setting is required.', 'data-machine'));
-        }
-        $sanitized['include_videos'] = (bool) $raw_settings['include_videos'];
+        // include_videos - provide default if missing
+        $sanitized['include_videos'] = isset($raw_settings['include_videos']) ? (bool) $raw_settings['include_videos'] : false;
         
-        // link_handling is required - no defaults allowed
-        if (!isset($raw_settings['link_handling'])) {
-            throw new Exception(esc_html__('Facebook link_handling setting is required.', 'data-machine'));
-        }
-        $link_handling = $raw_settings['link_handling'];
-        if (!in_array($link_handling, ['append', 'replace', 'none'])) {
-            throw new Exception(esc_html__('Invalid Facebook link_handling parameter. Must be "append", "replace", or "none".', 'data-machine'));
+        // link_handling - provide default and validate
+        $valid_link_options = ['append', 'replace', 'comment', 'none'];
+        $link_handling = $raw_settings['link_handling'] ?? 'append';
+        if (!in_array($link_handling, $valid_link_options)) {
+            do_action('dm_log', 'error', 'Facebook Handler: Invalid link_handling parameter in sanitize method', [
+                'provided_value' => $link_handling,
+                'valid_options' => $valid_link_options
+            ]);
+            $link_handling = 'append'; // Fall back to default
         }
         $sanitized['link_handling'] = $link_handling;
         

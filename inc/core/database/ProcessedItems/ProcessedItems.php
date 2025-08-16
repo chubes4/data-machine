@@ -204,6 +204,17 @@ class ProcessedItems {
             $result = $wpdb->query($sql);
         } 
         else if (!empty($where)) {
+            // Debug: Check what would be matched before deletion
+            $count_query = "SELECT COUNT(*) FROM {$this->table_name} WHERE " . implode(' AND ', array_map(function($key) { return "$key = %s"; }, array_keys($where)));
+            $count = $wpdb->get_var($wpdb->prepare($count_query, array_values($where)));
+            
+            do_action('dm_log', 'debug', 'Processed items deletion query analysis', [
+                'where_conditions' => $where,
+                'where_format' => $where_format,
+                'items_to_delete' => $count,
+                'table_name' => $this->table_name
+            ]);
+            
             // Standard delete with WHERE conditions
             $result = $wpdb->delete($this->table_name, $where, $where_format);
         } else {

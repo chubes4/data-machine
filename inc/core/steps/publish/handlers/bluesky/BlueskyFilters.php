@@ -59,7 +59,102 @@ function dm_register_bluesky_filters() {
         return $directives;
     });
     
+    // Bluesky tool registration with AI HTTP Client library
+    add_filter('ai_tools', function($tools) {
+        $tools['bluesky_publish'] = dm_get_bluesky_tool();
+        return $tools;
+    });
+
+    // Dynamic tool generation based on current configuration
+    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+        if ($handler_slug === 'bluesky') {
+            return dm_get_bluesky_tool($handler_config);
+        }
+        return $tool;
+    }, 10, 3);
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
+}
+
+/**
+ * Get Bluesky tool definition with dynamic parameters based on configuration.
+ *
+ * @param array $handler_config Optional handler configuration for dynamic parameters.
+ * @return array Bluesky tool configuration.
+ */
+function dm_get_bluesky_tool(array $handler_config = []): array {
+    // Debug logging for tool generation
+    if (!empty($handler_config)) {
+        do_action('dm_log', 'debug', 'Bluesky Tool: Generating with configuration', [
+            'handler_config_keys' => array_keys($handler_config),
+            'handler_config_values' => $handler_config
+        ]);
+    }
+    
+    // Base tool definition
+    $tool = [
+        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Bluesky\\Bluesky',
+        'method' => 'handle_tool_call',
+        'handler' => 'bluesky',
+        'description' => 'Post content to Bluesky (300 character limit)',
+        'parameters' => [
+            'content' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'Post content (will be formatted and truncated if needed)'
+            ],
+            'title' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Optional title to prepend to content'
+            ]
+        ]
+    ];
+    
+    // Store handler configuration for execution time
+    if (!empty($handler_config)) {
+        $tool['handler_config'] = $handler_config;
+    }
+    
+    // Get configuration values with defaults
+    $include_source = $handler_config['bluesky_include_source'] ?? true;
+    $enable_images = $handler_config['bluesky_enable_images'] ?? true;
+    
+    // Add conditional parameters based on configuration
+    if ($include_source) {
+        $tool['parameters']['source_url'] = [
+            'type' => 'string',
+            'required' => false,
+            'description' => 'Optional source URL to append to post'
+        ];
+    }
+    
+    if ($enable_images) {
+        $tool['parameters']['image_url'] = [
+            'type' => 'string',
+            'required' => false,
+            'description' => 'Optional image URL to attach to post'
+        ];
+    }
+    
+    // Update description based on enabled features
+    $description_parts = ['Post content to Bluesky (300 character limit)'];
+    if ($include_source) {
+        $description_parts[] = 'source URLs will be appended';
+    }
+    if ($enable_images) {
+        $description_parts[] = 'images will be uploaded if provided';
+    }
+    $tool['description'] = implode(', ', $description_parts);
+    
+    do_action('dm_log', 'debug', 'Bluesky Tool: Generation complete', [
+        'parameter_count' => count($tool['parameters']),
+        'parameter_names' => array_keys($tool['parameters']),
+        'include_source' => $include_source,
+        'enable_images' => $enable_images
+    ]);
+    
+    return $tool;
 }
 
 // Auto-register when file loads - achieving complete self-containment

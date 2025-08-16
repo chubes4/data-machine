@@ -9,7 +9,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\WordPress;
+namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -30,12 +30,15 @@ class WordPress {
      * Handle AI tool call for WordPress publishing.
      *
      * @param array $parameters Structured parameters from AI tool call.
+     * @param array $tool_def Tool definition including handler configuration.
      * @return array Tool execution result.
      */
-    public function handle_tool_call(array $parameters): array {
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
         do_action('dm_log', 'debug', 'WordPress Tool: Handling tool call', [
             'parameters' => $parameters,
-            'parameter_keys' => array_keys($parameters)
+            'parameter_keys' => array_keys($parameters),
+            'has_handler_config' => !empty($tool_def['handler_config']),
+            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
         ]);
 
         // Validate required parameters
@@ -53,12 +56,22 @@ class WordPress {
             ];
         }
 
-        // Prepare post data
+        // Get handler configuration from tool definition
+        $handler_config = $tool_def['handler_config'] ?? [];
+        
+        do_action('dm_log', 'debug', 'WordPress Tool: Using handler configuration', [
+            'post_author' => $handler_config['post_author'] ?? 'fallback',
+            'post_status' => $handler_config['post_status'] ?? 'fallback',
+            'post_type' => $handler_config['post_type'] ?? 'fallback'
+        ]);
+        
+        // Prepare post data using configuration from handler settings
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
             'post_content' => wp_kses_post(wp_unslash($parameters['content'])),
-            'post_status' => 'publish',
-            'post_type' => 'post'
+            'post_status' => $handler_config['post_status'] ?? 'publish',
+            'post_type' => $handler_config['post_type'] ?? 'post',
+            'post_author' => $handler_config['post_author'] ?? get_current_user_id()
         ];
 
         // Insert the post
@@ -115,76 +128,6 @@ class WordPress {
         ];
     }
 
-    /**
-     * Handles publishing the AI output to WordPress (local or remote).
-     *
-     * @param object $data_entry Universal data entry JSON object with all content and metadata.
-     * @return array Result array on success or failure.
-     */
-    public function handle_publish($data_entry): array {
-        // Debug: Log the data entry structure being received
-        do_action('dm_log', 'debug', 'WordPress handler received data entry', [
-            'has_content' => isset($data_entry->content),
-            'has_metadata' => isset($data_entry->metadata),
-            'has_publish_config' => isset($data_entry->publish_config),
-            'content_keys' => isset($data_entry->content) ? array_keys((array)$data_entry->content) : [],
-            'data_entry_type' => $data_entry->type ?? 'unknown'
-        ]);
-        
-        // Validate data entry structure - fail fast if structure violated
-        if (!isset($data_entry->content)) {
-            do_action('dm_log', 'error', 'WordPress handler validation failed - content missing', [
-                'data_entry_structure' => array_keys((array)$data_entry)
-            ]);
-            return ['success' => false, 'error' => 'Data entry structure violation: content object missing'];
-        }
-        
-        if (!isset($data_entry->content->title) || !isset($data_entry->content->body)) {
-            return ['success' => false, 'error' => 'Data entry structure violation: required content properties (title, body) missing'];
-        }
-        
-        // Access structured content directly from data entry - structure guaranteed
-        $content_title = $data_entry->content->title;
-        $content_body = $data_entry->content->body;
-        $content_tags = $data_entry->content->tags ?? []; // Optional property
-        $content_summary = $data_entry->content->summary ?? ''; // Optional property
-
-        // Get publish config from data entry (set by PublishStep)
-        $publish_config = $data_entry->publish_config ?? [];
-        if (!is_array($publish_config)) {
-            return ['success' => false, 'error' => 'Invalid publish_config format - array required'];
-        }
-
-        // Validate metadata in data entry
-        if (!isset($data_entry->metadata)) {
-            return ['success' => false, 'error' => 'Data entry structure violation: metadata object missing'];
-        }
-        
-        // Extract metadata from data entry - optional properties use fallbacks
-        $input_metadata = [
-            'original_date_gmt' => $data_entry->metadata->date_created ?? null, // Optional
-            'source_url' => $data_entry->metadata->source_url ?? null, // Optional 
-            'image_source_url' => !empty($data_entry->attachments->images) ? $data_entry->attachments->images[0]->url : null // Optional
-        ];
-
-        // Get config - publish_config is the handler_settings directly
-        if (empty($publish_config)) {
-            return ['success' => false, 'error' => 'WordPress configuration is required'];
-        }
-        
-        $wordpress_config = $publish_config;
-        
-        // Structure content data for local publishing
-        $structured_content = [
-            'title' => $content_title,
-            'body' => $content_body,
-            'tags' => $content_tags,
-            'summary' => $content_summary
-        ];
-
-        // Publish to local WordPress installation
-        return $this->publish_local($structured_content, $wordpress_config, $input_metadata);
-    }
 
 
     /**

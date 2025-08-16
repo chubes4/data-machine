@@ -318,6 +318,9 @@ class Update {
             return false;
         }
         
+        // Trigger auto-save for the pipeline
+        do_action('dm_auto_save', $flow['pipeline_id']);
+        
         // Log the action
         $action_type = $handler_exists ? 'updated' : 'added';
         do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
