@@ -311,7 +311,5 @@ function dm_register_pipelines_admin_page_filters() {
     });
 }
 
-// Handler settings functionality moved to PipelineModalAjax class to follow dm_ajax_route pattern
-
 // Auto-register when file loads - achieving complete self-containment
 dm_register_pipelines_admin_page_filters();

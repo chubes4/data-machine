@@ -21,7 +21,6 @@ class PipelinePageAjax
     /**
      * Handle pipeline page AJAX requests (business logic)
      */
-    // Routing wrapper method removed - individual WordPress action hooks call methods directly
 
 
     /**
@@ -152,9 +151,6 @@ class PipelinePageAjax
         do_action('dm_run_flow_now', $flow_id);
     }
 
-
-    // create_new_pipeline method removed - functionality moved to centralized Create.php
-
     /**
      * Layer 3: Add step to pipeline and sync to all existing flows
      * 
@@ -234,8 +230,6 @@ class PipelinePageAjax
 
         return $new_step;
     }
-
-    // add_flow_to_pipeline method removed - functionality moved to centralized Create.php
 
     /**
      * Bottom layer: Create flow steps for given pipeline steps
@@ -400,7 +394,4 @@ class PipelinePageAjax
             'pipeline_id' => $pipeline_id
         ]);
     }
-
-    // All deletion logic moved to central dm_delete action in DataMachineActions.php
-    // This eliminates ~200 lines of duplicated deletion code and provides unified deletion patterns
 }

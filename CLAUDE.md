@@ -79,14 +79,14 @@ do_action('dm_auto_save', $pipeline_id);
 
 **Action-Based Engine**: Three-action execution cycle drives all pipeline processing
 
-**Execution Cycle**:
+**Stateless Execution Cycle**:
 1. `dm_run_flow_now` → Creates job via `dm_create` action
-2. `dm_execute_step` → Functional step execution with job_id and flow_step_id
-3. `dm_schedule_next_step` → Action Scheduler step transitions
+2. `dm_execute_step` → Stateless step execution with explicit job_id parameter passing
+3. `dm_schedule_next_step` → Action Scheduler step transitions with job context
 
 **Job Status Management**: `completed`, `failed`, `completed_no_items` - engine exceptions fail jobs immediately
 
-**Array-Based Processing**: Steps process arrays of data entries sequentially via Action Scheduler
+**Array-Based Processing**: Steps process arrays of data entries sequentially via Action Scheduler with explicit job_id parameter passing for complete job isolation
 
 **Filter-Based Discovery**: Self-registering components via `*Filters.php`. All services discoverable via `apply_filters()`
 
@@ -103,6 +103,12 @@ do_action('dm_auto_save', $pipeline_id);
 - **AI**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
 **Admin-Only**: Site-level auth, `manage_options` checks, zero user dependencies
+
+**Stateless Execution Model**: Complete removal of global variables ensures job isolation:
+- No `global $dm_current_job_id` usage anywhere in codebase
+- All step execute() methods receive job_id as explicit first parameter
+- Fetch handlers updated to accept job_id parameter instead of flow_id
+- Processed items tracking requires explicit job_id for isolation
 
 ## AI Integration
 
@@ -288,6 +294,8 @@ return [
 | Google Sheets | OAuth2 | Spreadsheet data extraction |
 | WordPress | None | Post/page content retrieval |
 
+**Note**: All fetch handlers now accept job_id as parameter for stateless execution and proper job isolation.
+
 | **Publish** | **Auth** | **Features** |
 |-------------|----------|--------------|
 | Bluesky | App Password | Text posts, media upload |
@@ -364,11 +372,17 @@ return [
 ```php
 class MyStep {
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
-        // Job ID provided as explicit parameter
+        // Job ID provided as explicit parameter - no global state
+        // Mark items as processed with explicit job_id
+        do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_identifier, $job_id);
+        
         $processed_entry = [
             'type' => 'my_step',
             'content' => ['title' => $title, 'body' => $processed_content],
-            'metadata' => ['source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'],
+            'metadata' => [
+                'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown',
+                'job_id' => $job_id
+            ],
             'timestamp' => time()
         ];
         
@@ -518,15 +532,18 @@ add_filter('dm_handlers', function($handlers) {
 **Error Handling**:
 ```php
 try {
-    $result = $this->process_data($data);
+    $result = $this->process_data($data, $job_id);
     return $result;
 } catch (Exception $e) {
-    do_action('dm_log', 'error', $e->getMessage(), ['flow_step_id' => $flow_step_id]);
+    do_action('dm_log', 'error', $e->getMessage(), [
+        'flow_step_id' => $flow_step_id,
+        'job_id' => $job_id
+    ]);
     return $data; // Return original on failure
 }
 ```
 
-**Explicit Job Context**: Job ID passed as first parameter to all step execute() methods
+**Stateless Architecture**: Complete removal of global variables. Job ID passed explicitly as first parameter to all step execute() methods ensuring full job isolation and preventing cross-job data contamination
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
 

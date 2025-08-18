@@ -11,47 +11,21 @@ if (!defined('ABSPATH')) {
 /**
  * Universal AI Step - AI processing with full pipeline context
  * 
- * ENGINE DATA FLOW:
- * - Engine passes cumulative data packet array to every step via execute() method
- * - AI steps process all data entries for complete pipeline awareness
- * - Pure array-based system with no object creation needed
- * 
- * CONFIGURATION ARCHITECTURE:
- * - Step Config: Pipeline-level configuration (AI prompts, models, step behavior)
- * - Handler Config: Flow-level configuration (AI steps don't use handlers)
- * - AI configuration is stable across all flows using the same pipeline
- * 
- * PURE CAPABILITY-BASED ARCHITECTURE:
- * - No interface implementation required
- * - No inheritance requirements (completely self-contained)
- * - External plugins can create completely independent AI step classes
- * - All functionality detected via method existence (execute, get_prompt_fields)
- * - Maximum external override capabilities through filter priority
- * 
- * EXTERNAL PLUGIN REQUIREMENTS (minimum):
- * - Class with parameter-less constructor
- * - execute(int $job_id, array $data, array $step_config): array method
- * - get_prompt_fields(): array static method for UI configuration (optional)
- * 
- * Supports any AI operation: summarization, fact-checking, enhancement, translation,
- * content analysis, research, writing assistance, and complex multi-step workflows.
+ * Processes cumulative data packet array and adds AI response.
+ * Uses pure filter-based architecture with no interface requirements.
  */
 class AIStep {
 
     /**
-     * Execute AI processing with pure array data packet system
+     * Execute AI processing
      * 
-     * PURE ARRAY SYSTEM:
-     * - Receives the whole data packet array (cumulative job data)
-     * - Processes latest input and adds AI response to the array
-     * - Returns updated array with AI output added
-     * 
+     * @param string $job_id The job ID for context tracking
      * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job
-     * @param array $flow_step_config The merged step configuration including pipeline and flow settings
+     * @param array $flow_step_config The merged step configuration
      * @return array Updated data packet array with AI output added
      */
-    public function execute($flow_step_id, array $data = [], array $flow_step_config = []): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
         try {
             // Pure filter architecture - no client instance needed
 

@@ -43,16 +43,6 @@
             PipelineStatusManager.CSS_FLOW_STATUS_YELLOW,
             PipelineStatusManager.CSS_FLOW_STATUS_GREEN
         ];
-        
-        // Legacy constants for backward compatibility
-        static CSS_STATUS_RED = 'dm-pipeline-step-card--status-red';
-        static CSS_STATUS_YELLOW = 'dm-pipeline-step-card--status-yellow';
-        static CSS_STATUS_GREEN = 'dm-pipeline-step-card--status-green';
-        static CSS_STATUS_CLASSES = [
-            PipelineStatusManager.CSS_STATUS_RED,
-            PipelineStatusManager.CSS_STATUS_YELLOW,
-            PipelineStatusManager.CSS_STATUS_GREEN
-        ];
 
         /**
          * Refresh pipeline status via AJAX and update DOM

@@ -64,7 +64,7 @@ require_once __DIR__ . '/Engine.php';
  * - dm_update_job_status($job_id, $new_status, $context, $old_status): Intelligent status updates
  * - dm_execute_step($job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_datas): Core step execution
  * - dm_auto_save($pipeline_id): Central pipeline auto-save operations
- * - dm_mark_item_processed($flow_id, $source_type, $item_identifier): Universal processed item marking
+ * - dm_mark_item_processed($flow_step_id, $source_type, $item_identifier, $job_id): Universal processed item marking
  * - dm_update_flow_handler($flow_step_id, $handler_slug, $handler_settings): Central flow handler management (Update.php)
  * - dm_update_flow_schedule($flow_id, $schedule_interval, $old_interval): Engine-level flow scheduling
  * - dm_schedule_next_step($job_id, $execution_order, $pipeline_id, $flow_id, $job_config, $data): Central step scheduling
@@ -75,7 +75,7 @@ require_once __DIR__ . '/Engine.php';
  * do_action('dm_update_job_status', $job_id, 'failed', 'complete');
  * do_action('dm_execute_step', $job_id, 0, $pipeline_id, $flow_id, $job_config, []);
  * do_action('dm_auto_save', $pipeline_id);
- * do_action('dm_mark_item_processed', $flow_id, 'rss', $item_guid);
+ * do_action('dm_mark_item_processed', $flow_step_id, 'rss', $item_guid, $job_id);
  * do_action('dm_update_flow_handler', $flow_step_id, 'twitter', $handler_settings);
  * do_action('dm_update_flow_schedule', $flow_id, 'hourly', 'manual');
  * do_action('dm_sync_steps_to_flow', $flow_id, [$step_data], ['context' => 'add_step']);
@@ -88,18 +88,7 @@ require_once __DIR__ . '/Engine.php';
 function dm_register_core_actions() {
     
     // Central processed items marking hook - eliminates service discovery duplication across all handlers
-    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id = null) {
-        // If job_id not provided as parameter, fall back to global (backwards compatibility)
-        if ($job_id === null) {
-            global $dm_current_job_id;
-            $job_id = $dm_current_job_id;
-            
-            // Log deprecated usage
-            do_action('dm_log', 'warning', 'dm_mark_item_processed called without job_id parameter - using deprecated global fallback', [
-                'flow_step_id' => $flow_step_id,
-                'source_type' => $source_type
-            ]);
-        }
+    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
         
         // Validate required job_id
         if (empty($job_id) || !is_numeric($job_id) || $job_id <= 0) {

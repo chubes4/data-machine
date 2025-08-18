@@ -12,37 +12,20 @@ if (!defined('ABSPATH')) {
 /**
  * Universal Publish Step - Executes any publish handler
  * 
- * This step can publish data to any configured destination using the filter-based
- * handler discovery system. Handler configuration is managed through the modal system
- * and flow-level settings, maintaining complete separation from step-level logic.
- * 
- * PURE CAPABILITY-BASED: External publish step classes only need:
- * - execute(int $job_id, array $data, array $step_config): array method
- * - Parameter-less constructor
- * - No interface implementation required
- * 
- * Handler selection is determined by flow configuration, enabling
- * complete flexibility in publishing workflows.
+ * Publishes data to configured destinations using filter-based handler discovery.
  */
 class PublishStep {
 
     /**
-     * Execute publish publishing with pure array data packet system
+     * Execute publish publishing
      * 
-     * PURE ARRAY SYSTEM:
-     * - Receives the cumulative data packet array (newest items first)
-     * - Uses latest entry for publishing (data[0])
-     * - Adds publish result to the array and returns updated array
-     * 
+     * @param string $job_id The job ID for context tracking
      * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job
      * @param array $flow_step_config Flow step configuration including handler settings
      * @return array Updated data packet array with publish result added
      */
-    public function execute($flow_step_id, array $data = [], array $flow_step_config = []): array {
-        $all_databases = apply_filters('dm_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
         try {
             do_action('dm_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);
 
@@ -152,7 +135,7 @@ class PublishStep {
 
 
     /**
-     * Execute publish handler directly using pure auto-discovery
+     * Execute publish handler using tool-first architecture
      * 
      * @param string $handler_name Publish handler name
      * @param array $data_entry Latest data entry from data packet array
@@ -172,8 +155,6 @@ class PublishStep {
         }
 
         try {
-            // Handler is already instantiated from the registry
-
             // Get pipeline and flow IDs from flow_step_config
             $pipeline_id = $flow_step_config['pipeline_id'] ?? null;
             $flow_id = $flow_step_config['flow_id'] ?? null;
@@ -185,16 +166,35 @@ class PublishStep {
                 return null;
             }
 
-            // Universal JSON data entry interface - simple and direct
-            
-            // Convert data entry to pure JSON object  
-            $json_data_entry = json_decode(json_encode($data_entry));
-            $json_data_entry->publish_config = $handler_settings;
-            
-            // Execute handler with pure JSON object - beautiful simplicity
-            $publish_result = $handler->handle_publish($json_data_entry);
+            // Tool-first execution: Check if handler has tools available
+            $all_tools = apply_filters('ai_tools', []);
+            $handler_tools = array_filter($all_tools, function($tool) use ($handler_name) {
+                return isset($tool['handler']) && $tool['handler'] === $handler_name;
+            });
 
-            return $publish_result;
+            // Execute via handle_tool_call if tools are available
+            if (!empty($handler_tools)) {
+                $tool_name = array_key_first($handler_tools);
+                $tool_def = $handler_tools[$tool_name];
+                
+                // Extract tool parameters from data entry
+                $parameters = $this->extract_tool_parameters_from_data($data_entry, $handler_settings);
+                
+                do_action('dm_log', 'debug', 'Publish Step: Executing handler via tool calling', [
+                    'handler' => $handler_name,
+                    'tool_name' => $tool_name,
+                    'parameters_count' => count($parameters)
+                ]);
+                
+                return $handler->handle_tool_call($parameters, $tool_def);
+            }
+
+            // No execution method available
+            do_action('dm_log', 'error', 'Publish Step: Handler has no execution method available', [
+                'handler' => $handler_name,
+                'has_tools' => !empty($handler_tools)
+            ]);
+            return null;
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Publish Step: Handler execution failed', [
@@ -207,7 +207,58 @@ class PublishStep {
         }
     }
 
-
+    /**
+     * Extract tool parameters from data entry for tool calling
+     * 
+     * @param array $data_entry Latest data entry from data packet array
+     * @param array $handler_settings Handler configuration settings
+     * @return array Tool parameters extracted from data entry
+     */
+    private function extract_tool_parameters_from_data(array $data_entry, array $handler_settings): array {
+        $parameters = [];
+        
+        // Extract content from data entry
+        $content_data = $data_entry['content'] ?? [];
+        
+        if (isset($content_data['title'])) {
+            $parameters['title'] = $content_data['title'];
+        }
+        
+        if (isset($content_data['body'])) {
+            $parameters['content'] = $content_data['body'];
+        }
+        
+        // Extract source URL from metadata if available
+        $metadata = $data_entry['metadata'] ?? [];
+        if (isset($metadata['source_url'])) {
+            $parameters['source_url'] = $metadata['source_url'];
+        }
+        
+        // Extract attachments/media if available
+        $attachments = $data_entry['attachments'] ?? [];
+        if (!empty($attachments)) {
+            // Look for image attachments
+            foreach ($attachments as $attachment) {
+                if (isset($attachment['type']) && $attachment['type'] === 'image') {
+                    $parameters['image_url'] = $attachment['url'] ?? null;
+                    break;
+                }
+            }
+        }
+        
+        // Merge any additional parameters from handler settings
+        // This allows handler-specific configuration to be passed through
+        if (!empty($handler_settings)) {
+            // Filter out internal settings, only pass through tool-relevant ones
+            $tool_relevant_settings = array_filter($handler_settings, function($key) {
+                return !in_array($key, ['handler_slug', 'auth_config', 'internal_config']);
+            }, ARRAY_FILTER_USE_KEY);
+            
+            $parameters = array_merge($parameters, $tool_relevant_settings);
+        }
+        
+        return $parameters;
+    }
 
     /**
      * Get handler object directly from the handler system.

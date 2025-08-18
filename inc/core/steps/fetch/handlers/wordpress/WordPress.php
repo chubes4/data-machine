@@ -27,15 +27,6 @@ class WordPress {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get service via filter system.
-     *
-     * @param string $service_name Service name.
-     * @return mixed Service instance.
-     */
-    private function get_service(string $service_name) {
-        return apply_filters('dm_get_' . $service_name, null);
-    }
 
 
     /**
@@ -43,11 +34,11 @@ class WordPress {
      *
      * @param int $pipeline_id The pipeline ID for this execution context.
      * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
-     * @param int|null $flow_id The flow ID for processed items tracking.
+     * @param string|null $job_id The job ID for processed items tracking.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If fetch data is invalid or cannot be retrieved.
      */
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+    public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
         }
@@ -154,7 +145,7 @@ class WordPress {
             
             // Found first eligible item - mark as processed and return
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id);
+                do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
             }
 
             $title = $post->post_title ?: 'N/A';

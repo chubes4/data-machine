@@ -46,11 +46,11 @@ class Reddit {
 	 *
 	 * @param int $pipeline_id The pipeline ID for this execution context.
 	 * @param array  $handler_config Decoded handler configuration specific to this handler.
-	 * @param int|null $flow_id The flow ID for processed items tracking.
+	 * @param string|null $job_id The job ID for processed items tracking.
 	 * @return array Array containing 'processed_items' key with standardized data packets for Reddit data.
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 		do_action('dm_log', 'debug', 'Reddit Fetch: Entering get_fetch_data.', ['pipeline_id' => $pipeline_id]);
 
 		if ( empty( $pipeline_id ) ) {
@@ -72,10 +72,10 @@ class Reddit {
 			throw new Exception(esc_html__( 'Reddit authentication service not available. Please check system configuration.', 'data-machine' ));
 		}
 
-		// Flow ID is provided via method parameter for processed items tracking
+		// Job ID is provided via method parameter for processed items tracking
 		
-		if (!$flow_id) {
-			do_action('dm_log', 'error', 'Reddit Input: Could not determine flow context for processed items tracking.', [
+		if (!$job_id) {
+			do_action('dm_log', 'error', 'Reddit Input: Could not determine job context for processed items tracking.', [
 				'pipeline_id' => $pipeline_id
 			]);
 			// Continue without processed items tracking rather than fail completely
@@ -277,9 +277,9 @@ class Reddit {
 				}
 
 				// 3. Check if already processed
-				// Skip processed items tracking if flow_id not available
-				if ($flow_id) {
-					$is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'reddit', $current_item_id);
+				// Skip processed items tracking if flow_step_id not available
+				if ($flow_step_id) {
+					$is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'reddit', $current_item_id);
 					if ($is_processed) {
 						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 						continue; // Skip if already processed
@@ -321,8 +321,8 @@ class Reddit {
 				do_action('dm_log', 'debug', 'Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 				
 				// Mark item as processed immediately after confirming eligibility
-				if ($flow_step_id) {
-					do_action('dm_mark_item_processed', $flow_step_id, 'reddit', $current_item_id);
+				if ($flow_step_id && $job_id) {
+					do_action('dm_mark_item_processed', $flow_step_id, 'reddit', $current_item_id, $job_id);
 				}
 
 				// Prepare content string (Title and selftext/body)

@@ -23,15 +23,6 @@ class Files {
 		// No parameters needed - all services accessed via filters
 	}
 
-	/**
-	 * Get service via filter system.
-	 *
-	 * @param string $service_name Service name.
-	 * @return mixed Service instance.
-	 */
-	private function get_service(string $service_name) {
-		return apply_filters('dm_get_' . $service_name, null);
-	}
 
 	/**
 	 * Get repository instance via filter discovery
@@ -48,11 +39,11 @@ class Files {
 	 *
      * @param int $pipeline_id Pipeline ID for context.
      * @param array  $handler_config Handler configuration array.
-     * @param int|null $flow_id The flow ID for processed items tracking.
+     * @param string|null $job_id The job ID for processed items tracking.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         // Validate pipeline ID
         if (empty($pipeline_id)) {
             throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
@@ -94,7 +85,7 @@ class Files {
         }
         
         // Find the next unprocessed uploaded file
-        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files]);
+        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files], $job_id);
         
         if (!$next_file) {
             do_action('dm_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
@@ -140,9 +131,10 @@ class Files {
      *
      * @param string|null $flow_step_id Flow step ID for granular processed items tracking.
      * @param array $config Files configuration.
+     * @param string|null $job_id Job ID for processed items tracking.
      * @return array|null File info or null if no unprocessed files.
      */
-    private function find_next_unprocessed_file(?string $flow_step_id, array $config): ?array {
+    private function find_next_unprocessed_file(?string $flow_step_id, array $config, ?string $job_id = null): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
         
         if (empty($uploaded_files)) {
@@ -163,7 +155,7 @@ class Files {
             
             if (!$is_processed) {
                 // Mark file as processed immediately after confirming eligibility
-                do_action('dm_mark_item_processed', $flow_step_id, 'files', $file_identifier);
+                do_action('dm_mark_item_processed', $flow_step_id, 'files', $file_identifier, $job_id);
                 return $file;
             }
         }

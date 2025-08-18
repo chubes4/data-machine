@@ -31,26 +31,17 @@ class GoogleSheetsFetch {
         // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Get service via filter system.
-     *
-     * @param string $service_name Service name.
-     * @return mixed Service instance.
-     */
-    private function get_service(string $service_name) {
-        return apply_filters('dm_get_' . $service_name, null);
-    }
 
     /**
      * Fetches and prepares fetch data packets from a Google Sheets spreadsheet.
      *
      * @param int $pipeline_id The pipeline ID for this execution context.
      * @param array  $handler_config Decoded handler configuration specific to this handler.
-     * @param int|null $flow_id The flow ID for processed items tracking.
+     * @param string|null $job_id The job ID for processed items tracking.
      * @return array Array containing 'processed_items' key with standardized data packets for sheet rows.
      * @throws Exception If data cannot be retrieved or is invalid.
      */
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?int $flow_id = null): array {
+    public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
@@ -186,7 +177,7 @@ class GoogleSheetsFetch {
             
             // Mark item as processed immediately after confirming eligibility
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $row_identifier);
+                do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $row_identifier, $job_id);
             }
 
             // Build content string

@@ -130,9 +130,9 @@ class TwitterAuth {
     public function get_authorization_url() {
         // 1. Get API Key/Secret from configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
-        $apiKey = $config['api_key'] ?? '';
-        $apiSecret = $config['api_secret'] ?? '';
-        if (empty($apiKey) || empty($apiSecret)) {
+        $api_key = $config['api_key'] ?? '';
+        $api_secret = $config['api_secret'] ?? '';
+        if (empty($api_key) || empty($api_secret)) {
             return new WP_Error('twitter_missing_app_keys', __('Twitter API Key/Secret not configured.', 'data-machine'));
         }
 
@@ -141,7 +141,7 @@ class TwitterAuth {
 
         try {
             // 3. Instantiate TwitterOAuth
-            $connection = new TwitterOAuth($apiKey, $apiSecret);
+            $connection = new TwitterOAuth($api_key, $api_secret);
 
             // 4. Get Request Token from Twitter API
             $request_token = $connection->oauth('oauth/request_token', ['oauth_callback' => $callback_url]);
@@ -211,9 +211,9 @@ class TwitterAuth {
         }
 
         $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
-        $apiKey = $config['api_key'] ?? '';
-        $apiSecret = $config['api_secret'] ?? '';
-        if (empty($apiKey) || empty($apiSecret)) {
+        $api_key = $config['api_key'] ?? '';
+        $api_secret = $config['api_secret'] ?? '';
+        if (empty($api_key) || empty($api_secret)) {
             do_action('dm_log', 'error', 'Twitter OAuth Error: API Key/Secret missing during callback.');
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_app_keys'));
             exit;
@@ -222,7 +222,7 @@ class TwitterAuth {
         // --- 3. Exchange for Access Token --- 
         try {
             // Instantiate with App Key/Secret and *Request* Token/Secret
-            $connection = new TwitterOAuth($apiKey, $apiSecret, $oauth_token, $oauth_token_secret);
+            $connection = new TwitterOAuth($api_key, $api_secret, $oauth_token, $oauth_token_secret);
 
             // Exchange Request Token for Access Token
             $access_token_data = $connection->oauth("oauth/access_token", ["oauth_verifier" => $oauth_verifier]);

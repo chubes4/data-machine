@@ -46,11 +46,6 @@
                     error: errorDetails
                 }, window.location.origin);
                 
-                console.log('OAuth result sent to parent:', {
-                    success: !!authSuccess,
-                    provider: provider,
-                    error: errorDetails
-                });
             } catch (error) {
                 console.error('Failed to send OAuth result to parent:', error);
             }

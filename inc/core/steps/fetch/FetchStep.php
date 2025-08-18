@@ -11,37 +11,20 @@ if (!defined('ABSPATH')) {
 /**
  * Universal Fetch Step - Executes any fetch handler
  * 
- * This step can gather data from any configured fetch source using the filter-based
- * handler discovery system. Handler configuration is managed through the modal system
- * and flow-level settings, maintaining complete separation from step-level logic.
- * 
- * PURE CAPABILITY-BASED: External fetch step classes only need:
- * - execute(int $job_id, array $data, array $step_config): array method
- * - Parameter-less constructor
- * - No interface implementation required
- * 
- * Handler selection is determined by flow configuration, enabling
- * complete flexibility in pipeline composition.
+ * Gathers data from configured fetch sources using filter-based handler discovery.
  */
 class FetchStep {
 
     /**
-     * Execute fetch data collection with pure array data packet system
+     * Execute fetch data collection
      * 
-     * PURE ARRAY SYSTEM:
-     * - Fetch steps generate new data from external sources
-     * - Receives data packet array (may be empty for first step)
-     * - Adds fetch data to the array and returns updated array
-     * 
+     * @param string $job_id The job ID for context tracking
      * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job  
      * @param array $flow_step_config Flow step configuration including handler settings
      * @return array Updated data packet array with fetch data added
      */
-    public function execute($flow_step_id, array $data = [], array $flow_step_config = []): array {
-        $all_databases = apply_filters('dm_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
         try {
             // Fetch steps generate data from external sources 
             do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [
@@ -73,7 +56,7 @@ class FetchStep {
             $handler_settings['flow_step_id'] = $flow_step_config['flow_step_id'] ?? null;
 
             // Execute single handler - one step, one handler, per flow
-            $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings);
+            $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, $job_id);
 
             if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
                 do_action('dm_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);
@@ -111,9 +94,10 @@ class FetchStep {
      * @param string $handler_name Fetch handler name
      * @param array $flow_step_config Flow step configuration including pipeline/flow IDs
      * @param array $handler_settings Handler settings
+     * @param string $job_id Job ID for processed items tracking
      * @return array|null Fetch entry array or null on failure
      */
-    private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings): ?array {
+    private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings, string $job_id): ?array {
         // Get handler object directly from handler system
         $handler = $this->get_handler_object($handler_name);
         if (!$handler) {
@@ -139,8 +123,8 @@ class FetchStep {
             }
 
             // Execute handler - handlers return arrays, use universal conversion
-            // Pass flow_id for processed items tracking
-            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $flow_id);
+            // Pass job_id for processed items tracking
+            $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $job_id);
 
             // Convert handler output to data entry for the data packet array
             $context = [

@@ -67,9 +67,10 @@
 /* Explicit separator element between pipeline cards */
 .dm-pipelines-list .dm-separator {
     height: 1px;
-    background: #efefef;
+    background: linear-gradient(to right, rgba(0,0,0,0.06), rgba(0,0,0,0.03));
     margin: 12px 20px; /* aligns with card padding */
     border-radius: 1px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
 }
 
 /* Slightly larger gap on small screens for touch targets */

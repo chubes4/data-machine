@@ -64,9 +64,6 @@ function dm_register_execution_engine() {
 
     // 2. CORE STEP EXECUTION - Pure functional pipeline orchestration (the heart)
     add_action( 'dm_execute_step', function( $job_id, $flow_step_id, $data = null ) {
-        // Set global job context for processed items tracking
-        global $dm_current_job_id;
-        $dm_current_job_id = $job_id;
         
         try {
             // Load complete flow step configuration using flow_step_id
@@ -77,9 +74,6 @@ function dm_register_execution_engine() {
                     'flow_step_id' => $flow_step_id
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-                // Clear job context after cleanup actions complete
-                global $dm_current_job_id;
-                $dm_current_job_id = null;
                 return false;
             }
 
@@ -94,9 +88,6 @@ function dm_register_execution_engine() {
                     'step_type' => $step_type
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-                // Clear job context after cleanup actions complete
-                global $dm_current_job_id;
-                $dm_current_job_id = null;
                 return false;
             }
             
@@ -105,8 +96,8 @@ function dm_register_execution_engine() {
             // Create step instance (parameter-less constructor)
             $flow_step = new $step_class();
             
-            // Execute step without job_id - Engine provides job context globally
-            $data = $flow_step->execute( $flow_step_id, $data ?: [], $flow_step_config );
+            // Execute step with explicit job_id parameter
+            $data = $flow_step->execute( $job_id, $flow_step_id, $data ?: [], $flow_step_config );
             
             // Success = non-empty data packet array, failure = empty array
             $step_success = ! empty( $data );
@@ -126,40 +117,18 @@ function dm_register_execution_engine() {
                     'class' => $step_class
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-                // Clear job context after cleanup actions complete
-                global $dm_current_job_id;
-                $dm_current_job_id = null;
             }
 
-            // Clear job context after successful execution (no cleanup needed)
-            if ($step_success) {
-                global $dm_current_job_id;
-                $dm_current_job_id = null;
-            }
 
             return $step_success;
 
-        } catch ( \Exception $e ) {
-            do_action('dm_log', 'error', 'Exception in pipeline step execution', [
-                'flow_step_id' => $flow_step_id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-            // Clear job context after cleanup actions complete
-            global $dm_current_job_id;
-            $dm_current_job_id = null;
-            return false;
         } catch ( \Throwable $e ) {
-            do_action('dm_log', 'error', 'Fatal error in pipeline step execution', [
+            do_action('dm_log', 'error', 'Error in pipeline step execution', [
                 'flow_step_id' => $flow_step_id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
             do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-            // Clear job context after cleanup actions complete
-            global $dm_current_job_id;
-            $dm_current_job_id = null;
             return false;
         }
     }, 10, 3 );

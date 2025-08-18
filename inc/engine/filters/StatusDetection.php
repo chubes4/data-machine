@@ -9,8 +9,6 @@
  * @since 1.0.0
  */
 
-namespace DataMachine\Engine\Filters;
-
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
@@ -438,5 +436,3 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
 }
 
 
-// Auto-register filters when file loads
-dm_register_status_detection_filters();
