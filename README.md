@@ -98,7 +98,7 @@ Pipeline: "Document Processor"
 ### Filter Integration
 ```php
 // Pipeline execution and management
-do_action('dm_run_flow_now', $flow_id);
+do_action('dm_run_flow_now', $flow_id, 'manual');
 do_action('dm_create', 'pipeline', ['pipeline_name' => 'My Pipeline']);
 do_action('dm_create', 'flow', ['flow_name' => 'My Flow', 'pipeline_id' => $id]);
 
@@ -123,7 +123,7 @@ $oauth_url = apply_filters('dm_get_oauth_url', '', 'twitter');
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
 $steps = apply_filters('dm_steps', []);
-$auth_providers = apply_filters('dm_auth_providers', []);
+$databases = apply_filters('dm_db', []);
 ```
 
 ### Extension Development

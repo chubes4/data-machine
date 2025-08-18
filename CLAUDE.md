@@ -45,12 +45,17 @@ apply_filters('dm_get_oauth_auth_url', '', 'provider');
 apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
 apply_filters('dm_detect_status', 'green', 'context', $data);
 apply_filters('dm_generate_handler_tool', $tool, $handler_slug, $handler_config);
+
+// Flow Step Operations
+apply_filters('dm_split_flow_step_id', [], $flow_step_id);
+apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
 ```
 
 **Essential Actions**:
 ```php
 // Execution
-do_action('dm_run_flow_now', $flow_id);
+do_action('dm_run_flow_now', $flow_id, $context);
 do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
@@ -59,12 +64,15 @@ do_action('dm_create', 'pipeline', ['pipeline_name' => $name]);
 do_action('dm_create', 'flow', ['flow_name' => $name, 'pipeline_id' => $id]);
 do_action('dm_create', 'step', ['step_type' => 'fetch', 'pipeline_id' => $id]);
 do_action('dm_create', 'job', ['pipeline_id' => $id, 'flow_id' => $flow_id]);
-do_action('dm_update_flow_handler', $flow_step_id, $handler, $settings);
+do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
+do_action('dm_update_flow_schedule', $flow_id, $schedule_interval, $old_interval);
 do_action('dm_delete', 'pipeline', $pipeline_id, ['cascade' => true]);
 
 // System
-do_action('dm_log', 'error', $message, ['context' => $data]);
+do_action('dm_log', $level, $message, $context);
 do_action('dm_ajax_route', 'action_name', 'page|modal');
+do_action('dm_mark_item_processed', $flow_step_id, $source_type, $item_identifier, $job_id);
+do_action('dm_auto_save', $pipeline_id);
 ```
 
 ## Architecture
@@ -73,7 +81,7 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 **Execution Cycle**:
 1. `dm_run_flow_now` → Creates job via `dm_create` action
-2. `dm_execute_step` → Functional step execution with global job context
+2. `dm_execute_step` → Functional step execution with job_id and flow_step_id
 3. `dm_schedule_next_step` → Action Scheduler step transitions
 
 **Job Status Management**: `completed`, `failed`, `completed_no_items` - engine exceptions fail jobs immediately
@@ -116,7 +124,7 @@ $result = apply_filters('ai_request', [
 
 ## Agentic Tool Calling
 
-**Pure Tool Pattern**: All publish handlers use ONLY `handle_tool_call()` method - no `handle_publish()` methods exist
+**Pure Tool Pattern**: All current publish handlers use ONLY `handle_tool_call()` method. Legacy `handle_publish()` fallback exists only for future handlers without tool support
 
 **Dynamic Discovery**: AI models discover and use handler capabilities automatically via `apply_filters('ai_tools', [])`
 
@@ -195,7 +203,7 @@ class Twitter {
 }
 ```
 
-**Tool Execution**: `ai_http_execute_tool($tool_name, $parameters)` - Class method execution with WordPress action fallback
+**Tool Execution**: Direct `handle_tool_call()` method execution with automatic tool discovery. PublishStep uses tool-first execution path for all current handlers
 
 **Context-Aware**: Next step handlers automatically register tools for AI step discovery
 
@@ -341,8 +349,9 @@ return [
 1. **Pipelines Page**: Create/manage pipeline templates
 2. **Add Steps**: Configure step positions and types via modals
 3. **Flow Configuration**: Set handlers, authentication, scheduling
-4. **Job Management**: Monitor execution, clear processed items
-5. **Testing**: Manual execution with `dm_run_flow_now`
+4. **Jobs Page**: Monitor execution, clear jobs, view status
+5. **Logs Page**: System logging, error tracking, debug information
+6. **Testing**: Manual execution with `dm_run_flow_now`
 
 **OAuth URL System**: Public `/dm-oauth/{provider}/` rewrite URLs for external API callbacks with centralized authentication flow
 
@@ -354,8 +363,8 @@ return [
 
 ```php
 class MyStep {
-    public function execute($flow_step_id, array $data = [], array $step_config = []): array {
-        // Global job context available via $GLOBALS['dm_current_job_id']
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+        // Job ID provided as explicit parameter
         $processed_entry = [
             'type' => 'my_step',
             'content' => ['title' => $title, 'body' => $processed_content],
@@ -461,7 +470,7 @@ do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
 **Path Patterns**:
 - Flow isolation prevents cross-contamination between different pipeline flows
 - UUID-based flow_step_id ensures unique namespaces: `{pipeline_step_id}_{flow_id}`
-- Automatic cleanup on flow deletion via `cleanup_flow_files()`
+- Automatic cleanup on flow deletion
 
 **Operations**:
 ```php
@@ -469,11 +478,9 @@ $repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 
 // Storage
 $repo->store_file($tmp_name, $filename, $flow_step_id);
-$repo->get_file_path($filename, $flow_step_id);
-$repo->file_exists($filename, $flow_step_id);
+$repo->get_repository_path($flow_step_id);
 
 // Cleanup
-$repo->cleanup_flow_files($flow_step_id);        // Single flow
 do_action('dm_cleanup_old_files');               // Global maintenance
 $repo->delete_file($filename, $flow_step_id);    // Single file
 ```
@@ -519,7 +526,7 @@ try {
 }
 ```
 
-**Global Job Context**: `$GLOBALS['dm_current_job_id']` available during step execution
+**Explicit Job Context**: Job ID passed as first parameter to all step execute() methods
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
 
