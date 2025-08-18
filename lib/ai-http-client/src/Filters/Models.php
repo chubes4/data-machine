@@ -21,15 +21,11 @@ add_filter('ai_models', function($provider_name = null) {
         // Create provider instance directly, always passing config if present
         $provider = ai_http_create_provider($provider_name, $provider_config);
         if (!$provider) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-            }
             return [];
         }
         // Get models directly from provider (now returns full array of model objects)
         return $provider->get_normalized_models();
     } catch (Exception $e) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-        }
         return [];
     }
 }, 10, 2);

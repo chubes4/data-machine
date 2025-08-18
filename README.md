@@ -39,14 +39,22 @@ Create an automated content pipeline in 5 minutes:
 
 ### Content Automation
 ```php
-// RSS → AI → Multiple Publishers
-Pipeline: "Multi-Platform Content"
+// RSS → AI → Single Publisher (Recommended Pattern)
+Pipeline: "Twitter Content Bot"
 ├── Fetch: RSS (TechCrunch)
-├── AI: GPT-4 ("Create platform-specific content")
-├── Publish: Twitter (280 chars + URL reply)
-├── Publish: Facebook (with comment mode)
-└── Publish: WordPress (with taxonomies)
+├── AI: GPT-4 ("Create engaging Twitter content")
+└── Publish: Twitter (280 chars + URL reply)
+
+// Multi-Platform: Use Separate Flows or AI→Publish→AI→Publish Pattern
+Pipeline: "Multi-Platform Content" (Advanced)
+├── Fetch: RSS (TechCrunch)
+├── AI: GPT-4 ("Analyze and prepare content")
+├── Publish: Twitter (AI-guided)
+├── AI: GPT-4 ("Create Facebook version")
+└── Publish: Facebook (AI-guided)
 ```
+
+> **Note**: AI steps only discover tools for the **immediate next step**. Multiple consecutive publish steps will execute without AI guidance after the first one. For multi-platform publishing, use alternating AI→Publish→AI→Publish patterns or separate flows for each destination.
 
 ### Agentic Tool Calling
 ```php

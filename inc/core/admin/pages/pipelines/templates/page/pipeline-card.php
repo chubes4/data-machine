@@ -22,25 +22,11 @@ $pipeline_steps = [];
 if (isset($pipeline) && !empty($pipeline)) {
     $pipeline_id = $pipeline['pipeline_id'] ?? null;
     $pipeline_name = $pipeline['pipeline_name'] ?? '';
-    $step_config = $pipeline['pipeline_config'] ?? '';
-    $pipeline_steps = !empty($step_config) ? json_decode($step_config, true) : [];
-    $pipeline_steps = is_array($pipeline_steps) ? $pipeline_steps : [];
-    
-    // Validate all pipeline steps have valid UUID keys - the key IS the pipeline_step_id
-    foreach ($pipeline_steps as $pipeline_step_id => $step) {
-        if (empty($pipeline_step_id) || !is_string($pipeline_step_id)) {
-            do_action('dm_log', 'error', 'Pipeline step has invalid pipeline_step_id key - data corruption detected', [
-                'pipeline_id' => $pipeline_id,
-                'pipeline_step_id' => $pipeline_step_id,
-                'step_data' => $step
-            ]);
-            throw new \RuntimeException("Pipeline {$pipeline_id} step with invalid pipeline_step_id key - cannot render pipeline");
-        }
-    }
+    $pipeline_steps = $pipeline_id ? apply_filters('dm_get_pipeline_steps', [], $pipeline_id) : [];
 }
 
-$step_count = count($pipeline_steps);
 $is_new_pipeline = empty($pipeline_id);
+$has_steps = !empty($pipeline_steps);
 
 ?>
 <div class="dm-pipeline-card dm-pipeline-form" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
@@ -133,7 +119,7 @@ $is_new_pipeline = empty($pipeline_id);
             <div class="dm-flows-header-actions">
                 <button type="button" class="button button-primary dm-add-flow-btn" 
                         data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>"
-                        <?php echo ($is_new_pipeline || empty($pipeline_name) || $step_count === 0) ? 'disabled title="' . esc_attr__('Pipeline needs name and steps to add flows', 'data-machine') . '"' : ''; ?>>
+                        <?php echo ($is_new_pipeline || empty($pipeline_name) || !$has_steps) ? 'disabled title="' . esc_attr__('Pipeline needs name and steps to add flows', 'data-machine') . '"' : ''; ?>>
                     <?php esc_html_e('Add Flow', 'data-machine'); ?>
                 </button>
             </div>

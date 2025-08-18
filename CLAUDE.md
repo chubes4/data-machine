@@ -16,6 +16,10 @@ apply_filters('dm_get_pipelines', [], $pipeline_id);
 apply_filters('dm_get_flow_config', [], $flow_id);
 apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_id);
 
+// Pipeline Navigation
+apply_filters('dm_get_next_pipeline_step_id', null, $pipeline_step_id);
+apply_filters('dm_get_previous_pipeline_step_id', null, $pipeline_step_id);
+
 // Templates & Files
 apply_filters('dm_render_template', '', $template, $data);
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
@@ -409,12 +413,26 @@ $admin_pages = apply_filters('dm_admin_pages', []);
 
 ## Usage Examples
 
-**Pipeline Creation**:
+**Single Destination Pipeline (Recommended)**:
 ```php
 do_action('dm_create', 'pipeline', ['pipeline_name' => 'RSS to Twitter']);
 do_action('dm_create', 'step', ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
+do_action('dm_create', 'step', ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
+do_action('dm_create', 'step', ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]);
 do_action('dm_update_flow_handler', $flow_step_id, 'rss', $settings);
 do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly');
+```
+
+**Multi-Platform Pipeline (Advanced - Alternating Pattern)**:
+```php
+// Pattern: Fetch → AI → Publish → AI → Publish
+// Each AI step guides the next publish step
+do_action('dm_create', 'pipeline', ['pipeline_name' => 'Multi-Platform Content']);
+do_action('dm_create', 'step', ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
+do_action('dm_create', 'step', ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]); // Twitter AI
+do_action('dm_create', 'step', ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]); // Twitter
+do_action('dm_create', 'step', ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]); // Facebook AI
+do_action('dm_create', 'step', ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]); // Facebook
 ```
 
 **Execution & Testing**:
@@ -422,6 +440,8 @@ do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly');
 do_action('dm_run_flow_now', $flow_id, 'manual_trigger');
 do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
 ```
+
+> **Important**: AI steps only discover tools for the immediate next step. Multiple consecutive publish steps will execute without AI guidance. The system will show yellow warning status for publish steps that follow other publish steps.
 
 ## Files Repository
 
@@ -559,6 +579,11 @@ $draft_status = apply_filters('dm_detect_status', 'green', 'wordpress_draft', [
 // Files handler status
 $files_status = apply_filters('dm_detect_status', 'green', 'files_status', [
     'flow_step_id' => $flow_step_id
+]);
+
+// Subsequent publish step detection
+$subsequent_status = apply_filters('dm_detect_status', 'green', 'subsequent_publish_step', [
+    'pipeline_step_id' => $pipeline_step_id
 ]);
 ```
 

@@ -118,6 +118,14 @@
                         
                         // Update the flow step card with the new handler
                         this.updateFlowStepCard(response.data);
+                        
+                        // Refresh pipeline status after handler addition
+                        const pipelineId = $button.closest('.dm-pipeline-card').data('pipeline-id');
+                        if (pipelineId) {
+                            PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                                console.error('Failed to refresh pipeline status after adding handler:', error);
+                            });
+                        }
                     } else {
                         console.error('Error adding handler:', response.data);
                         alert(response.data?.message || 'Error adding handler to flow step');
@@ -337,6 +345,15 @@
             // For handler operations, update the specific step card
             if (data && data.handler_slug && data.step_type && data.flow_step_id) {
                 this.updateFlowStepCard(data);
+                
+                // Refresh pipeline status after handler configuration save
+                const $stepContainer = $(`.dm-step-container[data-flow-step-id="${data.flow_step_id}"]`);
+                const pipelineId = $stepContainer.closest('.dm-pipeline-card').data('pipeline-id');
+                if (pipelineId) {
+                    PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                        console.error('Failed to refresh pipeline status after handler save:', error);
+                    });
+                }
             }
         },
 
@@ -384,6 +401,14 @@
                         }).then((updatedStepHtml) => {
                             // Replace the existing step container with updated version
                             $flowStepContainer.replaceWith(updatedStepHtml);
+                            
+                            // Refresh pipeline status after template update
+                            const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
+                            if (pipelineId) {
+                                PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                                    console.error('Failed to refresh pipeline status after step card update:', error);
+                                });
+                            }
                         }).catch((error) => {
                             console.error('Failed to render updated step card template:', error);
                         });
@@ -444,6 +469,13 @@
                         $flowCard.fadeOut(300, function() {
                             $(this).remove();
                             
+                            // Refresh pipeline status after flow deletion
+                            const pipelineId = $flowCard.closest('.dm-pipeline-card').data('pipeline-id');
+                            if (pipelineId) {
+                                PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                                    console.error('Failed to refresh pipeline status after flow deletion:', error);
+                                });
+                            }
                         }.bind(this));
                     } else {
                         alert(response.data.message || 'Error deleting flow');

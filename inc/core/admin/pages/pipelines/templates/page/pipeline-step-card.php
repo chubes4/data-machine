@@ -36,6 +36,17 @@ if ($is_empty) {
 }
 $has_step_settings = !$is_empty && !empty($step_settings_info);
 
+// Pipeline step status detection (only for populated steps)
+$pipeline_status_class = '';
+if ($pipeline_id && !$is_empty && $pipeline_step_id) {
+    $pipeline_status = apply_filters('dm_detect_status', 'green', 'pipeline_step_status', [
+        'pipeline_id' => $pipeline_id,
+        'pipeline_step_id' => $pipeline_step_id,
+        'step_type' => $step_type
+    ]);
+    $pipeline_status_class = ' dm-pipeline-step-card--status-' . $pipeline_status;
+}
+
 ?>
 <div class="dm-step-container" 
      data-step-execution-order="<?php echo esc_attr($step_execution_order); ?>"
@@ -61,7 +72,7 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
         </div>
     <?php endif; ?>
 
-    <div class="dm-step-card<?php echo $is_empty ? ' dm-step-card--empty' : ''; ?>">
+    <div class="dm-step-card<?php echo $is_empty ? ' dm-step-card--empty' : ''; ?><?php echo esc_attr($pipeline_status_class); ?>">
         <?php if ($is_empty): ?>
             <!-- Empty step - Add Step button -->
             <div class="dm-step-empty-content">
@@ -74,7 +85,9 @@ $has_step_settings = !$is_empty && !empty($step_settings_info);
         <?php else: ?>
             <!-- Populated step -->
             <div class="dm-step-header">
-                <div class="dm-step-title"><?php echo esc_html($step_title); ?></div>
+                <div class="dm-step-title">
+                    <?php echo esc_html($step_title); ?>
+                </div>
                 <div class="dm-step-actions">
                     <!-- Pipeline actions: Delete + Configure -->
                     <button type="button" class="button button-small button-link-delete dm-modal-open" 

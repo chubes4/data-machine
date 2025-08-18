@@ -104,9 +104,7 @@
             }
             
             return addStepPromise.then(() => {
-                if (containerType === 'pipeline') {
-                    this.updateStepCount($pipelineCard);
-                } else if (containerType === 'flow') {
+                if (containerType === 'flow') {
                     this.updateFlowMetaText($pipelineCard, $container);
                 }
             });
@@ -170,33 +168,6 @@
             });
         },
         
-        /**
-         * Update step count using filter-based data access
-         */
-        updateStepCount: function($pipelineCard) {
-            const pipelineId = parseInt($pipelineCard.data('pipeline-id') || 0);
-            
-            if (pipelineId > 0) {
-                $.ajax({
-                    url: dmPipelineBuilder.ajax_url,
-                    type: 'POST',
-                    data: {
-                        action: 'dm_get_pipeline_data',
-                        pipeline_id: pipelineId,
-                        nonce: dmPipelineBuilder.dm_ajax_nonce
-                    },
-                    success: (response) => {
-                        if (response.success) {
-                            const stepCount = response.data.step_count || 0;
-                            $pipelineCard.find('.dm-step-count').text(stepCount + ' step' + (stepCount !== 1 ? 's' : ''));
-                        }
-                    },
-                    error: (xhr, status, error) => {
-                        console.error('Failed to update step count:', error);
-                    }
-                });
-            }
-        },
         
         /**
          * Update flow meta text when first step is added
@@ -373,7 +344,8 @@
                     $button.prop('disabled', false);
                 }
             });
-        }
+        },
+
     };
 
     // Bind the configure step action handler to the page-level

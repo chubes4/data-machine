@@ -634,8 +634,7 @@ class PipelineModalAjax
             'pipeline_id' => $pipeline_id,
             'pipeline_data' => $pipeline_data,
             'pipeline_steps' => $pipeline_steps ?? [],
-            'pipeline_flows' => $pipeline_flows ?? [],
-            'step_count' => count($pipeline_steps ?? [])
+            'pipeline_flows' => $pipeline_flows ?? []
         ]);
     }
 

@@ -316,6 +316,86 @@ function dm_register_database_filters() {
         return null; // No next step
     }, 10, 2);
     
+    /**
+     * Get Next Pipeline Step ID (Pipeline Level Navigation)
+     * 
+     * USAGE: $next_pipeline_step_id = apply_filters('dm_get_next_pipeline_step_id', null, $pipeline_step_id);
+     * 
+     * RETURNS: Next pipeline step ID or null if no next step
+     */
+    add_filter('dm_get_next_pipeline_step_id', function($default, $pipeline_step_id) {
+        if (!$pipeline_step_id) {
+            return null;
+        }
+        
+        // Get current step configuration to find pipeline_id and execution_order
+        $current_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        if (!$current_config) {
+            return null;
+        }
+        
+        $pipeline_id = $current_config['pipeline_id'];
+        $current_execution_order = $current_config['execution_order'];
+        $next_execution_order = $current_execution_order + 1;
+        
+        // Get all pipeline steps
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        if (empty($pipeline_steps)) {
+            return null;
+        }
+        
+        // Find step with next execution order
+        foreach ($pipeline_steps as $step_id => $step_config) {
+            if (($step_config['execution_order'] ?? -1) === $next_execution_order) {
+                return $step_id;
+            }
+        }
+        
+        return null; // No next step
+    }, 10, 2);
+    
+    /**
+     * Get Previous Pipeline Step ID (Pipeline Level Navigation)
+     * 
+     * USAGE: $prev_pipeline_step_id = apply_filters('dm_get_previous_pipeline_step_id', null, $pipeline_step_id);
+     * 
+     * RETURNS: Previous pipeline step ID or null if no previous step
+     */
+    add_filter('dm_get_previous_pipeline_step_id', function($default, $pipeline_step_id) {
+        if (!$pipeline_step_id) {
+            return null;
+        }
+        
+        // Get current step configuration to find pipeline_id and execution_order
+        $current_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        if (!$current_config) {
+            return null;
+        }
+        
+        $pipeline_id = $current_config['pipeline_id'] ?? null;
+        if (!$pipeline_id) {
+            return null; // No pipeline ID available
+        }
+        
+        $current_execution_order = $current_config['execution_order'] ?? -1;
+        $prev_execution_order = $current_execution_order - 1;
+        
+        // Get all pipeline steps
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        if (empty($pipeline_steps)) {
+            return null;
+        }
+        
+        // Find step with previous execution order
+        foreach ($pipeline_steps as $step_id => $step_config) {
+            if (($step_config['execution_order'] ?? -1) === $prev_execution_order) {
+                return $step_id;
+            }
+        }
+        
+        return null; // No previous step
+    }, 10, 2);
+    
     // ========================================================================
     // DATABASE-AWARE PROCESSING FILTERS
     // ========================================================================

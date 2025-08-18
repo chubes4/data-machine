@@ -131,6 +131,16 @@ if (!$is_empty) {
         }
     }
     
+    // Check for subsequent publish step (only if not already red)
+    if ($status !== 'red' && $pipeline_step_id) {
+        $subsequent_status = apply_filters('dm_detect_status', 'green', 'subsequent_publish_step', [
+            'pipeline_step_id' => $pipeline_step_id
+        ]);
+        if ($subsequent_status === 'yellow') {
+            $status = 'yellow'; // Override with warning status
+        }
+    }
+    
     // Apply status class for all statuses (including green)
     $status_class = ' dm-step-card--status-' . $status;
 }
@@ -162,7 +172,22 @@ if (!$is_empty) {
         <?php else: ?>
             <!-- Populated step -->
             <div class="dm-step-header">
-                <div class="dm-step-title"><?php echo esc_html($step_title); ?></div>
+                <div class="dm-step-title">
+                    <?php echo esc_html($step_title); ?>
+                    <?php if ($status === 'yellow' && $step_type === 'publish' && $pipeline_step_id): ?>
+                        <?php 
+                        // Check if this is specifically the subsequent publish warning
+                        $subsequent_check = apply_filters('dm_detect_status', 'green', 'subsequent_publish_step', [
+                            'pipeline_step_id' => $pipeline_step_id
+                        ]);
+                        if ($subsequent_check === 'yellow'): 
+                        ?>
+                            <span class="dashicons dashicons-warning" 
+                                  title="<?php esc_attr_e('Warning: This publish step follows another publish step. AI cannot guide content to multiple destinations simultaneously. Consider using separate AI steps or separate flows for each destination.', 'data-machine'); ?>" 
+                                  style="color: #f0b849; font-size: 14px; margin-left: 4px;"></span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
                 <div class="dm-step-actions">
                     <?php if ($step_uses_handlers && $has_handlers): ?>
                         <?php if (!$handler_configured): ?>

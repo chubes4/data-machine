@@ -49,7 +49,8 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
         <div class="dm-pipelines-list">
             <!-- Show existing pipelines (latest first) -->
             <?php if (!empty($all_pipelines)): ?>
-                <?php foreach (array_reverse($all_pipelines) as $pipeline): ?>
+                <?php $reversed_pipelines = array_reverse($all_pipelines); $total_pipelines = count($reversed_pipelines); ?>
+                <?php foreach ($reversed_pipelines as $index => $pipeline): ?>
                     <?php 
                     // Load flows for this pipeline
                     $pipeline_id = $pipeline['pipeline_id'];
@@ -60,6 +61,10 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
                         'existing_flows' => $existing_flows,
                         'pipelines_instance' => null  // No instance needed with template-based approach
                     ]); 
+                    // Insert visual separator between cards (not after last)
+                    if ($index < $total_pipelines - 1) {
+                        echo '<div class="dm-separator" aria-hidden="true"></div>';
+                    }
                     ?>
                 <?php endforeach; ?>
             <?php endif; ?>

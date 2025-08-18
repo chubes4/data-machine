@@ -73,6 +73,11 @@
                     if (response.success) {
                         // Update interface with new step for the specific pipeline
                         this.updatePipelineInterface(response.data, pipelineId);
+                        
+                        // Refresh pipeline status for real-time border updates
+                        PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                            console.error('Failed to refresh pipeline status after adding step:', error);
+                        });
                     } else {
                         alert(response.data.message || 'Error adding step');
                     }
@@ -315,15 +320,17 @@
                             $stepContainer.fadeOut(300, function() {
                                 $(this).remove();
                                 
-                                // Update step count for this specific pipeline
-                                PipelinesPage.updateStepCount($pipelineCard);
-                                
                                 // Check if only empty step remains and remove its arrow
                                 const remainingSteps = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
                                 if (remainingSteps === 0) {
                                     // Only empty step remains - it should be treated as first step (no arrow)
                                     $pipelineCard.find('.dm-step-container:has(.dm-step-card--empty) .dm-step-arrow').remove();
                                 }
+                                
+                                // Refresh pipeline status for real-time border updates
+                                PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                                    console.error('Failed to refresh pipeline status after deleting step:', error);
+                                });
                             });
                         }
                     } else {

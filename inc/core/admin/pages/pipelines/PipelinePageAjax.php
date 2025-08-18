@@ -175,7 +175,16 @@ class PipelinePageAjax
 
         // Get current pipeline steps to determine next execution order
         $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        $next_execution_order = count($current_steps);
+        
+        // Calculate the next execution_order by finding the highest existing value
+        $max_execution_order = -1;
+        foreach ($current_steps as $step) {
+            $execution_order = $step['execution_order'] ?? 0;
+            if ($execution_order > $max_execution_order) {
+                $max_execution_order = $execution_order;
+            }
+        }
+        $next_execution_order = $max_execution_order + 1;
 
         // Get step config for label
         $all_steps = apply_filters('dm_steps', []);
@@ -342,6 +351,54 @@ class PipelinePageAjax
         } else {
             wp_send_json_error(['message' => __('Import failed', 'data-machine')]);
         }
+    }
+
+    /**
+     * Refresh pipeline status for real-time updates - individual step statuses
+     */
+    public function handle_refresh_pipeline_status()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $pipeline_id = intval($_POST['pipeline_id'] ?? 0);
+        
+        if (!$pipeline_id) {
+            wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
+        }
+        
+        // Get all pipeline steps
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        
+        if (empty($pipeline_steps)) {
+            wp_send_json_success([
+                'step_statuses' => [],
+                'pipeline_id' => $pipeline_id
+            ]);
+            return;
+        }
+        
+        // Get individual status for each step
+        $step_statuses = [];
+        foreach ($pipeline_steps as $pipeline_step_id => $step_config) {
+            $step_type = $step_config['step_type'] ?? '';
+            
+            $step_status = apply_filters('dm_detect_status', 'green', 'pipeline_step_status', [
+                'pipeline_id' => $pipeline_id,
+                'pipeline_step_id' => $pipeline_step_id,
+                'step_type' => $step_type
+            ]);
+            
+            $step_statuses[$pipeline_step_id] = $step_status;
+        }
+        
+        wp_send_json_success([
+            'step_statuses' => $step_statuses,
+            'pipeline_id' => $pipeline_id
+        ]);
     }
 
     // All deletion logic moved to central dm_delete action in DataMachineActions.php

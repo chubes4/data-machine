@@ -33,6 +33,65 @@ class Delete {
         $instance = new self();
         // Central deletion action hook - eliminates code duplication across deletion types
         add_action('dm_delete', [$instance, 'handle_delete'], 10, 3);
+        
+        // Pipeline utility action for resequencing execution_order values
+        add_action('dm_resequence_pipeline_steps', [$instance, 'resequence_pipeline_steps'], 10, 1);
+    }
+    
+    /**
+     * Resequence execution_order values for a pipeline to ensure sequential ordering
+     * 
+     * Utility function to fix corrupted execution_order values by resequencing
+     * all steps to have sequential values (0, 1, 2, etc.) based on their current order.
+     * 
+     * @param int $pipeline_id Pipeline ID to resequence
+     * @return bool Success status
+     * @since NEXT_VERSION
+     */
+    public function resequence_pipeline_steps($pipeline_id) {
+        if (!current_user_can('manage_options')) {
+            return false;
+        }
+        
+        // Get database service
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            return false;
+        }
+        
+        // Get current pipeline steps
+        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        if (empty($current_steps)) {
+            return true; // Nothing to resequence
+        }
+        
+        // Sort steps by current execution_order to maintain relative positioning
+        $steps_array = array_values($current_steps);
+        usort($steps_array, function($a, $b) {
+            $order_a = $a['execution_order'] ?? 0;
+            $order_b = $b['execution_order'] ?? 0;
+            return $order_a - $order_b;
+        });
+        
+        // Resequence with clean sequential values
+        $updated_steps = [];
+        foreach ($steps_array as $index => $step) {
+            $step['execution_order'] = $index; // Reset to 0, 1, 2, etc.
+            $updated_steps[$step['pipeline_step_id']] = $step;
+        }
+        
+        // Update pipeline configuration
+        $success = $db_pipelines->update_pipeline($pipeline_id, [
+            'pipeline_config' => json_encode($updated_steps)
+        ]);
+        
+        if ($success) {
+            do_action('dm_log', 'debug', "Resequenced execution_order values for pipeline ID: {$pipeline_id}");
+        }
+        
+        return $success;
     }
 
     /**
@@ -243,16 +302,22 @@ class Delete {
 
         // Get current pipeline steps and remove the specified step
         $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        $updated_steps = [];
+        $remaining_steps = [];
         $step_found = false;
         
         foreach ($current_steps as $step) {
             if (($step['pipeline_step_id'] ?? '') !== $pipeline_step_id) {
-                // Preserve associative array format with pipeline_step_id as key
-                $updated_steps[$step['pipeline_step_id']] = $step;
+                $remaining_steps[] = $step;
             } else {
                 $step_found = true;
             }
+        }
+        
+        // Resequence execution_order values to ensure sequential ordering (0, 1, 2, etc.)
+        $updated_steps = [];
+        foreach ($remaining_steps as $index => $step) {
+            $step['execution_order'] = $index; // Reset to sequential values
+            $updated_steps[$step['pipeline_step_id']] = $step;
         }
         
         if (!$step_found) {

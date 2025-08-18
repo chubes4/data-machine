@@ -46,6 +46,39 @@
     background: #fafafa;
 }
 
+/* Separator between pipeline cards - simple, clean, aligned with card content */
+.dm-pipelines-list .dm-pipeline-card {
+    position: relative; /* enable pseudo-element positioning */
+}
+
+.dm-pipelines-list .dm-pipeline-card + .dm-pipeline-card::before {
+    content: "";
+    position: absolute;
+    top: -12px; /* sits slightly above the card to visually separate */
+    left: 20px; /* align with card inner padding */
+    right: 20px;
+    height: 1px;
+    background: #efefef; /* subtle neutral separator */
+    border-radius: 1px;
+    pointer-events: none;
+    opacity: 1;
+}
+
+/* Explicit separator element between pipeline cards */
+.dm-pipelines-list .dm-separator {
+    height: 1px;
+    background: #efefef;
+    margin: 12px 20px; /* aligns with card padding */
+    border-radius: 1px;
+}
+
+/* Slightly larger gap on small screens for touch targets */
+@media (max-width: 600px) {
+    .dm-pipelines-list .dm-separator {
+        margin: 18px 12px;
+    }
+}
+
 /* Pipeline header */
 .dm-pipeline-header {
     padding: 16px 20px;
@@ -455,7 +488,7 @@
     border: 1px solid #ffb5b5;
 }
 
-/* Status detection border colors */
+/* Flow-level status detection (left border) */
 .dm-step-card--status-red {
     border-left: 4px solid #dc3232;
 }
@@ -466,4 +499,17 @@
 
 .dm-step-card--status-green {
     border-left: 4px solid #00a32a;
+}
+
+/* Pipeline-level status detection (full border) */
+.dm-pipeline-step-card--status-red {
+    border: 1px solid #dc3232 !important;
+}
+
+.dm-pipeline-step-card--status-yellow {
+    border: 1px solid #f0a000 !important;
+}
+
+.dm-pipeline-step-card--status-green {
+    border: 1px solid #00a32a !important;
 }

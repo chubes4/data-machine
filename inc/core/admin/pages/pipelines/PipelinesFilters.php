@@ -89,9 +89,14 @@ function dm_register_pipelines_admin_page_filters() {
                         'deps' => [],
                         'in_footer' => true
                     ],
+                    'dm-pipeline-status' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-status.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true
+                    ],
                     'dm-pipelines-page' => [
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-page.js',
-                        'deps' => ['jquery'],
+                        'deps' => ['jquery', 'dm-pipeline-status'],
                         'in_footer' => true,
                         'localize' => [
                             'object' => 'dmPipelineBuilder',
@@ -119,12 +124,12 @@ function dm_register_pipelines_admin_page_filters() {
                     ],
                     'dm-pipeline-builder' => [
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
-                        'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipelines-page'],
+                        'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipelines-page', 'dm-pipeline-status'],
                         'in_footer' => true
                     ],
                     'dm-flow-builder' => [
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/flow-builder.js',
-                        'deps' => ['jquery', 'dm-pipelines-page'],
+                        'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status'],
                         'in_footer' => true
                     ],
                     'dm-pipelines-modal' => [
@@ -137,15 +142,6 @@ function dm_register_pipelines_admin_page_filters() {
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'admin_post_url' => admin_url('admin-post.php'),
                                 'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'oauth_nonces' => [
-                                    'twitter' => wp_create_nonce('dm_twitter_oauth_init_nonce'),
-                                    'googlesheets' => wp_create_nonce('dm_googlesheets_oauth_init_nonce'),
-                                    'reddit' => wp_create_nonce('dm_reddit_oauth_init_nonce'),
-                                    'facebook' => wp_create_nonce('dm_facebook_oauth_init_nonce'),
-                                    'threads' => wp_create_nonce('dm_threads_oauth_init_nonce')
-                                ],
-                                'disconnect_nonce' => wp_create_nonce('dm_disconnect_account'),
-                                'get_files_nonce' => wp_create_nonce('dm_get_handler_files'),
                                 'strings' => [
                                     'connecting' => __('Connecting...', 'data-machine'),
                                     'disconnecting' => __('Disconnecting...', 'data-machine'),
@@ -199,10 +195,15 @@ function dm_register_pipelines_admin_page_filters() {
     add_action('wp_ajax_dm_export_pipelines', fn() => do_action('dm_ajax_route', 'dm_export_pipelines', 'page'));
     add_action('wp_ajax_dm_import_pipelines', fn() => do_action('dm_ajax_route', 'dm_import_pipelines', 'page'));
     
+    // Status refresh endpoint
+    add_action('wp_ajax_dm_refresh_pipeline_status', fn() => do_action('dm_ajax_route', 'dm_refresh_pipeline_status', 'page'));
+    
     // Modal actions (UI/template operations) - using universal AJAX routing
     add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
     add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', 'dm_get_flow_step_card', 'modal'));
     add_action('wp_ajax_dm_get_flow_config', fn() => do_action('dm_ajax_route', 'dm_get_flow_config', 'modal'));
+    add_action('wp_ajax_dm_get_pipeline_data', fn() => do_action('dm_ajax_route', 'dm_get_pipeline_data', 'modal'));
+    add_action('wp_ajax_dm_get_flow_data', fn() => do_action('dm_ajax_route', 'dm_get_flow_data', 'modal'));
     add_action('wp_ajax_dm_configure_step_action', fn() => do_action('dm_ajax_route', 'dm_configure_step_action', 'modal'));
     add_action('wp_ajax_dm_add_location_action', fn() => do_action('dm_ajax_route', 'dm_add_location_action', 'modal'));
     add_action('wp_ajax_dm_add_handler_action', fn() => do_action('dm_ajax_route', 'dm_add_handler_action', 'modal'));
