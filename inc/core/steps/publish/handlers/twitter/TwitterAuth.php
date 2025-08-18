@@ -119,71 +119,52 @@ class TwitterAuth {
      * This should be called from the main plugin setup.
      */
     public function register_hooks() {
-        add_action('admin_post_dm_twitter_oauth_init', array($this, 'handle_oauth_init'));
         add_action('admin_post_' . self::OAUTH_CALLBACK_ACTION, array($this, 'handle_oauth_callback'));
     }
 
     /**
-     * Handles the initiation of the Twitter OAuth flow.
-     * Hooked to 'admin_post_dm_twitter_oauth_init'.
+     * Get the authorization URL for direct connection to Twitter OAuth
+     *
+     * @return string|WP_Error Authorization URL or error
      */
-    public function handle_oauth_init() {
-        // 1. Verify admin capability (admin_post_* hook already requires admin authentication)
-        if (!current_user_can('manage_options')) {
-            wp_die('Permission denied.', 'data-machine');
-        }
-
-        // 2. Get API Key/Secret from configuration
+    public function get_authorization_url() {
+        // 1. Get API Key/Secret from configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
         $apiKey = $config['api_key'] ?? '';
         $apiSecret = $config['api_secret'] ?? '';
         if (empty($apiKey) || empty($apiSecret)) {
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_app_keys'));
-            exit;
+            return new WP_Error('twitter_missing_app_keys', __('Twitter API Key/Secret not configured.', 'data-machine'));
         }
 
-        // 4. Define Callback URL (preserve modal context if present)
-        $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
-        if (isset($_GET['modal_context']) && $_GET['modal_context'] === '1') {
-            $callback_url .= '&modal_context=1';
-        }
+        // 2. Define Callback URL  
+        $callback_url = apply_filters('dm_get_oauth_url', '', 'twitter');
 
         try {
             // 3. Instantiate TwitterOAuth
             $connection = new TwitterOAuth($apiKey, $apiSecret);
 
-            // 5. Get Request Token from Twitter API
+            // 4. Get Request Token from Twitter API
             $request_token = $connection->oauth('oauth/request_token', ['oauth_callback' => $callback_url]);
 
-            // 6. Check for errors from Twitter
+            // 5. Check for errors from Twitter
             if ($connection->getLastHttpCode() != 200 || !isset($request_token['oauth_token']) || !isset($request_token['oauth_token_secret'])) {
                 $error_message = 'Failed to get request token from Twitter.';
-                $response_info = $connection->getLastXHeaders(); // Or other debug info
                 do_action('dm_log', 'error', 'Twitter OAuth Error: ' . $error_message, [
                     'http_code' => $connection->getLastHttpCode(),
-                    'response' => $connection->getLastBody(), // Log response body if available
-                    'headers' => $response_info
+                    'response' => $connection->getLastBody()
                 ]);
-                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_request_token_failed'));
-                exit;
+                return new WP_Error('twitter_request_token_failed', __('Failed to get request token from Twitter.', 'data-machine'));
             }
 
-            // 7. Store Request Token Secret temporarily
-            // Use the oauth_token as part of the transient key
-            set_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $request_token['oauth_token'], $request_token['oauth_token_secret'], 15 * MINUTE_IN_SECONDS); // 15 min expiry
+            // 6. Store Request Token Secret temporarily
+            set_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $request_token['oauth_token'], $request_token['oauth_token_secret'], 15 * MINUTE_IN_SECONDS);
 
-            // 8. Build Authorization URL
-            // Use oauth/authenticate - allows users to skip authorization if already granted
-            $url = $connection->url('oauth/authenticate', ['oauth_token' => $request_token['oauth_token']]);
-
-            // 9. Redirect user to Twitter
-            wp_redirect($url);
-            exit;
+            // 7. Return Authorization URL
+            return $connection->url('oauth/authenticate', ['oauth_token' => $request_token['oauth_token']]);
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Twitter OAuth Exception during init: ' . $e->getMessage());
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_init_exception'));
-            exit;
+            do_action('dm_log', 'error', 'Twitter OAuth Exception: ' . $e->getMessage());
+            return new WP_Error('twitter_init_exception', __('Twitter OAuth initialization failed.', 'data-machine'));
         }
     }
 

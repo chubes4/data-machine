@@ -194,37 +194,30 @@ class GoogleSheetsAuth {
      * This should be called from the main plugin setup.
      */
     public function register_hooks() {
-        add_action('admin_post_dm_googlesheets_oauth_init', array($this, 'handle_oauth_init'));
         add_action('admin_post_' . self::OAUTH_CALLBACK_ACTION, array($this, 'handle_oauth_callback'));
     }
 
     /**
-     * Handles the initiation of the Google OAuth flow.
-     * Hooked to 'admin_post_dm_googlesheets_oauth_init'.
+     * Get the authorization URL for direct connection to Google OAuth
+     *
+     * @return string|WP_Error Authorization URL or error
      */
-    public function handle_oauth_init() {
-        
-        // 1. Verify admin capability (admin_post_* hook already requires admin authentication)
-        if (!current_user_can('manage_options')) {
-            wp_die('Permission denied.', 'data-machine');
-        }
-
-        // 2. Get OAuth configuration
+    public function get_authorization_url() {
+        // 1. Get OAuth configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         
         if (empty($client_id) || empty($client_secret)) {
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=googlesheets_missing_oauth_config'));
-            exit;
+            return new WP_Error('googlesheets_missing_oauth_config', __('Google Sheets Client ID/Secret not configured.', 'data-machine'));
         }
 
-        // 3. Generate state parameter for security
+        // 2. Generate state parameter for security
         $state = wp_create_nonce('dm_googlesheets_oauth_state');
         set_transient(self::STATE_TRANSIENT_PREFIX . $state, 'admin_authenticated', 15 * MINUTE_IN_SECONDS);
 
-        // 4. Build authorization URL
-        $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
+        // 3. Build authorization URL
+        $callback_url = apply_filters('dm_get_oauth_url', '', 'googlesheets');
         
         $auth_params = [
             'client_id' => $client_id,
@@ -236,15 +229,7 @@ class GoogleSheetsAuth {
             'state' => $state
         ];
 
-        $auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($auth_params);
-
-        do_action('dm_log', 'debug', 'Redirecting user to Google OAuth authorization.', [
-            'auth_url' => $auth_url
-        ]);
-
-        // 5. Redirect to Google
-        wp_redirect($auth_url);
-        exit;
+        return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($auth_params);
     }
 
     /**
@@ -291,7 +276,7 @@ class GoogleSheetsAuth {
         $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
-        $callback_url = admin_url('admin-post.php?action=' . self::OAUTH_CALLBACK_ACTION);
+        $callback_url = apply_filters('dm_get_oauth_url', '', 'googlesheets');
 
         $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
             'body' => [

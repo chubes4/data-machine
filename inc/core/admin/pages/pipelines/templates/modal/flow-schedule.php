@@ -66,15 +66,14 @@ $next_run_time = $next_run_time ?? null;
         
         <!-- Actions -->
         <div class="dm-schedule-actions">
-            <button type="button" class="button button-secondary dm-cancel-schedule">
+            <button type="button" class="button button-secondary dm-cancel-schedule"
+                    aria-label="<?php echo esc_attr(sprintf(__('Cancel: %s', 'data-machine'), $flow_name)); ?>">
                 <?php esc_html_e('Cancel', 'data-machine'); ?>
-            </button>
-            <button type="button" class="button button-secondary dm-run-now-btn" data-flow-id="<?php echo esc_attr($flow_id); ?>">
-                <?php esc_html_e('Run Now', 'data-machine'); ?>
             </button>
             <button type="button" class="button button-primary dm-modal-close" 
                     data-template="save-schedule-action"
-                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'
+                    aria-label="<?php echo esc_attr(sprintf(__('Save Schedule: %s', 'data-machine'), $flow_name)); ?>">
                 <?php esc_html_e('Save Schedule', 'data-machine'); ?>
             </button>
         </div>

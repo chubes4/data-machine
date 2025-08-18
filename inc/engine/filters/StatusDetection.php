@@ -175,6 +175,84 @@ function dm_register_status_detection_filters() {
         
     }, 10, 3);
     
+    /**
+     * Handler Settings Customization Detection
+     *
+     * Context: 'handler_customization'
+     * Data: ['flow_step_id' => string]
+     * Returns: Array of customized settings with labels for display
+     */
+    add_filter('dm_get_handler_customizations', function($customizations, $flow_step_id) {
+        if (empty($flow_step_id)) {
+            return [];
+        }
+        
+        // Get flow step configuration
+        $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+        if (empty($step_config) || !isset($step_config['handler'])) {
+            return [];
+        }
+        
+        $handler_slug = $step_config['handler']['handler_slug'] ?? '';
+        $current_settings = $step_config['handler']['settings'] ?? [];
+        
+        if (empty($handler_slug) || empty($current_settings)) {
+            return [];
+        }
+        
+        // Get handler's Settings class
+        $all_settings = apply_filters('dm_handler_settings', []);
+        $handler_settings = $all_settings[$handler_slug] ?? null;
+        
+        if (!$handler_settings || !method_exists($handler_settings, 'get_defaults')) {
+            return [];
+        }
+        
+        // Get default values
+        $defaults = $handler_settings->get_defaults();
+        
+        // Get field definitions for labels
+        $fields = [];
+        if (method_exists($handler_settings, 'get_fields')) {
+            $fields = $handler_settings::get_fields($current_settings);
+        }
+        
+        // Compare current settings with defaults
+        $customizations = [];
+        foreach ($current_settings as $setting_key => $current_value) {
+            $default_value = $defaults[$setting_key] ?? null;
+            
+            // Check if value differs from default
+            if ($current_value !== $default_value) {
+                $field_config = $fields[$setting_key] ?? [];
+                $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $setting_key));
+                
+                // Format value for display
+                $display_value = $current_value;
+                if (is_bool($current_value)) {
+                    $display_value = $current_value ? __('ON', 'data-machine') : __('OFF', 'data-machine');
+                } elseif (is_array($current_value)) {
+                    $display_value = implode(', ', $current_value);
+                } elseif ($setting_key === 'subreddit' && $handler_slug === 'reddit') {
+                    // Special formatting for Reddit subreddits
+                    $display_value = 'r/' . $current_value;
+                    $label = ''; // Empty label so only r/subredditname shows
+                }
+                
+                $customizations[] = [
+                    'key' => $setting_key,
+                    'label' => $label,
+                    'value' => $current_value,
+                    'display_value' => $display_value,
+                    'default_value' => $default_value
+                ];
+            }
+        }
+        
+        return $customizations;
+        
+    }, 10, 2);
+    
 }
 
 // Auto-register filters when file loads

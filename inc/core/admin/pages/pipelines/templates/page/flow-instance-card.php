@@ -64,17 +64,20 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
         <div class="dm-flow-actions">
             <button type="button" class="button button-small dm-modal-open" 
                     data-template="flow-schedule"
-                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
-                <?php esc_html_e('Manage Schedule', 'data-machine'); ?>
+                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'
+                    aria-label="<?php echo esc_attr(sprintf('Schedule: %s', $flow_name)); ?>">
+                <?php echo esc_html__('Schedule', 'data-machine'); ?>
             </button>
             <button type="button" class="button button-small button-primary dm-run-now-btn" 
-                    data-flow-id="<?php echo esc_attr($flow_id); ?>">
-                <?php esc_html_e('Run Now', 'data-machine'); ?>
+                    data-flow-id="<?php echo esc_attr($flow_id); ?>"
+                    aria-label="<?php echo esc_attr(sprintf('Run Now: %s', $flow_name)); ?>">
+                <?php echo esc_html__('Run Now', 'data-machine'); ?>
             </button>
             <button type="button" class="button button-small button-delete dm-modal-open" 
                     data-template="confirm-delete"
-                    data-context='{"delete_type":"flow","flow_id":"<?php echo esc_attr($flow_id); ?>","flow_name":"<?php echo esc_attr($flow_name); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-                <?php esc_html_e('Delete', 'data-machine'); ?>
+                    data-context='{"delete_type":"flow","flow_id":"<?php echo esc_attr($flow_id); ?>","flow_name":"<?php echo esc_attr($flow_name); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'
+                    aria-label="<?php echo esc_attr(sprintf('Delete: %s', $flow_name)); ?>">
+                <?php echo esc_html__('Delete', 'data-machine'); ?>
             </button>
         </div>
     </div>

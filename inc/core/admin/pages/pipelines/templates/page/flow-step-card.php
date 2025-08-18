@@ -101,6 +101,14 @@ if (!$is_empty) {
                 }
             }
             
+            // Check for handler customizations (only if still green)
+            if ($status === 'green' && $flow_step_id) {
+                $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
+                if (empty($customizations)) {
+                    $status = 'yellow'; // Handler configured but no custom settings
+                }
+            }
+            
             // Check for WordPress draft mode (only if still green)
             if ($status === 'green' && $handler_slug === 'wordpress_publish') {
                 $draft_status = apply_filters('dm_detect_status', 'green', 'wordpress_draft', [
@@ -192,6 +200,24 @@ if (!$is_empty) {
                         <!-- Show configured handler -->
                         <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($current_handler['handler_slug'] ?? ''); ?>">
                             <span class="dm-handler-name"><?php echo esc_html($current_handler['handler_slug'] ?? 'Unknown'); ?></span>
+                        </div>
+                        
+                        <?php 
+                        // Show customized settings or "Not configured" badge
+                        $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
+                        ?>
+                        <div class="dm-handler-customizations">
+                            <?php if (!empty($customizations)): ?>
+                                <?php foreach ($customizations as $customization): ?>
+                                    <div>
+                                        <?php echo esc_html(empty($customization['label']) ? $customization['display_value'] : $customization['label'] . ': ' . $customization['display_value']); ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="dm-not-configured">
+                                    <?php esc_html_e('Not configured', 'data-machine'); ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php elseif ($step_uses_handlers): ?>
                         <!-- No handlers configured -->

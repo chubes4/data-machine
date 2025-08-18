@@ -84,6 +84,11 @@ function dm_register_pipelines_admin_page_filters() {
                             ]
                         ]
                     ],
+                    'dm-pipeline-auth' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-auth.js',
+                        'deps' => [],
+                        'in_footer' => true
+                    ],
                     'dm-pipelines-page' => [
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-page.js',
                         'deps' => ['jquery'],
@@ -301,19 +306,7 @@ function dm_register_pipelines_admin_page_filters() {
             'dynamic_template' => true, // Flag for dynamic template resolution
             'title' => __('Handler Settings', 'data-machine')
         ];
-        
-        // OAuth result modals (removed oauth-loading as it's unnecessary)
-        $modals['oauth-success'] = [
-            'template' => 'modal/oauth-success',
-            'title' => __('Connection Successful', 'data-machine')
-        ];
-        
-        $modals['oauth-error'] = [
-            'template' => 'modal/oauth-error',
-            'title' => __('Connection Failed', 'data-machine')
-        ];
-        
-        return $modals;
+                return $modals;
     });
 }
 

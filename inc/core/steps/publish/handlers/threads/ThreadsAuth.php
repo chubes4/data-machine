@@ -72,7 +72,7 @@ class ThreadsAuth {
      * This should be called from the main plugin setup.
      */
     public function register_hooks() {
-        add_action('admin_init', [$this, 'handle_oauth_callback_check']);
+        add_action('admin_post_dm_threads_oauth_callback', array($this, 'handle_oauth_callback'));
     }
 
 
@@ -166,6 +166,7 @@ class ThreadsAuth {
         }
         return $account['page_id'];
     }
+
 
     /**
      * Generates the authorization URL to redirect the user to.
@@ -341,7 +342,7 @@ class ThreadsAuth {
      * @return string
      */
     private function get_redirect_uri() {
-        return admin_url('admin.php?page=dm-pipelines&dm_oauth_callback=threads');
+        return apply_filters('dm_get_oauth_url', '', 'threads');
     }
 
     /**
@@ -472,12 +473,13 @@ class ThreadsAuth {
     }
 
     /**
-     * Checks for the OAuth callback parameters on admin_init.
+     * Handle OAuth callback from Threads.
+     * Hooked to 'admin_post_dm_threads_oauth_callback'.
      */
-    public function handle_oauth_callback_check() {
-        // Check if this is our callback
-        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-pipelines' || !isset($_GET['dm_oauth_callback']) || $_GET['dm_oauth_callback'] !== 'threads') {
-            return;
+    public function handle_oauth_callback() {
+        // 1. Verify admin capability
+        if (!current_user_can('manage_options')) {
+             wp_die('Permission denied.');
         }
 
         // Check for error response first (user might deny access)

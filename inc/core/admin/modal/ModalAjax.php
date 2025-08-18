@@ -249,6 +249,18 @@ class ModalAjax
                 $label = '';
                 break;
                 
+            case 'readonly':
+                // Read-only field for displaying values (like redirect URIs)
+                $display_value = $field_config['value'] ?? $current_value ?? '';
+                $field_html = sprintf(
+                    '<input type="text" id="%s" name="%s" value="%s" class="regular-text" readonly style="background-color: #f9f9f9; color: #666;"%s />',
+                    esc_attr($field_name),
+                    esc_attr($field_name),
+                    esc_attr($display_value),
+                    $attrs
+                );
+                break;
+                
             case 'section':
                 // Section headers with description support
                 $section_html = sprintf('<h4>%s</h4>', esc_html($label));

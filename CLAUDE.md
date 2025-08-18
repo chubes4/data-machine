@@ -30,8 +30,15 @@ apply_filters('dm_oauth', null, 'store', 'handler', $data);
 apply_filters('dm_oauth', [], 'get_config', 'handler');
 apply_filters('dm_oauth', null, 'store_config', 'handler', $config);
 apply_filters('dm_oauth', false, 'clear', 'handler');
+apply_filters('dm_oauth', false, 'clear_config', 'handler');
+apply_filters('dm_oauth', false, 'clear_all', 'handler');
 
-// Status Detection & Tool Generation
+// OAuth URL Generation
+apply_filters('dm_get_oauth_url', '', 'provider');
+apply_filters('dm_get_oauth_auth_url', '', 'provider');
+
+// ID Generation & Status Detection
+apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
 apply_filters('dm_detect_status', 'green', 'context', $data);
 apply_filters('dm_generate_handler_tool', $tool, $handler_slug, $handler_config);
 ```
@@ -87,6 +94,8 @@ do_action('dm_ajax_route', 'action_name', 'page|modal');
 
 ## AI Integration
 
+**Tool-First Architecture**: AI execution prioritizes agentic tool calling over traditional request/response patterns
+
 **Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
 **Usage**:
@@ -96,6 +105,8 @@ $result = apply_filters('ai_request', [
     'model' => 'gpt-4'
 ], 'openrouter');
 ```
+
+**Tool Integration**: AI models automatically discover and execute handler capabilities via `apply_filters('ai_tools', [])`
 
 **Discovery**: `apply_filters('ai_providers', [])`, `apply_filters('ai_models', $provider, $config)`
 
@@ -329,6 +340,12 @@ return [
 4. **Job Management**: Monitor execution, clear processed items
 5. **Testing**: Manual execution with `dm_run_flow_now`
 
+**OAuth URL System**: Public `/dm-oauth/{provider}/` rewrite URLs for external API callbacks with centralized authentication flow
+
+**Authentication Assets**: `pipeline-auth.js` handles OAuth popup window closure and parent communication for seamless modal authentication
+
+**Security Architecture**: Universal `manage_options` checks, centralized `dm_ajax_actions` nonce validation, OAuth callback permission verification
+
 ## Step Implementation
 
 ```php
@@ -410,10 +427,21 @@ do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
 
 **Flow-Isolated Architecture**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
 
+**Concrete Example**:
+```
+/wp-content/uploads/data-machine/files/
+├── 12345678-abcd-efgh-ijkl-mnopqrstuvwx_f1a2b3c4/     # fetch step files
+│   ├── document1.pdf
+│   └── data.csv
+├── 12345678-abcd-efgh-ijkl-mnopqrstuvwx_f1a2b3c4/     # AI step files (same flow_step_id pattern)
+└── 87654321-wxyz-mnop-qrst-uvwxyz123456_a9b8c7d6/     # different flow files
+    └── output.json
+```
+
 **Path Patterns**:
-- Flow isolation prevents cross-contamination
-- UUID-based flow_step_id ensures unique namespaces
-- Automatic cleanup on flow deletion
+- Flow isolation prevents cross-contamination between different pipeline flows
+- UUID-based flow_step_id ensures unique namespaces: `{pipeline_step_id}_{flow_id}`
+- Automatic cleanup on flow deletion via `cleanup_flow_files()`
 
 **Operations**:
 ```php
@@ -477,6 +505,8 @@ try {
 
 ## OAuth Integration
 
+**Centralized Architecture**: `/inc/engine/filters/OAuth.php` provides unified OAuth operations and public URL rewrite system
+
 **Central Operations**: Unified `dm_oauth` filter for all handlers
 
 ```php
@@ -488,7 +518,15 @@ apply_filters('dm_oauth', false, 'clear', 'twitter');
 // Configuration Management
 $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
 apply_filters('dm_oauth', null, 'store_config', 'twitter', $config_data);
+apply_filters('dm_oauth', false, 'clear_config', 'twitter');
+apply_filters('dm_oauth', false, 'clear_all', 'twitter');
+
+// URL Generation
+$callback_url = apply_filters('dm_get_oauth_url', '', 'twitter');
+$auth_url = apply_filters('dm_get_oauth_auth_url', '', 'twitter');
 ```
+
+**Public URL System**: `/dm-oauth/{provider}/` rewrite rules enable external API callbacks without exposing wp-admin URLs
 
 **Handler Requirements**:
 - **Reddit**: OAuth2 (read access)
@@ -530,12 +568,12 @@ $files_status = apply_filters('dm_detect_status', 'green', 'files_status', [
 
 **Engine Agnosticism**: No hardcoded step types in `/inc/engine/`
 **Service Discovery**: Filter-based only - `$service = apply_filters('dm_service', [])['key'] ?? null`
-**Sanitization**: `wp_unslash()` BEFORE `sanitize_text_field()` - security pattern enforced across all handlers
+**Security Pattern**: `wp_unslash()` BEFORE `sanitize_text_field()` - enforced universally across all OAuth handlers and form processing
 **CSS Namespace**: `dm-` prefix
 **Authentication**: `manage_options` checks only
-**OAuth Storage**: Unified `dm_oauth` filter system
+**OAuth Storage**: Unified `dm_oauth` filter system with centralized URL rewriting
 **Field Naming**: `pipeline_step_id` (UUID4)
 **Job Failure**: Engine exceptions fail jobs immediately
 **Logging**: Include relevant IDs in context
-**AJAX Security**: Universal `dm_ajax_actions` nonce
+**AJAX Security**: Universal `dm_ajax_actions` nonce validation
 **Tool Generation**: `dm_generate_handler_tool` enables configuration-aware tool definitions

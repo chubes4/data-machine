@@ -259,4 +259,63 @@
         }
     }
 
+    // OAuth completion handler
+    window.addEventListener('message', function(event) {
+        if (event.data.type === 'oauth_complete') {
+            dmCoreModal.handleOAuthComplete(event.data);
+        }
+    });
+
+    // Add OAuth completion handler to dmCoreModal
+    dmCoreModal.handleOAuthComplete = function(data) {
+        const provider = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+        
+        if (data.success) {
+            this.showNotice('success', provider + ' connected successfully!');
+        } else {
+            const errorMessage = data.error ? data.error.replace(/_/g, ' ') : 'unknown error';
+            this.showNotice('error', provider + ' connection failed: ' + errorMessage);
+        }
+        
+        // Refresh modal content to show updated auth status
+        this.refreshAuthForm(data.provider);
+    };
+
+    // Show modal notice
+    dmCoreModal.showNotice = function(type, message) {
+        // Remove any existing notices
+        $('.dm-modal-notice').remove();
+        
+        // Create notice element
+        const notice = $('<div class="dm-modal-notice dm-modal-notice--' + type + '">' + message + '</div>');
+        
+        // Add notice to modal
+        const $modal = $('#dm-modal');
+        if ($modal.is(':visible')) {
+            $modal.find('.dm-modal-header').after(notice);
+        }
+        
+        // Auto-hide after 5 seconds
+        setTimeout(function() {
+            notice.fadeOut(400, function() {
+                notice.remove();
+            });
+        }, 5000);
+    };
+
+    // Refresh auth form to show updated connection status
+    dmCoreModal.refreshAuthForm = function(provider) {
+        // Find the auth form for this provider and reload it
+        const $authForm = $('.dm-auth-form[data-provider="' + provider + '"]');
+        if ($authForm.length > 0) {
+            // Trigger a refresh of the modal content
+            const template = $authForm.closest('.dm-modal-content').data('current-template');
+            const context = $authForm.closest('.dm-modal-content').data('current-context') || {};
+            
+            if (template) {
+                this.open(template, context);
+            }
+        }
+    };
+
 })(jQuery);

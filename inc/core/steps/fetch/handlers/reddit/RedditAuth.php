@@ -48,8 +48,8 @@ class RedditAuth {
             'developer_username' => [
                 'label' => __('Developer Username', 'data-machine'),
                 'type' => 'text',
-                'required' => false,
-                'description' => __('Your Reddit username (defaults to DataMachinePlugin)', 'data-machine')
+                'required' => true,
+                'description' => __('Your Reddit username that is registered in the Reddit app configuration', 'data-machine')
             ]
         ];
     }
@@ -69,42 +69,35 @@ class RedditAuth {
      * This should be called from the main plugin setup.
      */
     public function register_hooks() {
-        add_action('admin_post_dm_reddit_oauth_init', array($this, 'handle_oauth_init'));
         add_action('admin_post_dm_reddit_oauth_callback', array($this, 'handle_oauth_callback'));
     }
 
     /**
-     * Handles the initiation of the Reddit OAuth flow.
-     * Hooked to 'admin_post_dm_reddit_oauth_init'.
+     * Get the authorization URL for direct connection to Reddit OAuth
+     *
+     * @return string|WP_Error Authorization URL or error
      */
-    public function handle_oauth_init() {
-        // 1. Verify admin capability (admin_post_* hook already requires admin authentication)
-        if (!current_user_can('manage_options')) {
-             wp_die('Permission denied.');
-        }
-
-        // 2. Get Client ID from configuration
+    public function get_authorization_url() {
+        // 1. Get Client ID from configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
         $client_id = $config['client_id'] ?? '';
         if (empty($client_id)) {
-            // Redirect back with error
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_client_id'));
-            exit;
+            return new WP_Error('reddit_missing_client_id', __('Reddit Client ID not configured.', 'data-machine'));
         }
 
-        // 3. Define Redirect URI (MUST match the one registered on Reddit Dev App settings)
-        $redirect_uri = admin_url('admin-post.php?action=dm_reddit_oauth_callback');
+        // 2. Define Redirect URI (MUST match the one registered on Reddit Dev App settings)
+        $redirect_uri = apply_filters('dm_get_oauth_url', '', 'reddit');
 
-        // 4. Generate State parameter
+        // 3. Generate State parameter
         $state = wp_create_nonce('dm_reddit_oauth_state');
         // Store state temporarily to verify on callback using admin-global transient
         set_transient('dm_reddit_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
 
-        // 5. Define Scopes
+        // 4. Define Scopes
         $scope = 'identity read'; // Request read access and user identity
 
-        // 6. Construct Authorization URL
-        $authorize_url = 'https://www.reddit.com/api/v1/authorize?' . http_build_query([
+        // 5. Construct Authorization URL
+        return 'https://www.reddit.com/api/v1/authorize?' . http_build_query([
             'client_id'     => $client_id,
             'response_type' => 'code',
             'state'         => $state,
@@ -112,10 +105,6 @@ class RedditAuth {
             'duration'      => 'permanent',
             'scope'         => $scope
         ]);
-
-        // 7. Redirect User
-        wp_redirect($authorize_url);
-        exit;
     }
 
     /**
@@ -154,8 +143,7 @@ class RedditAuth {
             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_code'));
             exit;
         }
-        // Security: Use sanitize_key() for OAuth authorization codes (tokens should be treated as keys)
-        $code = sanitize_key(wp_unslash($_GET['code']));
+        $code = sanitize_text_field(wp_unslash($_GET['code']));
 
         // --- 2. Exchange Code for Tokens --- 
         $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
@@ -168,8 +156,13 @@ class RedditAuth {
         }
 
         $token_url = 'https://www.reddit.com/api/v1/access_token';
-        $redirect_uri = admin_url('admin-post.php?action=dm_reddit_oauth_callback'); // Must match exactly
-        $developer_username = $config['developer_username'] ?? 'DataMachinePlugin'; // Fallback needed
+        $redirect_uri = apply_filters('dm_get_oauth_url', '', 'reddit'); // Must match exactly
+        $developer_username = $config['developer_username'] ?? '';
+        if (empty($developer_username)) {
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Developer username not configured.');
+            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=reddit_missing_username'));
+            exit;
+        }
 
         // Prepare request arguments
         $args = [
@@ -178,16 +171,18 @@ class RedditAuth {
                 // HTTP Basic Auth: base64(client_id:client_secret)
                 'Authorization' => 'Basic ' . base64_encode($client_id . ':' . $client_secret),
                 // Unique User-Agent is important!
-                'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')'
+                'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')',
+                // Content-Type required for Reddit OAuth
+                'Content-Type'  => 'application/x-www-form-urlencoded'
             ],
-            'body'      => [
+            'body'      => http_build_query([
                 'grant_type'   => 'authorization_code',
                 'code'         => $code,
                 'redirect_uri' => $redirect_uri,
-            ],
+            ], '', '&', PHP_QUERY_RFC3986),
         ];
 
-        // Make the POST request
+        // Make the POST request through dm_request filter
         $result = apply_filters('dm_request', null, 'POST', $token_url, $args, 'Reddit OAuth');
 
         // --- 3. Process Token Response --- 
@@ -290,7 +285,11 @@ class RedditAuth {
              do_action('dm_log', 'error', 'Reddit Token Refresh Error: Client ID or Secret not configured.');
              return false; // Cannot proceed
         }
-        $developer_username = $config['developer_username'] ?? 'DataMachinePlugin';
+        $developer_username = $config['developer_username'] ?? '';
+        if (empty($developer_username)) {
+            do_action('dm_log', 'error', 'Reddit Token Refresh Error: Developer username not configured.');
+            return false;
+        }
 
         // --- Make Refresh Request ---
         $token_url = 'https://www.reddit.com/api/v1/access_token';

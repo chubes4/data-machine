@@ -2,8 +2,8 @@
 /**
  * Handler Authentication Form Template
  *
- * Pure rendering template for handler authentication management.
- * Uses filter-based auth discovery for dynamic authentication interface.
+ * Simple, always-accessible authentication form.
+ * No overengineered states - just config form + connection status.
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
  * @since 1.0.0
@@ -27,15 +27,6 @@ $all_auth = apply_filters('dm_auth_providers', []);
 $auth_instance = $all_auth[$handler_slug] ?? null;
 $has_auth = ($auth_instance !== null);
 
-// Prepare global context data for navigation buttons
-$context_data = [
-    'handler_slug' => $handler_slug,
-    'step_type' => $step_type ?? '',
-    'flow_step_id' => $flow_step_id ?? '',
-    'pipeline_id' => $pipeline_id ?? ''
-];
-$context_json = htmlspecialchars(json_encode($context_data), ENT_QUOTES, 'UTF-8');
-
 if (!$has_auth) {
     ?>
     <div class="dm-handler-auth-container">
@@ -48,18 +39,16 @@ if (!$has_auth) {
         </div>
         <div class="dm-auth-actions">
             <?php 
+            // EXACT COPY FROM EDIT HANDLER BUTTON
             // Determine correct handler settings template - WordPress needs fetch/publish distinction
             $template_slug = $handler_slug;
             if ($handler_slug === 'wordpress' && isset($step_type)) {
                 $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
             }
             ?>
-            <?php
-            // Use global context data already prepared above
-            ?>
-            <button type="button" class="button button-secondary dm-modal-content" 
+            <button type="button" class="button button-secondary dm-modal-open" 
                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                    data-context='<?php echo $context_json; ?>'>
+                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
                 <?php esc_html_e('Back to Settings', 'data-machine'); ?>
             </button>
         </div>
@@ -68,8 +57,8 @@ if (!$has_auth) {
     return;
 }
 
-// Check configuration and authentication status
-$is_configured = method_exists($auth_instance, 'is_configured') ? $auth_instance->is_configured() : false;
+// Get current configuration and authentication status
+$current_config = apply_filters('dm_oauth', [], 'get_config', $handler_slug);
 $is_authenticated = $auth_instance->is_authenticated();
 $config_fields = method_exists($auth_instance, 'get_config_fields') ? $auth_instance->get_config_fields() : [];
 $account_details = null;
@@ -78,21 +67,17 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
     $account_details = $auth_instance->get_account_details();
 }
 
-// Get current configuration for populating form
-$current_config = $is_configured ? apply_filters('dm_oauth', [], 'get_config', $handler_slug) : [];
-
 ?>
 <div class="dm-handler-auth-container">
     <div class="dm-handler-auth-header">
         <h3><?php echo esc_html(sprintf(__('%s Authentication', 'data-machine'), $handler_label)); ?></h3>
-        <p><?php echo esc_html(sprintf(__('Manage your %s account connection below.', 'data-machine'), $handler_label)); ?></p>
+        <p><?php echo esc_html(sprintf(__('Configure API credentials and manage account connection.', 'data-machine'), $handler_label)); ?></p>
     </div>
     
-    <?php if (!empty($config_fields) && !$is_configured): ?>
-    <!-- Configuration Form (shown when not configured) -->
+    <?php if (!empty($config_fields)): ?>
+    <!-- Configuration Form (always visible) -->
     <div class="dm-auth-config-section">
         <h4><?php esc_html_e('API Configuration', 'data-machine'); ?></h4>
-        <p><?php echo esc_html(sprintf(__('Enter your %s API credentials to enable authentication.', 'data-machine'), $handler_label)); ?></p>
         
         <form class="dm-auth-config-form" data-handler="<?php echo esc_attr($handler_slug); ?>">
             <?php wp_nonce_field('dm_ajax_actions', 'nonce'); ?>
@@ -126,17 +111,28 @@ $current_config = $is_configured ? apply_filters('dm_oauth', [], 'get_config', $
             <?php endforeach; ?>
             
             <div class="dm-config-actions">
-                <button type="submit" class="button button-primary">
+                <button type="submit" class="button button-secondary">
                     <?php esc_html_e('Save Configuration', 'data-machine'); ?>
                 </button>
             </div>
         </form>
+        
+        <!-- Redirect URI Display for OAuth providers -->
+        <div class="dm-redirect-uri-section" style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #0073aa;">
+            <h5 style="margin: 0 0 10px 0;"><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'data-machine'), ucfirst($handler_slug))); ?></h5>
+            <p style="margin: 0 0 10px 0;"><?php esc_html_e('Copy this URL and paste it in your app settings under "redirect uri" or "callback URL":', 'data-machine'); ?></p>
+            <code style="display: block; padding: 8px; background: white; border: 1px solid #ddd; word-break: break-all;">
+                <?php echo esc_html(apply_filters('dm_get_oauth_url', '', $handler_slug)); ?>
+            </code>
+        </div>
     </div>
     <?php endif; ?>
     
-    <!-- Authentication Status (always shown) -->
-    <div class="dm-auth-status <?php echo $is_authenticated ? 'dm-auth-status--connected' : 'dm-auth-status--disconnected'; ?>">
-        <div class="dm-auth-status-info">
+    <!-- Connection Status & Actions -->
+    <div class="dm-auth-connection-section">
+        <h4><?php esc_html_e('Account Connection', 'data-machine'); ?></h4>
+        
+        <div class="dm-auth-status <?php echo $is_authenticated ? 'dm-auth-status--connected' : 'dm-auth-status--disconnected'; ?>">
             <?php if ($is_authenticated): ?>
                 <div class="dm-auth-connected">
                     <span class="dm-auth-indicator dm-auth-indicator--connected">
@@ -163,69 +159,54 @@ $current_config = $is_configured ? apply_filters('dm_oauth', [], 'get_config', $
                         <span class="dashicons dashicons-warning"></span>
                         <strong><?php esc_html_e('Not Connected', 'data-machine'); ?></strong>
                     </span>
-                    <?php if ($is_configured): ?>
-                        <p><?php echo esc_html(sprintf(__('Connect your %s account to enable this handler.', 'data-machine'), $handler_label)); ?></p>
-                    <?php else: ?>
-                        <p><?php echo esc_html(sprintf(__('Configure your %s API credentials above, then connect your account.', 'data-machine'), $handler_label)); ?></p>
-                    <?php endif; ?>
+                    <p><?php echo esc_html(sprintf(__('Connect your %s account to enable this handler.', 'data-machine'), $handler_label)); ?></p>
                 </div>
             <?php endif; ?>
-        </div>
-        
-        <!-- Authentication Actions -->
-        <div class="dm-auth-actions">
-            <?php if ($is_authenticated): ?>
-                <button type="button" class="button button-secondary dm-disconnect-account" 
-                        data-handler="<?php echo esc_attr($handler_slug); ?>">
-                    <?php esc_html_e('Disconnect', 'data-machine'); ?>
-                </button>
-            <?php else: ?>
-                <?php
-                // Generate OAuth URL for direct window opening
-                $oauth_nonces = apply_filters('dm_get_oauth_nonces', []);
-                $oauth_nonce = $oauth_nonces[$handler_slug] ?? wp_create_nonce('dm_' . $handler_slug . '_oauth_init_nonce');
-                
-                $base_url = admin_url('admin-post.php');
-                $oauth_url = $base_url . '?action=dm_' . $handler_slug . '_oauth_init&_wpnonce=' . $oauth_nonce . '&modal_context=1';
-                ?>
-                <button type="button" class="button button-primary dm-connect-oauth" 
-                        data-handler="<?php echo esc_attr($handler_slug); ?>"
-                        data-oauth-url="<?php echo esc_attr($oauth_url); ?>"
-                        <?php if (!$is_configured): ?>disabled title="<?php esc_attr_e('Configure API credentials first', 'data-machine'); ?>"<?php endif; ?>>
-                    <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
-                </button>
-            <?php endif; ?>
+            
+            <!-- Connection Actions -->
+            <div class="dm-auth-actions">
+                <?php if ($is_authenticated): ?>
+                    <button type="button" class="button button-secondary dm-disconnect-account" 
+                            data-handler="<?php echo esc_attr($handler_slug); ?>">
+                        <?php esc_html_e('Disconnect', 'data-machine'); ?>
+                    </button>
+                <?php else: ?>
+                    <?php
+                    // Get direct provider authorization URL - bare metal connection
+                    $oauth_url = apply_filters('dm_get_oauth_auth_url', '', $handler_slug);
+                    
+                    // Handle errors from authorization URL generation
+                    if (is_wp_error($oauth_url)) {
+                        $oauth_url = '#';
+                        $has_config = false; // Disable button if URL generation failed
+                    } else {
+                        $has_config = !empty($current_config);
+                    }
+                    ?>
+                    <button type="button" class="button button-primary dm-connect-oauth" 
+                            data-handler="<?php echo esc_attr($handler_slug); ?>"
+                            data-oauth-url="<?php echo esc_attr($oauth_url); ?>"
+                            <?php if (!$has_config): ?>disabled title="<?php esc_attr_e('Save configuration first', 'data-machine'); ?>"<?php endif; ?>>
+                        <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
+                    </button>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
-    
-    <?php
-    // Get handler-specific auth help text via method discovery only  
-    $help_text = '';
-    if (method_exists($auth_instance, 'get_auth_help_text')) {
-        $help_text = $auth_instance->get_auth_help_text();
-    }
-
-    // Only display help section if auth provider provides help text
-    if (!empty($help_text)): ?>
-        <!-- Authentication Help -->
-        <div class="dm-auth-help">
-            <h4><?php esc_html_e('Authentication Information', 'data-machine'); ?></h4>
-            <p><?php echo esc_html($help_text); ?></p>
-        </div>
-    <?php endif; ?>
     
     <!-- Modal Navigation -->
     <div class="dm-modal-navigation">
         <?php 
+        // EXACT COPY FROM EDIT HANDLER BUTTON
         // Determine correct handler settings template - WordPress needs fetch/publish distinction
         $template_slug = $handler_slug;
         if ($handler_slug === 'wordpress' && isset($step_type)) {
             $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
         }
         ?>
-        <button type="button" class="button button-secondary dm-modal-content" 
+        <button type="button" class="button button-secondary dm-modal-open" 
                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                data-context='<?php echo $context_json; ?>'>
+                data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
             <?php esc_html_e('Back to Settings', 'data-machine'); ?>
         </button>
     </div>

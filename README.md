@@ -6,7 +6,7 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Agentic Tool Calling, Visual Pipeline Builder, Sequential Processing, Content Publishing (Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets), Filter Architecture
+**Features**: Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Agentic Tool Calling, Visual Pipeline Builder, Sequential Processing, Content Publishing (Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets), Filter Architecture, Centralized OAuth System
 
 ## Architecture
 
@@ -107,6 +107,11 @@ $response = apply_filters('ai_request', [
 
 $available_tools = apply_filters('ai_tools', []);
 
+// OAuth management
+$auth_account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
+$oauth_url = apply_filters('dm_get_oauth_url', '', 'twitter');
+
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
 $steps = apply_filters('dm_steps', []);
@@ -165,6 +170,8 @@ add_filter('ai_tools', function($tools) {
 - **App Password**: Bluesky
 - **API Keys**: AI providers
 - **None**: Files, RSS, WordPress
+
+**OAuth System**: Public `/dm-oauth/{provider}/` URLs for external API callbacks with popup window authentication flow
 
 ### Enhanced Publishing Features
 

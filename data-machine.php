@@ -104,6 +104,7 @@ require_once __DIR__ . '/inc/engine/filters/Database.php';
 require_once __DIR__ . '/inc/engine/filters/Admin.php';
 require_once __DIR__ . '/inc/engine/filters/Logger.php';
 require_once __DIR__ . '/inc/engine/filters/AI.php';
+require_once __DIR__ . '/inc/engine/filters/OAuth.php';
 require_once __DIR__ . '/inc/engine/actions/DataMachineActions.php';
 require_once __DIR__ . '/inc/engine/filters/StatusDetection.php';
 
@@ -132,6 +133,9 @@ function run_data_machine() {
     
     // Register logger filters for information retrieval
     dm_register_logger_filters();
+    
+    // Register OAuth system for public URL handling
+    dm_register_oauth_system();
     
     // Register core action hooks for centralized operations
     dm_register_core_actions();

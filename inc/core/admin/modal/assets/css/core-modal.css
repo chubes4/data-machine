@@ -149,3 +149,50 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* ===== MODAL NOTICE SYSTEM ===== */
+
+.dm-modal-notice {
+    padding: 12px 20px;
+    margin: 0;
+    border-left: 4px solid;
+    font-size: 14px;
+    line-height: 1.4;
+    position: relative;
+    animation: dm-modal-notice-slide-in 0.3s ease-out;
+}
+
+.dm-modal-notice--success {
+    border-color: #46b450;
+    background: #ecf7ed;
+    color: #155724;
+}
+
+.dm-modal-notice--error {
+    border-color: #dc3232;
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.dm-modal-notice--warning {
+    border-color: #ffb900;
+    background: #fff3cd;
+    color: #856404;
+}
+
+.dm-modal-notice--info {
+    border-color: #0073aa;
+    background: #e6f3ff;
+    color: #0c5460;
+}
+
+@keyframes dm-modal-notice-slide-in {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -183,23 +183,26 @@ class Update {
     }
 
     /**
-     * Handle pipeline auto-save operations.
+     * Handle complete pipeline auto-save operations.
      *
-     * Eliminates database service discovery duplication by providing centralized
-     * pipeline auto-save operations with comprehensive error handling and logging.
+     * Saves EVERYTHING for a pipeline: pipeline data, all flows, flow configurations,
+     * flow scheduling, and handler settings. Simple interface - just call with pipeline_id.
      *
-     * @param int $pipeline_id Pipeline ID to auto-save
+     * @param int $pipeline_id Pipeline ID to auto-save everything for
      * @return bool Success status
      * @since NEXT_VERSION
      */
     public function handle_pipeline_auto_save($pipeline_id) {
-        // Get database service
+        // Get database services
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
+        $db_flows = $all_databases['flows'] ?? null;
         
-        if (!$db_pipelines) {
-            do_action('dm_log', 'error','Database service unavailable for auto-save', [
-                'pipeline_id' => $pipeline_id
+        if (!$db_pipelines || !$db_flows) {
+            do_action('dm_log', 'error','Database services unavailable for auto-save', [
+                'pipeline_id' => $pipeline_id,
+                'pipelines_db' => $db_pipelines ? 'available' : 'missing',
+                'flows_db' => $db_flows ? 'available' : 'missing'
             ]);
             return false;
         }
@@ -213,28 +216,52 @@ class Update {
             return false;
         }
         
-        // Always do full save - get current name and steps
+        // Save pipeline data (existing functionality)
         $pipeline_name = $pipeline['pipeline_name'];
         $pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         
-        // Full pipeline save (always save everything)
-        $success = $db_pipelines->update_pipeline($pipeline_id, [
+        $pipeline_success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_name' => $pipeline_name,
             'pipeline_config' => json_encode($pipeline_config)
         ]);
         
-        // Log auto-save results
-        if ($success) {
-            do_action('dm_log', 'debug','Pipeline auto-saved successfully', [
+        if (!$pipeline_success) {
+            do_action('dm_log', 'error','Pipeline save failed during auto-save', [
                 'pipeline_id' => $pipeline_id
             ]);
-        } else {
-            do_action('dm_log', 'error','Pipeline auto-save failed', [
-                'pipeline_id' => $pipeline_id
-            ]);
+            return false;
         }
         
-        return $success;
+        // Save all flows for this pipeline
+        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+        $flows_saved = 0;
+        $flow_steps_saved = 0;
+        
+        foreach ($flows as $flow) {
+            $flow_id = $flow['flow_id'];
+            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+            
+            $flow_success = $db_flows->update_flow($flow_id, [
+                'flow_name' => $flow['flow_name'],
+                'flow_config' => wp_json_encode($flow_config),
+                'scheduling_config' => is_string($flow['scheduling_config']) ? 
+                    $flow['scheduling_config'] : 
+                    wp_json_encode($flow['scheduling_config'])
+            ]);
+            
+            if ($flow_success) {
+                $flows_saved++;
+                $flow_steps_saved += count($flow_config);
+            }
+        }
+        
+        do_action('dm_log', 'debug','Complete auto-save successful', [
+            'pipeline_id' => $pipeline_id,
+            'flows_saved' => $flows_saved,
+            'flow_steps_saved' => $flow_steps_saved
+        ]);
+        
+        return true;
     }
 
     /**

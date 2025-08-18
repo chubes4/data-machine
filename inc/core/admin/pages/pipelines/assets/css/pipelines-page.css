@@ -249,6 +249,28 @@
     padding-top: 8px;
 }
 
+/* Handler customization badges */
+.dm-handler-customizations {
+    margin-top: 8px;
+}
+
+.dm-handler-customizations div {
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 2px 0;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.dm-handler-customizations div:not(.dm-not-configured) {
+    background: #f0f0f0;
+}
+
+.dm-handler-customizations .dm-not-configured {
+    background: #fff3cd;
+    color: #856404;
+}
+
 /* Flow placeholder when no pipeline steps exist */
 .dm-flow-placeholder {
     text-align: center;
