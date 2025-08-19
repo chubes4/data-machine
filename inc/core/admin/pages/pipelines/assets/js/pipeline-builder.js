@@ -20,6 +20,7 @@
          */
         init: function() {
             this.bindEvents();
+            this.initializeSorting();
         },
 
         /**
@@ -344,6 +345,163 @@
                     const errorType = deleteType === 'pipeline' ? 'pipeline' : 'step';
                     alert(`Error deleting ${errorType}`);
                     $button.text(originalText).prop('disabled', false);
+                }
+            });
+        },
+
+        /**
+         * Initialize drag & drop sorting for pipeline steps
+         */
+        initializeSorting: function() {
+            const self = this;
+            
+            // Initialize sortable on all pipeline step containers
+            $(document).on('mouseenter', '.dm-pipeline-steps', function() {
+                const $container = $(this);
+                
+                // Check if already initialized
+                if (!$container.hasClass('ui-sortable')) {
+                    $container.sortable({
+                        items: '.dm-step-container:not(:has(.dm-step-card--empty))',
+                        axis: 'x',
+                        cursor: 'grabbing',
+                        tolerance: 'pointer',
+                        placeholder: 'dm-step-drag-placeholder',
+                        
+                        start: function(event, ui) {
+                            ui.item.addClass('dm-dragging');
+                        },
+                        
+                        stop: function(event, ui) {
+                            ui.item.removeClass('dm-dragging');
+                        },
+                        
+                        update: function(event, ui) {
+                            self.handleStepReorder.call(self, event, ui);
+                        }
+                    });
+                }
+            });
+            
+            // Prevent drag when clicking interactive elements
+            $(document).on('mousedown', '.dm-step-card button, .dm-step-card a, .dm-step-card input', function(e) {
+                e.stopPropagation();
+            });
+        },
+
+        /**
+         * Handle step reordering after drag & drop
+         */
+        handleStepReorder: function(event, ui) {
+            const $container = $(event.target);
+            const $pipelineCard = $container.closest('.dm-pipeline-card');
+            const pipelineId = $pipelineCard.data('pipeline-id');
+            
+            if (!pipelineId) {
+                console.error('Pipeline ID not found for reorder operation');
+                return;
+            }
+
+            // Calculate new order based on DOM positions
+            const newOrder = this.calculateNewOrder($container);
+            
+            // Immediately reorder corresponding flow steps
+            this.reorderFlowSteps(pipelineId, newOrder);
+            
+            // Save new order to backend
+            this.saveStepOrder(pipelineId, newOrder);
+        },
+
+        /**
+         * Calculate new execution order based on DOM positions
+         */
+        calculateNewOrder: function($container) {
+            const stepOrder = {};
+            let executionOrder = 0;
+            
+            $container.find('.dm-step-container').each(function() {
+                const $stepContainer = $(this);
+                const pipelineStepId = $stepContainer.data('pipeline-step-id');
+                
+                // Skip empty step containers
+                if (pipelineStepId && !$stepContainer.find('.dm-step-card--empty').length) {
+                    stepOrder[pipelineStepId] = executionOrder;
+                    executionOrder++;
+                }
+            });
+            
+            return stepOrder;
+        },
+
+        /**
+         * Reorder flow steps to match pipeline step order
+         */
+        reorderFlowSteps: function(pipelineId, newOrder) {
+            const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
+            const $flowContainers = $pipelineCard.find('.dm-flow-steps');
+            
+            // Reorder each flow steps container to match pipeline order
+            $flowContainers.each(function() {
+                const $flowContainer = $(this);
+                const $flowSteps = $flowContainer.find('.dm-step-container').detach();
+                
+                // Sort flow steps by the new pipeline order
+                const sortedFlowSteps = $flowSteps.sort(function(a, b) {
+                    const aStepId = $(a).data('pipeline-step-id');
+                    const bStepId = $(b).data('pipeline-step-id');
+                    const aOrder = newOrder[aStepId] ?? 999;
+                    const bOrder = newOrder[bStepId] ?? 999;
+                    return aOrder - bOrder;
+                });
+                
+                // Re-append in new order
+                $flowContainer.append(sortedFlowSteps);
+                
+                // Update execution order data attributes
+                sortedFlowSteps.each(function() {
+                    const $stepContainer = $(this);
+                    const pipelineStepId = $stepContainer.data('pipeline-step-id');
+                    const newExecutionOrder = newOrder[pipelineStepId];
+                    
+                    if (newExecutionOrder !== undefined) {
+                        $stepContainer.attr('data-step-execution-order', newExecutionOrder);
+                    }
+                });
+            });
+        },
+
+        /**
+         * Save new step order via AJAX
+         */
+        saveStepOrder: function(pipelineId, stepOrder) {
+            const self = this;
+            
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_reorder_steps',
+                    pipeline_id: pipelineId,
+                    step_order: JSON.stringify(stepOrder),
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        console.log('Step order saved successfully');
+                        
+                        // Refresh pipeline status to maintain status colors
+                        PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                            console.error('Failed to refresh pipeline status after reorder:', error);
+                        });
+                        
+                    } else {
+                        console.error('Failed to save step order:', response.data?.message || 'Unknown error');
+                        alert('Error saving step order: ' + (response.data?.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error saving step order:', error);
+                    alert('Error saving step order');
                 }
             });
         },

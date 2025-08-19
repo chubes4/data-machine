@@ -348,6 +348,75 @@ class PipelinePageAjax
     }
 
     /**
+     * Reorder pipeline steps - update execution_order values
+     */
+    public function handle_reorder_steps()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        $step_order = json_decode(wp_unslash($_POST['step_order'] ?? '[]'), true);
+        
+        if (!$pipeline_id) {
+            wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
+        }
+        
+        if (empty($step_order)) {
+            wp_send_json_error(['message' => __('Step order data required', 'data-machine')]);
+        }
+        
+        // Get database service
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+        
+        // Get current pipeline steps
+        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        
+        if (empty($current_steps)) {
+            wp_send_json_error(['message' => __('No pipeline steps found', 'data-machine')]);
+        }
+        
+        // Validate that all step IDs in the order exist in the pipeline
+        foreach ($step_order as $pipeline_step_id => $new_execution_order) {
+            if (!isset($current_steps[$pipeline_step_id])) {
+                wp_send_json_error(['message' => __('Invalid step ID in reorder data', 'data-machine')]);
+            }
+        }
+        
+        // Update execution_order values
+        $updated_steps = $current_steps;
+        foreach ($step_order as $pipeline_step_id => $new_execution_order) {
+            $updated_steps[$pipeline_step_id]['execution_order'] = (int) $new_execution_order;
+        }
+        
+        // Save updated pipeline configuration
+        $success = $db_pipelines->update_pipeline($pipeline_id, [
+            'pipeline_config' => wp_json_encode($updated_steps)
+        ]);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to save step order', 'data-machine')]);
+        }
+        
+        // Trigger auto-save
+        do_action('dm_auto_save', $pipeline_id);
+        
+        wp_send_json_success([
+            'message' => __('Step order updated successfully', 'data-machine'),
+            'pipeline_id' => $pipeline_id,
+            'step_count' => count($step_order)
+        ]);
+    }
+
+    /**
      * Refresh pipeline status for real-time updates - individual step statuses
      */
     public function handle_refresh_pipeline_status()

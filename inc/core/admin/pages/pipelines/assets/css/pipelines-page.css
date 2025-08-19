@@ -546,3 +546,56 @@
 .dm-pipeline-step-card--status-green {
     border: 1px solid #00a32a !important;
 }
+
+/* Drag & Drop Styling */
+
+/* Hover state for draggable step cards */
+.dm-step-card:not(.dm-step-card--empty):hover {
+    cursor: grab;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #0073aa;
+    transition: all 0.2s ease;
+}
+
+/* Dragging state */
+.dm-step-container.dm-dragging .dm-step-card {
+    cursor: grabbing;
+    transform: rotate(3deg);
+    opacity: 0.8;
+    z-index: 1000;
+}
+
+/* Drag placeholder styling */
+.dm-step-drag-placeholder {
+    border: 2px dashed #0073aa !important;
+    background: rgba(0, 115, 170, 0.1) !important;
+    border-radius: 6px;
+    opacity: 0.7;
+    width: 150px;
+    height: 100px;
+    margin: 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dm-step-drag-placeholder::before {
+    content: "Drop here";
+    color: #0073aa;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Sortable UI adjustments */
+.ui-sortable-helper {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+}
+
+/* Prevent text selection during drag */
+.ui-sortable-helper * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}

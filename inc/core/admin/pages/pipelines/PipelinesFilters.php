@@ -198,6 +198,9 @@ function dm_register_pipelines_admin_page_filters() {
     // Status refresh endpoint
     add_action('wp_ajax_dm_refresh_pipeline_status', fn() => do_action('dm_ajax_route', 'dm_refresh_pipeline_status', 'page'));
     
+    // Step reordering endpoint
+    add_action('wp_ajax_dm_reorder_steps', fn() => do_action('dm_ajax_route', 'dm_reorder_steps', 'page'));
+    
     // Modal actions (UI/template operations) - using universal AJAX routing
     add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
     add_action('wp_ajax_dm_get_flow_step_card', fn() => do_action('dm_ajax_route', 'dm_get_flow_step_card', 'modal'));
