@@ -111,6 +111,10 @@
                     step_data: stepData.step_data
                 }, pipelineId, 'pipeline');
                 
+                // Fix arrow states after adding step
+                const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
+                this.updateArrowStates($pipelineSteps);
+                
                 // Also update flow steps using FlowBuilder
                 if (window.FlowBuilder) {
                     FlowBuilder.updateFlowSteps(stepData, pipelineId);
@@ -321,12 +325,9 @@
                             $stepContainer.fadeOut(300, function() {
                                 $(this).remove();
                                 
-                                // Check if only empty step remains and remove its arrow
-                                const remainingSteps = $pipelineCard.find('.dm-step-container:not(:has(.dm-step-card--empty))').length;
-                                if (remainingSteps === 0) {
-                                    // Only empty step remains - it should be treated as first step (no arrow)
-                                    $pipelineCard.find('.dm-step-container:has(.dm-step-card--empty) .dm-step-arrow').remove();
-                                }
+                                // Fix arrow states after step deletion
+                                const $pipelineSteps = $pipelineCard.find('.dm-pipeline-steps');
+                                PipelineBuilder.updateArrowStates($pipelineSteps);
                                 
                                 // Refresh pipeline status for real-time border updates
                                 PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
@@ -405,11 +406,38 @@
             // Calculate new order based on DOM positions
             const newOrder = this.calculateNewOrder($container);
             
+            // Fix arrow states after reordering
+            this.updateArrowStates($container);
+            
             // Immediately reorder corresponding flow steps
             this.reorderFlowSteps(pipelineId, newOrder);
             
             // Save new order to backend
             this.saveStepOrder(pipelineId, newOrder);
+        },
+
+        /**
+         * Update arrow states after drag & drop reordering
+         */
+        updateArrowStates: function($container) {
+            // Get all non-empty step containers in current DOM order
+            const $stepContainers = $container.find('.dm-step-container:not(:has(.dm-step-card--empty))');
+            
+            $stepContainers.each(function(index) {
+                const $stepContainer = $(this);
+                const $existingArrow = $stepContainer.find('.dm-step-arrow');
+                
+                if (index === 0) {
+                    // First step - remove arrow if exists
+                    $existingArrow.remove();
+                } else {
+                    // Not first step - ensure arrow exists
+                    if (!$existingArrow.length) {
+                        const arrowHtml = '<div class="dm-step-arrow"><span class="dashicons dashicons-arrow-right-alt"></span></div>';
+                        $stepContainer.prepend(arrowHtml);
+                    }
+                }
+            });
         },
 
         /**
@@ -467,7 +495,10 @@
                         $stepContainer.attr('data-step-execution-order', newExecutionOrder);
                     }
                 });
-            });
+                
+                // Fix arrow states in flow steps after reordering
+                this.updateArrowStates($flowContainer);
+            }.bind(this));
         },
 
         /**
@@ -487,11 +518,9 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        console.log('Step order saved successfully');
-                        
                         // Refresh pipeline status to maintain status colors
                         PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                            console.error('Failed to refresh pipeline status after reorder:', error);
+                            // Status refresh failed silently - this is non-critical
                         });
                         
                     } else {

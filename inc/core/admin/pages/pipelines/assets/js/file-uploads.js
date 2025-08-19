@@ -249,7 +249,7 @@
                     $table.show();
                     break;
                 default:
-                    console.warn('DM File Uploads: Unknown file state:', state);
+                    // Unknown state - default to empty display
                     $empty.show();
             }
         },

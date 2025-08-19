@@ -97,14 +97,12 @@
          */
         static updateStepStatuses(pipelineId, stepStatuses) {
             if (!pipelineId || !stepStatuses) {
-                console.warn('PipelineStatusManager: Missing pipelineId or stepStatuses for update');
                 return;
             }
 
             const $pipelineCards = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
             
             if ($pipelineCards.length === 0) {
-                console.warn(`PipelineStatusManager: No pipeline cards found for ID ${pipelineId}`);
                 return;
             }
 
@@ -135,7 +133,6 @@
          */
         static updateSingleStepStatus($stepCard, status) {
             if (!$stepCard || $stepCard.length === 0) {
-                console.warn('PipelineStatusManager: Invalid step card element provided');
                 return;
             }
 
@@ -147,7 +144,6 @@
             ];
             
             if (!validStatuses.includes(status)) {
-                console.warn(`PipelineStatusManager: Invalid status "${status}", defaulting to green`);
                 status = PipelineStatusManager.STATUS_GREEN;
             }
 
@@ -169,7 +165,6 @@
                 newStatusClass = `dm-step-card--status-${status}`;
             } else {
                 // Fallback to pipeline classes for unknown context
-                console.warn('PipelineStatusManager: Unable to detect card context, defaulting to pipeline styling');
                 newStatusClass = `dm-pipeline-step-card--status-${status}`;
             }
             
@@ -184,14 +179,12 @@
          */
         static updateSingleStep(pipelineStepId, status) {
             if (!pipelineStepId) {
-                console.warn('PipelineStatusManager: Pipeline step ID required');
                 return;
             }
 
             const $stepContainer = $(`.dm-step-container[data-pipeline-step-id="${pipelineStepId}"]`);
             
             if ($stepContainer.length === 0) {
-                console.warn(`PipelineStatusManager: No step container found for ID ${pipelineStepId}`);
                 return;
             }
 
@@ -209,7 +202,6 @@
          */
         static clearStatuses(pipelineId) {
             if (!pipelineId) {
-                console.warn('PipelineStatusManager: Pipeline ID required to clear statuses');
                 return;
             }
 
