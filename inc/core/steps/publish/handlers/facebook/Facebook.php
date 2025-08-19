@@ -87,10 +87,10 @@ class Facebook {
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'Facebook Tool: Using handler configuration', [
-            'facebook_target_id' => $handler_config['facebook_target_id'] ?? 'fallback',
-            'include_images' => $handler_config['include_images'] ?? 'fallback',
-            'include_videos' => $handler_config['include_videos'] ?? 'fallback',
-            'link_handling' => $handler_config['link_handling'] ?? 'fallback'
+            'facebook_target_id' => $handler_config['facebook_target_id'] ?? '',
+            'include_images' => $handler_config['include_images'] ?? true,
+            'include_videos' => $handler_config['include_videos'] ?? true,
+            'link_handling' => $handler_config['link_handling'] ?? 'append'
         ]);
 
         // Extract parameters

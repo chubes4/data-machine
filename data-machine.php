@@ -162,9 +162,9 @@ function activate_data_machine() {
 		$db_processed_items->create_table();
 	}
 
-	set_transient( 'dm_activation_notice', true, 5 * MINUTE_IN_SECONDS );
+	$timeout = defined( 'MINUTE_IN_SECONDS' ) ? 5 * MINUTE_IN_SECONDS : 5 * 60;
+	set_transient( 'dm_activation_notice', true, $timeout );
 }
-
 function dm_check_requirements() {
 	if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
 		add_action( 'admin_notices', function() {
@@ -181,14 +181,14 @@ function dm_check_requirements() {
 	}
 	
 	global $wp_version;
-	if ( version_compare( $wp_version, '5.0', '<' ) ) {
+	if ( version_compare( $wp_version, '6.0', '<' ) ) {
 		add_action( 'admin_notices', function() use ( $wp_version ) {
 			echo '<div class="notice notice-error"><p>';
 			printf( 
 				/* translators: %1$s: current WordPress version, %2$s: required WordPress version */
 				esc_html__( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.', 'data-machine' ),
 				esc_html( $wp_version ),
-				'5.0'
+				'6.0'
 			);
 			echo '</p></div>';
 		});

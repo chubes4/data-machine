@@ -126,7 +126,7 @@ class WordPressSettings {
             // Build options with skip as default
             $options = [
                 'skip' => __('Skip', 'data-machine'),
-                'instruct_model' => __('AI Decides', 'data-machine')
+                'ai_decides' => __('AI Decides', 'data-machine')
             ];
             
             // Get terms for this taxonomy
@@ -240,7 +240,7 @@ class WordPressSettings {
             $raw_value = $raw_settings[$field_key] ?? 'skip';
             
             // Sanitize taxonomy selection value
-            if ($raw_value === 'skip' || $raw_value === 'instruct_model') {
+            if ($raw_value === 'skip' || $raw_value === 'ai_decides') {
                 $sanitized[$field_key] = $raw_value;
             } else {
                 // Must be a term ID - validate it exists in this taxonomy

@@ -81,7 +81,8 @@ class RssSettings {
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
         $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
         if (!in_array($timeframe, $valid_timeframes)) {
-            throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+            do_action('dm_log', 'error', 'RSS Settings: Invalid timeframe parameter provided in settings.', ['timeframe' => $timeframe]);
+            return [];
         }
         $sanitized['timeframe_limit'] = $timeframe;
         

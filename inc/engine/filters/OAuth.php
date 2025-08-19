@@ -44,45 +44,14 @@ function dm_register_oauth_system() {
             wp_die(__('Insufficient permissions for OAuth operations.', 'data-machine'));
         }
         
-        // Route to OAuth callback handlers (only callbacks now - no init)
-        switch ($provider) {
-            case 'reddit':
-                if (class_exists('DataMachine\\Core\\Handlers\\Fetch\\Reddit\\RedditAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Fetch\Reddit\RedditAuth();
-                    $auth->handle_oauth_callback();
-                }
-                break;
-                
-            case 'twitter':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\Twitter\\TwitterAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\Twitter\TwitterAuth();
-                    $auth->handle_oauth_callback();
-                }
-                break;
-                
-            case 'googlesheets':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\GoogleSheets\\GoogleSheetsAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\GoogleSheets\GoogleSheetsAuth();
-                    $auth->handle_oauth_callback();
-                }
-                break;
-                
-            case 'threads':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\Threads\\ThreadsAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\Threads\ThreadsAuth();
-                    $auth->handle_oauth_callback();
-                }
-                break;
-                
-            case 'facebook':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\Facebook\\FacebookAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\Facebook\FacebookAuth();
-                    $auth->handle_oauth_callback();
-                }
-                break;
-                
-            default:
-                wp_die(__('Unknown OAuth provider.', 'data-machine'));
+        // Route to OAuth callback handlers via filter-based discovery
+        $all_auth = apply_filters('dm_auth_providers', []);
+        $auth_instance = $all_auth[$provider] ?? null;
+        
+        if ($auth_instance && method_exists($auth_instance, 'handle_oauth_callback')) {
+            $auth_instance->handle_oauth_callback();
+        } else {
+            wp_die(__('Unknown OAuth provider.', 'data-machine'));
         }
         
         exit;
@@ -167,42 +136,12 @@ function dm_register_oauth_system() {
             return $auth_url;
         }
         
-        // Get authorization URL from provider's auth handler
-        switch ($provider) {
-            case 'reddit':
-                if (class_exists('DataMachine\\Core\\Handlers\\Fetch\\Reddit\\RedditAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Fetch\Reddit\RedditAuth();
-                    return $auth->get_authorization_url();
-                }
-                break;
-                
-            case 'twitter':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\Twitter\\TwitterAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\Twitter\TwitterAuth();
-                    return $auth->get_authorization_url();
-                }
-                break;
-                
-            case 'googlesheets':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\GoogleSheets\\GoogleSheetsAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\GoogleSheets\GoogleSheetsAuth();
-                    return $auth->get_authorization_url();
-                }
-                break;
-                
-            case 'threads':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\Threads\\ThreadsAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\Threads\ThreadsAuth();
-                    return $auth->get_authorization_url();
-                }
-                break;
-                
-            case 'facebook':
-                if (class_exists('DataMachine\\Core\\Handlers\\Publish\\Facebook\\FacebookAuth')) {
-                    $auth = new DataMachine\Core\Handlers\Publish\Facebook\FacebookAuth();
-                    return $auth->get_authorization_url();
-                }
-                break;
+        // Get authorization URL from provider's auth handler via filter-based discovery
+        $all_auth = apply_filters('dm_auth_providers', []);
+        $auth_instance = $all_auth[$provider] ?? null;
+        
+        if ($auth_instance && method_exists($auth_instance, 'get_authorization_url')) {
+            return $auth_instance->get_authorization_url();
         }
         
         return new WP_Error('unknown_provider', __('Unknown OAuth provider.', 'data-machine'));

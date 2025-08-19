@@ -377,7 +377,8 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     }
     
     $handler_slug = $step_config['handler']['handler_slug'] ?? '';
-    $current_settings = $step_config['handler']['settings'] ?? [];
+    $all_settings = $step_config['handler']['settings'] ?? [];
+    $current_settings = $all_settings[$handler_slug] ?? [];
     
     if (empty($handler_slug) || empty($current_settings)) {
         return [];

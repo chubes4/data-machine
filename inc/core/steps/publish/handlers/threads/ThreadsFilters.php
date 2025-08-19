@@ -83,11 +83,15 @@ function dm_register_threads_filters() {
  * @return array Threads tool configuration.
  */
 function dm_get_threads_tool(array $handler_config = []): array {
+    // Extract Threads-specific config from nested structure
+    $threads_config = $handler_config['threads'] ?? $handler_config;
+    
     // Debug logging for tool generation
     if (!empty($handler_config)) {
         do_action('dm_log', 'debug', 'Threads Tool: Generating with configuration', [
             'handler_config_keys' => array_keys($handler_config),
-            'handler_config_values' => $handler_config
+            'threads_config_keys' => array_keys($threads_config),
+            'threads_config_values' => $threads_config
         ]);
     }
     
@@ -116,8 +120,8 @@ function dm_get_threads_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
     
-    // Get configuration values with defaults
-    $include_images = $handler_config['include_images'] ?? true;
+    // Get configuration values with defaults from extracted config
+    $include_images = $threads_config['include_images'] ?? true;
     
     // Add conditional parameters based on configuration
     if ($include_images) {

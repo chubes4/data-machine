@@ -52,7 +52,11 @@ class WordPressSettings {
         $post_types = get_post_types(['public' => true], 'objects');
         $post_type_options = [];
         foreach ($post_types as $post_type) {
-            $post_type_options[$post_type->name] = $post_type->label;
+            if (is_object($post_type)) {
+                $post_type_options[$post_type->name] = $post_type->label;
+            } elseif (is_string($post_type)) {
+                $post_type_options[$post_type] = $post_type;
+            }
         }
 
         // Get dynamic taxonomy filter fields for all available taxonomies
@@ -115,13 +119,19 @@ class WordPressSettings {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
+            // Ensure $taxonomy is an object before accessing its properties
+            if (!is_object($taxonomy)) {
+                continue;
+            }
             // Skip built-in formats and other non-content taxonomies
             if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
                 continue;
             }
             
             $taxonomy_slug = $taxonomy->name;
-            $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
+            $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
+                ? $taxonomy->labels->name
+                : $taxonomy->label;
             
             // Build filter options with "All" as default
             $options = [
@@ -230,6 +240,10 @@ class WordPressSettings {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
+            // Ensure $taxonomy is an object before accessing its properties
+            if (!is_object($taxonomy)) {
+                continue;
+            }
             // Skip built-in formats and other non-content taxonomies
             if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
                 continue;
@@ -243,13 +257,18 @@ class WordPressSettings {
                 $sanitized[$field_key] = 0; // All terms
             } else {
                 // Must be a term ID - validate it exists in this taxonomy
-                $term_id = absint($raw_value);
-                $term = get_term($term_id, $taxonomy->name);
-                if (!is_wp_error($term) && $term) {
-                    $sanitized[$field_key] = $term_id;
-                } else {
-                    // Invalid term ID - default to all
+                $term_id = intval($raw_value);
+                if ($term_id <= 0) {
+                    // Invalid numeric value - default to all
                     $sanitized[$field_key] = 0;
+                } else {
+                    $term = get_term($term_id, $taxonomy->name);
+                    if (!is_wp_error($term) && $term) {
+                        $sanitized[$field_key] = $term_id;
+                    } else {
+                        // Invalid term ID - default to all
+                        $sanitized[$field_key] = 0;
+                    }
                 }
             }
         }
@@ -290,6 +309,10 @@ class WordPressSettings {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
+            // Ensure $taxonomy is an object before accessing its properties
+            if (!is_object($taxonomy)) {
+                continue;
+            }
             // Skip built-in formats and other non-content taxonomies
             if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
                 continue;

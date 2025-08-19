@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Fetch\Rss;
 
-use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -42,7 +41,8 @@ class Rss {
         do_action('dm_log', 'debug', 'RSS Input: Starting RSS feed processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
-            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+            do_action('dm_log', 'error', 'RSS Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
         
         // Extract flow_step_id from handler config for processed items tracking
@@ -54,11 +54,13 @@ class Rss {
         // Configuration validation
         $feed_url = trim($config['feed_url'] ?? '');
         if (empty($feed_url)) {
-            throw new Exception(esc_html__('RSS feed URL is required.', 'data-machine'));
+            do_action('dm_log', 'error', 'RSS Input: RSS feed URL is required.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
         
         if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
-            throw new Exception(esc_html__('Invalid RSS feed URL format.', 'data-machine'));
+            do_action('dm_log', 'error', 'RSS Input: Invalid RSS feed URL format.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
+            return ['processed_items' => []];
         }
 
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
@@ -94,16 +96,18 @@ class Rss {
         $result = apply_filters('dm_request', null, 'GET', $feed_url, $args, 'RSS Feed');
         
         if (!$result['success']) {
-            throw new Exception(sprintf(
-                /* translators: %s: error message */
-                esc_html__('Failed to fetch RSS feed: %s', 'data-machine'),
-                esc_html($result['error'])
-            ));
+            do_action('dm_log', 'error', 'RSS Input: Failed to fetch RSS feed.', [
+                'pipeline_id' => $pipeline_id,
+                'error' => $result['error'],
+                'feed_url' => $feed_url
+            ]);
+            return ['processed_items' => []];
         }
 
         $feed_content = $result['data'];
         if (empty($feed_content)) {
-            throw new Exception(esc_html__('RSS feed content is empty.', 'data-machine'));
+            do_action('dm_log', 'error', 'RSS Input: RSS feed content is empty.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
+            return ['processed_items' => []];
         }
 
         // Parse the RSS feed
@@ -119,11 +123,12 @@ class Rss {
                 return trim($error->message);
             }, $errors);
             
-            throw new Exception(sprintf(
-                /* translators: %s: XML parsing errors */
-                esc_html__('Failed to parse RSS feed XML: %s', 'data-machine'),
-                esc_html(implode(', ', $error_messages))
-            ));
+            do_action('dm_log', 'error', 'RSS Input: Failed to parse RSS feed XML.', [
+                'pipeline_id' => $pipeline_id,
+                'feed_url' => $feed_url,
+                'xml_errors' => implode(', ', $error_messages)
+            ]);
+            return ['processed_items' => []];
         }
 
         // Determine feed type and extract items
@@ -142,7 +147,8 @@ class Rss {
             $items = $xml->entry;
             do_action('dm_log', 'debug', 'RSS Input: Detected Atom format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } else {
-            throw new Exception(esc_html__('Unsupported feed format or no items found in feed.', 'data-machine'));
+            do_action('dm_log', 'error', 'RSS Input: Unsupported feed format or no items found in feed.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
+            return ['processed_items' => []];
         }
 
         if (empty($items)) {
@@ -169,7 +175,7 @@ class Rss {
             }
 
             // Check if already processed
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'rss', $guid);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'rss', $guid);
             if ($is_processed) {
                 do_action('dm_log', 'debug', 'RSS Input: Skipping already processed item.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                 continue;

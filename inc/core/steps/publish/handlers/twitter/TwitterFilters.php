@@ -83,11 +83,15 @@ function dm_register_twitter_filters() {
  * @return array Twitter tool configuration.
  */
 function dm_get_twitter_tool(array $handler_config = []): array {
+    // Extract Twitter-specific config from nested structure
+    $twitter_config = $handler_config['twitter'] ?? $handler_config;
+    
     // Debug logging for tool generation
     if (!empty($handler_config)) {
         do_action('dm_log', 'debug', 'Twitter Tool: Generating with configuration', [
             'handler_config_keys' => array_keys($handler_config),
-            'handler_config_values' => $handler_config
+            'twitter_config_keys' => array_keys($twitter_config),
+            'twitter_config_values' => $twitter_config
         ]);
     }
     
@@ -116,10 +120,10 @@ function dm_get_twitter_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
     
-    // Get configuration values with defaults
-    $include_source = $handler_config['twitter_include_source'] ?? true;
-    $enable_images = $handler_config['twitter_enable_images'] ?? true;
-    $url_as_reply = $handler_config['twitter_url_as_reply'] ?? false;
+    // Get configuration values with defaults from extracted config
+    $include_source = $twitter_config['twitter_include_source'] ?? true;
+    $enable_images = $twitter_config['twitter_enable_images'] ?? true;
+    $url_as_reply = $twitter_config['twitter_url_as_reply'] ?? false;
     
     // Add conditional parameters based on configuration
     if ($include_source) {

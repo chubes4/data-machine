@@ -165,13 +165,7 @@ class JobsOperations {
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
-            // Fallback to direct pipeline query if flows service unavailable
-            global $wpdb;
-            $results = $wpdb->get_results( $wpdb->prepare(
-                "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY created_at DESC",
-                $pipeline_id
-            ), ARRAY_A );
-            return $results ?: [];
+            return [];
         }
         
         // Get all flows for this pipeline

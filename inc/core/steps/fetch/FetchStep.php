@@ -138,19 +138,43 @@ class FetchStep {
                     throw new \InvalidArgumentException('Handler output must be an array');
                 }
                 
-                // Handle Files handler's processed_items format
+                // Handle different handler data structures
                 if (isset($result['processed_items']) && is_array($result['processed_items']) && !empty($result['processed_items'])) {
-                    $item_data = $result['processed_items'][0]; // Process first file
-                    $title = $item_data['original_title'] ?? $item_data['file_name'] ?? 'Uploaded File';
-                    $body = "File: " . ($item_data['file_name'] ?? '') . "\nPath: " . ($item_data['file_path'] ?? '') . "\nType: " . ($item_data['mime_type'] ?? '') . "\nSize: " . ($item_data['file_size'] ?? 0) . " bytes";
+                    $item_data = $result['processed_items'][0];
                     
-                    // Add file-specific metadata to result for downstream processing
-                    $result['metadata'] = array_merge($result['metadata'] ?? [], [
-                        'file_path' => $item_data['file_path'] ?? '',
-                        'original_filename' => $item_data['file_name'] ?? '',
-                        'mime_type' => $item_data['mime_type'] ?? '',
-                        'file_size' => $item_data['file_size'] ?? 0
-                    ]);
+                    // Check if this is Files handler structure (has file_name/file_path)
+                    if (isset($item_data['file_name']) || isset($item_data['file_path'])) {
+                        // Files handler format
+                        $title = $item_data['original_title'] ?? $item_data['file_name'] ?? 'Uploaded File';
+                        $body = "File: " . ($item_data['file_name'] ?? '') . "\nPath: " . ($item_data['file_path'] ?? '') . "\nType: " . ($item_data['mime_type'] ?? '') . "\nSize: " . ($item_data['file_size'] ?? 0) . " bytes";
+                        
+                        // Add file-specific metadata to result for downstream processing
+                        $result['metadata'] = array_merge($result['metadata'] ?? [], [
+                            'file_path' => $item_data['file_path'] ?? '',
+                            'original_filename' => $item_data['file_name'] ?? '',
+                            'mime_type' => $item_data['mime_type'] ?? '',
+                            'file_size' => $item_data['file_size'] ?? 0
+                        ]);
+                    } else {
+                        // Standard handler format (Reddit/RSS/WordPress) - extract from data['content_string']
+                        $content_string = $item_data['data']['content_string'] ?? '';
+                        $file_info = $item_data['data']['file_info'] ?? null;
+                        
+                        // Extract title and body from content_string
+                        $title = $item_data['metadata']['original_title'] ?? '';
+                        $body = $content_string;
+                        
+                        // Preserve image handling from file_info
+                        if ($file_info && !empty($file_info['url'])) {
+                            $result['metadata'] = array_merge($result['metadata'] ?? [], [
+                                'image_source_url' => $file_info['url'],
+                                'image_mime_type' => $file_info['mime_type'] ?? 'image/jpeg'
+                            ]);
+                        }
+                        
+                        // Merge existing metadata from item
+                        $result['metadata'] = array_merge($result['metadata'] ?? [], $item_data['metadata'] ?? []);
+                    }
                 } else {
                     // Fallback for other handlers that return title/body directly
                     $title = $result['title'] ?? '';

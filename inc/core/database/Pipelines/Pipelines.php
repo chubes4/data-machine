@@ -5,9 +5,9 @@
  * Handles creating the pipelines table and performing CRUD operations.
  * Pipelines define reusable workflow templates without scheduling logic.
  *
- * @package    Data_Machine
- * @subpackage Data_Machine/includes/database
- * @since      0.15.0
+ * @package    DataMachine
+ * @subpackage DataMachine/Core/Database/Pipelines
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Database\Pipelines;
@@ -244,41 +244,6 @@ class Pipelines {
 		return true;
 	}
 
-	/**
-	 * Get pipeline configuration including steps and metadata.
-	 *
-	 * Returns the complete pipeline configuration structure for step execution.
-	 * The returned array contains a 'steps' key with the pipeline step configuration.
-	 *
-	 * @param int $pipeline_id The ID of the pipeline.
-	 * @return array Pipeline configuration with 'steps' key containing step array.
-	 */
-	public function get_pipeline_configuration( int $pipeline_id ): array {
-		global $wpdb;
-
-		if ( empty( $pipeline_id ) ) {
-			return [];
-		}
-
-		$pipeline = $this->get_pipeline( $pipeline_id );
-		if ( ! $pipeline ) {
-			return [];
-		}
-
-		$pipeline_config = [];
-		if ( ! empty( $pipeline['pipeline_config'] ) ) {
-			$decoded = json_decode( $pipeline['pipeline_config'], true );
-			$pipeline_config = is_array( $decoded ) ? $decoded : [];
-		}
-
-		return [
-			'steps' => $pipeline_config,
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $pipeline['pipeline_name'] ?? '',
-			'created_at' => $pipeline['created_at'] ?? '',
-			'updated_at' => $pipeline['updated_at'] ?? ''
-		];
-	}
 
 	/**
 	 * Get pipeline configuration.
@@ -383,7 +348,7 @@ class Pipelines {
 	/**
 	 * Create the pipelines database table on plugin activation.
 	 *
-	 * @since 0.15.0
+	 * @since 0.1.0
 	 */
 	public static function create_table() {
 		global $wpdb;

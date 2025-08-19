@@ -345,7 +345,6 @@ class Create {
             return;
         }
         
-        // Simple existence check
         $db_flows = $databases['flows'];
         if (!$db_flows->get_flow($flow_id)) {
             wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);

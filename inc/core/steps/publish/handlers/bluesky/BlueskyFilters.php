@@ -83,11 +83,15 @@ function dm_register_bluesky_filters() {
  * @return array Bluesky tool configuration.
  */
 function dm_get_bluesky_tool(array $handler_config = []): array {
+    // Extract Bluesky-specific config from nested structure
+    $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
+    
     // Debug logging for tool generation
     if (!empty($handler_config)) {
         do_action('dm_log', 'debug', 'Bluesky Tool: Generating with configuration', [
             'handler_config_keys' => array_keys($handler_config),
-            'handler_config_values' => $handler_config
+            'bluesky_config_keys' => array_keys($bluesky_config),
+            'bluesky_config_values' => $bluesky_config
         ]);
     }
     
@@ -116,9 +120,9 @@ function dm_get_bluesky_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
     
-    // Get configuration values with defaults
-    $include_source = $handler_config['bluesky_include_source'] ?? true;
-    $enable_images = $handler_config['bluesky_enable_images'] ?? true;
+    // Get configuration values with defaults from extracted config
+    $include_source = $bluesky_config['bluesky_include_source'] ?? true;
+    $enable_images = $bluesky_config['bluesky_enable_images'] ?? true;
     
     // Add conditional parameters based on configuration
     if ($include_source) {

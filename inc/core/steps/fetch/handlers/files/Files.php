@@ -8,7 +8,6 @@
  */
 namespace DataMachine\Core\Handlers\Fetch\Files;
 
-use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -16,50 +15,55 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Files {
 
-	/**
-	 * Parameter-less constructor for pure filter-based architecture.
-	 */
+    /**
+     * Parameter-less constructor for pure filter-based architecture.
+     */
 	public function __construct() {
 		// No parameters needed - all services accessed via filters
 	}
 
 
-	/**
-	 * Get repository instance via filter discovery
-	 *
-	 * @return FilesRepository|null
-	 */
+    /**
+     * Get repository instance via filter discovery
+     *
+     * @return FilesRepository|null
+     */
 	private function get_repository(): ?FilesRepository {
 		$repositories = apply_filters('dm_files_repository', []);
 		return $repositories['files'] ?? null;
 	}
 
-	/**
-	 * Processes uploaded files and prepares fetch data.
-	 *
+    /**
+     * Processes uploaded files and prepares fetch data.
+     *
      * @param int $pipeline_id Pipeline ID for context.
      * @param array  $handler_config Handler configuration array.
      * @param string|null $job_id The job ID for processed items tracking.
      * @return array Array with 'processed_items' key containing eligible items.
      * @throws Exception If file is missing, invalid, or cannot be processed.
-	 */
+     */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         // Validate pipeline ID
         if (empty($pipeline_id)) {
-            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+            do_action('dm_log', 'error', 'Files Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
         
         $repository = $this->get_repository();
         
         if (!$repository) {
-            throw new Exception(esc_html__('Files repository service not available.', 'data-machine'));
+            do_action('dm_log', 'error', 'Files Input: Repository service not available.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
 
         // Extract flow_step_id for proper file isolation
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
         
+        // Access config from handler config structure  
+        $config = $handler_config['files'] ?? [];
+        
         // Get uploaded files from handler config
-        $uploaded_files = $handler_config['uploaded_files'] ?? [];
+        $uploaded_files = $config['uploaded_files'] ?? [];
         
         // If no uploaded files in config, check repository for available files with proper isolation
         if (empty($uploaded_files)) {
@@ -94,7 +98,8 @@ class Files {
 
         // Check if file exists
         if (!file_exists($next_file['persistent_path'])) {
-            throw new Exception("File not found: {$next_file['persistent_path']}");
+            do_action('dm_log', 'error', 'Files Input: File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
+            return ['processed_items' => []];
         }
 
         // Create input_data using the file path as the identifier
@@ -241,21 +246,25 @@ class Files {
      *
      * @param string $file_path Path to file
      * @param string $filename Original filename
-     * @throws Exception If file fails security validation
+     * @return bool True if file passes validation, false otherwise
      */
-    private function validate_file_basic(string $file_path, string $filename): void {
+    private function validate_file_basic(string $file_path, string $filename): bool {
         // Only block obviously dangerous executable extensions for security
         $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr', 'com', 'pif', 'vbs', 'js'];
         $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         
         if (in_array($file_extension, $dangerous_extensions)) {
-            throw new Exception(esc_html__('File type not allowed for security reasons.', 'data-machine'));
+            do_action('dm_log', 'error', 'Files Input: File type not allowed for security reasons.', ['file_extension' => $file_extension]);
+            return false;
         }
         
         // Verify file exists and is readable
         if (!file_exists($file_path) || !is_readable($file_path)) {
-            throw new Exception(esc_html__('File is not accessible.', 'data-machine'));
+            do_action('dm_log', 'error', 'Files Input: File is not accessible.', ['file_path' => $file_path]);
+            return false;
         }
+        
+        return true;
     }
 }
 

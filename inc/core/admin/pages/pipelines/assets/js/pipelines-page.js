@@ -353,4 +353,48 @@
         window.PipelinesPage.handleConfigureStepAction(e);
     });
 
+    /**
+     * Universal Card Expansion System
+     * Detects overflow content and adds expand buttons to any step card
+     */
+    $(document).ready(function() {
+        // Initialize expansion detection
+        initCardExpansion();
+        
+        // Re-run detection when new cards are added
+        $(document).on('dm:cards-updated', function() {
+            initCardExpansion();
+        });
+    });
+
+    function initCardExpansion() {
+        $('.dm-step-card:not(.dm-step-card--empty)').each(function() {
+            const $card = $(this);
+            const $stepBody = $card.find('.dm-step-body');
+            
+            // Remove existing expand toggle if present
+            $card.find('.dm-expand-toggle').remove();
+            
+            // Detect if the card content is being truncated
+            if ($card[0].scrollHeight > $card[0].clientHeight) {
+                const $expandToggle = $('<button class="dm-expand-toggle" type="button">' +
+                    '<span class="dashicons dashicons-arrow-down"></span>' +
+                    '</button>');
+                $card.append($expandToggle);
+            }
+        });
+    }
+
+    // Universal expand/collapse behavior
+    $(document).on('click', '.dm-expand-toggle', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const $card = $(this).closest('.dm-step-card');
+        const $icon = $(this).find('.dashicons');
+        
+        $card.toggleClass('dm-expanded');
+        $icon.toggleClass('dashicons-arrow-down dashicons-arrow-up');
+    });
+
 })(jQuery);

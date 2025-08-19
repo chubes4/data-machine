@@ -83,11 +83,15 @@ function dm_register_facebook_filters() {
  * @return array Facebook tool configuration.
  */
 function dm_get_facebook_tool(array $handler_config = []): array {
+    // Extract Facebook-specific config from nested structure
+    $facebook_config = $handler_config['facebook'] ?? $handler_config;
+    
     // Debug logging for tool generation
     if (!empty($handler_config)) {
         do_action('dm_log', 'debug', 'Facebook Tool: Generating with configuration', [
             'handler_config_keys' => array_keys($handler_config),
-            'handler_config_values' => $handler_config
+            'facebook_config_keys' => array_keys($facebook_config),
+            'facebook_config_values' => $facebook_config
         ]);
     }
     
@@ -116,10 +120,10 @@ function dm_get_facebook_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
     
-    // Get configuration values with defaults
-    $include_images = $handler_config['include_images'] ?? true;
-    $include_videos = $handler_config['include_videos'] ?? true;
-    $link_handling = $handler_config['link_handling'] ?? 'append';
+    // Get configuration values with defaults from extracted config
+    $include_images = $facebook_config['include_images'] ?? true;
+    $include_videos = $facebook_config['include_videos'] ?? true;
+    $link_handling = $facebook_config['link_handling'] ?? 'append';
     
     // Add conditional parameters based on configuration
     if ($link_handling !== 'none') {

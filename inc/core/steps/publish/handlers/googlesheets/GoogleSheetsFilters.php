@@ -83,11 +83,15 @@ function dm_register_googlesheets_filters() {
  * @return array Google Sheets tool configuration.
  */
 function dm_get_googlesheets_tool(array $handler_config = []): array {
+    // Extract Google Sheets-specific config from nested structure
+    $googlesheets_config = $handler_config['googlesheets_output'] ?? $handler_config;
+    
     // Debug logging for tool generation
     if (!empty($handler_config)) {
         do_action('dm_log', 'debug', 'Google Sheets Tool: Generating with configuration', [
             'handler_config_keys' => array_keys($handler_config),
-            'spreadsheet_id' => !empty($handler_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing'
+            'googlesheets_config_keys' => array_keys($googlesheets_config),
+            'spreadsheet_id' => !empty($googlesheets_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing'
         ]);
     }
     
@@ -131,9 +135,9 @@ function dm_get_googlesheets_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
     
-    // Get configuration values for description
-    $spreadsheet_id = $handler_config['googlesheets_spreadsheet_id'] ?? '';
-    $worksheet_name = $handler_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
+    // Get configuration values for description from extracted config
+    $spreadsheet_id = $googlesheets_config['googlesheets_spreadsheet_id'] ?? '';
+    $worksheet_name = $googlesheets_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
     
     // Update description based on configuration
     if (!empty($spreadsheet_id)) {

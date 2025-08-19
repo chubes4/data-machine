@@ -74,7 +74,7 @@ class Threads {
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'Threads Tool: Using handler configuration', [
-            'include_images' => $handler_config['include_images'] ?? 'fallback'
+            'include_images' => $handler_config['include_images'] ?? true
         ]);
 
         // Extract parameters

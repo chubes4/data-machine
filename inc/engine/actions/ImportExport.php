@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
     die;
 }
 
-class ImportExportActions {
+class ImportExport {
     
     /**
      * Register import/export action hooks

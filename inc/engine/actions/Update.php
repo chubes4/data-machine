@@ -106,7 +106,6 @@ class Update {
             $method_used = 'complete_job';
             
         } else {
-            // Intermediate status change - use simple update
             $success = $db_jobs->update_job_status($job_id, $new_status);
             $method_used = 'update_job_status';
         }
@@ -147,7 +146,6 @@ class Update {
         }
         
         if ($schedule_interval !== 'manual') {
-            // Get interval seconds using simple conversion
             $interval_seconds = $this->get_schedule_interval_seconds($schedule_interval);
             if (!$interval_seconds) {
                 do_action('dm_log', 'error', 'Invalid schedule interval', [
@@ -199,7 +197,7 @@ class Update {
         $db_flows = $all_databases['flows'] ?? null;
         
         if (!$db_pipelines || !$db_flows) {
-            do_action('dm_log', 'error','Database services unavailable for auto-save', [
+            do_action('dm_log', 'error', 'Database services unavailable for auto-save', [
                 'pipeline_id' => $pipeline_id,
                 'pipelines_db' => $db_pipelines ? 'available' : 'missing',
                 'flows_db' => $db_flows ? 'available' : 'missing'
@@ -210,7 +208,7 @@ class Update {
         // Get current pipeline data
         $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
-            do_action('dm_log', 'error','Pipeline not found for auto-save', [
+            do_action('dm_log', 'error', 'Pipeline not found for auto-save', [
                 'pipeline_id' => $pipeline_id
             ]);
             return false;
@@ -226,7 +224,7 @@ class Update {
         ]);
         
         if (!$pipeline_success) {
-            do_action('dm_log', 'error','Pipeline save failed during auto-save', [
+            do_action('dm_log', 'error', 'Pipeline save failed during auto-save', [
                 'pipeline_id' => $pipeline_id
             ]);
             return false;
@@ -325,9 +323,13 @@ class Update {
                          ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
         
         // UPDATE existing handler settings OR ADD new handler (single handler per step)
+        // Store settings nested under handler key for proper structure expected by handlers
+        $nested_settings = [
+            $handler_slug => $handler_settings
+        ];
         $flow_config[$flow_step_id]['handler'] = [
             'handler_slug' => $handler_slug,
-            'settings' => $handler_settings,
+            'settings' => $nested_settings,
             'enabled' => true
         ];
         

@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Handlers\Fetch\Files;
 
-use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

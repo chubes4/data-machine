@@ -78,7 +78,7 @@ class GoogleSheets {
         
         do_action('dm_log', 'debug', 'Google Sheets Tool: Using handler configuration', [
             'spreadsheet_id' => !empty($handler_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing',
-            'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'fallback'
+            'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
         // Extract parameters

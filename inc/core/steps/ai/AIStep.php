@@ -9,10 +9,14 @@ if (!defined('ABSPATH')) {
 // Pure array-based data packet system - no object dependencies
 
 /**
- * Universal AI Step - AI processing with full pipeline context
+ * Universal AI Step - AI processing with dual tool discovery
  * 
  * Processes cumulative data packet array and adds AI response.
  * Uses pure filter-based architecture with no interface requirements.
+ * 
+ * Tool Discovery:
+ * - Handler tools: Available only when next step matches handler (publishing tools)
+ * - General tools: Architecture ready but no tools currently implemented
  */
 class AIStep {
 
@@ -392,11 +396,15 @@ class AIStep {
     }
     
     /**
-     * Get available tools for the next step handler in the pipeline
+     * Get available tools using dual discovery system
+     * 
+     * Discovers both handler tools (filtered by next step) and general tools (universal).
+     * Handler tools require 'handler' property matching next step's handler.
+     * General tools have no 'handler' property and are available to all AI steps.
      * 
      * @param array $flow_step_config Flow step configuration containing pipeline info
      * @param string $flow_step_id Flow step ID for logging
-     * @return array Available tools array for next step handler
+     * @return array Available tools array (handler tools + general tools)
      */
     private function get_next_step_tools(array $flow_step_config, string $flow_step_id): array {
         // Get current flow step ID from the step config
@@ -427,15 +435,20 @@ class AIStep {
         $all_tools = apply_filters('ai_tools', []);
         $handler_slug = $next_step_config['handler']['handler_slug'];
         
-        // Filter tools for next step handler only
+        // Dual tool discovery: handler tools (next step) + general tools (universal)
         $available_tools = [];
         foreach ($all_tools as $tool_name => $tool_config) {
+            // Handler tools: Only available when next step matches handler
             if (isset($tool_config['handler']) && $tool_config['handler'] === $handler_slug) {
                 // Apply dynamic configuration if available
                 $handler_config = $next_step_config['handler']['settings'] ?? [];
                 $dynamic_tool = apply_filters('dm_generate_handler_tool', $tool_config, $handler_slug, $handler_config);
                 
                 $available_tools[$tool_name] = $dynamic_tool ?: $tool_config;
+            }
+            // General tools: Available to all AI steps (no handler property)
+            elseif (!isset($tool_config['handler'])) {
+                $available_tools[$tool_name] = $tool_config;
             }
         }
         

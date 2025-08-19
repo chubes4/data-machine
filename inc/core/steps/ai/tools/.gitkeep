@@ -1,0 +1,2 @@
+# This directory contains general AI tools
+# Tools placed here are available to all AI steps regardless of next step handler

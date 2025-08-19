@@ -8,7 +8,7 @@
  */
 
 jQuery(document).ready(function($) {
-    // Refresh logs functionality (legacy)
+    // Refresh logs functionality
     $('#dm-refresh-logs').on('click', function() {
         var $button = $(this);
         var originalText = $button.text();

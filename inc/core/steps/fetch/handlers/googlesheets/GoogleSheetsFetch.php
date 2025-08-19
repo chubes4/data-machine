@@ -16,7 +16,6 @@
 
 namespace DataMachine\Core\Handlers\Fetch\GoogleSheets;
 
-use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -45,7 +44,8 @@ class GoogleSheetsFetch {
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
-            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+            do_action('dm_log', 'error', 'Google Sheets Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
         
         // Extract flow_step_id from handler config for processed items tracking
@@ -57,7 +57,8 @@ class GoogleSheetsFetch {
         // Configuration validation
         $spreadsheet_id = trim($config['spreadsheet_id'] ?? '');
         if (empty($spreadsheet_id)) {
-            throw new Exception(esc_html__('Google Sheets spreadsheet ID is required.', 'data-machine'));
+            do_action('dm_log', 'error', 'Google Sheets Input: Spreadsheet ID is required.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
         
         $worksheet_name = trim($config['worksheet_name'] ?? 'Sheet1');
@@ -69,17 +70,18 @@ class GoogleSheetsFetch {
         $all_auth = apply_filters('dm_auth_providers', []);
         $auth_service = $all_auth['googlesheets'] ?? null;
         if (!$auth_service) {
-            throw new Exception(esc_html__('Google Sheets authentication service not available.', 'data-machine'));
+            do_action('dm_log', 'error', 'Google Sheets Input: Authentication service not available.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
 
         // Get authenticated access token
         $access_token = $auth_service->get_service();
         if (is_wp_error($access_token)) {
-            throw new Exception(sprintf(
-                /* translators: %s: error message */
-                esc_html__('Google Sheets authentication failed: %s', 'data-machine'),
-                esc_html($access_token->get_error_message())
-            ));
+            do_action('dm_log', 'error', 'Google Sheets Input: Authentication failed.', [
+                'pipeline_id' => $pipeline_id,
+                'error' => $access_token->get_error_message()
+            ]);
+            return ['processed_items' => []];
         }
 
         // Build Google Sheets API URL
@@ -103,11 +105,12 @@ class GoogleSheetsFetch {
         ], 'Google Sheets API');
 
         if (!$result['success']) {
-            throw new Exception(sprintf(
-                /* translators: %s: error message */
-                esc_html__('Failed to fetch Google Sheets data: %s', 'data-machine'),
-                esc_html($result['error'])
-            ));
+            do_action('dm_log', 'error', 'Google Sheets Input: Failed to fetch data.', [
+                'pipeline_id' => $pipeline_id,
+                'error' => $result['error'],
+                'spreadsheet_id' => $spreadsheet_id
+            ]);
+            return ['processed_items' => []];
         }
 
         $response_code = $result['status_code'];
@@ -117,12 +120,13 @@ class GoogleSheetsFetch {
             $error_data = json_decode($response_body, true);
             $error_message = $error_data['error']['message'] ?? 'Unknown API error';
             
-            throw new Exception(sprintf(
-                /* translators: %1$d: HTTP status code, %2$s: error message */
-                esc_html__('Google Sheets API request failed (HTTP %1$d): %2$s', 'data-machine'),
-                $response_code,
-                esc_html($error_message)
-            ));
+            do_action('dm_log', 'error', 'Google Sheets Input: API request failed.', [
+                'pipeline_id' => $pipeline_id,
+                'status_code' => $response_code,
+                'error_message' => $error_message,
+                'spreadsheet_id' => $spreadsheet_id
+            ]);
+            return ['processed_items' => []];
         }
 
         $sheet_data = json_decode($response_body, true);
@@ -166,7 +170,7 @@ class GoogleSheetsFetch {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_id, 'googlesheets_fetch', $row_identifier);
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $row_identifier);
             if ($is_processed) {
                 do_action('dm_log', 'debug', 'Google Sheets Fetch: Skipping already processed row.', [
                     'row_identifier' => $row_identifier,

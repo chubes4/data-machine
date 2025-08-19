@@ -11,7 +11,6 @@
 
 namespace DataMachine\Core\Handlers\Fetch\WordPress;
 
-use Exception;
 use WP_Query;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -40,15 +39,16 @@ class WordPress {
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
-            throw new Exception(esc_html__('Missing pipeline ID.', 'data-machine'));
+            do_action('dm_log', 'error', 'WordPress Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            return ['processed_items' => []];
         }
         
         // Extract flow_step_id from handler config for processed items tracking
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
         
-        // Handle null flow_id gracefully - skip processed items tracking when flow context missing
-        if ($flow_id === null) {
-            do_action('dm_log', 'debug', 'WordPress fetch called without flow_id - processed items tracking disabled');
+        // Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
+        if ($flow_step_id === null) {
+            do_action('dm_log', 'debug', 'WordPress fetch called without flow_step_id - processed items tracking disabled');
         }
         
         $user_id = get_current_user_id();
@@ -57,7 +57,7 @@ class WordPress {
         $config = $handler_config['wordpress'] ?? [];
         
         // Fetch from local WordPress installation
-        $items = $this->fetch_local_data($pipeline_id, $config, $user_id);
+        $items = $this->fetch_local_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
         
         return ['processed_items' => $items];
     }
@@ -68,14 +68,16 @@ class WordPress {
      * @param int   $pipeline_id Module ID for tracking processed items.
      * @param array $config Configuration array.
      * @param int   $user_id User ID for context.
+     * @param string|null $flow_step_id Flow step ID for processed items tracking.
+     * @param string|null $job_id Job ID for processed items tracking.
      * @return array Array of item data packets.
      * @throws Exception If data cannot be retrieved.
      */
-    private function fetch_local_data(int $pipeline_id, array $config, int $user_id): array {
+    private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null): array {
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
         $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
-        $category_id = absint($config['category_id'] ?? 0);
-        $tag_id = absint($config['tag_id'] ?? 0);
+        $category_id = function_exists('absint') ? absint($config['category_id'] ?? 0) : intval(abs($config['category_id'] ?? 0));
+        $tag_id = function_exists('absint') ? absint($config['tag_id'] ?? 0) : intval(abs($config['tag_id'] ?? 0));
         $orderby = sanitize_text_field($config['orderby'] ?? 'date');
         $order = sanitize_text_field($config['order'] ?? 'DESC');
 
@@ -138,7 +140,7 @@ class WordPress {
         // Find first unprocessed post
         foreach ($posts as $post) {
             $post_id = $post->ID;
-            $is_processed = ($flow_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_id, 'wordpress_local', $post_id) : false;
+            $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id) : false;
             if ($is_processed) {
                 continue;
             }

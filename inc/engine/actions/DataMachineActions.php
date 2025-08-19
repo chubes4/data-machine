@@ -107,7 +107,7 @@ function dm_register_core_actions() {
         $processed_items = $all_databases['processed_items'] ?? null;
         
         if (!$processed_items) {
-                do_action('dm_log', 'error','ProcessedItems service unavailable for item marking', [
+                do_action('dm_log', 'error', 'ProcessedItems service unavailable for item marking', [
                 'flow_step_id' => $flow_step_id, 
                 'source_type' => $source_type,
                 'identifier' => substr($item_identifier, 0, 50) . '...',
@@ -128,7 +128,7 @@ function dm_register_core_actions() {
         ]);
         
         return $success;
-    }, 10, 3);
+    }, 10, 4);
     
     
     // Central logging hook - eliminates logger service discovery across all components  
@@ -154,7 +154,7 @@ function dm_register_core_actions() {
             }
         }
         
-        // Handle regular logging operations (backward compatibility)
+        // Handle regular logging operations  
         $level = $operation;
         $message = $param2;
         $context = $param3 ?? [];
@@ -212,20 +212,7 @@ function dm_register_core_actions() {
     \DataMachine\Engine\Actions\Create::register();
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();
-    \DataMachine\Engine\Actions\ImportExportActions::register();
+    \DataMachine\Engine\Actions\ImportExport::register();
     
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 

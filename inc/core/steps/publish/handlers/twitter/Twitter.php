@@ -6,9 +6,9 @@
  * TwitterAuth class for authentication. This modular approach separates
  * concerns between main handler logic and authentication functionality.
  *
- * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/twitter
- * @since      NEXT_VERSION
+ * @package    DataMachine
+ * @subpackage DataMachine/Core/Handlers/Publish/Twitter
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Handlers\Publish\Twitter;
@@ -76,9 +76,9 @@ class Twitter {
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'Twitter Tool: Using handler configuration', [
-            'include_source' => $handler_config['twitter_include_source'] ?? 'fallback',
-            'enable_images' => $handler_config['twitter_enable_images'] ?? 'fallback',
-            'url_as_reply' => $handler_config['twitter_url_as_reply'] ?? 'fallback'
+            'include_source' => $handler_config['twitter_include_source'] ?? true,
+            'enable_images' => $handler_config['twitter_enable_images'] ?? true,
+            'url_as_reply' => $handler_config['twitter_url_as_reply'] ?? false
         ]);
 
         // Extract parameters

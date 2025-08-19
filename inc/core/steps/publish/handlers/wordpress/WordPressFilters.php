@@ -98,10 +98,16 @@ function dm_get_wordpress_base_tool(): array {
  * @return array Dynamic tool configuration with taxonomy parameters.
  */
 function dm_get_dynamic_wordpress_tool(array $handler_config): array {
+    // Extract WordPress-specific config from nested structure
+    $wordpress_config = $handler_config['wordpress_publish'] ?? $handler_config;
+    
     // Debug logging for tool generation
     do_action('dm_log', 'debug', 'WordPress Tool: Starting generation', [
         'handler_config_keys' => array_keys($handler_config),
-        'handler_config_values' => $handler_config
+        'wordpress_config_keys' => array_keys($wordpress_config),
+        'wordpress_config_values' => $wordpress_config,
+        'handler_config_type' => gettype($handler_config),
+        'handler_config_empty' => empty($handler_config)
     ]);
     
     // Start with base tool
@@ -122,7 +128,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     
     // Sanitize handler config to prevent corruption
     $sanitized_config = [];
-    foreach ($handler_config as $key => $value) {
+    foreach ($wordpress_config as $key => $value) {
         if (is_string($key) && (is_string($value) || is_array($value))) {
             $sanitized_config[sanitize_key($key)] = is_string($value) ? sanitize_text_field($value) : $value;
         }
@@ -156,14 +162,16 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
             'taxonomy_name' => $taxonomy->name,
             'field_key' => $field_key,
             'selection' => $selection,
-            'hierarchical' => $taxonomy->hierarchical
+            'hierarchical' => $taxonomy->hierarchical,
+            'selection_equals_ai_decides' => ($selection === 'ai_decides'),
+            'raw_config_value' => $sanitized_config[$field_key] ?? 'NOT_FOUND'
         ]);
         
-        // Only include taxonomies for "instruct_model" (AI Decides) - others handled via publish_config
-        if ($selection === 'instruct_model') {
+        // Only include taxonomies for "ai_decides" (AI Decides) - others handled via publish_config
+        if ($selection === 'ai_decides') {
             $parameter_name = $taxonomy->name === 'category' ? 'category' : $taxonomy->name;
             
-            // Instruct model - include parameter with required flag
+            // AI Decides - include parameter with required flag
             if ($taxonomy->hierarchical) {
                 $tool['parameters'][$parameter_name] = [
                     'type' => 'string',
@@ -178,7 +186,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
                 ];
             }
             
-            do_action('dm_log', 'debug', 'WordPress Tool: Added instruct_model taxonomy parameter', [
+            do_action('dm_log', 'debug', 'WordPress Tool: Added ai_decides taxonomy parameter', [
                 'taxonomy_name' => $taxonomy->name,
                 'parameter_name' => $parameter_name,
                 'required' => true

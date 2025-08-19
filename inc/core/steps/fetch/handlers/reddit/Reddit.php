@@ -55,7 +55,7 @@ class Reddit {
 
 		if ( empty( $pipeline_id ) ) {
 			do_action('dm_log', 'error', 'Reddit Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			throw new Exception(esc_html__( 'Missing pipeline ID provided to Reddit handler.', 'data-machine' ));
+			return ['processed_items' => []];
 		}
 		
 		// Extract flow_step_id from handler config for processed items tracking
@@ -69,7 +69,7 @@ class Reddit {
 			do_action('dm_log', 'error', 'Reddit Input: Authentication service not available.', [
 				'pipeline_id' => $pipeline_id
 			]);
-			throw new Exception(esc_html__( 'Reddit authentication service not available. Please check system configuration.', 'data-machine' ));
+			return ['processed_items' => []];
 		}
 
 		// Job ID is provided via method parameter for processed items tracking
@@ -93,7 +93,7 @@ class Reddit {
 				  $needs_refresh = true;
 			 } else {
 				do_action('dm_log', 'error', 'Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['pipeline_id' => $pipeline_id]);
-				throw new Exception(esc_html__( 'Reddit account not authenticated or token missing. Please authenticate on the API Keys page.', 'data-machine' ));
+				return ['processed_items' => []];
 			}
 		} else {
 			 $token_expires_at = $reddit_account['token_expires_at'] ?? 0;
@@ -111,14 +111,14 @@ class Reddit {
 			if (!$refreshed) {
 				// Error already logged by refresh_token method
 				do_action('dm_log', 'error', 'Reddit Input: Token refresh failed.', ['pipeline_id' => $pipeline_id]);
-				throw new Exception(esc_html__( 'Failed to refresh expired Reddit access token. Please re-authenticate the Reddit account on the API Keys page.', 'data-machine' ));
+				return ['processed_items' => []];
 			}
 
 			// Re-fetch updated account data after successful refresh
 			$reddit_account = apply_filters('dm_oauth', [], 'retrieve', 'reddit');
 			if (empty($reddit_account['access_token'])) {
 				do_action('dm_log', 'error', 'Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
-				 throw new Exception(esc_html__( 'Reddit token refresh seemed successful, but failed to retrieve new token data.', 'data-machine' ));
+				return ['processed_items' => []];
 			}
 			do_action('dm_log', 'debug', 'Reddit Input: Token refresh successful.', ['pipeline_id' => $pipeline_id]);
 		}
@@ -127,7 +127,7 @@ class Reddit {
 		$access_token = $reddit_account['access_token'] ?? null;
 		if (empty($access_token)) {
 			do_action('dm_log', 'error', 'Reddit Input: Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
-			throw new Exception(esc_html__( 'Could not obtain valid Reddit access token.', 'data-machine' ));
+			return ['processed_items' => []];
 		}
 		// --- End Token Retrieval & Refresh ---
 
@@ -158,16 +158,16 @@ class Reddit {
 
 		if ( empty( $subreddit ) ) {
 			do_action('dm_log', 'error', 'Reddit Input: Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
-			throw new Exception(esc_html__( 'Subreddit name is not configured.', 'data-machine' ));
+			return ['processed_items' => []];
 		}
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
 			do_action('dm_log', 'error', 'Reddit Input: Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
-			throw new Exception(esc_html__( 'Invalid subreddit name format.', 'data-machine' ));
+			return ['processed_items' => []];
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		if (!in_array($sort, $valid_sorts)) {
 			do_action('dm_log', 'error', 'Reddit Input: Invalid sort parameter.', ['pipeline_id' => $pipeline_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
-			throw new Exception(esc_html__('Invalid sort parameter provided. Please check configuration.', 'data-machine'));
+			return ['processed_items' => []];
 		}
 
 		// Calculate cutoff timestamp if a timeframe limit is set
@@ -223,7 +223,10 @@ class Reddit {
 			$result = apply_filters('dm_request', null, 'GET', $reddit_url, $args, 'Reddit API');
 			
 			if (!$result['success']) {
-				if ($pages_fetched === 1) throw new Exception(esc_html($result['error']));
+				if ($pages_fetched === 1) {
+					do_action('dm_log', 'error', 'Reddit Input: API request failed.', ['pipeline_id' => $pipeline_id, 'error' => $result['error']]);
+					return ['processed_items' => []];
+				}
 				else break;
 			}
 
@@ -234,7 +237,10 @@ class Reddit {
 			$response_data = json_decode($body, true);
 			if (json_last_error() !== JSON_ERROR_NONE) {
 				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'data-machine'), json_last_error_msg());
-				if ($pages_fetched === 1) throw new Exception(esc_html($error_message));
+				if ($pages_fetched === 1) {
+					do_action('dm_log', 'error', 'Reddit Input: Invalid JSON response.', ['pipeline_id' => $pipeline_id, 'error' => $error_message]);
+					return ['processed_items' => []];
+				}
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
@@ -527,13 +533,15 @@ class Reddit {
 		$valid_sorts = ['hot', 'new', 'top', 'rising'];
 		$sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
 		if (!in_array($sort_by, $valid_sorts)) {
-			throw new Exception(esc_html__('Invalid sort parameter provided in settings.', 'data-machine'));
+			do_action('dm_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);
+			return [];
 		}
 		$sanitized['sort_by'] = $sort_by;
 		$valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
 		$timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
 		if (!in_array($timeframe, $valid_timeframes)) {
-			throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+			do_action('dm_log', 'error', 'Reddit Settings: Invalid timeframe parameter provided in settings.', ['timeframe' => $timeframe]);
+			return [];
 		}
 		$sanitized['timeframe_limit'] = $timeframe;
 		$min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;

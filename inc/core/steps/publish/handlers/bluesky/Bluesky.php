@@ -85,8 +85,8 @@ class Bluesky {
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'Bluesky Tool: Using handler configuration', [
-            'include_source' => $handler_config['bluesky_include_source'] ?? 'fallback',
-            'enable_images' => $handler_config['bluesky_enable_images'] ?? 'fallback'
+            'include_source' => $handler_config['bluesky_include_source'] ?? true,
+            'enable_images' => $handler_config['bluesky_enable_images'] ?? true
         ]);
 
         // Extract parameters

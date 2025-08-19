@@ -109,3 +109,12 @@ add_filter('dm_parse_ai_response', '__return_empty_array');
  * will be automatically registered without any bootstrap modifications.
  */
 dm_register_ai_step_filters();
+
+/**
+ * Load general AI tools registration
+ * 
+ * Include general tools that are available to all AI steps regardless of
+ * the next step's handler. This enables AI steps to access tools like
+ * search, data processing, analysis, etc.
+ */
+require_once __DIR__ . '/tools/GeneralToolsFilters.php';

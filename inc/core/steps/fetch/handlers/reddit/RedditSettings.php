@@ -105,13 +105,15 @@ class RedditSettings {
         $valid_sorts = ['hot', 'new', 'top', 'rising'];
         $sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
         if (!in_array($sort_by, $valid_sorts)) {
-            throw new Exception(esc_html__('Invalid sort parameter provided in settings.', 'data-machine'));
+            do_action('dm_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);
+            return [];
         }
         $sanitized['sort_by'] = $sort_by;
         $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
         $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
         if (!in_array($timeframe, $valid_timeframes)) {
-            throw new Exception(esc_html__('Invalid timeframe parameter provided in settings.', 'data-machine'));
+            do_action('dm_log', 'error', 'Reddit Settings: Invalid timeframe parameter provided in settings.', ['timeframe' => $timeframe]);
+            return [];
         }
         $sanitized['timeframe_limit'] = $timeframe;
         $min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
