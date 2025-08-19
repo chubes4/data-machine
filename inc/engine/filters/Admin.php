@@ -9,18 +9,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Register all admin-related filters for Data Machine
- * 
- * DEVELOPER OVERVIEW: This function provides bootstrap infrastructure for all
- * admin extension points. Each filter includes usage examples and extension patterns.
- * 
- * FILTER CATEGORIES:
- * - Admin Page System: Page registration and discovery
- * - Modal System: Modal registration and content management
- * - Template System: Template rendering and context resolution
- * - Asset Management: Admin-specific CSS/JS loading
- * 
- * @since 0.1.0
+ * Register admin filters - discovery system for pages, modals, templates
  */
 function dm_register_admin_filters() {
     
@@ -29,33 +18,7 @@ function dm_register_admin_filters() {
     // ========================================================================
     
     /**
-     * Admin Pages Discovery System
-     * 
-     * Pure discovery filter where components self-register admin pages.
-     * 
-     * USAGE:
-     * $all_pages = apply_filters('dm_admin_pages', []);
-     * $pipelines_page = $all_pages['pipelines'] ?? null;
-     * 
-     * EXTENSION EXAMPLE:
-     * add_filter('dm_admin_pages', function($pages) {
-     *     $pages['my_custom_page'] = [
-     *         'page_title' => __('My Custom Page', 'my-plugin'),
-     *         'menu_title' => __('Custom', 'my-plugin'), 
-     *         'capability' => 'manage_options',
-     *         'position' => 25,
-     *         'templates' => __DIR__ . '/templates/',
-     *         'assets' => [
-     *             'css' => [...],
-     *             'js' => [...]
-     *         ],
-     *         'ajax_handlers' => [
-     *             'modal' => new MyModalAjax(),
-     *             'page' => new MyPageAjax()
-     *         ]
-     *     ];
-     *     return $pages;
-     * });
+     * Admin page discovery filter
      */
     add_filter('dm_admin_pages', function($pages) {
         // Components self-register via this same filter with higher priority
@@ -67,23 +30,7 @@ function dm_register_admin_filters() {
     // ========================================================================
     
     /**
-     * Modal Content Discovery System
-     * 
-     * Pure discovery filter where components self-register modal content.
-     * 
-     * USAGE:
-     * $all_modals = apply_filters('dm_modals', []);
-     * $step_selection_modal = $all_modals['step-selection'] ?? null;
-     * 
-     * EXTENSION EXAMPLE:
-     * add_filter('dm_modals', function($modals) {
-     *     $modals['my-custom-modal'] = [
-     *         'template' => 'modal/my-custom-content',
-     *         'title' => __('My Custom Modal', 'my-plugin'),
-     *         'dynamic_template' => false // or true for handler-specific templates
-     *     ];
-     *     return $modals;
-     * });
+     * Modal content discovery filter
      */
     add_filter('dm_modals', function($modals) {
         // Components self-register via this same filter with higher priority
@@ -97,18 +44,7 @@ function dm_register_admin_filters() {
     
     
     /**
-     * Universal Template Rendering System
-     * 
-     * Central template rendering filter providing template discovery across all admin pages.
-     * 
-     * USAGE:
-     * $content = apply_filters('dm_render_template', '', 'page/my-template', $data);
-     * 
-     * PHASES:
-     * 1. Template Discovery - Searches all registered admin page template directories
-     * 2. Fallback Search - Checks core modal templates directory
-     * 
-     * EXTENSION: Templates automatically discovered from admin page registrations
+     * Template rendering with dynamic discovery across registered admin pages
      */
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         // Template discovery and rendering
@@ -119,8 +55,6 @@ function dm_register_admin_filters() {
             if (!empty($page_config['templates'])) {
                 $template_path = $page_config['templates'] . $template_name . '.php';
                 if (file_exists($template_path)) {
-                    // Extract data variables for template use
-                    extract($data);
                     ob_start();
                     include $template_path;
                     return ob_get_clean();
@@ -138,8 +72,6 @@ function dm_register_admin_filters() {
         }
         
         if (file_exists($core_modal_template_path)) {
-            // Extract data variables for template use
-            extract($data);
             ob_start();
             include $core_modal_template_path;
             return ob_get_clean();
@@ -160,19 +92,7 @@ function dm_register_admin_filters() {
 // ========================================================================
 
 /**
- * Split flow_step_id into individual components
- * 
- * Universal filter for extracting individual IDs from composite flow_step_id.
- * Follows the format: {pipeline_step_id}_{flow_id}
- * 
- * USAGE:
- * $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
- * $pipeline_step_id = $parts['pipeline_step_id'];
- * $flow_id = $parts['flow_id'];
- * 
- * @param null $null Not used - filter pattern consistency
- * @param string $flow_step_id Composite ID in format {pipeline_step_id}_{flow_id}
- * @return array|null Array with pipeline_step_id and flow_id, or null if invalid format
+ * Split composite flow_step_id: {pipeline_step_id}_{flow_id}
  */
 add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
     if (empty($flow_step_id) || !is_string($flow_step_id)) {
@@ -204,13 +124,7 @@ add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
 // ========================================================================
 
 /**
- * Register admin pages via dynamic discovery system.
- * 
- * Uses consistent discovery pattern matching dm_steps and dm_handlers.
- * All components self-register via filters with zero hardcoded limitations.
- * Pages are ordered by position parameter with alphabetical fallback.
- *
- * @since NEXT_VERSION
+ * Register admin menu via filter-based page discovery
  */
 function dm_register_admin_menu() {
     // Discovery mode - get all registered admin pages dynamically
@@ -287,12 +201,7 @@ function dm_register_admin_menu() {
 }
 
 /**
- * Store hook suffix for dynamic asset loading.
- * 
- * Works with any registered page via parameter-based discovery.
- *
- * @param string $page_slug Page slug
- * @param string $hook_suffix WordPress hook suffix
+ * Store hook suffix for asset loading
  */
 function dm_store_hook_suffix($page_slug, $hook_suffix) {
     $page_hook_suffixes = get_option('dm_page_hook_suffixes', []);
@@ -335,12 +244,7 @@ function dm_render_admin_page_content($page_config, $page_slug) {
 }
 
 /**
- * Enqueue admin assets via dynamic page detection.
- * 
- * Uses parameter-based asset discovery aligned with filter-based architecture.
- *
- * @since NEXT_VERSION
- * @param string $hook_suffix The current admin page hook.
+ * Enqueue assets via dynamic page detection
  */
 function dm_enqueue_admin_assets( $hook_suffix ) {
     $page_hook_suffixes = get_option('dm_page_hook_suffixes', []);
@@ -372,10 +276,7 @@ function dm_enqueue_admin_assets( $hook_suffix ) {
 }
 
 /**
- * Enqueue assets for a specific page using parameter-based configuration.
- *
- * @param array  $assets Page asset configuration
- * @param string $page_slug Page slug for context
+ * Enqueue page-specific assets
  */
 function dm_enqueue_page_assets($assets, $page_slug) {
     $plugin_base_path = DATA_MACHINE_PATH;

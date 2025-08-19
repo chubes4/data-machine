@@ -463,4 +463,112 @@ class PipelinePageAjax
             'pipeline_id' => $pipeline_id
         ]);
     }
+
+    /**
+     * Save pipeline title via auto-save functionality
+     */
+    public function handle_save_pipeline_title()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        $pipeline_title = sanitize_text_field(wp_unslash($_POST['pipeline_title'] ?? ''));
+        
+        if (!$pipeline_id) {
+            wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
+        }
+        
+        if (empty($pipeline_title)) {
+            wp_send_json_error(['message' => __('Pipeline title cannot be empty', 'data-machine')]);
+        }
+        
+        // Get database service
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+        
+        // Update pipeline title
+        $success = $db_pipelines->update_pipeline($pipeline_id, [
+            'pipeline_name' => $pipeline_title
+        ]);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to save pipeline title', 'data-machine')]);
+        }
+        
+        // Trigger auto-save for complete pipeline persistence
+        do_action('dm_auto_save', $pipeline_id);
+        
+        wp_send_json_success([
+            'message' => __('Pipeline title saved successfully', 'data-machine'),
+            'pipeline_id' => $pipeline_id,
+            'pipeline_title' => $pipeline_title
+        ]);
+    }
+
+    /**
+     * Save flow title via auto-save functionality
+     */
+    public function handle_save_flow_title()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $flow_id = (int) sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+        $flow_title = sanitize_text_field(wp_unslash($_POST['flow_title'] ?? ''));
+        
+        if (!$flow_id) {
+            wp_send_json_error(['message' => __('Flow ID required', 'data-machine')]);
+        }
+        
+        if (empty($flow_title)) {
+            wp_send_json_error(['message' => __('Flow title cannot be empty', 'data-machine')]);
+        }
+        
+        // Get database service
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+        
+        if (!$db_flows) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+        
+        // Get existing flow to extract pipeline_id for auto-save
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
+        }
+        
+        // Update flow title
+        $success = $db_flows->update_flow($flow_id, [
+            'flow_name' => $flow_title
+        ]);
+        
+        if (!$success) {
+            wp_send_json_error(['message' => __('Failed to save flow title', 'data-machine')]);
+        }
+        
+        // Trigger auto-save for complete pipeline persistence
+        $pipeline_id = (int) $flow['pipeline_id'];
+        if ($pipeline_id > 0) {
+            do_action('dm_auto_save', $pipeline_id);
+        }
+        
+        wp_send_json_success([
+            'message' => __('Flow title saved successfully', 'data-machine'),
+            'flow_id' => $flow_id,
+            'flow_title' => $flow_title,
+            'pipeline_id' => $pipeline_id
+        ]);
+    }
 }

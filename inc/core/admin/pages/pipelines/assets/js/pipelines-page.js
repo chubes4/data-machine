@@ -34,12 +34,12 @@
                         if (response.success) {
                             resolve(response.data.html);
                         } else {
-                            console.error('Template rendering failed:', response.data.message);
+                            // Template rendering failed
                             reject(response.data.message);
                         }
                     },
                     error: (xhr, status, error) => {
-                        console.error('Template request failed:', error);
+                        // Template request failed
                         reject(error);
                     }
                 });
@@ -116,7 +116,7 @@
         findPipelineCard: function(pipelineId) {
             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
             if (!$pipelineCard.length) {
-                console.error('Pipeline card not found for ID:', pipelineId);
+                // Pipeline card not found
                 return null;
             }
             return $pipelineCard;
@@ -190,14 +190,14 @@
             const contextData = $button.data('context');
             
             if (!contextData) {
-                console.error('Configure step action: Missing context data');
+                // Configure step action: Missing context data
                 return;
             }
             
             const { step_type, pipeline_id, pipeline_step_id } = contextData;
             
             if (!step_type || !pipeline_id || !pipeline_step_id) {
-                console.error('Configure step action: Missing required context fields', contextData);
+                // Configure step action: Missing required context fields
                 return;
             }
             
@@ -287,12 +287,12 @@
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
                                                 
                                             }).catch((error) => {
-                                                console.error('Failed to update flow step card after AI config save:', error);
+                                                // Failed to update flow step card after AI config save
                                             });
                                         }
                                     },
                                     error: (xhr, status, error) => {
-                                        console.error('Failed to get flow configuration for step card update:', error);
+                                        // Failed to get flow configuration for step card update
                                     }
                                 });
                             }
@@ -322,7 +322,7 @@
                                 $pipelineStepContainer.replaceWith(updatedStepHtml);
                                 
                             }).catch((error) => {
-                                console.error('Failed to update pipeline step card after AI config save:', error);
+                                // Failed to update pipeline step card after AI config save
                             });
                         });
                         
@@ -330,12 +330,12 @@
                         $(document).trigger('dm-step-configured', [contextData, response.data]);
                         
                     } else {
-                        console.error('Configure step action failed:', response.data);
+                        // Configure step action failed
                         alert(response.data.message || 'Failed to save step configuration');
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Configure step action AJAX error:', error);
+                    // Configure step action AJAX error
                     alert('Error saving step configuration: ' + error);
                 },
                 complete: () => {

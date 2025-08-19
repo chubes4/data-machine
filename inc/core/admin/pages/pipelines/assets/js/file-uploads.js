@@ -114,7 +114,7 @@
             // Get handler context from container data attributes
             const handlerContext = this.getHandlerContextFromContainer();
             if (!handlerContext) {
-                console.error('DM File Uploads: No handler context available for file upload');
+                // No handler context available for file upload
                 return;
             }
             
@@ -147,7 +147,7 @@
                     this.addUploadedFilesToTable(results);
                 })
                 .catch(error => {
-                    console.error('File upload error:', error);
+                    // File upload error occurred
                     this.showUploadProgress(false);
                     const errorMessage = error.message || 'File upload failed. Please try again.';
                     this.showMessage(errorMessage, 'error');
@@ -170,7 +170,7 @@
                 } else if (dmPipelineModal?.dm_ajax_nonce) {
                     nonce = dmPipelineModal.dm_ajax_nonce;
                 } else {
-                    console.error('No dm_ajax_nonce available for file upload');
+                    // No dm_ajax_nonce available for file upload
                     reject(new Error('No dm_ajax_nonce available'));
                     return;
                 }
@@ -193,7 +193,7 @@
                             resolve(response);
                         } else {
                             const errorMessage = response.data?.message || 'Upload failed';
-                            console.error('File upload server error:', errorMessage, response);
+                            // File upload server error
                             reject(new Error(errorMessage));
                         }
                     },

@@ -56,7 +56,7 @@
             const contextData = $button.data('context');
             
             if (!contextData?.flow_step_id) {
-                console.error('Invalid handler data in button context:', contextData);
+                // Invalid handler data in button context
                 return;
             }
             
@@ -83,7 +83,7 @@
         addHandlerToFlowStep: function(contextData) {
             // Simple validation - get it right the first time
             if (!contextData?.handler_slug || !contextData?.step_type || !contextData?.flow_step_id) {
-                console.error('Missing required context data:', contextData);
+                // Missing required context data
                 alert('Missing required handler context data');
                 return;
             }
@@ -123,16 +123,16 @@
                         const pipelineId = $button.closest('.dm-pipeline-card').data('pipeline-id');
                         if (pipelineId) {
                             PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                console.error('Failed to refresh pipeline status after adding handler:', error);
+                                // Status refresh failed after adding handler
                             });
                         }
                     } else {
-                        console.error('Error adding handler:', response.data);
+                        // Error adding handler
                         alert(response.data?.message || 'Error adding handler to flow step');
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error adding handler:', error);
+                    // AJAX error adding handler
                     alert('Error connecting to server');
                 }
             });
@@ -161,11 +161,11 @@
                         // Fetch flow config with reliable flow ID
                         this.fetchFlowConfig(flowId, stepData, pipelineId, isFirstStep);
                     } else {
-                        console.error('No flow found for pipeline', pipelineId);
+                        // No flow found for pipeline
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Failed to get flow data:', error);
+                    // Failed to get flow data
                 }
             });
         },
@@ -180,7 +180,7 @@
             const pipelineId = $button.data('pipeline-id');
             
             if (!pipelineId) {
-                console.error('No pipeline ID found on Add Flow button');
+                // No pipeline ID found on Add Flow button
                 return;
             }
 
@@ -204,7 +204,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
+                    // AJAX error occurred
                     alert('Error connecting to server');
                 },
                 complete: () => {
@@ -219,7 +219,7 @@
         addNewFlowToInterface: function(flowData, pipelineId) {
             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
             if (!$pipelineCard.length) {
-                console.error('Could not find pipeline card for ID:', pipelineId);
+                // Could not find pipeline card for ID
                 return;
             }
 
@@ -251,14 +251,14 @@
                         }).then((flowCardHtml) => {
                             $flowsList.append(flowCardHtml);
                         }).catch((error) => {
-                            console.error('Failed to render flow card template:', error);
+                            // Failed to render flow card template
                         });
                     } else {
-                        console.error('Failed to get pipeline steps for flow card:', response.data?.message);
+                        // Failed to get pipeline steps for flow card
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Failed to get pipeline data for flow card:', error);
+                    // Failed to get pipeline data for flow card
                 }
             });
         },
@@ -273,7 +273,7 @@
             const flowId = $button.data('flow-id');
             
             if (!flowId) {
-                console.error('Flow ID is required');
+                // Flow ID is required
                 return;
             }
             
@@ -297,7 +297,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
+                    // AJAX error occurred
                     this.showInlineMessage($button, 'Connection Error', 'error');
                 },
                 complete: () => {
@@ -351,7 +351,7 @@
                 const pipelineId = $stepContainer.closest('.dm-pipeline-card').data('pipeline-id');
                 if (pipelineId) {
                     PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                        console.error('Failed to refresh pipeline status after handler save:', error);
+                        // Status refresh failed after handler save
                     });
                 }
             }
@@ -367,7 +367,7 @@
             const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
             
             if (!$flowStepContainer.length) {
-                console.error('Flow step container not found for flow_step_id:', flow_step_id);
+                // Flow step container not found
                 return;
             }
 
@@ -406,18 +406,18 @@
                             const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
                             if (pipelineId) {
                                 PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                    console.error('Failed to refresh pipeline status after step card update:', error);
+                                    // Status refresh failed after step card update
                                 });
                             }
                         }).catch((error) => {
-                            console.error('Failed to render updated step card template:', error);
+                            // Failed to render updated step card template
                         });
                     } else {
-                        console.error('Failed to get updated flow configuration:', response.data?.message);
+                        // Failed to get updated flow configuration
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Failed to get flow configuration:', error);
+                    // Failed to get flow configuration
                 }
             });
         },
@@ -433,7 +433,7 @@
             const contextData = $button.data('context');
             
             if (!contextData) {
-                console.error('No context data found for delete action');
+                // No context data found for delete action
                 return;
             }
             
@@ -446,7 +446,7 @@
             }
             
             if (!flowId) {
-                console.error('Missing flow ID for flow deletion');
+                // Missing flow ID for flow deletion
                 return;
             }
             
@@ -473,7 +473,7 @@
                             const pipelineId = $flowCard.closest('.dm-pipeline-card').data('pipeline-id');
                             if (pipelineId) {
                                 PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                    console.error('Failed to refresh pipeline status after flow deletion:', error);
+                                    // Status refresh failed after flow deletion
                                 });
                             }
                         }.bind(this));
@@ -483,7 +483,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
+                    // AJAX error occurred
                     alert('Error deleting flow');
                     $button.text(originalText).prop('disabled', false);
                 }
@@ -522,14 +522,14 @@
                                 flow_id: flowId
                             }, pipelineId, 'flow');
                         }).catch((error) => {
-                            console.error('Failed to render flow step template:', error);
+                            // Failed to render flow step template
                         });
                     } else {
-                        console.error('Failed to get flow config:', response.data);
+                        // Failed to get flow config
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX error fetching flow config:', error);
+                    // AJAX error fetching flow config
                 }
             });
         },

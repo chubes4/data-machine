@@ -60,6 +60,9 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             <input type="text" class="dm-flow-title-input" 
                    value="<?php echo esc_attr($flow_name); ?>" 
                    placeholder="<?php esc_attr_e('Enter flow name...', 'data-machine'); ?>" />
+            <div class="dm-auto-save-status dm-auto-save-status--hidden">
+                <?php esc_html_e('Ready to auto-save', 'data-machine'); ?>
+            </div>
         </div>
         <div class="dm-flow-actions">
             <button type="button" class="button button-small dm-modal-open" 

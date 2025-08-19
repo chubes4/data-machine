@@ -196,3 +196,11 @@
         transform: translateY(0);
     }
 }
+
+/* ===== FORM FIELD STYLING ===== */
+
+/* Readonly field styling */
+.dm-readonly-field {
+    background-color: #f9f9f9 !important;
+    color: #666 !important;
+}

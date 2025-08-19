@@ -87,9 +87,6 @@ class Delete {
             'pipeline_config' => json_encode($updated_steps)
         ]);
         
-        if ($success) {
-            do_action('dm_log', 'debug', "Resequenced execution_order values for pipeline ID: {$pipeline_id}");
-        }
         
         return $success;
     }
@@ -218,8 +215,6 @@ class Delete {
             return;
         }
 
-        // Log the deletion
-        do_action('dm_log', 'debug', "Deleted pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with cascade deletion of {$flow_count} flows. Job records preserved as historical data.");
 
         wp_send_json_success([
             'message' => sprintf(
@@ -261,8 +256,6 @@ class Delete {
             return;
         }
 
-        // Log the deletion
-        do_action('dm_log', 'debug', "Deleted flow '{$flow_name}' (ID: {$flow_id}). Associated job records preserved as historical data.");
 
         wp_send_json_success([
             'message' => sprintf(
@@ -359,8 +352,6 @@ class Delete {
         // Get remaining steps count for response
         $remaining_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         
-        // Log the deletion
-        do_action('dm_log', 'debug', "Deleted step with ID '{$pipeline_step_id}' from pipeline '{$pipeline_name}' (ID: {$pipeline_id}). Affected {$flow_count} flows.");
 
         wp_send_json_success([
             'message' => sprintf(
@@ -428,24 +419,11 @@ class Delete {
                 return;
         }
         
-        // Debug logging before deletion attempt
-        do_action('dm_log', 'debug', 'Attempting processed items deletion', [
-            'target_id' => $target_id,
-            'context' => $context,
-            'criteria' => $criteria,
-            'delete_by' => $context['delete_by'] ?? 'unknown'
-        ]);
         
         $result = $processed_items->delete_processed_items($criteria);
         
-        // Always log the result for debugging (both AJAX and non-AJAX contexts)
-        if ($result !== false) {
-            do_action('dm_log', 'debug', 'Processed items deletion successful via dm_delete', [
-                'criteria' => $criteria,
-                'items_deleted' => $result,
-                'context' => wp_doing_ajax() ? 'AJAX' : 'non-AJAX'
-            ]);
-        } else {
+        // Log the result for errors only
+        if ($result === false) {
             do_action('dm_log', 'error', 'Processed items deletion failed via dm_delete', [
                 'criteria' => $criteria,
                 'context' => wp_doing_ajax() ? 'AJAX' : 'non-AJAX'
@@ -494,13 +472,6 @@ class Delete {
                 $job_ids_to_delete = $wpdb->get_col("SELECT job_id FROM {$jobs_table}");
             }
             
-            // Debug logging for job IDs collection
-            do_action('dm_log', 'debug', 'Collected job IDs for processed items cleanup', [
-                'clear_type' => $clear_type,
-                'job_ids_count' => count($job_ids_to_delete),
-                'job_ids' => $job_ids_to_delete,
-                'query' => $clear_type === 'failed' ? "SELECT job_id FROM {$jobs_table} WHERE status = 'failed'" : "SELECT job_id FROM {$jobs_table}"
-            ]);
         }
         
         // Build deletion criteria
@@ -537,12 +508,6 @@ class Delete {
         
         $message = implode(' ', $message_parts) . '.';
         
-        do_action('dm_log', 'debug', 'Jobs deletion completed', [
-            'clear_type' => $clear_type,
-            'jobs_deleted' => $deleted_count,
-            'cleanup_processed' => $cleanup_processed,
-            'job_ids_cleaned' => $cleanup_processed ? count($job_ids_to_delete) : 0
-        ]);
         
         wp_send_json_success([
             'message' => $message,

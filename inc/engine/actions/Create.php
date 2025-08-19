@@ -155,7 +155,6 @@ class Create {
         $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         
-        do_action('dm_log', 'debug', "Created pipeline '{$pipeline_name}' (ID: {$pipeline_id}) with auto-generated Draft Flow");
         
         wp_send_json_success([
             'message' => __('Pipeline created successfully', 'data-machine'),
@@ -224,7 +223,6 @@ class Create {
         
         $flow = $db_flows->get_flow($flow_id);
         
-        do_action('dm_log', 'debug', "Created flow '{$flow_name}' (ID: {$flow_id}) for pipeline {$pipeline_id} with " . count($pipeline_steps) . " synced steps");
         
         wp_send_json_success([
             'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
@@ -310,7 +308,6 @@ class Create {
         // Trigger auto-save
         do_action('dm_auto_save', $pipeline_id);
         
-        do_action('dm_log', 'debug', "Created step '{$step_type}' (ID: {$new_step['pipeline_step_id']}) for pipeline {$pipeline_id}, synced to " . count($flows) . " flows");
         
         wp_send_json_success([
             'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label']),
@@ -382,7 +379,6 @@ class Create {
         // Schedule execution with flow_step_id
         do_action('dm_schedule_next_step', $job_id, $first_flow_step_id, []);
         
-        do_action('dm_log', 'debug', "Created job {$job_id} for pipeline {$pipeline_id}, flow {$flow_id}");
         
         wp_send_json_success([
             'job_id' => $job_id,

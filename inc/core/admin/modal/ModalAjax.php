@@ -1,16 +1,6 @@
 <?php
 /**
- * Universal Modal AJAX Handler
- *
- * Handles all modal content requests through a single, universal AJAX endpoint.
- * Routes to the dm_modals filter system for component-specific content generation.
- *
- * This enables the universal modal architecture where any component can register
- * modal content via the dm_modals filter without needing custom AJAX handlers.
- * Eliminates component-specific modal AJAX handlers through unified architecture.
- *
- * @package DataMachine\Core\Admin\Modal
- * @since 1.0.0
+ * Universal modal AJAX handler using dm_modals filter system
  */
 
 namespace DataMachine\Core\Admin\Modal;
@@ -21,20 +11,12 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Universal Modal AJAX Handler Class
- *
- * Provides a single AJAX endpoint for all modal content requests across
- * the entire Data Machine admin interface. Components register modal content
- * via the dm_modals filter system.
- *
- * @since 1.0.0
+ * Single AJAX endpoint for all modal content via filter system
  */
 class ModalAjax
 {
     /**
-     * Constructor - Register AJAX actions
-     *
-     * @since 1.0.0
+     * Register AJAX handler
      */
     public function __construct()
     {
@@ -42,13 +24,7 @@ class ModalAjax
     }
 
     /**
-     * Handle modal content AJAX requests
-     *
-     * Routes to the dm_modals filter system for component-specific content.
-     * Maintains WordPress security standards with nonce verification and
-     * capability checks.
-     *
-     * @since 1.0.0
+     * Route modal requests through dm_modals filter system
      */
     public function handle_get_modal_content()
     {
@@ -131,11 +107,7 @@ class ModalAjax
     }
     
     /**
-     * Render dynamic modal content with processed context
-     * 
-     * @param string $template Template name
-     * @param array $context AJAX context data
-     * @return string Rendered content
+     * Render handler-specific or universal modal templates
      */
     private function render_dynamic_modal_content(string $template, array $context): string {
         // Check if this is a handler-specific template (starts with 'handler-settings/')
@@ -160,12 +132,7 @@ class ModalAjax
     
     
     /**
-     * Render form field based on Settings field definition
-     * 
-     * @param string $field_name Field name attribute
-     * @param array $field_config Field configuration from Settings class
-     * @param mixed $current_value Current value for this field
-     * @return string HTML form field element
+     * Render form field from Settings configuration
      */
     public static function render_settings_field(string $field_name, array $field_config, $current_value = null): string {
         $field_type = $field_config['type'] ?? 'text';
@@ -253,7 +220,7 @@ class ModalAjax
                 // Read-only field for displaying values (like redirect URIs)
                 $display_value = $field_config['value'] ?? $current_value ?? '';
                 $field_html = sprintf(
-                    '<input type="text" id="%s" name="%s" value="%s" class="regular-text" readonly style="background-color: #f9f9f9; color: #666;"%s />',
+                    '<input type="text" id="%s" name="%s" value="%s" class="regular-text dm-readonly-field" readonly%s />',
                     esc_attr($field_name),
                     esc_attr($field_name),
                     esc_attr($display_value),

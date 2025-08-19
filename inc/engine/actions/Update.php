@@ -115,15 +115,6 @@ class Update {
             do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
         }
         
-        // Centralized logging
-        do_action('dm_log', 'debug', 'Job status updated via hook', [
-            'job_id' => $job_id,
-            'old_status' => $old_status,
-            'new_status' => $new_status,
-            'context' => $context,
-            'method_used' => $method_used,
-            'success' => $success
-        ]);
         
         return $success;
     }
@@ -165,18 +156,8 @@ class Update {
                     'data-machine'
                 );
                 
-                do_action('dm_log', 'debug', 'Flow scheduling activated via direct Action Scheduler', [
-                    'flow_id' => $flow_id, 
-                    'interval' => $schedule_interval,
-                    'action_id' => $action_id,
-                    'success' => ($action_id !== false)
-                ]);
             }
         } else {
-            do_action('dm_log', 'debug', 'Flow scheduling set to manual (run-now only)', [
-                'flow_id' => $flow_id,
-                'interval' => $schedule_interval
-            ]);
         }
     }
 
@@ -230,7 +211,7 @@ class Update {
             return false;
         }
         
-        // Save all flows for this pipeline
+        // Save all flows for this pipeline with synchronized execution_order
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flows_saved = 0;
         $flow_steps_saved = 0;
@@ -238,6 +219,15 @@ class Update {
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+            
+            // Synchronize execution_order from pipeline steps to flow steps
+            foreach ($flow_config as $flow_step_id => $flow_step) {
+                $pipeline_step_id = $flow_step['pipeline_step_id'] ?? null;
+                if ($pipeline_step_id && isset($pipeline_config[$pipeline_step_id])) {
+                    // Update flow step execution_order to match pipeline step
+                    $flow_config[$flow_step_id]['execution_order'] = $pipeline_config[$pipeline_step_id]['execution_order'];
+                }
+            }
             
             $flow_success = $db_flows->update_flow($flow_id, [
                 'flow_name' => $flow['flow_name'],
@@ -253,11 +243,6 @@ class Update {
             }
         }
         
-        do_action('dm_log', 'debug','Complete auto-save successful', [
-            'pipeline_id' => $pipeline_id,
-            'flows_saved' => $flows_saved,
-            'flow_steps_saved' => $flow_steps_saved
-        ]);
         
         return true;
     }
@@ -350,9 +335,6 @@ class Update {
         // Trigger auto-save for the pipeline
         do_action('dm_auto_save', $flow['pipeline_id']);
         
-        // Log the action
-        $action_type = $handler_exists ? 'updated' : 'added';
-        do_action('dm_log', 'debug', "Handler '{$handler_slug}' {$action_type} for flow_step_id {$flow_step_id} in flow {$flow_id}");
         
         return true;
     }
@@ -438,9 +420,6 @@ class Update {
             return false;
         }
         
-        // Log successful sync
-        $context_desc = !empty($context['context']) ? $context['context'] : 'unknown';
-        do_action('dm_log', 'debug', "Synced " . count($steps) . " step(s) to flow {$flow_id} via {$context_desc}");
         
         return true;
     }

@@ -113,8 +113,8 @@ dm_register_ai_step_filters();
 /**
  * Load general AI tools registration
  * 
- * Include general tools that are available to all AI steps regardless of
- * the next step's handler. This enables AI steps to access tools like
+ * Include general tools directory that would be available to all AI steps regardless of
+ * the next step's handler when implemented. Architecture ready for tools like
  * search, data processing, analysis, etc.
  */
 require_once __DIR__ . '/tools/GeneralToolsFilters.php';

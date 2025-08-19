@@ -55,18 +55,10 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
      data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
 
     <?php
-    // Universal arrow logic - contextual validation
-    // For empty steps or when arrows aren't critical, default to showing arrow (safer for UI)
-    if (!isset($is_first_step)) {
-        if ($is_empty) {
-            // Empty steps don't need strict arrow validation - default to showing arrow
-            $is_first_step = false;
-        } else {
-            // Populated steps default to false (show arrow) if not specified
-            $is_first_step = false;
-        }
-    }
-    if (!$is_first_step): ?>
+    // Simplified arrow logic for drag & drop compatibility
+    // JavaScript will manage arrow states dynamically during reordering
+    $show_arrow = !($is_first_step ?? false);
+    if ($show_arrow): ?>
         <div class="dm-step-arrow">
             <span class="dashicons dashicons-arrow-right-alt"></span>
         </div>

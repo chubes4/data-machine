@@ -42,8 +42,7 @@ function ai_http_render_template($template_name, $data = []) {
         return '<div class="notice notice-error"><p>Template not found: ' . esc_html($template_name) . '</p></div>';
     }
     
-    // Extract data array to local variables for template use
-    extract($data, EXTR_SKIP);
+    // Template data available via $data array
     
     // Start output buffering to capture template output
     ob_start();

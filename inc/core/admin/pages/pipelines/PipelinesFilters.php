@@ -165,6 +165,23 @@ function dm_register_pipelines_admin_page_filters() {
                         'file' => 'inc/core/admin/pages/pipelines/assets/js/import-export.js',
                         'deps' => ['jquery', 'dm-core-modal'],
                         'in_footer' => true
+                    ],
+                    'dm-pipeline-auto-save' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-auto-save.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmPipelineAutoSave',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
+                                'strings' => [
+                                    'saving' => __('Saving...', 'data-machine'),
+                                    'saved' => __('Saved', 'data-machine'),
+                                    'error' => __('Error saving', 'data-machine')
+                                ]
+                            ]
+                        ]
                     ]
                 ]
             ],
@@ -200,6 +217,10 @@ function dm_register_pipelines_admin_page_filters() {
     
     // Step reordering endpoint
     add_action('wp_ajax_dm_reorder_steps', fn() => do_action('dm_ajax_route', 'dm_reorder_steps', 'page'));
+    
+    // Title auto-save endpoints
+    add_action('wp_ajax_dm_save_pipeline_title', fn() => do_action('dm_ajax_route', 'dm_save_pipeline_title', 'page'));
+    add_action('wp_ajax_dm_save_flow_title', fn() => do_action('dm_ajax_route', 'dm_save_flow_title', 'page'));
     
     // Modal actions (UI/template operations) - using universal AJAX routing
     add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));

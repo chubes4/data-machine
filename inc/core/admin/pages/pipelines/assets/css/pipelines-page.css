@@ -503,6 +503,10 @@
     text-align: center;
 }
 
+.dm-auto-save-status--hidden {
+    display: none;
+}
+
 .dm-auto-save-status.dm-status-saving {
     background-color: #f0f8ff;
     color: #0073aa;
@@ -549,8 +553,8 @@
 
 /* Drag & Drop Styling */
 
-/* Hover state for draggable step cards */
-.dm-step-card:not(.dm-step-card--empty):hover {
+/* Hover state for draggable step cards - ONLY pipeline step cards */
+.dm-pipeline-steps .dm-step-card:not(.dm-step-card--empty):hover {
     cursor: grab;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);

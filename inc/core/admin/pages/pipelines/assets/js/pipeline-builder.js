@@ -49,7 +49,7 @@
             const contextData = $card.data('context');
             
             if (!contextData || !contextData.step_type || !contextData.pipeline_id) {
-                console.error('Invalid step data in card context:', contextData);
+                // Invalid step data
                 return;
             }
 
@@ -77,14 +77,14 @@
                         
                         // Refresh pipeline status for real-time border updates
                         PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                            console.error('Failed to refresh pipeline status after adding step:', error);
+                            // Status refresh failed after adding step
                         });
                     } else {
                         alert(response.data.message || 'Error adding step');
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
+                    // AJAX error occurred
                     alert('Error adding step');
                 }
             });
@@ -121,7 +121,7 @@
                 }
                 
             }).catch((error) => {
-                console.error('Failed to render pipeline step template:', error);
+                // Failed to render pipeline step template
                 alert('Error rendering step template');
             });
         },
@@ -207,7 +207,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
+                    // AJAX error occurred
                     alert('Error creating pipeline');
                 },
                 complete: () => {
@@ -242,7 +242,7 @@
                 const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
                 $newCard.find('.dm-pipeline-title-input').focus().select();
             }).catch((error) => {
-                console.error('Failed to render pipeline card template:', error);
+                // Failed to render pipeline card template
             });
         },
 
@@ -257,7 +257,7 @@
             const contextData = $button.data('context');
             
             if (!contextData) {
-                console.error('No context data found for delete action');
+                // No context data found for delete action
                 return;
             }
             
@@ -273,12 +273,12 @@
             // Validation based on deletion type
             if (deleteType === 'pipeline') {
                 if (!pipelineId) {
-                    console.error('Missing pipeline ID for pipeline deletion');
+                    // Missing pipeline ID for pipeline deletion
                     return;
                 }
             } else {
                 if (!pipelineStepId || !pipelineId) {
-                    console.error('Missing pipeline step ID or pipeline ID for step deletion');
+                    // Missing pipeline step ID or pipeline ID for step deletion
                     return;
                 }
             }
@@ -331,7 +331,7 @@
                                 
                                 // Refresh pipeline status for real-time border updates
                                 PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                    console.error('Failed to refresh pipeline status after deleting step:', error);
+                                    // Status refresh failed after deleting step
                                 });
                             });
                         }
@@ -342,7 +342,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('AJAX Error:', error);
+                    // AJAX error occurred
                     const errorType = deleteType === 'pipeline' ? 'pipeline' : 'step';
                     alert(`Error deleting ${errorType}`);
                     $button.text(originalText).prop('disabled', false);
@@ -399,9 +399,13 @@
             const pipelineId = $pipelineCard.data('pipeline-id');
             
             if (!pipelineId) {
-                console.error('Pipeline ID not found for reorder operation');
+                // Pipeline ID not found for reorder operation
                 return;
             }
+
+            // Ensure dragging class is removed (cleanup for any race conditions)
+            ui.item.removeClass('dm-dragging');
+            $container.find('.dm-step-container').removeClass('dm-dragging');
 
             // Calculate new order based on DOM positions
             const newOrder = this.calculateNewOrder($container);
@@ -465,6 +469,7 @@
          * Reorder flow steps to match pipeline step order
          */
         reorderFlowSteps: function(pipelineId, newOrder) {
+            const self = this; // Capture context for use inside .each()
             const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
             const $flowContainers = $pipelineCard.find('.dm-flow-steps');
             
@@ -497,8 +502,8 @@
                 });
                 
                 // Fix arrow states in flow steps after reordering
-                this.updateArrowStates($flowContainer);
-            }.bind(this));
+                self.updateArrowStates($flowContainer);
+            });
         },
 
         /**
@@ -519,18 +524,20 @@
                 success: function(response) {
                     if (response.success) {
                         // Refresh pipeline status to maintain status colors
-                        PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                            // Status refresh failed silently - this is non-critical
-                        });
+                        if (window.PipelineStatusManager) {
+                            PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                                // Status refresh failed (non-critical)
+                            });
+                        }
                         
                     } else {
-                        console.error('Failed to save step order:', response.data?.message || 'Unknown error');
+                        // Server returned error
                         alert('Error saving step order: ' + (response.data?.message || 'Unknown error'));
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX error saving step order:', error);
-                    alert('Error saving step order');
+                    // AJAX error saving step order
+                    alert('Network error saving step order: ' + error);
                 }
             });
         },
@@ -542,7 +549,7 @@
             const $emptyStepContainer = $container.find('.dm-step-container:has(.dm-step-card--empty)').first();
             
             if (!$emptyStepContainer.length) {
-                console.error('No empty step container found to replace');
+                // No empty step container found to replace
                 return Promise.reject('No empty container');
             }
             

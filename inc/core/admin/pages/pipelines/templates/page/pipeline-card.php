@@ -23,6 +23,13 @@ if (isset($pipeline) && !empty($pipeline)) {
     $pipeline_id = $pipeline['pipeline_id'] ?? null;
     $pipeline_name = $pipeline['pipeline_name'] ?? '';
     $pipeline_steps = $pipeline_id ? apply_filters('dm_get_pipeline_steps', [], $pipeline_id) : [];
+    
+    // Sort pipeline steps by execution_order for correct display order
+    if (!empty($pipeline_steps)) {
+        uasort($pipeline_steps, function($a, $b) {
+            return ($a['execution_order'] ?? 0) <=> ($b['execution_order'] ?? 0);
+        });
+    }
 }
 
 $is_new_pipeline = empty($pipeline_id);
@@ -38,7 +45,7 @@ $has_steps = !empty($pipeline_steps);
                    placeholder="<?php esc_attr_e('Enter pipeline name...', 'data-machine'); ?>" />
         </div>
         <div class="dm-pipeline-actions">
-            <div class="dm-auto-save-status" style="display: none;">
+            <div class="dm-auto-save-status dm-auto-save-status--hidden">
                 <?php esc_html_e('Ready to auto-save', 'data-machine'); ?>
             </div>
             <?php if (!$is_new_pipeline): ?>

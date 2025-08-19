@@ -14,24 +14,24 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Extract variables with sensible defaults
-$delete_type = $delete_type ?? 'step';
+// Extract variables with sensible defaults from data array
+$delete_type = $data['delete_type'] ?? 'step';
 
 // Extract context-specific variables with defaults
 if ($delete_type === 'pipeline') {
-    $pipeline_id = $pipeline_id ?? 0;
-    $pipeline_name = $pipeline_name ?? __('Unknown Pipeline', 'data-machine');
+    $pipeline_id = $data['pipeline_id'] ?? 0;
+    $pipeline_name = $data['pipeline_name'] ?? __('Unknown Pipeline', 'data-machine');
 } elseif ($delete_type === 'flow') {
-    $flow_id = $flow_id ?? 0;
-    $flow_name = $flow_name ?? __('Unknown Flow', 'data-machine');
+    $flow_id = $data['flow_id'] ?? 0;
+    $flow_name = $data['flow_name'] ?? __('Unknown Flow', 'data-machine');
 } else {
     // Step deletion - default case
-    $pipeline_step_id = $pipeline_step_id ?? '';
-    $pipeline_id = $pipeline_id ?? 0;
-    $step_type = $step_type ?? 'unknown';
+    $pipeline_step_id = $data['pipeline_step_id'] ?? '';
+    $pipeline_id = $data['pipeline_id'] ?? 0;
+    $step_type = $data['step_type'] ?? 'unknown';
     
     // Generate step label from type
-    $step_label = $step_label ?? ucfirst(str_replace('_', ' ', $step_type));
+    $step_label = $data['step_label'] ?? ucfirst(str_replace('_', ' ', $step_type));
 }
 
 // Template self-discovery - fetch affected flows and jobs data via filter-based discovery
