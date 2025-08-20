@@ -9,15 +9,11 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Context auto-resolved by PipelineContextManager filter before template renders
-// All required context variables are available: $step_type, $pipeline_id, $pipeline_step_id
 
-// Get step title from registered step configuration
 $all_steps = apply_filters('dm_steps', []);
 $step_config_data = $all_steps[$step_type] ?? null;
 $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_type));
@@ -38,13 +34,10 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
     </div>
     
     <?php
-    // Get step configuration from step definition via filter discovery
     $all_step_settings = apply_filters('dm_step_settings', []);
     $step_config = $all_step_settings[$step_type] ?? null;
     
-    // Render based on step-provided configuration
     if ($step_config && ($step_config['config_type'] ?? '') === 'ai_configuration'):
-        // FAIL FAST - require pipeline_step_id for unique AI step configuration
         if (!$pipeline_step_id) {
             echo '<div class="dm-error">
                 <h4>' . __('Configuration Error', 'data-machine') . '</h4>
@@ -54,24 +47,19 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
             return;
         }
         
-        // Get saved step configuration from pipeline database
         $saved_step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
         
-        // Extract saved values with defaults - use first available provider instead of hardcoding OpenAI
         $all_providers = apply_filters('ai_providers', []);
         $llm_providers = array_filter($all_providers, function($provider) {
             return isset($provider['type']) && $provider['type'] === 'llm';
         });
-        // No default: only use saved value, otherwise empty
-        $selected_provider = isset($saved_step_config['provider']) ? $saved_step_config['provider'] : '';
+        $selected_provider = $saved_step_config['provider'] ?? '';
         $selected_model = $saved_step_config['model'] ?? '';
         $system_prompt_value = $saved_step_config['system_prompt'] ?? '';
         
-        // Check for provider-specific models
         if (empty($selected_model) && !empty($saved_step_config['providers'][$selected_provider]['model'])) {
             $selected_model = $saved_step_config['providers'][$selected_provider]['model'];
         }
-        // Render AI HTTP Client components using template-based filter system
         echo apply_filters('ai_render_component', '', [
             'selected_provider' => $selected_provider,
             'selected_model' => $selected_model,
@@ -82,17 +70,21 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
                 'placeholder' => __('Define how the AI should process data from previous pipeline steps...', 'data-machine'),
                 'help_text' => __('Instructions that guide AI behavior for this pipeline step. The AI will receive data from all previous steps automatically.', 'data-machine'),
                 'rows' => 6
+            ],
+            // Pass step context for tool configuration navigation
+            'step_context' => [
+                'step_type' => $step_type ?? 'ai',
+                'pipeline_id' => $pipeline_id ?? '',
+                'pipeline_step_id' => $pipeline_step_id ?? ''
             ]
         ]);
     elseif ($step_config):
-        // Future: Other step types can define their own configuration rendering
         ?>
         <div class="dm-generic-step-config">
             <p><?php echo esc_html(sprintf(__('Configuration for %s steps is available.', 'data-machine'), $step_type)); ?></p>
         </div>
         <?php
     else:
-        // No configuration available for this step type
         ?>
         <div class="dm-no-config">
             <p><?php echo esc_html(sprintf(__('No configuration available for %s steps.', 'data-machine'), $step_type)); ?></p>
