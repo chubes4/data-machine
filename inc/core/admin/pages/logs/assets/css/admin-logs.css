@@ -1,0 +1,108 @@
+/**
+ * Data Machine Logs Admin Page Styles
+ * 
+ * Component-owned styles following WordPress and Gutenberg patterns.
+ * All classes use dm- prefix for namespace isolation.
+ *
+ * @package DataMachine\Core\Admin\Pages\Logs
+ * @since NEXT_VERSION
+ */
+
+/* Main logs page container */
+.dm-logs-page {
+    padding: 20px;
+}
+
+/* Log configuration section */
+.dm-log-configuration {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.dm-log-configuration h2 {
+    margin-top: 0;
+}
+
+.dm-log-level-field {
+    margin-bottom: 15px;
+}
+
+.dm-log-level-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.dm-log-level-select {
+    min-width: 250px;
+}
+
+.dm-log-level-description {
+    color: #666;
+    margin: 5px 0 0 0;
+    font-size: 13px;
+}
+
+/* Log file information section */
+.dm-log-file-info {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.dm-log-file-info h2 {
+    margin-top: 0;
+}
+
+.dm-log-file-info p {
+    margin: 10px 0;
+}
+
+.dm-log-file-path {
+    background: #f1f1f1;
+    padding: 2px 6px;
+    margin-left: 5px;
+}
+
+.dm-log-actions {
+    margin-top: 15px;
+}
+
+.dm-log-actions form {
+    display: inline;
+}
+
+.dm-refresh-logs {
+    margin-left: 10px;
+}
+
+/* Recent logs section */
+.dm-recent-logs {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 20px;
+}
+
+.dm-recent-logs h2 {
+    margin-top: 0;
+}
+
+.dm-no-logs-message {
+    color: #666;
+    font-style: italic;
+}
+
+.dm-log-viewer {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+}

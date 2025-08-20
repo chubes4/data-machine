@@ -18,9 +18,8 @@ desktop.ini
 node_modules/
 vendor/
 
-# Logs
+# Log files only (not logs directories)
 *.log
-logs/
 
 # Temporary files
 *.tmp
