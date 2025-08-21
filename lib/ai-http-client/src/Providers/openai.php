@@ -642,12 +642,20 @@ class AI_HTTP_OpenAI_Provider {
             $properties[$param_name] = array();
             if (isset($param_config['type'])) {
                 $properties[$param_name]['type'] = $param_config['type'];
+                
+                // OpenAI requires 'items' property for array types
+                if ($param_config['type'] === 'array' && !isset($param_config['items'])) {
+                    $properties[$param_name]['items'] = array('type' => 'string');
+                }
             }
             if (isset($param_config['description'])) {
                 $properties[$param_name]['description'] = $param_config['description'];
             }
             if (isset($param_config['enum'])) {
                 $properties[$param_name]['enum'] = $param_config['enum'];
+            }
+            if (isset($param_config['items'])) {
+                $properties[$param_name]['items'] = $param_config['items'];
             }
             
             // Handle required flag

@@ -28,23 +28,19 @@ $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 $result = apply_filters('ai_request', $request, 'openrouter');
 $tools = apply_filters('ai_tools', []);
 
-// OAuth Operations
+// OAuth Operations (see OAuth Integration section for complete details)
 apply_filters('dm_oauth', [], 'retrieve', 'handler');
-apply_filters('dm_oauth', null, 'store', 'handler', $data);
-apply_filters('dm_oauth', [], 'get_config', 'handler');
-apply_filters('dm_oauth', null, 'store_config', 'handler', $config);
-apply_filters('dm_oauth', false, 'clear', 'handler');
-apply_filters('dm_oauth', false, 'clear_config', 'handler');
-apply_filters('dm_oauth', false, 'clear_all', 'handler');
-
-// OAuth URL Generation
 apply_filters('dm_get_oauth_url', '', 'provider');
-apply_filters('dm_get_oauth_auth_url', '', 'provider');
 
 // ID Generation & Status Detection
 apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
 apply_filters('dm_detect_status', 'green', 'context', $data);
 apply_filters('dm_generate_handler_tool', $tool, $handler_slug, $handler_config);
+
+// Tool Configuration
+apply_filters('dm_tool_configured', false, $tool_id);
+apply_filters('dm_get_tool_config', [], $tool_id);
+do_action('dm_save_tool_config', $tool_id, $config_data);
 
 // Flow Step Operations
 apply_filters('dm_split_flow_step_id', [], $flow_step_id);
@@ -104,11 +100,7 @@ do_action('dm_auto_save', $pipeline_id);
 
 **Admin-Only**: Site-level auth, `manage_options` checks, zero user dependencies
 
-**Stateless Execution Model**: Complete removal of global variables ensures job isolation:
-- No `global $dm_current_job_id` usage anywhere in codebase
-- All step execute() methods receive job_id as explicit first parameter
-- Fetch handlers updated to accept job_id parameter instead of flow_id
-- Processed items tracking requires explicit job_id for isolation
+**Stateless Execution**: Complete job isolation via explicit job_id parameter passing. No global variables, all step execute() methods receive job_id as first parameter for proper deduplication tracking
 
 ## AI Integration
 
@@ -127,7 +119,7 @@ $result = apply_filters('ai_request', [
 **Dual Tool Architecture**: AI steps discover both handler-specific tools (filtered by next step) and general tools (available to all AI steps)
 
 **Handler Tools**: Platform-specific publishing tools (twitter_publish, facebook_publish, etc.) - only available when next step matches handler
-**General Tools**: Universal capabilities (search, analysis, data processing, etc.) - available to all AI steps regardless of next step
+**General Tools**: Universal capabilities (Google Search, data analysis, etc.) - available to all AI steps regardless of next step
 
 **Tool Detection Logic**:
 - Handler tools: Tools with `handler` property matching next step's handler
@@ -143,83 +135,45 @@ $result = apply_filters('ai_request', [
 
 **Dual Discovery System**: AI models discover both handler tools (next step only) and general tools (all AI steps) via `apply_filters('ai_tools', [])`
 
-**Tool Registration**:
-```php
-// Static tool registration (basic)
-add_filter('ai_tools', function($tools) {
-    $tools['twitter_publish'] = dm_get_twitter_tool();
-    return $tools;
-});
+**Tool Registration**: Configuration-aware tool discovery supporting both handler-specific and general tools
 
-// Dynamic tool generation (configuration-aware)
+```php
+// Handler tool with dynamic configuration
 add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
     if ($handler_slug === 'twitter') {
-        return dm_get_twitter_tool($handler_config);
+        $tool = [
+            'class' => 'DataMachine\\Core\\Handlers\\Publish\\Twitter\\Twitter',
+            'method' => 'handle_tool_call',
+            'handler' => 'twitter', // Handler property = next step only
+            'description' => 'Post content to Twitter (280 character limit)',
+            'parameters' => [
+                'content' => ['type' => 'string', 'required' => true],
+                'title' => ['type' => 'string', 'required' => false]
+            ],
+            'handler_config' => $handler_config
+        ];
+        
+        // Dynamic parameters based on configuration
+        if ($handler_config['twitter_include_source'] ?? true) {
+            $tool['parameters']['source_url'] = ['type' => 'string', 'required' => false];
+        }
+        if ($handler_config['twitter_enable_images'] ?? true) {
+            $tool['parameters']['image_url'] = ['type' => 'string', 'required' => false];
+        }
     }
     return $tool;
 }, 10, 3);
 
-// Tool definition with dynamic parameters
-function dm_get_twitter_tool(array $handler_config = []): array {
-    $tool = [
-        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Twitter\\Twitter',
-        'method' => 'handle_tool_call',
-        'handler' => 'twitter',
-        'description' => 'Post content to Twitter (280 character limit)',
-        'parameters' => [
-            'content' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'Tweet content (will be formatted and truncated if needed)'
-            ],
-            'title' => [
-                'type' => 'string',
-                'required' => false,
-                'description' => 'Optional title to prepend to content'
-            ]
-        ]
-    ];
-    
-    // Store configuration for execution
-    if (!empty($handler_config)) {
-        $tool['handler_config'] = $handler_config;
-    }
-    
-    // Get configuration values with defaults
-    $include_source = $handler_config['twitter_include_source'] ?? true;
-    $enable_images = $handler_config['twitter_enable_images'] ?? true;
-    $url_as_reply = $handler_config['twitter_url_as_reply'] ?? false;
-    
-    // Add conditional parameters based on configuration
-    if ($include_source) {
-        $description = $url_as_reply ? 'Optional source URL to post as reply tweet' : 'Optional source URL to append to tweet';
-        $tool['parameters']['source_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => $description
-        ];
-    }
-    
-    if ($enable_images) {
-        $tool['parameters']['image_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => 'Optional image URL to attach to tweet'
-        ];
-    }
-    
-    return $tool;
-}
-
-// General tool registration (no handler property)
+// General tool registration (all AI steps)
 add_filter('ai_tools', function($tools) {
-    $tools['search_web'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\WebSearch',
+    $tools['google_search'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Search the web for current information',
+        'description' => 'Search Google for current information and context',
         'parameters' => [
             'query' => ['type' => 'string', 'required' => true],
-            'max_results' => ['type' => 'integer', 'required' => false]
+            'max_results' => ['type' => 'integer', 'required' => false],
+            'site_restrict' => ['type' => 'string', 'required' => false]
         ]
         // NOTE: No 'handler' property - available to all AI steps
     ];
@@ -301,91 +255,123 @@ class Twitter {
 
 **General Tool Implementation**:
 ```php
-class WebSearch {
+class GoogleSearch {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        $query = $parameters['query'] ?? '';
-        $max_results = $parameters['max_results'] ?? 5;
+        // Validate required parameters
+        if (empty($parameters['query'])) {
+            return [
+                'success' => false,
+                'error' => 'Google Search tool call missing required query parameter',
+                'tool_name' => 'google_search'
+            ];
+        }
+
+        // Get search configuration
+        $config = get_option('dm_search_config', []);
+        $google_config = $config['google_search'] ?? [];
         
-        // Execute search logic
-        $results = $this->search($query, $max_results);
+        if (empty($google_config['api_key']) || empty($google_config['search_engine_id'])) {
+            return [
+                'success' => false,
+                'error' => 'Google Search tool not configured. Please configure API key and Search Engine ID.',
+                'tool_name' => 'google_search'
+            ];
+        }
+
+        // Extract parameters with validation
+        $query = sanitize_text_field($parameters['query']);
+        $max_results = min(max(intval($parameters['max_results'] ?? 5), 1), 10); // Limit 1-10 results
+        $site_restrict = !empty($parameters['site_restrict']) ? sanitize_text_field($parameters['site_restrict']) : '';
+        
+        // Execute Google Custom Search API request with WordPress HTTP API
+        $search_url = 'https://www.googleapis.com/customsearch/v1';
+        $search_params = [
+            'key' => $google_config['api_key'],
+            'cx' => $google_config['search_engine_id'],
+            'q' => $query,
+            'num' => $max_results,
+            'safe' => 'active'
+        ];
+        
+        if ($site_restrict) {
+            $search_params['siteSearch'] = $site_restrict;
+        }
+        
+        $request_url = add_query_arg($search_params, $search_url);
+        
+        $response = wp_remote_get($request_url, [
+            'timeout' => 10,
+            'headers' => ['Accept' => 'application/json']
+        ]);
+        
+        if (is_wp_error($response)) {
+            return [
+                'success' => false,
+                'error' => 'Failed to connect to Google Search API: ' . $response->get_error_message(),
+                'tool_name' => 'google_search'
+            ];
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+        
+        if ($response_code !== 200) {
+            return [
+                'success' => false,
+                'error' => 'Google Search API error (HTTP ' . $response_code . '): ' . $response_body,
+                'tool_name' => 'google_search'
+            ];
+        }
+        
+        $search_data = json_decode($response_body, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [
+                'success' => false,
+                'error' => 'Failed to parse Google Search API response',
+                'tool_name' => 'google_search'
+            ];
+        }
+        
+        // Process search results
+        $results = [];
+        if (!empty($search_data['items'])) {
+            foreach ($search_data['items'] as $item) {
+                $results[] = [
+                    'title' => $item['title'] ?? '',
+                    'link' => $item['link'] ?? '',
+                    'snippet' => $item['snippet'] ?? '',
+                    'displayLink' => $item['displayLink'] ?? ''
+                ];
+            }
+        }
+        
+        $search_info = $search_data['searchInformation'] ?? [];
+        $total_results = $search_info['totalResults'] ?? '0';
+        $search_time = $search_info['searchTime'] ?? 0;
         
         return [
             'success' => true,
-            'data' => ['results' => $results, 'query' => $query],
-            'tool_name' => 'search_web'
+            'data' => [
+                'query' => $query,
+                'results_count' => count($results),
+                'total_available' => $total_results,
+                'search_time' => $search_time,
+                'results' => $results
+            ],
+            'tool_name' => 'google_search'
         ];
+    }
+    
+    public static function is_configured(): bool {
+        $config = get_option('dm_search_config', []);
+        $google_config = $config['google_search'] ?? [];
+        
+        return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
     }
 }
 ```
 
-**Character Limits**: Hardcoded per platform (Twitter: 280, Bluesky: 300, Threads: 500)
-
-**Enhanced Social Features**:
-
-**Twitter URL Reply**: Post source URLs as separate reply tweets
-```php
-'twitter_include_source' => true,    // Enable URL parameter access
-'twitter_enable_images' => true,     // Enable image upload capability
-'twitter_url_as_reply' => false,     // Post URLs as reply tweets (default: inline)
-
-// Reply mode result includes both tweets
-return [
-    'success' => true,
-    'data' => [
-        'tweet_id' => $tweet_id,
-        'tweet_url' => $tweet_url,
-        'reply_tweet_id' => $reply_tweet_id,     // Only when reply mode
-        'reply_tweet_url' => $reply_tweet_url,   // Only when reply mode
-        'content' => $tweet_text
-    ]
-];
-```
-
-**Facebook Comment Mode**: Post URLs as separate comments
-```php
-'link_handling' => 'append',    // Add URL to post content (default)
-'link_handling' => 'replace',   // Replace post content with URL only
-'link_handling' => 'comment',   // Post URL as Facebook comment
-'link_handling' => 'none',      // No URL inclusion
-
-// Comment mode result includes both post and comment
-return [
-    'success' => true,
-    'data' => [
-        'post_id' => $post_id,
-        'post_url' => $post_url,
-        'comment_id' => $comment_id,         // Only when comment mode
-        'comment_url' => $comment_url,       // Only when comment mode
-        'content' => $post_text
-    ]
-];
-```
-
-**WordPress Taxonomy Assignment**: Dynamic category/tag/custom taxonomy support
-```php
-// Tool definition with taxonomy parameters
-'parameters' => [
-    'title' => ['type' => 'string', 'required' => true],
-    'content' => ['type' => 'string', 'required' => true],
-    'category' => ['type' => 'string', 'required' => false],
-    'tags' => ['type' => 'array', 'required' => false],
-    // Custom taxonomies dynamically added based on post type
-];
-
-// Result includes taxonomy assignments
-return [
-    'success' => true,
-    'data' => [
-        'post_id' => $post_id,
-        'post_url' => $post_url,
-        'taxonomy_results' => [
-            'category' => ['success' => true, 'category_id' => 5],
-            'tags' => ['success' => true, 'tag_count' => 3],
-            'custom_taxonomy' => ['success' => true, 'term_count' => 1]
-        ]
-    ]
-];
-```
 
 ## Handler Matrix
 
@@ -397,18 +383,18 @@ return [
 | Google Sheets | OAuth2 | Spreadsheet data extraction, cell-level access |
 | WordPress | None | Post/page content retrieval, taxonomy filtering |
 
-**Note**: All fetch handlers accept job_id as explicit parameter for stateless execution and proper job isolation.
+| **Publish** | **Auth** | **Limit** | **Features** |
+|-------------|----------|-----------|--------------|
+| Twitter | OAuth 1.0a | 280 chars | URL replies, media upload |
+| Bluesky | App Password | 300 chars | Media upload |
+| Threads | OAuth2 | 500 chars | Media upload |
+| Facebook | OAuth2 | No limit | Comment mode, link handling |
+| WordPress | None | No limit | Taxonomy assignment |
+| Google Sheets | OAuth2 | No limit | Row insertion |
 
-| **Publish** | **Auth** | **Features** |
-|-------------|----------|--------------|
-| Bluesky | App Password | Text posts (300 chars), media upload, session management |
-| Twitter | OAuth 1.0a | Tweets (280 chars), media, URL replies, image uploads |
-| Threads | OAuth2 | Text posts (500 chars), media upload, Meta API integration |
-| Facebook | OAuth2 | Page posts, media upload, URL comments, link handling modes |
-| Google Sheets | OAuth2 | Row insertion, data logging, spreadsheet management |
-| WordPress | None | Post creation, taxonomy assignment, draft/publish modes |
-
-**Tool-First Execution**: All publish handlers use ONLY `handle_tool_call()` method with configuration-aware tool generation via `dm_generate_handler_tool` filter.
+| **General Tools** | **Auth** | **Features** |
+|-------------------|----------|--------------|
+| Google Search | API Key | Web search, site restriction, 1-10 results |
 
 ## DataPacket Array
 
@@ -457,20 +443,28 @@ return [
 
 **Flow**: Fetch creates entry → AI adds entry → Publish adds entry → Array accumulates all processing history
 
-## Admin Workflow
+## Admin Interface
 
-1. **Pipelines Page**: Create/manage pipeline templates
-2. **Add Steps**: Configure step positions and types via modals
-3. **Flow Configuration**: Set handlers, authentication, scheduling
-4. **Jobs Page**: Monitor execution, clear jobs, view status
-5. **Logs Page**: System logging, error tracking, debug information
-6. **Testing**: Manual execution with `dm_run_flow_now`
+**Pages**: Pipelines (builder), Jobs (monitor), Logs (debug), Settings (control)
 
-**OAuth URL System**: Public `/dm-oauth/{provider}/` rewrite URLs for external API callbacks with centralized authentication flow
+**Pipeline Builder**: Drag & drop reordering, auto-save, visual status indicators, modal configuration
+**OAuth System**: Public `/dm-oauth/{provider}/` URLs, popup authentication, `manage_options` security
+**Logs**: `/wp-content/uploads/data-machine-logs/data-machine.log`, configurable levels, 100-entry view
 
-**Authentication Assets**: `pipeline-auth.js` handles OAuth popup window closure and parent communication for seamless modal authentication
+## Settings
 
-**Security Architecture**: Universal `manage_options` checks, centralized `dm_ajax_actions` nonce validation, OAuth callback permission verification
+**Location**: WordPress Settings → Data Machine
+
+```php
+$settings = dm_get_data_machine_settings();
+$enabled_pages = dm_get_enabled_admin_pages();
+$enabled_tools = dm_get_enabled_general_tools();
+```
+
+**Engine Mode**: Headless deployment (disables admin UI, preserves API)
+**Page Control**: Selective admin page enable/disable  
+**Tool Control**: General AI tool availability (Google Search, etc.)
+**Global Prompt**: Universal system message for all AI requests
 
 ## Step Implementation
 
@@ -608,50 +602,24 @@ do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
 
 ## Files Repository
 
-**Flow-Isolated Architecture**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
+**Path**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
+**Isolation**: UUID-based namespaces per flow: `{pipeline_step_id}_{flow_id}`
 
-**Concrete Example**:
-```
-/wp-content/uploads/data-machine/files/
-├── 12345678-abcd-efgh-ijkl-mnopqrstuvwx_f1a2b3c4/     # fetch step files
-│   ├── document1.pdf
-│   └── data.csv
-├── 12345678-abcd-efgh-ijkl-mnopqrstuvwx_f1a2b3c4/     # AI step files (same flow_step_id pattern)
-└── 87654321-wxyz-mnop-qrst-uvwxyz123456_a9b8c7d6/     # different flow files
-    └── output.json
-```
-
-**Path Patterns**:
-- Flow isolation prevents cross-contamination between different pipeline flows
-- UUID-based flow_step_id ensures unique namespaces: `{pipeline_step_id}_{flow_id}`
-- Automatic cleanup on flow deletion
-
-**Operations**:
 ```php
 $repo = apply_filters('dm_files_repository', [])['files'] ?? null;
-
-// Storage
 $repo->store_file($tmp_name, $filename, $flow_step_id);
-$repo->get_repository_path($flow_step_id);
-
-// Cleanup
-do_action('dm_cleanup_old_files');               // Global maintenance
-$repo->delete_file($filename, $flow_step_id);    // Single file
+do_action('dm_cleanup_old_files');
 ```
-
-**Maintenance**: Automatic cleanup via `dm_cleanup_old_files` action for orphaned files
 
 ## Development
 
-**Debug**:
 ```bash
 composer install && composer test
-window.dmDebugMode = true; # Browser
-define('WP_DEBUG', true);  # PHP
 ```
 
-**Service Validation**:
 ```php
+define('WP_DEBUG', true);
+window.dmDebugMode = true;
 error_log(print_r(apply_filters('dm_db', []), true));
 ```
 
@@ -682,8 +650,6 @@ try {
     return $data; // Return original on failure
 }
 ```
-
-**Stateless Architecture**: Complete removal of global variables. Job ID passed explicitly as first parameter to all step execute() methods ensuring full job isolation and preventing cross-job data contamination
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
 
@@ -726,36 +692,12 @@ $auth_url = apply_filters('dm_get_oauth_auth_url', '', 'twitter');
 
 ## Status Detection
 
-**UI Status Indicators**: `dm_detect_status` filter provides red/yellow/green status
-
 ```php
-// AI step configuration status
-$status = apply_filters('dm_detect_status', 'green', 'ai_step', [
-    'pipeline_step_id' => $pipeline_step_id
-]);
-
-// Handler authentication status
-$auth_status = apply_filters('dm_detect_status', 'green', 'handler_auth', [
-    'handler_slug' => $handler_slug
-]);
-
-// WordPress draft mode detection
-$draft_status = apply_filters('dm_detect_status', 'green', 'wordpress_draft', [
-    'flow_step_id' => $flow_step_id
-]);
-
-// Files handler status
-$files_status = apply_filters('dm_detect_status', 'green', 'files_status', [
-    'flow_step_id' => $flow_step_id
-]);
-
-// Subsequent publish step detection
-$subsequent_status = apply_filters('dm_detect_status', 'green', 'subsequent_publish_step', [
-    'pipeline_step_id' => $pipeline_step_id
-]);
+$status = apply_filters('dm_detect_status', 'green', 'context', $data);
 ```
 
-**Status Values**: `'red'` (error/missing), `'yellow'` (warning), `'green'` (ready)
+**Values**: `red` (error), `yellow` (warning), `green` (ready)
+**Contexts**: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`
 
 ## Rules
 

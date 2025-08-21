@@ -256,7 +256,16 @@ function dm_handle_yellow_pipeline_statuses($default_status, $context, $data) {
             }
         }
         
-        // All AI steps are properly configured or no AI steps exist
+        // Check overall pipeline viability for architectural issues
+        $viability_status = apply_filters('dm_detect_status', 'green', 'pipeline_viability', [
+            'pipeline_id' => $pipeline_id
+        ]);
+        
+        if ($viability_status === 'red') {
+            return 'red'; // Pipeline has architectural issues (single steps, invalid flow, etc.)
+        }
+        
+        // All AI steps are properly configured and pipeline is architecturally sound
         return 'green';
     }
     

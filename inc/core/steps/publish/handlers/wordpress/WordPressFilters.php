@@ -75,7 +75,7 @@ function dm_get_wordpress_base_tool(): array {
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\WordPress\\WordPress',
         'method' => 'handle_tool_call',
         'handler' => 'wordpress_publish',
-        'description' => 'Publish content to WordPress',
+        'description' => 'Publish content to WordPress using Gutenberg block format',
         'parameters' => [
             'title' => [
                 'type' => 'string',
@@ -85,7 +85,7 @@ function dm_get_wordpress_base_tool(): array {
             'content' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Post content'
+                'description' => 'Post content formatted as WordPress Gutenberg blocks. Use block comments like <!-- wp:heading {"level":2} --><h2>Title</h2><!-- /wp:heading --> for headings and <!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph --> for paragraphs.'
             ]
         ]
     ];
@@ -169,7 +169,8 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
         
         // Only include taxonomies for "ai_decides" (AI Decides) - others handled via publish_config
         if ($selection === 'ai_decides') {
-            $parameter_name = $taxonomy->name === 'category' ? 'category' : $taxonomy->name;
+            $parameter_name = $taxonomy->name === 'category' ? 'category' : 
+                             ($taxonomy->name === 'post_tag' ? 'tags' : $taxonomy->name);
             
             // AI Decides - include parameter with required flag
             if ($taxonomy->hierarchical) {

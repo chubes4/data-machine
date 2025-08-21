@@ -31,13 +31,11 @@
          */
         open: function(template, context = {}) {
             if (!template) {
-                console.error('DM Core Modal: Template parameter is required');
                 return;
             }
 
             const $modal = $('#dm-modal');
             if ($modal.length === 0) {
-                console.error('DM Core Modal: Modal template not found on page');
                 return;
             }
             
@@ -62,7 +60,6 @@
                 success: (response) => {
                     // Check if response is HTML (server error) instead of JSON
                     if (typeof response === 'string' && response.includes('<!DOCTYPE html>')) {
-                        console.error('[DM Modal] Server returned HTML instead of JSON - Raw response:', response);
                         this.showError('Server error - check console for details');
                         return;
                     }
@@ -71,16 +68,10 @@
                         this.showContent(response.data.template || 'Modal', response.data.content);
                     } else {
                         const errorMessage = response.data?.message || response.data || 'Error loading modal content';
-                        console.error('[DM Modal] Error response:', errorMessage);
                         this.showError(errorMessage);
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('[DM Modal] AJAX Error - Status:', status);
-                    console.error('[DM Modal] AJAX Error - Error:', error);
-                    console.error('[DM Modal] AJAX Error - Status Code:', xhr.status);
-                    console.error('[DM Modal] AJAX Error - Response Text:', xhr.responseText);
-                    console.error('[DM Modal] AJAX Error - Full XHR:', xhr);
                     this.showError('Error connecting to server');
                 }
             });
@@ -198,7 +189,6 @@
             const contextData = $button.data('context') || {};
             
             if (!template) {
-                console.error('DM Core Modal: No template parameter found on modal open button');
                 return;
             }
 
@@ -222,7 +212,6 @@
             const contextData = $button.data('context') || {};
             
             if (!template) {
-                console.error('DM Core Modal: No template parameter found on modal content button');
                 return;
             }
 

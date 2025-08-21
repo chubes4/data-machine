@@ -109,6 +109,9 @@
                 }
             });
             
+            // Capture context for callback
+            const self = this;
+            
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
@@ -116,11 +119,16 @@
                 success: (response) => {
                     if (response.success) {
                         
-                        // Update the flow step card with the new handler
-                        this.updateFlowStepCard(response.data);
+                        // Emit event using established pattern instead of direct method call
+                        $(document).trigger('dm-pipeline-modal-saved', response.data);
+                        
+                        // Close modal after successful save
+                        if (typeof dmCoreModal !== 'undefined') {
+                            dmCoreModal.close();
+                        }
                         
                         // Refresh pipeline status after handler addition
-                        const pipelineId = $button.closest('.dm-pipeline-card').data('pipeline-id');
+                        const pipelineId = contextData.pipeline_id;
                         if (pipelineId) {
                             PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
                                 // Status refresh failed after adding handler
@@ -155,11 +163,8 @@
                 success: (response) => {
                     if (response.success && response.data.first_flow_id) {
                         const flowId = response.data.first_flow_id;
-                        const isFirstStep = response.data.flow_count === 0 || 
-                                          (response.data.flows[0] && Object.keys(response.data.flows[0].flow_config || {}).length === 0);
-                        
                         // Fetch flow config with reliable flow ID
-                        this.fetchFlowConfig(flowId, stepData, pipelineId, isFirstStep);
+                        this.fetchFlowConfig(flowId, stepData, pipelineId);
                     } else {
                         // No flow found for pipeline
                     }
@@ -358,10 +363,10 @@
         },
 
         /**
-         * Update specific flow step card after handler configuration
+         * Update specific flow step card after handler configuration using fresh data
          */
         updateFlowStepCard: function(handlerData) {
-            const { flow_step_id, step_type, handler_slug, flow_id } = handlerData;
+            const { flow_step_id, step_type, handler_slug, flow_id, flow_config } = handlerData;
             
             // Find the specific flow step card to update
             const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
@@ -371,54 +376,30 @@
                 return;
             }
 
-            // Get updated flow configuration from database
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_get_flow_config',
-                    flow_id: flow_id,
-                    nonce: dmPipelineBuilder.dm_ajax_nonce
+            // Use flow config directly from save response - no AJAX call needed
+            PipelinesPage.requestTemplate('page/flow-step-card', {
+                step: {
+                    step_type: step_type,
+                    execution_order: $flowStepContainer.data('step-execution-order') || 0,
+                    pipeline_step_id: $flowStepContainer.data('pipeline-step-id'),
+                    is_empty: false
                 },
-                success: (response) => {
-                    if (response.success && response.data.flow_config) {
-                        // Calculate is_first_step for consistent arrow rendering
-                        const $parentContainer = $flowStepContainer.parent();
-                        const isFirstStep = $parentContainer.children('.dm-step-container').first().is($flowStepContainer);
-                        
-                        // Request updated step card template with new flow configuration
-                        PipelinesPage.requestTemplate('page/flow-step-card', {
-                            step: {
-                                step_type: step_type,
-                                execution_order: $flowStepContainer.data('step-execution-order') || 0,
-                                pipeline_step_id: $flowStepContainer.data('pipeline-step-id'),
-                                is_empty: false
-                            },
-                            flow_config: response.data.flow_config,
-                            flow_id: flow_id,
-                            pipeline_id: $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id'),
-                            is_first_step: isFirstStep
-                        }).then((updatedStepHtml) => {
-                            // Replace the existing step container with updated version
-                            $flowStepContainer.replaceWith(updatedStepHtml);
-                            
-                            // Refresh pipeline status after template update
-                            const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
-                            if (pipelineId) {
-                                PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                    // Status refresh failed after step card update
-                                });
-                            }
-                        }).catch((error) => {
-                            // Failed to render updated step card template
-                        });
-                    } else {
-                        // Failed to get updated flow configuration
-                    }
-                },
-                error: (xhr, status, error) => {
-                    // Failed to get flow configuration
+                flow_config: flow_config,
+                flow_id: flow_id,
+                pipeline_id: $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id')
+            }).then((updatedStepHtml) => {
+                // Replace the existing step container with updated version
+                $flowStepContainer.replaceWith(updatedStepHtml);
+                
+                // Refresh pipeline status after template update
+                const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
+                if (pipelineId) {
+                    PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                        // Status refresh failed after step card update
+                    });
                 }
+            }).catch((error) => {
+                // Failed to render updated step card template
             });
         },
 
@@ -494,7 +475,7 @@
         /**
          * Fetch flow config - simple, direct approach
          */
-        fetchFlowConfig: function(flowId, stepData, pipelineId, isFirstStep) {
+        fetchFlowConfig: function(flowId, stepData, pipelineId) {
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
                 type: 'POST',
@@ -511,8 +492,7 @@
                             step: stepData.step_data,
                             flow_config: flowConfig,
                             flow_id: flowId,
-                            pipeline_id: pipelineId,
-                            is_first_step: isFirstStep
+                            pipeline_id: pipelineId
                         };
                         
                         PipelinesPage.requestTemplate('page/flow-step-card', templateData).then((flowStepHtml) => {

@@ -9,12 +9,10 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Data-driven rendering - handle both new (empty) and existing (populated) pipelines
 $pipeline_id = null;
 $pipeline_name = '';
 $pipeline_steps = [];
@@ -37,7 +35,6 @@ $has_steps = !empty($pipeline_steps);
 
 ?>
 <div class="dm-pipeline-card dm-pipeline-form" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-    <!-- Pipeline Header with Editable Title -->
     <div class="dm-pipeline-header">
         <div class="dm-pipeline-title-section">
             <input type="text" class="dm-pipeline-title-input" 
@@ -45,9 +42,6 @@ $has_steps = !empty($pipeline_steps);
                    placeholder="<?php esc_attr_e('Enter pipeline name...', 'data-machine'); ?>" />
         </div>
         <div class="dm-pipeline-actions">
-            <div class="dm-auto-save-status dm-auto-save-status--hidden">
-                <?php esc_html_e('Ready to auto-save', 'data-machine'); ?>
-            </div>
             <?php if (!$is_new_pipeline): ?>
                 <button type="button" class="button button-secondary dm-modal-open" 
                         data-template="confirm-delete"
@@ -58,7 +52,6 @@ $has_steps = !empty($pipeline_steps);
         </div>
     </div>
     
-    <!-- Pipeline Steps Section (Template Level) -->
     <div class="dm-pipeline-steps-section">
         <div class="dm-section-header">
             <h4><?php esc_html_e('Pipeline Steps', 'data-machine'); ?></h4>
@@ -66,7 +59,6 @@ $has_steps = !empty($pipeline_steps);
         </div>
         <div class="dm-pipeline-steps">
             <?php 
-            // Transform database step structure to template format
             $display_steps = [];
             foreach ($pipeline_steps as $step) {
                 // Database structure validation - fail fast if corrupt
@@ -91,12 +83,10 @@ $has_steps = !empty($pipeline_steps);
                     }
                 }
                 
-                // Use database format directly - no transformation needed
                 $step['is_empty'] = false; // Add template flag to database object
                 $display_steps[] = $step;
             }
             
-            // Always append an empty step for "Add Step" functionality
             $display_steps[] = [
                 'step_type' => '',
                 'execution_order' => count($pipeline_steps),
@@ -111,12 +101,10 @@ $has_steps = !empty($pipeline_steps);
                     'pipeline_id' => $pipeline_id,
                     'is_first_step' => ($index === 0)
                 ]); ?>
-                <!-- Arrow rendering handled by universal step-card template -->
             <?php endforeach; ?>
         </div>
     </div>
     
-    <!-- Associated Flows -->
     <div class="dm-pipeline-flows">
         <div class="dm-flows-header">
             <div class="dm-flows-header-content">
@@ -132,7 +120,6 @@ $has_steps = !empty($pipeline_steps);
             </div>
         </div>
         <div class="dm-flows-list">
-            <!-- Existing Flows from Database -->
             <?php if (!empty($existing_flows)): ?>
                 <?php foreach ($existing_flows as $flow): ?>
                     <?php echo apply_filters('dm_render_template', '', 'page/flow-instance-card', [

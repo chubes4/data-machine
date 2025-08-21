@@ -140,8 +140,7 @@
     display: flex;
     align-items: center;
     flex: 0 0 160px;
-    height: 80px;
-    margin: 20px 0;
+    margin: 15px 0;
 }
 
 /* Step cards */
@@ -162,6 +161,115 @@
     height: auto;
     overflow: visible;
     transition: all 0.3s ease;
+}
+
+/* AI Prompt Display and Editing */
+.dm-prompt-display {
+    margin-top: 8px;
+}
+
+.dm-prompt-excerpt,
+.dm-prompt-full {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dm-prompt-excerpt {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.dm-ai-prompt-input {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    background: #fff;
+    transition: border-color 0.2s ease;
+}
+
+.dm-ai-prompt-input:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 1px #0073aa;
+}
+
+.dm-ai-prompt-input::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+/* Conditional display based on expansion state */
+.dm-step-card:not(.dm-expanded) .dm-prompt-expanded {
+    display: none;
+}
+
+.dm-step-card.dm-expanded .dm-prompt-collapsed {
+    display: none;
+}
+
+.dm-step-card:not(.dm-expanded) .dm-prompt-collapsed {
+    display: block;
+}
+
+.dm-step-card.dm-expanded .dm-prompt-expanded {
+    display: block;
+}
+
+/* Enhanced textarea styling for expanded prompts */
+.dm-prompt-full.dm-prompt-expanded {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.dm-prompt-full.dm-prompt-expanded:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+}
+
+/* User message styling for flow step cards */
+.dm-user-message-display {
+    margin-top: 8px;
+}
+
+.dm-user-message-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-sizing: border-box;
+}
+
+.dm-user-message-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+}
+
+.dm-user-message-input::placeholder {
+    color: #999;
+    font-style: italic;
 }
 
 .dm-expand-toggle {
@@ -492,38 +600,7 @@
     margin: 15px 0;
 }
 
-/* Auto-save status indicator */
-.dm-auto-save-status {
-    font-size: 13px;
-    padding: 6px 12px;
-    border-radius: 4px;
-    display: inline-block;
-    font-weight: 500;
-    min-width: 120px;
-    text-align: center;
-}
-
-.dm-auto-save-status--hidden {
-    display: none;
-}
-
-.dm-auto-save-status.dm-status-saving {
-    background-color: #f0f8ff;
-    color: #0073aa;
-    border: 1px solid #b5d7ff;
-}
-
-.dm-auto-save-status.dm-status-saved {
-    background-color: #f0fff0;
-    color: #2e8b57;
-    border: 1px solid #90ee90;
-}
-
-.dm-auto-save-status.dm-status-error {
-    background-color: #fff0f0;
-    color: #dc3232;
-    border: 1px solid #ffb5b5;
-}
+/* Auto-save status indicator styles removed for silent auto-save */
 
 /* Flow-level status detection (left border) */
 .dm-step-card--status-red {

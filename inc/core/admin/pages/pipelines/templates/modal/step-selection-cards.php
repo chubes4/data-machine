@@ -9,14 +9,12 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
 ?>
 <div class="dm-step-selection-container" data-pipeline-id="<?php echo esc_attr($pipeline_id ?? ''); ?>">
-    <!-- Hidden input to store pipeline ID for JavaScript access -->
     <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id ?? ''); ?>" />
     
     <div class="dm-step-selection-header">
@@ -25,7 +23,6 @@ if (!defined('WPINC')) {
     
     <div class="dm-step-cards">
         <?php 
-        // Template self-discovery - get all registered steps
         $all_steps = apply_filters('dm_steps', []);
         uasort($all_steps, function($a, $b) {
             $pos_a = $a['position'] ?? 999;
@@ -38,7 +35,6 @@ if (!defined('WPINC')) {
             $label = $step_config['label'] ?? ucfirst($step_type);
             $description = $step_config['description'] ?? '';
             
-            // Get available handlers for this step type using pure discovery
             $handlers_list = '';
             $all_handlers = apply_filters('dm_handlers', []);
             $handlers = array_filter($all_handlers, function($handler) use ($step_type) {

@@ -110,6 +110,14 @@ function dm_register_execution_engine() {
                 if ( $next_flow_step_id ) {
                     // Schedule next step with updated data packet
                     do_action('dm_schedule_next_step', $job_id, $next_flow_step_id, $data);
+                } else {
+                    // Pipeline completed - mark job as completed
+                    do_action('dm_update_job_status', $job_id, 'completed', 'complete');
+                    do_action('dm_log', 'info', 'Pipeline execution completed successfully', [
+                        'job_id' => $job_id,
+                        'flow_step_id' => $flow_step_id,
+                        'final_data_count' => count($data)
+                    ]);
                 }
             } else {
                 do_action('dm_log', 'error', 'Step execution failed - empty data packet', [

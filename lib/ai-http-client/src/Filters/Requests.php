@@ -119,8 +119,8 @@ function ai_http_client_register_provider_filters() {
         // Handle streaming requests with cURL
         if ($streaming) {
             // Streaming requires cURL as WordPress wp_remote_* functions don't support it
-            $headers = isset($args['headers']) ? $args['headers'] : [];
-            $body = isset($args['body']) ? $args['body'] : '';
+            $headers = $args['headers'] ?? [];
+            $body = $args['body'] ?? '';
             
             // Format headers for cURL
             $formatted_headers = [];

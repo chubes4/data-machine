@@ -9,17 +9,14 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Get pipelines data via centralized filter
 $all_pipelines = apply_filters('dm_get_pipelines', []);
 
 ?>
 <div class="dm-admin-wrap dm-pipelines-page">
-    <!-- Page Header -->
     <div class="dm-admin-header">
         <div class="dm-admin-header-left">
             <h1 class="dm-admin-title">
@@ -37,17 +34,14 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
         </div>
     </div>
     
-    <!-- Add New Pipeline Button -->
     <div class="dm-add-pipeline-section">
         <button type="button" class="button button-primary dm-add-new-pipeline-btn">
             <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
         </button>
     </div>
 
-    <!-- Universal Pipeline Cards Container -->
     <div class="dm-pipeline-cards-container">
         <div class="dm-pipelines-list">
-            <!-- Show existing pipelines (latest first) -->
             <?php if (!empty($all_pipelines)): ?>
                 <?php $reversed_pipelines = array_reverse($all_pipelines); $total_pipelines = count($reversed_pipelines); ?>
                 <?php foreach ($reversed_pipelines as $index => $pipeline): ?>

@@ -122,7 +122,7 @@ function ai_http_execute_tool($tool_name, $parameters = []) {
     // Execute tool via class method
     if (isset($tool_def['class']) && class_exists($tool_def['class'])) {
         $tool_class = $tool_def['class'];
-        $method = isset($tool_def['method']) ? $tool_def['method'] : 'execute';
+        $method = $tool_def['method'] ?? 'execute';
         
         if (method_exists($tool_class, $method)) {
             try {

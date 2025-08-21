@@ -55,7 +55,6 @@
                 // Validate pipeline ID
                 if (!pipelineId || pipelineId <= 0) {
                     const error = 'Invalid pipeline ID provided';
-                    console.error('PipelineStatusManager:', error);
                     reject(error);
                     return;
                 }
@@ -76,13 +75,11 @@
                             resolve(response.data);
                         } else {
                             const error = response.data?.message || 'Status refresh failed';
-                            console.error('PipelineStatusManager: Status refresh failed', error);
                             reject(error);
                         }
                     },
                     error: (xhr, status, error) => {
                         const errorMessage = `AJAX error refreshing pipeline status: ${error}`;
-                        console.error('PipelineStatusManager:', errorMessage);
                         reject(errorMessage);
                     }
                 });
@@ -108,7 +105,7 @@
 
             $pipelineCards.each(function() {
                 const $pipelineCard = $(this);
-                const $stepContainers = $pipelineCard.find('.dm-step-container[data-pipeline-step-id]');
+                const $stepContainers = $pipelineCard.find('.dm-pipeline-steps .dm-step-container[data-pipeline-step-id]');
                 
                 // Update each step container's status based on its pipeline_step_id
                 $stepContainers.each(function() {

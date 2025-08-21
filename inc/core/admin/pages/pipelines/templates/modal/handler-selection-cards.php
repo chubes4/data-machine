@@ -9,7 +9,6 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
@@ -23,7 +22,6 @@ if (!defined('WPINC')) {
     
     <div class="dm-handler-cards">
         <?php 
-        // Template self-discovery - get handlers for this step type
         $step_type = $step_type ?? 'unknown';
         $all_handlers = apply_filters('dm_handlers', []);
         $handlers = array_filter($all_handlers, function($handler) use ($step_type) {
@@ -31,7 +29,6 @@ if (!defined('WPINC')) {
         });
         
         foreach ($handlers as $handler_slug => $handler_config): 
-            // Determine correct template for handler - WordPress needs fetch/publish distinction
             $template_slug = $handler_slug;
             if ($handler_slug === 'wordpress') {
                 $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';

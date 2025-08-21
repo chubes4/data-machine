@@ -175,10 +175,25 @@ function dm_register_pipelines_admin_page_filters() {
                             'data' => [
                                 'ajax_url' => admin_url('admin-ajax.php'),
                                 'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'strings' => [
+                                // Status strings removed for silent auto-save
+                            ]
+                        ]
+                    ],
+                    'dm-tool-config' => [
+                        'file' => 'inc/core/admin/pages/pipelines/assets/js/tool-config.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dmToolConfig',
+                            'data' => [
+                                'ajax_url' => admin_url('admin-ajax.php'),
+                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
+                                'i18n' => [
                                     'saving' => __('Saving...', 'data-machine'),
-                                    'saved' => __('Saved', 'data-machine'),
-                                    'error' => __('Error saving', 'data-machine')
+                                    'config_saved' => __('Configuration saved successfully', 'data-machine'),
+                                    'config_failed' => __('Failed to save configuration', 'data-machine'),
+                                    'network_error' => __('Network error occurred while saving configuration', 'data-machine'),
+                                    'save_config' => __('Save Configuration', 'data-machine')
                                 ]
                             ]
                         ]
@@ -221,6 +236,8 @@ function dm_register_pipelines_admin_page_filters() {
     // Title auto-save endpoints
     add_action('wp_ajax_dm_save_pipeline_title', fn() => do_action('dm_ajax_route', 'dm_save_pipeline_title', 'page'));
     add_action('wp_ajax_dm_save_flow_title', fn() => do_action('dm_ajax_route', 'dm_save_flow_title', 'page'));
+    add_action('wp_ajax_dm_save_ai_prompt', fn() => do_action('dm_ajax_route', 'dm_save_ai_prompt', 'page'));
+    add_action('wp_ajax_dm_save_user_message', fn() => do_action('dm_ajax_route', 'dm_save_user_message', 'page'));
     
     // Modal actions (UI/template operations) - using universal AJAX routing
     add_action('wp_ajax_dm_get_template', fn() => do_action('dm_ajax_route', 'dm_get_template', 'modal'));
@@ -290,6 +307,36 @@ function dm_register_pipelines_admin_page_filters() {
         }
     });
     
+    // Tool configuration AJAX endpoint - handles tool config form submissions
+    add_action('wp_ajax_dm_save_tool_config', function() {
+        // Security verification
+        if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+
+        $tool_id = sanitize_text_field(wp_unslash($_POST['tool_id'] ?? ''));
+        $config_data = $_POST['config_data'] ?? [];
+        
+        if (empty($tool_id)) {
+            wp_send_json_error(['message' => __('Tool ID is required', 'data-machine')]);
+        }
+
+        // Sanitize config data array
+        if (is_array($config_data)) {
+            $config_data = array_map('sanitize_text_field', array_map('wp_unslash', $config_data));
+        }
+
+        // Trigger tool-specific save action
+        do_action('dm_save_tool_config', $tool_id, $config_data);
+        
+        // If we reach here, the tool-specific handler didn't send a response
+        wp_send_json_error(['message' => __('Tool configuration handler not found', 'data-machine')]);
+    });
+    
     
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     
@@ -312,6 +359,11 @@ function dm_register_pipelines_admin_page_filters() {
         $modals['configure-step'] = [
             'template' => 'modal/configure-step', // Extensible - steps can register their own templates
             'title' => __('Configure Step', 'data-machine')
+        ];
+        
+        $modals['tool-config'] = [
+            'template' => 'modal/tool-config',
+            'title' => __('Configure Tool', 'data-machine')
         ];
         
         $modals['confirm-delete'] = [

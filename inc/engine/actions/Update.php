@@ -65,6 +65,9 @@ class Update {
         
         // Flow step synchronization action hook - unifies single and bulk step sync operations
         add_action('dm_sync_steps_to_flow', [$instance, 'handle_flow_steps_sync'], 10, 3);
+        
+        // Flow user message management action hook - enables AI steps to run standalone
+        add_action('dm_update_flow_user_message', [$instance, 'handle_flow_user_message_update'], 10, 2);
     }
 
     /**
@@ -421,6 +424,90 @@ class Update {
         }
         
         
+        return true;
+    }
+
+    /**
+     * Handle flow user message updates for AI steps.
+     *
+     * Enables AI steps to run standalone by providing user message content
+     * that gets converted to data packets when no fetch step precedes them.
+     * 
+     * Flow-scoped user messages allow different content per flow instance
+     * while maintaining pipeline-level system prompt templates.
+     *
+     * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id)
+     * @param string $user_message User message content
+     * @return bool Success status
+     * @since NEXT_VERSION
+     */
+    public function handle_flow_user_message_update($flow_step_id, $user_message) {
+        // Extract flow_id from flow_step_id using universal filter
+        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+        if (!$parts) {
+            do_action('dm_log', 'error', 'Invalid flow_step_id format for user message update', ['flow_step_id' => $flow_step_id]);
+            return false;
+        }
+        $flow_id = $parts['flow_id'];
+
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+        
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow user message update failed - flows database service unavailable', [
+                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id
+            ]);
+            return false;
+        }
+
+        // Get current flow
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            do_action('dm_log', 'error', 'Flow user message update failed - flow not found', [
+                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id
+            ]);
+            return false;
+        }
+
+        // Decode flow configuration
+        $flow_config = is_string($flow['flow_config']) 
+            ? json_decode($flow['flow_config'], true) 
+            : ($flow['flow_config'] ?? []);
+
+        // Update user message in the specific flow step
+        if (!isset($flow_config[$flow_step_id])) {
+            do_action('dm_log', 'error', 'Flow user message update failed - flow step not found', [
+                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id,
+                'existing_steps' => array_keys($flow_config)
+            ]);
+            return false;
+        }
+
+        // Update user message field
+        $flow_config[$flow_step_id]['user_message'] = wp_unslash(sanitize_textarea_field($user_message));
+
+        // Update flow with new configuration
+        $success = $db_flows->update_flow($flow_id, [
+            'flow_config' => wp_json_encode($flow_config)
+        ]);
+        
+        if (!$success) {
+            do_action('dm_log', 'error', 'Flow user message update failed - database update error', [
+                'flow_id' => $flow_id,
+                'flow_step_id' => $flow_step_id
+            ]);
+            return false;
+        }
+
+        do_action('dm_log', 'info', 'Flow user message updated successfully', [
+            'flow_id' => $flow_id,
+            'flow_step_id' => $flow_step_id,
+            'message_length' => strlen($user_message)
+        ]);
+
         return true;
     }
 

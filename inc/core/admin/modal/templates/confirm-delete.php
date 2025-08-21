@@ -9,15 +9,12 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Extract variables with sensible defaults from data array
 $delete_type = $data['delete_type'] ?? 'step';
 
-// Extract context-specific variables with defaults
 if ($delete_type === 'pipeline') {
     $pipeline_id = $data['pipeline_id'] ?? 0;
     $pipeline_name = $data['pipeline_name'] ?? __('Unknown Pipeline', 'data-machine');
@@ -25,16 +22,13 @@ if ($delete_type === 'pipeline') {
     $flow_id = $data['flow_id'] ?? 0;
     $flow_name = $data['flow_name'] ?? __('Unknown Flow', 'data-machine');
 } else {
-    // Step deletion - default case
     $pipeline_step_id = $data['pipeline_step_id'] ?? '';
     $pipeline_id = $data['pipeline_id'] ?? 0;
     $step_type = $data['step_type'] ?? 'unknown';
     
-    // Generate step label from type
     $step_label = $data['step_label'] ?? ucfirst(str_replace('_', ' ', $step_type));
 }
 
-// Template self-discovery - fetch affected flows and jobs data via filter-based discovery
 $all_databases = apply_filters('dm_db', []);
 $db_flows = $all_databases['flows'] ?? null;
 $db_jobs = $all_databases['jobs'] ?? null;
@@ -42,12 +36,9 @@ $db_jobs = $all_databases['jobs'] ?? null;
 $affected_flows = [];
 $affected_jobs = [];
 
-// Fetch affected data based on deletion type and available database services
 if ($delete_type === 'pipeline' && isset($pipeline_id)) {
-    // Pipeline deletion affects all flows in that pipeline
     $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
     
-    // Get job count for this pipeline if jobs service available
     if ($db_jobs && method_exists($db_jobs, 'get_jobs_for_pipeline')) {
         $jobs_for_pipeline = $db_jobs->get_jobs_for_pipeline($pipeline_id);
         $affected_jobs = is_array($jobs_for_pipeline) ? $jobs_for_pipeline : [];

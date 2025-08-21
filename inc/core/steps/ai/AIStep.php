@@ -45,8 +45,37 @@ class AIStep {
 
             // Process ALL data packet entries (oldest to newest for logical message flow)
             if (empty($data)) {
-                do_action('dm_log', 'error', 'AI Step: No data found in data packet array', ['flow_step_id' => $flow_step_id]);
-                return $data;
+                // Check for flow-level user message for direct publishing use cases
+                $user_message = trim($flow_step_config['user_message'] ?? '');
+                
+                if (!empty($user_message)) {
+                    // Create user message data packet (same structure as fetch packets)
+                    $user_packet = [
+                        'type' => 'user_input',
+                        'content' => [
+                            'title' => '',
+                            'body' => $user_message
+                        ],
+                        'metadata' => [
+                            'source_type' => 'user_input',
+                            'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
+                            'flow_id' => $flow_step_config['flow_id'] ?? null
+                        ],
+                        'attachments' => [],
+                        'timestamp' => time()
+                    ];
+                    
+                    // Inject user message as data packet array
+                    $data = [$user_packet];
+                    
+                    do_action('dm_log', 'info', 'AI Step: Injected user message data packet for direct publishing', [
+                        'flow_step_id' => $flow_step_id,
+                        'message_length' => strlen($user_message)
+                    ]);
+                } else {
+                    do_action('dm_log', 'error', 'AI Step: No data found and no user message configured', ['flow_step_id' => $flow_step_id]);
+                    return $data;
+                }
             }
             
 
@@ -144,8 +173,10 @@ class AIStep {
                 
             }
             
-            // Get available tools for next step handler
-            $available_tools = $this->get_next_step_tools($flow_step_config, $flow_step_id);
+            // Get handler tools for next step + user-enabled general tools
+            $handler_tools = $this->get_next_step_tools($flow_step_config, $flow_step_id);
+            $general_tools = $this->get_allowed_general_tools($step_ai_config);
+            $available_tools = array_merge($handler_tools, $general_tools);
             
             
             // Prepare AI request with messages and step configuration
@@ -296,15 +327,14 @@ class AIStep {
     }
     
     /**
-     * Get available tools using dual discovery system
+     * Get available handler tools for immediate next step only
      * 
-     * Discovers handler tools (filtered by immediate next step) and general tools (when implemented).
      * Handler tools require 'handler' property matching next step's handler.
-     * General tools have no 'handler' property and would be available to all AI steps when implemented.
+     * Does NOT include general tools - those are handled separately via get_allowed_general_tools().
      * 
      * @param array $flow_step_config Flow step configuration containing pipeline info
      * @param string $flow_step_id Flow step ID for logging
-     * @return array Available tools array (handler tools + general tools when implemented)
+     * @return array Available handler tools for next step only
      */
     private function get_next_step_tools(array $flow_step_config, string $flow_step_id): array {
         // Get current flow step ID from the step config
@@ -340,14 +370,41 @@ class AIStep {
                 
                 $available_tools[$tool_name] = $dynamic_tool ?: $tool_config;
             }
-            // General tools: Would be available to all AI steps when implemented (no handler property)
-            elseif (!isset($tool_config['handler'])) {
-                $available_tools[$tool_name] = $tool_config;
-            }
         }
         
         
         return $available_tools;
+    }
+
+    /**
+     * Get user-enabled general tools that are properly configured
+     * 
+     * General tools are available to all AI steps but only when:
+     * 1. User explicitly enabled them via checkbox in AI step modal
+     * 2. Tool is properly configured (has required API keys, settings, etc.)
+     * 
+     * @param array $step_ai_config AI step configuration containing enabled_tools
+     * @return array Allowed general tools filtered by user choice and configuration
+     */
+    private function get_allowed_general_tools(array $step_ai_config): array {
+        // Get tools filtered by plugin settings (removes disabled tools completely)
+        $available_general_tools = dm_get_enabled_general_tools();
+        $enabled_tools = $step_ai_config['enabled_tools'] ?? [];
+        $allowed_tools = [];
+        
+        foreach ($available_general_tools as $tool_name => $tool_config) {
+            // Only process general tools (no handler property)
+            if (!isset($tool_config['handler'])) {
+                // Check if user enabled this tool AND it's properly configured
+                $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
+                
+                if (in_array($tool_name, $enabled_tools) && $tool_configured) {
+                    $allowed_tools[$tool_name] = $tool_config;
+                }
+            }
+        }
+        
+        return $allowed_tools;
     }
 
 

@@ -200,7 +200,7 @@ class GoogleSheetsFetch {
                     continue;
                 }
                 
-                $column_key = isset($headers[$col_index]) ? $headers[$col_index] : 'Column_' . chr(65 + $col_index);
+                $column_key = $headers[$col_index] ?? 'Column_' . chr(65 + $col_index);
                 $row_data[$column_key] = $cell_value;
                 $content_parts[] = $column_key . ": " . $cell_value;
             }

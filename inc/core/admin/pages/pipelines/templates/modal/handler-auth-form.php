@@ -9,12 +9,10 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Extract context data consistently with template system
 $handler_slug = $context['handler_slug'] ?? ($handler_slug ?? null);
 $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
@@ -22,7 +20,6 @@ $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
 $handler_label = $handler_config['label'] ?? ucfirst($handler_slug);
 
-// Authentication discovery via pure discovery mode
 $all_auth = apply_filters('dm_auth_providers', []);
 $auth_instance = $all_auth[$handler_slug] ?? null;
 $has_auth = ($auth_instance !== null);
@@ -39,8 +36,6 @@ if (!$has_auth) {
         </div>
         <div class="dm-auth-actions">
             <?php 
-            // EXACT COPY FROM EDIT HANDLER BUTTON
-            // Determine correct handler settings template - WordPress needs fetch/publish distinction
             $template_slug = $handler_slug;
             if ($handler_slug === 'wordpress' && isset($step_type)) {
                 $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
@@ -194,11 +189,9 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         </div>
     </div>
     
-    <!-- Modal Navigation -->
     <div class="dm-modal-navigation">
         <?php 
         // EXACT COPY FROM EDIT HANDLER BUTTON
-        // Determine correct handler settings template - WordPress needs fetch/publish distinction
         $template_slug = $handler_slug;
         if ($handler_slug === 'wordpress' && isset($step_type)) {
             $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';

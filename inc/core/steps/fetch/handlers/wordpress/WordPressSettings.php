@@ -63,6 +63,12 @@ class WordPressSettings {
         $taxonomy_fields = self::get_taxonomy_filter_fields();
 
         $fields = [
+            'post_id' => [
+                'type' => 'number',
+                'label' => __('Specific Post ID', 'data-machine'),
+                'description' => __('Target a specific post by ID. When provided, other filters are ignored.', 'data-machine'),
+                'placeholder' => __('Leave empty for general query', 'data-machine'),
+            ],
             'post_type' => [
                 'type' => 'select',
                 'label' => __('Post Type', 'data-machine'),
@@ -216,6 +222,7 @@ class WordPressSettings {
      */
     private static function sanitize_local_settings(array $raw_settings): array {
         $sanitized = [
+            'post_id' => function_exists('absint') ? absint($raw_settings['post_id'] ?? 0) : intval(abs($raw_settings['post_id'] ?? 0)),
             'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
             'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'publish'),
             'orderby' => sanitize_text_field($raw_settings['orderby'] ?? 'date'),
@@ -284,6 +291,7 @@ class WordPressSettings {
      */
     public static function get_defaults(): array {
         $defaults = [
+            'post_id' => 0,
             'post_type' => 'post',
             'post_status' => 'publish',
             'orderby' => 'date',

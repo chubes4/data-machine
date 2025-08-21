@@ -9,12 +9,10 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Required template variables
 $flow_id = $flow_id ?? null;
 $flow_name = $flow_name ?? 'Flow';
 $current_interval = $current_interval ?? 'manual';

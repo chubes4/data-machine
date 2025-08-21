@@ -94,7 +94,6 @@
             const oauthUrl = $button.data('oauth-url');
             
             if (!handlerSlug || !oauthUrl) {
-                console.error('DM Pipeline Modal: Missing handler or OAuth URL');
                 alert('OAuth configuration missing. Please refresh and try again.');
                 return;
             }
@@ -149,7 +148,6 @@
             const handlerSlug = $button.data('handler');
             
             if (!handlerSlug) {
-                console.error('DM Pipeline Modal: No handler slug found on disconnect button');
                 return;
             }
             
@@ -183,7 +181,6 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('DM Pipeline Modal: AJAX Error:', error);
                     alert('Error connecting to server');
                     $button.text(originalText).prop('disabled', false);
                 }
@@ -202,7 +199,6 @@
             const handlerSlug = $form.data('handler');
             
             if (!handlerSlug) {
-                console.error('DM Pipeline Modal: No handler slug found on config form');
                 return;
             }
             
@@ -249,7 +245,6 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('DM Pipeline Modal: Config save error:', error);
                     alert('Error saving configuration');
                 },
                 complete: () => {

@@ -9,25 +9,20 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Extract context data consistently with template system
 $handler_slug = $context['handler_slug'] ?? ($handler_slug ?? null);
 $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
 $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
-// Individual IDs are automatically extracted by template context resolution from flow_step_id
 
-// Template self-discovery - get handler configuration and settings
 $handler_info = [];
 $handler_settings = null;
 
 if ($handler_slug) {
-    // Get handler configuration via pure discovery
     $all_handlers = apply_filters('dm_handlers', []);
     $handler_info = $all_handlers[$handler_slug] ?? [];
     

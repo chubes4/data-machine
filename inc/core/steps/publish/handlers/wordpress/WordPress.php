@@ -61,6 +61,8 @@ class WordPress {
         
         do_action('dm_log', 'debug', 'WordPress Tool: Using handler configuration', [
             'has_post_author' => isset($handler_config['post_author']),
+            'post_author_config' => $handler_config['post_author'] ?? 'NOT_SET',
+            'current_user_id' => get_current_user_id(),
             'has_post_status' => isset($handler_config['post_status']),
             'has_post_type' => isset($handler_config['post_type'])
         ]);
@@ -73,6 +75,14 @@ class WordPress {
             'post_type' => $handler_config['post_type'] ?? 'post',
             'post_author' => $handler_config['post_author'] ?? get_current_user_id()
         ];
+
+        do_action('dm_log', 'debug', 'WordPress Tool: Final post data for wp_insert_post', [
+            'post_author' => $post_data['post_author'],
+            'post_status' => $post_data['post_status'],
+            'post_type' => $post_data['post_type'],
+            'title_length' => strlen($post_data['post_title']),
+            'content_length' => strlen($post_data['post_content'])
+        ]);
 
         // Insert the post
         $post_id = wp_insert_post($post_data);

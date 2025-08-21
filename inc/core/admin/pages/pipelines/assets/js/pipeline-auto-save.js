@@ -15,9 +15,11 @@
      */
     window.PipelineAutoSave = {
         
-        // Debounce timers for title input
+        // Debounce timers for title input, AI prompt, and user message
         pipelineTitleTimer: null,
         flowTitleTimer: null,
+        aiPromptTimer: null,
+        userMessageTimer: null,
         
         // Auto-save delay (milliseconds)
         saveDelay: 750,
@@ -38,6 +40,12 @@
             
             // Flow title auto-save  
             $(document).on('input keyup blur', '.dm-flow-title-input', this.handleFlowTitleChange.bind(this));
+            
+            // AI prompt auto-save
+            $(document).on('input keyup blur', '.dm-ai-prompt-input', this.handleAIPromptChange.bind(this));
+            
+            // User message auto-save
+            $(document).on('input keyup blur', '.dm-user-message-input', this.handleUserMessageChange.bind(this));
         },
 
         /**
@@ -49,7 +57,6 @@
             const newTitle = $input.val().trim();
             
             if (!pipelineId) {
-                console.error('Pipeline ID not found for title input');
                 return;
             }
             
@@ -79,7 +86,6 @@
             const newTitle = $input.val().trim();
             
             if (!flowId) {
-                console.error('Flow ID not found for title input');
                 return;
             }
             
@@ -109,8 +115,7 @@
                 return;
             }
             
-            const $statusIndicator = this.getStatusIndicator($input);
-            this.updateStatus($statusIndicator, 'saving');
+            // Silent auto-save - no UI feedback
             
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
@@ -122,17 +127,10 @@
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
                 success: (response) => {
-                    if (response.success) {
-                        this.updateStatus($statusIndicator, 'saved');
-                        console.log('Pipeline title saved:', title);
-                    } else {
-                        this.updateStatus($statusIndicator, 'error');
-                        console.error('Pipeline title save failed:', response.data?.message);
-                    }
+                    // Silent save - no UI feedback
                 },
                 error: (xhr, status, error) => {
-                    this.updateStatus($statusIndicator, 'error');
-                    console.error('Pipeline title save AJAX error:', error);
+                    // Silent save - no UI feedback
                 }
             });
         },
@@ -146,8 +144,7 @@
                 return;
             }
             
-            const $statusIndicator = this.getStatusIndicator($input);
-            this.updateStatus($statusIndicator, 'saving');
+            // Silent auto-save - no UI feedback
             
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
@@ -159,77 +156,125 @@
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
                 success: (response) => {
-                    if (response.success) {
-                        this.updateStatus($statusIndicator, 'saved');
-                        console.log('Flow title saved:', title);
-                    } else {
-                        this.updateStatus($statusIndicator, 'error');
-                        console.error('Flow title save failed:', response.data?.message);
-                    }
+                    // Silent save - no UI feedback
                 },
                 error: (xhr, status, error) => {
-                    this.updateStatus($statusIndicator, 'error');
-                    console.error('Flow title save AJAX error:', error);
+                    // Silent save - no UI feedback
                 }
             });
         },
 
         /**
-         * Get or create status indicator element
+         * Handle AI prompt changes with debounced saving
          */
-        getStatusIndicator: function($input) {
-            const $card = $input.closest('.dm-pipeline-card, .dm-flow-instance-card');
-            let $statusIndicator = $card.find('.dm-auto-save-status');
+        handleAIPromptChange: function(e) {
+            const $textarea = $(e.currentTarget);
+            const pipelineStepId = $textarea.data('pipeline-step-id');
+            const newPrompt = $textarea.val().trim();
             
-            if (!$statusIndicator.length) {
-                // Create status indicator if it doesn't exist
-                $statusIndicator = $('<div class="dm-auto-save-status" style="display: none;">');
-                $input.closest('.dm-pipeline-title-section, .dm-flow-title-section').append($statusIndicator);
+            if (!pipelineStepId) {
+                return;
             }
             
-            return $statusIndicator;
+            // Clear existing timer
+            if (this.aiPromptTimer) {
+                clearTimeout(this.aiPromptTimer);
+            }
+            
+            // For blur events, save immediately
+            if (e.type === 'blur') {
+                this.saveAIPrompt(pipelineStepId, newPrompt, $textarea);
+                return;
+            }
+            
+            // For input/keyup events, debounce
+            this.aiPromptTimer = setTimeout(() => {
+                this.saveAIPrompt(pipelineStepId, newPrompt, $textarea);
+            }, this.saveDelay);
         },
 
         /**
-         * Update status indicator with visual feedback
+         * Save AI prompt via AJAX
          */
-        updateStatus: function($statusIndicator, status) {
-            // Clear existing status classes
-            $statusIndicator.removeClass('dm-status-saving dm-status-saved dm-status-error');
+        saveAIPrompt: function(pipelineStepId, prompt, $textarea) {
+            // Allow empty prompts
             
-            let message = '';
-            let statusClass = '';
+            // Silent auto-save - no UI feedback
             
-            switch (status) {
-                case 'saving':
-                    message = dmPipelineAutoSave.strings.saving || 'Saving...';
-                    statusClass = 'dm-status-saving';
-                    break;
-                    
-                case 'saved':
-                    message = dmPipelineAutoSave.strings.saved || 'Saved';
-                    statusClass = 'dm-status-saved';
-                    break;
-                    
-                case 'error':
-                    message = dmPipelineAutoSave.strings.error || 'Error saving';
-                    statusClass = 'dm-status-error';
-                    break;
+            $.ajax({
+                url: dmPipelineAutoSave.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_save_ai_prompt',
+                    pipeline_step_id: pipelineStepId,
+                    ai_prompt: prompt,
+                    nonce: dmPipelineAutoSave.dm_ajax_nonce
+                },
+                success: (response) => {
+                    // Silent save - no UI feedback
+                },
+                error: (xhr, status, error) => {
+                    // Silent save - no UI feedback
+                }
+            });
+        },
+
+        /**
+         * Handle user message changes with debounced saving
+         */
+        handleUserMessageChange: function(e) {
+            const $textarea = $(e.currentTarget);
+            const flowStepId = $textarea.data('flow-step-id');
+            const newMessage = $textarea.val().trim();
+            
+            if (!flowStepId) {
+                return;
             }
             
-            // Update indicator
-            $statusIndicator
-                .addClass(statusClass)
-                .text(message)
-                .show();
-            
-            // Auto-hide saved/error status after 2.5 seconds
-            if (status === 'saved' || status === 'error') {
-                setTimeout(() => {
-                    $statusIndicator.fadeOut(300);
-                }, 2500);
+            // Clear existing timer
+            if (this.userMessageTimer) {
+                clearTimeout(this.userMessageTimer);
             }
-        }
+            
+            // For blur events, save immediately
+            if (e.type === 'blur') {
+                this.saveUserMessage(flowStepId, newMessage, $textarea);
+                return;
+            }
+            
+            // For input/keyup events, debounce
+            this.userMessageTimer = setTimeout(() => {
+                this.saveUserMessage(flowStepId, newMessage, $textarea);
+            }, this.saveDelay);
+        },
+
+        /**
+         * Save user message via AJAX
+         */
+        saveUserMessage: function(flowStepId, message, $textarea) {
+            // Allow empty messages
+            
+            // Silent auto-save - no UI feedback
+            
+            $.ajax({
+                url: dmPipelineAutoSave.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_save_user_message',
+                    flow_step_id: flowStepId,
+                    user_message: message,
+                    nonce: dmPipelineAutoSave.dm_ajax_nonce
+                },
+                success: (response) => {
+                    // Silent save - no UI feedback
+                },
+                error: (xhr, status, error) => {
+                    // Silent save - no UI feedback
+                }
+            });
+        },
+
+        // Status indicator methods removed for silent auto-save
     };
 
     // Initialize when document is ready
@@ -237,8 +282,6 @@
         // Only initialize if we have the required localized data
         if (typeof dmPipelineAutoSave !== 'undefined') {
             PipelineAutoSave.init();
-        } else {
-            console.warn('Pipeline Auto-Save: dmPipelineAutoSave object not found - auto-save disabled');
         }
     });
 

@@ -12,7 +12,6 @@
  * @since NEXT_VERSION
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }

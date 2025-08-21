@@ -165,20 +165,15 @@ class Logs
      */
     public function handle_form_actions()
     {
-        error_log('DM Debug: handle_form_actions() called');
-        
         if (!isset($_POST['dm_logs_action']) || !wp_verify_nonce(wp_unslash($_POST['dm_logs_nonce'] ?? ''), 'dm_logs_action')) {
             return;
         }
 
         $action = sanitize_text_field(wp_unslash($_POST['dm_logs_action']));
-        error_log('DM Debug: Nonce verified, action = ' . $action);
 
         switch ($action) {
             case 'clear_all':
-                error_log('DM Debug: clear_all case reached');
                 do_action('dm_log', 'clear_all');
-                error_log('DM Debug: do_action called for clear_all');
                 $this->add_admin_notice(
                     __('Logs cleared successfully.', 'data-machine'),
                     'success'

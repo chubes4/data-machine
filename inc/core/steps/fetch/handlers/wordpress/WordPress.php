@@ -74,6 +74,14 @@ class WordPress {
      * @throws Exception If data cannot be retrieved.
      */
     private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null): array {
+        $post_id = function_exists('absint') ? absint($config['post_id'] ?? 0) : intval(abs($config['post_id'] ?? 0));
+        
+        // If specific post ID is provided, fetch only that post
+        if ($post_id > 0) {
+            return $this->fetch_specific_post($post_id, $flow_step_id, $job_id);
+        }
+        
+        // Otherwise continue with normal query-based fetching
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
         $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
         $category_id = function_exists('absint') ? absint($config['category_id'] ?? 0) : intval(abs($config['category_id'] ?? 0));
@@ -185,7 +193,61 @@ class WordPress {
         return [];
     }
 
+    /**
+     * Fetch a specific post by ID (used for direct post targeting).
+     *
+     * @param int $post_id Specific post ID to fetch.
+     * @param string|null $flow_step_id Flow step ID for processed items tracking.
+     * @param string|null $job_id Job ID for processed items tracking.
+     * @return array Array of item data packets (single post).
+     */
+    private function fetch_specific_post(int $post_id, ?string $flow_step_id = null, ?string $job_id = null): array {
+        // Get the specific post
+        $post = get_post($post_id);
+        
+        if (!$post || $post->post_status === 'trash') {
+            do_action('dm_log', 'warning', 'WordPress fetch: Specific post not found or trashed', [
+                'post_id' => $post_id,
+                'flow_step_id' => $flow_step_id
+            ]);
+            return [];
+        }
+        
+        // Skip processed items checking when targeting specific post ID - always process the target
+        // Mark as processed for deduplication tracking
+        if ($flow_step_id) {
+            do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
+        }
 
+        $title = $post->post_title ?: 'N/A';
+        $content = $post->post_content ?: '';
+        $source_link = get_permalink($post_id);
+        $image_url = $this->extract_image_url($post_id, $content);
+
+        // Extract source name
+        $site_name = get_bloginfo('name');
+        $source_name = $site_name ?: 'Local WordPress';
+        $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
+
+        // Create standardized packet
+        $input_data = [
+            'data' => [
+                'content_string' => $content_string,
+                'file_info' => null
+            ],
+            'metadata' => [
+                'source_type' => 'wordpress_local',
+                'item_identifier_to_log' => $post_id,
+                'original_id' => $post_id,
+                'source_url' => $source_link,
+                'original_title' => $title,
+                'image_source_url' => $image_url,
+                'original_date_gmt' => $post->post_date_gmt
+            ]
+        ];
+        
+        return [$input_data];
+    }
 
     /**
      * Extract image URL from post (featured image with content fallback).

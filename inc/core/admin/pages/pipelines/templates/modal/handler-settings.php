@@ -10,31 +10,24 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Extract context data consistently with template system
 $handler_slug = $context['handler_slug'] ?? ($handler_slug ?? null);
 $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
 $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
-// Individual IDs are automatically extracted by template context resolution from flow_step_id
 
-// Template self-discovery - get handler configuration and settings
 $handler_info = [];
 $handler_settings = null;
 $settings_fields = [];
 
 if ($handler_slug) {
-    // Get handler configuration via pure discovery
     $all_handlers = apply_filters('dm_handlers', []);
     $handler_info = $all_handlers[$handler_slug] ?? [];
     
-    // Get handler settings instance via pure discovery 
-    // Handle special cases like WordPress fetch/publish distinction
     $settings_key = $handler_slug;
     if ($handler_slug === 'wordpress' && $step_type) {
         $settings_key = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
@@ -43,20 +36,24 @@ if ($handler_slug) {
     $all_settings = apply_filters('dm_handler_settings', []);
     $handler_settings = $all_settings[$settings_key] ?? null;
     
-    // Get settings fields with current configuration
     if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
-        $current_settings = $context['current_settings'] ?? [];
-        $settings_fields = $handler_settings::get_fields($current_settings);
+        // Get current settings from flow step config for field generation
+        $current_settings_for_fields = [];
+        if (!empty($flow_step_id) && !empty($handler_slug)) {
+            $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+            if (!empty($step_config)) {
+                $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
+            }
+        }
+        $settings_fields = $handler_settings::get_fields($current_settings_for_fields);
     }
 }
 
 $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handler_slug));
 
-// Authentication discovery via pure discovery mode
 $all_auth = apply_filters('dm_auth_providers', []);
 $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
 
-// WordPress handler never requires authentication (site-local publishing)
 if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
     $has_auth_system = false;
 }
@@ -68,7 +65,6 @@ if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
         <p><?php echo esc_html(sprintf(__('Set up your %s integration settings below.', 'data-machine'), $handler_label)); ?></p>
     </div>
     
-    <!-- Authentication Link Section -->
     <?php if ($has_auth_system): ?>
         <div class="dm-auth-link-section">
             <div class="dm-auth-link-info">
@@ -85,7 +81,6 @@ if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
     
     <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
-        <!-- Hidden fields for handler settings form -->
         <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('dm_ajax_actions'); ?>" />
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
@@ -94,24 +89,20 @@ if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
         
         <div class="dm-settings-fields">
             <?php
-            // Direct flow_config access for settings persistence
             $current_settings = [];
             
-            // If we have a flow_step_id, get the settings from flow_config
-            if (!empty($flow_step_id)) {
+            if (!empty($flow_step_id) && !empty($handler_slug)) {
                 $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
                 if (!empty($step_config)) {
-                    $current_settings = $step_config['handler']['settings'] ?? [];
+                    $current_settings = $step_config['handler']['settings'][$handler_slug] ?? [];
                 }
             }
             
             
-            // Render settings fields using the Settings class and field renderer
             if (!empty($settings_fields)) {
                 foreach ($settings_fields as $field_name => $field_config) {
                     $current_value = $current_settings[$field_name] ?? null;
                     
-                    // Use the ModalAjax field renderer
                     echo \DataMachine\Core\Admin\Modal\ModalAjax::render_settings_field(
                         $field_name, 
                         $field_config, 
@@ -119,7 +110,6 @@ if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
                     );
                 }
             } else {
-                // Fallback message if Settings class not found
                 echo '<p class="notice notice-warning inline">';
                 esc_html_e('Settings fields could not be loaded. Please check handler configuration.', 'data-machine');
                 echo '</p>';

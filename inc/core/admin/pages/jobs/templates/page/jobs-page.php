@@ -8,12 +8,10 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Get jobs data using filter-based discovery
 $all_databases = apply_filters('dm_db', []);
 $db_jobs = $all_databases['jobs'] ?? null;
 

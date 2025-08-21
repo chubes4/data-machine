@@ -47,7 +47,6 @@
                 }, window.location.origin);
                 
             } catch (error) {
-                console.error('Failed to send OAuth result to parent:', error);
             }
         }
         

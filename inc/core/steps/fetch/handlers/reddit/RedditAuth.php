@@ -197,7 +197,7 @@ class RedditAuth {
         $data = json_decode($body, true);
 
         if ($response_code !== 200 || empty($data['access_token'])) {
-            $error_detail = isset($data['error']) ? $data['error'] : 'Unknown reason';
+            $error_detail = $data['error'] ?? 'Unknown reason';
             do_action('dm_log', 'error', 'Reddit OAuth Error: Failed to retrieve access token.', [
                 'response_code' => $response_code,
                 'error_detail'  => $error_detail,
@@ -320,7 +320,7 @@ class RedditAuth {
         // Check for errors or missing new access token
         // Reddit might return 400 Bad Request if refresh token is invalid/revoked
         if ($response_code !== 200 || empty($data['access_token'])) {
-            $error_detail = isset($data['error']) ? $data['error'] : 'Unknown reason';
+            $error_detail = $data['error'] ?? 'Unknown reason';
              do_action('dm_log', 'error', 'Reddit Token Refresh Error: Failed to retrieve new access token.', [
                 'response_code' => $response_code,
                 'error_detail'  => $error_detail,

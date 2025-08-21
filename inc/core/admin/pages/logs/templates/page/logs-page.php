@@ -8,21 +8,17 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Handle form submissions
 if (!empty($_POST)) {
     $logs_instance = new \DataMachine\Core\Admin\Pages\Logs\Logs();
     $logs_instance->handle_form_actions();
 }
 
-// Get template data using filter-based approach
 $current_log_level = apply_filters('dm_log_file', 'error', 'get_level');
 
-// Get log file info
 $upload_dir = wp_upload_dir();
 $log_file_path = $upload_dir['basedir'] . '/data-machine-logs/data-machine.log';
 

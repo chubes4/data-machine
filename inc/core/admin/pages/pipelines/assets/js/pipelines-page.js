@@ -266,10 +266,6 @@
                                     },
                                     success: (flowResponse) => {
                                         if (flowResponse.success && flowResponse.data.flow_config) {
-                                            // Calculate is_first_step for consistent arrow rendering
-                                            const $parentContainer = $flowStepContainer.parent();
-                                            const isFirstStep = $parentContainer.children('.dm-step-container').first().is($flowStepContainer);
-                                            
                                             // Request updated step card template with fresh configuration
                                             PipelinesPage.requestTemplate('page/flow-step-card', {
                                                 step: {
@@ -280,8 +276,7 @@
                                                 },
                                                 flow_config: flowResponse.data.flow_config,
                                                 flow_id: flow_id,
-                                                pipeline_id: pipeline_id,
-                                                is_first_step: isFirstStep
+                                                pipeline_id: pipeline_id
                                             }).then((updatedStepHtml) => {
                                                 // Replace the existing step container with updated version
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
@@ -303,10 +298,6 @@
                             const $pipelineStepContainer = $(this);
                             const step_type = contextData.step_type;
                             
-                            // Calculate is_first_step for consistent arrow rendering
-                            const $pipelineContainer = $pipelineStepContainer.closest('.dm-pipeline-steps');
-                            const isFirstStep = $pipelineContainer.children('.dm-step-container').first().is($pipelineStepContainer);
-                            
                             // Request updated pipeline step card template with fresh AI configuration
                             PipelinesPage.requestTemplate('page/pipeline-step-card', {
                                 step: {
@@ -315,8 +306,7 @@
                                     pipeline_step_id: pipeline_step_id,
                                     is_empty: false
                                 },
-                                pipeline_id: pipeline_id,
-                                is_first_step: isFirstStep
+                                pipeline_id: pipeline_id
                             }).then((updatedStepHtml) => {
                                 // Replace the existing pipeline step container with updated version
                                 $pipelineStepContainer.replaceWith(updatedStepHtml);

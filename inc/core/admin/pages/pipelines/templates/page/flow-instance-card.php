@@ -9,24 +9,19 @@
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('WPINC')) {
     die;
 }
 
-// Extract flow data
 $flow_id = $flow['flow_id'];
 $flow_name = $flow['flow_name'];
 $pipeline_id = $flow['pipeline_id'];
 
-// Get scheduling info (already decoded by database service)
 $scheduling_config = $flow['scheduling_config'];
 $schedule_interval = $scheduling_config['interval'] ?? 'manual';
 
-// Get last run time
 $last_run = $scheduling_config['last_run_at'] ?? null;
 if (!$last_run) {
-    // Fallback: Get latest job for this flow
     $all_databases = apply_filters('dm_db', []);
     $jobs_db = $all_databases['jobs'] ?? null;
     if ($jobs_db) {
@@ -35,7 +30,6 @@ if (!$last_run) {
     }
 }
 
-// Get next scheduled run directly from Action Scheduler
 $next_run = null;
 if (function_exists('as_next_scheduled_action')) {
     $next_action = as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
@@ -44,13 +38,10 @@ if (function_exists('as_next_scheduled_action')) {
     }
 }
 
-// Validate required data - no fallbacks
 $pipeline_steps = $pipeline_steps ?? [];
 
-// Extract flow config with sensible defaults
 $flow = $flow ?? [];
 
-// Get flow configuration using centralized filter
 $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
 ?>
@@ -60,9 +51,6 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             <input type="text" class="dm-flow-title-input" 
                    value="<?php echo esc_attr($flow_name); ?>" 
                    placeholder="<?php esc_attr_e('Enter flow name...', 'data-machine'); ?>" />
-            <div class="dm-auto-save-status dm-auto-save-status--hidden">
-                <?php esc_html_e('Ready to auto-save', 'data-machine'); ?>
-            </div>
         </div>
         <div class="dm-flow-actions">
             <button type="button" class="button button-small dm-modal-open" 
@@ -92,16 +80,15 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
                 $flow_step_count = 0; // Track actual flow steps rendered (non-empty steps only)
                 foreach ($pipeline_steps as $index => $step): ?>
                     <?php 
-                    // Skip empty steps entirely - they don't belong in flow instances
-                    if (!($step['is_empty'] ?? false)) {
+                        if (!($step['is_empty'] ?? false)) {
                         echo apply_filters('dm_render_template', '', 'page/flow-step-card', [
                             'step' => $step,
                             'flow_config' => $flow_config,
                             'flow_id' => $flow_id,
                             'pipeline_id' => $pipeline_id,
-                            'is_first_step' => ($flow_step_count === 0) // First non-empty step is first flow step
+                            'is_first_step' => ($flow_step_count === 0)
                         ]);
-                        $flow_step_count++; // Increment only for rendered steps
+                        $flow_step_count++;
                     }
                     ?>
                 <?php endforeach; ?>

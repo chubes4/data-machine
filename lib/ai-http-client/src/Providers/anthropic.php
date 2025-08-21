@@ -36,7 +36,7 @@ class AI_HTTP_Anthropic_Provider {
      * @param array $config Provider configuration
      */
     public function __construct($config = array()) {
-        $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
+        $this->api_key = $config['api_key'] ?? '';
         
         if (isset($config['base_url']) && !empty($config['base_url'])) {
             $this->base_url = rtrim($config['base_url'], '/');
@@ -274,11 +274,11 @@ class AI_HTTP_Anthropic_Provider {
         $models = array();
         
         // Anthropic returns: { "data": [{"id": "claude-3-5-sonnet-20241022", "display_name": "Claude 3.5 Sonnet", ...}, ...] }
-        $data = isset($raw_models['data']) ? $raw_models['data'] : $raw_models;
+        $data = $raw_models['data'] ?? $raw_models;
         if (is_array($data)) {
             foreach ($data as $model) {
                 if (isset($model['id'])) {
-                    $display_name = isset($model['display_name']) ? $model['display_name'] : $model['id'];
+                    $display_name = $model['display_name'] ?? $model['id'];
                     $models[$model['id']] = $display_name;
                 }
             }
@@ -363,8 +363,8 @@ class AI_HTTP_Anthropic_Provider {
 
         // Extract usage
         $usage = array(
-            'prompt_tokens' => isset($anthropic_response['usage']['input_tokens']) ? $anthropic_response['usage']['input_tokens'] : 0,
-            'completion_tokens' => isset($anthropic_response['usage']['output_tokens']) ? $anthropic_response['usage']['output_tokens'] : 0,
+            'prompt_tokens' => $anthropic_response['usage']['input_tokens'] ?? 0,
+            'completion_tokens' => $anthropic_response['usage']['output_tokens'] ?? 0,
             'total_tokens' => 0
         );
         $usage['total_tokens'] = $usage['prompt_tokens'] + $usage['completion_tokens'];

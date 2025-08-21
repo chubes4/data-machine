@@ -11,7 +11,6 @@
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
  */
 
-// If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
@@ -21,15 +20,9 @@ if ( ! dm_check_requirements() ) {
 	return;
 }
 
-/**
- * Currently plugin version.
- */
 define( 'DATA_MACHINE_VERSION', '0.1.0' );
 
-/** Define plugin path constant */
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
-
-// Filter-based architecture with service discovery patterns
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -134,7 +127,6 @@ register_activation_hook( __FILE__, 'activate_data_machine' );
 register_deactivation_hook( __FILE__, 'dm_deactivate_plugin' );
 
 function dm_deactivate_plugin() {
-    // Plugin deactivation cleanup would go here if needed
 }
 
 function activate_data_machine() {

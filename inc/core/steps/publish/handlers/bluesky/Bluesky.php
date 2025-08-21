@@ -256,8 +256,8 @@ class Bluesky {
      */
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
-        $sanitized['bluesky_include_source'] = isset($raw_settings['bluesky_include_source']) && $raw_settings['bluesky_include_source'] == '1';
-        $sanitized['bluesky_enable_images'] = isset($raw_settings['bluesky_enable_images']) && $raw_settings['bluesky_enable_images'] == '1';
+        $sanitized['bluesky_include_source'] = ($raw_settings['bluesky_include_source'] ?? false) == '1';
+        $sanitized['bluesky_enable_images'] = ($raw_settings['bluesky_enable_images'] ?? false) == '1';
         return $sanitized;
     }
 

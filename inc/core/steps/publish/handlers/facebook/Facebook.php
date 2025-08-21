@@ -408,10 +408,10 @@ class Facebook {
         $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
         
         // include_images - provide default if missing
-        $sanitized['include_images'] = isset($raw_settings['include_images']) ? (bool) $raw_settings['include_images'] : false;
+        $sanitized['include_images'] = (bool) ($raw_settings['include_images'] ?? false);
         
         // include_videos - provide default if missing
-        $sanitized['include_videos'] = isset($raw_settings['include_videos']) ? (bool) $raw_settings['include_videos'] : false;
+        $sanitized['include_videos'] = (bool) ($raw_settings['include_videos'] ?? false);
         
         // link_handling - provide default and validate
         $valid_link_options = ['append', 'replace', 'comment', 'none'];

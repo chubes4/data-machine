@@ -571,4 +571,68 @@ class PipelinePageAjax
             'pipeline_id' => $pipeline_id
         ]);
     }
+
+    /**
+     * Save AI prompt via auto-save functionality
+     */
+    public function handle_save_ai_prompt()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
+        $ai_prompt = wp_unslash($_POST['ai_prompt'] ?? ''); // Don't sanitize - preserve formatting
+        
+        if (!$pipeline_step_id) {
+            wp_send_json_error(['message' => __('Pipeline step ID required', 'data-machine')]);
+        }
+        
+        // Get existing pipeline step configuration
+        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        
+        // Update system_prompt in configuration
+        $step_config['system_prompt'] = $ai_prompt;
+        
+        // Save the updated configuration
+        do_action('dm_update_pipeline_step_config', $pipeline_step_id, $step_config);
+        
+        wp_send_json_success([
+            'message' => __('AI prompt saved successfully', 'data-machine'),
+            'pipeline_step_id' => $pipeline_step_id
+        ]);
+    }
+
+    /**
+     * Handle user message auto-save for AI flow steps
+     */
+    public function handle_save_user_message() {
+        // Security checks
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
+        $user_message = wp_unslash($_POST['user_message'] ?? ''); // Don't sanitize - preserve formatting
+        
+        if (!$flow_step_id) {
+            wp_send_json_error(['message' => __('Flow step ID required', 'data-machine')]);
+        }
+        
+        // Use centralized flow user message update action
+        $success = do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
+        
+        if ($success === false) {
+            wp_send_json_error(['message' => __('Failed to save user message', 'data-machine')]);
+        }
+        
+        wp_send_json_success([
+            'message' => __('User message saved successfully', 'data-machine'),
+            'flow_step_id' => $flow_step_id
+        ]);
+    }
 }

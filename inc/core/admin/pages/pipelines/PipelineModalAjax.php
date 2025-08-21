@@ -53,11 +53,6 @@ class PipelineModalAjax
         
         // For step-card templates in AJAX context, add sensible defaults for UI rendering
         if ($template === 'page/pipeline-step-card' || $template === 'page/flow-step-card') {
-            if (!isset($template_data['is_first_step'])) {
-                // AJAX-rendered steps default to showing arrows (safer for dynamic UI)
-                $template_data['is_first_step'] = false;
-            }
-            
             if (!isset($template_data['step']['is_empty'])) {
                 // AJAX-rendered steps are typically populated (not empty)
                 $template_data['step']['is_empty'] = false;
@@ -401,6 +396,7 @@ class PipelineModalAjax
         
         // Get required context - user clicked on specific flow step
         $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
+        $step_type = sanitize_text_field($context['step_type'] ?? '');
         $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? '');
         
         if (empty($handler_slug)) {
@@ -436,11 +432,16 @@ class PipelineModalAjax
         $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
         $flow_id = $parts['flow_id'] ?? null;
         
+        // Get updated flow configuration for immediate UI update
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        
         wp_send_json_success([
             'message' => sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug),
             'handler_slug' => $handler_slug,
+            'step_type' => $step_type,
             'flow_step_id' => $flow_step_id,
             'flow_id' => $flow_id,
+            'flow_config' => $flow_config,
             'action_type' => 'added'
         ]);
     }

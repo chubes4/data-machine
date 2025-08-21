@@ -556,10 +556,19 @@
             const stepHtml = stepData.step_html || stepData.html;
             $emptyStepContainer.replaceWith(stepHtml);
             
+            // Calculate execution order for new empty step (last + 1)
+            let nextExecutionOrder = 0;
+            $container.find('.dm-step-container').each(function() {
+                const execOrder = parseInt($(this).data('step-execution-order') || 0);
+                if (execOrder >= nextExecutionOrder) {
+                    nextExecutionOrder = execOrder + 1;
+                }
+            });
+            
             // Add new empty step container
             return PipelinesPage.requestTemplate('page/pipeline-step-card', {
                 context: config.context,
-                step: { is_empty: true, step_type: '', execution_order: '' },
+                step: { is_empty: true, step_type: '', execution_order: nextExecutionOrder },
                 ...config.templateData
             }).then((emptyStepHtml) => {
                 $container.append(emptyStepHtml);

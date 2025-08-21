@@ -18,7 +18,7 @@ $field_name = 'ai_system_prompt';
 
 // Get current system prompt value from passed config (step-scoped)
 // System prompt is STEP-SCOPED, not provider-specific
-$current_prompt = isset($config['value']) ? $config['value'] : '';
+$current_prompt = $config['value'] ?? '';
 $label = $config['label'] ?? 'System Prompt';
 $help_text = $config['help_text'] ?? 'Instructions that define the AI\'s behavior and role for this task.';
 $placeholder = $config['placeholder'] ?? 'Enter system instructions for the AI...';
