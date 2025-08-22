@@ -25,12 +25,12 @@ foreach ($files as $file):
 ?>
     <tr class="dm-file-row dm-file-status-<?php echo esc_attr($status_class); ?>">
         <td class="dm-file-name-col">
-            <span class="dashicons dashicons-media-default" style="margin-right: 8px;"></span>
+            <span class="dashicons dashicons-media-default"></span>
             <span class="dm-file-name"><?php echo esc_html($file['filename']); ?></span>
         </td>
         <td class="dm-file-size-col"><?php echo esc_html($file['size_formatted']); ?></td>
         <td class="dm-file-status-col">
-            <span class="dashicons <?php echo esc_attr($status_icon); ?>" style="color: <?php echo esc_attr($status_color); ?>; margin-right: 4px;"></span>
+            <span class="dashicons <?php echo esc_attr($status_icon); ?> dm-file-status-icon" data-status="<?php echo esc_attr($file['is_processed'] ? 'processed' : 'pending'); ?>"></span>
             <span class="dm-file-status"><?php echo esc_html($file['status']); ?></span>
         </td>
         <td class="dm-file-date-col"><?php echo esc_html($file['modified_formatted']); ?></td>

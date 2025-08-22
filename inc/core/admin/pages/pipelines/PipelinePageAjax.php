@@ -19,6 +19,35 @@ if (!defined('WPINC')) {
 class PipelinePageAjax
 {
     /**
+     * Register all pipeline page AJAX handlers.
+     *
+     * Self-contained registration pattern following WordPress-native approach.
+     * Registers all AJAX actions this class handles directly with WordPress.
+     *
+     * @since NEXT_VERSION
+     */
+    public static function register() {
+        $instance = new self();
+        
+        // Pipeline management AJAX actions
+        add_action('wp_ajax_dm_create_pipeline', [$instance, 'handle_create_pipeline']);
+        add_action('wp_ajax_dm_add_step', [$instance, 'handle_add_step']);
+        add_action('wp_ajax_dm_add_flow', [$instance, 'handle_add_flow']);
+        add_action('wp_ajax_dm_delete_pipeline', [$instance, 'handle_delete_pipeline']);
+        add_action('wp_ajax_dm_delete_step', [$instance, 'handle_delete_step']);
+        add_action('wp_ajax_dm_delete_flow', [$instance, 'handle_delete_flow']);
+        add_action('wp_ajax_dm_run_flow_now', [$instance, 'handle_run_flow_now']);
+        add_action('wp_ajax_dm_save_flow_schedule', [$instance, 'handle_save_flow_schedule']);
+        add_action('wp_ajax_dm_export_pipelines', [$instance, 'handle_export_pipelines']);
+        add_action('wp_ajax_dm_import_pipelines', [$instance, 'handle_import_pipelines']);
+        add_action('wp_ajax_dm_reorder_steps', [$instance, 'handle_reorder_steps']);
+        add_action('wp_ajax_dm_refresh_pipeline_status', [$instance, 'handle_refresh_pipeline_status']);
+        add_action('wp_ajax_dm_save_pipeline_title', [$instance, 'handle_save_pipeline_title']);
+        add_action('wp_ajax_dm_save_flow_title', [$instance, 'handle_save_flow_title']);
+        add_action('wp_ajax_dm_save_user_message', [$instance, 'handle_save_user_message']);
+    }
+
+    /**
      * Handle pipeline page AJAX requests (business logic)
      */
 
@@ -28,7 +57,19 @@ class PipelinePageAjax
      */
     public function handle_add_step()
     {
-        do_action('dm_create', 'step', $_POST, ['source' => 'ajax']);
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        // Delegate to dm_create_step filter
+        // Filter handles AJAX response directly via wp_send_json when in AJAX context
+        $step_id = apply_filters('dm_create_step', false, $_POST);
+        
+        // If we reach here, filter didn't send JSON response (shouldn't happen in AJAX)
+        if (!$step_id) {
+            wp_send_json_error(['message' => __('Failed to add step', 'data-machine')]);
+        }
     }
 
 
@@ -37,6 +78,11 @@ class PipelinePageAjax
      */
     public function handle_delete_step()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
         $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
@@ -49,6 +95,11 @@ class PipelinePageAjax
      */
     public function handle_delete_pipeline()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
         // Delegate to central deletion system
@@ -56,19 +107,43 @@ class PipelinePageAjax
     }
 
     /**
-     * Create a new pipeline in the database - delegated to central dm_create action
+     * Create a new pipeline in the database - delegated to central dm_create filter
      */
     public function handle_create_pipeline()
     {
-        do_action('dm_create', 'pipeline', $_POST, ['source' => 'ajax']);
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        // Delegate to dm_create_pipeline filter
+        // Filter handles AJAX response directly via wp_send_json when in AJAX context
+        $pipeline_id = apply_filters('dm_create_pipeline', false, $_POST);
+        
+        // If we reach here, filter didn't send JSON response (shouldn't happen in AJAX)
+        if (!$pipeline_id) {
+            wp_send_json_error(['message' => __('Failed to create pipeline', 'data-machine')]);
+        }
     }
 
     /**
-     * Add flow to pipeline - delegated to central dm_create action
+     * Add flow to pipeline - delegated to central dm_create filter
      */
     public function handle_add_flow()
     {
-        do_action('dm_create', 'flow', $_POST, ['source' => 'ajax']);
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        // Delegate to dm_create_flow filter
+        // Filter handles AJAX response directly via wp_send_json when in AJAX context
+        $flow_id = apply_filters('dm_create_flow', false, $_POST);
+        
+        // If we reach here, filter didn't send JSON response (shouldn't happen in AJAX)
+        if (!$flow_id) {
+            wp_send_json_error(['message' => __('Failed to add flow', 'data-machine')]);
+        }
     }
 
     /**
@@ -76,6 +151,11 @@ class PipelinePageAjax
      */
     public function handle_delete_flow()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
         
         // Delegate to central deletion system
@@ -140,15 +220,48 @@ class PipelinePageAjax
     }
 
     /**
-     * Run flow immediately - delegated to central dm_create action
+     * Run flow immediately - delegated to central action
      */
     public function handle_run_flow_now()
     {
-        // Use the proper action hook chain - let dm_run_flow_now handle pipeline_id lookup
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
         
-        // Use the designed entry point for flow execution
-        do_action('dm_run_flow_now', $flow_id);
+        if (!$flow_id) {
+            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
+        }
+        
+        // Use the existing dm_run_flow_now action that handles job creation
+        // This action returns true on success, false on failure
+        $result = false;
+        
+        // Capture the return value using output buffering to avoid action hook limitations
+        ob_start();
+        $result = apply_filters('dm_run_flow_now_result', false, $flow_id);
+        ob_end_clean();
+        
+        // If no filter handled it, trigger the action and assume success
+        if (!$result) {
+            do_action('dm_run_flow_now', $flow_id);
+            $result = true; // Assume success since action doesn't return values
+        }
+        
+        // Send JSON response based on result
+        if ($result) {
+            wp_send_json_success([
+                'message' => __('Flow execution started successfully', 'data-machine'),
+                'flow_id' => $flow_id
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Failed to start flow execution', 'data-machine'),
+                'flow_id' => $flow_id
+            ]);
+        }
     }
 
     /**
@@ -572,38 +685,6 @@ class PipelinePageAjax
         ]);
     }
 
-    /**
-     * Save AI prompt via auto-save functionality
-     */
-    public function handle_save_ai_prompt()
-    {
-        check_ajax_referer('dm_ajax_actions', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-        }
-        
-        $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
-        $ai_prompt = wp_unslash($_POST['ai_prompt'] ?? ''); // Don't sanitize - preserve formatting
-        
-        if (!$pipeline_step_id) {
-            wp_send_json_error(['message' => __('Pipeline step ID required', 'data-machine')]);
-        }
-        
-        // Get existing pipeline step configuration
-        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
-        
-        // Update system_prompt in configuration
-        $step_config['system_prompt'] = $ai_prompt;
-        
-        // Save the updated configuration
-        do_action('dm_update_pipeline_step_config', $pipeline_step_id, $step_config);
-        
-        wp_send_json_success([
-            'message' => __('AI prompt saved successfully', 'data-machine'),
-            'pipeline_step_id' => $pipeline_step_id
-        ]);
-    }
 
     /**
      * Handle user message auto-save for AI flow steps
@@ -624,11 +705,10 @@ class PipelinePageAjax
         }
         
         // Use centralized flow user message update action
-        $success = do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
+        do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
         
-        if ($success === false) {
-            wp_send_json_error(['message' => __('Failed to save user message', 'data-machine')]);
-        }
+        // Note: dm_update_flow_user_message action logs its own success/failure
+        // WordPress actions don't return values, so we assume success here
         
         wp_send_json_success([
             'message' => __('User message saved successfully', 'data-machine'),

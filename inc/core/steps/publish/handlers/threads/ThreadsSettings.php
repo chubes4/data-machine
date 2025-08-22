@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\Threads;
+namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

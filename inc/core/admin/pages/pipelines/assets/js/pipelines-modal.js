@@ -94,7 +94,6 @@
             const oauthUrl = $button.data('oauth-url');
             
             if (!handlerSlug || !oauthUrl) {
-                alert('OAuth configuration missing. Please refresh and try again.');
                 return;
             }
             
@@ -106,8 +105,7 @@
             const oauthWindow = window.open(oauthUrl, 'oauth_window', 'width=600,height=700,scrollbars=yes,resizable=yes');
             
             if (!oauthWindow) {
-                // Popup blocked
-                alert('Popup blocked! Please allow popups and try again.');
+                // Popup blocked - restore button state and exit silently
                 $button.text(originalText).prop('disabled', false);
                 return;
             }
@@ -173,15 +171,13 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Account disconnected successfully - user can manually refresh if needed
-                        alert('Account disconnected successfully');
+                        // Account disconnected - refresh modal content to show updated status
+                        this.refreshAuthModal();
                     } else {
-                        alert(response.data?.message || 'Error disconnecting account');
                         $button.text(originalText).prop('disabled', false);
                     }
                 },
                 error: (xhr, status, error) => {
-                    alert('Error connecting to server');
                     $button.text(originalText).prop('disabled', false);
                 }
             });
@@ -241,11 +237,13 @@
                         
                     } else {
                         const message = response.data?.message || 'Failed to save configuration';
-                        alert(message);
+                        const $error = $('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
+                        $form.before($error);
                     }
                 },
                 error: (xhr, status, error) => {
-                    alert('Error saving configuration');
+                    const $error = $('<div class="notice notice-error is-dismissible"><p>Error saving configuration</p></div>');
+                    $form.before($error);
                 },
                 complete: () => {
                     $submitButton.text(originalText).prop('disabled', false);

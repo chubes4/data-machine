@@ -23,6 +23,9 @@ class AIStep {
     /**
      * Execute AI processing
      * 
+     * Processes cumulative data packet array and user message (if provided).
+     * User messages are prepended as additional context before pipeline data.
+     * 
      * @param string $job_id The job ID for context tracking
      * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job
@@ -44,38 +47,14 @@ class AIStep {
             $title = $flow_step_config['title'] ?? 'AI Processing';
 
             // Process ALL data packet entries (oldest to newest for logical message flow)
+            // Note: User messages are now handled separately and always functional
             if (empty($data)) {
-                // Check for flow-level user message for direct publishing use cases
                 $user_message = trim($flow_step_config['user_message'] ?? '');
-                
-                if (!empty($user_message)) {
-                    // Create user message data packet (same structure as fetch packets)
-                    $user_packet = [
-                        'type' => 'user_input',
-                        'content' => [
-                            'title' => '',
-                            'body' => $user_message
-                        ],
-                        'metadata' => [
-                            'source_type' => 'user_input',
-                            'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
-                            'flow_id' => $flow_step_config['flow_id'] ?? null
-                        ],
-                        'attachments' => [],
-                        'timestamp' => time()
-                    ];
-                    
-                    // Inject user message as data packet array
-                    $data = [$user_packet];
-                    
-                    do_action('dm_log', 'info', 'AI Step: Injected user message data packet for direct publishing', [
-                        'flow_step_id' => $flow_step_id,
-                        'message_length' => strlen($user_message)
-                    ]);
-                } else {
+                if (empty($user_message)) {
                     do_action('dm_log', 'error', 'AI Step: No data found and no user message configured', ['flow_step_id' => $flow_step_id]);
                     return $data;
                 }
+                // Continue processing - user message will be added to empty messages array
             }
             
 
@@ -133,6 +112,21 @@ class AIStep {
                     } else {
                     }
                 }
+            }
+            
+            // Add user message as additional context if provided (always functional)
+            $user_message = trim($flow_step_config['user_message'] ?? '');
+            if (!empty($user_message)) {
+                array_unshift($messages, [
+                    'role' => 'user',
+                    'content' => $user_message
+                ]);
+                
+                do_action('dm_log', 'debug', 'AI Step: Prepended user message as additional context', [
+                    'flow_step_id' => $flow_step_id,
+                    'message_length' => strlen($user_message),
+                    'total_messages' => count($messages)
+                ]);
             }
             
             // Ensure we have at least one message
@@ -218,8 +212,8 @@ class AIStep {
             }
             
             
-            // Execute AI request using pure filter with provider name and clean tools
-            $ai_response = apply_filters('ai_request', $ai_request, $provider_name, null, $ai_provider_tools);
+            // Execute AI request using pure filter with provider name and full tools for execution
+            $ai_response = apply_filters('ai_request', $ai_request, $provider_name, null, $ai_provider_tools, $available_tools);
 
             if (!$ai_response['success']) {
                 $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
@@ -355,20 +349,19 @@ class AIStep {
             return [];
         }
         
-        // Get all tools from AI HTTP Client library
-        $all_tools = apply_filters('ai_tools', []);
+        // Get all tools from AI HTTP Client library with handler context
         $handler_slug = $next_step_config['handler']['handler_slug'];
+        $handler_config = $next_step_config['handler']['settings'] ?? [];
         
-        // Dual tool discovery: handler tools (next step) + general tools (when implemented)
+        // Pass handler context to ai_tools filter for dynamic tool generation
+        $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
+        
+        // Filter tools for current handler
         $available_tools = [];
         foreach ($all_tools as $tool_name => $tool_config) {
             // Handler tools: Only available when next step matches handler
             if (isset($tool_config['handler']) && $tool_config['handler'] === $handler_slug) {
-                // Apply dynamic configuration if available
-                $handler_config = $next_step_config['handler']['settings'] ?? [];
-                $dynamic_tool = apply_filters('dm_generate_handler_tool', $tool_config, $handler_slug, $handler_config);
-                
-                $available_tools[$tool_name] = $dynamic_tool ?: $tool_config;
+                $available_tools[$tool_name] = $tool_config;
             }
         }
         

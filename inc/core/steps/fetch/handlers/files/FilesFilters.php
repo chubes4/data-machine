@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Files;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -64,30 +64,8 @@ function dm_register_files_fetch_filters() {
         }
         return $content;
     }, 10, 3);
-    
-    // Modal registrations removed - now handled by generic modal system via pure discovery
-    
-    // DataPacket creation removed - engine uses universal DataPacket constructor
-    // Files handler returns properly formatted data for direct constructor usage
-    
-    // Register Files handler repository implementation via engine filter
-    add_filter('dm_files_repository', function($repositories) {
-        $repositories['files'] = new FilesRepository();
-        return $repositories;
-    });
-    
-    // Action Scheduler cleanup integration
-    add_action('dm_cleanup_old_files', function() {
-        $repositories = apply_filters('dm_files_repository', []);
-        $repository = $repositories['files'] ?? null;
-        if ($repository) {
-            $deleted_count = $repository->cleanup_old_files(7); // Delete files older than 7 days
-            
-            do_action('dm_log', 'debug', 'FilesRepository: Scheduled cleanup completed.', [
-                'deleted_files' => $deleted_count
-            ]);
-        }
-    });
+
+// Repository registration and cleanup now handled in Engine/filters/DataMachineFilters.php
     
     // Schedule cleanup on plugin activation or settings change
     add_action('init', function() {
@@ -105,8 +83,6 @@ function dm_register_files_fetch_filters() {
         }
     });
     
-    // AJAX file upload handler
-    add_action('wp_ajax_dm_upload_file', fn() => do_action('dm_ajax_route', 'dm_upload_file', 'modal'));
     
 }
 
@@ -123,7 +99,6 @@ function dm_files_should_schedule_cleanup(): bool {
     $files_settings = $all_settings['files'] ?? null;
     
     if (!$files_settings) {
-        // Fallback to default if settings not available
         return true;
     }
     

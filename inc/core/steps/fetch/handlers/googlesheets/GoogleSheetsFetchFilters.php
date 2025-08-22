@@ -16,7 +16,7 @@
  * @since NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\GoogleSheets;
+namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -56,7 +56,7 @@ function dm_register_googlesheets_fetch_filters() {
     // This creates bi-directional Google Sheets integration by sharing auth with publish handler
     add_filter('dm_auth_providers', function($providers) {
         // Use shared authentication for both fetch and publish Google Sheets handlers
-        $providers['googlesheets'] = new \DataMachine\Core\Handlers\Publish\GoogleSheets\GoogleSheetsAuth();
+        $providers['googlesheets'] = new \DataMachine\Core\Steps\Publish\Handlers\GoogleSheets\GoogleSheetsAuth();
         return $providers;
     });
     

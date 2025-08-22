@@ -18,10 +18,9 @@
  * - dm_schedule_next_step: Central pipeline step scheduling eliminating Action Scheduler duplication
  * - dm_mark_item_processed: Universal processed item marking across all handlers
  * - dm_log: Central logging operations eliminating logger service discovery
- * - dm_ajax_route: Universal AJAX handler routing eliminating duplicated security validation
  *
  * ORGANIZED ACTIONS (WordPress-native registration):
- * - dm_create, dm_delete: CRUD operations via organized action classes (Create.php, Delete.php)
+ * - dm_create, dm_delete: CRUD operations via organized action classes
  * - dm_update_job_status, dm_update_flow_schedule, dm_auto_save, dm_update_flow_handler, dm_sync_steps_to_flow: Update operations (Update.php)
  * - External Plugin Actions: Plugins register custom actions using standard add_action() patterns
  *
@@ -47,7 +46,6 @@ if ( ! defined( 'WPINC' ) ) {
 
 // Include organized action classes
 require_once __DIR__ . '/Delete.php';
-require_once __DIR__ . '/Create.php';
 require_once __DIR__ . '/ImportExport.php';
 require_once __DIR__ . '/Update.php';
 require_once __DIR__ . '/Engine.php';
@@ -81,7 +79,6 @@ require_once __DIR__ . '/Engine.php';
  * do_action('dm_sync_steps_to_flow', $flow_id, [$step_data], ['context' => 'add_step']);
  * do_action('dm_schedule_next_step', $job_id, 1, $pipeline_id, $flow_id, $job_config, $data);
  * do_action('dm_log', 'error', 'Process failed', ['context' => 'data']);
- * do_action('dm_ajax_route', 'dm_add_step', 'page');
  *
  * @since 0.1.0
  */
@@ -175,41 +172,12 @@ function dm_register_core_actions() {
         return false;
     }, 10, 4);
     
-    // Universal AJAX routing action hook - eliminates 132 lines of duplication in PipelinesFilters.php
-    add_action('dm_ajax_route', function($ajax_action, $handler_type = 'page') {
-        // WordPress-native security: capability check + nonce verification
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Security check failed: insufficient permissions.', 'data-machine')]);
-            return;
-        }
-        
-        // Verify nonce with universal 'dm_ajax_actions' action
-        $nonce = wp_unslash($_POST['nonce'] ?? '');
-        if (!wp_verify_nonce($nonce, 'dm_ajax_actions')) {
-            wp_send_json_error(['message' => __('Security check failed: invalid nonce.', 'data-machine')]);
-            return;
-        }
-        
-        $all_pages = apply_filters('dm_admin_pages', []);
-        $ajax_handlers = $all_pages['pipelines']['ajax_handlers'] ?? [];
-        $handler = $ajax_handlers[$handler_type] ?? null;
-        
-        // Convert AJAX action to method name: dm_add_step → handle_add_step
-        $method_name = 'handle_' . str_replace('dm_', '', $ajax_action);
-        
-        if ($handler && method_exists($handler, $method_name)) {
-            $handler->$method_name();
-        } else {
-            wp_send_json_error(['message' => __('Handler not available', 'data-machine')]);
-        }
-    }, 10, 2);
     
     
     // Register core pipeline execution engine
     dm_register_execution_engine();
     
     // Register organized action classes - static WordPress-native pattern
-    \DataMachine\Engine\Actions\Create::register();
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();
     \DataMachine\Engine\Actions\ImportExport::register();

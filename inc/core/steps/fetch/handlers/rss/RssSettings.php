@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Rss;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

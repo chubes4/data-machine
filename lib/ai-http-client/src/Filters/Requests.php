@@ -107,7 +107,7 @@ function ai_http_client_register_provider_filters() {
         $args = wp_parse_args($args, [
             'user-agent' => sprintf('AI-HTTP-Client/%s (+WordPress)', 
                 defined('AI_HTTP_CLIENT_VERSION') ? AI_HTTP_CLIENT_VERSION : '1.0'),
-            'timeout' => 60  // 60-second timeout for AI operations
+            'timeout' => 120  // 120-second timeout for AI operations
         ]);
 
         // Set method for non-GET requests
@@ -144,7 +144,7 @@ function ai_http_client_register_provider_filters() {
                 CURLOPT_POST => ($method !== 'GET'),
                 CURLOPT_POSTFIELDS => ($method !== 'GET') ? $body : null,
                 CURLOPT_HTTPHEADER => $formatted_headers,
-                CURLOPT_TIMEOUT => 60,  // 60-second timeout for streaming
+                CURLOPT_TIMEOUT => 120,  // 120-second timeout for streaming
                 CURLOPT_WRITEFUNCTION => function($ch, $data) use ($callback, &$response_body) {
                     $response_body .= $data; // Capture response for error logging
                     if ($callback && is_callable($callback)) {

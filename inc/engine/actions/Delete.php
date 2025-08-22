@@ -293,7 +293,7 @@ class Delete {
         $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
-        // Get current pipeline steps and remove the specified step
+        // Remove specified step from pipeline
         $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         $remaining_steps = [];
         $step_found = false;
@@ -333,7 +333,7 @@ class Delete {
             $flow_id = $flow['flow_id'];
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             
-            // Remove flow steps for this pipeline step ID
+            // Remove matching flow steps
             foreach ($flow_config as $flow_step_id => $step_data) {
                 if (isset($step_data['pipeline_step_id']) && $step_data['pipeline_step_id'] === $pipeline_step_id) {
                     unset($flow_config[$flow_step_id]);

@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\Facebook;
+namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

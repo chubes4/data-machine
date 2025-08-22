@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
+namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -60,18 +60,14 @@ function dm_register_googlesheets_filters() {
     });
     
     // Google Sheets tool registration with AI HTTP Client library
-    add_filter('ai_tools', function($tools) {
-        $tools['googlesheets_append'] = dm_get_googlesheets_tool();
-        return $tools;
-    });
-
-    // Dynamic tool generation based on current configuration
-    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+        // Only generate Google Sheets tool when it's the target handler
         if ($handler_slug === 'googlesheets_output') {
-            return dm_get_googlesheets_tool($handler_config);
+            $tools['googlesheets_append'] = dm_get_googlesheets_tool($handler_config);
         }
-        return $tool;
+        return $tools;
     }, 10, 3);
+
     
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }

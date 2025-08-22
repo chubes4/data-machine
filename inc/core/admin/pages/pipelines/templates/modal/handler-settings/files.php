@@ -116,7 +116,7 @@ if ($flow_step_id) {
                 <div class="dm-file-upload-container" 
                      data-handler-context="<?php echo esc_attr(json_encode(['flow_step_id' => $flow_step_id, 'handler_slug' => $handler_slug])); ?>">
                     
-                    <div class="dm-file-selection-area" id="dm-file-drop-zone">
+                    <div class="dm-file-selection-area dm-file-drop-zone" id="dm-file-drop-zone">
                         <div class="dm-file-upload-interface">
                             <label for="dm-file-upload" class="dm-file-upload-label">
                                 <span class="dashicons dashicons-cloud-upload dm-file-upload-icon"></span>
@@ -132,7 +132,7 @@ if ($flow_step_id) {
                         </div>
                         
                         <!-- Upload Progress Indicator -->
-                        <div class="dm-file-upload-progress" style="display: none;">
+                        <div class="dm-file-upload-progress">
                             <div class="dm-upload-progress-bar">
                                 <div class="dm-upload-progress-fill"></div>
                             </div>
@@ -159,7 +159,7 @@ if ($flow_step_id) {
                             <!-- File Status Table -->
                             <?php if ($show_table): ?>
                             <div class="dm-files-table-container" id="dm-files-table">
-                                <table class="dm-file-status-table widefat striped">
+                                <table class="dm-files-table widefat striped">
                                     <thead>
                                         <tr>
                                             <th class="dm-file-name-col"><?php esc_html_e('File Name', 'data-machine'); ?></th>
@@ -177,12 +177,12 @@ if ($flow_step_id) {
                                         ?>
                                         <tr class="dm-file-row dm-file-status-<?php echo esc_attr($status_class); ?>">
                                             <td class="dm-file-name-col">
-                                                <span class="dashicons dashicons-media-default" style="margin-right: 8px;"></span>
+                                                <span class="dashicons dashicons-media-default"></span>
                                                 <span class="dm-file-name"><?php echo esc_html($file['filename']); ?></span>
                                             </td>
                                             <td class="dm-file-size-col"><?php echo esc_html($file['size_formatted']); ?></td>
                                             <td class="dm-file-status-col">
-                                                <span class="dashicons <?php echo esc_attr($status_icon); ?>" style="color: <?php echo esc_attr($status_color); ?>; margin-right: 4px;"></span>
+                                                <span class="dashicons <?php echo esc_attr($status_icon); ?> dm-file-status-icon" data-status="<?php echo esc_attr($file['is_processed'] ? 'processed' : 'pending'); ?>"></span>
                                                 <span class="dm-file-status"><?php echo esc_html($file['status']); ?></span>
                                             </td>
                                             <td class="dm-file-date-col"><?php echo esc_html($file['modified_formatted']); ?></td>

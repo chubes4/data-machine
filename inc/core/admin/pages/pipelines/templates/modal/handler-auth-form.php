@@ -37,9 +37,6 @@ if (!$has_auth) {
         <div class="dm-auth-actions">
             <?php 
             $template_slug = $handler_slug;
-            if ($handler_slug === 'wordpress' && isset($step_type)) {
-                $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
-            }
             ?>
             <button type="button" class="button button-secondary dm-modal-open" 
                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
@@ -113,10 +110,10 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         </form>
         
         <!-- Redirect URI Display for OAuth providers -->
-        <div class="dm-redirect-uri-section" style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #0073aa;">
-            <h5 style="margin: 0 0 10px 0;"><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'data-machine'), ucfirst($handler_slug))); ?></h5>
-            <p style="margin: 0 0 10px 0;"><?php esc_html_e('Copy this URL and paste it in your app settings under "redirect uri" or "callback URL":', 'data-machine'); ?></p>
-            <code style="display: block; padding: 8px; background: white; border: 1px solid #ddd; word-break: break-all;">
+        <div class="dm-redirect-uri-section">
+            <h5><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'data-machine'), ucfirst($handler_slug))); ?></h5>
+            <p><?php esc_html_e('Copy this URL and paste it in your app settings under "redirect uri" or "callback URL":', 'data-machine'); ?></p>
+            <code class="dm-redirect-uri-code">
                 <?php echo esc_html(apply_filters('dm_get_oauth_url', '', $handler_slug)); ?>
             </code>
         </div>
@@ -193,9 +190,6 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         <?php 
         // EXACT COPY FROM EDIT HANDLER BUTTON
         $template_slug = $handler_slug;
-        if ($handler_slug === 'wordpress' && isset($step_type)) {
-            $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
-        }
         ?>
         <button type="button" class="button button-secondary dm-modal-open" 
                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"

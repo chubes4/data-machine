@@ -4,8 +4,10 @@
  *
  * Provides configuration interface for AI tools that require setup.
  * Each tool has its own configuration section with appropriate fields.
+ * 
+ * Migrated from Pipelines to Settings page for better UX and logical organization.
  *
- * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
+ * @package DataMachine\Core\Admin\Settings\Templates
  * @since 1.0.0
  */
 
@@ -133,17 +135,10 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
     }
     ?>
     
-    <div class="dm-modal-navigation">
-        <?php 
-        // Get context variables for navigation back to AI configuration
-        $step_type = $step_type ?? 'ai';
-        $pipeline_id = $pipeline_id ?? '';
-        $pipeline_step_id = $pipeline_step_id ?? '';
-        ?>
-        <button type="button" class="button button-secondary dm-modal-open" 
-                data-template="configure-step"
-                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","modal_type":"step","config_type":"ai_configuration"}'>
-            <?php esc_html_e('Back to Settings', 'data-machine'); ?>
-        </button>
+    <!-- Settings page context - no navigation back to pipeline needed -->
+    <div class="dm-settings-tool-notice">
+        <p class="description">
+            <?php esc_html_e('Once configured, this tool will be available for use in all AI steps across all pipelines.', 'data-machine'); ?>
+        </p>
     </div>
 </div>

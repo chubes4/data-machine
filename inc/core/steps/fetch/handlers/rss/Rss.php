@@ -11,7 +11,7 @@
  * @since      0.11.0
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Rss;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -362,18 +362,17 @@ class Rss {
      * Extract GUID from RSS/Atom item.
      *
      * @param object $item SimpleXML item object.
-     * @param string $fallback_link Fallback link to use as GUID.
+     * @param string $item_link Item link to use as GUID.
      * @return string Item GUID.
      */
-    private function extract_item_guid($item, string $fallback_link): string {
+    private function extract_item_guid($item, string $item_link): string {
         if (isset($item->guid)) {
             return (string) $item->guid;
         }
         if (isset($item->id)) {
             return (string) $item->id;
         }
-        // Use link as fallback GUID
-        return $fallback_link;
+        return $item_link;
     }
 
     /**

@@ -176,7 +176,7 @@ class FetchStep {
                         $result['metadata'] = array_merge($result['metadata'] ?? [], $item_data['metadata'] ?? []);
                     }
                 } else {
-                    // Fallback for other handlers that return title/body directly
+                    // Direct title/body structure - simplified processing
                     $title = $result['title'] ?? '';
                     $body = $result['body'] ?? '';
                 }

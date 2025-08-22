@@ -104,7 +104,7 @@ add_filter('ai_render_component', function($html, $config = []) {
     }
     
     // Add nonce for AJAX operations
-    $html .= '<tr style="display:none;"><td colspan="2">' . wp_nonce_field('ai_http_nonce', 'ai_http_nonce_field', true, false) . '</td></tr>';
+    $html .= '<tr class="ai-hidden"><td colspan="2">' . wp_nonce_field('ai_http_nonce', 'ai_http_nonce_field', true, false) . '</td></tr>';
     
     return $html;
 }, 10, 2);

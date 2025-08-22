@@ -11,7 +11,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\Threads;
+namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -144,7 +144,7 @@ class ThreadsAuth {
                 if (isset($account['token_expires_at']) && time() > intval($account['token_expires_at'])) {
                     return null;
                 }
-                // Otherwise, return the old (but potentially soon-to-expire) token
+                // Return the current token
                 return $current_token;
             }
         }

@@ -281,6 +281,9 @@
                                                 // Replace the existing step container with updated version
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
                                                 
+                                                // Trigger card expansion detection for updated content
+                                                $(document).trigger('dm:cards-updated');
+                                                
                                             }).catch((error) => {
                                                 // Failed to update flow step card after AI config save
                                             });
@@ -310,6 +313,9 @@
                             }).then((updatedStepHtml) => {
                                 // Replace the existing pipeline step container with updated version
                                 $pipelineStepContainer.replaceWith(updatedStepHtml);
+                                
+                                // Trigger card expansion detection for updated content
+                                $(document).trigger('dm:cards-updated');
                                 
                             }).catch((error) => {
                                 // Failed to update pipeline step card after AI config save

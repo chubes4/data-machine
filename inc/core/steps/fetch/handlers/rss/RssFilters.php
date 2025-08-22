@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Rss;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {

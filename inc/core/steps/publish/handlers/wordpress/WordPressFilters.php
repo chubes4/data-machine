@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\WordPress;
+namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -49,18 +49,14 @@ function dm_register_wordpress_publish_filters() {
     });
     
     // WordPress tool registration with AI HTTP Client library
-    add_filter('ai_tools', function($tools) {
-        $tools['wordpress_publish'] = dm_get_wordpress_base_tool();
-        return $tools;
-    });
-
-    // Dynamic tool generation based on current taxonomy configuration
-    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+        // Only generate WordPress tool when it's the target handler
         if ($handler_slug === 'wordpress_publish') {
-            return dm_get_dynamic_wordpress_tool($handler_config);
+            $tools['wordpress_publish'] = dm_get_dynamic_wordpress_tool($handler_config);
         }
-        return $tool;
+        return $tools;
     }, 10, 3);
+
     
     // WordPress handler does not register any modals - site-local publishing only
 }
@@ -80,12 +76,12 @@ function dm_get_wordpress_base_tool(): array {
             'title' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Post title'
+                'description' => 'Post title (page h1 element)'
             ],
             'content' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Post content formatted as WordPress Gutenberg blocks. Use block comments like <!-- wp:heading {"level":2} --><h2>Title</h2><!-- /wp:heading --> for headings and <!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph --> for paragraphs.'
+                'description' => 'Post content formatted as WordPress Gutenberg blocks. Use block comments like <!-- wp:heading {"level":2} --><h2>Subheading</h2><!-- /wp:heading --> for headings and <!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph --> for paragraphs.'
             ]
         ]
     ];
@@ -183,7 +179,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
                 $tool['parameters'][$parameter_name] = [
                     'type' => 'array',
                     'required' => true,
-                    'description' => "Choose 3-5 relevant {$taxonomy->name} for the content"
+                    'description' => "Choose one or more relevant {$taxonomy->name} for the content"
                 ];
             }
             

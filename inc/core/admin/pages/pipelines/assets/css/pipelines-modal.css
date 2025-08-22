@@ -10,106 +10,6 @@
 
 /* ===== FILES HANDLER MODAL STYLES ===== */
 
-/* Drag and drop zone */
-#dm-file-drop-zone {
-    border: 2px dashed #c3c4c7;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    transition: all 0.3s ease;
-    background: #fafafa;
-}
-
-#dm-file-drop-zone:hover {
-    border-color: #0073aa;
-    background: #f6f9fc;
-}
-
-#dm-file-drop-zone.dm-drag-over {
-    border-color: #00a32a;
-    background: #f0f8f0;
-    border-style: solid;
-}
-
-/* File upload interface */
-.dm-file-upload-interface {
-    padding: 20px;
-}
-
-.dm-file-upload-label {
-    display: block;
-    cursor: pointer;
-    text-align: center;
-}
-
-.dm-file-upload-icon {
-    font-size: 48px;
-    color: #0073aa;
-    margin-bottom: 10px;
-    display: block;
-}
-
-.dm-file-upload-text {
-    display: block;
-    font-size: 16px;
-    font-weight: 500;
-    margin-bottom: 8px;
-    color: #1d2327;
-}
-
-.dm-file-upload-hint {
-    display: block;
-    font-size: 12px;
-    color: #646970;
-    margin-bottom: 12px;
-}
-
-.dm-file-upload-formats {
-    display: block;
-    font-size: 11px;
-    color: #8c8f94;
-    font-style: italic;
-}
-
-.dm-file-input {
-    display: none;
-}
-
-/* Upload progress */
-.dm-file-upload-progress {
-    margin-top: 15px;
-    padding: 10px;
-    background: #f0f8f0;
-    border-radius: 4px;
-}
-
-.dm-upload-progress-bar {
-    width: 100%;
-    height: 6px;
-    background: #e1e1e1;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 8px;
-}
-
-.dm-upload-progress-fill {
-    height: 100%;
-    background: #00a32a;
-    width: 0%;
-    animation: progress-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes progress-pulse {
-    0%, 100% { width: 0%; }
-    50% { width: 100%; }
-}
-
-.dm-upload-progress-text {
-    font-size: 12px;
-    color: #135e96;
-    text-align: center;
-    display: block;
-}
 
 /* File status section */
 .dm-uploaded-files-section {
@@ -175,24 +75,6 @@
     color: #8c8f94;
 }
 
-/* File status table */
-.dm-file-status-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.dm-file-status-table th,
-.dm-file-status-table td {
-    text-align: left;
-    padding: 8px 12px;
-    border-bottom: 1px solid #e1e1e1;
-}
-
-.dm-file-status-table th {
-    background: #f6f7f7;
-    font-weight: 600;
-    color: #1d2327;
-}
 
 .dm-file-row.dm-file-status-processed {
     background: #f8fff8;
@@ -222,10 +104,6 @@
     line-height: 1;
 }
 
-/* Utility classes */
-.dm-spin {
-    animation: spin 1s linear infinite;
-}
 
 /* ===== STEP SELECTION MODAL ===== */
 
@@ -591,6 +469,53 @@
     padding: 0;
 }
 
+/* Auth configuration section */
+.dm-auth-config-section {
+    margin-bottom: 20px;
+}
+
+.dm-auth-config-form {
+    margin-bottom: 20px;
+}
+
+.dm-redirect-uri-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-left: 4px solid #0073aa;
+    border-radius: 4px;
+}
+
+.dm-redirect-uri-section h5 {
+    margin: 0 0 10px 0;
+    color: #1d2327;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dm-redirect-uri-section p {
+    margin: 0 0 10px 0;
+    color: #646970;
+    font-size: 13px;
+}
+
+.dm-redirect-uri-code {
+    display: block;
+    padding: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 12px;
+    border-radius: 3px;
+    color: #23282d;
+    line-height: 1.4;
+}
+
+.dm-auth-connection-section {
+    margin-top: 20px;
+}
+
 .dm-auth-status {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -933,59 +858,17 @@
     }
 }
 
+
 /* ===== FILES HANDLER MODAL STYLES ===== */
-
-.dm-file-upload-container {
-    margin-top: 10px;
-}
-
-.dm-file-upload-container input[type="file"] {
-    margin-bottom: 10px;
-}
-
-.dm-file-list {
-    margin-top: 15px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.dm-file-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 5px;
-    background: #fff;
-}
-
-.dm-file-item .dashicons {
-    margin-right: 8px;
-    color: #666;
-}
-
-.dm-file-info {
-    flex: 1;
-}
-
-.dm-file-name {
-    font-weight: 500;
-}
-
-.dm-file-size {
-    font-size: 12px;
-    color: #666;
-}
-
-/* ===== ENHANCED FILES HANDLER MODAL STYLES ===== */
 
 /* Main file upload interface */
 .dm-file-upload-interface {
-    margin-top: 20px;
+    padding: 20px;
 }
 
-/* Drag and drop zone */
-.dm-file-drop-zone {
+/* Drag and drop zone - consolidated from duplicate selectors */
+.dm-file-drop-zone,
+#dm-file-drop-zone {
     border: 2px dashed #ccc;
     border-radius: 8px;
     padding: 40px 20px;
@@ -996,16 +879,19 @@
     position: relative;
 }
 
-.dm-file-drop-zone:hover {
+.dm-file-drop-zone:hover,
+#dm-file-drop-zone:hover {
     border-color: #0073aa;
     background: #f0f8ff;
     transform: translateY(-1px);
 }
 
-.dm-file-drop-zone.dragover {
+.dm-file-drop-zone.dragover,
+#dm-file-drop-zone.dm-drag-over {
     border-color: #0073aa;
     background: #e8f4ff;
     box-shadow: 0 4px 12px rgba(0, 115, 170, 0.1);
+    border-style: solid;
 }
 
 /* Upload icon */
@@ -1017,7 +903,8 @@
     transition: color 0.3s ease;
 }
 
-.dm-file-drop-zone:hover .dm-file-upload-icon {
+.dm-file-drop-zone:hover .dm-file-upload-icon,
+#dm-file-drop-zone:hover .dm-file-upload-icon {
     color: #0073aa;
 }
 
@@ -1128,11 +1015,6 @@
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
 .dm-empty-files {
     text-align: center;
     padding: 40px 20px;
@@ -1155,8 +1037,39 @@
     font-style: italic;
 }
 
-/* File status table */
-.dm-files-table {
+/* File status icons */
+.dm-file-status-icon[data-status="processed"] {
+    color: #46b450;
+    margin-right: 4px;
+}
+
+.dm-file-status-icon[data-status="pending"] {
+    color: #ffb900;
+    margin-right: 4px;
+}
+
+.dashicons-media-default {
+    margin-right: 8px;
+}
+
+/* Upload progress - initially hidden */
+.dm-file-upload-progress {
+    display: none;
+}
+
+.dm-file-upload-progress.active {
+    display: block;
+}
+
+/* Import file input - hidden by default */
+.dm-import-file {
+    display: none;
+}
+
+
+/* File status table - consolidated from duplicate selectors */
+.dm-files-table,
+.dm-file-status-table {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
@@ -1165,19 +1078,23 @@
     overflow: hidden;
 }
 
-.dm-files-table thead {
+.dm-files-table thead,
+.dm-file-status-table thead {
     background: #f8f9fa;
 }
 
 .dm-files-table th,
-.dm-files-table td {
+.dm-files-table td,
+.dm-file-status-table th,
+.dm-file-status-table td {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #e1e1e1;
     font-size: 14px;
 }
 
-.dm-files-table th {
+.dm-files-table th,
+.dm-file-status-table th {
     font-weight: 600;
     color: #333;
     font-size: 13px;
@@ -1185,11 +1102,13 @@
     letter-spacing: 0.5px;
 }
 
-.dm-files-table tbody tr:last-child td {
+.dm-files-table tbody tr:last-child td,
+.dm-file-status-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-.dm-files-table tbody tr:hover {
+.dm-files-table tbody tr:hover,
+.dm-file-status-table tbody tr:hover {
     background: #fafafa;
 }
 
@@ -1309,7 +1228,8 @@
 }
 
 /* File type icons in table */
-.dm-files-table .dashicons {
+.dm-files-table .dashicons,
+.dm-file-status-table .dashicons {
     margin-right: 8px;
     color: #666;
     font-size: 16px;
@@ -1361,12 +1281,15 @@
         font-size: 15px;
     }
     
-    .dm-files-table {
+    .dm-files-table,
+    .dm-file-status-table {
         font-size: 13px;
     }
     
     .dm-files-table th,
-    .dm-files-table td {
+    .dm-files-table td,
+    .dm-file-status-table th,
+    .dm-file-status-table td {
         padding: 10px 12px;
     }
     
@@ -1391,6 +1314,35 @@
         width: 100%;
         text-align: center;
     }
+}
+
+/* ===== AI TOOL OPTIONS STYLES ===== */
+
+.dm-tool-option {
+    margin-bottom: 8px;
+}
+
+.dm-tool-option label {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.dm-tool-option span {
+    margin-left: 4px;
+}
+
+.dm-tool-config-warning {
+    color: #d63638;
+    font-size: 12px;
+}
+
+.dm-tool-config-warning a {
+    color: #d63638;
+    text-decoration: none;
+}
+
+.dm-tool-config-warning a:hover {
+    text-decoration: underline;
 }
 
 /* ===== UTILITY CLASSES ===== */

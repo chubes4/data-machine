@@ -153,18 +153,6 @@ if (!$is_empty) {
             <div class="dm-step-header">
                 <div class="dm-step-title">
                     <?php echo esc_html($step_title); ?>
-                    <?php if ($status === 'yellow' && $step_type === 'publish' && $pipeline_step_id): ?>
-                        <?php 
-                        $subsequent_check = apply_filters('dm_detect_status', 'green', 'subsequent_publish_step', [
-                            'pipeline_step_id' => $pipeline_step_id
-                        ]);
-                        if ($subsequent_check === 'yellow'): 
-                        ?>
-                            <span class="dashicons dashicons-warning" 
-                                  title="<?php esc_attr_e('Warning: This publish step follows another publish step. AI cannot guide content to multiple destinations simultaneously. Consider using separate AI steps or separate flows for each destination.', 'data-machine'); ?>" 
-                                  style="color: #f0b849; font-size: 14px; margin-left: 4px;"></span>
-                        <?php endif; ?>
-                    <?php endif; ?>
                 </div>
                 <div class="dm-step-actions">
                     <?php if ($step_uses_handlers && $has_handlers): ?>
@@ -179,9 +167,6 @@ if (!$is_empty) {
                             $handler_slug = $current_handler['handler_slug'] ?? '';
                             
                             $template_slug = $handler_slug;
-                            if ($handler_slug === 'wordpress') {
-                                $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
-                            }
                             ?>
                             <button type="button" class="button button-small dm-modal-open" 
                                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"

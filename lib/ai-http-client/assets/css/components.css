@@ -88,3 +88,8 @@
 .ai-field-group:last-child {
     margin-bottom: 0;
 }
+
+/* Hidden Elements */
+.ai-hidden {
+    display: none;
+}

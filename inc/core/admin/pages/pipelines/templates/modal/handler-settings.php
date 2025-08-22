@@ -29,9 +29,6 @@ if ($handler_slug) {
     $handler_info = $all_handlers[$handler_slug] ?? [];
     
     $settings_key = $handler_slug;
-    if ($handler_slug === 'wordpress' && $step_type) {
-        $settings_key = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
-    }
     
     $all_settings = apply_filters('dm_handler_settings', []);
     $handler_settings = $all_settings[$settings_key] ?? null;
@@ -45,7 +42,12 @@ if ($handler_slug) {
                 $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
             }
         }
-        $settings_fields = $handler_settings::get_fields($current_settings_for_fields);
+        $all_fields = $handler_settings::get_fields($current_settings_for_fields);
+        $settings_fields = apply_filters('dm_enabled_settings', $all_fields, $handler_slug, $step_type, [
+            'flow_step_id' => $flow_step_id,
+            'pipeline_id' => $pipeline_id,
+            'current_settings' => $current_settings_for_fields
+        ]);
     }
 }
 
@@ -54,7 +56,7 @@ $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handle
 $all_auth = apply_filters('dm_auth_providers', []);
 $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
 
-if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
+if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch') {
     $has_auth_system = false;
 }
 
@@ -97,6 +99,9 @@ if ($handler_slug === 'wordpress' || $settings_key === 'wordpress_publish') {
                     $current_settings = $step_config['handler']['settings'][$handler_slug] ?? [];
                 }
             }
+            
+            // Apply global defaults for handlers
+            $current_settings = apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
             
             
             if (!empty($settings_fields)) {

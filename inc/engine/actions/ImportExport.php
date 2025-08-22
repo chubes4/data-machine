@@ -65,9 +65,8 @@ class ImportExport {
                 $existing_id = $this->find_pipeline_by_name($pipeline_name);
                 
                 if (!$existing_id) {
-                    // Create new pipeline
-                    do_action('dm_create', 'pipeline', ['pipeline_name' => $pipeline_name], ['source' => 'import']);
-                    $existing_id = $this->find_pipeline_by_name($pipeline_name);
+                    // Create new pipeline using filter
+                    $existing_id = apply_filters('dm_create_pipeline', false, ['pipeline_name' => $pipeline_name]);
                 }
                 
                 if ($existing_id) {
@@ -78,11 +77,11 @@ class ImportExport {
             
             // Add steps
             if (isset($processed[$pipeline_name]) && $step_config) {
-                do_action('dm_create', 'step', [
+                apply_filters('dm_create_step', false, [
                     'pipeline_id' => $processed[$pipeline_name],
                     'step_type' => $step_type,
                     'step_config' => $step_config
-                ], ['source' => 'import']);
+                ]);
             }
         }
         

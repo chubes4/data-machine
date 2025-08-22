@@ -11,7 +11,7 @@
  * @since      0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\Twitter;
+namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly

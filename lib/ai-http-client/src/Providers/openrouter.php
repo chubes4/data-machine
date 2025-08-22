@@ -38,7 +38,7 @@ class AI_HTTP_OpenRouter_Provider {
      *
      * @param array $config Provider configuration
      */
-    public function __construct($config = array()) {
+    public function __construct($config = []) {
         $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
         $this->http_referer = isset($config['http_referer']) ? $config['http_referer'] : '';
         $this->app_title = isset($config['app_title']) ? $config['app_title'] : 'AI HTTP Client';
@@ -173,7 +173,7 @@ class AI_HTTP_OpenRouter_Provider {
      */
     public function get_raw_models() {
         if (!$this->is_configured()) {
-            return array();
+            return [];
         }
 
         $url = $this->base_url . '/models';
@@ -295,7 +295,7 @@ class AI_HTTP_OpenRouter_Provider {
      * @return array Normalized models array
      */
     private function normalize_models_response($raw_models) {
-        $models = array();
+        $models = [];
         
         // OpenRouter returns: { "data": [{"id": "model-name", "name": "Display Name", ...}, ...] }
         $data = isset($raw_models['data']) ? $raw_models['data'] : $raw_models;

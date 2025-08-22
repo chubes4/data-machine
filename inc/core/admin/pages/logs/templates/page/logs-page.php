@@ -110,16 +110,15 @@ if (file_exists($log_file_path)) {
         </p>
         
         <div class="dm-log-actions">
-            <form method="post" action="">
+            <form method="post" action="" class="dm-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
                 <?php wp_nonce_field('dm_logs_action', 'dm_logs_nonce'); ?>
                 <input type="hidden" name="dm_logs_action" value="clear_all">
-                <button type="submit" class="button" 
-                        onclick="return confirm('<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>')">
+                <button type="submit" class="button">
                     <?php esc_html_e('Clear All Logs', 'data-machine'); ?>
                 </button>
             </form>
             
-            <button type="button" class="button dm-refresh-logs" onclick="location.reload();">
+            <button type="button" class="button dm-refresh-logs">
                 <?php esc_html_e('Refresh Logs', 'data-machine'); ?>
             </button>
         </div>

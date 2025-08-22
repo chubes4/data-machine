@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\Bluesky;
+namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

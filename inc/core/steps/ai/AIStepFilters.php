@@ -63,11 +63,6 @@ function dm_register_ai_step_filters() {
     });
     
     
-    // DataPacket conversion registration - AI step uses dedicated DataPacket class
-    // DataPacket creation removed - engine uses universal DataPacket constructor
-    // AI steps return properly formatted data for direct constructor usage
-    
-    // AI service registrations removed - AIStep now works directly with AI HTTP Client
     
     /**
      * AI Step Configuration Registration
@@ -90,9 +85,6 @@ function dm_register_ai_step_filters() {
         return $configs;
     });
     
-    // Modal registration removed - configure-step modal already registered in PipelinesFilters.php
-    // The shared configure-step modal handles all step types via template switching
-    
 }
 
 /**
@@ -100,6 +92,105 @@ function dm_register_ai_step_filters() {
  * Allows handlers to register custom parsing logic for AI-generated structured content
  */
 add_filter('dm_parse_ai_response', '__return_empty_array');
+
+/**
+ * Extend AI HTTP Client component with Data Machine tool configuration
+ * 
+ * Adds tool selection UI and system prompt to the AI component when rendered in Data Machine context.
+ * Only shows tools that are enabled in Data Machine settings.
+ */
+add_filter('ai_render_component', function($output, $config) {
+    // Get enabled tools directly (no external dependencies)
+    $settings = dm_get_data_machine_settings();
+    
+    // Engine mode - no tools available
+    if ($settings['engine_mode']) {
+        $enabled_general_tools = [];
+    } else {
+        // Get all registered tools and filter to general tools
+        $all_tools = apply_filters('ai_tools', []);
+        $general_tools = [];
+        foreach ($all_tools as $tool_name => $tool_config) {
+            if (!isset($tool_config['handler'])) {
+                $general_tools[$tool_name] = $tool_config;
+            }
+        }
+        
+        // Apply settings filtering
+        if (empty($settings['enabled_tools'])) {
+            $enabled_general_tools = $general_tools; // Default: all enabled
+        } else {
+            $enabled_general_tools = [];
+            foreach ($general_tools as $tool_name => $tool_config) {
+                if (!empty($settings['enabled_tools'][$tool_name])) {
+                    $enabled_general_tools[$tool_name] = $tool_config;
+                }
+            }
+        }
+    }
+    
+    // Start building the Data Machine extensions
+    $extensions = '';
+    
+    // Add system prompt field
+    $ai_config = $config['ai_config'] ?? [];
+    $system_prompt_value = $config['system_prompt_value'] ?? '';
+    $system_prompt_config = $config['system_prompt'] ?? [];
+    
+    $extensions .= '<tr class="form-field">' . "\n";
+    $extensions .= '    <th scope="row">' . "\n";
+    $extensions .= '        <label for="ai_system_prompt">' . esc_html($system_prompt_config['label'] ?? __('System Prompt', 'data-machine')) . '</label>' . "\n";
+    $extensions .= '    </th>' . "\n";
+    $extensions .= '    <td>' . "\n";
+    $extensions .= '        <textarea name="system_prompt" id="ai_system_prompt" rows="' . ($system_prompt_config['rows'] ?? 4) . '" cols="70" class="large-text" placeholder="' . esc_attr($system_prompt_config['placeholder'] ?? '') . '">' . esc_textarea($system_prompt_value) . '</textarea>' . "\n";
+    $extensions .= '        <br><small class="description">' . esc_html($system_prompt_config['help_text'] ?? __('Instructions for the AI model.', 'data-machine')) . '</small>' . "\n";
+    $extensions .= '    </td>' . "\n";
+    $extensions .= '</tr>' . "\n";
+    
+    // Add tool configuration UI if tools are available
+    if (!empty($enabled_general_tools)) {
+        $enabled_tools = $ai_config['enabled_tools'] ?? [];
+        
+        $extensions .= '<tr class="form-field">' . "\n";
+        $extensions .= '    <th scope="row">' . "\n";
+        $extensions .= '        <label>' . esc_html__('Available Tools', 'data-machine') . '</label>' . "\n";
+        $extensions .= '    </th>' . "\n";
+        $extensions .= '    <td>' . "\n";
+        $extensions .= '        <fieldset>' . "\n";
+        $extensions .= '            <legend class="screen-reader-text">' . esc_html__('Select available tools for this AI step', 'data-machine') . '</legend>' . "\n";
+        
+        foreach ($enabled_general_tools as $tool_id => $tool_config) {
+            $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+            $configure_needed = !$tool_configured && !empty($tool_config['requires_config']);
+            $tool_enabled = in_array($tool_id, $enabled_tools) && $tool_configured;
+            
+            $extensions .= '            <div class="dm-tool-option">' . "\n";
+            $extensions .= '                <label>' . "\n";
+            $extensions .= '                    <input type="checkbox" name="enabled_tools[]" value="' . esc_attr($tool_id) . '" ' . checked($tool_enabled, true, false) . ' ' . disabled($configure_needed, true, false) . ' />' . "\n";
+            $extensions .= '                    <span>' . esc_html($tool_config['description'] ?? ucfirst($tool_id)) . '</span>' . "\n";
+            $extensions .= '                </label>' . "\n";
+            
+            // Only show configuration link for tools that need configuration but aren't configured
+            if ($configure_needed) {
+                $extensions .= '                <span class="dm-tool-config-warning">' . "\n";
+                $extensions .= '                    ⚠ <a href="' . esc_url(admin_url('options-general.php?page=data-machine-settings')) . '" target="_blank">' . esc_html__('Configure in settings', 'data-machine') . '</a>' . "\n";
+                $extensions .= '                </span>' . "\n";
+            }
+            
+            $extensions .= '            </div>' . "\n";
+        }
+        
+        $extensions .= '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'data-machine') . '</p>' . "\n";
+        $extensions .= '        </fieldset>' . "\n";
+        $extensions .= '    </td>' . "\n";
+        $extensions .= '</tr>' . "\n";
+    }
+    
+    // Insert extensions before closing table tag
+    $output = str_replace('</table>', $extensions . '</table>', $output);
+    
+    return $output;
+}, 20, 2);
 
 /**
  * Auto-register AI step filters when this file is loaded.

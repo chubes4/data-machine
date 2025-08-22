@@ -9,7 +9,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\Threads;
+namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {

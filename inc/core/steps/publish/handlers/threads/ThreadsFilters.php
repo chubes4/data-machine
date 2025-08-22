@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\Threads;
+namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -60,18 +60,14 @@ function dm_register_threads_filters() {
     });
     
     // Threads tool registration with AI HTTP Client library
-    add_filter('ai_tools', function($tools) {
-        $tools['threads_publish'] = dm_get_threads_tool();
-        return $tools;
-    });
-
-    // Dynamic tool generation based on current configuration
-    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+        // Only generate Threads tool when it's the target handler
         if ($handler_slug === 'threads') {
-            return dm_get_threads_tool($handler_config);
+            $tools['threads_publish'] = dm_get_threads_tool($handler_config);
         }
-        return $tool;
+        return $tools;
     }, 10, 3);
+
     
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }

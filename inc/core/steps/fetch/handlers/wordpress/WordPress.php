@@ -9,7 +9,7 @@
  * @since      1.0.0
  */
 
-namespace DataMachine\Core\Handlers\Fetch\WordPress;
+namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
 
 use WP_Query;
 
@@ -54,7 +54,7 @@ class WordPress {
         $user_id = get_current_user_id();
 
         // Access config from handler config structure
-        $config = $handler_config['wordpress'] ?? [];
+        $config = $handler_config['wordpress_fetch'] ?? [];
         
         // Fetch from local WordPress installation
         $items = $this->fetch_local_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
@@ -84,10 +84,8 @@ class WordPress {
         // Otherwise continue with normal query-based fetching
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
         $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
-        $category_id = function_exists('absint') ? absint($config['category_id'] ?? 0) : intval(abs($config['category_id'] ?? 0));
-        $tag_id = function_exists('absint') ? absint($config['tag_id'] ?? 0) : intval(abs($config['tag_id'] ?? 0));
-        $orderby = sanitize_text_field($config['orderby'] ?? 'date');
-        $order = sanitize_text_field($config['order'] ?? 'DESC');
+        $orderby = 'modified';
+        $order = 'DESC';
 
         // Direct config parsing
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
@@ -117,14 +115,24 @@ class WordPress {
             'update_post_term_cache' => false, // Performance optimization
         ];
 
-        // Add category filter if specified
-        if ($category_id > 0) {
-            $query_args['cat'] = $category_id;
+        // Handle dynamic taxonomy filters
+        $tax_query = [];
+        foreach ($config as $field_key => $field_value) {
+            if (strpos($field_key, 'taxonomy_') === 0 && strpos($field_key, '_filter') !== false) {
+                $term_id = intval($field_value);
+                if ($term_id > 0) {
+                    // Extract taxonomy name from field key: taxonomy_{slug}_filter  
+                    $taxonomy_slug = str_replace(['taxonomy_', '_filter'], '', $field_key);
+                    $tax_query[] = [
+                        'taxonomy' => $taxonomy_slug,
+                        'field'    => 'term_id', 
+                        'terms'    => [$term_id],
+                    ];
+                }
+            }
         }
-
-        // Add tag filter if specified
-        if ($tag_id > 0) {
-            $query_args['tag_id'] = $tag_id;
+        if (!empty($tax_query)) {
+            $query_args['tax_query'] = $tax_query;
         }
 
         // Add search term if specified
@@ -161,7 +169,7 @@ class WordPress {
             $title = $post->post_title ?: 'N/A';
             $content = $post->post_content ?: '';
             $source_link = get_permalink($post_id);
-            $image_url = $this->extract_image_url($post_id, $content);
+            $image_url = $this->extract_image_url($post_id);
 
             // Extract source name
             $site_name = get_bloginfo('name');
@@ -250,29 +258,14 @@ class WordPress {
     }
 
     /**
-     * Extract image URL from post (featured image with content fallback).
+     * Extract featured image URL from post.
      *
-     * @param int    $post_id Post ID.
-     * @param string $content Post content.
-     * @return string|null Image URL or null if none found.
+     * @param int $post_id Post ID.
+     * @return string|null Featured image URL or null if none found.
      */
-    private function extract_image_url(int $post_id, string $content): ?string {
+    private function extract_image_url(int $post_id): ?string {
         $featured_image_id = get_post_thumbnail_id($post_id);
-        $image_url = $featured_image_id ? wp_get_attachment_image_url($featured_image_id, 'full') : null;
-
-        // Fallback: Try to get the first image from content if no featured image
-        if (empty($image_url) && !empty($content)) {
-            if (preg_match('/<img.*?src=[\'"]([^\'"]*)[\'"]/i', $content, $matches)) {
-                $first_image_src = $matches[1];
-                // Basic validation - check if it looks like a URL
-                if (filter_var($first_image_src, FILTER_VALIDATE_URL)) {
-                    $image_url = $first_image_src;
-                    do_action('dm_log', 'debug', 'WordPress Input: Using first image from content as fallback.', ['found_url' => $image_url, 'post_id' => $post_id]);
-                }
-            }
-        }
-
-        return $image_url;
+        return $featured_image_id ? wp_get_attachment_image_url($featured_image_id, 'full') : null;
     }
 
 

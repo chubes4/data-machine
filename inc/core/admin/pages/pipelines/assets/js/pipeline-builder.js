@@ -121,8 +121,7 @@
                 }
                 
             }).catch((error) => {
-                // Failed to render pipeline step template
-                alert('Error rendering step template');
+                // Template rendering failed - fail silently
             });
         },
 

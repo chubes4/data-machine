@@ -15,13 +15,47 @@
     },
     "autoload": {
         "psr-4": {
-            "DataMachine\\Core\\": "inc/core/",
-            "DataMachine\\Admin\\": "inc/admin/",
-            "DataMachine\\Engine\\": "inc/engine/",
-            "DataMachine\\Services\\": "inc/services/",
-            "DataMachine\\Helpers\\": "inc/helpers/"
+            "DataMachine\\Core\\": "inc/Core/",
+            "DataMachine\\Admin\\": "inc/Admin/",
+            "DataMachine\\Engine\\": "inc/Engine/",
+            "DataMachine\\Services\\": "inc/Services/",
+            "DataMachine\\Helpers\\": "inc/Helpers/"
         },
-        "files": []
+        "files": [
+            "inc/Engine/filters/DataMachineFilters.php",
+            "inc/Engine/filters/Database.php",
+            "inc/Engine/filters/Admin.php",
+            "inc/Engine/filters/Logger.php",
+            "inc/Engine/filters/AI.php",
+            "inc/Engine/filters/OAuth.php",
+            "inc/Engine/Actions/DataMachineActions.php",
+            "inc/Engine/filters/StatusDetection.php",
+            "inc/Core/Database/ProcessedItems/ProcessedItemsFilters.php",
+            "inc/Core/Database/Pipelines/PipelinesFilters.php",
+            "inc/Core/Database/Jobs/JobsFilters.php",
+            "inc/Core/Database/Flows/FlowsFilters.php",
+            "inc/Core/Admin/Modal/ModalFilters.php",
+            "inc/Core/Admin/Pages/Pipelines/PipelinesFilters.php",
+            "inc/Core/Admin/Settings/SettingsFilters.php",
+            "inc/Core/Admin/Pages/Logs/LogsFilters.php",
+            "inc/Core/Admin/Pages/Jobs/JobsFilters.php",
+            "inc/Core/Steps/Fetch/FetchStepFilters.php",
+            "inc/Core/Steps/Fetch/Handlers/WordPress/WordPressFilters.php",
+            "inc/Core/Steps/Fetch/Handlers/Rss/RssFilters.php",
+            "inc/Core/Steps/Fetch/Handlers/GoogleSheets/GoogleSheetsFetchFilters.php",
+            "inc/Core/Steps/Fetch/Handlers/Reddit/RedditFilters.php",
+            "inc/Core/Steps/Fetch/Handlers/Files/FilesFilters.php",
+            "inc/Core/Steps/Publish/PublishStepFilters.php",
+            "inc/Core/Steps/Publish/Handlers/Twitter/TwitterFilters.php",
+            "inc/Core/Steps/Publish/Handlers/WordPress/WordPressFilters.php",
+            "inc/Core/Steps/Publish/Handlers/GoogleSheets/GoogleSheetsFilters.php",
+            "inc/Core/Steps/Publish/Handlers/Facebook/FacebookFilters.php",
+            "inc/Core/Steps/Publish/Handlers/Threads/ThreadsFilters.php",
+            "inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyFilters.php",
+            "inc/Core/Steps/AI/AIStepFilters.php",
+            "inc/Core/Steps/AI/Tools/GeneralToolsFilters.php",
+            "inc/Engine/filters/FilesRepository.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

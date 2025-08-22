@@ -45,6 +45,13 @@ function dm_register_logs_admin_page_filters() {
                         'deps' => [],
                         'media' => 'all'
                     ]
+                ],
+                'js' => [
+                    'dm-admin-logs' => [
+                        'file' => 'inc/core/admin/pages/logs/assets/js/admin-logs.js',
+                        'deps' => ['jquery'],
+                        'in_footer' => true
+                    ]
                 ]
             ]
         ];

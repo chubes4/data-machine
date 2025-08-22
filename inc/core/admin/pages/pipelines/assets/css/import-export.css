@@ -19,6 +19,14 @@
     border-bottom: 2px solid #0073aa;
 }
 
+.dm-modal-tab-content {
+    display: none;
+}
+
+.dm-modal-tab-content.active {
+    display: block;
+}
+
 .dm-export-table {
     margin: 15px 0;
 }

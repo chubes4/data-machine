@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\WordPress;
+namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -209,7 +209,7 @@ class WordPressSettings {
         $sanitized = [
             'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
             'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'draft'),
-            'post_author' => absint($raw_settings['post_author'] ?? get_current_user_id()),
+            'post_author' => absint($raw_settings['post_author']),
         ];
 
         // Sanitize dynamic taxonomy selections
@@ -268,8 +268,8 @@ class WordPressSettings {
         $defaults = [
             'post_type' => 'post',
             'post_status' => 'draft',
-            'post_author' => get_current_user_id(),
             'post_date_source' => 'current_date',
+            'post_author' => get_current_user_id(), // Add missing default author
         ];
 
         // Add dynamic taxonomy defaults (all skip by default)

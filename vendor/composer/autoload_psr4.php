@@ -7,15 +7,12 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Psr\\Log\\' => array($vendorDir . '/psr/log/src'),
-    'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
     'Monolog\\' => array($vendorDir . '/monolog/monolog/src/Monolog'),
-    'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
-    'DataMachine\\Tests\\' => array($baseDir . '/tests'),
-    'DataMachine\\Services\\' => array($baseDir . '/inc/services'),
-    'DataMachine\\Helpers\\' => array($baseDir . '/inc/helpers'),
-    'DataMachine\\Engine\\' => array($baseDir . '/inc/engine'),
-    'DataMachine\\Core\\' => array($baseDir . '/inc/core'),
-    'DataMachine\\Admin\\' => array($baseDir . '/inc/admin'),
+    'DataMachine\\Services\\' => array($baseDir . '/inc/Services'),
+    'DataMachine\\Helpers\\' => array($baseDir . '/inc/Helpers'),
+    'DataMachine\\Engine\\' => array($baseDir . '/inc/Engine'),
+    'DataMachine\\Core\\' => array($baseDir . '/inc/Core'),
+    'DataMachine\\Admin\\' => array($baseDir . '/inc/Admin'),
     'Composer\\CaBundle\\' => array($vendorDir . '/composer/ca-bundle/src'),
     'Abraham\\TwitterOAuth\\' => array($vendorDir . '/abraham/twitteroauth/src'),
 );

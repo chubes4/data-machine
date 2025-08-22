@@ -194,27 +194,48 @@
         },
 
         /**
-         * Save AI prompt via AJAX
+         * Save AI prompt via AJAX using the same action as the modal
          */
         saveAIPrompt: function(pipelineStepId, prompt, $textarea) {
-            // Allow empty prompts
+            // Get the current configuration from the card display
+            const $stepCard = $textarea.closest('.dm-step-card');
+            const $modelDisplay = $stepCard.find('.dm-model-name strong');
             
-            // Silent auto-save - no UI feedback
+            if (!$modelDisplay.length) {
+                return;
+            }
             
+            // Extract provider and model from the display text "Provider: Model"
+            const displayText = $modelDisplay.text();
+            const parts = displayText.split(': ');
+            if (parts.length !== 2) {
+                return;
+            }
+            
+            const provider = parts[0].toLowerCase();
+            const model = parts[1];
+            
+            // Use the same action as the modal with all required fields
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_save_ai_prompt',
-                    pipeline_step_id: pipelineStepId,
-                    ai_prompt: prompt,
+                    action: 'dm_configure_step_action',
+                    ai_provider: provider,
+                    ai_model: model,
+                    ai_system_prompt: prompt,
+                    context: JSON.stringify({
+                        step_type: 'ai',
+                        pipeline_id: $stepCard.closest('.dm-step-container').data('pipeline-id'),
+                        pipeline_step_id: pipelineStepId
+                    }),
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
                 success: (response) => {
-                    // Silent save - no UI feedback
+                    // Silent save - no UI feedback needed for auto-save
                 },
                 error: (xhr, status, error) => {
-                    // Silent save - no UI feedback
+                    // Silent save - no UI feedback needed for auto-save
                 }
             });
         },

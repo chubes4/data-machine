@@ -19,20 +19,46 @@ if (!defined('WPINC')) {
 class PipelineModalAjax
 {
     /**
+     * Register all pipeline modal AJAX handlers.
+     *
+     * Self-contained registration pattern following WordPress-native approach.
+     * Registers all modal-related AJAX actions this class handles.
+     *
+     * @since NEXT_VERSION
+     */
+    public static function register() {
+        $instance = new self();
+        
+        // Modal and template AJAX actions
+        add_action('wp_ajax_dm_get_template', [$instance, 'handle_get_template']);
+        add_action('wp_ajax_dm_get_flow_step_card', [$instance, 'handle_get_flow_step_card']);
+        add_action('wp_ajax_dm_get_flow_config', [$instance, 'handle_get_flow_config']);
+        add_action('wp_ajax_dm_configure_step_action', [$instance, 'handle_configure_step_action']);
+        add_action('wp_ajax_dm_add_handler_action', [$instance, 'handle_add_handler_action']);
+        add_action('wp_ajax_dm_upload_file', [$instance, 'handle_upload_file']);
+        add_action('wp_ajax_dm_save_handler_settings', [$instance, 'handle_save_handler_settings']);
+        add_action('wp_ajax_dm_get_pipeline_data', [$instance, 'handle_get_pipeline_data']);
+        add_action('wp_ajax_dm_get_flow_data', [$instance, 'handle_get_flow_data']);
+    }
+
+    /**
      * Handle pipeline modal AJAX requests (UI support)
      */
-    // Routing wrapper method removed - individual WordPress action hooks call methods directly
 
 
 
     /**
      * Get rendered template with provided data
      * Dedicated endpoint for template rendering to maintain architecture consistency
-     * Security handled by dm_ajax_route system
      */
     public function handle_get_template()
     {
-        // Remove fallbacks - require explicit data
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        // Require explicit data
         if (!isset($_POST['template'])) {
             wp_send_json_error(['message' => __('Template parameter is required', 'data-machine')]);
         }
@@ -76,10 +102,13 @@ class PipelineModalAjax
 
     /**
      * Get flow step card data for template rendering
-     * Security handled by dm_ajax_route system
      */
     public function handle_get_flow_step_card()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
         $pipeline_id = (int) ($_POST['pipeline_id'] ?? 0);
@@ -119,10 +148,13 @@ class PipelineModalAjax
 
     /**
      * Get flow configuration for step card updates
-     * Security handled by dm_ajax_route system
      */
     public function handle_get_flow_config()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         $flow_id = (int) sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 
         if (empty($flow_id)) {
@@ -142,11 +174,15 @@ class PipelineModalAjax
 
     /**
      * Handle step configuration save action
-     * Security handled by dm_ajax_route system
      */
     public function handle_configure_step_action()
     {
-        // Get context data from AJAX request - no fallbacks
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        // Get context data from AJAX request
         if (!isset($_POST['context'])) {
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
@@ -223,7 +259,7 @@ class PipelineModalAjax
             // Save AI HTTP Client step-aware configuration using actions
             try {
                     
-                    // Get form data using step-aware field names (no fallbacks)
+                    // Get form data using step-aware field names
                     $form_data = [];
                     
                     // AI HTTP Client now uses standard field names - Data Machine handles step-specific storage
@@ -384,10 +420,13 @@ class PipelineModalAjax
 
     /**
      * Handle add handler action with proper update vs replace logic
-     * Security handled by dm_ajax_route system
      */
     public function handle_add_handler_action()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         // Pure discovery approach - get only essential data from context
         $context = $_POST['context'] ?? [];
         if (is_string($context)) {
@@ -453,6 +492,10 @@ class PipelineModalAjax
      */
     public function handle_upload_file()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         
         // Check if file was uploaded
         if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
@@ -539,10 +582,13 @@ class PipelineModalAjax
 
     /**
      * Handle save handler settings action
-     * Security handled by dm_ajax_route system
      */
     public function handle_save_handler_settings()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         // Enhanced debugging for save handler process
         do_action('dm_log', 'debug', 'Save handler settings request received', [
             'post_keys' => array_keys($_POST),
@@ -550,8 +596,6 @@ class PipelineModalAjax
             'has_nonce' => isset($_POST['handler_settings_nonce']),
             'user_can_manage' => current_user_can('manage_options')
         ]);
-        
-        // Note: nonce verification handled by dm_ajax_route system
         
         // Get and validate required form data
         $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
@@ -615,10 +659,13 @@ class PipelineModalAjax
 
     /**
      * Get complete pipeline data using filters
-     * Security handled by dm_ajax_route system
      */
     public function handle_get_pipeline_data()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
 
         if (empty($pipeline_id)) {
@@ -641,10 +688,13 @@ class PipelineModalAjax
 
     /**
      * Get flow data for validation and operations
-     * Security handled by dm_ajax_route system
      */
     public function handle_get_flow_data()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
         $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
 
         if (empty($pipeline_id)) {
@@ -668,126 +718,6 @@ class PipelineModalAjax
         ]);
     }
 
-    /**
-     * Handle account disconnection for OAuth handlers
-     * Security handled by dm_ajax_route system
-     */
-    public function handle_disconnect_account()
-    {
-        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
-        
-        if (empty($handler_slug)) {
-            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
-        }
-
-        // Validate handler exists and supports authentication
-        $all_auth = apply_filters('dm_auth_providers', []);
-        $auth_instance = $all_auth[$handler_slug] ?? null;
-        
-        if (!$auth_instance) {
-            wp_send_json_error(['message' => __('Authentication provider not found', 'data-machine')]);
-        }
-
-        // Clear OAuth credentials using dm_oauth filter
-        $cleared = apply_filters('dm_oauth', false, 'clear', $handler_slug);
-        
-        if ($cleared) {
-            do_action('dm_log', 'debug', 'Account disconnected successfully', [
-                'handler_slug' => $handler_slug
-            ]);
-            
-            wp_send_json_success([
-                'message' => sprintf(__('%s account disconnected successfully', 'data-machine'), ucfirst($handler_slug))
-            ]);
-        } else {
-            do_action('dm_log', 'error', 'Failed to disconnect account', [
-                'handler_slug' => $handler_slug
-            ]);
-            
-            wp_send_json_error(['message' => __('Failed to disconnect account', 'data-machine')]);
-        }
-    }
-
-    /**
-     * Check OAuth authentication status for polling
-     * Security handled by dm_ajax_route system
-     */
-    public function handle_check_oauth_status()
-    {
-        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
-        
-        if (empty($handler_slug)) {
-            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
-        }
-
-        // Get auth provider instance
-        $all_auth = apply_filters('dm_auth_providers', []);
-        $auth_instance = $all_auth[$handler_slug] ?? null;
-        
-        if (!$auth_instance) {
-            wp_send_json_error(['message' => __('Authentication provider not found', 'data-machine')]);
-        }
-
-        // Check authentication status
-        $is_authenticated = $auth_instance->is_authenticated();
-        
-        if ($is_authenticated) {
-            // Get account details for success response
-            $account_details = null;
-            if (method_exists($auth_instance, 'get_account_details')) {
-                $account_details = $auth_instance->get_account_details();
-            }
-            
-            wp_send_json_success([
-                'authenticated' => true,
-                'account_details' => $account_details,
-                'handler_slug' => $handler_slug
-            ]);
-        } else {
-            // Check for recent OAuth errors stored in transients
-            $error_transient = get_transient('dm_oauth_error_' . $handler_slug);
-            $success_transient = get_transient('dm_oauth_success_' . $handler_slug);
-            
-            if ($error_transient) {
-                // Clear the error transient since we're handling it
-                delete_transient('dm_oauth_error_' . $handler_slug);
-                
-                wp_send_json_success([
-                    'authenticated' => false,
-                    'error' => true,
-                    'error_code' => 'oauth_failed',
-                    'error_message' => $error_transient,
-                    'handler_slug' => $handler_slug
-                ]);
-            } elseif ($success_transient) {
-                // Clear the success transient and re-check auth status
-                delete_transient('dm_oauth_success_' . $handler_slug);
-                
-                // Force re-check authentication status as success transient might indicate completion
-                $is_authenticated = $auth_instance->is_authenticated();
-                
-                if ($is_authenticated) {
-                    $account_details = null;
-                    if (method_exists($auth_instance, 'get_account_details')) {
-                        $account_details = $auth_instance->get_account_details();
-                    }
-                    
-                    wp_send_json_success([
-                        'authenticated' => true,
-                        'account_details' => $account_details,
-                        'handler_slug' => $handler_slug
-                    ]);
-                }
-            }
-            
-            // Still not authenticated, continue polling
-            wp_send_json_success([
-                'authenticated' => false,
-                'error' => false,
-                'handler_slug' => $handler_slug
-            ]);
-        }
-    }
 
     /**
      * Process handler settings from form data

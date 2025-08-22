@@ -11,7 +11,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Reddit;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

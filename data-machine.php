@@ -31,14 +31,6 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 }
 
 require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
-require_once __DIR__ . '/inc/engine/filters/DataMachineFilters.php';
-require_once __DIR__ . '/inc/engine/filters/Database.php';
-require_once __DIR__ . '/inc/engine/filters/Admin.php';
-require_once __DIR__ . '/inc/engine/filters/Logger.php';
-require_once __DIR__ . '/inc/engine/filters/AI.php';
-require_once __DIR__ . '/inc/engine/filters/OAuth.php';
-require_once __DIR__ . '/inc/engine/actions/DataMachineActions.php';
-require_once __DIR__ . '/inc/engine/filters/StatusDetection.php';
 
 function run_data_machine() {
     dm_register_database_service_system();
@@ -50,69 +42,14 @@ function run_data_machine() {
     dm_register_status_detection_filters();
     dm_register_core_actions();
     
-    dm_autoload_core_component_directory('inc/core/admin/');
-    dm_autoload_core_component_directory('inc/core/steps/');
-    dm_autoload_core_component_directory('inc/core/database/');
+    // Register create filters
+    \DataMachine\Engine\Filters\Create::register();
+    
+    // Register AJAX handler classes
+    \DataMachine\Core\Admin\Pages\Pipelines\PipelinePageAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\PipelineModalAjax::register();
 }
 
-function dm_autoload_core_component_directory(string $relative_path): void {
-    $component_root = DATA_MACHINE_PATH . $relative_path;
-    
-    if (!is_dir($component_root)) {
-        return;
-    }
-    
-    $component_directories = glob($component_root . '*', GLOB_ONLYDIR);
-    
-    foreach ($component_directories as $component_dir) {
-        $php_files = glob($component_dir . '/*.php');
-        
-        foreach ($php_files as $php_file) {
-            require_once $php_file;
-        }
-        
-        if (strpos($relative_path, 'handlers/') !== false || strpos($relative_path, 'steps/') !== false) {
-            $handler_subdirs = glob($component_dir . '/*', GLOB_ONLYDIR);
-            
-            foreach ($handler_subdirs as $handler_subdir) {
-                $handler_php_files = glob($handler_subdir . '/*.php');
-                
-                foreach ($handler_php_files as $handler_php_file) {
-                    require_once $handler_php_file;
-                }
-                
-                if (basename($handler_subdir) === 'handlers') {
-                    $individual_handlers = glob($handler_subdir . '/*', GLOB_ONLYDIR);
-                    
-                    foreach ($individual_handlers as $individual_handler_dir) {
-                        $handler_files = glob($individual_handler_dir . '/*.php');
-                        
-                        foreach ($handler_files as $handler_file) {
-                            require_once $handler_file;
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (basename($component_dir) === 'pages') {
-            $page_subdirectories = glob($component_dir . '/*', GLOB_ONLYDIR);
-            
-            foreach ($page_subdirectories as $page_dir) {
-                $page_php_files = glob($page_dir . '/*.php');
-                
-                foreach ($page_php_files as $page_php_file) {
-                    require_once $page_php_file;
-                }
-            }
-        }
-    }
-    
-    $root_php_files = glob($component_root . '*.php');
-    foreach ($root_php_files as $php_file) {
-        require_once $php_file;
-    }
-}
 
 add_action('plugins_loaded', 'run_data_machine', 20);
 
@@ -130,7 +67,6 @@ function dm_deactivate_plugin() {
 }
 
 function activate_data_machine() {
-	dm_autoload_core_component_directory('inc/core/database/');
 	dm_register_database_service_system();
 
 	$all_databases = apply_filters('dm_db', []);

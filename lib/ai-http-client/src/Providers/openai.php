@@ -38,7 +38,7 @@ class AI_HTTP_OpenAI_Provider {
      *
      * @param array $config Provider configuration
      */
-    public function __construct($config = array()) {
+    public function __construct($config = []) {
         $this->api_key = isset($config['api_key']) ? $config['api_key'] : '';
         $this->organization = isset($config['organization']) ? $config['organization'] : '';
         
@@ -319,7 +319,7 @@ class AI_HTTP_OpenAI_Provider {
      * @return array Normalized models array
      */
     private function normalize_models_response($raw_models) {
-        $models = array();
+        $models = [];
         
         // OpenAI returns: { "data": [{"id": "gpt-4", "object": "model", ...}, ...] }
         $data = isset($raw_models['data']) ? $raw_models['data'] : $raw_models;
@@ -466,7 +466,7 @@ class AI_HTTP_OpenAI_Provider {
      * @return array OpenAI-formatted messages
      */
     private function normalize_openai_messages($messages) {
-        $normalized = array();
+        $normalized = [];
 
         foreach ($messages as $message) {
             if (!isset($message['role']) || !isset($message['content'])) {
@@ -503,7 +503,7 @@ class AI_HTTP_OpenAI_Provider {
      * @return array OpenAI multi-modal content format
      */
     private function build_openai_multimodal_content($message) {
-        $content = array();
+        $content = [];
 
         // Handle content array format (from AIStep)
         if (is_array($message['content'])) {
@@ -585,7 +585,7 @@ class AI_HTTP_OpenAI_Provider {
      * @return array OpenAI-formatted tools
      */
     private function normalize_openai_tools($tools) {
-        $normalized = array();
+        $normalized = [];
 
         foreach ($tools as $tool) {
             // Handle nested format (Chat Completions) - convert to flat format (Responses API)
@@ -630,8 +630,8 @@ class AI_HTTP_OpenAI_Provider {
         }
         
         // Convert library standard format to OpenAI JSON Schema
-        $properties = array();
-        $required = array();
+        $properties = [];
+        $required = [];
         
         foreach ($library_parameters as $param_name => $param_config) {
             if (!is_array($param_config)) {
@@ -639,7 +639,7 @@ class AI_HTTP_OpenAI_Provider {
             }
             
             // Extract type and description
-            $properties[$param_name] = array();
+            $properties[$param_name] = [];
             if (isset($param_config['type'])) {
                 $properties[$param_name]['type'] = $param_config['type'];
                 
@@ -693,7 +693,7 @@ class AI_HTTP_OpenAI_Provider {
         
         // Extract content and tool calls from output
         $content = '';
-        $tool_calls = array();
+        $tool_calls = [];
         
         if (isset($response['output']) && is_array($response['output'])) {
             foreach ($response['output'] as $output_item) {
@@ -732,7 +732,7 @@ class AI_HTTP_OpenAI_Provider {
                     // Parse JSON arguments
                     $function_arguments = json_decode($function_arguments_json, true);
                     if (json_last_error() !== JSON_ERROR_NONE) {
-                        $function_arguments = array();
+                        $function_arguments = [];
                     }
                     
                     if (!empty($function_name)) {

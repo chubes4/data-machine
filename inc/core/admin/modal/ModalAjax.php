@@ -80,7 +80,7 @@ class ModalAjax
                 'template' => $title
             ]);
         } else {
-            // Fallback to dynamic modal rendering for unregistered templates
+            // Dynamic modal rendering for unregistered templates
             $context = $_POST['context'] ?? [];
             if (is_string($context)) {
                 $context = json_decode($context, true) ?: [];
@@ -135,10 +135,6 @@ class ModalAjax
      * Render form field from Settings configuration
      */
     public static function render_settings_field(string $field_name, array $field_config, $current_value = null): string {
-        $field_type = $field_config['type'] ?? 'text';
-        $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $field_name));
-        $description = $field_config['description'] ?? '';
-        $options = $field_config['options'] ?? [];
         $attributes = $field_config['attributes'] ?? [];
         
         // Build attributes string
@@ -147,127 +143,17 @@ class ModalAjax
             $attrs .= ' ' . esc_attr($attr) . '="' . esc_attr($value) . '"';
         }
         
-        $field_html = '';
+        // Prepare template data
+        $template_data = [
+            'field_name' => $field_name,
+            'field_config' => $field_config,
+            'current_value' => $current_value,
+            'attrs' => $attrs,
+            'label' => $field_config['label'] ?? ucfirst(str_replace('_', ' ', $field_name)),
+            'description' => $field_config['description'] ?? '',
+            'options' => $field_config['options'] ?? []
+        ];
         
-        switch ($field_type) {
-            case 'text':
-            case 'url':
-            case 'email':
-                $field_html = sprintf(
-                    '<input type="%s" id="%s" name="%s" value="%s" class="regular-text"%s />',
-                    esc_attr($field_type),
-                    esc_attr($field_name),
-                    esc_attr($field_name),
-                    esc_attr($current_value ?? ''),
-                    $attrs
-                );
-                break;
-                
-            case 'number':
-                $field_html = sprintf(
-                    '<input type="number" id="%s" name="%s" value="%s" class="regular-text"%s />',
-                    esc_attr($field_name),
-                    esc_attr($field_name),
-                    esc_attr($current_value ?? ''),
-                    $attrs
-                );
-                break;
-                
-            case 'textarea':
-                $field_html = sprintf(
-                    '<textarea id="%s" name="%s" rows="5" class="large-text"%s>%s</textarea>',
-                    esc_attr($field_name),
-                    esc_attr($field_name),
-                    $attrs,
-                    esc_textarea($current_value ?? '')
-                );
-                break;
-                
-            case 'select':
-                $field_html = sprintf('<select id="%s" name="%s" class="regular-text"%s>', 
-                    esc_attr($field_name), 
-                    esc_attr($field_name), 
-                    $attrs
-                );
-                
-                foreach ($options as $option_value => $option_label) {
-                    $selected = ($current_value == $option_value) ? ' selected="selected"' : '';
-                    $field_html .= sprintf(
-                        '<option value="%s"%s>%s</option>',
-                        esc_attr($option_value),
-                        $selected,
-                        esc_html($option_label)
-                    );
-                }
-                $field_html .= '</select>';
-                break;
-                
-            case 'checkbox':
-                $checked = !empty($current_value) ? ' checked="checked"' : '';
-                $field_html = sprintf(
-                    '<label><input type="checkbox" id="%s" name="%s" value="1"%s%s /> %s</label>',
-                    esc_attr($field_name),
-                    esc_attr($field_name),
-                    $checked,
-                    $attrs,
-                    esc_html($label)
-                );
-                // For checkboxes, don't show label separately
-                $label = '';
-                break;
-                
-            case 'readonly':
-                // Read-only field for displaying values (like redirect URIs)
-                $display_value = $field_config['value'] ?? $current_value ?? '';
-                $field_html = sprintf(
-                    '<input type="text" id="%s" name="%s" value="%s" class="regular-text dm-readonly-field" readonly%s />',
-                    esc_attr($field_name),
-                    esc_attr($field_name),
-                    esc_attr($display_value),
-                    $attrs
-                );
-                break;
-                
-            case 'section':
-                // Section headers with description support
-                $section_html = sprintf('<h4>%s</h4>', esc_html($label));
-                if ($description) {
-                    $section_html .= sprintf('<p>%s</p>', esc_html($description));
-                }
-                return $section_html;
-                
-            default:
-                // Fallback to text input
-                $field_html = sprintf(
-                    '<input type="text" id="%s" name="%s" value="%s" class="regular-text"%s />',
-                    esc_attr($field_name),
-                    esc_attr($field_name),
-                    esc_attr($current_value ?? ''),
-                    $attrs
-                );
-                break;
-        }
-        
-        // Wrap field with label and description
-        $output = '';
-        if ($field_type !== 'section') {
-            $output .= '<div class="dm-form-field">';
-            
-            if ($label && $field_type !== 'checkbox') {
-                $output .= sprintf('<label for="%s">%s</label>', esc_attr($field_name), esc_html($label));
-            }
-            
-            $output .= $field_html;
-            
-            if ($description) {
-                $output .= sprintf('<p class="description">%s</p>', esc_html($description));
-            }
-            
-            $output .= '</div>';
-        } else {
-            $output = $field_html;
-        }
-        
-        return $output;
+        return apply_filters('dm_render_template', '', 'modal/fields', $template_data);
     }
 }

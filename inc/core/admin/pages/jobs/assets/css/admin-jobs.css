@@ -4,7 +4,7 @@
  * Extracted from inline styles for better code organization and maintainability.
  * Used by: inc/core/admin/pages/jobs/Jobs.php
  *
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
 
 /* Jobs page post boxes */
@@ -12,17 +12,6 @@
     margin-top: 20px;
 }
 
-/* Log viewer container */
-#dm-log-viewer {
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    padding: 10px;
-    height: 400px;
-    overflow-y: auto;
-    font-family: monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-}
 
 /* Inline form elements */
 .dm-logs-container .dm-inline-form {

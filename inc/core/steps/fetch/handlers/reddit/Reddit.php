@@ -9,7 +9,7 @@
  * @since      0.15.0
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Reddit;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -270,7 +270,7 @@ class Reddit {
 					if ($item_timestamp < $cutoff_timestamp) {
 						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'pipeline_id' => $pipeline_id]);
 						$batch_hit_time_limit = true;
-						continue; // Skip item if it's too old
+						continue;
 					}
 				}
 

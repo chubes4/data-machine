@@ -11,7 +11,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\Twitter;
+namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 

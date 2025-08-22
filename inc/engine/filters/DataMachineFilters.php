@@ -137,7 +137,7 @@ function dm_register_utility_filters() {
             'user-agent' => sprintf('DataMachine/%s (+%s)', 
                 defined('DATA_MACHINE_VERSION') ? DATA_MACHINE_VERSION : '1.0', 
                 home_url()),
-            'timeout' => 60  // 60-second timeout for external API calls
+            'timeout' => 120  // 120-second timeout for external API calls
         ]);
 
         // Set method for non-GET requests
@@ -308,13 +308,7 @@ function dm_register_utility_filters() {
         return $configs;
     }, 5);
 
-    // Universal files repository discovery system - allows external plugins to implement custom storage
-    // Usage: $all_repositories = apply_filters('dm_files_repository', []); $repository = $all_repositories['files'] ?? null;
-    add_filter('dm_files_repository', function($repositories) {
-        // Engine provides the filter hook infrastructure
-        // File storage components self-register their repository implementations via this same filter
-        return $repositories;
-    }, 5);
+    // Files repository system moved to dedicated FilesRepositoryFilters.php
     
     // Central Flow Step ID Generation Utility
     // Provides consistent flow_step_id generation across all system components

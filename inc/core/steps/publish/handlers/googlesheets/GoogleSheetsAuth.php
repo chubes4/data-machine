@@ -11,7 +11,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\GoogleSheets;
+namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly

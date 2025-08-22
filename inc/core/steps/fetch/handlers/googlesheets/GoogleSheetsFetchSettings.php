@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\GoogleSheets;
+namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -90,11 +90,7 @@ class GoogleSheetsFetchSettings {
         
         // Sanitize cell range with A1 notation validation
         $cell_range = sanitize_text_field($raw_settings['googlesheets_fetch_cell_range'] ?? 'A1:Z1000');
-        if (preg_match('/^[A-Z]+\d+:[A-Z]+\d+$/', $cell_range)) {
-            $sanitized['googlesheets_fetch_cell_range'] = $cell_range;
-        } else {
-            $sanitized['googlesheets_fetch_cell_range'] = 'A1:Z1000'; // Default fallback
-        }
+        $sanitized['googlesheets_fetch_cell_range'] = preg_match('/^[A-Z]+\d+:[A-Z]+\d+$/', $cell_range) ? $cell_range : 'A1:Z1000';
         
         // Header row option
         $sanitized['googlesheets_fetch_has_header_row'] = !empty($raw_settings['googlesheets_fetch_has_header_row']);

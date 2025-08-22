@@ -430,6 +430,31 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                 // Special formatting for Reddit subreddits
                 $display_value = 'r/' . $current_value;
                 $label = ''; // Empty label so only r/subredditname shows
+            } elseif (in_array($handler_slug, ['wordpress_fetch', 'wordpress_publish'])) {
+                // WordPress handlers: Use field options to get proper display labels
+                if (isset($field_config['options'])) {
+                    $options = $field_config['options'];
+                    if (isset($options[$current_value])) {
+                        $display_value = $options[$current_value];
+                    } elseif (strpos($setting_key, 'taxonomy_') === 0 && strpos($setting_key, '_filter') !== false) {
+                        // Handle taxonomy filter fields (0 = All, term_id = Term Name)
+                        if ($current_value == 0) {
+                            $display_value = $options[0] ?? __('All', 'data-machine');
+                        } else {
+                            // Get term name for term ID
+                            $taxonomy_name = str_replace(['taxonomy_', '_filter'], '', $setting_key);
+                            $term = get_term($current_value, $taxonomy_name);
+                            $display_value = (!is_wp_error($term) && $term) ? $term->name : $current_value;
+                        }
+                    }
+                } else {
+                    // Fallback for WordPress fields without options
+                    if ($setting_key === 'post_status' && $current_value === 'any') {
+                        $display_value = __('Any', 'data-machine');
+                    } elseif ($setting_key === 'post_type' && $current_value === 'any') {
+                        $display_value = __('Any', 'data-machine');
+                    }
+                }
             }
             
             $customizations[] = [

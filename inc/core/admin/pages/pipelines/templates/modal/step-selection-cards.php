@@ -54,8 +54,7 @@ if (!defined('WPINC')) {
                  data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 
-                 tabindex="0"
-                 style="cursor: pointer;">
+                 tabindex="0">
                 <div class="dm-step-card-header">
                     <h5 class="dm-step-card-title"><?php echo esc_html($label); ?></h5>
                 </div>

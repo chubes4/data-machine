@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\WordPress;
+namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -50,7 +50,9 @@ class WordPressSettings {
     private static function get_local_fields(): array {
         // Get available post types
         $post_types = get_post_types(['public' => true], 'objects');
-        $post_type_options = [];
+        $post_type_options = [
+            'any' => __('Any', 'data-machine'),
+        ];
         foreach ($post_types as $post_type) {
             if (is_object($post_type)) {
                 $post_type_options[$post_type->name] = $post_type->label;
@@ -64,7 +66,7 @@ class WordPressSettings {
 
         $fields = [
             'post_id' => [
-                'type' => 'number',
+                'type' => 'text',
                 'label' => __('Specific Post ID', 'data-machine'),
                 'description' => __('Target a specific post by ID. When provided, other filters are ignored.', 'data-machine'),
                 'placeholder' => __('Leave empty for general query', 'data-machine'),
@@ -85,26 +87,6 @@ class WordPressSettings {
                     'pending' => __('Pending', 'data-machine'),
                     'private' => __('Private', 'data-machine'),
                     'any' => __('Any', 'data-machine'),
-                ],
-            ],
-            'orderby' => [
-                'type' => 'select',
-                'label' => __('Order By', 'data-machine'),
-                'description' => __('Select the field to order results by.', 'data-machine'),
-                'options' => [
-                    'date' => __('Date', 'data-machine'),
-                    'modified' => __('Modified Date', 'data-machine'),
-                    'title' => __('Title', 'data-machine'),
-                    'ID' => __('ID', 'data-machine'),
-                ],
-            ],
-            'order' => [
-                'type' => 'select',
-                'label' => __('Order', 'data-machine'),
-                'description' => __('Select the order direction.', 'data-machine'),
-                'options' => [
-                    'DESC' => __('Descending', 'data-machine'),
-                    'ASC' => __('Ascending', 'data-machine'),
                 ],
             ],
         ];
@@ -223,10 +205,8 @@ class WordPressSettings {
     private static function sanitize_local_settings(array $raw_settings): array {
         $sanitized = [
             'post_id' => function_exists('absint') ? absint($raw_settings['post_id'] ?? 0) : intval(abs($raw_settings['post_id'] ?? 0)),
-            'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
+            'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'any'),
             'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'publish'),
-            'orderby' => sanitize_text_field($raw_settings['orderby'] ?? 'date'),
-            'order' => sanitize_text_field($raw_settings['order'] ?? 'DESC'),
         ];
 
         // Sanitize dynamic taxonomy filter selections
@@ -292,10 +272,8 @@ class WordPressSettings {
     public static function get_defaults(): array {
         $defaults = [
             'post_id' => 0,
-            'post_type' => 'post',
+            'post_type' => 'any',
             'post_status' => 'publish',
-            'orderby' => 'date',
-            'order' => 'DESC',
             'timeframe_limit' => 'all_time',
             'search' => '',
         ];

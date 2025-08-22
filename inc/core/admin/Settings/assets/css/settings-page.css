@@ -1,0 +1,125 @@
+.dm-settings-fieldset {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 8px 0;
+}
+
+.dm-settings-fieldset legend {
+    font-weight: 600;
+    padding: 0 8px;
+}
+
+.dm-settings-engine-mode {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+.dm-settings-engine-mode.active {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.dm-settings-pages {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    background: #fafafa;
+}
+
+.dm-settings-page-item {
+    display: block;
+    margin-bottom: 8px;
+    padding: 4px 0;
+}
+
+/* Settings page checkbox layout with proper specificity */
+.form-table fieldset .dm-settings-page-item {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.form-table fieldset .dm-settings-page-item:last-child {
+    margin-bottom: 0;
+}
+
+.dm-engine-mode-notice {
+    background: #e7f3ff;
+    border-left: 4px solid #0073aa;
+    padding: 12px;
+    margin: 16px 0;
+}
+
+/* Tool Options (for AI HTTP Client integration) */
+.dm-tool-option {
+    margin-bottom: 8px;
+}
+
+.dm-tool-option label {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.dm-tool-option label span {
+    margin-left: 4px;
+}
+
+/* Tool status indicators */
+.dm-tool-config-needed {
+    color: #d63638;
+    font-size: 12px;
+}
+
+.dm-tool-config-needed a {
+    color: #d63638;
+    text-decoration: none;
+}
+
+.dm-tool-status-available {
+    color: #00a32a;
+    font-size: 12px;
+}
+
+.dm-tool-status-disabled {
+    color: #ff8c00;
+    font-size: 12px;
+}
+
+.dm-tools-description {
+    margin-top: 8px;
+}
+
+/* Tool configuration items */
+.dm-tool-config-item {
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.dm-tool-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dm-tool-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dm-tool-status {
+    font-weight: 500;
+}
+
+/* Tool configuration status colors */
+.dm-tool-status.configured {
+    color: #00a32a;
+}
+
+.dm-tool-status.not-configured {
+    color: #d63638;
+}

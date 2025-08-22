@@ -1,0 +1,43 @@
+# Development files
+.git/
+.gitignore
+.DS_Store
+*.log
+
+# Documentation
+README.md
+LICENSE
+CLAUDE.md
+
+# Build system
+build.sh
+.buildignore
+build/
+
+# Testing
+tests/
+phpunit.xml
+coverage/
+
+# Development dependencies (handled by composer --no-dev)
+vendor/phpunit/
+vendor/yoast/
+vendor/php-stubs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Composer development files
+composer.lock
+
+# Node.js (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# OS files
+Thumbs.db
+.DS_Store

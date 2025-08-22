@@ -1,0 +1,57 @@
+/**
+ * Data Machine Pipeline Status System Styles
+ * 
+ * Centralized styling for all status detection visual indicators.
+ * Colors and styles for red/yellow/green status states.
+ * CENTRALIZED STATUS STYLES ONLY
+ *
+ * @since 1.0.0
+ */
+
+/* ===== FLOW STEP STATUS (LEFT BORDER) ===== */
+
+/* Flow steps use left border indicators for status */
+.dm-step-card--status-red {
+    border-left: 4px solid #dc3232;
+}
+
+.dm-step-card--status-yellow {
+    border-left: 4px solid #f0a000;
+}
+
+.dm-step-card--status-green {
+    border-left: 4px solid #00a32a;
+}
+
+/* ===== PIPELINE STEP STATUS (FULL BORDER) ===== */
+
+/* Pipeline steps use full border indicators for status */
+.dm-pipeline-step-card--status-red {
+    border: 1px solid #dc3232 !important;
+}
+
+.dm-pipeline-step-card--status-yellow {
+    border: 1px solid #f0a000 !important;
+}
+
+.dm-pipeline-step-card--status-green {
+    border: 1px solid #00a32a !important;
+}
+
+/* ===== STATUS CONTEXTS ===== */
+
+/*
+ * Status detection contexts handled by dm_detect_status filter:
+ * 
+ * - ai_step: AI step configuration and tool availability
+ * - handler_auth: Handler authentication status
+ * - wordpress_draft: WordPress publish handler draft detection  
+ * - files_status: Files handler file availability
+ * - subsequent_publish_step: Architectural warning for consecutive publish steps
+ * - pipeline_step_status: Pipeline-level status detection
+ *
+ * Colors:
+ * - Red (#dc3232): Critical issues (missing handlers, auth failures, missing files)
+ * - Yellow (#f0a000): Warnings (no customizations, drafts, architectural issues)
+ * - Green (#00a32a): Ready to execute
+ */

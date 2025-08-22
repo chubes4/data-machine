@@ -5,7 +5,7 @@
  * Handles basic database operations for jobs: create, read, update, delete.
  * Part of the modular Jobs architecture following single responsibility principle.
  *
- * Updated for Pipeline → Flow architecture (clean break from legacy project/module system).
+ * Pipeline → Flow architecture implementation.
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/includes/database/jobs

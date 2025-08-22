@@ -5,7 +5,7 @@
  * Follows handler-style modular architecture where the main class coordinates
  * between focused internal components for single responsibility compliance.
  *
- * Updated for Pipeline → Flow architecture (clean break from legacy project/module system).
+ * Pipeline → Flow architecture implementation.
  *
  * @package    Data_Machine
  * @subpackage Data_Machine/includes/database/jobs

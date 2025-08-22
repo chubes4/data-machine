@@ -94,7 +94,7 @@ class Update {
             return false;
         }
         
-        // Intelligent method selection - removes confusion from call sites
+        // Intelligent method selection
         $success = false;
         $method_used = '';
         

@@ -23,6 +23,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+
 /**
  * Register core pipeline execution engine actions.
  * 
@@ -40,9 +41,14 @@ function dm_register_execution_engine() {
         // Get flow data to determine pipeline_id
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
+        $db_jobs = $all_databases['jobs'] ?? null;
         
-        if (!$db_flows) {
-            do_action('dm_log', 'error', 'Flow execution failed - database service unavailable', ['flow_id' => $flow_id]);
+        if (!$db_flows || !$db_jobs) {
+            do_action('dm_log', 'error', 'Flow execution failed - database services unavailable', [
+                'flow_id' => $flow_id,
+                'flows_db' => $db_flows ? 'available' : 'missing',
+                'jobs_db' => $db_jobs ? 'available' : 'missing'
+            ]);
             return false;
         }
         
@@ -52,10 +58,46 @@ function dm_register_execution_engine() {
             return false;
         }
         
-        // Use organized dm_create action for consistent job creation
-        do_action('dm_create', 'job', [
+        // Create job directly to get job_id for execution chain
+        $job_id = $db_jobs->create_job([
             'pipeline_id' => (int)$flow['pipeline_id'],
             'flow_id' => $flow_id
+        ]);
+        
+        if (!$job_id) {
+            do_action('dm_log', 'error', 'Flow execution failed - job creation failed', [
+                'flow_id' => $flow_id,
+                'pipeline_id' => $flow['pipeline_id']
+            ]);
+            return false;
+        }
+        
+        // Find first step (execution_order = 0) for scheduling
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        
+        $first_flow_step_id = null;
+        foreach ($flow_config as $flow_step_id => $config) {
+            if (($config['execution_order'] ?? -1) === 0) {
+                $first_flow_step_id = $flow_step_id;
+                break;
+            }
+        }
+        
+        if (!$first_flow_step_id) {
+            do_action('dm_log', 'error', 'Flow execution failed - no first step found', [
+                'flow_id' => $flow_id,
+                'job_id' => $job_id
+            ]);
+            return false;
+        }
+        
+        // Schedule execution starting with first step
+        do_action('dm_schedule_next_step', $job_id, $first_flow_step_id, []);
+        
+        do_action('dm_log', 'info', 'Flow execution started successfully', [
+            'flow_id' => $flow_id,
+            'job_id' => $job_id,
+            'first_step' => $first_flow_step_id
         ]);
         
         return true;
@@ -66,6 +108,22 @@ function dm_register_execution_engine() {
     add_action( 'dm_execute_step', function( $job_id, $flow_step_id, $data = null ) {
         
         try {
+            // Retrieve data from storage if it's a reference, otherwise use data directly
+            $repositories = apply_filters('dm_files_repository', []);
+            $repository = $repositories['files'] ?? null;
+            
+            if ($repository && $repository->is_data_reference($data)) {
+                $data = $repository->retrieve_data_packet($data);
+                if ($data === null) {
+                    do_action('dm_log', 'error', 'Failed to retrieve data from storage', [
+                        'job_id' => $job_id,
+                        'flow_step_id' => $flow_step_id
+                    ]);
+                    do_action('dm_update_job_status', $job_id, 'failed', 'data_retrieval_failure');
+                    $repository->cleanup_job_data_packets($job_id);
+                    return false;
+                }
+            }
             // Load complete flow step configuration using flow_step_id
             $flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
             if (!$flow_step_config) {
@@ -74,6 +132,9 @@ function dm_register_execution_engine() {
                     'flow_step_id' => $flow_step_id
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+                if ($repository) {
+                    $repository->cleanup_job_data_packets($job_id);
+                }
                 return false;
             }
 
@@ -88,6 +149,9 @@ function dm_register_execution_engine() {
                     'step_type' => $step_type
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+                if ($repository) {
+                    $repository->cleanup_job_data_packets($job_id);
+                }
                 return false;
             }
             
@@ -111,8 +175,11 @@ function dm_register_execution_engine() {
                     // Schedule next step with updated data packet
                     do_action('dm_schedule_next_step', $job_id, $next_flow_step_id, $data);
                 } else {
-                    // Pipeline completed - mark job as completed
+                    // Pipeline completed - mark job as completed and clean up data
                     do_action('dm_update_job_status', $job_id, 'completed', 'complete');
+                    if ($repository) {
+                        $repository->cleanup_job_data_packets($job_id);
+                    }
                     do_action('dm_log', 'info', 'Pipeline execution completed successfully', [
                         'job_id' => $job_id,
                         'flow_step_id' => $flow_step_id,
@@ -125,6 +192,9 @@ function dm_register_execution_engine() {
                     'class' => $step_class
                 ]);
                 do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+                if ($repository) {
+                    $repository->cleanup_job_data_packets($job_id);
+                }
             }
 
 
@@ -137,6 +207,9 @@ function dm_register_execution_engine() {
                 'trace' => $e->getTraceAsString()
             ]);
             do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
+            if ($repository) {
+                $repository->cleanup_job_data_packets($job_id);
+            }
             return false;
         }
     }, 10, 3 );
@@ -152,14 +225,25 @@ function dm_register_execution_engine() {
             return false;
         }
         
-        // Direct Action Scheduler call with job_id and flow_step_id
+        // Always store data in files repository and use reference
+        $repositories = apply_filters('dm_files_repository', []);
+        $repository = $repositories['files'] ?? null;
+        
+        if ($repository) {
+            $data_reference = $repository->store_data_packet($data, $job_id, $flow_step_id);
+        } else {
+            // Fallback to direct data passing if repository unavailable
+            $data_reference = ['data' => $data];
+        }
+        
+        // Schedule Action Scheduler action with lightweight reference
         $action_id = as_schedule_single_action(
             time(), // Immediate execution
             'dm_execute_step',
             [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
-                'data' => $data
+                'data' => $data_reference
             ],
             'data-machine'
         );
@@ -170,7 +254,8 @@ function dm_register_execution_engine() {
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
                 'action_id' => $action_id,
-                'success' => ($action_id !== false)
+                'success' => ($action_id !== false),
+                'data_stored' => isset($data_reference['is_data_reference'])
             ]);
         }
         

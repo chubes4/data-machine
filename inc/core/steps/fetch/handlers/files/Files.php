@@ -6,7 +6,7 @@
  * @subpackage Data_Machine/core/handlers/fetch
  * @since      0.7.0
  */
-namespace DataMachine\Core\Handlers\Fetch\Files;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,9 +26,9 @@ class Files {
     /**
      * Get repository instance via filter discovery
      *
-     * @return FilesRepository|null
+     * @return \DataMachine\Engine\FilesRepository|null
      */
-	private function get_repository(): ?FilesRepository {
+	private function get_repository(): ?\DataMachine\Engine\FilesRepository {
 		$repositories = apply_filters('dm_files_repository', []);
 		return $repositories['files'] ?? null;
 	}

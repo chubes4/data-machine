@@ -14,7 +14,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\GoogleSheets;
+namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
 
 if ( ! defined( 'ABSPATH' ) ) {

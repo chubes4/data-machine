@@ -1,22 +1,75 @@
 <?php
 /**
- * File Repository Management
+ * Universal Files Repository Management
  *
- * Simple file repository system for handling uploaded files.
- * Focuses solely on file storage, retrieval, and cleanup operations.
- * Does not care where files come from - just manages the repository.
+ * Central file repository system for handling file storage, retrieval, and cleanup operations.
+ * Supports both regular file storage and data packet storage for Action Scheduler integration.
+ * Focuses solely on file management - does not care where files come from.
  *
- * @package    Data_Machine
- * @subpackage Data_Machine/handlers/input/files
- * @since      NEXT_VERSION
+ * @package DataMachine
+ * @subpackage Engine\Filters
+ * @since NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Files;
+namespace DataMachine\Engine;
 
-
-if ( ! defined( 'ABSPATH' ) ) {
+if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
+
+// Self-register repository implementation and cleanup integration
+add_filter('dm_files_repository', function($repositories) {
+    $repositories['files'] = new FilesRepository();
+    return $repositories;
+}, 5);
+
+// Universal files repository cleanup integration
+add_action('dm_cleanup_old_files', function() {
+    $repositories = apply_filters('dm_files_repository', []);
+    $repository = $repositories['files'] ?? null;
+    if ($repository) {
+        // Clean up regular files older than 7 days
+        $deleted_count = $repository->cleanup_old_files(7);
+        
+        // Clean up old job data packets
+        $job_data_deleted = 0;
+        $cutoff_time = time() - (7 * DAY_IN_SECONDS);
+        
+        // Get all job_* directories
+        $upload_dir = wp_upload_dir();
+        $base_path = trailingslashit($upload_dir['basedir']) . 'dm-files';
+        
+        if (is_dir($base_path)) {
+            $job_directories = glob($base_path . '/job_*', GLOB_ONLYDIR);
+            
+            foreach ($job_directories as $job_dir) {
+                $job_namespace = basename($job_dir);
+                $files = $repository->get_all_files($job_namespace);
+                
+                foreach ($files as $file) {
+                    if (str_starts_with($file['filename'], 'data_packet_') && $file['modified'] < $cutoff_time) {
+                        if ($repository->delete_file($file['filename'], $job_namespace)) {
+                            $job_data_deleted++;
+                        }
+                    }
+                }
+                
+                // Remove empty job directories
+                if (empty($repository->get_all_files($job_namespace))) {
+                    $job_dir_path = $repository->get_repository_path($job_namespace);
+                    if (is_dir($job_dir_path)) {
+                        rmdir($job_dir_path);
+                    }
+                }
+            }
+        }
+        
+        do_action('dm_log', 'debug', 'FilesRepository: Universal cleanup completed', [
+            'deleted_files' => $deleted_count,
+            'deleted_job_data' => $job_data_deleted
+        ]);
+    }
+});
 
 class FilesRepository {
 
@@ -89,8 +142,6 @@ class FilesRepository {
             }
         }
 
-        // Add .htaccess for security
-        $this->create_htaccess_protection();
         
         return true;
     }
@@ -138,6 +189,183 @@ class FilesRepository {
     }
 
     /**
+     * Store data packet as JSON file and return reference
+     *
+     * @param array $data Data packet array to store
+     * @param int $job_id Job ID for namespace isolation
+     * @param string $flow_step_id Flow step ID for additional context
+     * @return array Reference object containing storage keys
+     */
+    public function store_data_packet(array $data, int $job_id, string $flow_step_id): array {
+        // Create job-specific storage namespace
+        $storage_namespace = "job_{$job_id}";
+        
+        // Generate unique filename for this data packet
+        $timestamp = time();
+        $filename = "data_packet_{$timestamp}_" . uniqid() . '.json';
+        
+        // Serialize data to JSON
+        $json_data = wp_json_encode($data, JSON_UNESCAPED_UNICODE);
+        if ($json_data === false) {
+            do_action('dm_log', 'error', 'FilesRepository: Failed to encode data as JSON', [
+                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id
+            ]);
+            return ['data' => $data]; // Fallback to direct data passing
+        }
+
+        // Create temporary file and store in repository
+        $temp_file = wp_tempnam($filename);
+        if (file_put_contents($temp_file, $json_data) === false) {
+            do_action('dm_log', 'error', 'FilesRepository: Failed to write temporary file', [
+                'job_id' => $job_id,
+                'temp_file' => $temp_file
+            ]);
+            return ['data' => $data]; // Fallback to direct data passing
+        }
+
+        // Store in repository with job namespace
+        $stored_path = $this->store_file($temp_file, $filename, $storage_namespace);
+        
+        // Clean up temporary file
+        if (file_exists($temp_file)) {
+            unlink($temp_file);
+        }
+
+        if (!$stored_path) {
+            do_action('dm_log', 'error', 'FilesRepository: Failed to store data packet in repository', [
+                'job_id' => $job_id,
+                'filename' => $filename
+            ]);
+            return ['data' => $data]; // Fallback to direct data passing
+        }
+
+        do_action('dm_log', 'debug', 'FilesRepository: Data packet stored successfully', [
+            'job_id' => $job_id,
+            'flow_step_id' => $flow_step_id,
+            'filename' => $filename,
+            'data_size' => strlen($json_data)
+        ]);
+
+        // Return lightweight reference object
+        return [
+            'is_data_reference' => true,
+            'job_id' => $job_id,
+            'storage_namespace' => $storage_namespace,
+            'filename' => $filename,
+            'flow_step_id' => $flow_step_id,
+            'stored_at' => $timestamp
+        ];
+    }
+
+    /**
+     * Retrieve data packet from JSON file using reference
+     *
+     * @param array $reference Reference object from store_data_packet()
+     * @return array|null Retrieved data packet or null on failure
+     */
+    public function retrieve_data_packet(array $reference): ?array {
+        // Check if this is actually a reference object
+        if (!isset($reference['is_data_reference']) || !$reference['is_data_reference']) {
+            // This is direct data, return as-is
+            return $reference['data'] ?? $reference;
+        }
+
+        // Extract reference information
+        $job_id = $reference['job_id'] ?? 0;
+        $storage_namespace = $reference['storage_namespace'] ?? '';
+        $filename = $reference['filename'] ?? '';
+
+        if (empty($storage_namespace) || empty($filename)) {
+            do_action('dm_log', 'error', 'FilesRepository: Invalid data packet reference', [
+                'reference' => $reference
+            ]);
+            return null;
+        }
+
+        // Get file path
+        $file_path = $this->get_repository_path($storage_namespace) . '/' . $filename;
+        
+        if (!file_exists($file_path)) {
+            do_action('dm_log', 'error', 'FilesRepository: Data packet file not found', [
+                'job_id' => $job_id,
+                'file_path' => $file_path
+            ]);
+            return null;
+        }
+
+        // Read and decode JSON data
+        $json_data = file_get_contents($file_path);
+        if ($json_data === false) {
+            do_action('dm_log', 'error', 'FilesRepository: Failed to read data packet file', [
+                'job_id' => $job_id,
+                'file_path' => $file_path
+            ]);
+            return null;
+        }
+
+        $data = json_decode($json_data, true);
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            do_action('dm_log', 'error', 'FilesRepository: Failed to decode JSON data packet', [
+                'job_id' => $job_id,
+                'json_error' => json_last_error_msg()
+            ]);
+            return null;
+        }
+
+        do_action('dm_log', 'debug', 'FilesRepository: Data packet retrieved successfully', [
+            'job_id' => $job_id,
+            'filename' => $filename,
+            'data_size' => strlen($json_data)
+        ]);
+
+        return $data;
+    }
+
+    /**
+     * Clean up stored data packets for a specific job
+     *
+     * @param int $job_id Job ID to clean up
+     * @return int Number of files deleted
+     */
+    public function cleanup_job_data_packets(int $job_id): int {
+        $storage_namespace = "job_{$job_id}";
+        $deleted_count = 0;
+
+        // Get all files for this job namespace
+        $files = $this->get_all_files($storage_namespace);
+        
+        foreach ($files as $file) {
+            if (str_starts_with($file['filename'], 'data_packet_')) {
+                if ($this->delete_file($file['filename'], $storage_namespace)) {
+                    $deleted_count++;
+                }
+            }
+        }
+
+        if ($deleted_count > 0) {
+            do_action('dm_log', 'debug', 'FilesRepository: Job data packet cleanup completed', [
+                'job_id' => $job_id,
+                'deleted_count' => $deleted_count
+            ]);
+        }
+
+        return $deleted_count;
+    }
+
+    /**
+     * Check if argument is a data reference or actual data
+     *
+     * @param mixed $argument Argument to check
+     * @return bool True if it's a data reference, false if it's actual data
+     */
+    public function is_data_reference($argument): bool {
+        return is_array($argument) && 
+               isset($argument['is_data_reference']) && 
+               $argument['is_data_reference'] === true;
+    }
+
+    /**
      * Get all files in the repository
      *
      * @param string|null $flow_step_id Flow step ID for isolation
@@ -157,7 +385,7 @@ class FilesRepository {
                 $filename = basename($file_path);
                 
                 // Skip system files
-                if (in_array($filename, ['.htaccess', 'index.php'])) {
+                if ($filename === 'index.php') {
                     continue;
                 }
 
@@ -298,24 +526,6 @@ class FilesRepository {
     private function sanitize_filename(string $filename): string {
         // Use WordPress sanitize_file_name function
         return sanitize_file_name($filename);
-    }
-
-    /**
-     * Create .htaccess file for security
-     */
-    private function create_htaccess_protection(): void {
-        $htaccess_path = $this->get_repository_path() . '/.htaccess';
-        
-        if (!file_exists($htaccess_path)) {
-            $htaccess_content = "# Data Machine Files Repository - Security Protection\n";
-            $htaccess_content .= "# Prevent direct access to files\n";
-            $htaccess_content .= "Options -Indexes\n";
-            $htaccess_content .= "<Files ~ \"\\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|sh|cgi)$\">\n";
-            $htaccess_content .= "    deny from all\n";
-            $htaccess_content .= "</Files>\n";
-            
-            file_put_contents($htaccess_path, $htaccess_content);
-        }
     }
 
 }

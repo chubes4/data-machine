@@ -52,10 +52,10 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
     </button>
 </div>
 
-<div class="dm-modal-tab-content" id="import-tab" style="display:none;">
+<div class="dm-modal-tab-content" id="import-tab">
     <div class="dm-import-dropzone">
         <p><?php esc_html_e('Drag CSV file here or click to browse', 'data-machine'); ?></p>
-        <input type="file" class="dm-import-file" accept=".csv" style="display:none;">
+        <input type="file" class="dm-import-file" accept=".csv">
     </div>
     <div class="dm-import-preview"></div>
     <button class="button button-primary dm-import-pipelines" disabled>

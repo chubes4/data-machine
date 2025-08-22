@@ -10,7 +10,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Fetch\Files;
+namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

@@ -5,8 +5,22 @@
  * Component-based design with proper namespace isolation.
  * PAGE-LEVEL STYLES ONLY - Modal styles in pipelines-modal.css
  *
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
+
+/* CSS Custom Properties for consistent values */
+:root {
+    --dm-color-text-muted: #666;
+    --dm-color-text-secondary: #646970;
+    --dm-color-border: #ddd;
+    --dm-color-border-light: #e1e1e1;
+    --dm-spacing-xs: 4px;
+    --dm-spacing-sm: 8px;
+    --dm-spacing-md: 12px;
+    --dm-spacing-lg: 20px;
+    --dm-border-radius: 4px;
+    --dm-border-radius-lg: 8px;
+}
 
 /* Base page container */
 .dm-pipelines-page {
@@ -602,31 +616,6 @@
 
 /* Auto-save status indicator styles removed for silent auto-save */
 
-/* Flow-level status detection (left border) */
-.dm-step-card--status-red {
-    border-left: 4px solid #dc3232;
-}
-
-.dm-step-card--status-yellow {
-    border-left: 4px solid #f0a000;
-}
-
-.dm-step-card--status-green {
-    border-left: 4px solid #00a32a;
-}
-
-/* Pipeline-level status detection (full border) */
-.dm-pipeline-step-card--status-red {
-    border: 1px solid #dc3232 !important;
-}
-
-.dm-pipeline-step-card--status-yellow {
-    border: 1px solid #f0a000 !important;
-}
-
-.dm-pipeline-step-card--status-green {
-    border: 1px solid #00a32a !important;
-}
 
 /* Drag & Drop Styling */
 
@@ -676,7 +665,5 @@
 /* Prevent text selection during drag */
 .ui-sortable-helper * {
     user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
 }
+

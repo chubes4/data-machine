@@ -11,7 +11,7 @@
  * @since      NEXT_VERSION
  */
 
-namespace DataMachine\Core\Handlers\Publish\Bluesky;
+namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -208,7 +208,7 @@ class Bluesky {
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
             
             if (is_wp_error($post_url)) {
-                $post_url = 'https://bsky.app/'; // Fallback URL
+                $post_url = 'https://bsky.app/';
             }
             
             do_action('dm_log', 'debug', 'Bluesky Tool: Post created successfully', [

@@ -35,7 +35,7 @@ class AI_HTTP_Anthropic_Provider {
      *
      * @param array $config Provider configuration
      */
-    public function __construct($config = array()) {
+    public function __construct($config = []) {
         $this->api_key = $config['api_key'] ?? '';
         
         if (isset($config['base_url']) && !empty($config['base_url'])) {
@@ -158,12 +158,12 @@ class AI_HTTP_Anthropic_Provider {
      */
     public function get_raw_models() {
         if (!$this->is_configured()) {
-            return array();
+            return [];
         }
 
         // Anthropic doesn't have a models endpoint
         // Model names are hardcoded: claude-3-5-sonnet-20241022, claude-3-haiku-20240307, etc.
-        return array();
+        return [];
     }
 
     /**
@@ -271,7 +271,7 @@ class AI_HTTP_Anthropic_Provider {
      * @return array Normalized models array
      */
     private function normalize_models_response($raw_models) {
-        $models = array();
+        $models = [];
         
         // Anthropic returns: { "data": [{"id": "claude-3-5-sonnet-20241022", "display_name": "Claude 3.5 Sonnet", ...}, ...] }
         $data = $raw_models['data'] ?? $raw_models;
@@ -339,7 +339,7 @@ class AI_HTTP_Anthropic_Provider {
      */
     private function format_response($anthropic_response) {
         $content = '';
-        $tool_calls = array();
+        $tool_calls = [];
 
         // Extract content
         if (isset($anthropic_response['content']) && is_array($anthropic_response['content'])) {
@@ -353,7 +353,7 @@ class AI_HTTP_Anthropic_Provider {
                             // Convert Anthropic tool_use to standard format
                             $tool_calls[] = array(
                                 'name' => $content_block['name'] ?? '',
-                                'parameters' => $content_block['input'] ?? array()
+                                'parameters' => $content_block['input'] ?? []
                             );
                             break;
                     }

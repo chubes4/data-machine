@@ -32,8 +32,7 @@ defined('ABSPATH') || exit;
  *                 'description' => 'Input parameter description'
  *             ]
  *         ]
- *         // NOTE: No 'handler' property - this makes it a general tool
- *     ];
+ * *     ];
  *     return $tools;
  * });
  */
@@ -63,7 +62,37 @@ add_filter('ai_tools', function($tools) {
                 'description' => 'Restrict search to specific domain (e.g., "wikipedia.org")'
             ]
         ]
-        // NOTE: No 'handler' property - this makes it available to all AI steps
+    ];
+    
+    return $tools;
+});
+
+/**
+ * Register Local Search Tool
+ */
+add_filter('ai_tools', function($tools) {
+    $tools['local_search'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
+        'method' => 'handle_tool_call',
+        'description' => 'Search the local WordPress site for context and information',
+        'requires_config' => false, // No configuration needed - uses WordPress core
+        'parameters' => [
+            'query' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'Search query to find content on the local site'
+            ],
+            'max_results' => [
+                'type' => 'integer',
+                'required' => false,
+                'description' => 'Maximum number of results to return (1-20, default: 10)'
+            ],
+            'post_types' => [
+                'type' => 'array',
+                'required' => false,
+                'description' => 'Post types to search (default: ["post", "page"])'
+            ]
+        ]
     ];
     
     return $tools;
@@ -80,6 +109,9 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
             $config = get_option('dm_search_config', []);
             $google_config = $config['google_search'] ?? [];
             return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
+        
+        case 'local_search':
+            return true; // Always configured - no setup required
         
         default:
             return $configured;

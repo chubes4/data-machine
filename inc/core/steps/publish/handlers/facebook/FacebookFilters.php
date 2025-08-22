@@ -13,7 +13,7 @@
  * @since 0.1.0
  */
 
-namespace DataMachine\Core\Handlers\Publish\Facebook;
+namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
@@ -60,18 +60,14 @@ function dm_register_facebook_filters() {
     });
     
     // Facebook tool registration with AI HTTP Client library
-    add_filter('ai_tools', function($tools) {
-        $tools['facebook_publish'] = dm_get_facebook_tool();
-        return $tools;
-    });
-
-    // Dynamic tool generation based on current configuration
-    add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+        // Only generate Facebook tool when it's the target handler
         if ($handler_slug === 'facebook') {
-            return dm_get_facebook_tool($handler_config);
+            $tools['facebook_publish'] = dm_get_facebook_tool($handler_config);
         }
-        return $tool;
+        return $tools;
     }, 10, 3);
+
     
     // Modal registrations removed - now handled by generic modal system via pure discovery
 }

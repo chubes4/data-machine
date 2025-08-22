@@ -83,8 +83,7 @@
         addHandlerToFlowStep: function(contextData) {
             // Simple validation - get it right the first time
             if (!contextData?.handler_slug || !contextData?.step_type || !contextData?.flow_step_id) {
-                // Missing required context data
-                alert('Missing required handler context data');
+                // Missing required context data - exit silently
                 return;
             }
             
@@ -140,8 +139,7 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    // AJAX error adding handler
-                    alert('Error connecting to server');
+                    // Network error - handler addition failed silently
                 }
             });
         },

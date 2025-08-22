@@ -30,9 +30,6 @@ if (!defined('WPINC')) {
         
         foreach ($handlers as $handler_slug => $handler_config): 
             $template_slug = $handler_slug;
-            if ($handler_slug === 'wordpress') {
-                $template_slug = ($step_type === 'fetch') ? 'wordpress_fetch' : 'wordpress_publish';
-            }
             ?>
             <div class="dm-handler-selection-card dm-modal-content" 
                  data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
@@ -40,8 +37,7 @@ if (!defined('WPINC')) {
                  data-handler-slug="<?php echo esc_attr($handler_slug); ?>" 
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 
-                 tabindex="0"
-                 style="cursor: pointer;">
+                 tabindex="0">
                 <h4 class="dm-handler-card-title"><?php echo esc_html($handler_config['label'] ?? ucfirst($handler_slug)); ?></h4>
                 <?php if (!empty($handler_config['description'])): ?>
                     <p class="dm-handler-card-description"><?php echo esc_html($handler_config['description']); ?></p>

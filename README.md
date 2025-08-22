@@ -6,7 +6,7 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI Architecture (OpenAI, Anthropic, Google, Grok, OpenRouter), Agentic Tool Calling, Visual Pipeline Builder with Drag & Drop Reordering, Auto-Save Functionality, Google Search Integration, Sequential Processing, Enhanced Social Publishing (Facebook, Twitter, Threads, WordPress, Bluesky, Google Sheets), Filter-Based Discovery, Centralized OAuth System
+**Features**: Tool-First AI Architecture (OpenAI, Anthropic, Google, Grok, OpenRouter), Agentic Tool Calling, Visual Pipeline Builder, Google Search + Local Search Tools, Enhanced Social Publishing, Filter-Based Self-Registration, Centralized OAuth System, Settings Administration, Universal Files Repository, Engine Mode (Headless)
 
 ## Architecture
 
@@ -20,15 +20,27 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 ## Quick Start
 
 ### Installation
+
+**Development Installation**:
 1. Clone repository to `/wp-content/plugins/data-machine/`
-2. Run `composer install`
+2. Run `composer install` (installs dev dependencies)
 3. Activate plugin in WordPress admin
 4. Configure AI provider in Data Machine → Settings
 
+**Production Installation**:
+1. Run `./build.sh` to create production zip
+2. Install `build/data-machine-v{version}.zip` via WordPress admin
+3. Configure AI provider in Data Machine → Settings
+
 ### Google Search Setup (Optional)
 1. Create Custom Search Engine at [Google Custom Search](https://cse.google.com/)
-2. Get API key from [Google Cloud Console](https://console.cloud.google.com/)
-3. Configure via Settings page or programmatically
+2. Get API key from [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+3. Configure via **WordPress Settings → Data Machine → Tools**
+   - **Requirements**: Google Custom Search Engine ID + API key  
+   - **Tool Configuration**: Centralized via `dm_tool_configured` filter system
+   - **Status Check**: `apply_filters('dm_tool_configured', false, 'google_search')`
+   - **API Limits**: 100 queries/day (free tier), expandable with billing
+   - **Local Search**: Always available (no configuration needed)
 
 ### Example: RSS to Twitter Bot
 Create an automated content pipeline in 5 minutes:
@@ -62,16 +74,15 @@ Pipeline: "Multi-Platform Content" (Advanced)
 
 > **Note**: AI steps discover **handler tools for the immediate next step** only. Multiple consecutive publish steps will execute without handler-specific AI guidance after the first one. For multi-platform publishing, use alternating AI→Publish→AI→Publish patterns or separate flows for each destination. General tools are available to all AI steps for enhanced capabilities.
 
-### Agentic Tool Calling
-AI steps automatically discover tools for enhanced publishing and analysis capabilities:
+### Enhanced AI Capabilities
+AI steps discover tools for smarter publishing and research:
 
 ```php
-Pipeline: "Smart Publishing"
+Pipeline: "Research-Enhanced Publishing"
 ├── Fetch: RSS (news feed)  
-├── AI: Claude + Tools ("Analyze and create optimized posts")
-│    → Handler tools: Available for immediate next step only
-│    → General tools: google_search, data_analysis (always available)
-└── Publish: Platform-specific execution with dynamic optimization
+├── AI: Claude ("Research topic and create optimized post")
+│    → Tools: Google Search, Local Search + platform-specific publishing tools
+└── Publish: Twitter/Facebook/etc. (AI-guided optimization)
 ```
 
 ### Reddit Monitor
@@ -105,9 +116,10 @@ Pipeline: "Document Processor"
 
 ### Core Operations
 ```php
-// Pipeline management
+// Pipeline management (filter-based creation)
+$pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'My Pipeline']);
+$step_id = apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
 do_action('dm_run_flow_now', $flow_id, 'manual');
-do_action('dm_create', 'pipeline', ['pipeline_name' => 'My Pipeline']);
 
 // AI integration  
 $response = apply_filters('ai_request', [
@@ -118,6 +130,15 @@ $response = apply_filters('ai_request', [
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
 $auth_account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+
+// Settings administration
+$settings = apply_filters('dm_get_data_machine_settings', []);
+$enabled_tools = apply_filters('dm_get_enabled_general_tools', []);
+
+// Tool configuration management
+$configured = apply_filters('dm_tool_configured', false, 'google_search');
+$config = apply_filters('dm_get_tool_config', [], 'google_search');
+do_action('dm_save_tool_config', 'google_search', ['api_key' => '...', 'search_engine_id' => '...']);
 ```
 
 ### Extension Development
@@ -137,20 +158,20 @@ add_filter('dm_handlers', function($handlers) {
 add_filter('dm_handlers', function($handlers) {
     $handlers['my_publisher'] = [
         'type' => 'publish',
-        'class' => 'MyPublisher',
+        'class' => 'DataMachine\Core\Steps\Publish\Handlers\MyPublisher\MyPublisher',
         'label' => 'My Publisher',
         'description' => 'Publish to custom platform'
     ];
     return $handlers;
 });
 
-// Register handler tool for agentic publishing (next step only)
+// Custom AI tool for enhanced publishing capabilities
 add_filter('ai_tools', function($tools) {
     $tools['my_publish'] = [
         'class' => 'MyPublisher',
         'method' => 'handle_tool_call',
-        'handler' => 'my_publisher',  // Handler property = next step only
-        'description' => 'Publish content to my platform',
+        'handler' => 'my_publisher',  // Available when next step = my_publisher
+        'description' => 'Publish content with platform optimization',
         'parameters' => [
             'content' => ['type' => 'string', 'required' => true],
             'title' => ['type' => 'string', 'required' => false]
@@ -158,46 +179,11 @@ add_filter('ai_tools', function($tools) {
     ];
     return $tools;
 });
-
-// General tool (universal availability)
-add_filter('ai_tools', function($tools) {
-    $tools['google_search'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
-        'method' => 'handle_tool_call',
-        'description' => 'Search Google for current information',
-        'parameters' => [
-            'query' => ['type' => 'string', 'required' => true],
-            'max_results' => ['type' => 'integer', 'required' => false],
-            'site_restrict' => ['type' => 'string', 'required' => false]
-        ]
-        // NOTE: No 'handler' property = universal availability
-    ];
-    return $tools;
-});
-
-// Dynamic tool generation with configuration
-add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
-    if ($handler_slug === 'my_publisher') {
-        $tool = [
-            'class' => 'MyPublisher',
-            'method' => 'handle_tool_call',
-            'description' => 'Publish to my platform with dynamic features',
-            'parameters' => ['content' => ['type' => 'string', 'required' => true]],
-            'handler_config' => $handler_config
-        ];
-        
-        // Add conditional parameters based on configuration
-        if ($handler_config['enable_media'] ?? false) {
-            $tool['parameters']['image_url'] = ['type' => 'string', 'required' => false];
-        }
-    }
-    return $tool;
-}, 10, 3);
 ```
 
 ## Handlers
 
-**Fetch**: Files, RSS, Reddit, WordPress, Google Sheets (OAuth2: Reddit, Google Sheets)
+**Fetch**: Files, RSS, Reddit, WordPress (specific post IDs + query filtering), Google Sheets (OAuth2: Reddit, Google Sheets)
 **Publish**: Twitter (280 chars), Bluesky (300 chars), Threads (500 chars), Facebook, WordPress, Google Sheets
 **AI**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
@@ -210,11 +196,9 @@ add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_c
 - **Facebook**: `link_handling` modes (append/replace/comment/none) 
 - **WordPress**: Dynamic taxonomy assignment (category/tags/custom taxonomies)
 
-**Tool Architecture**: Handler tools (next step only) + General tools (universal) with configuration-aware parameter generation and platform-specific character limits
+**AI Tools**: Handler-specific tools (next step only) + General tools (all AI steps) with configuration-aware features
 
-| **General Tools** | **Auth** | **Features** |
-|-------------------|----------|--------------|
-| Google Search | API Key | Web search with site restriction, 1-10 results, fact-checking |
+**Available Tools**: Google Search (web research), Local Search (site content), custom handler tools
 
 ## Use Cases
 
@@ -233,19 +217,26 @@ add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_c
 1. **Pipelines**: Create and manage reusable workflow templates with drag & drop reordering and auto-save
 2. **Flows**: Configure pipeline instances with handlers and scheduling  
 3. **Jobs**: Monitor execution status, clear failed/completed jobs
-4. **Logs**: Comprehensive logging system with file management and real-time viewing
-5. **Settings**: Engine mode, admin page control, tool management, global system prompt, AI provider configuration
+4. **Logs**: Real-time log viewing with 100-entry display and file rotation
+5. **Settings**: Engine mode, admin page control, tool management, global system prompt, AI provider configuration, WordPress-specific settings (post types, taxonomies, author defaults)
 
-**Features**: Drag & drop reordering, auto-save, status indicators, tool configuration, logs management
+**Features**: Drag & drop reordering with debounced auto-save (750ms), visual status indicators, modal-based tool configuration with form validation, real-time logs monitoring
 
 ## Development
 
 **Requirements**: WordPress 5.0+, PHP 8.0+, Composer
 
-**Setup**:
+**Development Setup**:
 ```bash
-composer install && composer test
+composer install
 ```
+
+**Production Build**:
+```bash
+./build.sh  # Creates optimized zip for WordPress installation
+```
+
+**PSR-4 Architecture**: Uses lowercase directory structure (`inc/core/`, `inc/engine/`) with automatic filter registration via composer.json
 
 **Debug**: `window.dmDebugMode = true;` (browser), `define('WP_DEBUG', true);` (PHP)
 
