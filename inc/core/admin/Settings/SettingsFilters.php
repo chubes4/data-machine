@@ -14,10 +14,14 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register Settings Admin Page filters
- * 
- * Self-registration pattern for WordPress Settings integration.
- * 
+ * Register Settings Admin Page filters and WordPress Settings API integration.
+ *
+ * Establishes complete WordPress Settings API integration including:
+ * - Settings page registration under WordPress Options menu
+ * - Settings fields and sections registration
+ * - Tool configuration modal registration
+ * - Asset loading for Settings page functionality
+ *
  * @since 1.0.0
  */
 function dm_register_settings_admin_page_filters() {
@@ -42,7 +46,10 @@ function dm_register_settings_admin_page_filters() {
 }
 
 /**
- * Register Data Machine settings page under WordPress Settings menu
+ * Register Data Machine settings page under WordPress Options menu.
+ *
+ * Creates 'Data Machine' submenu item with manage_options capability requirement.
+ * Stores hook suffix for conditional asset loading.
  */
 function dm_register_settings_page() {
     $hook = add_options_page(
@@ -58,7 +65,11 @@ function dm_register_settings_page() {
 }
 
 /**
- * Register Data Machine settings with WordPress Settings API
+ * Register all Data Machine settings with WordPress Settings API.
+ *
+ * Configures two main sections:
+ * - Admin Interface Control: engine mode, admin pages, tools, system prompt
+ * - WordPress Settings: post types, taxonomies, author/status defaults
  */
 function dm_register_settings() {
     register_setting('data_machine_settings', 'data_machine_settings', [
@@ -153,7 +164,10 @@ function dm_register_settings() {
 }
 
 /**
- * Render settings page using template system
+ * Render settings page via template system with fallback.
+ *
+ * Attempts universal template rendering first, falls back to direct
+ * WordPress Settings API rendering if template not found.
  */
 function dm_render_settings_page_template() {
     // Use template rendering system for consistency
@@ -262,7 +276,13 @@ function dm_enqueue_settings_assets($hook_suffix) {
 }
 
 /**
- * Enqueue settings component assets
+ * Enqueue component assets with version management.
+ *
+ * Loads CSS and JS files with file modification time versioning.
+ * Handles localization data injection for JavaScript components.
+ *
+ * @param array  $assets        Asset configuration array (css/js).
+ * @param string $component_slug Component identifier for debugging.
  */
 function dm_enqueue_component_assets($assets, $component_slug) {
     $plugin_base_path = DATA_MACHINE_PATH;
@@ -827,9 +847,18 @@ function dm_sanitize_settings($input) {
 }
 
 /**
- * WordPress Settings Filtering - dm_enabled_settings filter
- * 
- * Filter handler settings fields based on WordPress global settings
+ * Filter handler settings fields based on WordPress global settings.
+ *
+ * Dynamically modifies WordPress handler configuration modals by:
+ * - Filtering post type options to enabled types only
+ * - Removing taxonomy fields for disabled taxonomies
+ * - Hiding author/status fields when global defaults are set
+ *
+ * @param array  $fields       Handler settings fields.
+ * @param string $handler_slug Handler identifier.
+ * @param string $step_type    Step type context.
+ * @param array  $context      Additional context data.
+ * @return array Filtered settings fields.
  */
 add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $context) {
     // Only apply to WordPress handlers
@@ -892,9 +921,15 @@ add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $
 }, 10, 4);
 
 /**
- * WordPress Global Defaults - dm_apply_global_defaults filter
- * 
- * Apply global WordPress defaults to current settings
+ * Apply global WordPress defaults to current handler settings.
+ *
+ * Automatically injects global default author ID and post status into
+ * WordPress publish handler settings when not already configured.
+ *
+ * @param array  $current_settings Current handler settings.
+ * @param string $handler_slug     Handler identifier.
+ * @param string $step_type        Step type context.
+ * @return array Settings with global defaults applied.
  */
 add_filter('dm_apply_global_defaults', function($current_settings, $handler_slug, $step_type) {
     // Only apply to WordPress publish handlers

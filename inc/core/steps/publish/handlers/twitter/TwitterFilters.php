@@ -73,10 +73,15 @@ function dm_register_twitter_filters() {
 }
 
 /**
- * Get Twitter tool definition with dynamic parameters based on configuration.
+ * Generate Twitter tool definition with dynamic parameters based on handler configuration.
  *
- * @param array $handler_config Optional handler configuration for dynamic parameters.
- * @return array Twitter tool configuration.
+ * Dynamically constructs tool parameters based on Twitter-specific settings:
+ * - Conditionally includes source_url parameter based on include_source setting
+ * - Conditionally includes image_url parameter based on enable_images setting
+ * - Modifies parameter descriptions based on url_as_reply setting
+ *
+ * @param array $handler_config Handler configuration containing Twitter-specific settings.
+ * @return array Complete Twitter tool configuration for AI HTTP Client.
  */
 function dm_get_twitter_tool(array $handler_config = []): array {
     // Extract Twitter-specific config from nested structure

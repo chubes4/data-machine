@@ -1,0 +1,237 @@
+<?php
+/**
+ * WordPress Update Handler Settings
+ *
+ * Defines settings fields and sanitization for WordPress update handler.
+ * Part of the modular handler architecture.
+ *
+ * @package    Data_Machine
+ * @subpackage Core\Steps\Update\Handlers\WordPress
+ * @since      NEXT_VERSION
+ */
+
+namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Exit if accessed directly
+}
+
+class WordPressSettings {
+
+    /**
+     * Constructor.
+     * Pure filter-based architecture - no dependencies.
+     */
+    public function __construct() {
+        // No constructor dependencies - all services accessed via filters
+    }
+
+    /**
+     * Get settings fields for WordPress update handler.
+     *
+     * @param array $current_config Current configuration values for this handler.
+     * @return array Associative array defining the settings fields.
+     */
+    public static function get_fields(array $current_config = []): array {
+        // WordPress update settings for local WordPress installation only
+        $fields = self::get_local_fields();
+
+        // Add common fields for all destination types
+        $fields = array_merge($fields, self::get_common_fields());
+
+        return $fields;
+    }
+
+    /**
+     * Get settings fields specific to local WordPress updating.
+     *
+     * @return array Settings fields.
+     */
+    private static function get_local_fields(): array {
+        return [
+            'allow_title_updates' => [
+                'type' => 'checkbox',
+                'label' => __('Allow Title Updates', 'data-machine'),
+                'description' => __('Enable AI to modify post titles. When disabled, titles will remain unchanged.', 'data-machine'),
+            ],
+            'allow_content_updates' => [
+                'type' => 'checkbox',
+                'label' => __('Allow Content Updates', 'data-machine'),
+                'description' => __('Enable AI to modify post content. When disabled, content will remain unchanged.', 'data-machine'),
+            ],
+        ];
+    }
+
+    /**
+     * Get dynamic taxonomy fields for all available public taxonomies.
+     *
+     * @return array Taxonomy field definitions.
+     */
+    private static function get_taxonomy_fields(): array {
+        $taxonomy_fields = [];
+        
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $taxonomy_slug = $taxonomy->name;
+            $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
+            
+            // Build options with skip as default
+            $options = [
+                'skip' => __('Skip', 'data-machine'),
+                'ai_decides' => __('AI Decides', 'data-machine')
+            ];
+            
+            // Get terms for this taxonomy
+            $terms = get_terms(['taxonomy' => $taxonomy_slug, 'hide_empty' => false]);
+            if (!is_wp_error($terms) && !empty($terms)) {
+                foreach ($terms as $term) {
+                    $options[$term->term_id] = $term->name;
+                }
+            }
+            
+            // Generate field definition
+            $field_key = "taxonomy_{$taxonomy_slug}_selection";
+            $taxonomy_fields[$field_key] = [
+                'type' => 'select',
+                'label' => $taxonomy_label,
+                'description' => sprintf(
+                    __('Configure %s assignment for updates: Skip to exclude from AI instructions, let AI choose, or select specific %s.', 'data-machine'),
+                    strtolower($taxonomy_label),
+                    $taxonomy->hierarchical ? __('category', 'data-machine') : __('term', 'data-machine')
+                ),
+                'options' => $options,
+            ];
+        }
+        
+        return $taxonomy_fields;
+    }
+
+
+    /**
+     * Get common settings fields for all destination types.
+     *
+     * @return array Settings fields.
+     */
+    private static function get_common_fields(): array {
+        return [];
+    }
+
+    /**
+     * Sanitize WordPress update handler settings.
+     *
+     * @param array $raw_settings Raw settings input.
+     * @return array Sanitized settings.
+     */
+    public static function sanitize(array $raw_settings): array {
+        // Sanitize local WordPress settings
+        return self::sanitize_local_settings($raw_settings);
+    }
+
+    /**
+     * Sanitize local WordPress settings.
+     *
+     * @param array $raw_settings Raw settings array.
+     * @return array Sanitized settings.
+     */
+    private static function sanitize_local_settings(array $raw_settings): array {
+        return [
+            'allow_title_updates' => !empty($raw_settings['allow_title_updates']),
+            'allow_content_updates' => !empty($raw_settings['allow_content_updates']),
+        ];
+    }
+
+    /**
+     * Sanitize dynamic taxonomy selection settings.
+     *
+     * @param array $raw_settings Raw settings array.
+     * @return array Sanitized taxonomy selections.
+     */
+    private static function sanitize_taxonomy_selections(array $raw_settings): array {
+        $sanitized = [];
+        
+        // Get all public taxonomies to validate against
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $field_key = "taxonomy_{$taxonomy->name}_selection";
+            $raw_value = $raw_settings[$field_key] ?? 'skip';
+            
+            // Sanitize taxonomy selection value
+            if ($raw_value === 'skip' || $raw_value === 'ai_decides') {
+                $sanitized[$field_key] = $raw_value;
+            } else {
+                // Must be a term ID - validate it exists in this taxonomy
+                $term_id = absint($raw_value);
+                $term = get_term($term_id, $taxonomy->name);
+                if (!is_wp_error($term) && $term) {
+                    $sanitized[$field_key] = $term_id;
+                } else {
+                    // Invalid term ID - default to skip
+                    $sanitized[$field_key] = 'skip';
+                }
+            }
+        }
+        
+        return $sanitized;
+    }
+
+
+    /**
+     * Get default values for all settings.
+     *
+     * @return array Default values for all settings.
+     */
+    public static function get_defaults(): array {
+        return [
+            'allow_title_updates' => true,
+            'allow_content_updates' => true,
+        ];
+    }
+
+    /**
+     * Get default values for all available taxonomies.
+     *
+     * @return array Default taxonomy selections (all set to 'skip').
+     */
+    private static function get_taxonomy_defaults(): array {
+        $defaults = [];
+        
+        // Get all public taxonomies
+        $taxonomies = get_taxonomies(['public' => true], 'objects');
+        
+        foreach ($taxonomies as $taxonomy) {
+            // Skip built-in formats and other non-content taxonomies
+            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+                continue;
+            }
+            
+            $field_key = "taxonomy_{$taxonomy->name}_selection";
+            $defaults[$field_key] = 'skip'; // Default to skip for all taxonomies
+        }
+        
+        return $defaults;
+    }
+
+    /**
+     * Determine if authentication is required based on current configuration.
+     *
+     * @param array $current_config Current configuration values for this handler.
+     * @return bool True if authentication is required, false otherwise.
+     */
+    public static function requires_authentication(array $current_config = []): bool {
+        // Local WordPress does not require authentication
+        return false;
+    }
+}

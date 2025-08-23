@@ -31,25 +31,27 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register AI step-specific filters.
- * 
- * Called automatically when AI step components are loaded via dm_autoload_core_steps().
- * This maintains the self-registration pattern and keeps AI functionality self-contained.
- * 
- * Registered Filters:
- * - dm_steps: Register AI step for pipeline discovery * 
+ * Register AI step filters for pipeline integration and configuration support.
+ *
+ * Establishes complete AI step functionality through self-registration:
+ * - Registers AI step type for pipeline discovery with consume_all_packets capability
+ * - Enables step configuration UI with modal support
+ * - Integrates tool selection and system prompt configuration
+ *
+ * Called automatically when AI components are loaded via dm_autoload_core_steps().
+ *
  * @since 1.0.0
  */
 function dm_register_ai_step_filters() {
     
     /**
-     * AI Step Registration
-     * 
-     * Register the AI step type for pipeline discovery via pure discovery mode.
-     * This enables the AI step to be discovered and used in pipelines.
-     * 
-     * @param array $steps Current steps array
-     * @return array Updated steps array
+     * Register AI step type for pipeline discovery.
+     *
+     * Configures AI step with consume_all_packets capability for multi-item processing
+     * and positions it appropriately within the step type hierarchy.
+     *
+     * @param array $steps Current registered steps.
+     * @return array Updated steps array including AI step.
      */
     add_filter('dm_steps', function($steps) {
         $steps['ai'] = [
@@ -65,15 +67,13 @@ function dm_register_ai_step_filters() {
     
     
     /**
-     * AI Step Configuration Registration
-     * 
-     * Register AI step configuration capability so the pipeline step card shows Configure button.
-     * This tells the step-card template that AI steps have configurable options.
-     * 
-     * @param mixed $config Current step configuration (null if none)
-     * @param string $step_type Step type being requested
-     * @param array $context Step context data
-     * @return array|mixed Step configuration or original value
+     * Enable AI step configuration UI support.
+     *
+     * Registers configuration modal capability enabling the Configure button
+     * on AI step cards with ai_configuration modal type integration.
+     *
+     * @param array $configs Current step configuration registry.
+     * @return array Updated configurations including AI step settings.
      */
     add_filter('dm_step_settings', function($configs) {
         $configs['ai'] = [
@@ -94,10 +94,13 @@ function dm_register_ai_step_filters() {
 add_filter('dm_parse_ai_response', '__return_empty_array');
 
 /**
- * Extend AI HTTP Client component with Data Machine tool configuration
- * 
- * Adds tool selection UI and system prompt to the AI component when rendered in Data Machine context.
- * Only shows tools that are enabled in Data Machine settings.
+ * Extend AI HTTP Client component with Data Machine-specific tool configuration UI.
+ *
+ * Dynamically injects tool selection interface into AI HTTP Client component rendering:
+ * - Filters tools based on Data Machine settings (enabled_tools)
+ * - Displays tool configuration status and setup links
+ * - Respects engine mode restrictions
+ * - Shows only general tools (handler-specific tools excluded)
  */
 add_filter('ai_render_component', function($output, $config) {
     // Get enabled tools directly (no external dependencies)
@@ -188,10 +191,10 @@ add_filter('ai_render_component', function($output, $config) {
 dm_register_ai_step_filters();
 
 /**
- * Load general AI tools registration
- * 
- * Include general tools directory that would be available to all AI steps regardless of
- * the next step's handler when implemented. Architecture ready for tools like
- * search, data processing, analysis, etc.
+ * Load general AI tools registration from Tools subdirectory.
+ *
+ * Includes universal AI tools available to all AI steps regardless of pipeline context.
+ * General tools (no 'handler' property) are discoverable across all AI operations,
+ * unlike handler-specific tools which are context-dependent.
  */
 require_once __DIR__ . '/Tools/GeneralToolsFilters.php';

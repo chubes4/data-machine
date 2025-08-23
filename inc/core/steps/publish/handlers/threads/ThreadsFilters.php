@@ -73,10 +73,15 @@ function dm_register_threads_filters() {
 }
 
 /**
- * Get Threads tool definition with dynamic parameters based on configuration.
+ * Generate Threads tool definition with dynamic parameters based on handler configuration.
  *
- * @param array $handler_config Optional handler configuration for dynamic parameters.
- * @return array Threads tool configuration.
+ * Dynamically constructs tool parameters based on Threads-specific settings:
+ * - Conditionally includes source_url parameter based on include_source setting
+ * - Conditionally includes image_url parameter based on enable_images setting
+ * - Configures 500-character limit and Meta platform integration specifics
+ *
+ * @param array $handler_config Handler configuration containing Threads-specific settings.
+ * @return array Complete Threads tool configuration for AI HTTP Client.
  */
 function dm_get_threads_tool(array $handler_config = []): array {
     // Extract Threads-specific config from nested structure

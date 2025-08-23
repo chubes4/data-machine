@@ -27,6 +27,7 @@ do_action('dm_save_tool_config', $tool_id, $config_data);
 // OAuth
 apply_filters('dm_oauth', [], 'retrieve', 'handler');
 apply_filters('dm_get_oauth_url', '', 'provider');
+$providers = apply_filters('dm_auth_providers', []);
 
 // Execution
 do_action('dm_run_flow_now', $flow_id, $context);
@@ -60,13 +61,31 @@ $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 ```php
 function dm_register_twitter_filters() {
     add_filter('dm_handlers', function($handlers) {
-        $handlers['twitter'] = ['name' => __('Twitter'), 'steps' => ['publish'], 'auth_required' => true];
+        $handlers['twitter'] = [
+            'type' => 'publish',
+            'class' => Twitter::class,
+            'label' => __('Twitter', 'data-machine'),
+            'description' => __('Post content to Twitter with media support', 'data-machine')
+        ];
         return $handlers;
     });
-    add_filter('ai_tools', function($tools) {
-        $tools['twitter_publish'] = ['class' => TwitterClass, 'method' => 'handle_tool_call', 'handler' => 'twitter'];
-        return $tools;
+    add_filter('dm_auth_providers', function($providers) {
+        $providers['twitter'] = new TwitterAuth();
+        return $providers;
     });
+    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+        if ($handler_slug === 'twitter') {
+            $tools['twitter_publish'] = [
+                'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
+                'method' => 'handle_tool_call',
+                'handler' => 'twitter',
+                'description' => 'Post content to Twitter (280 character limit)',
+                'parameters' => ['content' => ['type' => 'string', 'required' => true]],
+                'handler_config' => $handler_config
+            ];
+        }
+        return $tools;
+    }, 10, 3);
 }
 dm_register_twitter_filters(); // Auto-execute at file load
 ```
@@ -75,7 +94,7 @@ dm_register_twitter_filters(); // Auto-execute at file load
 - **Pipeline+Flow**: Reusable templates + configured instances
 - **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 - **Files Repository**: Flow-isolated UUID storage with cleanup
-- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (Content modification, existing post updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
 - **Admin**: `manage_options` only, zero user dependencies
 
 ## Database Schema
@@ -84,16 +103,16 @@ dm_register_twitter_filters(); // Auto-execute at file load
 
 ```sql
 -- Pipeline templates (reusable)
-wp_dm_pipelines: id, pipeline_name, pipeline_description, steps_json, created_at, updated_at
+wp_dm_pipelines: pipeline_id, pipeline_name, pipeline_config, created_at, updated_at
 
 -- Flow instances (scheduled + configured)
-wp_dm_flows: id, pipeline_id, flow_name, cron_expression, flow_config_json, status, created_at, updated_at
+wp_dm_flows: flow_id, pipeline_id, flow_name, cron_expression, flow_config_json, status, created_at, updated_at
 
 -- Job executions
-wp_dm_jobs: id, flow_id, pipeline_id, status, job_data_json, started_at, completed_at, error_message
+wp_dm_jobs: job_id, flow_id, pipeline_id, status, job_data_json, started_at, completed_at, error_message
 
 -- Deduplication tracking
-wp_dm_processed_items: id, flow_step_id, source_type, item_id, job_id, processed_at
+wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, processed_at
 ```
 
 **Relationships**:
@@ -129,9 +148,10 @@ $result = apply_filters('ai_request', [
 add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'twitter') {
         $tools['twitter_publish'] = [
-            'class' => TwitterClass,
+            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
             'method' => 'handle_tool_call',
             'handler' => 'twitter',
+            'description' => 'Post content to Twitter (280 character limit)',
             'parameters' => ['content' => ['type' => 'string', 'required' => true]],
             'handler_config' => $handler_config
         ];
@@ -142,8 +162,10 @@ add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = 
 // General tools (all steps)
 add_filter('ai_tools', function($tools) {
     $tools['google_search'] = [
-        'class' => GoogleSearchClass,
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
         'method' => 'handle_tool_call',
+        'description' => 'Search Google for current information and context',
+        'requires_config' => true,
         'parameters' => ['query' => ['type' => 'string', 'required' => true]]
         // No 'handler' = universal
     ];
@@ -201,6 +223,11 @@ do_action('dm_save_tool_config', 'google_search', $config_data);
 | WordPress | None | No limit | Taxonomy assignment |
 | Google Sheets | OAuth2 | No limit | Row insertion |
 
+| **Update** | **Auth** | **Features** |
+|------------|----------|---------------|
+| WordPress | None | Post/page modification, taxonomy updates, meta field updates |
+| *Extensible* | *Varies* | *Custom update handlers via extensions* |
+
 | **General Tools** | **Auth** | **Features** |
 |-------------------|----------|--------------|
 | Google Search | API Key + Search Engine ID | Web search, site restriction, 1-10 results |
@@ -211,7 +238,7 @@ do_action('dm_save_tool_config', 'google_search', $config_data);
 ```php
 // Standard format for all step types
 [
-    'type' => 'fetch|ai|publish',
+    'type' => 'fetch|ai|update|publish',
     'handler' => 'rss|twitter|etc', // Optional for AI
     'content' => ['title' => $title, 'body' => $content],
     'metadata' => ['source_type' => $type, 'pipeline_id' => $id, /*...*/],
@@ -289,6 +316,17 @@ class MyPublishHandler {
 }
 ```
 
+**Update Handlers**:
+```php
+class MyUpdateHandler {
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        $handler_config = $tool_def['handler_config'] ?? [];
+        $original_id = $parameters['original_id'] ?? null; // Required for updates
+        return ['success' => true, 'data' => ['updated_id' => $original_id, 'modifications' => $changes]];
+    }
+}
+```
+
 ## System Integration
 
 **Import/Export**:
@@ -320,7 +358,16 @@ $pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'Mu
 // Add steps: fetch, ai (twitter), publish (twitter), ai (facebook), publish (facebook)
 ```
 
-> **Note**: AI steps discover handler tools for immediate next step only. Use alternating AI→Publish pattern for multi-platform publishing.
+**Content Update (Fetch→AI→Update pattern)**:
+```php
+// WordPress content enhancement workflow
+$pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'Content Enhancement']);
+apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
+apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
+apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
+```
+
+> **Note**: AI steps discover handler tools for immediate next step only. Update step requires `original_id` in metadata for content modification.
 
 ## Development
 
@@ -330,7 +377,7 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/`
-**Filter Registration**: 25 `*Filters.php` files auto-loaded via composer.json (containing 50+ filter hooks)
+**Filter Registration**: 27 `*Filters.php` files auto-loaded via composer.json (containing 50+ filter hooks)
 
 ## Extensions
 
@@ -412,7 +459,7 @@ $callback_url = apply_filters('dm_get_oauth_url', '', 'twitter');
 $auth_url = apply_filters('dm_get_oauth_auth_url', '', 'twitter');
 ```
 
-**URLs**: `/dm-oauth/{provider}/` with `manage_options` security
+**URLs**: `/dm-oauth/{provider}/` with `manage_options` security - all OAuth operations require admin capabilities
 **Storage**: `dm_auth_data` option per handler
 
 **Requirements**:

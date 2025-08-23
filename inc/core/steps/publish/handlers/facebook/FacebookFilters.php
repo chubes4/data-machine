@@ -73,10 +73,15 @@ function dm_register_facebook_filters() {
 }
 
 /**
- * Get Facebook tool definition with dynamic parameters based on configuration.
+ * Generate Facebook tool definition with dynamic parameters based on handler configuration.
  *
- * @param array $handler_config Optional handler configuration for dynamic parameters.
- * @return array Facebook tool configuration.
+ * Dynamically constructs tool parameters based on Facebook-specific settings:
+ * - Conditionally includes source_url parameter based on link_handling setting
+ * - Conditionally includes image_url parameter based on include_images setting
+ * - Modifies parameter descriptions based on link_handling mode (append/comment/none)
+ *
+ * @param array $handler_config Handler configuration containing Facebook-specific settings.
+ * @return array Complete Facebook tool configuration for AI HTTP Client.
  */
 function dm_get_facebook_tool(array $handler_config = []): array {
     // Extract Facebook-specific config from nested structure

@@ -25,8 +25,10 @@ class Pipelines {
 	private $table_name;
 
 	/**
-	 * Initialize the class.
-	 * Uses filter-based service access for dependencies.
+	 * Initialize pipeline database operations.
+	 *
+	 * Sets up database table reference using WordPress global $wpdb.
+	 * No external dependencies - follows self-contained architecture pattern.
 	 */
 	public function __construct() {
 		global $wpdb;
@@ -271,31 +273,6 @@ class Pipelines {
 		return is_array( $pipeline_config ) ? $pipeline_config : [];
 	}
 
-	/**
-	 * Check if a pipeline name already exists.
-	 *
-	 * @param string   $pipeline_name  The pipeline name to check.
-	 * @param int|null $exclude_id     Optional pipeline ID to exclude from check.
-	 * @return bool True if name exists, false otherwise.
-	 */
-	public function pipeline_name_exists( string $pipeline_name, ?int $exclude_id = null ): bool {
-		global $wpdb;
-
-		if ( empty( $pipeline_name ) ) {
-			return false;
-		}
-
-		$sql = "SELECT COUNT(*) FROM {$this->table_name} WHERE pipeline_name = %s";
-		$params = [ $pipeline_name ];
-
-		if ( $exclude_id ) {
-			$sql .= " AND pipeline_id != %d";
-			$params[] = $exclude_id;
-		}
-
-		$count = $wpdb->get_var( $wpdb->prepare( $sql, ...$params ) );
-		return $count > 0;
-	}
 
 	/**
 	 * Get pipelines count for list table pagination.

@@ -24,7 +24,7 @@ class PipelineModalAjax
      * Self-contained registration pattern following WordPress-native approach.
      * Registers all modal-related AJAX actions this class handles.
      *
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public static function register() {
         $instance = new self();
@@ -42,14 +42,20 @@ class PipelineModalAjax
     }
 
     /**
-     * Handle pipeline modal AJAX requests (UI support)
+     * Core AJAX handler methods for pipeline modal operations.
+     * 
+     * Provides UI support functionality for modal rendering, step configuration,
+     * and handler settings management within the pipeline editor interface.
      */
 
 
 
     /**
-     * Get rendered template with provided data
-     * Dedicated endpoint for template rendering to maintain architecture consistency
+     * Render template with provided data via AJAX.
+     *
+     * Universal template rendering endpoint that processes template requests
+     * and injects contextual data for pipeline step cards and modal content.
+     * Includes AJAX-specific defaults for UI rendering consistency.
      */
     public function handle_get_template()
     {
@@ -101,7 +107,10 @@ class PipelineModalAjax
     }
 
     /**
-     * Get flow step card data for template rendering
+     * Generate flow step card template data for AJAX rendering.
+     *
+     * Validates step type against registered steps and constructs template data
+     * for new step cards including flow context and first-step detection logic.
      */
     public function handle_get_flow_step_card()
     {
@@ -173,7 +182,13 @@ class PipelineModalAjax
     }
 
     /**
-     * Handle step configuration save action
+     * Process and save AI step configuration data.
+     *
+     * Handles AI HTTP Client integration by:
+     * - Extracting step-specific configuration from form data
+     * - Saving API keys to unified ai_provider_api_keys storage
+     * - Storing step configuration in pipeline database with provider-specific model persistence
+     * - Validating UUID4 format for pipeline_step_id
      */
     public function handle_configure_step_action()
     {
@@ -419,7 +434,11 @@ class PipelineModalAjax
 
 
     /**
-     * Handle add handler action with proper update vs replace logic
+     * Add handler to specific flow step with settings processing.
+     *
+     * Processes handler selection and configuration, then updates the target
+     * flow step identified by flow_step_id. Includes handler validation and
+     * immediate flow configuration refresh for UI updates.
      */
     public function handle_add_handler_action()
     {
@@ -488,7 +507,11 @@ class PipelineModalAjax
 
 
     /**
-     * Handle AJAX file upload with handler context support
+     * Process file uploads with flow-isolated storage.
+     *
+     * Validates file security (size limits, dangerous extensions) and stores
+     * files using flow_step_id isolation via the files repository service.
+     * Implements 32MB size limit and blocks executable file types.
      */
     public function handle_upload_file()
     {
@@ -581,7 +604,11 @@ class PipelineModalAjax
 
 
     /**
-     * Handle save handler settings action
+     * Save handler-specific settings to flow step configuration.
+     *
+     * Processes form data through handler's sanitize() method and updates
+     * flow step configuration via dm_update_flow_handler action. Provides
+     * immediate flow configuration refresh for UI consistency.
      */
     public function handle_save_handler_settings()
     {
@@ -724,7 +751,14 @@ class PipelineModalAjax
 
 
     /**
-     * Process handler settings from form data
+     * Extract and sanitize handler settings from POST data.
+     *
+     * Uses handler's sanitize() method for proper data validation while
+     * filtering out WordPress-specific form fields (nonce, action, etc.).
+     * Returns sanitized settings array ready for storage.
+     *
+     * @param string $handler_slug Handler identifier for settings lookup.
+     * @return array Sanitized handler settings.
      */
     private function process_handler_settings($handler_slug)
     {

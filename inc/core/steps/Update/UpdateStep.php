@@ -71,6 +71,19 @@ class UpdateStep {
                 'data_entries' => count($data)
             ]);
 
+            // Check if AI already executed the tool for this handler
+            $tool_result_entry = $this->find_tool_result_for_handler($data, $handler_slug);
+            if ($tool_result_entry) {
+                do_action('dm_log', 'debug', 'Update Step: Tool already executed by AI step', [
+                    'flow_step_id' => $flow_step_id,
+                    'handler' => $handler_slug,
+                    'tool_name' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
+                ]);
+                
+                // Create success entry from tool result and return
+                return $this->create_update_entry_from_tool_result($tool_result_entry, $data, $handler_slug, $flow_step_id);
+            }
+
             // Get handler instance and execute update
             $handler_result = $this->execute_handler($handler_slug, $latest_entry, $handler, $flow_step_config);
             
@@ -244,5 +257,73 @@ class UpdateStep {
         }
         
         return $parameters;
+    }
+
+    /**
+     * Find tool_result entry for the specified handler in the data packet.
+     * 
+     * @param array $data Data packet array
+     * @param string $handler Handler slug to look for
+     * @return array|null Tool result entry or null if not found
+     */
+    private function find_tool_result_for_handler(array $data, string $handler): ?array {
+        foreach ($data as $entry) {
+            if (($entry['type'] ?? '') === 'tool_result') {
+                $tool_name = $entry['metadata']['tool_name'] ?? '';
+                // For update handlers, look for tools that match handler pattern (e.g., save_semantic_analysis for structured_data)
+                $tool_handler = $entry['metadata']['tool_handler'] ?? '';
+                if ($tool_handler === $handler) {
+                    return $entry;
+                }
+                // Fallback: check if tool name contains handler name pattern
+                if (strpos($tool_name, $handler) !== false || strpos($handler, $tool_name) !== false) {
+                    return $entry;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Create update entry from successful tool result.
+     * 
+     * @param array $tool_result_entry The tool result entry from AI step
+     * @param array $data Current data packet
+     * @param string $handler Handler slug
+     * @param string $flow_step_id Flow step ID
+     * @return array Updated data packet with update entry
+     */
+    private function create_update_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
+        $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
+        
+        // Create update data entry for the data packet array
+        $update_entry = [
+            'content' => [
+                'update_result' => $tool_result_data,
+                'updated_at' => current_time('mysql')
+            ],
+            'metadata' => [
+                'step_type' => 'update',
+                'handler' => $handler,
+                'flow_step_id' => $flow_step_id,
+                'success' => $tool_result_data['success'] ?? false,
+                'executed_via' => 'ai_tool_call',
+                'tool_execution_data' => $tool_result_data
+            ],
+            'attachments' => []
+        ];
+        
+        // Add update entry to front of data packet array (newest first)
+        array_unshift($data, $update_entry);
+        
+        do_action('dm_log', 'info', 'Update Step: Completed successfully via AI tool call', [
+            'flow_step_id' => $flow_step_id,
+            'handler_slug' => $handler,
+            'tool_result_keys' => array_keys($tool_result_data),
+            'success' => $tool_result_data['success'] ?? false,
+            'data_entries' => count($data)
+        ]);
+
+        return $data;
     }
 }

@@ -94,6 +94,7 @@ $response = apply_filters('ai_request', [
 
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
+$auth_providers = apply_filters('dm_auth_providers', []);
 $auth_account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
 $settings = dm_get_data_machine_settings();
 
@@ -110,6 +111,7 @@ Data Machine includes a complete extension system with LLM-powered development t
 
 **Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
+**Update Handlers**: WordPress content modification, post enhancement  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
 **Tools**: Google Search, WordPress Search
 

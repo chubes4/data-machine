@@ -254,11 +254,20 @@ class AIStep {
                             'tool_name' => $tool_name
                         ];
                     } else {
+                        // Extract additional parameters from data packet
+                        $latest_data = !empty($data) ? $data[0] : [];
+                        $handler_config = $tool_def['handler_config'] ?? [];
+                        $data_packet_parameters = $this->extract_tool_parameters_from_data($latest_data, $handler_config);
+                        
+                        // Merge AI analysis parameters with data packet parameters
+                        // AI parameters take precedence over data packet parameters
+                        $complete_parameters = array_merge($data_packet_parameters, $tool_parameters);
+                        
                         // Direct tool execution following established pattern
                         $class_name = $tool_def['class'];
                         if (class_exists($class_name)) {
                             $tool_handler = new $class_name();
-                            $tool_result = $tool_handler->handle_tool_call($tool_parameters, $tool_def);
+                            $tool_result = $tool_handler->handle_tool_call($complete_parameters, $tool_def);
                         } else {
                             $tool_result = [
                                 'success' => false,
@@ -279,7 +288,8 @@ class AIStep {
                             ],
                             'metadata' => [
                                 'tool_name' => $tool_name,
-                                'tool_parameters' => $tool_parameters,
+                                'tool_handler' => $tool_def['handler'] ?? '',
+                                'tool_parameters' => $complete_parameters,
                                 'tool_result' => $tool_result['data'] ?? [],
                                 'model' => $ai_response['data']['model'] ?? 'unknown',
                                 'provider' => $ai_response['provider'] ?? 'unknown',
@@ -419,6 +429,62 @@ class AIStep {
         }
         
         return $allowed_tools;
+    }
+
+    /**
+     * Extract tool parameters from data entry for tool calling
+     * 
+     * @param array $data_entry Latest data entry from data packet array
+     * @param array $handler_settings Handler configuration settings
+     * @return array Tool parameters extracted from data entry
+     */
+    private function extract_tool_parameters_from_data(array $data_entry, array $handler_settings): array {
+        $parameters = [];
+        
+        // Extract content from data entry
+        $content_data = $data_entry['content'] ?? [];
+        
+        if (isset($content_data['title'])) {
+            $parameters['title'] = $content_data['title'];
+        }
+        
+        if (isset($content_data['body'])) {
+            $parameters['content'] = $content_data['body'];
+        }
+        
+        // Extract metadata - CRITICAL: Include original_id for updates
+        $metadata = $data_entry['metadata'] ?? [];
+        if (isset($metadata['original_id'])) {
+            $parameters['original_id'] = $metadata['original_id'];
+        }
+        if (isset($metadata['source_url'])) {
+            $parameters['source_url'] = $metadata['source_url'];
+        }
+        
+        // Extract attachments/media if available
+        $attachments = $data_entry['attachments'] ?? [];
+        if (!empty($attachments)) {
+            // Look for image attachments
+            foreach ($attachments as $attachment) {
+                if (isset($attachment['type']) && $attachment['type'] === 'image') {
+                    $parameters['image_url'] = $attachment['url'] ?? null;
+                    break;
+                }
+            }
+        }
+        
+        // Merge any additional parameters from handler settings
+        // This allows handler-specific configuration to be passed through
+        if (!empty($handler_settings)) {
+            // Filter out internal settings, only pass through tool-relevant ones
+            $tool_relevant_settings = array_filter($handler_settings, function($key) {
+                return !in_array($key, ['handler_slug', 'auth_config', 'internal_config']);
+            }, ARRAY_FILTER_USE_KEY);
+            
+            $parameters = array_merge($parameters, $tool_relevant_settings);
+        }
+        
+        return $parameters;
     }
 
 

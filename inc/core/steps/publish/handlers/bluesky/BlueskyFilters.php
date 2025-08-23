@@ -71,10 +71,15 @@ function dm_register_bluesky_filters() {
 }
 
 /**
- * Get Bluesky tool definition with dynamic parameters based on configuration.
+ * Generate Bluesky tool definition with dynamic parameters based on handler configuration.
  *
- * @param array $handler_config Optional handler configuration for dynamic parameters.
- * @return array Bluesky tool configuration.
+ * Dynamically constructs tool parameters based on Bluesky-specific settings:
+ * - Conditionally includes source_url parameter based on include_source setting
+ * - Conditionally includes image_url parameter based on enable_images setting
+ * - Modifies descriptions based on link and media handling configuration
+ *
+ * @param array $handler_config Handler configuration containing Bluesky-specific settings.
+ * @return array Complete Bluesky tool configuration for AI HTTP Client.
  */
 function dm_get_bluesky_tool(array $handler_config = []): array {
     // Extract Bluesky-specific config from nested structure
