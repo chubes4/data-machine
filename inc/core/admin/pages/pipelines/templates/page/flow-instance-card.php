@@ -51,6 +51,11 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             <input type="text" class="dm-flow-title-input" 
                    value="<?php echo esc_attr($flow_name); ?>" 
                    placeholder="<?php esc_attr_e('Enter flow name...', 'data-machine'); ?>" />
+            <button type="button" class="button button-primary dm-run-now-btn" 
+                    data-flow-id="<?php echo esc_attr($flow_id); ?>"
+                    aria-label="<?php echo esc_attr(sprintf('Run: %s', $flow_name)); ?>">
+                <?php echo esc_html__('Run', 'data-machine'); ?>
+            </button>
         </div>
         <div class="dm-flow-actions">
             <button type="button" class="button button-small dm-modal-open" 
@@ -58,11 +63,6 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
                     data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'
                     aria-label="<?php echo esc_attr(sprintf('Schedule: %s', $flow_name)); ?>">
                 <?php echo esc_html__('Schedule', 'data-machine'); ?>
-            </button>
-            <button type="button" class="button button-small button-primary dm-run-now-btn" 
-                    data-flow-id="<?php echo esc_attr($flow_id); ?>"
-                    aria-label="<?php echo esc_attr(sprintf('Run Now: %s', $flow_name)); ?>">
-                <?php echo esc_html__('Run Now', 'data-machine'); ?>
             </button>
             <button type="button" class="button button-small button-delete dm-modal-open" 
                     data-template="confirm-delete"

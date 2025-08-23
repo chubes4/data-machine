@@ -117,7 +117,7 @@ apply_filters('ai_request', null, $request_data, $provider)
 - Template-based UI components using PHP includes
 - Located in `src/templates/` directory
 - Standard WordPress template variables and escaping
-- Core templates: core.php, max-tokens.php, system-prompt.php, temperature.php
+- Core templates: core.php
 
 **Template Rendering**:
 ```php

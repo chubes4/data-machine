@@ -5,7 +5,7 @@
  * Handles WordPress content from local installation using WP_Query.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/inc/core/steps/fetch/handlers
+ * @subpackage Core\Steps\Fetch\Handlers\WordPress
  * @since      1.0.0
  */
 

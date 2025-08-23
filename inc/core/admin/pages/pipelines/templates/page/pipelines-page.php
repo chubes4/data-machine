@@ -28,6 +28,15 @@ if (empty($selected_pipeline_id) && !empty($all_pipelines)) {
     $selected_pipeline_id = $all_pipelines[0]['pipeline_id'];
 }
 
+// Validate that the selected pipeline ID actually exists in available pipelines
+if (!empty($selected_pipeline_id) && !empty($all_pipelines)) {
+    $valid_pipeline_ids = array_column($all_pipelines, 'pipeline_id');
+    if (!in_array($selected_pipeline_id, $valid_pipeline_ids, true)) {
+        // Selected pipeline doesn't exist, fall back to first available pipeline
+        $selected_pipeline_id = $all_pipelines[0]['pipeline_id'];
+    }
+}
+
 ?>
 <div class="dm-admin-wrap dm-pipelines-page">
     <div class="dm-admin-header">
@@ -48,16 +57,14 @@ if (empty($selected_pipeline_id) && !empty($all_pipelines)) {
     </div>
     
     <div class="dm-pipeline-page-header">
-        <?php if (!empty($all_pipelines)): ?>
-            <select class="dm-pipeline-dropdown" id="dm-pipeline-selector">
-                <?php foreach ($all_pipelines as $pipeline): ?>
-                    <option value="<?php echo esc_attr($pipeline['pipeline_id']); ?>" 
-                        <?php selected($selected_pipeline_id, $pipeline['pipeline_id']); ?>>
-                        <?php echo esc_html($pipeline['pipeline_name']); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        <?php endif; ?>
+        <select class="dm-pipeline-dropdown" id="dm-pipeline-selector" <?php echo empty($all_pipelines) ? 'style="display:none;"' : ''; ?>>
+            <?php foreach ($all_pipelines as $pipeline): ?>
+                <option value="<?php echo esc_attr($pipeline['pipeline_id']); ?>" 
+                    <?php selected($selected_pipeline_id, $pipeline['pipeline_id']); ?>>
+                    <?php echo esc_html($pipeline['pipeline_name']); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
         
         <button type="button" class="button button-primary dm-add-new-pipeline-btn">
             <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
@@ -66,7 +73,7 @@ if (empty($selected_pipeline_id) && !empty($all_pipelines)) {
 
     <div class="dm-pipeline-cards-container">
         <div class="dm-pipelines-list">
-            <?php if (!empty($all_pipelines) && !empty($selected_pipeline_id)): ?>
+            <?php if (!empty($all_pipelines)): ?>
                 <?php foreach ($all_pipelines as $pipeline): ?>
                     <?php 
                     $pipeline_id = $pipeline['pipeline_id'];

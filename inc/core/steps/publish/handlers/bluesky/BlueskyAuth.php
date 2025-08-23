@@ -7,7 +7,7 @@
  * Provides authenticated API access through session tokens.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/bluesky
+ * @subpackage Core\Steps\Publish\Handlers\Bluesky
  * @since      NEXT_VERSION
  */
 

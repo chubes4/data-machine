@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Publish\WordPress
+ * @subpackage Core\Steps\Publish\Handlers\WordPress
  * @since 0.1.0
  */
 

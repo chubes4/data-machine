@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Output\Threads
+ * @subpackage Core\Steps\Publish\Handlers\Threads
  * @since 0.1.0
  */
 
@@ -93,7 +93,7 @@ function dm_get_threads_tool(array $handler_config = []): array {
     
     // Base tool definition
     $tool = [
-        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Threads\\Threads',
+        'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Threads\\Threads',
         'method' => 'handle_tool_call',
         'handler' => 'threads',
         'description' => 'Post content to Threads (500 character limit)',

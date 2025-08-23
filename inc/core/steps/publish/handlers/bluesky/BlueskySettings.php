@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/publish/bluesky
+ * @subpackage Core\Steps\Publish\Handlers\Bluesky
  * @since      NEXT_VERSION
  */
 

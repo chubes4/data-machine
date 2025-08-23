@@ -6,15 +6,17 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'a5dd7c37007f43324e048d476ae79868' => $baseDir . '/inc/Engine/filters/DataMachineFilters.php',
-    'd9eab9debca92254a40bcf8433f0d89c' => $baseDir . '/inc/Engine/filters/Database.php',
-    '393188fc5e9258cb0d877dc33cd2dc79' => $baseDir . '/inc/Engine/filters/Admin.php',
-    'f9123865ebc264f56bda83f71ee7dfa1' => $baseDir . '/inc/Engine/filters/Logger.php',
-    '1c96008da180fb81cd854290c2fd5406' => $baseDir . '/inc/Engine/filters/AI.php',
-    '1a63f0a641c35ddb55b7a827dd6d968e' => $baseDir . '/inc/Engine/filters/OAuth.php',
-    '49f0fdd39bbc62ab8c929d3a9b97d2c2' => $baseDir . '/inc/Engine/filters/Create.php',
+    '6124b4c8570aa390c21fafd04a26c69f' => $vendorDir . '/myclabs/deep-copy/src/DeepCopy/deep_copy.php',
+    'ec07570ca5a812141189b1fa81503674' => $vendorDir . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
+    '7d3b315c4f303f2fc14aca642a738e50' => $vendorDir . '/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php',
+    'ba0b0ea338fcc8ed0dbf2d84b766a598' => $baseDir . '/inc/Engine/Filters/DataMachineFilters.php',
+    '4ec6208fb525b3063cee36bcda2e9a13' => $baseDir . '/inc/Engine/Filters/Database.php',
+    '04a5e7de2289459d29f567cbbeaaa0f8' => $baseDir . '/inc/Engine/Filters/Admin.php',
+    '010638256465f878cece43f681a6b950' => $baseDir . '/inc/Engine/Filters/Logger.php',
+    'd850ef6ea5eab2b418e951037b3606f7' => $baseDir . '/inc/Engine/Filters/AI.php',
+    'ae1ffd207e9fafb17da2635b802a31be' => $baseDir . '/inc/Engine/Filters/OAuth.php',
     '0074b1ccee7951587dbc57181c8ea536' => $baseDir . '/inc/Engine/Actions/DataMachineActions.php',
-    'c5767b7295370b4fc7708c19e0fc1359' => $baseDir . '/inc/Engine/filters/StatusDetection.php',
+    '1aff3868410418ff700dc5f58048ac1d' => $baseDir . '/inc/Engine/Filters/StatusDetection.php',
     'cc9f95bfb35457a45c72a11cf870b061' => $baseDir . '/inc/Core/Database/ProcessedItems/ProcessedItemsFilters.php',
     '9a4d01491ef026106cc3c39d886d57c4' => $baseDir . '/inc/Core/Database/Pipelines/PipelinesFilters.php',
     '477a5f6d05fcac8b6c1885dd3738a330' => $baseDir . '/inc/Core/Database/Jobs/JobsFilters.php',
@@ -39,5 +41,5 @@ return array(
     '2c598200bb9e93b4867d30fe9adc964a' => $baseDir . '/inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyFilters.php',
     '34c215504a76087018afe866ef46a137' => $baseDir . '/inc/Core/Steps/AI/AIStepFilters.php',
     '571df12bcee566b1c7b2b944c7398a15' => $baseDir . '/inc/Core/Steps/AI/Tools/GeneralToolsFilters.php',
-    'c3e9a4dd44cab5c1eab47a6f7a8f1b68' => $baseDir . '/inc/Engine/filters/FilesRepository.php',
+    '48461dcaeb3e841a66ff412295326aaf' => $baseDir . '/inc/Engine/Filters/FilesRepository.php',
 );

@@ -7,7 +7,7 @@
  * concerns between main handler logic and authentication functionality.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/facebook
+ * @subpackage Core\Steps\Publish\Handlers\Facebook
  * @since      NEXT_VERSION
  */
 

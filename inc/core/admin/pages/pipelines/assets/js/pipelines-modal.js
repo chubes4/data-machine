@@ -51,15 +51,16 @@
             
             
             // AI step configuration - handle provider switching with saved models
-            $(document).on('dm-modal-opened', this.handleAIStepConfiguration.bind(this));
+            $(document).on('dm-core-modal-content-loaded', this.handleAIStepConfiguration.bind(this));
         },
         
         /**
          * Handle AI step configuration modal opening
          * Restores saved model selections when provider is switched
          */
-        handleAIStepConfiguration: function(e, modalType) {
-            if (modalType !== 'configure-step') return;
+        handleAIStepConfiguration: function(e, title, content) {
+            // Check if this is an AI step configuration modal
+            if (!content.includes('ai-http-provider-config')) return;
             
             // Hook into provider change to restore saved models
             $(document).on('change.ai-step', '.ai-http-provider-manager select[name*="provider"]', function() {

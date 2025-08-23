@@ -7,7 +7,7 @@
  * and converting them into standardized DataPackets for processing.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/fetch
+ * @subpackage Core\Steps\Fetch\Handlers\Rss
  * @since      0.11.0
  */
 

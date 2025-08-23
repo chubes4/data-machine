@@ -7,7 +7,7 @@
  * concerns between main handler logic and authentication functionality.
  *
  * @package    DataMachine
- * @subpackage DataMachine/Core/Handlers/Publish/Twitter
+ * @subpackage Core\Steps\Publish\Handlers\Twitter
  * @since      0.1.0
  */
 

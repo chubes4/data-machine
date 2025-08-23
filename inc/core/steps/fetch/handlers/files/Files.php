@@ -3,7 +3,7 @@
  * Handles file uploads as a data source.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/fetch
+ * @subpackage Core\Steps\Fetch\Handlers\Files
  * @since      0.7.0
  */
 namespace DataMachine\Core\Steps\Fetch\Handlers\Files;

@@ -10,7 +10,7 @@
  * to provide seamless bi-directional Google Sheets integration.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/fetch/googlesheets
+ * @subpackage Core\Steps\Fetch\Handlers\GoogleSheets
  * @since      NEXT_VERSION
  */
 

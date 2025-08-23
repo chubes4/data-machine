@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Fetch\Reddit
+ * @subpackage Core\Steps\Fetch\Handlers\Reddit
  * @since 0.1.0
  */
 

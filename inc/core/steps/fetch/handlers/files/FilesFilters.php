@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration for AI workflow integration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Fetch\Files
+ * @subpackage Core\Steps\Fetch\Handlers\Files
  * @since 0.1.0
  */
 

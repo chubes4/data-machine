@@ -640,11 +640,15 @@ class PipelineModalAjax
             $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
             $flow_id = $parts['flow_id'] ?? null;
             
+            // Get updated flow configuration for immediate UI update
+            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+            
             wp_send_json_success([
                 'message' => sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug),
                 'handler_slug' => $handler_slug,
                 'flow_step_id' => $flow_step_id,
-                'flow_id' => $flow_id
+                'flow_id' => $flow_id,
+                'flow_config' => $flow_config
             ]);
             
         } catch (\Exception $e) {

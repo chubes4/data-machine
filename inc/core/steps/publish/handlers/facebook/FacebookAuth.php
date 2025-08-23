@@ -7,7 +7,7 @@
  * Uses filter-based HTTP requests and centralized logging.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/facebook
+ * @subpackage Core\Steps\Publish\Handlers\Facebook
  * @since      NEXT_VERSION
  */
 

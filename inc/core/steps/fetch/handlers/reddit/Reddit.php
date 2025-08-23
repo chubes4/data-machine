@@ -5,7 +5,7 @@
  * Fetches posts from a subreddit using the public Reddit JSON API.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/fetch
+ * @subpackage Core\Steps\Fetch\Handlers\Reddit
  * @since      0.15.0
  */
 
@@ -34,7 +34,7 @@ class Reddit {
 	/**
 	 * Get the OAuth Reddit service - internal implementation.
 	 *
-	 * @return \DataMachine\Core\Handlers\Input\Reddit\RedditAuth The OAuth Reddit service.
+	 * @return \DataMachine\Core\Steps\Fetch\Handlers\Reddit\RedditAuth The OAuth Reddit service.
 	 */
 	private function get_oauth_reddit() {
 		return $this->oauth_reddit;
@@ -563,5 +563,5 @@ class Reddit {
 		return 'Reddit Subreddit';
 	}
 
-} // End class \DataMachine\Core\Handlers\Input\Reddit\Reddit
+} // End class \DataMachine\Core\Steps\Fetch\Handlers\Reddit\Reddit
 

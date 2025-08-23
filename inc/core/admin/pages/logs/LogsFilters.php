@@ -41,14 +41,14 @@ function dm_register_logs_admin_page_filters() {
             'assets' => [
                 'css' => [
                     'dm-admin-logs' => [
-                        'file' => 'inc/core/admin/pages/logs/assets/css/admin-logs.css',
+                        'file' => 'inc/Core/Admin/Pages/Logs/assets/css/admin-logs.css',
                         'deps' => [],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
                     'dm-admin-logs' => [
-                        'file' => 'inc/core/admin/pages/logs/assets/js/admin-logs.js',
+                        'file' => 'inc/Core/Admin/Pages/Logs/assets/js/admin-logs.js',
                         'deps' => ['jquery'],
                         'in_footer' => true
                     ]

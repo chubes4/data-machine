@@ -23,6 +23,7 @@ if ( ! dm_check_requirements() ) {
 define( 'DATA_MACHINE_VERSION', '0.1.0' );
 
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
+define( 'DATA_MACHINE_URL', plugin_dir_url( __FILE__ ) );
 
 require_once __DIR__ . '/vendor/autoload.php';
 

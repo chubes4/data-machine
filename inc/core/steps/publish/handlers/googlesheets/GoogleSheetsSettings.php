@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/publish/googlesheets
+ * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
  * @since      NEXT_VERSION
  */
 

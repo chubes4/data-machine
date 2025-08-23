@@ -7,7 +7,7 @@
  * Uses centralized logging and filter-based HTTP requests.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/fetch/reddit
+ * @subpackage Core\Steps\Fetch\Handlers\Reddit
  * @since      NEXT_VERSION
  */
 

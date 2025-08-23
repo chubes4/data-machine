@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/publish/twitter
+ * @subpackage Core\Steps\Publish\Handlers\Twitter
  * @since      NEXT_VERSION
  */
 

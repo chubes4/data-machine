@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/publish/wordpress
+ * @subpackage Core\Steps\Publish\Handlers\WordPress
  * @since      NEXT_VERSION
  */
 

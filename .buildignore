@@ -1,15 +1,11 @@
 # Development files
 .git/
 .gitignore
+.github/
 .DS_Store
 *.log
 
-# Documentation
-README.md
-LICENSE
-CLAUDE.md
-
-# Build system
+# Build system (exclude build files but not the final product)
 build.sh
 .buildignore
 build/
@@ -40,4 +36,11 @@ yarn.lock
 
 # OS files
 Thumbs.db
-.DS_Store
+
+# Documentation that should be excluded from distribution
+CLAUDE.md
+extensions/
+
+# Temporary and cache files
+*.tmp
+*.cache

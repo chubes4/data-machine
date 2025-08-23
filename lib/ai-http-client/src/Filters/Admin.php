@@ -56,15 +56,12 @@ function ai_http_render_template($template_name, $data = []) {
 
 // AI Component Rendering filter - simplified to return only table rows
 // Usage: echo apply_filters('ai_render_component', '');
-// Usage: echo apply_filters('ai_render_component', '', ['temperature' => true, 'system_prompt' => true]);
 // Usage: echo apply_filters('ai_render_component', '', ['selected_provider' => 'anthropic', 'selected_model' => 'claude-3-sonnet']);
 add_filter('ai_render_component', function($html, $config = []) {
     
     // Use provided configuration or defaults
     $selected_provider = $config['selected_provider'] ?? 'openai';
     $selected_model = $config['selected_model'] ?? '';
-    $temperature_value = $config['temperature_value'] ?? '';  // No default - truly optional
-    $system_prompt_value = $config['system_prompt_value'] ?? '';
     
     // Generate unique ID for form elements
     $unique_id = 'ai_' . uniqid();
@@ -74,34 +71,12 @@ add_filter('ai_render_component', function($html, $config = []) {
         'unique_id' => $unique_id,
         'selected_provider' => $selected_provider,
         'provider_config' => [
-            'model' => $selected_model,
-            'temperature' => $temperature_value,
-            'system_prompt' => $system_prompt_value
+            'model' => $selected_model
         ]
     ];
     
     $html = ai_http_render_template('core', $template_data);
     
-    // Optional components (based on config) - each returns table rows
-    if (!empty($config['temperature'])) {
-        $temp_config = is_array($config['temperature']) ? $config['temperature'] : [];
-        $temp_config['value'] = $temperature_value; // Pass the current value
-        $template_data['config'] = $temp_config;
-        $html .= ai_http_render_template('temperature', $template_data);
-    }
-    
-    if (!empty($config['system_prompt'])) {
-        $prompt_config = is_array($config['system_prompt']) ? $config['system_prompt'] : [];
-        $prompt_config['value'] = $system_prompt_value; // Pass the current value
-        $template_data['config'] = $prompt_config;
-        $html .= ai_http_render_template('system-prompt', $template_data);
-    }
-    
-    if (!empty($config['max_tokens'])) {
-        $tokens_config = is_array($config['max_tokens']) ? $config['max_tokens'] : [];
-        $template_data['config'] = $tokens_config;
-        $html .= ai_http_render_template('max-tokens', $template_data);
-    }
     
     // Add nonce for AJAX operations
     $html .= '<tr class="ai-hidden"><td colspan="2">' . wp_nonce_field('ai_http_nonce', 'ai_http_nonce_field', true, false) . '</td></tr>';

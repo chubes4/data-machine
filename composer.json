@@ -16,20 +16,17 @@
     "autoload": {
         "psr-4": {
             "DataMachine\\Core\\": "inc/Core/",
-            "DataMachine\\Admin\\": "inc/Admin/",
-            "DataMachine\\Engine\\": "inc/Engine/",
-            "DataMachine\\Services\\": "inc/Services/",
-            "DataMachine\\Helpers\\": "inc/Helpers/"
+            "DataMachine\\Engine\\": "inc/Engine/"
         },
         "files": [
-            "inc/Engine/filters/DataMachineFilters.php",
-            "inc/Engine/filters/Database.php",
-            "inc/Engine/filters/Admin.php",
-            "inc/Engine/filters/Logger.php",
-            "inc/Engine/filters/AI.php",
-            "inc/Engine/filters/OAuth.php",
+            "inc/Engine/Filters/DataMachineFilters.php",
+            "inc/Engine/Filters/Database.php",
+            "inc/Engine/Filters/Admin.php",
+            "inc/Engine/Filters/Logger.php",
+            "inc/Engine/Filters/AI.php",
+            "inc/Engine/Filters/OAuth.php",
             "inc/Engine/Actions/DataMachineActions.php",
-            "inc/Engine/filters/StatusDetection.php",
+            "inc/Engine/Filters/StatusDetection.php",
             "inc/Core/Database/ProcessedItems/ProcessedItemsFilters.php",
             "inc/Core/Database/Pipelines/PipelinesFilters.php",
             "inc/Core/Database/Jobs/JobsFilters.php",
@@ -54,7 +51,7 @@
             "inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyFilters.php",
             "inc/Core/Steps/AI/AIStepFilters.php",
             "inc/Core/Steps/AI/Tools/GeneralToolsFilters.php",
-            "inc/Engine/filters/FilesRepository.php"
+            "inc/Engine/Filters/FilesRepository.php"
         ]
     },
     "autoload-dev": {

@@ -125,6 +125,9 @@
                         // Wrap pipeline card and add to page
                         const wrappedHtml = `<div class="dm-pipeline-wrapper" data-pipeline-id="${pipelineId}">${response.data.pipeline_card_html}</div>`;
                         $pipelinesList.append(wrappedHtml);
+                        
+                        // Trigger card expansion detection for new content
+                        $(document).trigger('dm:cards-updated');
                     } else {
                         this.showNotice(response.data.message || 'Error loading pipeline', 'error');
                         // Fall back to first available pipeline

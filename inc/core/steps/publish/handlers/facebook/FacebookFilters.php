@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Publish\Facebook
+ * @subpackage Core\Steps\Publish\Handlers\Facebook
  * @since 0.1.0
  */
 
@@ -93,7 +93,7 @@ function dm_get_facebook_tool(array $handler_config = []): array {
     
     // Base tool definition
     $tool = [
-        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Facebook\\Facebook',
+        'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Facebook\\Facebook',
         'method' => 'handle_tool_call',
         'handler' => 'facebook',
         'description' => 'Post content to Facebook pages and profiles',

@@ -6,7 +6,7 @@
  * Pipelines define reusable workflow templates without scheduling logic.
  *
  * @package    DataMachine
- * @subpackage DataMachine/Core/Database/Pipelines
+ * @subpackage Core\Database\Pipelines
  * @since      0.1.0
  */
 

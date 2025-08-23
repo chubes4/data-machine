@@ -108,12 +108,11 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
                                 <strong><?php echo esc_html(ucfirst($selected_provider)); ?>: <?php echo esc_html($model_name); ?></strong>
                             </div>
                             <div class="dm-prompt-display">
-                                <div class="dm-prompt-excerpt dm-prompt-collapsed"><?php echo esc_html($prompt_excerpt); ?></div>
                                 <?php
                                 // Calculate dynamic rows based on content length
                                 $estimated_rows = max(4, min(20, ceil(strlen($prompt) / 80) + 2));
                                 ?>
-                                <textarea class="dm-prompt-full dm-ai-prompt-input dm-prompt-expanded" 
+                                <textarea class="dm-ai-prompt-input" 
                                           data-pipeline-step-id="<?php echo esc_attr($pipeline_step_id); ?>"
                                           placeholder="<?php esc_attr_e('Define how the AI should process data from previous pipeline steps...', 'data-machine'); ?>"
                                           rows="<?php echo esc_attr($estimated_rows); ?>"><?php echo esc_textarea($prompt); ?></textarea>

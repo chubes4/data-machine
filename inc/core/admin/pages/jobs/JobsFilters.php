@@ -41,19 +41,19 @@ function dm_register_jobs_admin_page_filters() {
             'assets' => [
                 'css' => [
                     'dm-core-modal' => [
-                        'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
+                        'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
                         'deps' => [],
                         'media' => 'all'
                     ],
                     'dm-admin-jobs' => [
-                        'file' => 'inc/core/admin/pages/jobs/assets/css/admin-jobs.css',
+                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/css/admin-jobs.css',
                         'deps' => ['dm-core-modal'],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
                     'dm-core-modal' => [
-                        'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
+                        'file' => 'inc/Core/Admin/Modal/assets/js/core-modal.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
                         'localize' => [
@@ -70,7 +70,7 @@ function dm_register_jobs_admin_page_filters() {
                         ]
                     ],
                     'dm-jobs-admin' => [
-                        'file' => 'inc/core/admin/pages/jobs/assets/js/data-machine-jobs.js',
+                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/data-machine-jobs.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
                         'localize' => [
@@ -85,7 +85,7 @@ function dm_register_jobs_admin_page_filters() {
                         ]
                     ],
                     'dm-jobs-modal' => [
-                        'file' => 'inc/core/admin/pages/jobs/assets/js/jobs-modal.js',
+                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/jobs-modal.js',
                         'deps' => ['jquery', 'dm-core-modal'],
                         'in_footer' => true,
                         'localize' => [

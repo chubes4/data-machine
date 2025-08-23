@@ -15,12 +15,25 @@ NC='\033[0m' # No Color
 PLUGIN_FILE="data-machine.php"
 BUILD_DIR="build"
 TEMP_DIR="$BUILD_DIR/temp"
+BUILDIGNORE_FILE=".buildignore"
 
 echo -e "${GREEN}🔨 Starting Data Machine build process...${NC}"
 
 # Check if we're in the right directory
 if [[ ! -f "$PLUGIN_FILE" ]]; then
     echo -e "${RED}❌ Error: $PLUGIN_FILE not found. Make sure you're in the plugin root directory.${NC}"
+    exit 1
+fi
+
+# Check if .buildignore exists
+if [[ ! -f "$BUILDIGNORE_FILE" ]]; then
+    echo -e "${RED}❌ Error: $BUILDIGNORE_FILE not found. Build exclusion rules are required.${NC}"
+    exit 1
+fi
+
+# Check if rsync is available
+if ! command -v rsync &> /dev/null; then
+    echo -e "${RED}❌ Error: rsync is not installed. This is required for proper file filtering.${NC}"
     exit 1
 fi
 
@@ -48,29 +61,39 @@ mkdir -p "$TEMP_DIR/data-machine"
 echo -e "${YELLOW}📥 Installing production dependencies...${NC}"
 composer install --no-dev --optimize-autoloader --no-interaction
 
-# Copy plugin files (excluding development files)
-echo -e "${YELLOW}📋 Copying plugin files...${NC}"
-
-# Copy main plugin files
-cp "$PLUGIN_FILE" "$TEMP_DIR/data-machine/"
-cp "uninstall.php" "$TEMP_DIR/data-machine/"
-
-# Copy directories
-echo -e "${YELLOW}   📂 Copying inc/ directory...${NC}"
-cp -r inc/ "$TEMP_DIR/data-machine/"
-
-echo -e "${YELLOW}   📂 Copying lib/ directory...${NC}"
-cp -r lib/ "$TEMP_DIR/data-machine/"
-
-echo -e "${YELLOW}   📂 Copying vendor/ directory...${NC}"
-cp -r vendor/ "$TEMP_DIR/data-machine/"
+# Copy plugin files using rsync with .buildignore exclusions
+echo -e "${YELLOW}📋 Copying plugin files (excluding development files)...${NC}"
+rsync -av --exclude-from="$BUILDIGNORE_FILE" . "$TEMP_DIR/data-machine/"
 
 # Validate essential files exist
 echo -e "${YELLOW}✅ Validating build...${NC}"
-REQUIRED_FILES=("$TEMP_DIR/data-machine/data-machine.php" "$TEMP_DIR/data-machine/vendor/autoload.php")
+REQUIRED_FILES=(
+    "$TEMP_DIR/data-machine/data-machine.php"
+    "$TEMP_DIR/data-machine/uninstall.php"
+    "$TEMP_DIR/data-machine/vendor/autoload.php"
+    "$TEMP_DIR/data-machine/inc/Core"
+    "$TEMP_DIR/data-machine/inc/Engine"
+    "$TEMP_DIR/data-machine/lib/ai-http-client"
+)
+
 for file in "${REQUIRED_FILES[@]}"; do
-    if [[ ! -f "$file" ]]; then
-        echo -e "${RED}❌ Error: Required file missing: $file${NC}"
+    if [[ ! -e "$file" ]]; then
+        echo -e "${RED}❌ Error: Required file/directory missing: $file${NC}"
+        exit 1
+    fi
+done
+
+# Validate that development files are excluded
+EXCLUDED_FILES=(
+    "$TEMP_DIR/data-machine/.git"
+    "$TEMP_DIR/data-machine/build.sh"
+    "$TEMP_DIR/data-machine/phpunit.xml"
+    "$TEMP_DIR/data-machine/composer.lock"
+)
+
+for file in "${EXCLUDED_FILES[@]}"; do
+    if [[ -e "$file" ]]; then
+        echo -e "${RED}❌ Error: Development file should be excluded but was found: $file${NC}"
         exit 1
     fi
 done
@@ -84,7 +107,8 @@ zip -r "../$ZIP_NAME" "data-machine/" -q
 
 cd ../../
 
-# Clean up temp directory
+# Keep clean plugin directory alongside zip
+mv "$TEMP_DIR/data-machine" "$BUILD_DIR/data-machine"
 rm -rf "$TEMP_DIR"
 
 # Restore dev dependencies

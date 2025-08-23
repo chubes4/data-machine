@@ -22,8 +22,8 @@
     
     <filter>
         <whitelist processUncoveredFilesFromWhitelist="true">
-            <directory suffix=".php">inc/engine</directory>
-            <directory suffix=".php">inc/core</directory>
+            <directory suffix=".php">inc/Engine</directory>
+            <directory suffix=".php">inc/Core</directory>
             <exclude>
                 <directory>tests</directory>
                 <directory>vendor</directory>

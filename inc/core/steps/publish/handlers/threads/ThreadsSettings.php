@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/publish/threads
+ * @subpackage Core\Steps\Publish\Handlers\Threads
  * @since      NEXT_VERSION
  */
 

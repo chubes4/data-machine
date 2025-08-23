@@ -280,7 +280,7 @@
                 
                 // Add new pipeline to dropdown
                 const optionHtml = `<option value="${pipelineData.pipeline_id}">${pipelineData.pipeline_data.pipeline_name}</option>`;
-                $('#dm-pipeline-selector').append(optionHtml);
+                $('#dm-pipeline-selector').append(optionHtml).show();
                 
                 // Auto-select the new pipeline
                 PipelinesPage.autoSelectNewPipeline(pipelineData.pipeline_id);

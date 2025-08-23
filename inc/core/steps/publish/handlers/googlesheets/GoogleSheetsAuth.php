@@ -7,7 +7,7 @@
  * Uses filter-based HTTP requests and centralized logging.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/googlesheets
+ * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
  * @since      NEXT_VERSION
  */
 

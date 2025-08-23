@@ -2,7 +2,7 @@
  * Data Machine Admin Jobs Page JavaScript
  * 
  * Extracted from inline scripts for better code organization and maintainability.
- * Used by: inc/core/admin/pages/jobs/Jobs.php
+ * Used by: inc/Core/Admin/Pages/Jobs/Jobs.php
  *
  * @since NEXT_VERSION
  */

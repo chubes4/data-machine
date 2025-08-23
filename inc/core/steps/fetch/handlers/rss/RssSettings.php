@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/fetch/rss
+ * @subpackage Core\Steps\Fetch\Handlers\Rss
  * @since      NEXT_VERSION
  */
 

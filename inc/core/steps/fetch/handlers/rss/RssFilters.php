@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Fetch\Rss
+ * @subpackage Core\Steps\Fetch\Handlers\Rss
  * @since 0.1.0
  */
 

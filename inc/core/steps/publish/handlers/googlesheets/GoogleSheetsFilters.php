@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Output\GoogleSheets
+ * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
  * @since 0.1.0
  */
 
@@ -93,7 +93,7 @@ function dm_get_googlesheets_tool(array $handler_config = []): array {
     
     // Base tool definition
     $tool = [
-        'class' => 'DataMachine\\Core\\Handlers\\Publish\\GoogleSheets\\GoogleSheets',
+        'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\GoogleSheets\\GoogleSheets',
         'method' => 'handle_tool_call',
         'handler' => 'googlesheets_output',
         'description' => 'Append data to Google Sheets spreadsheet',

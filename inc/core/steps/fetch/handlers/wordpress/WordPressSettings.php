@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    DataMachine
- * @subpackage Core\Handlers\Fetch\WordPress
+ * @subpackage Core\Steps\Fetch\Handlers\WordPress
  * @since      NEXT_VERSION
  */
 

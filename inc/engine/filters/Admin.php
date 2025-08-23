@@ -66,9 +66,9 @@ function dm_register_admin_filters() {
         // Handle core modal templates
         if (strpos($template_name, 'modal/') === 0) {
             $modal_template_name = substr($template_name, 6);
-            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/' . $modal_template_name . '.php';
+            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Modal/templates/' . $modal_template_name . '.php';
         } else {
-            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/core/admin/modal/templates/' . $template_name . '.php';
+            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Modal/templates/' . $template_name . '.php';
         }
         
         if (file_exists($core_modal_template_path)) {
@@ -380,7 +380,7 @@ function dm_enqueue_admin_assets( $hook_suffix ) {
  */
 function dm_enqueue_page_assets($assets, $page_slug) {
     $plugin_base_path = DATA_MACHINE_PATH;
-    $plugin_base_url = plugins_url('/', 'data-machine/data-machine.php');
+    $plugin_base_url = DATA_MACHINE_URL;
     $version = DATA_MACHINE_VERSION;
     
     // Enqueue CSS files

@@ -41,22 +41,22 @@ function dm_register_pipelines_admin_page_filters() {
             'assets' => [
                 'css' => [
                     'dm-core-modal' => [
-                        'file' => 'inc/core/admin/modal/assets/css/core-modal.css',
+                        'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
                         'deps' => [],
                         'media' => 'all'
                     ],
                     'dm-pipelines-page' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-page.css',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-page.css',
                         'deps' => ['dm-core-modal'],
                         'media' => 'all'
                     ],
                     'dm-pipeline-status' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/css/pipeline-status.css',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipeline-status.css',
                         'deps' => ['dm-pipelines-page'],
                         'media' => 'all'
                     ],
                     'dm-pipelines-modal' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/css/pipelines-modal.css',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-modal.css',
                         'deps' => ['dm-core-modal', 'dm-pipelines-page', 'dm-pipeline-status'],
                         'media' => 'all'
                     ],
@@ -66,14 +66,14 @@ function dm_register_pipelines_admin_page_filters() {
                         'media' => 'all'
                     ],
                     'dm-import-export' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/css/import-export.css',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/import-export.css',
                         'deps' => [],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
                     'dm-core-modal' => [
-                        'file' => 'inc/core/admin/modal/assets/js/core-modal.js',
+                        'file' => 'inc/Core/Admin/Modal/assets/js/core-modal.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
                         'localize' => [
@@ -90,17 +90,17 @@ function dm_register_pipelines_admin_page_filters() {
                         ]
                     ],
                     'dm-pipeline-auth' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-auth.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-auth.js',
                         'deps' => [],
                         'in_footer' => true
                     ],
                     'dm-pipeline-status' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-status.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-status.js',
                         'deps' => ['jquery'],
                         'in_footer' => true
                     ],
                     'dm-pipelines-page' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-page.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipelines-page.js',
                         'deps' => ['jquery', 'dm-pipeline-status'],
                         'in_footer' => true,
                         'localize' => [
@@ -128,17 +128,17 @@ function dm_register_pipelines_admin_page_filters() {
                         ]
                     ],
                     'dm-pipeline-builder' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-builder.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-builder.js',
                         'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipelines-page', 'dm-pipeline-status'],
                         'in_footer' => true
                     ],
                     'dm-flow-builder' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/flow-builder.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/flow-builder.js',
                         'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status'],
                         'in_footer' => true
                     ],
                     'dm-pipelines-modal' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipelines-modal.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipelines-modal.js',
                         'deps' => ['jquery', 'dm-core-modal'],
                         'in_footer' => true,
                         'localize' => [
@@ -157,7 +157,7 @@ function dm_register_pipelines_admin_page_filters() {
                         ]
                     ],
                     'dm-file-uploads' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/file-uploads.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/file-uploads.js',
                         'deps' => ['jquery', 'dm-pipelines-modal'],
                         'in_footer' => true
                     ],
@@ -167,12 +167,12 @@ function dm_register_pipelines_admin_page_filters() {
                         'in_footer' => true
                     ],
                     'dm-import-export' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/import-export.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/import-export.js',
                         'deps' => ['jquery', 'dm-core-modal'],
                         'in_footer' => true
                     ],
                     'dm-pipeline-auto-save' => [
-                        'file' => 'inc/core/admin/pages/pipelines/assets/js/pipeline-auto-save.js',
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-auto-save.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
                         'localize' => [

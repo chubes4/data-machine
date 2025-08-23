@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Output\Bluesky
+ * @subpackage Core\Steps\Publish\Handlers\Bluesky
  * @since 0.1.0
  */
 
@@ -91,7 +91,7 @@ function dm_get_bluesky_tool(array $handler_config = []): array {
     
     // Base tool definition
     $tool = [
-        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Bluesky\\Bluesky',
+        'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Bluesky\\Bluesky',
         'method' => 'handle_tool_call',
         'handler' => 'bluesky',
         'description' => 'Post content to Bluesky (300 character limit)',

@@ -412,11 +412,54 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     
     // Compare current settings with defaults
     $customizations = [];
+    
+    // Special handling for WordPress handlers - always show essential settings
+    if ($handler_slug === 'wordpress_publish') {
+        $essential_wordpress_settings = ['post_type', 'post_status', 'post_author'];
+        foreach ($essential_wordpress_settings as $essential_key) {
+            if (isset($current_settings[$essential_key])) {
+                $current_value = $current_settings[$essential_key];
+                $field_config = $fields[$essential_key] ?? [];
+                $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $essential_key));
+                
+                // Format value for display
+                $display_value = $current_value;
+                if ($essential_key === 'post_author') {
+                    // Convert user ID to user name for display
+                    $user = get_userdata($current_value);
+                    if ($user) {
+                        $display_value = $user->display_name;
+                    }
+                } elseif (isset($field_config['options'][$current_value])) {
+                    $display_value = $field_config['options'][$current_value];
+                }
+                
+                $customizations[] = [
+                    'key' => $essential_key,
+                    'label' => $label,
+                    'value' => $current_value,
+                    'display_value' => $display_value,
+                    'default_value' => $defaults[$essential_key] ?? null
+                ];
+            }
+        }
+    }
+    
     foreach ($current_settings as $setting_key => $current_value) {
         $default_value = $defaults[$setting_key] ?? null;
         
-        // Check if value differs from default
-        if ($current_value !== $default_value) {
+        // For WordPress handlers, skip essential settings already processed above
+        if ($handler_slug === 'wordpress_publish' && in_array($setting_key, ['post_type', 'post_status', 'post_author'])) {
+            continue;
+        }
+        
+        // For WordPress taxonomy settings, only show non-"skip" values
+        if ($handler_slug === 'wordpress_publish' && strpos($setting_key, 'taxonomy_') === 0 && $current_value === 'skip') {
+            continue;
+        }
+        
+        // Check if value differs from default (or is a WordPress taxonomy that's not "skip")
+        if ($current_value !== $default_value || ($handler_slug === 'wordpress_publish' && strpos($setting_key, 'taxonomy_') === 0 && $current_value !== 'skip')) {
             $field_config = $fields[$setting_key] ?? [];
             $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $setting_key));
             

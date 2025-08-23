@@ -17,8 +17,8 @@
  * - Step Services: Step configuration and discovery (engine-level)
  * 
  * Specialized filter files:
- * - Database filters: inc/engine/filters/Database.php
- * - Admin/UI filters: inc/engine/filters/Admin.php
+ * - Database filters: inc/Engine/Filters/Database.php
+ * - Admin/UI filters: inc/Engine/Filters/Admin.php
  *
  * @package DataMachine
  * @subpackage Engine\Filters
@@ -52,7 +52,7 @@ function dm_register_importexport_filters() {
      */
     add_filter('dm_importer', function($service) {
         if ($service === null) {
-            require_once DATA_MACHINE_PATH . 'inc/engine/actions/ImportExport.php';
+            require_once DATA_MACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
             return new \DataMachine\Engine\Actions\ImportExportActions();
         }
         return $service;

@@ -5,7 +5,7 @@
  * Handles WordPress publishing to local installation using wp_insert_post.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/inc/core/steps/publish/handlers
+ * @subpackage Core\Steps\Publish\Handlers\WordPress
  * @since      1.0.0
  */
 

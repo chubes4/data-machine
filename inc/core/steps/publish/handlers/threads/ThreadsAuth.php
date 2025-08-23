@@ -7,7 +7,7 @@
  * Facebook Graph API integration. Uses filter-based HTTP requests.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/threads
+ * @subpackage Core\Steps\Publish\Handlers\Threads
  * @since      NEXT_VERSION
  */
 

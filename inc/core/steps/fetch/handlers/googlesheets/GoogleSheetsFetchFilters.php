@@ -12,7 +12,7 @@
  * seamless bi-directional integration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Fetch\GoogleSheets
+ * @subpackage Core\Steps\Fetch\Handlers\GoogleSheets
  * @since NEXT_VERSION
  */
 

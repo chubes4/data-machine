@@ -55,7 +55,6 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
         });
         $selected_provider = $saved_step_config['provider'] ?? '';
         $selected_model = $saved_step_config['model'] ?? '';
-        $system_prompt_value = $saved_step_config['system_prompt'] ?? '';
         
         if (empty($selected_model) && !empty($saved_step_config['providers'][$selected_provider]['model'])) {
             $selected_model = $saved_step_config['providers'][$selected_provider]['model'];
@@ -63,14 +62,7 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
         echo apply_filters('ai_render_component', '', [
             'selected_provider' => $selected_provider,
             'selected_model' => $selected_model,
-            'system_prompt_value' => $system_prompt_value,
             'show_save_button' => false, // Hide built-in save button - Data Machine provides custom save
-            'system_prompt' => [
-                'label' => __('AI Processing Instructions', 'data-machine'),
-                'placeholder' => __('Define how the AI should process data from previous pipeline steps...', 'data-machine'),
-                'help_text' => __('Instructions that guide AI behavior for this pipeline step. The AI will receive data from all previous steps automatically.', 'data-machine'),
-                'rows' => 6
-            ],
             // Pass step context for tool configuration navigation
             'step_context' => [
                 'step_type' => $step_type ?? 'ai',
@@ -100,7 +92,7 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
         <button type="button" class="button button-primary dm-modal-close" 
                 data-template="configure-step-action"
                 data-context='{"step_type":"<?php echo esc_attr($step_type ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id ?? ''); ?>"}'>
-            <?php esc_html_e('Save Step Configuration', 'data-machine'); ?>
+            <?php esc_html_e('Save AI Model Settings', 'data-machine'); ?>
         </button>
     </div>
 </div>

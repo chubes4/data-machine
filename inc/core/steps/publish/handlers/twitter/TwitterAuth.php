@@ -7,7 +7,7 @@
  * OAuth flow handling, and authenticated connection creation.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/core/handlers/publish/twitter
+ * @subpackage Core\Steps\Publish\Handlers\Twitter
  * @since      NEXT_VERSION
  */
 

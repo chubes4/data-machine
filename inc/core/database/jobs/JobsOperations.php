@@ -8,7 +8,7 @@
  * Pipeline → Flow architecture implementation.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/database/jobs
+ * @subpackage Core\Database\Jobs
  * @since      0.15.0
  */
 

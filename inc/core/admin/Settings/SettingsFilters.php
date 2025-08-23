@@ -266,7 +266,7 @@ function dm_enqueue_settings_assets($hook_suffix) {
  */
 function dm_enqueue_component_assets($assets, $component_slug) {
     $plugin_base_path = DATA_MACHINE_PATH;
-    $plugin_base_url = plugins_url('/', 'data-machine/data-machine.php');
+    $plugin_base_url = DATA_MACHINE_URL;
     $version = DATA_MACHINE_VERSION;
     
     // Enqueue CSS files

@@ -9,7 +9,7 @@
  * Each handler component manages its own filter registration.
  * 
  * @package DataMachine
- * @subpackage Core\Handlers\Publish\Twitter
+ * @subpackage Core\Steps\Publish\Handlers\Twitter
  * @since 0.1.0
  */
 
@@ -93,7 +93,7 @@ function dm_get_twitter_tool(array $handler_config = []): array {
     
     // Base tool definition
     $tool = [
-        'class' => 'DataMachine\\Core\\Handlers\\Publish\\Twitter\\Twitter',
+        'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
         'method' => 'handle_tool_call',
         'handler' => 'twitter',
         'description' => 'Post content to Twitter (280 character limit)',

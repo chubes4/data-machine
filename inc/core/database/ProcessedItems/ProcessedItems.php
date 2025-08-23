@@ -6,7 +6,7 @@
  * duplicate processing. Core responsibility: duplicate prevention only.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/includes/database/processed_items
+ * @subpackage Core\Database\ProcessedItems
  * @since      0.16.0
  */
 

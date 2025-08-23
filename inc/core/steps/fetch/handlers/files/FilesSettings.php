@@ -6,7 +6,7 @@
  * Part of the modular handler architecture.
  *
  * @package    Data_Machine
- * @subpackage Data_Machine/handlers/fetch/files
+ * @subpackage Core\Steps\Fetch\Handlers\Files
  * @since      NEXT_VERSION
  */
 

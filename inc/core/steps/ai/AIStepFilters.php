@@ -132,20 +132,6 @@ add_filter('ai_render_component', function($output, $config) {
     // Start building the Data Machine extensions
     $extensions = '';
     
-    // Add system prompt field
-    $ai_config = $config['ai_config'] ?? [];
-    $system_prompt_value = $config['system_prompt_value'] ?? '';
-    $system_prompt_config = $config['system_prompt'] ?? [];
-    
-    $extensions .= '<tr class="form-field">' . "\n";
-    $extensions .= '    <th scope="row">' . "\n";
-    $extensions .= '        <label for="ai_system_prompt">' . esc_html($system_prompt_config['label'] ?? __('System Prompt', 'data-machine')) . '</label>' . "\n";
-    $extensions .= '    </th>' . "\n";
-    $extensions .= '    <td>' . "\n";
-    $extensions .= '        <textarea name="system_prompt" id="ai_system_prompt" rows="' . ($system_prompt_config['rows'] ?? 4) . '" cols="70" class="large-text" placeholder="' . esc_attr($system_prompt_config['placeholder'] ?? '') . '">' . esc_textarea($system_prompt_value) . '</textarea>' . "\n";
-    $extensions .= '        <br><small class="description">' . esc_html($system_prompt_config['help_text'] ?? __('Instructions for the AI model.', 'data-machine')) . '</small>' . "\n";
-    $extensions .= '    </td>' . "\n";
-    $extensions .= '</tr>' . "\n";
     
     // Add tool configuration UI if tools are available
     if (!empty($enabled_general_tools)) {
@@ -208,4 +194,4 @@ dm_register_ai_step_filters();
  * the next step's handler when implemented. Architecture ready for tools like
  * search, data processing, analysis, etc.
  */
-require_once __DIR__ . '/tools/GeneralToolsFilters.php';
+require_once __DIR__ . '/Tools/GeneralToolsFilters.php';
