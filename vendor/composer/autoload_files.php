@@ -42,6 +42,6 @@ return array(
     '34c215504a76087018afe866ef46a137' => $baseDir . '/inc/Core/Steps/AI/AIStepFilters.php',
     '571df12bcee566b1c7b2b944c7398a15' => $baseDir . '/inc/Core/Steps/AI/Tools/GeneralToolsFilters.php',
     '9ade207e669cc5c3af18a3310fa0b449' => $baseDir . '/inc/Core/Steps/Update/UpdateStepFilters.php',
-    '8b2eaf74bb7a0f02665f7da7673d3628' => $baseDir . '/inc/Core/Steps/Update/handlers/wordpress/WordPressFilters.php',
+    'e9972855a04ad3d2ea2d2d62f084e663' => $baseDir . '/inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php',
     '48461dcaeb3e841a66ff412295326aaf' => $baseDir . '/inc/Engine/Filters/FilesRepository.php',
 );

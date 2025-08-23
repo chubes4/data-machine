@@ -52,7 +52,7 @@
             "inc/Core/Steps/AI/AIStepFilters.php",
             "inc/Core/Steps/AI/Tools/GeneralToolsFilters.php",
             "inc/Core/Steps/Update/UpdateStepFilters.php",
-            "inc/Core/Steps/Update/handlers/wordpress/WordPressFilters.php",
+            "inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
             "inc/Engine/Filters/FilesRepository.php"
         ]
     },
