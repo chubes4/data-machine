@@ -1,12 +1,8 @@
 <?php
 /**
- * Settings Admin Page Component Filter Registration
+ * Settings Admin Page Filter Registration
  * 
- * "Plugins Within Plugins" Architecture Implementation for Settings
- * 
- * Unified admin component architecture for Data Machine settings page.
- * Manages settings configuration, field registration, and asset loading
- * following the same self-contained pattern as other admin components.
+ * WordPress Settings API integration for Data Machine configuration.
  * 
  * @package DataMachine\Core\Admin\Settings
  * @since 1.0.0
@@ -18,10 +14,9 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register all Settings Admin Page component filters
+ * Register Settings Admin Page filters
  * 
- * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers Settings capabilities purely through filter-based discovery.
+ * Self-registration pattern for WordPress Settings integration.
  * 
  * @since 1.0.0
  */

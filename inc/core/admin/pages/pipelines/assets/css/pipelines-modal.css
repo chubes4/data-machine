@@ -54,7 +54,7 @@
 
 .dm-empty-files {
     background: #f9f9f9;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
 }
 
 .dm-empty-icon {
@@ -263,7 +263,7 @@
 .dm-delete-warning {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     padding: 15px;
     margin: 15px 0;
 }
@@ -277,7 +277,7 @@
 .dm-affected-flows {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     padding: 15px;
     margin: 15px 0;
 }
@@ -313,7 +313,7 @@
 .dm-no-flows {
     background: #d1ecf1;
     border: 1px solid #bee5eb;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     padding: 15px;
     margin: 15px 0;
 }
@@ -421,7 +421,7 @@
 .dm-form-field textarea {
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     font-size: 14px;
     transition: border-color 0.2s ease;
 }
@@ -483,7 +483,7 @@
     padding: 15px;
     background: #f9f9f9;
     border-left: 4px solid #0073aa;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
 }
 
 .dm-redirect-uri-section h5 {
@@ -650,7 +650,7 @@
     gap: 6px;
     padding: 8px 16px;
     font-size: 14px;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     transition: all 0.2s ease;
 }
 
@@ -712,7 +712,7 @@
     gap: 8px;
     padding: 12px;
     border: 1px solid #e1e1e1;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -936,7 +936,7 @@
     width: 100%;
     height: 8px;
     background: #e1e1e1;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     overflow: hidden;
     margin-bottom: 8px;
 }
@@ -944,7 +944,7 @@
 .dm-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #0073aa, #005a87);
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     transition: width 0.3s ease;
     width: 0%;
 }
@@ -983,7 +983,7 @@
     padding: 6px 12px;
     font-size: 13px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     background: #fff;
     color: #666;
     cursor: pointer;
@@ -1158,57 +1158,6 @@
     min-height: 26px;
 }
 
-/* Processing options section */
-.dm-processing-options {
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #e1e1e1;
-}
-
-.dm-processing-options h4 {
-    margin: 0 0 15px 0;
-    font-size: 16px;
-    color: #333;
-    font-weight: 600;
-}
-
-.dm-processing-field {
-    margin-bottom: 15px;
-}
-
-.dm-processing-field label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #333;
-    font-size: 14px;
-}
-
-.dm-processing-field input,
-.dm-processing-field select,
-.dm-processing-field textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-    transition: border-color 0.2s ease;
-}
-
-.dm-processing-field input:focus,
-.dm-processing-field select:focus,
-.dm-processing-field textarea:focus {
-    border-color: #0073aa;
-    outline: none;
-    box-shadow: 0 0 0 1px #0073aa;
-}
-
-.dm-processing-field .description {
-    margin-top: 5px;
-    font-size: 12px;
-    color: #666;
-    font-style: italic;
-}
 
 /* File size formatting */
 .dm-file-size {
@@ -1235,6 +1184,48 @@
     font-size: 16px;
     width: 16px;
     height: 16px;
+}
+
+/* Specific icon styles for file uploads */
+.dm-file-type-icon {
+    margin-right: 8px;
+}
+
+.dm-file-status-pending-icon {
+    color: #ffb900;
+    margin-right: 4px;
+}
+
+/* Upload message styling */
+.dm-upload-message {
+    margin: 10px 0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+}
+
+.dm-upload-message .dashicons {
+    margin-right: 8px;
+}
+
+/* Authentication status modal styles */
+.dm-auth-status-modal {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.dm-auth-status-title {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.dm-auth-status-message {
+    opacity: 0.8;
+}
+
+.dm-auth-status-message--with-margin {
+    opacity: 0.8;
+    margin-bottom: 16px;
 }
 
 /* Status badges */

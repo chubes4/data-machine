@@ -96,17 +96,17 @@
         
         if (success) {
             message.innerHTML = `
-                <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-                <div style="font-size: 20px; margin-bottom: 8px;">${provider.charAt(0).toUpperCase() + provider.slice(1)} Connected!</div>
-                <div style="opacity: 0.8;">Closing window...</div>
+                <div class="dm-auth-status-modal">✅</div>
+                <div class="dm-auth-status-title">${provider.charAt(0).toUpperCase() + provider.slice(1)} Connected!</div>
+                <div class="dm-auth-status-message">Closing window...</div>
             `;
         } else {
             const errorMessage = error ? error.replace(/_/g, ' ') : 'unknown error';
             message.innerHTML = `
-                <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
-                <div style="font-size: 20px; margin-bottom: 8px;">Connection Failed</div>
-                <div style="opacity: 0.8; margin-bottom: 16px;">${errorMessage}</div>
-                <div style="opacity: 0.8;">Closing window...</div>
+                <div class="dm-auth-status-modal">❌</div>
+                <div class="dm-auth-status-title">Connection Failed</div>
+                <div class="dm-auth-status-message--with-margin">${errorMessage}</div>
+                <div class="dm-auth-status-message">Closing window...</div>
             `;
         }
         

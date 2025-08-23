@@ -59,6 +59,7 @@ class WordPress {
         // Get handler configuration from tool definition
         $handler_config = $tool_def['handler_config'] ?? [];
         
+        
         do_action('dm_log', 'debug', 'WordPress Tool: Using handler configuration', [
             'has_post_author' => isset($handler_config['post_author']),
             'post_author_config' => $handler_config['post_author'] ?? 'NOT_SET',
@@ -67,13 +68,56 @@ class WordPress {
             'has_post_type' => isset($handler_config['post_type'])
         ]);
         
+        // Validate required WordPress configuration - fail job if missing
+        if (empty($handler_config['post_author'])) {
+            $error_msg = 'WordPress publish handler missing required post_author configuration';
+            do_action('dm_log', 'error', $error_msg, [
+                'handler_config_keys' => array_keys($handler_config),
+                'provided_post_author' => $handler_config['post_author'] ?? 'NOT_SET'
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_publish'
+            ];
+        }
+
+        if (empty($handler_config['post_status'])) {
+            $error_msg = 'WordPress publish handler missing required post_status configuration';
+            do_action('dm_log', 'error', $error_msg, [
+                'handler_config_keys' => array_keys($handler_config),
+                'provided_post_status' => $handler_config['post_status'] ?? 'NOT_SET'
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_publish'
+            ];
+        }
+
+        if (empty($handler_config['post_type'])) {
+            $error_msg = 'WordPress publish handler missing required post_type configuration';
+            do_action('dm_log', 'error', $error_msg, [
+                'handler_config_keys' => array_keys($handler_config),
+                'provided_post_type' => $handler_config['post_type'] ?? 'NOT_SET'
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_publish'
+            ];
+        }
+        
         // Prepare post data using configuration from handler settings
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
             'post_content' => wp_kses_post(wp_unslash($parameters['content'])),
-            'post_status' => $handler_config['post_status'] ?? 'publish',
-            'post_type' => $handler_config['post_type'] ?? 'post',
-            'post_author' => $handler_config['post_author'] ?? get_current_user_id()
+            'post_status' => $handler_config['post_status'],
+            'post_type' => $handler_config['post_type'],
+            'post_author' => $handler_config['post_author']
         ];
 
         do_action('dm_log', 'debug', 'WordPress Tool: Final post data for wp_insert_post', [

@@ -291,12 +291,12 @@
                     const $newRow = $(`
                         <tr class="dm-file-row dm-file-status-pending">
                             <td class="dm-file-name-col">
-                                <span class="dashicons dashicons-media-default" style="margin-right: 8px;"></span>
+                                <span class="dashicons dashicons-media-default dm-file-type-icon"></span>
                                 <span class="dm-file-name">${fileInfo.filename}</span>
                             </td>
                             <td class="dm-file-size-col">${this.formatFileSize(fileInfo.size)}</td>
                             <td class="dm-file-status-col">
-                                <span class="dashicons dashicons-clock" style="color: #ffb900; margin-right: 4px;"></span>
+                                <span class="dashicons dashicons-clock dm-file-status-pending-icon"></span>
                                 <span class="dm-file-status">Pending</span>
                             </td>
                             <td class="dm-file-date-col">${this.formatDate(Date.now())}</td>
@@ -343,8 +343,8 @@
             
             // Create message element using simple DOM creation
             const $message = $(`
-                <div class="notice ${messageClass} dm-upload-message" style="margin: 10px 0; padding: 8px 12px; display: flex; align-items: center;">
-                    <span class="dashicons ${iconClass}" style="margin-right: 8px;"></span>
+                <div class="notice ${messageClass} dm-upload-message">
+                    <span class="dashicons ${iconClass}"></span>
                     <span>${message}</span>
                 </div>
             `);

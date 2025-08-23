@@ -127,10 +127,10 @@ add_filter('ai_tools', function($tools) {
 });
 ```
 
-**Discovery & Usage**:
+**Tool Discovery Only**:
 ```php
 $all_tools = apply_filters('ai_tools', []);
-$result = ai_http_execute_tool('file_processor', ['file_path' => '/path']);
+// Note: Tool execution is handled by plugins, not the library
 ```
 
 ## Distribution

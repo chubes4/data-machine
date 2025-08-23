@@ -8,6 +8,15 @@
  * @author Chris Huber <https://chubes.net>
  */
 
+/* Provider status indicators */
+.ai-provider-status--configured {
+    color: #00a32a;
+}
+
+.ai-provider-status--not-configured {
+    color: #d63638;
+}
+
 /* Temperature Slider Component */
 .ai-temperature-slider {
     width: 100%;

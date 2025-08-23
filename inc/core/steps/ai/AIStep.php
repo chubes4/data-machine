@@ -245,8 +245,28 @@ class AIStep {
                         continue;
                     }
                     
-                    // Execute tool using AI HTTP Client library
-                    $tool_result = ai_http_execute_tool($tool_name, $tool_parameters);
+                    // Execute tool directly - plugin handles tool execution, not library
+                    $tool_def = $available_tools[$tool_name] ?? null;
+                    if (!$tool_def) {
+                        $tool_result = [
+                            'success' => false,
+                            'error' => "Tool '{$tool_name}' not found",
+                            'tool_name' => $tool_name
+                        ];
+                    } else {
+                        // Direct tool execution following established pattern
+                        $class_name = $tool_def['class'];
+                        if (class_exists($class_name)) {
+                            $tool_handler = new $class_name();
+                            $tool_result = $tool_handler->handle_tool_call($tool_parameters, $tool_def);
+                        } else {
+                            $tool_result = [
+                                'success' => false,
+                                'error' => "Tool class '{$class_name}' not found",
+                                'tool_name' => $tool_name
+                            ];
+                        }
+                    }
                     
                     
                     if ($tool_result['success']) {
@@ -352,6 +372,7 @@ class AIStep {
         // Get all tools from AI HTTP Client library with handler context
         $handler_slug = $next_step_config['handler']['handler_slug'];
         $handler_config = $next_step_config['handler']['settings'] ?? [];
+        
         
         // Pass handler context to ai_tools filter for dynamic tool generation
         $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);

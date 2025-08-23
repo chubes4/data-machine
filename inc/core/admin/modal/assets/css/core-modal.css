@@ -186,6 +186,12 @@
     color: #0c5460;
 }
 
+/* Modal error message styling */
+.dm-modal-error-message {
+    color: #d63638;
+    margin: 20px 0;
+}
+
 @keyframes dm-modal-notice-slide-in {
     0% {
         opacity: 0;

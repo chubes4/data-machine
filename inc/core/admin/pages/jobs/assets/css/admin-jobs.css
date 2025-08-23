@@ -13,16 +13,6 @@
 }
 
 
-/* Inline form elements */
-.dm-logs-container .dm-inline-form {
-    display: inline;
-}
-
-/* Spinner positioning */
-.dm-logs-container .spinner {
-    float: none;
-    vertical-align: middle;
-}
 
 /* Jobs page layout */
 .dm-jobs-page {

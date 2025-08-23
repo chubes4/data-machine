@@ -144,7 +144,7 @@
             $modalTitle.text(dmCoreModal.strings?.error || 'Error');
             $modalBody.html(`
                 <div class="dm-modal-error">
-                    <p style="color: #d63638; margin: 20px 0;">${message}</p>
+                    <p class="dm-modal-error-message">${message}</p>
                     <button type="button" class="button" onclick="dmCoreModal.close()">
                         ${dmCoreModal.strings?.close || 'Close'}
                     </button>

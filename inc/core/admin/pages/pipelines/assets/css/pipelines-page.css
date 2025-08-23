@@ -113,7 +113,7 @@
     border: 1px solid transparent;
     background: transparent;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     width: 100%;
     max-width: 400px;
 }
@@ -177,6 +177,18 @@
     transition: all 0.3s ease;
 }
 
+/* AI Step horizontal expansion - pattern-aligned container expansion */
+.dm-step-container[data-step-type="ai"] .dm-step-card.dm-expanded {
+    min-width: auto;        /* Override fixed 150px width */
+    max-width: none;        /* Remove width constraints */  
+    width: 200px;           /* Expand to 200px */
+}
+
+/* Expand container to accommodate wider AI card */
+.dm-step-container[data-step-type="ai"]:has(.dm-step-card.dm-expanded) {
+    flex: 0 0 220px;        /* Expand from 160px to 220px */
+}
+
 /* AI Prompt Display and Editing */
 .dm-prompt-display {
     margin-top: 8px;
@@ -200,7 +212,7 @@
     min-height: 80px;
     padding: 8px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 13px;
     line-height: 1.4;
@@ -241,7 +253,7 @@
 .dm-prompt-full.dm-prompt-expanded {
     padding: 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.5;
@@ -265,7 +277,7 @@
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
     line-height: 1.4;
@@ -374,7 +386,7 @@
     border: 1px solid transparent;
     background: transparent;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--dm-border-radius);
     width: 100%;
     max-width: 300px;
 }
@@ -520,6 +532,15 @@
         max-width: none;
         width: 100%;
     }
+    
+    /* AI step expansion disabled on mobile - follows responsive pattern */
+    .dm-step-container[data-step-type="ai"] .dm-step-card.dm-expanded {
+        width: auto !important; /* Disable expansion on mobile */
+    }
+    
+    .dm-step-container[data-step-type="ai"]:has(.dm-step-card.dm-expanded) {
+        flex: 1 !important;     /* Mobile flex pattern */
+    }
 }
 
 /* Empty step styling - minimal visual distinction */
@@ -610,8 +631,53 @@
     height: 14px;
     font-size: 14px;
 }
-.dm-add-pipeline-section{
+/* Page-level pipeline header with dropdown and add button */
+.dm-pipeline-page-header {
+    display: flex;
+    align-items: center;
+    gap: var(--dm-spacing-md);
     margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+/* Pipeline selection dropdown */
+.dm-pipeline-dropdown {
+    min-width: 200px;
+    max-width: 300px;
+    flex-grow: 1;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 6px 8px;
+    border: 1px solid var(--dm-color-border);
+    border-radius: var(--dm-border-radius);
+    background: #fff;
+}
+
+.dm-pipeline-dropdown:focus {
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+    outline: none;
+}
+
+/* Responsive behavior for smaller screens */
+@media screen and (max-width: 782px) {
+    .dm-pipeline-page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .dm-pipeline-dropdown {
+        max-width: none;
+        margin-bottom: var(--dm-spacing-sm);
+    }
+}
+
+/* Loading state for pipeline switching */
+.dm-pipeline-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--dm-color-text-muted);
+    font-style: italic;
 }
 
 /* Auto-save status indicator styles removed for silent auto-save */
@@ -665,5 +731,76 @@
 /* Prevent text selection during drag */
 .ui-sortable-helper * {
     user-select: none;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Hidden element utility */
+.dm-hidden {
+    display: none;
+}
+
+/* WordPress-style admin notices */
+.dm-admin-notice {
+    background: #fff;
+    border-left: 4px solid #00a32a;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    margin: 5px 0 15px;
+    padding: 1px 12px;
+    position: relative;
+    border-radius: 3px;
+}
+
+.dm-admin-notice--error {
+    border-left-color: #d63638;
+}
+
+.dm-admin-notice--warning {
+    border-left-color: #dba617;
+}
+
+.dm-admin-notice--info {
+    border-left-color: #72aee6;
+}
+
+.dm-admin-notice p {
+    margin: 0.5em 0;
+    padding: 2px;
+}
+
+.dm-admin-notice--dismissible {
+    padding-right: 38px;
+    position: relative;
+}
+
+.dm-admin-notice .notice-dismiss {
+    background: none;
+    border: none;
+    border-radius: 0;
+    color: #787c82;
+    cursor: pointer;
+    float: right;
+    font-size: 13px;
+    height: 38px;
+    margin: 0;
+    overflow: hidden;
+    padding: 9px;
+    position: absolute;
+    right: 1px;
+    text-align: center;
+    text-decoration: none;
+    top: 0;
+    width: 38px;
+    z-index: 1;
+}
+
+.dm-admin-notice .notice-dismiss:hover,
+.dm-admin-notice .notice-dismiss:active {
+    color: #d63638;
+}
+
+.dm-admin-notice .notice-dismiss:focus {
+    box-shadow: 0 0 0 1px #72aee6, 0 0 2px 1px rgba(54, 144, 192, 0.8);
+    outline: 2px solid transparent;
 }
 

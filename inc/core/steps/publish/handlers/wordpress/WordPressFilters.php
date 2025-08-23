@@ -97,20 +97,13 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     // Extract WordPress-specific config from nested structure
     $wordpress_config = $handler_config['wordpress_publish'] ?? $handler_config;
     
-    // Debug logging for tool generation
-    do_action('dm_log', 'debug', 'WordPress Tool: Starting generation', [
-        'handler_config_keys' => array_keys($handler_config),
-        'wordpress_config_keys' => array_keys($wordpress_config),
-        'wordpress_config_values' => $wordpress_config,
-        'handler_config_type' => gettype($handler_config),
-        'handler_config_empty' => empty($handler_config)
-    ]);
     
     // Start with base tool
     $tool = dm_get_wordpress_base_tool();
     
-    // Store handler configuration in tool definition for access during execution
-    $tool['handler_config'] = $handler_config;
+    // Store resolved configuration for execution (flat structure)
+    $tool['handler_config'] = $wordpress_config;
+    
     
     // Input validation
     if (!is_array($handler_config)) {

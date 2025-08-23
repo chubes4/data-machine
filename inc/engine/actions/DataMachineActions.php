@@ -145,27 +145,23 @@ function dm_register_core_actions() {
                     return $result;
                     
                 case 'set_level':
-                    $new_level = $param2;
-                    $result = dm_set_log_level($new_level);
-                    return $result;
+                    return dm_set_log_level($param2);
             }
         }
         
         // Handle regular logging operations  
-        $level = $operation;
-        $message = $param2;
         $context = $param3 ?? [];
         
         // Valid log levels for the 3-level system: debug, error, warning
         $valid_levels = ['debug', 'error', 'warning', 'info', 'critical'];
-        if (!in_array($level, $valid_levels)) {
+        if (!in_array($operation, $valid_levels)) {
             return false;
         }
         
         // Execute logging function dynamically
-        $function_name = 'dm_log_' . $level;
+        $function_name = 'dm_log_' . $operation;
         if (function_exists($function_name)) {
-            $function_name($message, $context);
+            $function_name($param2, $context);
             return true;
         }
         

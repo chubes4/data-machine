@@ -45,6 +45,8 @@ class PipelinePageAjax
         add_action('wp_ajax_dm_save_pipeline_title', [$instance, 'handle_save_pipeline_title']);
         add_action('wp_ajax_dm_save_flow_title', [$instance, 'handle_save_flow_title']);
         add_action('wp_ajax_dm_save_user_message', [$instance, 'handle_save_user_message']);
+        add_action('wp_ajax_dm_switch_pipeline_selection', [$instance, 'handle_switch_pipeline_selection']);
+        add_action('wp_ajax_dm_save_pipeline_preference', [$instance, 'handle_save_pipeline_preference']);
     }
 
     /**
@@ -713,6 +715,104 @@ class PipelinePageAjax
         wp_send_json_success([
             'message' => __('User message saved successfully', 'data-machine'),
             'flow_step_id' => $flow_step_id
+        ]);
+    }
+
+    /**
+     * Handle pipeline selection switch for dropdown functionality
+     */
+    public function handle_switch_pipeline_selection() {
+        // Security checks
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $selected_pipeline_id = sanitize_text_field(wp_unslash($_POST['selected_pipeline_id'] ?? ''));
+        
+        if (!$selected_pipeline_id) {
+            wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
+        }
+        
+        // Get all pipelines to validate selection
+        $all_pipelines = apply_filters('dm_get_pipelines', []);
+        $selected_pipeline = null;
+        
+        foreach ($all_pipelines as $pipeline) {
+            if ($pipeline['pipeline_id'] === $selected_pipeline_id) {
+                $selected_pipeline = $pipeline;
+                break;
+            }
+        }
+        
+        if (!$selected_pipeline) {
+            wp_send_json_error(['message' => __('Invalid pipeline ID', 'data-machine')]);
+        }
+        
+        // Get flows for the selected pipeline
+        $existing_flows = apply_filters('dm_get_pipeline_flows', [], $selected_pipeline_id);
+        
+        // Render the pipeline card template
+        $pipeline_card_html = apply_filters('dm_render_template', '', 'page/pipeline-card', [
+            'pipeline' => $selected_pipeline,
+            'existing_flows' => $existing_flows,
+            'pipelines_instance' => null
+        ]);
+        
+        if (empty($pipeline_card_html)) {
+            wp_send_json_error(['message' => __('Failed to render pipeline card', 'data-machine')]);
+        }
+        
+        wp_send_json_success([
+            'message' => __('Pipeline switched successfully', 'data-machine'),
+            'pipeline_id' => $selected_pipeline_id,
+            'pipeline_card_html' => $pipeline_card_html
+        ]);
+    }
+
+    /**
+     * Handle saving user's pipeline selection preference
+     */
+    public function handle_save_pipeline_preference() {
+        // Security checks
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $selected_pipeline_id = sanitize_text_field(wp_unslash($_POST['selected_pipeline_id'] ?? ''));
+        
+        if (!$selected_pipeline_id) {
+            wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
+        }
+        
+        // Validate pipeline exists
+        $all_pipelines = apply_filters('dm_get_pipelines', []);
+        $pipeline_exists = false;
+        
+        foreach ($all_pipelines as $pipeline) {
+            if ($pipeline['pipeline_id'] === $selected_pipeline_id) {
+                $pipeline_exists = true;
+                break;
+            }
+        }
+        
+        if (!$pipeline_exists) {
+            wp_send_json_error(['message' => __('Invalid pipeline ID', 'data-machine')]);
+        }
+        
+        // Save user preference
+        $updated = update_user_meta(get_current_user_id(), 'dm_selected_pipeline_id', $selected_pipeline_id);
+        
+        if ($updated === false) {
+            wp_send_json_error(['message' => __('Failed to save preference', 'data-machine')]);
+        }
+        
+        wp_send_json_success([
+            'message' => __('Pipeline preference saved', 'data-machine'),
+            'pipeline_id' => $selected_pipeline_id
         ]);
     }
 }

@@ -16,6 +16,44 @@
     window.PipelineBuilder = {
         
         /**
+         * Show WordPress-style admin notice
+         */
+        showNotice: function(message, type = 'error') {
+            // Remove any existing notices first
+            $('.dm-admin-notice').remove();
+            
+            const $notice = $(`
+                <div class="dm-admin-notice dm-admin-notice--${type} dm-admin-notice--dismissible">
+                    <p>${message}</p>
+                    <button type="button" class="notice-dismiss">
+                        <span class="dashicons dashicons-dismiss"></span>
+                    </button>
+                </div>
+            `);
+            
+            // Find the best container to insert the notice
+            const $container = $('.dm-admin-wrap').length ? 
+                $('.dm-admin-wrap') : 
+                $('.dm-pipelines-page').length ? $('.dm-pipelines-page') : $('body');
+            
+            $container.prepend($notice);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                $notice.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 5000);
+            
+            // Manual dismiss handler
+            $notice.find('.notice-dismiss').on('click', function() {
+                $notice.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
+        },
+        
+        /**
          * Initialize the pipeline builder
          */
         init: function() {
@@ -80,12 +118,12 @@
                             // Status refresh failed after adding step
                         });
                     } else {
-                        alert(response.data.message || 'Error adding step');
+                        this.showNotice(response.data.message || 'Error adding step', 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     // AJAX error occurred
-                    alert('Error adding step');
+                    this.showNotice('Error adding step', 'error');
                 }
             });
         },
@@ -202,12 +240,12 @@
                         // Add the new pipeline card to the page
                         this.addNewPipelineCardToPage(response.data);
                     } else {
-                        alert(response.data.message || 'Error creating pipeline');
+                        this.showNotice(response.data.message || 'Error creating pipeline', 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     // AJAX error occurred
-                    alert('Error creating pipeline');
+                    this.showNotice('Error creating pipeline', 'error');
                 },
                 complete: () => {
                     $button.text(originalText).prop('disabled', false);
@@ -226,16 +264,26 @@
                 pipeline: pipelineData.pipeline_data,
                 existing_flows: pipelineData.existing_flows
             }).then((pipelineCardHtml) => {
-                // Insert new pipeline at top of list (newest-first positioning)
-                const $firstPipelineCard = $pipelinesList.find('.dm-pipeline-card').first();
+                // Wrap new pipeline card for dropdown functionality
+                const wrappedHtml = `<div class="dm-pipeline-wrapper dm-hidden" data-pipeline-id="${pipelineData.pipeline_id}">${pipelineCardHtml}</div>`;
                 
-                if ($firstPipelineCard.length) {
-                    // Insert before the first existing pipeline (maintains newest-first order)
-                    $firstPipelineCard.before(pipelineCardHtml);
+                // Insert new pipeline at top of list
+                const $firstPipelineWrapper = $pipelinesList.find('.dm-pipeline-wrapper').first();
+                
+                if ($firstPipelineWrapper.length) {
+                    // Insert before the first existing pipeline
+                    $firstPipelineWrapper.before(wrappedHtml);
                 } else {
-                    // No existing pipelines, prepend to the list (before Add button)
-                    $pipelinesList.prepend(pipelineCardHtml);
+                    // No existing pipelines, prepend to the list
+                    $pipelinesList.prepend(wrappedHtml);
                 }
+                
+                // Add new pipeline to dropdown
+                const optionHtml = `<option value="${pipelineData.pipeline_id}">${pipelineData.pipeline_data.pipeline_name}</option>`;
+                $('#dm-pipeline-selector').append(optionHtml);
+                
+                // Auto-select the new pipeline
+                PipelinesPage.autoSelectNewPipeline(pipelineData.pipeline_id);
                 
                 // Focus on the pipeline name input in the new card
                 const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
@@ -336,14 +384,14 @@
                         }
                     } else {
                         const errorType = deleteType === 'pipeline' ? 'pipeline' : 'step';
-                        alert(response.data.message || `Error deleting ${errorType}`);
+                        this.showNotice(response.data.message || `Error deleting ${errorType}`, 'error');
                         $button.text(originalText).prop('disabled', false);
                     }
                 },
                 error: (xhr, status, error) => {
                     // AJAX error occurred
                     const errorType = deleteType === 'pipeline' ? 'pipeline' : 'step';
-                    alert(`Error deleting ${errorType}`);
+                    this.showNotice(`Error deleting ${errorType}`, 'error');
                     $button.text(originalText).prop('disabled', false);
                 }
             });
@@ -531,12 +579,12 @@
                         
                     } else {
                         // Server returned error
-                        alert('Error saving step order: ' + (response.data?.message || 'Unknown error'));
+                        this.showNotice('Error saving step order: ' + (response.data?.message || 'Unknown error'), 'error');
                     }
                 },
                 error: function(xhr, status, error) {
                     // AJAX error saving step order
-                    alert('Network error saving step order: ' + error);
+                    PipelineBuilder.showNotice('Network error saving step order: ' + error, 'error');
                 }
             });
         },

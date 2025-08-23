@@ -13,6 +13,17 @@
     padding: 20px;
 }
 
+/* Inline form elements in logs container */
+.dm-logs-container .dm-inline-form {
+    display: inline;
+}
+
+/* Spinner positioning in logs container */
+.dm-logs-container .spinner {
+    float: none;
+    vertical-align: middle;
+}
+
 /* Log configuration section */
 .dm-log-configuration {
     background: #fff;

@@ -16,6 +16,170 @@
     window.PipelinesPage = {
         
         /**
+         * Show WordPress-style admin notice
+         */
+        showNotice: function(message, type = 'error') {
+            // Remove any existing notices first
+            $('.dm-admin-notice').remove();
+            
+            const $notice = $(`
+                <div class="dm-admin-notice dm-admin-notice--${type} dm-admin-notice--dismissible">
+                    <p>${message}</p>
+                    <button type="button" class="notice-dismiss">
+                        <span class="dashicons dashicons-dismiss"></span>
+                    </button>
+                </div>
+            `);
+            
+            // Find the best container to insert the notice
+            const $container = $('.dm-admin-wrap').length ? 
+                $('.dm-admin-wrap') : 
+                $('.dm-pipelines-page').length ? $('.dm-pipelines-page') : $('body');
+            
+            $container.prepend($notice);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                $notice.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 5000);
+            
+            // Manual dismiss handler
+            $notice.find('.notice-dismiss').on('click', function() {
+                $notice.fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
+        },
+        
+        /**
+         * Initialize pipelines page functionality
+         */
+        init: function() {
+            this.bindEvents();
+        },
+
+        /**
+         * Bind pipeline page events
+         */
+        bindEvents: function() {
+            // Pipeline dropdown change handler
+            $(document).on('change', '#dm-pipeline-selector', this.handlePipelineDropdownChange.bind(this));
+        },
+
+        /**
+         * Handle pipeline dropdown selection change
+         */
+        handlePipelineDropdownChange: function(e) {
+            const selectedPipelineId = $(e.currentTarget).val();
+            if (selectedPipelineId) {
+                this.switchToSelectedPipeline(selectedPipelineId);
+                this.updateUrlParameter('selected_pipeline_id', selectedPipelineId);
+                
+                // Save user's preference for future visits
+                this.saveSelectedPipelinePreference(selectedPipelineId);
+            }
+        },
+
+        /**
+         * Switch to show only the selected pipeline
+         */
+        switchToSelectedPipeline: function(pipelineId) {
+            // First, hide all pipeline wrappers immediately for faster UI response
+            $('.dm-pipeline-wrapper').hide();
+            
+            // Check if pipeline is already loaded
+            const $existingWrapper = $(`.dm-pipeline-wrapper[data-pipeline-id="${pipelineId}"]`);
+            if ($existingWrapper.length > 0) {
+                // Pipeline already exists, just show it
+                $existingWrapper.show();
+            } else {
+                // Pipeline not loaded, fetch via AJAX
+                this.loadPipelineViaAjax(pipelineId);
+            }
+        },
+
+        /**
+         * Load pipeline card via AJAX for better performance
+         */
+        loadPipelineViaAjax: function(pipelineId) {
+            const $pipelinesList = $('.dm-pipelines-list');
+            
+            // Show loading state
+            $pipelinesList.append('<div class="dm-pipeline-loading">Loading pipeline...</div>');
+            
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_switch_pipeline_selection',
+                    selected_pipeline_id: pipelineId,
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
+                },
+                success: (response) => {
+                    // Remove loading state
+                    $('.dm-pipeline-loading').remove();
+                    
+                    if (response.success) {
+                        // Wrap pipeline card and add to page
+                        const wrappedHtml = `<div class="dm-pipeline-wrapper" data-pipeline-id="${pipelineId}">${response.data.pipeline_card_html}</div>`;
+                        $pipelinesList.append(wrappedHtml);
+                    } else {
+                        this.showNotice(response.data.message || 'Error loading pipeline', 'error');
+                        // Fall back to first available pipeline
+                        const firstOption = $('#dm-pipeline-selector option:first').val();
+                        if (firstOption) {
+                            $('#dm-pipeline-selector').val(firstOption);
+                            this.switchToSelectedPipeline(firstOption);
+                        }
+                    }
+                },
+                error: (xhr, status, error) => {
+                    $('.dm-pipeline-loading').remove();
+                    this.showNotice('Error loading pipeline', 'error');
+                }
+            });
+        },
+
+        /**
+         * Update URL parameter without page reload
+         */
+        updateUrlParameter: function(paramName, paramValue) {
+            const url = new URL(window.location);
+            url.searchParams.set(paramName, paramValue);
+            window.history.replaceState(null, null, url);
+        },
+
+        /**
+         * Auto-select new pipeline in dropdown and display
+         */
+        autoSelectNewPipeline: function(pipelineId) {
+            // Update dropdown selection
+            $('#dm-pipeline-selector').val(pipelineId).trigger('change');
+            
+            // Update URL parameter
+            this.updateUrlParameter('selected_pipeline_id', pipelineId);
+        },
+
+        /**
+         * Save user's selected pipeline preference for future visits
+         */
+        saveSelectedPipelinePreference: function(pipelineId) {
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_save_pipeline_preference',
+                    selected_pipeline_id: pipelineId,
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
+                },
+                // Silent operation - no success/error handling needed
+                // User preference saving should be unobtrusive
+            });
+        },
+        
+        /**
          * Request template rendering from server
          * Maintains architecture consistency by using PHP templates only
          */
@@ -327,12 +491,12 @@
                         
                     } else {
                         // Configure step action failed
-                        alert(response.data.message || 'Failed to save step configuration');
+                        this.showNotice(response.data.message || 'Failed to save step configuration', 'error');
                     }
                 },
                 error: (xhr, status, error) => {
                     // Configure step action AJAX error
-                    alert('Error saving step configuration: ' + error);
+                    this.showNotice('Error saving step configuration: ' + error, 'error');
                 },
                 complete: () => {
                     // Restore button state
@@ -391,6 +555,13 @@
         
         $card.toggleClass('dm-expanded');
         $icon.toggleClass('dashicons-arrow-down dashicons-arrow-up');
+    });
+
+    // Initialize PipelinesPage functionality when DOM is ready
+    $(document).ready(function() {
+        if (typeof window.PipelinesPage !== 'undefined') {
+            window.PipelinesPage.init();
+        }
     });
 
 })(jQuery);

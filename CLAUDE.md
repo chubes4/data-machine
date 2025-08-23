@@ -28,7 +28,7 @@ $flow_id = apply_filters('dm_create_flow', null, $data);
 // Templates & Files
 apply_filters('dm_render_template', '', $template, $data);
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
-apply_filters('ai_http_render_template', '', $template, $vars); // AI HTTP Client library
+ai_http_render_template($template, $vars); // AI HTTP Client library function call
 
 // AI Integration
 $result = apply_filters('ai_request', $request, 'openrouter');
@@ -41,7 +41,6 @@ apply_filters('dm_get_oauth_url', '', 'provider');
 // ID Generation & Status Detection
 apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
 apply_filters('dm_detect_status', 'green', 'context', $data);
-apply_filters('dm_generate_handler_tool', $tool, $handler_slug, $handler_config);
 
 // Settings Administration
 $settings = apply_filters('dm_get_data_machine_settings', []);
@@ -68,10 +67,6 @@ do_action('dm_run_flow_now', $flow_id, $context);
 do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
-// CRUD (Legacy - see Filter-Based Creation above for current approach)
-do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
-do_action('dm_update_flow_schedule', $flow_id, $schedule_interval, $old_interval);
-do_action('dm_delete', 'pipeline', $pipeline_id, ['cascade' => true]);
 
 // System
 do_action('dm_log', $level, $message, $context);
@@ -129,7 +124,7 @@ dm_register_twitter_filters();
 - **PSR-4 Autoloading**: Composer autoloader handles all class loading
 - **Pure Filter System**: All services accessed through filter patterns only
 
-**Universal Files Repository**: Data packet storage for Action Scheduler integration with job-specific namespacing (`job_{$job_id}`) and automatic cleanup
+**Files Repository**: File storage and data packet management with flow-isolated namespacing and automatic cleanup
 
 **Pipeline+Flow**: 
 - **Pipelines**: Reusable templates (steps 0-99, UUID4 IDs)
@@ -160,14 +155,9 @@ $result = apply_filters('ai_request', [
 ], 'openrouter');
 ```
 
-**Dual Tool Architecture**: AI steps discover both handler-specific tools (filtered by next step) and general tools (available to all AI steps)
-
-**Handler Tools**: Platform-specific publishing tools (twitter_publish, facebook_publish, etc.) - only available when next step matches handler
-**General Tools**: Universal capabilities (Google Search, data analysis, etc.) - available to all AI steps regardless of next step
-
-**Tool Detection Logic**:
-- Handler tools: Tools with `handler` property matching next step's handler
-- General tools: Tools without `handler` property (universal availability)
+**Dual Tool Architecture**: 
+- **Handler Tools**: Platform-specific tools (twitter_publish, etc.) - available only when next step matches handler
+- **General Tools**: Universal tools (Google Search, Local Search) - available to all AI steps
 
 **Discovery**: `apply_filters('ai_providers', [])`, `apply_filters('ai_models', $provider, $config)`
 
@@ -177,59 +167,44 @@ $result = apply_filters('ai_request', [
 
 **Dual Discovery System**: AI models discover both handler tools (next step only) and general tools (all AI steps) via `apply_filters('ai_tools', [])`
 
-**Tool Registration**: Configuration-aware tool discovery supporting both handler-specific and general tools
+**Tool Registration Examples**:
 
 ```php
-// Handler tool with dynamic configuration
-add_filter('dm_generate_handler_tool', function($tool, $handler_slug, $handler_config) {
+// Handler-specific tool (next step only)
+add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'twitter') {
-        $tool = [
-            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
+        $tools['twitter_publish'] = [
+            'class' => 'DataMachine\\Core\\Handlers\\Publish\\Twitter\\Twitter',
             'method' => 'handle_tool_call',
-            'handler' => 'twitter', // Handler property = next step only
+            'handler' => 'twitter',
             'description' => 'Post content to Twitter (280 character limit)',
             'parameters' => [
-                'content' => ['type' => 'string', 'required' => true],
-                'title' => ['type' => 'string', 'required' => false]
+                'content' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Tweet content (will be formatted and truncated if needed)'
+                ]
             ],
             'handler_config' => $handler_config
         ];
-        
-        // Dynamic parameters based on configuration
-        if ($handler_config['twitter_include_source'] ?? true) {
-            $tool['parameters']['source_url'] = ['type' => 'string', 'required' => false];
-        }
-        if ($handler_config['twitter_enable_images'] ?? true) {
-            $tool['parameters']['image_url'] = ['type' => 'string', 'required' => false];
-        }
     }
-    return $tool;
+    return $tools;
 }, 10, 3);
 
-// General tool registration (all AI steps)
+// General tools (all AI steps)
 add_filter('ai_tools', function($tools) {
     $tools['google_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Search Google for current information and context',
+        'description' => 'Search Google for real-time information',
         'parameters' => [
-            'query' => ['type' => 'string', 'required' => true],
-            'max_results' => ['type' => 'integer', 'required' => false],
-            'site_restrict' => ['type' => 'string', 'required' => false]
+            'query' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'Search query to execute'
+            ]
         ]
-        // NOTE: No 'handler' property - available to all AI steps
-    ];
-    
-    $tools['local_search'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
-        'method' => 'handle_tool_call',
-        'description' => 'Search WordPress site for local content and context',
-        'parameters' => [
-            'query' => ['type' => 'string', 'required' => true],
-            'max_results' => ['type' => 'integer', 'required' => false],
-            'post_types' => ['type' => 'array', 'required' => false]
-        ]
-        // NOTE: No 'handler' property - available to all AI steps
+        // No 'handler' = available everywhere
     ];
     return $tools;
 });
@@ -299,182 +274,42 @@ class Twitter {
 }
 ```
 
-**Tool Execution**: Direct `handle_tool_call()` method execution with automatic dual discovery system
-- Handler tools: Available only when next step matches handler 
-- General tools: Available to all AI steps universally
+**Tool Execution**: Direct `handle_tool_call()` method execution with automatic discovery system
 
-**Configuration Integration**: Handler settings passed through tool definitions for dynamic parameter generation
-
-**Configuration-Aware Tool Generation**:
+**Tool Discovery and Selection**:
 ```php
-// Discovery and dynamic generation in AI execution
+// Discovery and filtering in AI execution
 $all_tools = apply_filters('ai_tools', []);
 foreach ($all_tools as $tool_name => $tool_config) {
     if (isset($tool_config['handler']) && $tool_config['handler'] === $handler_slug) {
-        // Get handler configuration from next step
-        $handler_config = $next_step_config['handler']['settings'] ?? [];
-        
-        // Apply dynamic configuration via filter
-        $dynamic_tool = apply_filters('dm_generate_handler_tool', $tool_config, $handler_slug, $handler_config);
-        
-        $available_tools[$tool_name] = $dynamic_tool ?: $tool_config;
+        $available_tools[$tool_name] = $tool_config;
     }
 }
 ```
 
-**Dynamic Parameter Generation**: Tools adapt parameters based on handler configuration state, enabling conditional features and platform-specific optimization
+**Static Tool Parameters**: Tools have fixed parameters defined at registration time
 
 **General Tool Capabilities**:
+- **Google Search**: Web search, fact verification, trend analysis, site-specific searches. Real-time information access.
+- **Local Search**: WordPress site search using WP_Query. Post type filtering, relevance ranking. Privacy-first (no external APIs).
 
-**Google Search Capabilities**:
-- **Fact Verification**: Validate information accuracy by cross-referencing multiple sources
-- **Trend Analysis**: Research current topics and emerging discussions
-- **Source Attribution**: Find original sources for citations and references  
-- **Content Research**: Gather contextual information for enhanced AI-generated content
-- **Site-Specific Search**: Restrict results to authoritative domains or specific websites
-- **Real-Time Information**: Access current information beyond AI model training cutoffs
+**Tool Configuration**: Modal-based configuration via WordPress Settings → Data Machine → Tool Configuration.
 
-**Local Search Tool Implementation**:
+**Configuration Check**:
 ```php
-class LocalSearch {
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Validate required parameters
-        if (empty($parameters['query'])) {
-            return [
-                'success' => false,
-                'error' => 'Local Search tool call missing required query parameter',
-                'tool_name' => 'local_search'
-            ];
-        }
-
-        // Extract parameters with defaults
-        $query = sanitize_text_field($parameters['query']);
-        $max_results = min(max(intval($parameters['max_results'] ?? 10), 1), 20); // Limit 1-20 results
-        $post_types = $parameters['post_types'] ?? ['post', 'page'];
-        
-        // Build WP_Query arguments for search
-        $query_args = [
-            's' => $query, // WordPress search parameter
-            'post_type' => $post_types,
-            'post_status' => 'publish',
-            'posts_per_page' => $max_results,
-            'orderby' => 'relevance', // WordPress search relevance ranking
-            'order' => 'DESC'
-        ];
-        
-        // Execute search and process results
-        $wp_query = new \WP_Query($query_args);
-        $results = [];
-        
-        if ($wp_query->have_posts()) {
-            while ($wp_query->have_posts()) {
-                $wp_query->the_post();
-                $post = get_post();
-                
-                $results[] = [
-                    'title' => get_the_title($post->ID),
-                    'link' => get_permalink($post->ID),
-                    'excerpt' => get_the_excerpt($post->ID) ?: wp_trim_words(strip_tags(get_the_content('', false, $post)), 25, '...'),
-                    'post_type' => get_post_type($post->ID),
-                    'publish_date' => get_the_date('Y-m-d H:i:s', $post->ID),
-                    'author' => get_the_author_meta('display_name', $post->post_author)
-                ];
-            }
-            wp_reset_postdata();
-        }
-        
-        return [
-            'success' => true,
-            'data' => [
-                'query' => $query,
-                'results_count' => count($results),
-                'total_available' => $wp_query->found_posts,
-                'post_types_searched' => $post_types,
-                'results' => $results
-            ],
-            'tool_name' => 'local_search'
-        ];
-    }
-    
-    public static function is_configured(): bool {
-        return true; // Always available, no configuration needed
-    }
-}
-```
-
-**Local Search Capabilities**:
-- **Content Discovery**: Find relevant posts and pages for context gathering
-- **Reference Lookup**: Search site-specific tutorials, guides, and documentation
-- **Topic Research**: Identify related articles and content themes on the site
-- **Draft Analysis**: Cross-reference against published content for consistency
-- **Site Knowledge**: Leverage local expertise and previously published insights
-- **Privacy-First**: All searches remain local without external API dependencies
-
-**Use Cases**:
-```php
-// Fact-checking workflow with external sources
-Pipeline: "Fact-Checked Content"
-├── Fetch: RSS (news sources)
-├── AI: Claude + Google Search ("Verify claims and add context")
-└── Publish: WordPress (with source attribution)
-
-// Research-enhanced content creation  
-Pipeline: "Research-Backed Publishing"
-├── Fetch: WordPress (draft posts)
-├── AI: GPT-4 + Google Search ("Research topic and enhance with current data")
-└── Publish: Bluesky (with fact-checked content)
-
-// Trend monitoring
-Pipeline: "Trend Analysis Bot"
-├── AI: Claude + Google Search ("Research trending topics in technology")
-└── Publish: Google Sheets (trend log with sources)
-
-// Content enhancement with local context
-Pipeline: "Context-Aware Publishing"
-├── Fetch: RSS (industry news)
-├── AI: Claude + Local Search ("Find related site content and add context")
-└── Publish: Twitter (enhanced with local expertise)
-
-// Knowledge base integration
-Pipeline: "Knowledge-Enhanced Responses"
-├── Fetch: WordPress (new comments)
-├── AI: GPT-4 + Local Search ("Search site for relevant tutorials and guides")
-└── Publish: WordPress (helpful responses with internal links)
-```
-
-**Tool Configuration System**: Centralized management for tools requiring setup
-
-```php
-// Check if tool is configured
+// Primary method - filter-based access
 $configured = apply_filters('dm_tool_configured', false, 'google_search');
-
-// Get tool configuration
 $config = apply_filters('dm_get_tool_config', [], 'google_search');
-// Returns: ['api_key' => '...', 'search_engine_id' => '...']
+do_action('dm_save_tool_config', 'google_search', $config_data);
 
-// Save tool configuration
-do_action('dm_save_tool_config', 'google_search', [
-    'api_key' => 'your_google_api_key',
-    'search_engine_id' => 'your_search_engine_id'
-]);
-
-// Tool configuration status in modal UI
-$tools_status = [
-    'google_search' => apply_filters('dm_tool_configured', false, 'google_search'),
-    'local_search' => true // Always available
-];
+// Static method also available
+$configured = GoogleSearch::is_configured();
+$configured = LocalSearch::is_configured(); // Always returns true
 ```
 
-**Google Search Tool Configuration**:
-- **Requirements**: Google Custom Search Engine ID + API key from Google Cloud Console
-- **Setup Location**: WordPress Admin → Settings → Data Machine → Tools
-- **Modal Integration**: Configuration status displayed with setup prompts
-- **API Limits**: 100 queries/day (free tier), expandable with billing
-
-**Local Search Tool**:
-- **Requirements**: None (always available)
-- **Configuration**: No setup needed
-- **Privacy**: All searches remain on-site, no external APIs
+**Requirements**:
+- **Google Search**: API key + Search Engine ID (100 queries/day free)
+- **Local Search**: Always available (no configuration needed)
 
 ## Handler Matrix
 
@@ -488,8 +323,8 @@ $tools_status = [
 
 | **Publish** | **Auth** | **Limit** | **Features** |
 |-------------|----------|-----------|--------------|
-| Twitter | OAuth 1.0a | 280 chars | URL replies, media upload |
-| Bluesky | App Password | 300 chars | Media upload |
+| Twitter | OAuth 1.0a | 280 chars | URL replies, media upload, t.co link handling |
+| Bluesky | App Password | 300 chars | Media upload, AT Protocol integration |
 | Threads | OAuth2 | 500 chars | Media upload |
 | Facebook | OAuth2 | No limit | Comment mode, link handling |
 | WordPress | None | No limit | Taxonomy assignment |
@@ -497,8 +332,8 @@ $tools_status = [
 
 | **General Tools** | **Auth** | **Features** |
 |-------------------|----------|--------------|
-| Google Search | API Key + Search Engine ID | Web search with site restriction, 1-10 results, fact verification, trend analysis |
-| Local Search | None | WordPress site search, 1-20 results, content discovery, context gathering |
+| Google Search | API Key + Search Engine ID | Web search, site restriction, 1-10 results |
+| Local Search | None | WordPress search, 1-20 results |
 
 ## DataPacket Array
 
@@ -549,102 +384,39 @@ $tools_status = [
 
 ## Admin Interface
 
-**Location**: WordPress Settings → Data Machine + Data Machine admin pages
-
-**Pages**: Pipelines (builder), Jobs (monitor), Logs (debug), Settings (control)
-
-**Features**: Drag & drop reordering with auto-save, visual status indicators, modal configuration, tool setup with validation, real-time log monitoring
-
+**Admin Pages**: Pipelines (builder), Jobs (monitor), Logs (debug)
+**Settings**: WordPress Settings → Data Machine
+**Features**: Drag & drop reordering with auto-save, visual status indicators, modal configuration, real-time log monitoring
 **OAuth System**: Public `/dm-oauth/{provider}/` URLs, popup authentication, `manage_options` security
 
 ## Settings Administration
 
+**Location**: WordPress Settings → Data Machine
+
+**Admin Interface Control**: 
+- **Engine Mode**: Disables all admin pages while preserving core functionality (headless deployment)
+- **Admin Page Control**: Enable/disable individual admin pages (defaults to all enabled)  
+- **General Tool Control**: Enable/disable AI tools (defaults to all enabled)
+- **Global System Prompt**: Prepended to all AI interactions for consistent brand voice
+- **Tool Configuration**: Modal-based configuration for tools requiring API keys
+
+**WordPress Global Defaults**: Site-wide defaults for post types, taxonomies, author, and post status to streamline handler configuration.
+
+**Filter Patterns**:
 ```php
-$settings = dm_get_data_machine_settings();
-$enabled_pages = dm_get_enabled_admin_pages();
-$enabled_tools = dm_get_enabled_general_tools();
-```
-
-**Settings Structure**:
-```php
-[
-    'engine_mode' => false,           // Headless deployment toggle
-    'enabled_pages' => [],            // Empty = all enabled (default)
-    'enabled_tools' => [],            // Empty = all enabled (default)
-    'global_system_prompt' => '',     // Universal AI system message
-    'wordpress_settings' => [         // WordPress-specific configuration
-        'enabled_post_types' => [],   // Post types for WordPress handlers
-        'enabled_taxonomies' => [],   // Taxonomies for content assignment
-        'default_author_id' => 0,     // Default author for published posts
-        'default_post_status' => ''   // Default status (publish, draft, etc.)
-    ]
-]
-```
-
-**Engine Mode**: 
-- `true`: Headless deployment (disables admin UI, preserves API/filters)
-- `false`: Full admin interface available (default)
-- Filter: `apply_filters('dm_engine_mode', $settings['engine_mode'])`
-
-**Page Control**: Empty `enabled_pages` enables all pages; populate with `['page_slug' => true]` for selective control
-
-**Tool Control**: Empty `enabled_tools` enables all general tools; populate with `['tool_name' => true]` for selective control (handler tools unaffected)
-
-**Global System Prompt**: Prepended to all AI interactions; configure behavior, tone, constraints across all flows
-
-**Settings API Functions**:
-```php
-// Core settings retrieval (function)
-function dm_get_data_machine_settings(): array {
-    return get_option('dm_data_machine_settings', [
-        'engine_mode' => false,
-        'enabled_pages' => [],
-        'enabled_tools' => [],
-        'global_system_prompt' => '',
-        'wordpress_settings' => [
-            'enabled_post_types' => [],
-            'enabled_taxonomies' => [],
-            'default_author_id' => 0,
-            'default_post_status' => 'publish'
-        ]
-    ]);
-}
-
-// Page filtering function (respects engine mode)
-function dm_get_enabled_admin_pages(): array {
-    $settings = dm_get_data_machine_settings();
-    if ($settings['engine_mode']) return [];
-    
-    $enabled_pages = $settings['enabled_pages'] ?? [];
-    return empty($enabled_pages) ? ['pipelines' => true, 'jobs' => true, 'logs' => true] : $enabled_pages;
-}
-
-// Tool filtering function (general tools only)
-function dm_get_enabled_general_tools(): array {
-    $settings = dm_get_data_machine_settings();
-    if ($settings['engine_mode']) return [];
-    
-    $enabled_tools = $settings['enabled_tools'] ?? [];
-    return empty($enabled_tools) ? ['google_search' => true, 'local_search' => true] : $enabled_tools;
-}
-```
-
-**Filter-Based Settings Access**:
-```php
-// Filter-based access (for consistency with architecture)
+// Settings access
 $settings = apply_filters('dm_get_data_machine_settings', []);
 $enabled_pages = apply_filters('dm_get_enabled_admin_pages', []);
 $enabled_tools = apply_filters('dm_get_enabled_general_tools', []);
 
-// WordPress-specific settings helpers
-$post_types = $settings['wordpress_settings']['enabled_post_types'] ?? [];
-$taxonomies = $settings['wordpress_settings']['enabled_taxonomies'] ?? [];
+// WordPress handler configuration filtering
+apply_filters('dm_enabled_settings', $fields, $handler_slug, $step_type, $context);
+apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
 
-// Settings filtering for modal optimization
-$fields = apply_filters('dm_enabled_settings', $all_fields, $handler_slug, $step_type, $context);
-
-// Global defaults application
-$settings = apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
+// Tool configuration
+$configured = apply_filters('dm_tool_configured', false, $tool_id);
+$config = apply_filters('dm_get_tool_config', [], $tool_id);
+do_action('dm_save_tool_config', $tool_id, $config_data);
 ```
 
 ## Step Implementation
@@ -741,9 +513,8 @@ $step_2_id = apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeli
 $step_3_id = apply_filters('dm_create_step', null, ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]);
 $flow_id = apply_filters('dm_create_flow', null, ['pipeline_id' => $pipeline_id, 'flow_name' => 'Twitter Flow']);
 
-// Flow configuration
-do_action('dm_update_flow_handler', $flow_step_id, 'rss', $settings);
-do_action('dm_update_flow_schedule', $flow_id, 'active', 'hourly');
+// Flow configuration via UI or filter-based updates
+// Use admin interface for handler/schedule configuration
 ```
 
 **Multi-Platform Pipeline (Advanced - Alternating Pattern)**:
@@ -768,23 +539,7 @@ do_action('dm_delete', 'processed_items', $flow_id, ['delete_by' => 'flow_id']);
 
 ## Files Repository
 
-**Path**: `/wp-content/uploads/data-machine/files/{flow_step_id}/`
-**Isolation**: UUID-based namespaces per flow: `{pipeline_step_id}_{flow_id}`
-
-```php
-$repo = apply_filters('dm_files_repository', [])['files'] ?? null;
-
-// File storage (traditional)
-$repo->store_file($tmp_name, $filename, $flow_step_id);
-
-// Data packet storage (Action Scheduler integration)
-$repo->store_data_packet($data_array, $job_id, $flow_step_id);
-$reference = $repo->retrieve_data_packet($data_reference);
-
-// Cleanup operations
-do_action('dm_cleanup_old_files');
-$repo->cleanup_job_data_packets($job_id);
-```
+**Flow-Isolated Storage**: UUID-based namespacing with Action Scheduler integration. Filter-based access via `dm_files_repository`. Automatic cleanup operations.
 
 ## Development
 
@@ -795,15 +550,18 @@ composer install && composer test
 
 ## PSR-4 Architecture
 
-**Directory Structure**: PSR-4 autoloading with lowercase paths (`inc/core/`, `inc/engine/`)
+**Directory Structure**: PSR-4 autoloading with proper case paths (`inc/Core/`, `inc/Engine/`)
 
 **Namespace Mapping**:
 ```php
-"DataMachine\\Core\\" => "inc/core/"
-"DataMachine\\Engine\\" => "inc/engine/"
+"DataMachine\\Core\\" => "inc/Core/",
+"DataMachine\\Admin\\" => "inc/Admin/",
+"DataMachine\\Engine\\" => "inc/Engine/",
+"DataMachine\\Services\\" => "inc/Services/",
+"DataMachine\\Helpers\\" => "inc/Helpers/"
 ```
 
-**Filter Registration**: Automatic loading via composer.json "files" array eliminates manual registration
+**Filter Registration**: Automatic loading via composer.json "files" array with 57 filter files
 
 **Build System**: `build.sh` script creates production-ready zip with optimized autoloader
 
@@ -891,4 +649,3 @@ $status = apply_filters('dm_detect_status', 'green', 'context', $data);
 **Job Failure**: Engine exceptions fail jobs immediately
 **Logging**: Include relevant IDs in context
 **AJAX Security**: Universal `dm_ajax_actions` nonce validation
-**Tool Generation**: `dm_generate_handler_tool` enables configuration-aware tool definitions
