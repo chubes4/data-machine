@@ -22,7 +22,7 @@
         userMessageTimer: null,
         
         // Auto-save delay (milliseconds)
-        saveDelay: 750,
+        saveDelay: 500,
         
         /**
          * Initialize auto-save functionality

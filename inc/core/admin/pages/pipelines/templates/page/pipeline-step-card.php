@@ -52,7 +52,7 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
     <?php
     $show_arrow = ($step_execution_order > 0);
     if ($show_arrow): ?>
-        <div class="dm-step-arrow">
+        <div class="dm-data-flow-arrow">
             <span class="dashicons dashicons-arrow-right-alt"></span>
         </div>
     <?php endif; ?>

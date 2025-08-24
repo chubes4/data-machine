@@ -3,7 +3,7 @@
         'name' => 'chubes/data-machine',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'af3d0cac45b4cdaaf2e1860f85cfdcb64a7065df',
+        'reference' => 'a88ce1e0faa417fe48a5eb1c0df5f33fb39675ae',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -22,7 +22,7 @@
         'chubes/data-machine' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'af3d0cac45b4cdaaf2e1860f85cfdcb64a7065df',
+            'reference' => 'a88ce1e0faa417fe48a5eb1c0df5f33fb39675ae',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

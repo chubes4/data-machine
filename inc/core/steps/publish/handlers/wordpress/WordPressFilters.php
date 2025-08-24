@@ -97,11 +97,13 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     // Extract WordPress-specific config from nested structure
     $wordpress_config = $handler_config['wordpress_publish'] ?? $handler_config;
     
+    // Apply global WordPress defaults from settings page before processing
+    $wordpress_config = apply_filters('dm_apply_global_defaults', $wordpress_config, 'wordpress_publish', 'publish');
     
     // Start with base tool
     $tool = dm_get_wordpress_base_tool();
     
-    // Store resolved configuration for execution (flat structure)
+    // Store resolved configuration for execution (flat structure) with defaults applied
     $tool['handler_config'] = $wordpress_config;
     
     

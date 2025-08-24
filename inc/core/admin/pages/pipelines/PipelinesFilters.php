@@ -99,9 +99,14 @@ function dm_register_pipelines_admin_page_filters() {
                         'deps' => ['jquery'],
                         'in_footer' => true
                     ],
+                    'dm-pipeline-cards-ui' => [
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-cards-ui.js',
+                        'deps' => ['jquery', 'jquery-ui-sortable'],
+                        'in_footer' => true
+                    ],
                     'dm-pipelines-page' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipelines-page.js',
-                        'deps' => ['jquery', 'dm-pipeline-status'],
+                        'deps' => ['jquery', 'dm-pipeline-status', 'dm-pipeline-cards-ui'],
                         'in_footer' => true,
                         'localize' => [
                             'object' => 'dmPipelineBuilder',
@@ -129,7 +134,7 @@ function dm_register_pipelines_admin_page_filters() {
                     ],
                     'dm-pipeline-builder' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-builder.js',
-                        'deps' => ['jquery', 'jquery-ui-sortable', 'dm-pipelines-page', 'dm-pipeline-status'],
+                        'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status'],
                         'in_footer' => true
                     ],
                     'dm-flow-builder' => [

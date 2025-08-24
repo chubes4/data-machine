@@ -135,7 +135,7 @@ if (!$is_empty) {
      data-flow-step-id="<?php echo esc_attr($flow_step_id); ?>">
 
     <?php if (($step['execution_order'] ?? 0) > 0): ?>
-        <div class="dm-step-arrow">
+        <div class="dm-data-flow-arrow">
             <span class="dashicons dashicons-arrow-right-alt"></span>
         </div>
     <?php endif; ?>

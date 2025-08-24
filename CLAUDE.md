@@ -139,7 +139,7 @@ $result = apply_filters('ai_request', [
 ```
 
 **Tool Discovery**:
-- **Handler Tools**: Platform-specific (twitter_publish) - available when next step matches handler
+- **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
 - **General Tools**: Universal (Google Search, Local Search) - available to all AI steps
 
 **Tool Registration**:
@@ -325,6 +325,16 @@ class MyUpdateHandler {
         return ['success' => true, 'data' => ['updated_id' => $original_id, 'modifications' => $changes]];
     }
 }
+
+add_filter('dm_handlers', function($handlers) {
+    $handlers['my_update'] = [
+        'type' => 'update',
+        'class' => 'MyUpdateHandler',
+        'label' => __('My Update Handler'),
+        'description' => __('Updates existing content')
+    ];
+    return $handlers;
+});
 ```
 
 ## System Integration
@@ -376,7 +386,7 @@ composer install && composer test
 ./build.sh  # Production build
 ```
 
-**PSR-4 Structure**: `inc/Core/`, `inc/Engine/`
+**PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
 **Filter Registration**: 27 `*Filters.php` files auto-loaded via composer.json (containing 50+ filter hooks)
 
 ## Extensions
@@ -385,11 +395,11 @@ composer install && composer test
 
 **Discovery**: Filter-based auto-discovery system - extensions register using WordPress filters
 **Template**: `/extensions/extension-prompt.md` - Fill placeholders, give to LLM for complete extensions
-**Types**: Fetch handlers, Publish handlers, AI tools, Admin pages, Database services
+**Types**: Fetch handlers, Publish handlers, Update handlers, AI tools, Admin pages, Database services
 
 **Extension Points**:
 ```php
-add_filter('dm_handlers', [$this, 'register_handlers']);     // Fetch/publish handlers
+add_filter('dm_handlers', [$this, 'register_handlers']);     // Fetch/publish/update handlers
 add_filter('ai_tools', [$this, 'register_ai_tools']);       // AI capabilities
 add_filter('dm_steps', [$this, 'register_steps']);          // Custom step types
 add_filter('dm_db', [$this, 'register_database']);          // Database services
@@ -428,6 +438,7 @@ new MyExtension();
 **Required Interfaces**:
 - **Fetch**: `get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array`
 - **Publish**: `handle_tool_call(array $parameters, array $tool_def = []): array`
+- **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `original_id`)
 - **Steps**: `execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array`
 
 **Error Handling**:

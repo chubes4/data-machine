@@ -63,8 +63,10 @@ class Flows {
             flow_name varchar(255) NOT NULL,
             flow_config longtext NOT NULL,
             scheduling_config longtext NOT NULL,
+            display_order int(11) NOT NULL DEFAULT 0,
             PRIMARY KEY (flow_id),
-            KEY pipeline_id (pipeline_id)
+            KEY pipeline_id (pipeline_id),
+            KEY display_order (display_order)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -115,20 +117,30 @@ class Flows {
             $flow_data['scheduling_config'] : 
             wp_json_encode($flow_data['scheduling_config']);
         
+        $insert_data = [
+            'pipeline_id' => intval($flow_data['pipeline_id']),
+            'flow_name' => sanitize_text_field($flow_data['flow_name']),
+            'flow_config' => $flow_config,
+            'scheduling_config' => $scheduling_config
+        ];
+        
+        $insert_format = [
+            '%d', // pipeline_id
+            '%s', // flow_name
+            '%s', // flow_config
+            '%s'  // scheduling_config
+        ];
+        
+        // Add display_order if provided
+        if (isset($flow_data['display_order'])) {
+            $insert_data['display_order'] = intval($flow_data['display_order']);
+            $insert_format[] = '%d';
+        }
+        
         $result = $this->wpdb->insert(
             $this->table_name,
-            [
-                'pipeline_id' => intval($flow_data['pipeline_id']),
-                'flow_name' => sanitize_text_field($flow_data['flow_name']),
-                'flow_config' => $flow_config,
-                'scheduling_config' => $scheduling_config
-            ],
-            [
-                '%d', // pipeline_id
-                '%s', // flow_name
-                '%s', // flow_config
-                '%s'  // scheduling_config
-            ]
+            $insert_data,
+            $insert_format
         );
         
         if ($result === false) {
@@ -190,7 +202,7 @@ class Flows {
         
         $flows = $this->wpdb->get_results(
             $this->wpdb->prepare(
-                "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY flow_id DESC",
+                "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY display_order ASC, flow_id ASC",
                 $pipeline_id
             ),
             ARRAY_A
@@ -527,5 +539,222 @@ class Flows {
         $current_config['last_run_at'] = $timestamp;
         
         return $this->update_flow_scheduling($flow_id, $current_config);
+    }
+
+    /**
+     * Get next display order for a pipeline's flows
+     * 
+     * @param int $pipeline_id Pipeline ID
+     * @return int Next display order value
+     */
+    public function get_next_display_order(int $pipeline_id): int {
+        $max_order = $this->wpdb->get_var(
+            $this->wpdb->prepare(
+                "SELECT MAX(display_order) FROM {$this->table_name} WHERE pipeline_id = %d",
+                $pipeline_id
+            )
+        );
+        
+        return ($max_order !== null) ? (int)$max_order + 1 : 0;
+    }
+
+    /**
+     * Update display orders for multiple flows in a pipeline
+     * 
+     * @param int $pipeline_id Pipeline ID
+     * @param array $flow_orders Array of flow_id => display_order pairs
+     * @return bool True on success, false on failure
+     */
+    public function update_flow_display_orders(int $pipeline_id, array $flow_orders): bool {
+        if (empty($flow_orders)) {
+            return true;
+        }
+
+        $success = true;
+        
+        foreach ($flow_orders as $flow_id => $display_order) {
+            $result = $this->wpdb->update(
+                $this->table_name,
+                ['display_order' => (int)$display_order],
+                [
+                    'flow_id' => (int)$flow_id,
+                    'pipeline_id' => $pipeline_id
+                ],
+                ['%d'],
+                ['%d', '%d']
+            );
+            
+            if ($result === false) {
+                do_action('dm_log', 'error', 'Failed to update flow display order', [
+                    'flow_id' => $flow_id,
+                    'display_order' => $display_order,
+                    'pipeline_id' => $pipeline_id,
+                    'wpdb_error' => $this->wpdb->last_error
+                ]);
+                $success = false;
+            }
+        }
+        
+        if ($success) {
+            do_action('dm_log', 'debug', 'Flow display orders updated successfully', [
+                'pipeline_id' => $pipeline_id,
+                'updated_flows' => count($flow_orders)
+            ]);
+        }
+        
+        return $success;
+    }
+
+    /**
+     * Move a flow up in the display order (swap with previous flow)
+     * 
+     * @param int $flow_id Flow ID to move up
+     * @return bool True on success, false on failure
+     */
+    public function move_flow_up(int $flow_id): bool {
+        global $wpdb;
+        
+        // Get the current flow
+        $current_flow = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT flow_id, pipeline_id, display_order FROM {$this->table_name} WHERE flow_id = %d",
+                $flow_id
+            ),
+            ARRAY_A
+        );
+        
+        if (!$current_flow) {
+            return false;
+        }
+        
+        // Find the previous flow (next lower display_order in same pipeline)
+        $prev_flow = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT flow_id, display_order FROM {$this->table_name} 
+                 WHERE pipeline_id = %d AND display_order < %d 
+                 ORDER BY display_order DESC LIMIT 1",
+                $current_flow['pipeline_id'],
+                $current_flow['display_order']
+            ),
+            ARRAY_A
+        );
+        
+        if (!$prev_flow) {
+            return false; // Already at the top
+        }
+        
+        // Swap display orders
+        return $this->swap_flow_positions($current_flow, $prev_flow);
+    }
+
+    /**
+     * Move a flow down in the display order (swap with next flow)
+     * 
+     * @param int $flow_id Flow ID to move down
+     * @return bool True on success, false on failure  
+     */
+    public function move_flow_down(int $flow_id): bool {
+        global $wpdb;
+        
+        // Get the current flow
+        $current_flow = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT flow_id, pipeline_id, display_order FROM {$this->table_name} WHERE flow_id = %d",
+                $flow_id
+            ),
+            ARRAY_A
+        );
+        
+        if (!$current_flow) {
+            return false;
+        }
+        
+        // Find the next flow (next higher display_order in same pipeline)
+        $next_flow = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT flow_id, display_order FROM {$this->table_name} 
+                 WHERE pipeline_id = %d AND display_order > %d 
+                 ORDER BY display_order ASC LIMIT 1",
+                $current_flow['pipeline_id'],
+                $current_flow['display_order']
+            ),
+            ARRAY_A
+        );
+        
+        if (!$next_flow) {
+            return false; // Already at the bottom
+        }
+        
+        // Swap display orders
+        return $this->swap_flow_positions($current_flow, $next_flow);
+    }
+
+    /**
+     * Swap the display_order values of two flows
+     * 
+     * @param array $flow1 First flow data
+     * @param array $flow2 Second flow data  
+     * @return bool True on success, false on failure
+     */
+    private function swap_flow_positions(array $flow1, array $flow2): bool {
+        global $wpdb;
+        
+        // Start transaction
+        $wpdb->query('START TRANSACTION');
+        
+        try {
+            // Update first flow
+            $result1 = $wpdb->update(
+                $this->table_name,
+                ['display_order' => $flow2['display_order']],
+                ['flow_id' => $flow1['flow_id']],
+                ['%d'],
+                ['%d']
+            );
+            
+            // Update second flow
+            $result2 = $wpdb->update(
+                $this->table_name,
+                ['display_order' => $flow1['display_order']],
+                ['flow_id' => $flow2['flow_id']],
+                ['%d'],
+                ['%d']
+            );
+            
+            if ($result1 === false || $result2 === false) {
+                $wpdb->query('ROLLBACK');
+                
+                do_action('dm_log', 'error', 'Failed to swap flow positions', [
+                    'flow1_id' => $flow1['flow_id'],
+                    'flow2_id' => $flow2['flow_id'],
+                    'wpdb_error' => $wpdb->last_error
+                ]);
+                
+                return false;
+            }
+            
+            // Commit transaction
+            $wpdb->query('COMMIT');
+            
+            do_action('dm_log', 'debug', 'Successfully swapped flow positions', [
+                'flow1_id' => $flow1['flow_id'],
+                'flow1_new_order' => $flow2['display_order'],
+                'flow2_id' => $flow2['flow_id'],
+                'flow2_new_order' => $flow1['display_order']
+            ]);
+            
+            return true;
+            
+        } catch (Exception $e) {
+            $wpdb->query('ROLLBACK');
+            
+            do_action('dm_log', 'error', 'Exception during flow position swap', [
+                'flow1_id' => $flow1['flow_id'],
+                'flow2_id' => $flow2['flow_id'],
+                'error' => $e->getMessage()
+            ]);
+            
+            return false;
+        }
     }
 }

@@ -1,55 +1,51 @@
-# Copilot Instructions for Data Machine Plugin
+# Copilot Instructions for Data Machine (WordPress plugin)
 
-This file is a concise, practical reference for AI coding agents working in the Data Machine WordPress plugin. Focus on discoverable, actionable patterns and files that make a contributor productive immediately.
+Quick context for AI coding agents: what matters, where to look, and how to work productively in this repo.
 
-Core idea (big picture)
-- Data Machine implements visual pipelines: reusable pipeline templates (structure) + flow instances (runtime configuration).
-- Data flows: fetchers → AI steps → publishers. Each step can transform/enrich the payload.
-- Major areas:
-  - `inc/Core/` — admin UI, modal templates, step registration, DB abstractions.
-  - `inc/Engine/` — pipeline execution, actions, filters (see `inc/Engine/Actions/Engine.php`, `inc/Engine/Actions/`).
-  - `lib/ai-http-client/` — unified AI provider client. All provider calls MUST go through this library.
-  - `inc/Core/Steps/` — step types and their handlers (ai, fetch, publish, receiver).
+Big picture
+- Visual pipelines: reusable pipeline templates + flow instances. Typical flow: Fetch → AI → Publish/Update.
+- Runtime engine cycle: do_action('dm_run_flow_now') → do_action('dm_execute_step') → do_action('dm_schedule_next_step'). See `inc/Engine/Actions/Engine.php`.
+- Two IDs: `pipeline_step_id` (UUID4, template-level) and `flow_step_id` (`{pipeline_step_id}_{flow_id}`, runtime). Dedup lives in `wp_dm_processed_items`.
 
-Key, actionable patterns (code locations + examples)
-- Step registration: add a class under `inc/Core/Steps/{type}/` and register via `add_filter('dm_steps', ...)`. Example: search for `dm_steps` to find registered handlers.
-- Fetch pipeline flows: use `apply_filters('dm_get_pipeline_flows', [], $pipeline_id)` to retrieve flows for a pipeline.
-- Modal templates: UI templates live in `inc/Core/Admin/Modal/templates/`. Always validate required params and use WordPress i18n functions (see existing templates for patterns).
-- Database services and extensibility are exposed via filters such as `dm_db` — look for registrations and implementations under `inc/Core/Database/`.
-- Engine actions and lifecycle: inspect `inc/Engine/Actions/Engine.php` and `inc/Engine/Actions/*` to understand how steps are executed and how jobs are enqueued/updated.
+Where things live
+- Engine: `inc/Engine/Actions/*` (Engine.php, Update.php, Delete.php) and `inc/Engine/Filters/*` (Admin.php, OAuth.php, Logger.php, FilesRepository.php).
+- Steps: `inc/Core/Steps/{AI|Fetch|Publish|Update}/**` (handlers, settings, Filters files).
+- Admin UI: `inc/Core/Admin/**` (modal templates under `Modal/templates/`).
+- AI client: `lib/ai-http-client/**` (all provider calls via `apply_filters('ai_request', ...)`).
 
-Project-specific conventions (non-generic)
-- Strict parameter validation: handlers and modal templates validate inputs and fail fast. Mirror that style in new code.
-- No hardcoded AI defaults: AI provider and step settings must be explicitly supplied; code throws on missing config.
-- Two-layer model (pipeline template vs flow instance): always keep template vs runtime config responsibilities separate.
-- Handler organization: each step type has a directory and may include multiple handler classes; keep registration via filters rather than global side effects.
-- Use the packaged AI client: all provider calls must go through `lib/ai-http-client/` (see `lib/ai-http-client/README.md` and `lib/ai-http-client/ai-http-client.php`).
+Core runtime contracts (filters/actions)
+- Discovery: `dm_steps`, `dm_handlers`, `dm_db`, `dm_admin_pages`.
+- Pipeline data: `dm_get_pipelines`, `dm_get_pipeline_steps`, `dm_get_pipeline_flows`, `dm_get_flow_config`.
+- Execution: `dm_run_flow_now`, `dm_execute_step`, `dm_schedule_next_step`, `dm_generate_flow_step_id`, `dm_get_next_flow_step_id`.
+- Items/dedup: `dm_mark_item_processed`, `dm_is_item_processed`.
+- AI & tools: `ai_request`, `ai_tools`, `dm_tool_configured`, `dm_get_tool_config`, `dm_apply_global_defaults`.
+- OAuth & HTTP: `dm_oauth`, `dm_get_oauth_url`, `dm_auth_providers`, `dm_request` (HTTP wrapper).
+- Files repo & status: `dm_files_repository`, `dm_detect_status`, `dm_log`.
 
-Developer workflows & commands (discoverable in repo)
-- Install dependencies: from plugin root run `composer install`.
-- Run tests: `vendor/bin/phpunit` (project has `phpunit.xml`).
-- Activate plugin: via WordPress admin UI (standard WP activation).
-- Update bundled AI client: documented in `lib/ai-http-client/README.md` — typically updated via `git subtree pull --prefix=lib/ai-http-client ...`.
+Project-specific conventions
+- Fail fast: no hardcoded AI defaults. Provider, model, and tool config must be explicit or handlers return errors. See `inc/Core/Steps/AI/AIStep.php` and `inc/Engine/Filters/AI.php`.
+- Tool-first AI: AI step exposes tools for the immediate next handler only. For multi-platform, use AI→Publish→AI→Publish. See root `README.md`.
+- Self-registration: new capabilities are added in `*Filters.php` and auto-loaded via Composer; avoid global state. Example: `inc/Core/Steps/AI/AIStepFilters.php`.
+- Security & UX: `manage_options` for admin actions, `wp_unslash()` before `sanitize_text_field()`, and WordPress i18n in templates.
+- Provider access: never call vendor SDKs directly; always use `lib/ai-http-client` via `ai_request`. Models and keys flow through that library.
 
-Integration points & cross-component communication
-- AI providers: centralised in `lib/ai-http-client/`. Do not call providers directly from step handlers.
-- Filters: most extensibility and wiring uses WordPress filters (e.g., `dm_steps`, `dm_db`, `dm_get_pipeline_flows`). Grep for `apply_filters`/`add_filter` to trace behavior.
-- External publishing & webhooks: publishing handlers live in `inc/Core/Steps/Publish/`; receiver/webhook handlers in `inc/Core/Steps/Receiver/`.
+Common tasks (snippets)
+- Register a step: add under `inc/Core/Steps/{type}/` and `add_filter('dm_steps', fn($s)=>$s+['my_step'=>['class'=>MyStep::class,'name'=>__('My Step','data-machine')]]);`
+- Publish tool for a handler: hook `ai_tools` conditionally by `$handler_slug` and route to `handle_tool_call()` on the handler class.
+- Run a flow now: `do_action('dm_run_flow_now', $flow_id, 'manual');`
 
-What to search first when changing behavior
-- `dm_steps`, `dm_db`, `dm_get_pipeline_flows`, `apply_filters('dm_` (to find filter points)
-- `inc/Engine/Actions/Engine.php` and `inc/Engine/Actions/` to understand execution lifecycle
-- `lib/ai-http-client/` to confirm provider API usage and credential flow
-- `inc/Core/Admin/Modal/templates/` for UI and validation patterns
+Dev workflows
+- Install: `composer install` (root). Run tests: `vendor/bin/phpunit` (uses `phpunit.xml`).
+- Build production zip: `./build.sh` (outputs under `/build/`). Activate via WordPress admin.
+- Update AI client subtree: see `lib/ai-http-client/README.md` (git subtree add/pull commands).
+- Debug: Logs available via `do_action('dm_log', ...)` and WP debug log; status checks via `dm_detect_status`.
 
-Documentation to consult
-- Root `CLAUDE.md` (primary codebase documentation — always consult before major changes).
-- `README.md` (architecture quickstart and diagrams).
-- `lib/ai-http-client/README.md` (provider client usage and update instructions).
-- `inc/Core/Steps/Receiver/README.md` (webhook/receiver patterns).
+Search tips to change behavior fast
+- Grep for: `apply_filters('dm_`, `do_action('dm_`, `ai_request`, `dm_steps`, `dm_handlers`.
+- Start with: `inc/Engine/Actions/Engine.php`, `inc/Engine/Actions/Update.php`, `inc/Engine/Filters/*`, and the relevant handler directory.
 
-Final notes
-- Be concrete: prefer following existing filter registration and handler patterns rather than introducing global state.
-- Preserve backward compatibility for registered filters and DB schemas where possible.
+Primary docs
+- Root `CLAUDE.md` (full architecture, filter index), root `README.md` (quickstart, examples), and `lib/ai-http-client/README.md`.
 
-If anything in this summary is unclear or you want more examples (specific files or call sequences), tell me which area to expand and I will iterate.
+Keep compatibility
+- Follow existing filter names and data shapes; don’t change DB schemas or public filters without a shim.

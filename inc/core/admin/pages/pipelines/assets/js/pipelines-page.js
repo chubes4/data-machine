@@ -122,12 +122,23 @@
                     $('.dm-pipeline-loading').remove();
                     
                     if (response.success) {
-                        // Wrap pipeline card and add to page
-                        const wrappedHtml = `<div class="dm-pipeline-wrapper" data-pipeline-id="${pipelineId}">${response.data.pipeline_card_html}</div>`;
-                        $pipelinesList.append(wrappedHtml);
-                        
-                        // Trigger card expansion detection for new content
-                        $(document).trigger('dm:cards-updated');
+                        // Use established requestTemplate pattern
+                        PipelinesPage.requestTemplate('page/pipeline-card', {
+                            pipeline: response.data.pipeline_data,
+                            existing_flows: response.data.existing_flows,
+                            pipelines_instance: null
+                        }).then((pipelineCardHtml) => {
+                            // Wrap pipeline card and add to page
+                            const wrappedHtml = `<div class="dm-pipeline-wrapper" data-pipeline-id="${pipelineId}">${pipelineCardHtml}</div>`;
+                            $pipelinesList.append(wrappedHtml);
+                            
+                            // Trigger card UI updates for new content
+                            if (typeof PipelineCardsUI !== 'undefined') {
+                                PipelineCardsUI.handleDOMChanges();
+                            }
+                        }).catch((error) => {
+                            this.showNotice('Failed to render pipeline card', 'error');
+                        });
                     } else {
                         this.showNotice(response.data.message || 'Error loading pipeline', 'error');
                         // Fall back to first available pipeline
@@ -448,8 +459,10 @@
                                                 // Replace the existing step container with updated version
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
                                                 
-                                                // Trigger card expansion detection for updated content
-                                                $(document).trigger('dm:cards-updated');
+                                                // Trigger card UI updates for updated content
+                                                if (typeof PipelineCardsUI !== 'undefined') {
+                                                    PipelineCardsUI.handleDOMChanges();
+                                                }
                                                 
                                             }).catch((error) => {
                                                 // Failed to update flow step card after AI config save
@@ -481,8 +494,10 @@
                                 // Replace the existing pipeline step container with updated version
                                 $pipelineStepContainer.replaceWith(updatedStepHtml);
                                 
-                                // Trigger card expansion detection for updated content
-                                $(document).trigger('dm:cards-updated');
+                                // Trigger card UI updates for updated content
+                                if (typeof PipelineCardsUI !== 'undefined') {
+                                    PipelineCardsUI.handleDOMChanges();
+                                }
                                 
                             }).catch((error) => {
                                 // Failed to update pipeline step card after AI config save
@@ -507,7 +522,7 @@
                     $button.prop('disabled', false);
                 }
             });
-        },
+        }
 
     };
 
@@ -516,49 +531,6 @@
         window.PipelinesPage.handleConfigureStepAction(e);
     });
 
-    /**
-     * Universal Card Expansion System
-     * Detects overflow content and adds expand buttons to any step card
-     */
-    $(document).ready(function() {
-        // Initialize expansion detection
-        initCardExpansion();
-        
-        // Re-run detection when new cards are added
-        $(document).on('dm:cards-updated', function() {
-            initCardExpansion();
-        });
-    });
-
-    function initCardExpansion() {
-        $('.dm-step-card:not(.dm-step-card--empty)').each(function() {
-            const $card = $(this);
-            const $stepBody = $card.find('.dm-step-body');
-            
-            // Remove existing expand toggle if present
-            $card.find('.dm-expand-toggle').remove();
-            
-            // Detect if the card content is being truncated
-            if ($card[0].scrollHeight > $card[0].clientHeight) {
-                const $expandToggle = $('<button class="dm-expand-toggle" type="button">' +
-                    '<span class="dashicons dashicons-arrow-down"></span>' +
-                    '</button>');
-                $card.append($expandToggle);
-            }
-        });
-    }
-
-    // Universal expand/collapse behavior
-    $(document).on('click', '.dm-expand-toggle', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const $card = $(this).closest('.dm-step-card');
-        const $icon = $(this).find('.dashicons');
-        
-        $card.toggleClass('dm-expanded');
-        $icon.toggleClass('dashicons-arrow-down dashicons-arrow-up');
-    });
 
     // Initialize PipelinesPage functionality when DOM is ready
     $(document).ready(function() {

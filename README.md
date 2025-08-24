@@ -75,6 +75,7 @@ RSS → AI → Twitter → AI → Facebook
 
 **Reddit Monitor**: Reddit → AI analysis → Google Sheets  
 **Content Repurposer**: WordPress posts → AI rewrite → Bluesky  
+**Content Updater**: WordPress posts → AI enhancement → WordPress update  
 **File Processor**: PDF files → AI extraction → Structured data
 
 ## Programmatic Usage
@@ -105,13 +106,20 @@ do_action('dm_save_tool_config', 'google_search', $config_data);
 
 ### Extension Development
 
-Data Machine includes a complete extension system with LLM-powered development templates. See `/extensions/` directory and `CLAUDE.md` for full development documentation.
+Data Machine includes a complete extension system with LLM-powered development templates:
+
+- **Extension Types**: Fetch, Publish, Update handlers, AI tools, Admin pages
+- **Auto-Discovery**: Filter-based registration system
+- **LLM Templates**: Fill-in-the-blank prompts for complete extension generation
+- **Location**: `/extensions/` directory (development builds only)
+
+See `CLAUDE.md` for complete technical documentation.
 
 ## Available Handlers
 
 **Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
-**Update Handlers**: WordPress content modification, post enhancement  
+**Update Handlers**: WordPress content updates (title, content, meta, taxonomy)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
 **Tools**: Google Search, WordPress Search
 

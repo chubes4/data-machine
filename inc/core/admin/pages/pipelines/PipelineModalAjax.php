@@ -34,7 +34,6 @@ class PipelineModalAjax
         add_action('wp_ajax_dm_get_flow_step_card', [$instance, 'handle_get_flow_step_card']);
         add_action('wp_ajax_dm_get_flow_config', [$instance, 'handle_get_flow_config']);
         add_action('wp_ajax_dm_configure_step_action', [$instance, 'handle_configure_step_action']);
-        add_action('wp_ajax_dm_add_handler_action', [$instance, 'handle_add_handler_action']);
         add_action('wp_ajax_dm_upload_file', [$instance, 'handle_upload_file']);
         add_action('wp_ajax_dm_save_handler_settings', [$instance, 'handle_save_handler_settings']);
         add_action('wp_ajax_dm_get_pipeline_data', [$instance, 'handle_get_pipeline_data']);
@@ -433,78 +432,6 @@ class PipelineModalAjax
     }
 
 
-    /**
-     * Add handler to specific flow step with settings processing.
-     *
-     * Processes handler selection and configuration, then updates the target
-     * flow step identified by flow_step_id. Includes handler validation and
-     * immediate flow configuration refresh for UI updates.
-     */
-    public function handle_add_handler_action()
-    {
-        check_ajax_referer('dm_ajax_actions', 'nonce');
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-        }
-        // Pure discovery approach - get only essential data from context
-        $context = $_POST['context'] ?? [];
-        if (is_string($context)) {
-            $context = json_decode($context, true) ?: [];
-        }
-        
-        // Get required context - user clicked on specific flow step
-        $handler_slug = sanitize_text_field($context['handler_slug'] ?? '');
-        $step_type = sanitize_text_field($context['step_type'] ?? '');
-        $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? '');
-        
-        if (empty($handler_slug)) {
-            wp_send_json_error(['message' => __('Handler slug is required', 'data-machine')]);
-        }
-        
-        if (empty($flow_step_id)) {
-            wp_send_json_error(['message' => __('Flow step ID is required', 'data-machine')]);
-        }
-        
-        // Validate handler exists
-        $all_handlers = apply_filters('dm_handlers', []);
-        $handler_info = null;
-        
-        foreach ($all_handlers as $slug => $config) {
-            if ($slug === $handler_slug) {
-                $handler_info = $config;
-                break;
-            }
-        }
-        
-        if (!$handler_info) {
-            wp_send_json_error(['message' => __('Handler not found', 'data-machine')]);
-        }
-        
-        // Process handler settings from form data
-        $saved_handler_settings = $this->process_handler_settings($handler_slug);
-        
-        // Add handler to the specific flow step user clicked on
-        do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $saved_handler_settings);
-        
-        // Extract flow_id for JavaScript response
-        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
-        $flow_id = $parts['flow_id'] ?? null;
-        
-        // Get updated flow configuration for immediate UI update
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
-        
-        wp_send_json_success([
-            'message' => sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug),
-            'handler_slug' => $handler_slug,
-            'step_type' => $step_type,
-            'flow_step_id' => $flow_step_id,
-            'flow_id' => $flow_id,
-            'flow_config' => $flow_config,
-            'action_type' => 'added'
-        ]);
-    }
-
-
 
     /**
      * Process file uploads with flow-isolated storage.
@@ -606,9 +533,9 @@ class PipelineModalAjax
     /**
      * Save handler-specific settings to flow step configuration.
      *
-     * Processes form data through handler's sanitize() method and updates
-     * flow step configuration via dm_update_flow_handler action. Provides
-     * immediate flow configuration refresh for UI consistency.
+     * Unified method that handles both adding new handlers and updating existing handler settings.
+     * Processes form data through handler's sanitize() method and updates flow step configuration 
+     * via dm_update_flow_handler action. Provides immediate flow configuration refresh for UI consistency.
      */
     public function handle_save_handler_settings()
     {
@@ -616,27 +543,37 @@ class PipelineModalAjax
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
         }
+        
         // Enhanced debugging for save handler process
         do_action('dm_log', 'debug', 'Save handler settings request received', [
             'post_keys' => array_keys($_POST),
-            'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action'])),
+            'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action', 'context'])),
             'has_nonce' => isset($_POST['handler_settings_nonce']),
             'user_can_manage' => current_user_can('manage_options')
         ]);
         
-        // Get and validate required form data
-        $handler_slug = sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
-        $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
-        $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
-        $pipeline_id = sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
+        // Handle both context-based (add handler) and direct form data (save settings) scenarios
+        $context = $_POST['context'] ?? [];
+        if (is_string($context)) {
+            $context = json_decode(wp_unslash($context), true) ?: [];
+        }
         
-        if (empty($handler_slug) || empty($step_type) || empty($flow_step_id) || empty($pipeline_id)) {
+        // Extract data from context if available (add handler scenario), otherwise from direct form fields
+        $handler_slug = sanitize_text_field($context['handler_slug'] ?? wp_unslash($_POST['handler_slug'] ?? ''));
+        $step_type = sanitize_text_field($context['step_type'] ?? wp_unslash($_POST['step_type'] ?? ''));
+        $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? wp_unslash($_POST['flow_step_id'] ?? ''));
+        $pipeline_id = sanitize_text_field($context['pipeline_id'] ?? wp_unslash($_POST['pipeline_id'] ?? ''));
+        
+        // Determine if this is an "add" or "update" operation
+        $action_type = !empty($context) ? 'added' : 'updated';
+        
+        if (empty($handler_slug) || empty($flow_step_id)) {
             wp_send_json_error([
-                'message' => __('Required fields are missing.', 'data-machine'),
+                'message' => __('Handler slug and flow step ID are required.', 'data-machine'),
                 'missing_data' => [
                     'handler_slug' => empty($handler_slug),
-                    'step_type' => empty($step_type), 
                     'flow_step_id' => empty($flow_step_id),
+                    'step_type' => empty($step_type),
                     'pipeline_id' => empty($pipeline_id)
                 ]
             ]);
@@ -645,8 +582,17 @@ class PipelineModalAjax
         
         // Validate handler exists
         $all_handlers = apply_filters('dm_handlers', []);
-        if (!isset($all_handlers[$handler_slug])) {
-            wp_send_json_error(['message' => __('Invalid handler.', 'data-machine')]);
+        $handler_info = null;
+        
+        foreach ($all_handlers as $slug => $config) {
+            if ($slug === $handler_slug) {
+                $handler_info = $config;
+                break;
+            }
+        }
+        
+        if (!$handler_info) {
+            wp_send_json_error(['message' => __('Handler not found.', 'data-machine')]);
             return;
         }
         
@@ -656,6 +602,7 @@ class PipelineModalAjax
         do_action('dm_log', 'debug', 'Handler settings processed', [
             'handler_slug' => $handler_slug,
             'flow_step_id' => $flow_step_id,
+            'action_type' => $action_type,
             'settings_count' => count($handler_settings)
         ]);
         
@@ -670,12 +617,19 @@ class PipelineModalAjax
             // Get updated flow configuration for immediate UI update
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
             
+            // Prepare success message based on action type
+            $message = ($action_type === 'added') 
+                ? sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
+                : sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug);
+            
             wp_send_json_success([
-                'message' => sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug),
+                'message' => $message,
                 'handler_slug' => $handler_slug,
+                'step_type' => $step_type,  // Include step_type for UI updates
                 'flow_step_id' => $flow_step_id,
                 'flow_id' => $flow_id,
-                'flow_config' => $flow_config
+                'flow_config' => $flow_config,
+                'action_type' => $action_type
             ]);
             
         } catch (\Exception $e) {

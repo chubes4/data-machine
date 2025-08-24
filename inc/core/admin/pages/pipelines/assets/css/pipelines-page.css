@@ -571,8 +571,8 @@
     text-decoration: underline;
 }
 
-/* Universal step arrows - proper flexbox child */
-.dm-step-arrow {
+/* Universal data flow arrows - proper flexbox child */
+.dm-data-flow-arrow {
     margin: 12px;
     color: #666;
     font-size: 16px;
@@ -581,19 +581,19 @@
     flex-shrink: 0;
 }
 
-.dm-step-arrow .dashicons {
+.dm-data-flow-arrow .dashicons {
     width: 16px;
     height: 16px;
     font-size: 16px;
 }
 
 /* Flow context - smaller arrows for nested flow steps */
-.dm-flow-steps .dm-step-arrow {
+.dm-flow-steps .dm-data-flow-arrow {
     color: #888;
     font-size: 14px;
 }
 
-.dm-flow-steps .dm-step-arrow .dashicons {
+.dm-flow-steps .dm-data-flow-arrow .dashicons {
     width: 14px;
     height: 14px;
     font-size: 14px;
@@ -769,5 +769,53 @@
 .dm-admin-notice .notice-dismiss:focus {
     box-shadow: 0 0 0 1px #72aee6, 0 0 2px 1px rgba(54, 144, 192, 0.8);
     outline: 2px solid transparent;
+}
+
+/* === Flow Reordering Controls === */
+
+/* Flow reorder controls container */
+.dm-flow-reorder-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-right: 8px;
+}
+
+/* Clean reorder arrow icons following expand-toggle pattern */
+.dm-reorder-arrow-up,
+.dm-reorder-arrow-down {
+    cursor: pointer;
+    color: #646970;
+    padding: 1px;
+    border-radius: 3px;
+    transition: all 0.15s ease-in-out;
+    display: inline-block;
+}
+
+.dm-reorder-arrow-up:hover,
+.dm-reorder-arrow-down:hover {
+    color: #0073aa;
+    background: rgba(0, 115, 170, 0.1);
+}
+
+.dm-reorder-arrow-up .dashicons,
+.dm-reorder-arrow-down .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+}
+
+/* Hidden state */
+.dm-reorder-arrow-up.dm-hidden,
+.dm-reorder-arrow-down.dm-hidden {
+    display: none;
+}
+
+/* Update flow header to accommodate reorder controls */
+.dm-flow-header {
+    display: flex;
+    align-items: center;
+    gap: 0;
 }
 

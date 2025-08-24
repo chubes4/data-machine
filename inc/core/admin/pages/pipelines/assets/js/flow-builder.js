@@ -43,7 +43,9 @@
             
             // Direct delete action handler for flow deletion
             $(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
+            
         },
+
 
         /**
          * Handle add handler action via data attributes
@@ -78,7 +80,7 @@
         },
 
         /**
-         * Add selected handler to flow step using direct AJAX
+         * Add selected handler to flow step using unified AJAX endpoint
          */
         addHandlerToFlowStep: function(contextData) {
             // Simple validation - get it right the first time
@@ -87,7 +89,7 @@
                 return;
             }
             
-            // Collect form data from the modal for add-handler-action endpoint
+            // Collect form data from the modal for unified handler settings endpoint
             const $modal = $('#dm-modal');
             const formData = {
                 action: 'dm_save_handler_settings',
@@ -252,7 +254,8 @@
                             flow: flowData.flow_data,
                             pipeline_steps: pipelineSteps
                         }).then((flowCardHtml) => {
-                            $flowsList.append(flowCardHtml);
+                            $flowsList.prepend(flowCardHtml);
+                            
                         }).catch((error) => {
                             // Failed to render flow card template
                         });
@@ -389,6 +392,11 @@
                 // Replace the existing step container with updated version
                 $flowStepContainer.replaceWith(updatedStepHtml);
                 
+                // Trigger card UI updates for updated content
+                if (typeof PipelineCardsUI !== 'undefined') {
+                    PipelineCardsUI.handleDOMChanges();
+                }
+                
                 // Refresh pipeline status after template update
                 const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
                 if (pipelineId) {
@@ -446,10 +454,12 @@
                         // Flow deletion - remove specific flow instance card
                         const $flowCard = $(`.dm-flow-instance-card[data-flow-id="${flowId}"]`);
                         $flowCard.fadeOut(300, function() {
+                            const $pipelineCard = $(this).closest('.dm-pipeline-card');
                             $(this).remove();
                             
+                            
                             // Refresh pipeline status after flow deletion
-                            const pipelineId = $flowCard.closest('.dm-pipeline-card').data('pipeline-id');
+                            const pipelineId = $pipelineCard.data('pipeline-id');
                             if (pipelineId) {
                                 PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
                                     // Status refresh failed after flow deletion
