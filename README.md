@@ -90,7 +90,7 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 // AI integration
 $response = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'gpt-4'
+    'model' => 'gpt-5'
 ], 'openrouter');
 
 // Service discovery
