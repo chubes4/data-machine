@@ -44,6 +44,12 @@ $settings = dm_get_data_machine_settings();
 $enabled_pages = dm_get_enabled_admin_pages();
 $enabled_tools = dm_get_enabled_general_tools();
 
+// AI Step Persistence
+do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt); // Pipeline-level templates
+do_action('dm_update_flow_user_message', $flow_step_id, $user_message); // Flow-level instances
+$flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+$pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+
 // Site Context
 $context = SiteContext::get_context();
 $formatted_context = SiteContext::format_for_ai($context);
@@ -136,6 +142,11 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 
 **Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
+**Dual-Layer Persistence Model**:
+- **Pipeline Level**: System prompts stored per `pipeline_step_id` - serve as reusable templates
+- **Flow Level**: User messages stored per `flow_step_id` - enable instance-specific customization  
+- **Inheritance**: Flow steps inherit pipeline system prompts, add flow-specific user messages
+
 ```php
 $result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
@@ -174,6 +185,12 @@ add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 3, 4);
 - Tool result formatting for optimal AI model consumption
 - Context preservation across multi-turn conversations
 - Specialized formatters for search, publish, and generic tool results
+
+**AI Step Execution Model**:
+- AI steps can run standalone using flow-level user messages when no fetch step precedes
+- System prompts (pipeline-level) provide consistent behavior templates
+- User messages (flow-level) enable different prompts per flow instance
+- Multi-turn conversation support with context preservation across tool executions
 
 ### Tool Management
 
@@ -318,6 +335,40 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 ```
 
 **Processing**: Each step adds entry to array front → accumulates complete workflow history
+
+## Step Configuration Persistence
+
+**Dual-Layer Architecture**:
+
+**Pipeline Level (Templates)**:
+- System prompts stored in `pipeline_config` per `pipeline_step_id`
+- Shared across all flow instances using this pipeline
+- Updated via `dm_update_system_prompt` action
+
+**Flow Level (Instances)**:
+- User messages stored in `flow_config` per `flow_step_id`
+- Instance-specific customization per flow
+- Updated via `dm_update_flow_user_message` action
+
+**Configuration Access**:
+```php
+// Flow step configuration (inherits from pipeline + flow-specific data)
+$flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+// Contains: user_message (flow-level), system_prompt (inherited from pipeline), handler config
+
+// Pipeline configuration (templates)
+$pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+// Contains: system_prompt, step configuration templates
+
+// Flow configuration (instance data)  
+$flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+// Contains: flow_step configurations, user_message overrides
+```
+
+**AI Step Execution**:
+- Reads `user_message` from flow step config (flow-specific)
+- Inherits system prompt template from pipeline step
+- Can run standalone when flow has user_message but no preceding fetch step
 
 ## Admin Interface
 

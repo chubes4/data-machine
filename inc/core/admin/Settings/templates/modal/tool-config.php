@@ -126,6 +126,145 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
             <?php
             break;
             
+        case 'google_search_console':
+            // Get current configuration
+            $gsc_config = apply_filters('dm_get_tool_config', [], 'google_search_console');
+            $gsc_configured = apply_filters('dm_tool_configured', false, 'google_search_console');
+            
+            // Get authentication status
+            $all_auth = apply_filters('dm_auth_providers', []);
+            $auth_service = $all_auth['google_search_console'] ?? null;
+            $is_authenticated = $auth_service ? $auth_service->is_authenticated() : false;
+            ?>
+            <div class="dm-tool-config-container">
+                <div class="dm-tool-config-header">
+                    <h3><?php esc_html_e('Configure Google Search Console', 'data-machine'); ?></h3>
+                    <p><?php esc_html_e('Analyze your website\'s search performance, find keyword opportunities, and optimize content based on real Google Search Console data.', 'data-machine'); ?></p>
+                    
+                    <div class="dm-tool-config-note">
+                        <p class="description">
+                            <strong><?php esc_html_e('Note:', 'data-machine'); ?></strong>
+                            <?php esc_html_e('You need a verified Google Search Console property and a Google Cloud Console project with Search Console API enabled.', 'data-machine'); ?>
+                            <a href="https://developers.google.com/webmaster-tools/v1/getting_started" target="_blank">
+                                <?php esc_html_e('View Setup Guide', 'data-machine'); ?>
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                
+                <form id="dm-google-search-console-config-form" data-tool-id="google_search_console">
+                    <table class="form-table">
+                        <tbody>
+                            <tr class="form-field">
+                                <th scope="row">
+                                    <label for="google_search_console_client_id"><?php esc_html_e('OAuth Client ID', 'data-machine'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" 
+                                           id="google_search_console_client_id" 
+                                           name="client_id" 
+                                           value="<?php echo esc_attr($gsc_config['client_id'] ?? ''); ?>"
+                                           class="regular-text" 
+                                           placeholder="<?php esc_attr_e('Enter your OAuth 2.0 Client ID', 'data-machine'); ?>"
+                                           required />
+                                    <p class="description">
+                                        <?php esc_html_e('Get your OAuth 2.0 Client ID from Google Cloud Console → APIs & Services → Credentials', 'data-machine'); ?>
+                                        <br>
+                                        <a href="https://console.cloud.google.com/apis/credentials" target="_blank">
+                                            <?php esc_html_e('Open Google Cloud Console', 'data-machine'); ?>
+                                        </a>
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <tr class="form-field">
+                                <th scope="row">
+                                    <label for="google_search_console_client_secret"><?php esc_html_e('OAuth Client Secret', 'data-machine'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" 
+                                           id="google_search_console_client_secret" 
+                                           name="client_secret" 
+                                           value="<?php echo esc_attr($gsc_config['client_secret'] ?? ''); ?>"
+                                           class="regular-text" 
+                                           placeholder="<?php esc_attr_e('Enter your OAuth 2.0 Client Secret', 'data-machine'); ?>"
+                                           required />
+                                    <p class="description">
+                                        <?php esc_html_e('Your OAuth 2.0 Client Secret from the same Google Cloud Console credentials', 'data-machine'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <?php if (!empty($gsc_config['client_id']) && !empty($gsc_config['client_secret'])): ?>
+                            <tr class="form-field">
+                                <th scope="row">
+                                    <?php esc_html_e('Authentication Status', 'data-machine'); ?>
+                                </th>
+                                <td>
+                                    <?php if ($is_authenticated): ?>
+                                        <span class="dm-status-indicator dm-status-success">
+                                            <span class="dashicons dashicons-yes-alt"></span>
+                                            <?php esc_html_e('Connected to Google Search Console', 'data-machine'); ?>
+                                        </span>
+                                        <p class="description">
+                                            <?php 
+                                            $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+                                            if (!empty($account['last_verified_at'])) {
+                                                echo sprintf(
+                                                    __('Last authenticated: %s', 'data-machine'),
+                                                    date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $account['last_verified_at'])
+                                                );
+                                            }
+                                            ?>
+                                        </p>
+                                        <button type="button" class="button button-secondary" id="dm-gsc-disconnect">
+                                            <?php esc_html_e('Disconnect Account', 'data-machine'); ?>
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="dm-status-indicator dm-status-warning">
+                                            <span class="dashicons dashicons-warning"></span>
+                                            <?php esc_html_e('Not connected - authorization required', 'data-machine'); ?>
+                                        </span>
+                                        <p class="description">
+                                            <?php esc_html_e('After saving your credentials, you\'ll be able to connect to Google Search Console.', 'data-machine'); ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                            
+                            <tr class="form-field">
+                                <th scope="row">
+                                    <?php esc_html_e('Setup Instructions', 'data-machine'); ?>
+                                </th>
+                                <td>
+                                    <div class="dm-setup-instructions">
+                                        <h4><?php esc_html_e('Quick Setup Guide:', 'data-machine'); ?></h4>
+                                        <ol>
+                                            <li><?php esc_html_e('Go to Google Cloud Console and create a new project (or select existing)', 'data-machine'); ?></li>
+                                            <li><?php esc_html_e('Enable the Search Console API in the APIs & Services library', 'data-machine'); ?></li>
+                                            <li><?php esc_html_e('Create OAuth 2.0 credentials (Web application type)', 'data-machine'); ?></li>
+                                            <li><?php printf(
+                                                __('Add %s as an authorized redirect URI', 'data-machine'),
+                                                '<code>' . esc_html(apply_filters('dm_get_oauth_url', '', 'google_search_console')) . '</code>'
+                                            ); ?></li>
+                                            <li><?php esc_html_e('Copy the Client ID and Client Secret to the fields above', 'data-machine'); ?></li>
+                                            <li><?php esc_html_e('Save the configuration and connect your Google account', 'data-machine'); ?></li>
+                                        </ol>
+                                        <p class="description">
+                                            <strong><?php esc_html_e('Requirements:', 'data-machine'); ?></strong>
+                                            <?php esc_html_e('You must be an owner or verified user of the website in Google Search Console to access the data.', 'data-machine'); ?>
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </form>
+            </div>
+            <?php
+            break;
+            
         default:
             echo '<div class="dm-error">';
             echo '<h4>' . __('Unknown Tool', 'data-machine') . '</h4>';
@@ -134,6 +273,18 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
             break;
     }
     ?>
+    
+    <!-- Save Actions -->
+    <div class="dm-tool-config-actions">
+        <button type="button" class="button button-secondary dm-modal-close">
+            <?php esc_html_e('Cancel', 'data-machine'); ?>
+        </button>
+        <button type="button" class="button button-primary dm-modal-close" 
+                data-template="tool-config-save"
+                data-context='{"tool_id":"<?php echo esc_attr($tool_id); ?>"}'>
+            <?php esc_html_e('Save Configuration', 'data-machine'); ?>
+        </button>
+    </div>
     
     <!-- Settings page context - no navigation back to pipeline needed -->
     <div class="dm-settings-tool-notice">

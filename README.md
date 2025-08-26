@@ -14,10 +14,11 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 
-**Example**: RSS → AI → Twitter
-- Pipeline: 3-step template
-- Flow A: TechCrunch + Claude 3.5 Sonnet + Twitter
-- Flow B: Gaming RSS + GPT-4o + Facebook
+**Example**: Automated Tech News Twitter Feed
+- **Pipeline Template**: Fetch → AI → Twitter with system prompt "You are a tech news curator. Extract key insights and create engaging tweets that highlight innovation and industry impact. Maintain a professional but accessible tone."
+- **Flow A** (Independent Agent): TechCrunch + Hacker News RSS → AI agent instance → user message "Focus on AI/ML breakthroughs and venture funding" → Twitter (every 2 hours)
+- **Flow B** (Independent Agent): Reddit r/technology + GitHub trending → AI agent instance → user message "Focus on open-source projects and developer tools" → Twitter (every 4 hours)
+- **Flow C** (Independent Agent): VentureBeat + Product Hunt → AI agent instance → user message "Focus on startup launches and product innovations" → Twitter (every 6 hours)
 
 ## Quick Start
 
@@ -72,14 +73,30 @@ RSS → AI → Twitter → AI → Facebook
 **AI Enhancement**: 
 - **Dynamic Directives**: Automatic tool-specific prompts
 - **Site Context**: WordPress site information injection
+- **Dual-Layer Persistence**: Pipeline-level system prompts + flow-level user messages
 - **Three-Layer Tools**: Global settings → per-step selection → configuration validation  
 - **Tool Categories**: Handler tools (next step) + general tools (Google Search, Local Search)
+- **Standalone Execution**: AI steps can run independently using flow-specific user messages
 
-**Additional Examples**:
-- **Reddit Monitor**: Reddit → AI analysis → Google Sheets
-- **Content Repurposer**: WordPress posts → AI rewrite → Bluesky  
-- **Content Updater**: WordPress posts → AI enhancement → WordPress update
-- **File Processor**: PDF files → AI extraction → Structured data
+**Advanced Examples**:
+
+**Automated Health News WordPress Site**:
+- **Pipeline Template**: Fetch → AI → WordPress with system prompt "You are a medical content specialist. Create accurate, well-researched articles with proper citations. Use clear, accessible language while maintaining scientific rigor."
+- **Flow A** (Independent Agent): PubMed cardiology research + American Heart Association → AI agent instance → user message "Focus on cardiovascular breakthroughs and heart disease prevention" → WordPress (daily)
+- **Flow B** (Independent Agent): FDA RSS + CDC health alerts → AI agent instance → user message "Focus on regulatory updates and public health emergencies" → WordPress (twice daily)  
+- **Flow C** (Independent Agent): Nutrition journals + Mayo Clinic blog → AI agent instance → user message "Focus on evidence-based diet and lifestyle interventions" → WordPress (weekly)
+
+**Multi-Platform Content Distribution**:
+- **Pipeline Template**: Fetch → AI → Publish with system prompt "Transform technical content into platform-appropriate formats while preserving key insights and maintaining brand voice."
+- **Flow A** (Independent Agent): RSS tech blogs → AI agent instance → user message "Create professional Twitter threads for developers" → Twitter (daily)
+- **Flow B** (Independent Agent): Reddit r/programming discussions → AI agent instance → user message "Create engaging Facebook posts highlighting trends" → Facebook (twice daily)  
+- **Flow C** (Independent Agent): WordPress tech sites → AI agent instance → user message "Create detailed analysis articles" → WordPress (weekly)
+
+**Research Intelligence System**:
+- **Pipeline Template**: Fetch → AI → Analysis with system prompt "You are a research analyst. Identify trends, synthesize insights, and flag significant developments across multiple data sources."
+- **Flow A** (Independent Agent): Google Sheets industry data → AI agent instance → user message "Analyze competitive intelligence metrics" → Google Sheets (daily)
+- **Flow B** (Independent Agent): Reddit discussions + RSS feeds → AI agent instance → user message "Track brand mentions and sentiment" → WordPress (brand monitoring posts)
+- **Flow C** (Independent Agent): Files (PDF reports) → AI agent instance → user message "Extract key innovation insights" → WordPress (weekly research summaries)
 
 ## Programmatic Usage
 
@@ -107,6 +124,11 @@ $configured = apply_filters('dm_tool_configured', false, 'google_search');
 do_action('dm_save_tool_config', 'google_search', $config_data);
 $tools = apply_filters('ai_tools', []);
 $enabled_tools = dm_get_enabled_general_tools();
+
+// AI step configuration
+do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
+do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
+$step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
 ```
 
 ### Extension Development

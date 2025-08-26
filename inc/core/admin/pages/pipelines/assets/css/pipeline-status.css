@@ -55,3 +55,126 @@
  * - Yellow (#f0a000): Warnings (no customizations, drafts, architectural issues)
  * - Green (#00a32a): Ready to execute
  */
+
+/* ===== BUTTON STATUS INDICATORS ===== */
+
+/* Run button status states using circular progress and icons */
+.dm-run-now-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Loading state with circular progress animation */
+.dm-run-now-btn--loading {
+    pointer-events: none;
+}
+
+.dm-run-now-btn--loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    border: 2px solid transparent;
+    border-top: 2px solid #666;
+    animation: dm-button-progress 2s linear forwards;
+    box-sizing: border-box;
+}
+
+@keyframes dm-button-progress {
+    0% {
+        transform: rotate(-90deg);
+        border-color: transparent;
+        border-top-color: #666;
+    }
+    25% {
+        border-color: transparent;
+        border-top-color: #666;
+        border-right-color: #666;
+    }
+    50% {
+        border-color: transparent;
+        border-top-color: #666;
+        border-right-color: #666;
+        border-bottom-color: #666;
+    }
+    75% {
+        border-color: transparent;
+        border-top-color: #666;
+        border-right-color: #666;
+        border-bottom-color: #666;
+        border-left-color: #666;
+    }
+    100% {
+        border-color: #666;
+    }
+}
+
+/* Success state with green border and checkmark */
+.dm-run-now-btn--success {
+    border-color: #00a32a !important;
+    position: relative;
+}
+
+.dm-run-now-btn--success::after {
+    content: '\f147'; /* WordPress Dashicon checkmark */
+    font-family: dashicons;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00a32a;
+    font-size: 20px;
+    font-weight: normal;
+    line-height: 1;
+    animation: dm-status-fade-in 0.3s ease-in;
+}
+
+.dm-run-now-btn--success .button-text {
+    opacity: 0;
+}
+
+/* Error state with red border and X */
+.dm-run-now-btn--error {
+    border-color: #dc3232 !important;
+    position: relative;
+}
+
+.dm-run-now-btn--error::after {
+    content: '\f335'; /* WordPress Dashicon X */
+    font-family: dashicons;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc3232;
+    font-size: 20px;
+    font-weight: normal;
+    line-height: 1;
+    animation: dm-status-fade-in 0.3s ease-in;
+}
+
+.dm-run-now-btn--error .button-text {
+    opacity: 0;
+}
+
+@keyframes dm-status-fade-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

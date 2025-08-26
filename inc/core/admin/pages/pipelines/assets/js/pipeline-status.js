@@ -34,6 +34,11 @@
         static CSS_FLOW_STATUS_YELLOW = 'dm-step-card--status-yellow';
         static CSS_FLOW_STATUS_GREEN = 'dm-step-card--status-green';
         
+        // CSS class constants for button status indicators
+        static CSS_BUTTON_LOADING = 'dm-run-now-btn--loading';
+        static CSS_BUTTON_SUCCESS = 'dm-run-now-btn--success';
+        static CSS_BUTTON_ERROR = 'dm-run-now-btn--error';
+        
         // Array of all status CSS classes for easy removal
         static CSS_ALL_STATUS_CLASSES = [
             PipelineStatusManager.CSS_PIPELINE_STATUS_RED,
@@ -42,6 +47,13 @@
             PipelineStatusManager.CSS_FLOW_STATUS_RED,
             PipelineStatusManager.CSS_FLOW_STATUS_YELLOW,
             PipelineStatusManager.CSS_FLOW_STATUS_GREEN
+        ];
+        
+        // Array of button status classes for easy removal
+        static CSS_ALL_BUTTON_CLASSES = [
+            PipelineStatusManager.CSS_BUTTON_LOADING,
+            PipelineStatusManager.CSS_BUTTON_SUCCESS,
+            PipelineStatusManager.CSS_BUTTON_ERROR
         ];
 
         /**
@@ -265,6 +277,109 @@
                 yellow: $pipelineCards.find(`.${PipelineStatusManager.CSS_PIPELINE_STATUS_YELLOW}, .${PipelineStatusManager.CSS_FLOW_STATUS_YELLOW}`).length,
                 green: $pipelineCards.find(`.${PipelineStatusManager.CSS_PIPELINE_STATUS_GREEN}, .${PipelineStatusManager.CSS_FLOW_STATUS_GREEN}`).length
             };
+        }
+
+        /**
+         * Set button to loading state with circular progress animation
+         * 
+         * @param {jQuery} $button - Button jQuery element
+         * @param {string} loadingText - Text to display during loading (default: 'Running...')
+         */
+        static setButtonLoading($button, loadingText = 'Running...') {
+            if (!$button || $button.length === 0) {
+                return;
+            }
+
+            // Store original text and state
+            if (!$button.data('original-text')) {
+                $button.data('original-text', $button.text());
+            }
+
+            // Clear any existing button status classes
+            $button.removeClass(PipelineStatusManager.CSS_ALL_BUTTON_CLASSES.join(' '));
+            
+            // Set loading state
+            $button.addClass(PipelineStatusManager.CSS_BUTTON_LOADING);
+            $button.text(loadingText);
+            $button.prop('disabled', true);
+        }
+
+        /**
+         * Set button to success state with green border and checkmark
+         * 
+         * @param {jQuery} $button - Button jQuery element
+         * @param {number} duration - How long to show success state in milliseconds (default: 2000)
+         */
+        static setButtonSuccess($button, duration = 2000) {
+            if (!$button || $button.length === 0) {
+                return;
+            }
+
+            // Clear existing classes and set success state
+            $button.removeClass(PipelineStatusManager.CSS_ALL_BUTTON_CLASSES.join(' '));
+            $button.addClass(PipelineStatusManager.CSS_BUTTON_SUCCESS);
+            
+            // Add a span for the button text to control its opacity
+            if (!$button.find('.button-text').length) {
+                $button.wrapInner('<span class="button-text"></span>');
+            }
+
+            // Reset to normal state after duration
+            setTimeout(() => {
+                PipelineStatusManager.resetButton($button);
+            }, duration);
+        }
+
+        /**
+         * Set button to error state with red border and X
+         * 
+         * @param {jQuery} $button - Button jQuery element
+         * @param {number} duration - How long to show error state in milliseconds (default: 3000)
+         */
+        static setButtonError($button, duration = 3000) {
+            if (!$button || $button.length === 0) {
+                return;
+            }
+
+            // Clear existing classes and set error state
+            $button.removeClass(PipelineStatusManager.CSS_ALL_BUTTON_CLASSES.join(' '));
+            $button.addClass(PipelineStatusManager.CSS_BUTTON_ERROR);
+            
+            // Add a span for the button text to control its opacity
+            if (!$button.find('.button-text').length) {
+                $button.wrapInner('<span class="button-text"></span>');
+            }
+
+            // Reset to normal state after duration
+            setTimeout(() => {
+                PipelineStatusManager.resetButton($button);
+            }, duration);
+        }
+
+        /**
+         * Reset button to original state
+         * 
+         * @param {jQuery} $button - Button jQuery element
+         */
+        static resetButton($button) {
+            if (!$button || $button.length === 0) {
+                return;
+            }
+
+            // Remove all button status classes
+            $button.removeClass(PipelineStatusManager.CSS_ALL_BUTTON_CLASSES.join(' '));
+            
+            // Restore original text
+            const originalText = $button.data('original-text');
+            if (originalText) {
+                $button.text(originalText);
+            }
+            
+            // Re-enable button
+            $button.prop('disabled', false);
+            
+            // Clean up data
+            $button.removeData('original-text');
         }
     }
 

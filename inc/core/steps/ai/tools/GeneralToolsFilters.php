@@ -89,6 +89,42 @@ add_filter('ai_tools', function($tools) {
 });
 
 /**
+ * Register Google Search Console Tool
+ */
+add_filter('ai_tools', function($tools) {
+    $tools['google_search_console'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearchConsole',
+        'method' => 'handle_tool_call',
+        'description' => 'Analyze Google Search Console data for SEO optimization. Get keyword performance, find content opportunities, and suggest internal links based on search data.',
+        'requires_config' => true, // Requires OAuth authentication
+        'parameters' => [
+            'page_url' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'URL of the page to analyze (must match a page in your Search Console account)'
+            ],
+            'analysis_type' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Type of analysis: performance, keywords, opportunities, or internal_links (default: performance)'
+            ],
+            'date_range' => [
+                'type' => 'string',
+                'required' => false,
+                'description' => 'Date range for analysis: 7d, 30d, or 90d (default: 30d)'
+            ],
+            'include_internal_links' => [
+                'type' => 'boolean',
+                'required' => false,
+                'description' => 'Whether to include internal linking suggestions (default: false)'
+            ]
+        ]
+    ];
+    
+    return $tools;
+});
+
+/**
  * Tool Configuration Detection Filter
  * 
  * Checks if a tool is properly configured and ready for use
@@ -102,6 +138,17 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
         
         case 'local_search':
             return true; // Always configured - no setup required
+        
+        case 'google_search_console':
+            // GSC tool configuration is handled by GoogleSearchConsoleFilters.php
+            // Check if OAuth configuration exists and user is authenticated
+            $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+            $has_config = !empty($config['client_id']) && !empty($config['client_secret']);
+            
+            $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+            $has_tokens = !empty($account['access_token']);
+            
+            return $has_config && $has_tokens;
         
         default:
             return $configured;

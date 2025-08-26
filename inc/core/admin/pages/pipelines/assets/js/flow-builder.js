@@ -283,8 +283,8 @@
                 return;
             }
             
-            const originalText = $button.text();
-            $button.text('Running...').prop('disabled', true);
+            // Set button to loading state using status manager
+            PipelineStatusManager.setButtonLoading($button);
             
             $.ajax({
                 url: dmPipelineBuilder.ajax_url,
@@ -296,52 +296,20 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Show inline success message
-                        this.showInlineMessage($button, 'Job Created', 'success');
+                        // Show success state with checkmark
+                        PipelineStatusManager.setButtonSuccess($button);
                     } else {
-                        this.showInlineMessage($button, 'Error: ' + (response.data.message || 'Unknown error'), 'error');
+                        // Show error state with X
+                        PipelineStatusManager.setButtonError($button);
                     }
                 },
                 error: (xhr, status, error) => {
-                    // AJAX error occurred
-                    this.showInlineMessage($button, 'Connection Error', 'error');
-                },
-                complete: () => {
-                    $button.text(originalText).prop('disabled', false);
+                    // AJAX error occurred - show error state
+                    PipelineStatusManager.setButtonError($button);
                 }
             });
         },
 
-        /**
-         * Show inline success/error message next to button
-         */
-        showInlineMessage: function($button, message, type) {
-            // Remove any existing inline messages
-            $button.siblings('.dm-inline-message').remove();
-            
-            // Create inline message element
-            const messageClass = type === 'success' ? 'dm-inline-message dm-inline-success' : 'dm-inline-message dm-inline-error';
-            const $message = $('<span>', {
-                class: messageClass,
-                text: message,
-                style: 'margin-left: 10px; font-weight: 500;'
-            });
-            
-            // Add success/error styling
-            if (type === 'success') {
-                $message.css('color', '#28a745');
-            } else {
-                $message.css('color', '#dc3545');
-            }
-            
-            // Insert message after button and fade it in, then out
-            $button.after($message);
-            $message.hide().fadeIn(300, function() {
-                $(this).fadeOut(300, function() {
-                    $(this).remove();
-                });
-            });
-        },
 
         /**
          * Handle modal saved event to update specific step card

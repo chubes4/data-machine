@@ -1,5 +1,5 @@
 **CURRENT KNOWN ISSUES**
-- The Run button has a visual indicator, but it disappears too quick to be helpfu
+- The Run button has a visual indicator, but it disappears too quick to be helpful
 - We need to review our Status Management System to ensure that we are properly accounting for all combinations of statuses. It has not been updated since before we added the update step to the system. 
 - When opening the step configuration modal, it ALWAYS shows a blank api field. It loads openai first which is fine. but IF api key exists for openai, then we should also be loading the key and the models upon modal open. Currently, it only loads them when we switch providers via the dropdown
 - In the case of AI-Publish, if we do this: 1. Enter use message, run job. 2. change user message, run job again, sometimes the user message from run 1 is lost. We must investigate and identify why this happens. it is likely because the job pulls the flow config from the database and if we change it before it pulls that it will grab the new one instead of the old one. We can work around this by creating a new flow, but i am wondering if we can find a way to get around it without creating a new flow

@@ -81,7 +81,7 @@ function dm_get_wordpress_base_tool(): array {
             'content' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Post content formatted as WordPress Gutenberg blocks. Use block comments like <!-- wp:heading {"level":2} --><h2>Subheading</h2><!-- /wp:heading --> for headings and <!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph --> for paragraphs.'
+                'description' => 'Post content formatted as WordPress Gutenberg blocks. Wrap ALL URLs in anchor tags like <a href="URL">Link Text</a>. Use <strong>bold</strong> and <em>italic</em> for formatting. Lists: <!-- wp:list --><ul><li>Item</li></ul><!-- /wp:list -->. Paragraphs: <!-- wp:paragraph --><p>Content with <a href="https://example.com">proper links</a></p><!-- /wp:paragraph -->.'
             ]
         ]
     ];

@@ -41,6 +41,25 @@ function dm_register_settings_admin_page_filters() {
         return $modals;
     });
     
+    // Register Settings templates for modal discovery (template-only, not for admin menu)
+    add_filter('dm_render_template', function($content, $template_name, $data = []) {
+        // Only handle Settings-specific templates if not already found
+        if (!empty($content)) {
+            return $content;
+        }
+        
+        // Check Settings templates directory
+        $settings_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
+        if (file_exists($settings_template_path)) {
+            ob_start();
+            extract($data); // Extract data array to make variables available in template scope
+            include $settings_template_path;
+            return ob_get_clean();
+        }
+        
+        return $content;
+    }, 15, 3); // Priority 15 - after admin pages (10) but before fallback
+    
     // Register Settings page AJAX handlers
     \DataMachine\Core\Admin\Settings\SettingsPageAjax::register();
 }
