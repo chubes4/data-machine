@@ -280,18 +280,7 @@ class PipelineModalAjax
                     $provider_field = 'ai_provider';
                     $api_key_field = 'ai_api_key';
                     $model_field = 'ai_model';
-                    $system_prompt_field = 'ai_system_prompt';
                     
-                    // Log received field names for debugging
-                    do_action('dm_log', 'debug', 'AI step configuration field mapping', [
-                        'pipeline_step_id' => $pipeline_step_id,
-                        'expected_fields' => [
-                            'provider' => $provider_field,
-                            'api_key' => $api_key_field,
-                            'model' => $model_field
-                        ],
-                        'received_post_keys' => array_keys($_POST)
-                    ]);
                     
                     // Extract AI configuration with proper field names
                     $step_config_data = []; // Step config data (no API key)
@@ -321,12 +310,22 @@ class PipelineModalAjax
                             $step_config_data['providers'][$provider]['model'] = $model;
                         }
                     }
-                    if (isset($_POST[$system_prompt_field])) {
-                        $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST[$system_prompt_field]));
-                    }
-                    if (isset($_POST['system_prompt'])) {
-                        $step_config_data['system_prompt'] = sanitize_textarea_field(wp_unslash($_POST['system_prompt']));
-                    }
+                    // Process enabled tools using centralized tools management
+                    require_once dirname(__DIR__, 3) . '/Steps/AI/AIStepTools.php';
+                    $tools_manager = new \DataMachine\Core\Steps\AI\AIStepTools();
+                    
+                    do_action('dm_log', 'debug', 'PipelineModalAjax: Before saving tool selections', [
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'post_enabled_tools' => $_POST['enabled_tools'] ?? null,
+                        'post_keys' => array_keys($_POST)
+                    ]);
+                    
+                    $step_config_data['enabled_tools'] = $tools_manager->save_tool_selections($pipeline_step_id, $_POST);
+                    
+                    do_action('dm_log', 'debug', 'PipelineModalAjax: After saving tool selections', [
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'saved_enabled_tools' => $step_config_data['enabled_tools']
+                    ]);
                     
                     // Save API key via unified ai_provider_api_keys filter (replace per-provider option storage)
                     if (!empty($api_key) && !empty($provider)) {
@@ -376,6 +375,14 @@ class PipelineModalAjax
                     if (isset($pipeline_config[$pipeline_step_id])) {
                         $existing_config = $pipeline_config[$pipeline_step_id];
                         
+                        do_action('dm_log', 'debug', 'PipelineModalAjax: Merging with existing config', [
+                            'pipeline_step_id' => $pipeline_step_id,
+                            'existing_enabled_tools' => $existing_config['enabled_tools'] ?? null,
+                            'new_enabled_tools' => $step_config_data['enabled_tools'] ?? null,
+                            'existing_config_keys' => array_keys($existing_config),
+                            'new_config_keys' => array_keys($step_config_data)
+                        ]);
+                        
                         // Preserve existing provider models
                         if (isset($existing_config['providers']) && isset($step_config_data['providers'])) {
                             $step_config_data['providers'] = array_merge(
@@ -388,6 +395,12 @@ class PipelineModalAjax
                         
                         // Merge with existing config
                         $pipeline_config[$pipeline_step_id] = array_merge($existing_config, $step_config_data);
+                        
+                        do_action('dm_log', 'debug', 'PipelineModalAjax: Config merged', [
+                            'pipeline_step_id' => $pipeline_step_id,
+                            'final_enabled_tools' => $pipeline_config[$pipeline_step_id]['enabled_tools'] ?? null,
+                            'final_config_keys' => array_keys($pipeline_config[$pipeline_step_id])
+                        ]);
                     } else {
                         $pipeline_config[$pipeline_step_id] = $step_config_data;
                     }

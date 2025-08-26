@@ -511,4 +511,5 @@ class AI_HTTP_Anthropic_Provider {
         return $anthropic_tools;
     }
 
+
 }

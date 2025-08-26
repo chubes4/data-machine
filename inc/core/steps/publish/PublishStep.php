@@ -49,77 +49,27 @@ class PublishStep {
             $handler = $handler_data['handler_slug'];
             $handler_settings = $handler_data['settings'] ?? [];
 
-            // Check if AI already executed the tool for this handler
+            // PublishStep trusts AI workflow completely - AI must call handler tool during conversation
             $tool_result_entry = $this->find_tool_result_for_handler($data, $handler);
             if ($tool_result_entry) {
-                do_action('dm_log', 'debug', 'Publish Step: Tool already executed by AI step', [
-                    'flow_step_id' => $flow_step_id,
+                do_action('dm_log', 'info', 'PublishStep: AI successfully used handler tool', [
                     'handler' => $handler,
-                    'tool_name' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
+                    'tool_result' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
                 ]);
                 
-                // Create success entry from tool result and return
+                // Create success entry from AI tool result and return
                 return $this->create_publish_entry_from_tool_result($tool_result_entry, $data, $handler, $flow_step_id);
             }
 
-            // Publish steps use latest data entry (first in array)
-            $latest_data = $data[0] ?? null;
-            if (!$latest_data) {
-                do_action('dm_log', 'error', 'Publish Step: No data available from previous step', ['flow_step_id' => $flow_step_id]);
-                return $data; // Return unchanged array
-            }
-
-            // Execute single publish handler - one step, one handler, per flow
-            $handler_result = $this->execute_publish_handler_direct($handler, $latest_data, $flow_step_config, $handler_settings);
-
-            if (!$handler_result || !is_array($handler_result)) {
-                do_action('dm_log', 'error', 'Publish Step: Handler execution failed - null or invalid result', [
-                    'flow_step_id' => $flow_step_id,
-                    'handler' => $handler,
-                    'result_type' => gettype($handler_result)
-                ]);
-                return []; // Return empty array to signal step failure
-            }
-
-            // Check if handler reported failure
-            if (isset($handler_result['success']) && $handler_result['success'] === false) {
-                do_action('dm_log', 'error', 'Publish Step: Handler reported failure', [
-                    'flow_step_id' => $flow_step_id,
-                    'handler' => $handler,
-                    'error' => $handler_result['error'] ?? 'Unknown error'
-                ]);
-                return []; // Return empty array to signal step failure
-            }
-
-            // Create publish data entry for the data packet array
-            $publish_entry = [
-                'type' => 'publish',
-                'handler' => $handler,
-                'content' => [
-                    'title' => 'Publish Complete',
-                    'body' => json_encode($handler_result, JSON_PRETTY_PRINT)
-                ],
-                'metadata' => [
-                    'handler_used' => $handler,
-                    'publish_success' => true,
-                    'flow_step_id' => $flow_step_id,
-                    'source_type' => $latest_data['metadata']['source_type'] ?? 'unknown'
-                ],
-                'result' => $handler_result,
-                'timestamp' => time()
-            ];
-            
-            // Add publish entry to front of data packet array (newest first)
-            array_unshift($data, $publish_entry);
-            
-            do_action('dm_log', 'debug', 'Publish Step: Publishing completed successfully', [
+            // AI did not execute handler tool - this indicates a workflow problem
+            do_action('dm_log', 'error', 'PublishStep: AI did not execute handler tool - step failed', [
                 'flow_step_id' => $flow_step_id,
-                'handler' => $handler,
-                'items_processed' => 1, // Publish step always processes exactly 1 item (latest)
-                'total_items_in_packet' => count($data) // Total accumulated items in data packet
+                'expected_handler' => $handler,
+                'data_entries' => count($data),
+                'available_entry_types' => array_unique(array_column($data, 'type'))
             ]);
-
-            return $data;
+            
+            return []; // Return empty array to signal step failure
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Publish Step: Exception during publishing', [
@@ -167,7 +117,7 @@ class PublishStep {
             }
 
             // Tool-first execution: Check if handler has tools available
-            $all_tools = apply_filters('ai_tools', []);
+            $all_tools = apply_filters('ai_tools', [], $handler_name, $handler_settings);
             $handler_tools = array_filter($all_tools, function($tool) use ($handler_name) {
                 return isset($tool['handler']) && $tool['handler'] === $handler_name;
             });
@@ -215,6 +165,28 @@ class PublishStep {
      * @return array Tool parameters extracted from data entry
      */
     private function extract_tool_parameters_from_data(array $data_entry, array $handler_settings): array {
+        $metadata = $data_entry['metadata'] ?? [];
+        $entry_type = $data_entry['type'] ?? '';
+        
+        // NEW: For ai_handler_complete entries, use clean separated parameters from metadata
+        if ($entry_type === 'ai_handler_complete' && isset($metadata['tool_parameters'])) {
+            // Use clean separated parameters stored by AIStep
+            $clean_parameters = $metadata['tool_parameters'];
+            
+            // Use handler_config from metadata if available, otherwise fall back to handler_settings
+            $handler_config = $metadata['handler_config'] ?? $handler_settings;
+            
+            // Merge handler config into parameters for tool execution
+            if (!empty($handler_config)) {
+                $parameters = array_merge($clean_parameters, $handler_config);
+            } else {
+                $parameters = $clean_parameters;
+            }
+            
+            return $parameters;
+        }
+        
+        // LEGACY: For regular data entries, extract from content structure
         $parameters = [];
         
         // Extract content from data entry
@@ -229,7 +201,6 @@ class PublishStep {
         }
         
         // Extract source URL from metadata if available
-        $metadata = $data_entry['metadata'] ?? [];
         if (isset($metadata['source_url'])) {
             $parameters['source_url'] = $metadata['source_url'];
         }
@@ -298,15 +269,82 @@ class PublishStep {
      * @return array|null Tool result entry or null if not found
      */
     private function find_tool_result_for_handler(array $data, string $handler): ?array {
-        foreach ($data as $entry) {
-            if (($entry['type'] ?? '') === 'tool_result') {
+        do_action('dm_log', 'debug', 'PublishStep: Searching for tool result or ai_handler_complete entry', [
+            'handler' => $handler,
+            'data_entries_count' => count($data),
+            'entry_types' => array_column($data, 'type')
+        ]);
+        
+        foreach ($data as $index => $entry) {
+            $entry_type = $entry['type'] ?? '';
+            
+            // Check for traditional tool_result entries
+            if ($entry_type === 'tool_result') {
                 $tool_name = $entry['metadata']['tool_name'] ?? '';
+                
+                do_action('dm_log', 'debug', 'PublishStep: Found tool_result entry', [
+                    'handler' => $handler,
+                    'entry_index' => $index,
+                    'tool_name' => $tool_name,
+                    'matches_handler' => ($tool_name === $handler)
+                ]);
+                
                 // Match tool name to handler (e.g., 'wordpress_publish' matches 'wordpress_publish' handler)
                 if ($tool_name === $handler) {
+                    do_action('dm_log', 'debug', 'PublishStep: Matched traditional tool_result entry', [
+                        'handler' => $handler,
+                        'tool_name' => $tool_name,
+                        'entry_type' => 'tool_result'
+                    ]);
                     return $entry;
                 }
             }
+            
+            // Check for new ai_handler_complete entries (from unified conversation system)
+            if ($entry_type === 'ai_handler_complete') {
+                $handler_tool = $entry['metadata']['handler_tool'] ?? '';
+                
+                do_action('dm_log', 'debug', 'PublishStep: Found ai_handler_complete entry', [
+                    'handler' => $handler,
+                    'entry_index' => $index,
+                    'handler_tool' => $handler_tool,
+                    'matches_handler' => ($handler_tool === $handler),
+                    'entry_metadata' => $entry['metadata'] ?? []
+                ]);
+                
+                // Match handler tool to handler (e.g., 'wordpress_publish' matches 'wordpress_publish' handler)
+                if ($handler_tool === $handler) {
+                    do_action('dm_log', 'debug', 'PublishStep: Matched ai_handler_complete entry from unified conversation system', [
+                        'handler' => $handler,
+                        'handler_tool' => $handler_tool,
+                        'entry_type' => 'ai_handler_complete',
+                        'conversation_turn_data' => isset($entry['metadata']['conversation_turn']) ? 'present' : 'missing'
+                    ]);
+                    return $entry;
+                }
+            }
+            
+            // Log other entry types for visibility
+            if (!in_array($entry_type, ['tool_result', 'ai_handler_complete'])) {
+                do_action('dm_log', 'debug', 'PublishStep: Skipping non-tool entry', [
+                    'handler' => $handler,
+                    'entry_index' => $index,
+                    'entry_type' => $entry_type
+                ]);
+            }
         }
+        
+        do_action('dm_log', 'debug', 'PublishStep: No matching tool result or ai_handler_complete entry found', [
+            'handler' => $handler,
+            'searched_entries' => count($data),
+            'available_tool_results' => array_filter($data, function($entry) {
+                return ($entry['type'] ?? '') === 'tool_result';
+            }),
+            'available_ai_handler_complete' => array_filter($data, function($entry) {
+                return ($entry['type'] ?? '') === 'ai_handler_complete';
+            })
+        ]);
+        
         return null;
     }
 
@@ -321,22 +359,28 @@ class PublishStep {
      */
     private function create_publish_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
+        $entry_type = $tool_result_entry['type'] ?? '';
+        
+        // Determine execution method based on entry type
+        $executed_via = ($entry_type === 'ai_handler_complete') ? 'ai_conversation_tool' : 'ai_tool_call';
+        $title_suffix = ($entry_type === 'ai_handler_complete') ? '(via AI Conversation)' : '(via AI Tool)';
         
         // Create publish data entry for the data packet array
         $publish_entry = [
             'type' => 'publish',
             'handler' => $handler,
             'content' => [
-                'title' => 'Publish Complete (via AI Tool)',
+                'title' => 'Publish Complete ' . $title_suffix,
                 'body' => json_encode($tool_result_data, JSON_PRETTY_PRINT)
             ],
             'metadata' => [
                 'handler_used' => $handler,
                 'publish_success' => true,
-                'executed_via' => 'ai_tool_call',
+                'executed_via' => $executed_via,
                 'flow_step_id' => $flow_step_id,
                 'source_type' => $tool_result_entry['metadata']['source_type'] ?? 'unknown',
-                'tool_execution_data' => $tool_result_data
+                'tool_execution_data' => $tool_result_data,
+                'original_entry_type' => $entry_type
             ],
             'result' => $tool_result_data,
             'timestamp' => time()

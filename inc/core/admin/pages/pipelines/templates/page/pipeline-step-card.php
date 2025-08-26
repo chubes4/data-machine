@@ -103,7 +103,7 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
                         $prompt_excerpt = !empty($prompt) ? (strlen($prompt) > 100 ? substr($prompt, 0, 100) . '...' : $prompt) : 'No prompt set';
                         $status_class = 'dm-ai-configured';
                     ?>
-                        <div class="dm-ai-step-info <?php echo esc_attr($status_class); ?>">
+                        <div class="dm-ai-agent-info <?php echo esc_attr($status_class); ?>">
                             <div class="dm-model-name">
                                 <strong><?php echo esc_html(ucfirst($selected_provider)); ?>: <?php echo esc_html($model_name); ?></strong>
                             </div>
@@ -114,15 +114,21 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
                                 ?>
                                 <textarea class="dm-ai-prompt-input" 
                                           data-pipeline-step-id="<?php echo esc_attr($pipeline_step_id); ?>"
-                                          placeholder="<?php esc_attr_e('Define how the AI should process data from previous pipeline steps...', 'data-machine'); ?>"
+                                          placeholder="<?php esc_attr_e('Define how the AI agent should process data from previous pipeline steps...', 'data-machine'); ?>"
                                           rows="<?php echo esc_attr($estimated_rows); ?>"><?php echo esc_textarea($prompt); ?></textarea>
                             </div>
                         </div>
                     <?php else: ?>
-                        <div class="dm-placeholder-text"><?php esc_html_e('AI step not configured', 'data-machine'); ?></div>
+                        <div class="dm-placeholder-text"><?php esc_html_e('AI agent not configured', 'data-machine'); ?></div>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
+        <?php endif; ?>
+        
+        <?php if (!$is_empty): ?>
+            <button class="dm-expand-toggle dm-expand-toggle--hidden" type="button">
+                <span class="dashicons dashicons-arrow-down"></span>
+            </button>
         <?php endif; ?>
     </div>
 </div>

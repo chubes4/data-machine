@@ -6,7 +6,7 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Search Tools, Social Publishing, OAuth System, Headless Mode
+**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Dynamic AI Directives, Site Context Integration, Three-Layer Tool Management, Social Publishing, OAuth System, Headless Mode
 
 **Requirements**: WordPress 5.0+, PHP 8.0+, Composer
 
@@ -16,8 +16,8 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 
 **Example**: RSS → AI → Twitter
 - Pipeline: 3-step template
-- Flow A: TechCrunch + GPT-4 + Twitter
-- Flow B: Gaming RSS + Claude + Facebook
+- Flow A: TechCrunch + Claude 3.5 Sonnet + Twitter
+- Flow B: Gaming RSS + GPT-4o + Facebook
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 
 1. Create Pipeline: "Tech News Bot"
 2. Add Steps: RSS → AI → Twitter
-3. Configure: TechCrunch feed + GPT-4 + Twitter auth
+3. Configure: TechCrunch feed + Claude 3.5 Sonnet + Twitter auth
 4. Schedule: Every 2 hours
 5. Monitor: Data Machine → Logs
 
@@ -67,16 +67,19 @@ RSS → AI → Twitter
 RSS → AI → Twitter → AI → Facebook
 ```
 
-> **Note**: AI steps discover handler tools for the immediate next step only. For multi-platform, use AI→Publish→AI→Publish pattern.
+> **Note**: AI agents discover handler tools for the immediate next step only. For multi-platform, use AI→Publish→AI→Publish pattern.
 
-**AI Tools**: Handler tools (next step) + general tools (Google Search, Local Search) for enhanced capabilities.
+**AI Enhancement**: 
+- **Dynamic Directives**: Automatic tool-specific prompts
+- **Site Context**: WordPress site information injection
+- **Three-Layer Tools**: Global settings → per-step selection → configuration validation  
+- **Tool Categories**: Handler tools (next step) + general tools (Google Search, Local Search)
 
-### More Examples
-
-**Reddit Monitor**: Reddit → AI analysis → Google Sheets  
-**Content Repurposer**: WordPress posts → AI rewrite → Bluesky  
-**Content Updater**: WordPress posts → AI enhancement → WordPress update  
-**File Processor**: PDF files → AI extraction → Structured data
+**Additional Examples**:
+- **Reddit Monitor**: Reddit → AI analysis → Google Sheets
+- **Content Repurposer**: WordPress posts → AI rewrite → Bluesky  
+- **Content Updater**: WordPress posts → AI enhancement → WordPress update
+- **File Processor**: PDF files → AI extraction → Structured data
 
 ## Programmatic Usage
 
@@ -90,8 +93,8 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 // AI integration
 $response = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'gpt-5'
-], 'openrouter');
+    'model' => 'claude-3-5-sonnet-20241022'
+], 'anthropic');
 
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
@@ -99,21 +102,21 @@ $auth_providers = apply_filters('dm_auth_providers', []);
 $auth_account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
 $settings = dm_get_data_machine_settings();
 
-// Tool configuration
+// Tool management
 $configured = apply_filters('dm_tool_configured', false, 'google_search');
 do_action('dm_save_tool_config', 'google_search', $config_data);
+$tools = apply_filters('ai_tools', []);
+$enabled_tools = dm_get_enabled_general_tools();
 ```
 
 ### Extension Development
 
-Data Machine includes a complete extension system with LLM-powered development templates:
+Complete extension system with LLM-powered development:
+- **Types**: Fetch, Publish, Update handlers, AI tools, Admin pages
+- **Discovery**: Filter-based auto-registration  
+- **Templates**: `/extensions/` directory with LLM prompts (development builds)
 
-- **Extension Types**: Fetch, Publish, Update handlers, AI tools, Admin pages
-- **Auto-Discovery**: Filter-based registration system
-- **LLM Templates**: Fill-in-the-blank prompts for complete extension generation
-- **Location**: `/extensions/` directory (development builds only)
-
-See `CLAUDE.md` for complete technical documentation.
+*See `CLAUDE.md` for complete technical specifications*
 
 ## Available Handlers
 
@@ -121,7 +124,7 @@ See `CLAUDE.md` for complete technical documentation.
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
 **Update Handlers**: WordPress content updates (title, content, meta, taxonomy)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
-**Tools**: Google Search, WordPress Search
+**General Tools**: Google Search, Local WordPress Search
 
 *For detailed specifications, see `CLAUDE.md`*
 
@@ -141,10 +144,12 @@ See `CLAUDE.md` for complete technical documentation.
 **Pages**: Pipelines, Flows, Jobs, Logs
 
 **Settings** (WordPress Settings → Data Machine):
-- Engine Mode (headless), page controls, tool controls
-- Global system prompt
-- Tool configuration (API keys)
+- Engine Mode (headless), page controls, tool toggles
+- Site Context toggle (WordPress info injection)
+- Global system prompt + dynamic AI directives
+- Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies)
+- Three-layer tool management (global → modal → validation)
 
 **Features**: Drag & drop, auto-save, status indicators, real-time monitoring
 

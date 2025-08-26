@@ -47,6 +47,7 @@ class PipelinePageAjax
         add_action('wp_ajax_dm_save_pipeline_title', [$instance, 'handle_save_pipeline_title']);
         add_action('wp_ajax_dm_save_flow_title', [$instance, 'handle_save_flow_title']);
         add_action('wp_ajax_dm_save_user_message', [$instance, 'handle_save_user_message']);
+        add_action('wp_ajax_dm_save_system_prompt', [$instance, 'handle_save_system_prompt']);
         add_action('wp_ajax_dm_switch_pipeline_selection', [$instance, 'handle_switch_pipeline_selection']);
         add_action('wp_ajax_dm_save_pipeline_preference', [$instance, 'handle_save_pipeline_preference']);
     }
@@ -821,6 +822,36 @@ class PipelinePageAjax
         wp_send_json_success([
             'message' => __('User message saved successfully', 'data-machine'),
             'flow_step_id' => $flow_step_id
+        ]);
+    }
+
+    /**
+     * Handle system prompt auto-save for AI pipeline steps
+     */
+    public function handle_save_system_prompt() {
+        // Security checks
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
+        $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
+        $system_prompt = wp_unslash($_POST['system_prompt'] ?? ''); // Don't sanitize - preserve formatting
+        
+        if (!$pipeline_step_id) {
+            wp_send_json_error(['message' => __('Pipeline step ID required', 'data-machine')]);
+        }
+        
+        // Use centralized system prompt update action
+        do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
+        
+        // Note: dm_update_system_prompt action logs its own success/failure
+        // WordPress actions don't return values, so we assume success here
+        
+        wp_send_json_success([
+            'message' => __('System prompt saved successfully', 'data-machine'),
+            'pipeline_step_id' => $pipeline_step_id
         ]);
     }
 

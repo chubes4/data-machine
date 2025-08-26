@@ -254,7 +254,8 @@ function ai_http_client_register_provider_filters() {
     // Usage: $response = apply_filters('ai_request', $request, $provider_name);  
     // Usage: $response = apply_filters('ai_request', $request, null, $streaming_callback);
     // Usage: $response = apply_filters('ai_request', $request, $provider_name, $streaming_callback, $tools);
-    add_filter('ai_request', function($request, $provider_name = null, $streaming_callback = null, $tools = null) {
+    // Usage: $response = apply_filters('ai_request', $request, $provider_name, $streaming_callback, $tools, $conversation_data);
+    add_filter('ai_request', function($request, $provider_name = null, $streaming_callback = null, $tools = null, $conversation_data = null) {
         
         
         // Validate request format
@@ -277,6 +278,39 @@ function ai_http_client_register_provider_filters() {
             }
             // Merge tools (parameter tools take precedence)
             $request['tools'] = array_merge($request['tools'], $tools);
+        }
+        
+        // Handle conversation continuation data
+        if ($conversation_data && is_array($conversation_data)) {
+            // Get provider instance to check conversation type
+            $shared_api_keys = apply_filters('ai_provider_api_keys', null);
+            $api_key = $shared_api_keys[$provider_name] ?? '';
+            if (!empty($api_key)) {
+                $provider_config = ['api_key' => $api_key];
+                $provider = ai_http_create_provider($provider_name, $provider_config);
+                
+                if ($provider && method_exists($provider, 'get_conversation_continuation')) {
+                    $continuation_info = $provider->get_conversation_continuation();
+                    
+                    if ($continuation_info && isset($continuation_info['type'])) {
+                        switch ($continuation_info['type']) {
+                            case 'stateful':
+                                // OpenAI-style: Use previous_response_id
+                                if (isset($conversation_data['previous_response_id'])) {
+                                    $request['previous_response_id'] = $conversation_data['previous_response_id'];
+                                }
+                                break;
+                                
+                            case 'stateless':
+                                // Anthropic/Gemini/etc style: Full conversation history required
+                                if (isset($conversation_data['conversation_history'])) {
+                                    $request['messages'] = $conversation_data['conversation_history'];
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
         }
         
         try {
@@ -315,7 +349,7 @@ function ai_http_client_register_provider_filters() {
         } catch (Exception $e) {
             return ai_http_create_error_response($e->getMessage(), $provider_name);
         }
-    }, 10, 5);
+    }, 10, 6);
 }
 
 /**

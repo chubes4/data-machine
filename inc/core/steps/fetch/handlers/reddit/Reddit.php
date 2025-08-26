@@ -51,7 +51,6 @@ class Reddit {
 	 * @throws Exception If data cannot be retrieved or is invalid.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-		do_action('dm_log', 'debug', 'Reddit Fetch: Entering get_fetch_data.', ['pipeline_id' => $pipeline_id]);
 
 		if ( empty( $pipeline_id ) ) {
 			do_action('dm_log', 'error', 'Reddit Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);

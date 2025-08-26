@@ -68,6 +68,9 @@ class Update {
         
         // Flow user message management action hook - enables AI steps to run standalone
         add_action('dm_update_flow_user_message', [$instance, 'handle_flow_user_message_update'], 10, 2);
+        
+        // Pipeline system prompt management action hook - enables AI step template updates
+        add_action('dm_update_system_prompt', [$instance, 'handle_system_prompt_update'], 10, 2);
     }
 
     /**
@@ -507,6 +510,87 @@ class Update {
             'flow_step_id' => $flow_step_id,
             'message_length' => strlen($user_message)
         ]);
+
+        return true;
+    }
+
+    /**
+     * Handle system prompt updates for AI pipeline steps.
+     *
+     * Updates the system_prompt field in pipeline step configuration
+     * while preserving all other step configuration data.
+     * 
+     * Pipeline-scoped system prompts serve as templates that can be
+     * inherited by flow instances while maintaining flow-specific customization.
+     *
+     * @param string $pipeline_step_id Pipeline step ID (UUID4)
+     * @param string $system_prompt System prompt content
+     * @return bool Success status
+     * @since NEXT_VERSION
+     */
+    public function handle_system_prompt_update($pipeline_step_id, $system_prompt) {
+        // Get database services
+        $all_databases = apply_filters('dm_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        
+        if (!$db_pipelines) {
+            do_action('dm_log', 'error', 'System prompt update failed - pipelines database service unavailable', [
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return false;
+        }
+
+        // Find pipeline containing this step
+        $pipelines = $db_pipelines->get_all_pipelines();
+        $target_pipeline = null;
+        
+        foreach ($pipelines as $pipeline) {
+            $pipeline_config = is_string($pipeline['pipeline_config']) 
+                ? json_decode($pipeline['pipeline_config'], true) 
+                : ($pipeline['pipeline_config'] ?? []);
+                
+            if (isset($pipeline_config[$pipeline_step_id])) {
+                $target_pipeline = $pipeline;
+                break;
+            }
+        }
+        
+        if (!$target_pipeline) {
+            do_action('dm_log', 'error', 'System prompt update failed - pipeline step not found', [
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return false;
+        }
+
+        // Update step configuration
+        $pipeline_config = is_string($target_pipeline['pipeline_config']) 
+            ? json_decode($target_pipeline['pipeline_config'], true) 
+            : ($target_pipeline['pipeline_config'] ?? []);
+            
+        if (!is_array($pipeline_config)) {
+            $pipeline_config = [];
+        }
+
+        // Update system_prompt field
+        if (!isset($pipeline_config[$pipeline_step_id])) {
+            $pipeline_config[$pipeline_step_id] = [];
+        }
+        $pipeline_config[$pipeline_step_id]['system_prompt'] = wp_unslash($system_prompt);
+
+        // Save updated pipeline configuration
+        $success = $db_pipelines->update_pipeline($target_pipeline['pipeline_id'], [
+            'pipeline_config' => json_encode($pipeline_config)
+        ]);
+        
+        if (!$success) {
+            do_action('dm_log', 'error', 'System prompt update failed - database update error', [
+                'pipeline_id' => $target_pipeline['pipeline_id'],
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return false;
+        }
+
+        do_action('dm_log', 'info', 'System prompt updated successfully');
 
         return true;
     }

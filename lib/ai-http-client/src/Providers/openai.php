@@ -31,7 +31,6 @@ class AI_HTTP_OpenAI_Provider {
     private $base_url;
     private $organization;
     private $files_api_callback = null;
-    private $last_response_id = null;
 
     /**
      * Constructor
@@ -94,18 +93,6 @@ class AI_HTTP_OpenAI_Provider {
         
         $url = $this->base_url . '/responses';
         
-        // Debug logging for tool requests
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            do_action('dm_log', 'debug', 'OpenAI Provider: Final request to API', [
-                'url' => $url,
-                'has_tools' => isset($provider_request['tools']),
-                'tools_count' => isset($provider_request['tools']) ? count($provider_request['tools']) : 0,
-                'tools_array' => $provider_request['tools'] ?? 'NOT_SET',
-                'has_tool_choice' => isset($provider_request['tool_choice']),
-                'tool_choice_value' => $provider_request['tool_choice'] ?? 'NOT_SET',
-                'request_keys' => array_keys($provider_request)
-            ]);
-        }
         
         // Use centralized ai_http filter
         $headers = $this->get_auth_headers();
@@ -343,14 +330,6 @@ class AI_HTTP_OpenAI_Provider {
         $this->files_api_callback = $callback;
     }
     
-    /**
-     * Set last response ID for continuation
-     *
-     * @param string $response_id Response ID from OpenAI
-     */
-    public function set_last_response_id($response_id) {
-        $this->last_response_id = $response_id;
-    }
     
     /**
      * Format unified request to OpenAI Responses API format
@@ -387,6 +366,7 @@ class AI_HTTP_OpenAI_Provider {
         if (isset($request['temperature']) && !empty($request['temperature'])) {
             $request['temperature'] = max(0, min(1, floatval($request['temperature'])));
         }
+
 
         return $request;
     }
@@ -460,7 +440,7 @@ class AI_HTTP_OpenAI_Provider {
     }
     
     /**
-     * Normalize OpenAI messages for multi-modal support
+     * Normalize OpenAI messages for Responses API format
      *
      * @param array $messages Array of messages
      * @return array OpenAI-formatted messages
@@ -474,6 +454,7 @@ class AI_HTTP_OpenAI_Provider {
                 continue;
             }
 
+
             $normalized_message = array('role' => $message['role']);
 
             // Handle multi-modal content (images, files) or content arrays
@@ -483,9 +464,9 @@ class AI_HTTP_OpenAI_Provider {
                 $normalized_message['content'] = $message['content'];
             }
 
-            // Preserve other fields (tool_calls, etc.)
+            // Preserve other fields (excluding tool_calls for Responses API compatibility)
             foreach ($message as $key => $value) {
-                if (!in_array($key, array('role', 'content', 'images', 'image_urls', 'files'))) {
+                if (!in_array($key, array('role', 'content', 'images', 'image_urls', 'files', 'tool_calls'))) {
                     $normalized_message[$key] = $value;
                 }
             }
@@ -685,11 +666,6 @@ class AI_HTTP_OpenAI_Provider {
      * @return array Standard format
      */
     private function normalize_openai_responses_api($response) {
-        // Extract response ID for continuation
-        $response_id = isset($response['id']) ? $response['id'] : null;
-        if ($response_id) {
-            $this->set_last_response_id($response_id);
-        }
         
         // Extract content and tool calls from output
         $content = '';
@@ -779,8 +755,7 @@ class AI_HTTP_OpenAI_Provider {
                 'usage' => $usage,
                 'model' => isset($response['model']) ? $response['model'] : '',
                 'finish_reason' => isset($response['status']) ? $response['status'] : 'unknown',
-                'tool_calls' => !empty($tool_calls) ? $tool_calls : null,
-                'response_id' => $response_id
+                'tool_calls' => !empty($tool_calls) ? $tool_calls : null
             ),
             'error' => null,
             'provider' => 'openai',
@@ -816,5 +791,6 @@ class AI_HTTP_OpenAI_Provider {
             'raw_response' => $response
         );
     }
+
 
 }

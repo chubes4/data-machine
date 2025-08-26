@@ -75,7 +75,7 @@ public function handle_tool_call(array $parameters, array $tool_def = []): array
 }
 ```
 
-**AI Steps:**
+**AI Agents:**
 ```php
 public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
     // Process data array, add new entry to front

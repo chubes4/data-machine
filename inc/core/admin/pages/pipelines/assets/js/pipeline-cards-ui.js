@@ -59,22 +59,31 @@
 
         /**
          * Card Expansion System
-         * Detects overflow content and adds expand buttons
+         * Shows/hides existing expand buttons based on overflow content
          */
         initCardExpansion: function() {
             $('.dm-step-card:not(.dm-step-card--empty)').each(function() {
                 const $card = $(this);
+                const $expandToggle = $card.find('.dm-expand-toggle');
                 
-                // Remove existing expand toggle if present
-                $card.find('.dm-expand-toggle').remove();
-                
-                // Detect if the card content is being truncated
-                if ($card[0].scrollHeight > $card[0].clientHeight) {
-                    const $expandToggle = $('<button class="dm-expand-toggle" type="button">' +
-                        '<span class="dashicons dashicons-arrow-down"></span>' +
-                        '</button>');
-                    $card.append($expandToggle);
+                if ($expandToggle.length === 0) {
+                    return; // No expand toggle found, skip
                 }
+                
+                // Check if card is visible - skip if not visible
+                if (!$card.is(':visible') || $card.closest('.dm-pipeline-wrapper:hidden').length > 0) {
+                    return; // Card not visible, defer measurement
+                }
+                
+                // Use setTimeout(0) to ensure layout is complete
+                setTimeout(() => {
+                    // Double-check visibility again after timeout
+                    if ($card.is(':visible') && $card[0].scrollHeight > $card[0].clientHeight) {
+                        $expandToggle.removeClass('dm-expand-toggle--hidden');
+                    } else {
+                        $expandToggle.addClass('dm-expand-toggle--hidden');
+                    }
+                }, 0);
             });
         },
 
@@ -172,15 +181,15 @@
                 success: (response) => {
                     if (response.success) {
                         // Success - step order updated
-                        console.log('Pipeline step order updated successfully');
+                        
+                        // Re-check expansion system after reordering
+                        this.initCardExpansion();
                     } else {
                         console.error('Failed to update step order:', response.data?.message || 'Unknown error');
-                        // Could implement UI revert here if needed
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Error updating step order:', error);
-                    // Could implement UI revert here if needed
                 }
             });
         },
@@ -269,11 +278,9 @@
                         // Update arrow visibility after successful move
                         this.updateFlowArrowVisibility($flowsList.closest('.dm-pipeline-card'));
                     } else {
-                        console.error('Failed to move flow:', response.data?.message || 'Unknown error');
                     }
                 },
                 error: (xhr, status, error) => {
-                    console.error('Error moving flow:', error);
                 },
                 complete: () => {
                     // Restore arrow appearance
@@ -387,6 +394,52 @@
          */
         handleDOMChanges: function() {
             this.debouncedRefresh();
+        },
+
+        /**
+         * Save expansion state before card replacement
+         */
+        saveExpansionState: function($container) {
+            const expandedCards = [];
+            $container.find('.dm-step-card.dm-expanded').each(function() {
+                const $stepContainer = $(this).closest('.dm-step-container');
+                const pipelineStepId = $stepContainer.data('pipeline-step-id');
+                const flowStepId = $stepContainer.data('flow-step-id');
+                if (pipelineStepId || flowStepId) {
+                    expandedCards.push({
+                        pipeline_step_id: pipelineStepId,
+                        flow_step_id: flowStepId
+                    });
+                }
+            });
+            return expandedCards;
+        },
+
+        /**
+         * Restore expansion state after card replacement
+         */
+        restoreExpansionState: function(expandedCards, $container) {
+            if (!expandedCards || expandedCards.length === 0) {
+                return;
+            }
+            
+            expandedCards.forEach(cardInfo => {
+                let $stepContainer;
+                if (cardInfo.pipeline_step_id) {
+                    $stepContainer = $container.find(`.dm-step-container[data-pipeline-step-id="${cardInfo.pipeline_step_id}"]`);
+                } else if (cardInfo.flow_step_id) {
+                    $stepContainer = $container.find(`.dm-step-container[data-flow-step-id="${cardInfo.flow_step_id}"]`);
+                }
+                
+                if ($stepContainer && $stepContainer.length) {
+                    const $card = $stepContainer.find('.dm-step-card');
+                    const $expandToggle = $card.find('.dm-expand-toggle');
+                    const $icon = $expandToggle.find('.dashicons');
+                    
+                    $card.addClass('dm-expanded');
+                    $icon.removeClass('dashicons-arrow-down').addClass('dashicons-arrow-up');
+                }
+            });
         },
 
         /**

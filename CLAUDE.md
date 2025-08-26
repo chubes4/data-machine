@@ -44,6 +44,11 @@ $settings = dm_get_data_machine_settings();
 $enabled_pages = dm_get_enabled_admin_pages();
 $enabled_tools = dm_get_enabled_general_tools();
 
+// Site Context
+$context = SiteContext::get_context();
+$formatted_context = SiteContext::format_for_ai($context);
+SiteContext::clear_cache();
+
 // System
 do_action('dm_log', $level, $message, $context);
 do_action('dm_auto_save', $pipeline_id);
@@ -134,17 +139,69 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 ```php
 $result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'gpt-4'
-], 'openrouter');
+    'model' => 'claude-3-5-sonnet-20241022'
+], 'anthropic');
 ```
 
-**Tool Discovery**:
-- **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
-- **General Tools**: Universal (Google Search, Local Search) - available to all AI steps
+### AI Request Pipeline
 
-**Tool Registration**:
+**Message Injection Priority System**: AI requests receive multiple system messages in priority order:
+
+1. **Priority 1 - AI Step Directives** (`AIStepDirective`): Dynamic tool-specific prompts
+2. **Priority 3 - Site Context** (`AIStepDirective`): WordPress site information injection  
+3. **Priority 5 - Global System Prompt**: User-configured system prompt
+
 ```php
-// Handler-specific (next step only)
+// Automatic directive injection via ai_request filter hooks
+add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 1, 4);
+add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 3, 4);
+```
+
+**AI Step Directive Content**:
+- Role clarification (backend processing agent)
+- Available tools enumeration with descriptions  
+- Content quality guidelines (no raw tool output)
+
+**Site Context Integration**:
+- WordPress site metadata (name, URL, language)
+- Post types with counts and capabilities
+- Taxonomies with term counts and associations
+- User statistics and theme information
+- Cached with automatic invalidation on content changes
+
+**AI Conversation State Management**:
+- Centralized conversation history building from data packets
+- Tool result formatting for optimal AI model consumption
+- Context preservation across multi-turn conversations
+- Specialized formatters for search, publish, and generic tool results
+
+### Tool Management
+
+**Three-Layer Enablement**:
+1. **Global Settings**: Admin toggles tools site-wide (`enabled_tools` setting)
+2. **Modal Selection**: Per-step tool activation in pipeline configuration
+3. **Configuration Validation**: Tools requiring API keys checked at runtime
+
+**Tool Discovery Hierarchy**:
+```php
+// Global level (settings filtering)
+$global_tools = AIStepTools->get_global_enabled_tools();
+
+// Modal level (per-step selections)
+$modal_tools = AIStepTools->get_step_enabled_tools($pipeline_step_id);
+
+// Runtime validation (configuration requirements)
+$tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+```
+
+**Tool Categories**:
+- **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
+- **General Tools**: Universal (Google Search, Local Search) - available to all AI agents
+
+### Tool Registration
+
+**Handler-Specific Tools**:
+```php
 add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'twitter') {
         $tools['twitter_publish'] = [
@@ -158,8 +215,10 @@ add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = 
     }
     return $tools;
 }, 10, 3);
+```
 
-// General tools (all steps)
+**General Tools**:
+```php
 add_filter('ai_tools', function($tools) {
     $tools['google_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
@@ -167,13 +226,15 @@ add_filter('ai_tools', function($tools) {
         'description' => 'Search Google for current information and context',
         'requires_config' => true,
         'parameters' => ['query' => ['type' => 'string', 'required' => true]]
-        // No 'handler' = universal
+        // No 'handler' property = universal tool
     ];
     return $tools;
 });
 ```
 
-**Handler Implementation**:
+### Tool Implementation
+
+**Handler Tool Implementation**:
 ```php
 class Twitter {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -193,11 +254,21 @@ class Twitter {
 }
 ```
 
-**Tool Configuration**:
+
+### Tool Configuration
+
+**Configuration Management**:
 ```php
 $configured = apply_filters('dm_tool_configured', false, 'google_search');
 $config = apply_filters('dm_get_tool_config', [], 'google_search');
 do_action('dm_save_tool_config', 'google_search', $config_data);
+```
+
+**Modal HTML Generation**:
+```php
+// Automatic tool selection rendering in pipeline modals
+$html = AIStepTools->render_tools_html($pipeline_step_id);
+// Includes configuration warnings and per-step enablement checkboxes
 ```
 
 **Tool Capabilities**:
@@ -257,9 +328,10 @@ do_action('dm_save_tool_config', 'google_search', $config_data);
 
 ## Settings
 
-**Controls**: Engine Mode (headless), admin page toggles, tool toggles, global system prompt
+**Controls**: Engine Mode (headless - disables admin pages only), admin page toggles, tool toggles, site context toggle, global system prompt
 **WordPress Defaults**: Site-wide post type, taxonomy, author, status defaults
-**Tool Configuration**: Modal setup for API keys
+**Tool Configuration**: Modal setup for API keys and service configurations
+**Site Context**: Automatic WordPress context injection (enabled by default)
 
 ```php
 // Direct function access (internal system components)
@@ -349,6 +421,41 @@ do_action('dm_export', 'pipelines', [$pipeline_id]);
 **Templates**: Filter-based rendering
 **Jobs**: Clear processed items/jobs via modal
 
+## Logging & Debugging
+
+**Centralized Logging**: All components use `dm_log` action for consistent debug output
+
+```php
+// Standard logging format
+do_action('dm_log', $level, $message, $context_array);
+
+// Examples from codebase
+do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
+    'tool_count' => count($tools),
+    'available_tools' => array_keys($tools),
+    'directive_length' => strlen($directive)
+]);
+
+do_action('dm_log', 'debug', 'AIStepTools: Generated HTML attributes', [
+    'pipeline_step_id' => $pipeline_step_id,
+    'tool_id' => $tool_id,
+    'checked_attr_output' => $checked_attr,
+    'disabled_attr_output' => $disabled_attr
+]);
+```
+
+**Log Levels**: `debug`, `info`, `warning`, `error`
+**Context Data**: Structured arrays with relevant debugging information
+**Timestamps**: Automatic microtime tracking in critical operations
+
+**Key Logging Points**:
+- AI request processing and directive injection
+- Tool selection and configuration validation
+- Pipeline step execution and data flow
+- OAuth authentication and configuration
+- Item processing and deduplication
+- Site context generation and caching
+
 ## Usage Examples
 
 **Single Platform (Recommended)**:
@@ -377,7 +484,7 @@ apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pi
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Note**: AI steps discover handler tools for immediate next step only. Update step requires `original_id` in metadata for content modification.
+> **Note**: AI agents discover handler tools for immediate next step only. Update step requires `original_id` in metadata for content modification.
 
 ## Development
 
@@ -387,7 +494,8 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 27 `*Filters.php` files auto-loaded via composer.json (containing 50+ filter hooks)
+**Filter Registration**: 54 `*Filters.php` files auto-loaded via composer.json (containing 68+ filter registrations)
+**Key Auto-loaded Classes**: `AIStepDirective.php`, `AIConversationState.php` - automatic filter registration
 
 ## Extensions
 
@@ -404,9 +512,10 @@ add_filter('ai_tools', [$this, 'register_ai_tools']);       // AI capabilities
 add_filter('dm_steps', [$this, 'register_steps']);          // Custom step types
 add_filter('dm_db', [$this, 'register_database']);          // Database services
 add_filter('dm_admin_pages', [$this, 'register_pages']);    // Admin interfaces
+add_filter('dm_tool_configured', [$this, 'check_config']);  // Configuration validation
 ```
 
-**Extension Pattern**:
+**Enhanced Extension Pattern**:
 ```php
 <?php
 /**
@@ -421,15 +530,50 @@ class MyExtension {
     public function init() {
         add_filter('dm_handlers', [$this, 'register_handlers']);
         add_filter('ai_tools', [$this, 'register_ai_tools']);
+        add_filter('dm_tool_configured', [$this, 'check_tool_configuration'], 10, 2);
     }
     
     public function register_handlers($handlers) {
         $handlers['my_handler'] = [
-            'name' => __('My Handler'),
-            'steps' => ['publish'],
-            'auth_required' => false
+            'type' => 'publish',
+            'class' => 'MyExtension\\MyHandler',
+            'label' => __('My Handler'),
+            'description' => __('Custom publishing handler with advanced features')
         ];
         return $handlers;
+    }
+    
+    public function register_ai_tools($tools, $handler_slug = null, $handler_config = []) {
+        // Handler-specific tool
+        if ($handler_slug === 'my_handler') {
+            $tools['my_publish'] = [
+                'class' => 'MyExtension\\MyHandler',
+                'method' => 'handle_tool_call',
+                'handler' => 'my_handler',
+                'description' => 'Publish to my custom platform',
+                'parameters' => ['content' => ['type' => 'string', 'required' => true]],
+                'handler_config' => $handler_config
+            ];
+        }
+        
+        // General tool (available to all AI steps)
+        $tools['my_search'] = [
+            'class' => 'MyExtension\\MySearchTool',
+            'method' => 'handle_tool_call',
+            'description' => 'Search my custom data source',
+            'requires_config' => true,
+            'parameters' => ['query' => ['type' => 'string', 'required' => true]]
+        ];
+        
+        return $tools;
+    }
+    
+    public function check_tool_configuration($is_configured, $tool_id) {
+        if ($tool_id === 'my_search') {
+            $config = apply_filters('dm_get_tool_config', [], $tool_id);
+            return !empty($config['api_key']);
+        }
+        return $is_configured;
     }
 }
 new MyExtension();
@@ -453,7 +597,7 @@ try {
 
 ## OAuth Integration
 
-**Unified System**: Centralized `dm_oauth` filter handles all providers
+**Unified System**: Centralized `dm_oauth` filter handles all providers with configuration validation
 
 ```php
 // Account operations
@@ -461,17 +605,29 @@ $account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
 apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
 apply_filters('dm_oauth', false, 'clear', 'twitter');
 
-// Configuration
+// Configuration with validation
 $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
 apply_filters('dm_oauth', null, 'store_config', 'twitter', $config_data);
+$is_configured = apply_filters('dm_tool_configured', false, 'twitter');
 
 // URLs
 $callback_url = apply_filters('dm_get_oauth_url', '', 'twitter');
 $auth_url = apply_filters('dm_get_oauth_auth_url', '', 'twitter');
 ```
 
+**Configuration Validation**: Tools requiring configuration are automatically validated before enablement:
+```php
+// Tool configuration check (applied in modal rendering and tool selection)
+$tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+$requires_config = !empty($tool_config['requires_config']);
+
+// Disabled in UI if configuration needed but not provided
+$disabled = $requires_config && !$tool_configured;
+```
+
 **URLs**: `/dm-oauth/{provider}/` with `manage_options` security - all OAuth operations require admin capabilities
 **Storage**: `dm_auth_data` option per handler
+**Validation**: Real-time configuration checks prevent unconfigured tools from being enabled
 
 **Requirements**:
 - **Reddit**: OAuth2 (client_id/client_secret)
@@ -480,6 +636,7 @@ $auth_url = apply_filters('dm_get_oauth_auth_url', '', 'twitter');
 - **Threads**: OAuth2 (same as Facebook)
 - **Google Sheets**: OAuth2 (client_id/client_secret)
 - **Bluesky**: App Password (username/app_password)
+- **Google Search**: API Key + Custom Search Engine ID (not OAuth)
 
 ## Status & Rules
 

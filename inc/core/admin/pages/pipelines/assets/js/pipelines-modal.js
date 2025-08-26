@@ -63,7 +63,7 @@
             if (!content.includes('ai-http-provider-config')) return;
             
             // Hook into provider change to restore saved models
-            $(document).on('change.ai-step', '.ai-http-provider-manager select[name*="provider"]', function() {
+            $(document).on('change.ai-agent', '.ai-http-provider-manager select[name*="provider"]', function() {
                 const provider = $(this).val();
                 const modelSelect = $('.ai-http-provider-manager select[name*="model"]');
                 
@@ -79,7 +79,7 @@
             
             // Clean up event handler when modal closes
             $(document).one('dm-modal-closed', function() {
-                $(document).off('change.ai-step');
+                $(document).off('change.ai-agent');
             });
         },
 

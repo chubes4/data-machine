@@ -85,7 +85,8 @@ function dm_register_ai_filters() {
         $config = [
             'selected_provider' => $selected_provider,
             'system_prompt' => $system_prompt,
-            'model' => $step_config['model'] ?? ''
+            'model' => $step_config['model'] ?? '',
+            'enabled_tools' => $step_config['enabled_tools'] ?? []
         ];
         
         // Config retrieved successfully - no logging needed for routine filter calls

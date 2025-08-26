@@ -94,6 +94,14 @@
             if ($existingWrapper.length > 0) {
                 // Pipeline already exists, just show it
                 $existingWrapper.show();
+                
+                // Trigger expansion system check after showing pipeline
+                if (typeof PipelineCardsUI !== 'undefined') {
+                    // Use setTimeout to ensure the show() operation is complete
+                    setTimeout(() => {
+                        PipelineCardsUI.initCardExpansion();
+                    }, 10);
+                }
             } else {
                 // Pipeline not loaded, fetch via AJAX
                 this.loadPipelineViaAjax(pipelineId);
@@ -396,8 +404,16 @@
                 const name = $input.attr('name');
                 const value = $input.val();
                 
-                if (name && value !== undefined) {
-                    formData.append(name, value);
+                if (name) {
+                    if ($input.is(':checkbox')) {
+                        // Only submit checked checkboxes (proper HTML form behavior)
+                        if ($input.is(':checked')) {
+                            formData.append(name, value);
+                        }
+                    } else if (value !== undefined) {
+                        // Submit other input types normally
+                        formData.append(name, value);
+                    }
                 }
             });
             
@@ -456,12 +472,23 @@
                                                 flow_id: flow_id,
                                                 pipeline_id: pipeline_id
                                             }).then((updatedStepHtml) => {
+                                                // Save expansion state before replacement
+                                                let expandedCards = [];
+                                                if (typeof PipelineCardsUI !== 'undefined') {
+                                                    expandedCards = PipelineCardsUI.saveExpansionState($flowStepContainer.parent());
+                                                }
+                                                
                                                 // Replace the existing step container with updated version
                                                 $flowStepContainer.replaceWith(updatedStepHtml);
                                                 
                                                 // Trigger card UI updates for updated content
                                                 if (typeof PipelineCardsUI !== 'undefined') {
                                                     PipelineCardsUI.handleDOMChanges();
+                                                    
+                                                    // Restore expansion state
+                                                    setTimeout(() => {
+                                                        PipelineCardsUI.restoreExpansionState(expandedCards, $flowStepContainer.parent());
+                                                    }, 50);
                                                 }
                                                 
                                             }).catch((error) => {
@@ -491,12 +518,23 @@
                                 },
                                 pipeline_id: pipeline_id
                             }).then((updatedStepHtml) => {
+                                // Save expansion state before replacement
+                                let expandedCards = [];
+                                if (typeof PipelineCardsUI !== 'undefined') {
+                                    expandedCards = PipelineCardsUI.saveExpansionState($pipelineStepContainer.parent());
+                                }
+                                
                                 // Replace the existing pipeline step container with updated version
                                 $pipelineStepContainer.replaceWith(updatedStepHtml);
                                 
                                 // Trigger card UI updates for updated content
                                 if (typeof PipelineCardsUI !== 'undefined') {
                                     PipelineCardsUI.handleDOMChanges();
+                                    
+                                    // Restore expansion state
+                                    setTimeout(() => {
+                                        PipelineCardsUI.restoreExpansionState(expandedCards, $pipelineStepContainer.parent());
+                                    }, 50);
                                 }
                                 
                             }).catch((error) => {

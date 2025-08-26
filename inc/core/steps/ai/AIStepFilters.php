@@ -1,11 +1,11 @@
 <?php
 /**
- * AI Step Filters Registration
+ * AI Agent Filters Registration
  *
  * WordPress-Native AI Processing
  * 
  * This file enables sophisticated AI workflows through comprehensive self-registration,
- * making AI step functionality completely modular and WordPress-native.
+ * making AI agent functionality completely modular and WordPress-native.
  * 
  * AI Innovation Features:
  * - Multi-provider AI client integration (OpenAI, Anthropic, Google, Grok, OpenRouter)
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
 /**
  * Register AI step filters for pipeline integration and configuration support.
  *
- * Establishes complete AI step functionality through self-registration:
+ * Establishes complete AI agent functionality through self-registration:
  * - Registers AI step type for pipeline discovery with consume_all_packets capability
  * - Enables step configuration UI with modal support
  * - Integrates tool selection and system prompt configuration
@@ -45,18 +45,18 @@ if (!defined('ABSPATH')) {
 function dm_register_ai_step_filters() {
     
     /**
-     * Register AI step type for pipeline discovery.
+     * Register AI agent type for pipeline discovery.
      *
-     * Configures AI step with consume_all_packets capability for multi-item processing
+     * Configures AI agent with consume_all_packets capability for multi-item processing
      * and positions it appropriately within the step type hierarchy.
      *
      * @param array $steps Current registered steps.
-     * @return array Updated steps array including AI step.
+     * @return array Updated steps array including AI agent.
      */
     add_filter('dm_steps', function($steps) {
         $steps['ai'] = [
-            'label' => __('AI', 'data-machine'),
-            'description' => __('Configure a custom prompt to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
+            'label' => __('AI Agent', 'data-machine'),
+            'description' => __('Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
             'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
             'consume_all_packets' => true,
             'position' => 20
@@ -67,20 +67,20 @@ function dm_register_ai_step_filters() {
     
     
     /**
-     * Enable AI step configuration UI support.
+     * Enable AI agent configuration UI support.
      *
      * Registers configuration modal capability enabling the Configure button
-     * on AI step cards with ai_configuration modal type integration.
+     * on AI agent cards with ai_configuration modal type integration.
      *
      * @param array $configs Current step configuration registry.
-     * @return array Updated configurations including AI step settings.
+     * @return array Updated configurations including AI agent settings.
      */
     add_filter('dm_step_settings', function($configs) {
         $configs['ai'] = [
             'config_type' => 'ai_configuration',
             'modal_type' => 'configure-step', // Links to existing modal content registration
             'button_text' => __('Configure', 'data-machine'),
-            'label' => __('AI Configuration', 'data-machine')
+            'label' => __('AI Agent Configuration', 'data-machine')
         ];
         return $configs;
     });
@@ -103,76 +103,22 @@ add_filter('dm_parse_ai_response', '__return_empty_array');
  * - Shows only general tools (handler-specific tools excluded)
  */
 add_filter('ai_render_component', function($output, $config) {
-    // Get enabled tools directly (no external dependencies)
-    $settings = dm_get_data_machine_settings();
-    
-    // Engine mode - no tools available
-    if ($settings['engine_mode']) {
-        $enabled_general_tools = [];
-    } else {
-        // Get all registered tools and filter to general tools
-        $all_tools = apply_filters('ai_tools', []);
-        $general_tools = [];
-        foreach ($all_tools as $tool_name => $tool_config) {
-            if (!isset($tool_config['handler'])) {
-                $general_tools[$tool_name] = $tool_config;
-            }
-        }
-        
-        // Apply settings filtering
-        if (empty($settings['enabled_tools'])) {
-            $enabled_general_tools = $general_tools; // Default: all enabled
-        } else {
-            $enabled_general_tools = [];
-            foreach ($general_tools as $tool_name => $tool_config) {
-                if (!empty($settings['enabled_tools'][$tool_name])) {
-                    $enabled_general_tools[$tool_name] = $tool_config;
-                }
-            }
-        }
-    }
+    // Use centralized tools management
+    require_once __DIR__ . '/AIStepTools.php';
+    $tools_manager = new \DataMachine\Core\Steps\AI\AIStepTools();
     
     // Start building the Data Machine extensions
     $extensions = '';
     
-    
-    // Add tool configuration UI if tools are available
-    if (!empty($enabled_general_tools)) {
-        $enabled_tools = $ai_config['enabled_tools'] ?? [];
+    // Add tool configuration UI if pipeline step ID is available
+    if (isset($config['step_context']['pipeline_step_id'])) {
+        $pipeline_step_id = $config['step_context']['pipeline_step_id'];
+        $extensions .= $tools_manager->render_tools_html($pipeline_step_id);
         
-        $extensions .= '<tr class="form-field">' . "\n";
-        $extensions .= '    <th scope="row">' . "\n";
-        $extensions .= '        <label>' . esc_html__('Available Tools', 'data-machine') . '</label>' . "\n";
-        $extensions .= '    </th>' . "\n";
-        $extensions .= '    <td>' . "\n";
-        $extensions .= '        <fieldset>' . "\n";
-        $extensions .= '            <legend class="screen-reader-text">' . esc_html__('Select available tools for this AI step', 'data-machine') . '</legend>' . "\n";
-        
-        foreach ($enabled_general_tools as $tool_id => $tool_config) {
-            $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
-            $configure_needed = !$tool_configured && !empty($tool_config['requires_config']);
-            $tool_enabled = in_array($tool_id, $enabled_tools) && $tool_configured;
-            
-            $extensions .= '            <div class="dm-tool-option">' . "\n";
-            $extensions .= '                <label>' . "\n";
-            $extensions .= '                    <input type="checkbox" name="enabled_tools[]" value="' . esc_attr($tool_id) . '" ' . checked($tool_enabled, true, false) . ' ' . disabled($configure_needed, true, false) . ' />' . "\n";
-            $extensions .= '                    <span>' . esc_html($tool_config['description'] ?? ucfirst($tool_id)) . '</span>' . "\n";
-            $extensions .= '                </label>' . "\n";
-            
-            // Only show configuration link for tools that need configuration but aren't configured
-            if ($configure_needed) {
-                $extensions .= '                <span class="dm-tool-config-warning">' . "\n";
-                $extensions .= '                    ⚠ <a href="' . esc_url(admin_url('options-general.php?page=data-machine-settings')) . '" target="_blank">' . esc_html__('Configure in settings', 'data-machine') . '</a>' . "\n";
-                $extensions .= '                </span>' . "\n";
-            }
-            
-            $extensions .= '            </div>' . "\n";
+        // Add description
+        if (!empty($extensions)) {
+            $extensions = str_replace('</tr>', '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'data-machine') . '</p>' . "\n" . '        </fieldset>' . "\n" . '    </td>' . "\n" . '</tr>', $extensions);
         }
-        
-        $extensions .= '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'data-machine') . '</p>' . "\n";
-        $extensions .= '        </fieldset>' . "\n";
-        $extensions .= '    </td>' . "\n";
-        $extensions .= '</tr>' . "\n";
     }
     
     // Insert extensions before closing table tag
@@ -182,7 +128,7 @@ add_filter('ai_render_component', function($output, $config) {
 }, 20, 2);
 
 /**
- * Auto-register AI step filters when this file is loaded.
+ * Auto-register AI agent filters when this file is loaded.
  * 
  * This follows the self-registration pattern established throughout Data Machine.
  * The dm_autoload_core_steps() function will load this file, and filters
@@ -193,7 +139,7 @@ dm_register_ai_step_filters();
 /**
  * Load general AI tools registration from Tools subdirectory.
  *
- * Includes universal AI tools available to all AI steps regardless of pipeline context.
+ * Includes universal AI tools available to all AI agents regardless of pipeline context.
  * General tools (no 'handler' property) are discoverable across all AI operations,
  * unlike handler-specific tools which are context-dependent.
  */

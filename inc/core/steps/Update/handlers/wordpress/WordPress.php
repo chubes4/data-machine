@@ -170,9 +170,11 @@ class WordPress {
             $taxonomy_results['tags'] = $tags_result;
         }
 
-        // Handle other taxonomies dynamically
+        // Handle other taxonomies dynamically - exclude handler config parameters
+        $excluded_params = ['original_id', 'title', 'content', 'category', 'tags', 'wordpress_update'];
         foreach ($parameters as $param_name => $param_value) {
-            if (!in_array($param_name, ['original_id', 'title', 'content', 'category', 'tags']) && !empty($param_value)) {
+            if (!in_array($param_name, $excluded_params) && !empty($param_value) && is_string($param_value)) {
+                // Only process string values as potential taxonomy terms, not arrays/objects which are likely config
                 $taxonomy_result = $this->assign_taxonomy($post_id, $param_name, $param_value);
                 $taxonomy_results[$param_name] = $taxonomy_result;
             }

@@ -40,13 +40,17 @@ class WordPress {
             'has_handler_config' => !empty($tool_def['handler_config']),
             'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
         ]);
-
+        
         // Validate required parameters
         if (empty($parameters['title']) || empty($parameters['content'])) {
             $error_msg = 'WordPress tool call missing required parameters';
             do_action('dm_log', 'error', $error_msg, [
                 'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['title', 'content']
+                'required_parameters' => ['title', 'content'],
+                'parameter_values' => [
+                    'title' => $parameters['title'] ?? 'NOT_PROVIDED',
+                    'content_length' => isset($parameters['content']) ? strlen($parameters['content']) : 'NOT_PROVIDED'
+                ]
             ]);
             
             return [
@@ -157,9 +161,11 @@ class WordPress {
             $taxonomy_results['tags'] = $tags_result;
         }
 
-        // Handle other taxonomies dynamically
+        // Handle other taxonomies dynamically - exclude core content parameters  
+        $excluded_params = ['title', 'content', 'category', 'tags'];
         foreach ($parameters as $param_name => $param_value) {
-            if (!in_array($param_name, ['title', 'content', 'category', 'tags']) && !empty($param_value)) {
+            if (!in_array($param_name, $excluded_params) && !empty($param_value) && is_string($param_value)) {
+                // Only process string values as potential taxonomy terms, not arrays/objects which are likely config
                 $taxonomy_result = $this->assign_taxonomy($post_id, $param_name, $param_value);
                 $taxonomy_results[$param_name] = $taxonomy_result;
             }

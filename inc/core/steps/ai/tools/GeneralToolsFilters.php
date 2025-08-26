@@ -74,23 +74,13 @@ add_filter('ai_tools', function($tools) {
     $tools['local_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Search the local WordPress site for context and information',
+        'description' => 'Find existing posts on this WordPress site to create accurate internal links. Use this tool whenever you want to link to site content instead of guessing URLs. Returns real permalinks in the "link" field.',
         'requires_config' => false, // No configuration needed - uses WordPress core
         'parameters' => [
             'query' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Search query to find content on the local site'
-            ],
-            'max_results' => [
-                'type' => 'integer',
-                'required' => false,
-                'description' => 'Maximum number of results to return (1-20, default: 10)'
-            ],
-            'post_types' => [
-                'type' => 'array',
-                'required' => false,
-                'description' => 'Post types to search (default: ["post", "page"])'
+                'description' => 'Search terms to find relevant posts for internal linking. Use the returned "link" field for accurate URLs.'
             ]
         ]
     ];

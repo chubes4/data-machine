@@ -115,7 +115,6 @@
                 return;
             }
             
-            // Silent auto-save - no UI feedback
             
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
@@ -126,12 +125,8 @@
                     pipeline_title: title,
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
-                success: (response) => {
-                    // Silent save - no UI feedback
-                },
-                error: (xhr, status, error) => {
-                    // Silent save - no UI feedback
-                }
+                success: (response) => {},
+                error: (xhr, status, error) => {}
             });
         },
 
@@ -144,7 +139,6 @@
                 return;
             }
             
-            // Silent auto-save - no UI feedback
             
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
@@ -155,12 +149,8 @@
                     flow_title: title,
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
-                success: (response) => {
-                    // Silent save - no UI feedback
-                },
-                error: (xhr, status, error) => {
-                    // Silent save - no UI feedback
-                }
+                success: (response) => {},
+                error: (xhr, status, error) => {}
             });
         },
 
@@ -194,49 +184,22 @@
         },
 
         /**
-         * Save AI prompt via AJAX using the same action as the modal
+         * Save AI system prompt via simple AJAX action
          */
         saveAIPrompt: function(pipelineStepId, prompt, $textarea) {
-            // Get the current configuration from the card display
-            const $stepCard = $textarea.closest('.dm-step-card');
-            const $modelDisplay = $stepCard.find('.dm-model-name strong');
+            // Simple save - no complex modal configuration needed
             
-            if (!$modelDisplay.length) {
-                return;
-            }
-            
-            // Extract provider and model from the display text "Provider: Model"
-            const displayText = $modelDisplay.text();
-            const parts = displayText.split(': ');
-            if (parts.length !== 2) {
-                return;
-            }
-            
-            const provider = parts[0].toLowerCase();
-            const model = parts[1];
-            
-            // Use the same action as the modal with all required fields
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_configure_step_action',
-                    ai_provider: provider,
-                    ai_model: model,
-                    ai_system_prompt: prompt,
-                    context: JSON.stringify({
-                        step_type: 'ai',
-                        pipeline_id: $stepCard.closest('.dm-step-container').data('pipeline-id'),
-                        pipeline_step_id: pipelineStepId
-                    }),
+                    action: 'dm_save_system_prompt',
+                    pipeline_step_id: pipelineStepId,
+                    system_prompt: prompt,
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
-                success: (response) => {
-                    // Silent save - no UI feedback needed for auto-save
-                },
-                error: (xhr, status, error) => {
-                    // Silent save - no UI feedback needed for auto-save
-                }
+                success: (response) => {},
+                error: (xhr, status, error) => {}
             });
         },
 
@@ -275,7 +238,6 @@
         saveUserMessage: function(flowStepId, message, $textarea) {
             // Allow empty messages
             
-            // Silent auto-save - no UI feedback
             
             $.ajax({
                 url: dmPipelineAutoSave.ajax_url,
@@ -286,12 +248,8 @@
                     user_message: message,
                     nonce: dmPipelineAutoSave.dm_ajax_nonce
                 },
-                success: (response) => {
-                    // Silent save - no UI feedback
-                },
-                error: (xhr, status, error) => {
-                    // Silent save - no UI feedback
-                }
+                success: (response) => {},
+                error: (xhr, status, error) => {}
             });
         },
 

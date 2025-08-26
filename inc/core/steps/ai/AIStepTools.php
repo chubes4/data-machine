@@ -33,11 +33,6 @@ class AIStepTools {
     public function get_global_enabled_tools(): array {
         $settings = dm_get_data_machine_settings();
         
-        // Engine mode - no tools available
-        if ($settings['engine_mode']) {
-            return [];
-        }
-        
         // Get all registered tools and filter to general tools only
         $all_tools = apply_filters('ai_tools', []);
         $general_tools = [];
@@ -64,27 +59,18 @@ class AIStepTools {
     }
     
     /**
-     * Get modal-level enabled tools for a specific pipeline step
+     * Get step-level enabled tools for a specific pipeline step
      * 
      * @param string $pipeline_step_id Pipeline step UUID
      * @return array Tools enabled for this specific step
      */
-    public function get_modal_enabled_tools(string $pipeline_step_id): array {
+    public function get_step_enabled_tools(string $pipeline_step_id): array {
         if (empty($pipeline_step_id)) {
-            do_action('dm_log', 'debug', 'AIStepTools: get_modal_enabled_tools called with empty pipeline_step_id');
             return [];
         }
         
         $saved_step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
         $modal_enabled_tools = $saved_step_config['enabled_tools'] ?? [];
-        
-        do_action('dm_log', 'debug', 'AIStepTools: get_modal_enabled_tools retrieved data', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'saved_step_config_keys' => array_keys($saved_step_config),
-            'enabled_tools_raw' => $modal_enabled_tools,
-            'enabled_tools_is_array' => is_array($modal_enabled_tools),
-            'enabled_tools_count' => is_array($modal_enabled_tools) ? count($modal_enabled_tools) : 0
-        ]);
         
         // Ensure we have a clean array (empty array = all tools unchecked for new steps)
         return is_array($modal_enabled_tools) ? $modal_enabled_tools : [];
@@ -98,13 +84,6 @@ class AIStepTools {
      * @return array Updated enabled_tools array
      */
     public function save_tool_selections(string $pipeline_step_id, array $post_data): array {
-        do_action('dm_log', 'debug', 'AIStepTools: save_tool_selections called', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'post_data_keys' => array_keys($post_data),
-            'has_enabled_tools' => isset($post_data['enabled_tools']),
-            'enabled_tools_raw' => $post_data['enabled_tools'] ?? null
-        ]);
-        
         // Process enabled tools from modal form data (enabled_tools[] array)
         if (isset($post_data['enabled_tools']) && is_array($post_data['enabled_tools'])) {
             $raw_enabled_tools = array_map('sanitize_text_field', wp_unslash($post_data['enabled_tools']));
@@ -128,27 +107,10 @@ class AIStepTools {
                 }
             }
             
-            $enabled_tools = array_values($valid_enabled_tools); // Ensure clean indexed array
-            
-            do_action('dm_log', 'debug', 'AIStepTools: Tools processed and filtered', [
-                'pipeline_step_id' => $pipeline_step_id,
-                'raw_tools' => $raw_enabled_tools,
-                'valid_tools' => $valid_enabled_tools,
-                'final_tools' => $enabled_tools,
-                'tools_count' => count($enabled_tools),
-                'filtered_count' => count($raw_enabled_tools) - count($enabled_tools)
-            ]);
-            
-            return $enabled_tools;
-        } else {
-            do_action('dm_log', 'debug', 'AIStepTools: No tools selected or invalid data', [
-                'pipeline_step_id' => $pipeline_step_id,
-                'enabled_tools_isset' => isset($post_data['enabled_tools']),
-                'enabled_tools_is_array' => isset($post_data['enabled_tools']) ? is_array($post_data['enabled_tools']) : false
-            ]);
-            
-            return []; // No tools selected
+            return array_values($valid_enabled_tools); // Ensure clean indexed array
         }
+        
+        return []; // No tools selected
     }
     
     /**
@@ -165,17 +127,7 @@ class AIStepTools {
             return '';
         }
         
-        $modal_enabled_tools = $this->get_modal_enabled_tools($pipeline_step_id);
-        
-        // Debug logging with timestamp to track modal rendering
-        do_action('dm_log', 'debug', 'AIStepTools: render_tools_html called', [
-            'timestamp' => date('Y-m-d H:i:s'),
-            'microtime' => microtime(true),
-            'pipeline_step_id' => $pipeline_step_id,
-            'modal_enabled_tools' => $modal_enabled_tools,
-            'modal_enabled_tools_count' => count($modal_enabled_tools),
-            'available_global_tools' => array_keys($global_enabled_tools)
-        ]);
+        $modal_enabled_tools = $this->get_step_enabled_tools($pipeline_step_id);
         
         $html = '<tr class="form-field">' . "\n";
         $html .= '    <th scope="row">' . "\n";
@@ -200,35 +152,12 @@ class AIStepTools {
             // Generate simple tool name from tool_id (e.g., "local_search" -> "Local Search")
             $tool_name = $tool_config['name'] ?? ucwords(str_replace('_', ' ', $tool_id));
             
-            // Debug log for each tool's state and HTML generation
-            do_action('dm_log', 'debug', 'AIStepTools: Individual tool state and HTML', [
-                'pipeline_step_id' => $pipeline_step_id,
-                'tool_id' => $tool_id,
-                'tool_modal_enabled' => $tool_modal_enabled,
-                'tool_configured' => $tool_configured,
-                'requires_config' => $requires_config,
-                'config_needed' => $config_needed,
-                'should_be_checked' => $should_be_checked,
-                'will_generate_checked_html' => $should_be_checked ? 'checked="checked"' : '',
-                'will_generate_disabled_html' => $config_needed ? 'disabled="disabled"' : ''
-            ]);
-            
             $html .= '            <div class="dm-tool-option">' . "\n";
             $html .= '                <label>' . "\n";
             
             // Generate the checkbox HTML attributes
             $checked_attr = checked($should_be_checked, true, false);
             $disabled_attr = disabled($config_needed, true, false);
-            
-            // Log the actual HTML attributes being generated
-            do_action('dm_log', 'debug', 'AIStepTools: Generated HTML attributes', [
-                'pipeline_step_id' => $pipeline_step_id,
-                'tool_id' => $tool_id,
-                'should_be_checked_value' => $should_be_checked,
-                'config_needed_value' => $config_needed,
-                'checked_attr_output' => $checked_attr,
-                'disabled_attr_output' => $disabled_attr
-            ]);
             
             $html .= '                    <input type="checkbox" name="enabled_tools[]" value="' . esc_attr($tool_id) . '" ' . $checked_attr . ' ' . $disabled_attr . ' />' . "\n";
             $html .= '                    <span>' . esc_html($tool_name) . '</span>' . "\n";
@@ -248,94 +177,201 @@ class AIStepTools {
         $html .= '    </td>' . "\n";
         $html .= '</tr>' . "\n";
         
-        // Final debug log of complete generated HTML
-        do_action('dm_log', 'debug', 'AIStepTools: Complete HTML generated', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'html_length' => strlen($html),
-            'contains_checked' => strpos($html, 'checked="checked"') !== false,
-            'checked_count' => substr_count($html, 'checked="checked"'),
-            'disabled_count' => substr_count($html, 'disabled="disabled"')
-        ]);
-        
         return $html;
     }
     
     
     /**
-     * Generate a human-readable summary of tool execution results
+     * Get available tools for the next step in pipeline
      * 
-     * @param string $tool_name Tool that was executed
-     * @param array $tool_data Data returned by tool
-     * @param array $parameters Parameters passed to tool
-     * @return string Human-readable summary
+     * Discovers handler-specific and general tools based on next step configuration.
+     * Handler tools are only available when the next step matches the handler type.
+     * 
+     * @param array $next_step_config Next step configuration including handler info
+     * @param string|null $current_pipeline_step_id Current AI step's pipeline step ID for tool filtering
+     * @return array Available tools filtered by step configuration and enablement
      */
-    public function generate_tool_result_summary(string $tool_name, array $tool_data, array $parameters): string {
-        switch ($tool_name) {
-            case 'local_search':
-                $results_count = $tool_data['results_count'] ?? 0;
-                $query = $tool_data['query'] ?? '';
-                
-                if ($results_count === 0) {
-                    return "Local search for '{$query}' returned no results.";
+    public static function getAvailableToolsForNextStep(array $next_step_config, ?string $current_pipeline_step_id = null): array {
+        // Determine handler context from next step
+        $handler_slug = $next_step_config['handler']['handler_slug'] ?? null;
+        $handler_config = $next_step_config['handler']['settings'] ?? [];
+        
+        // Pass handler context to ai_tools filter for dynamic tool generation
+        $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
+        
+        return self::getAllowedTools($all_tools, $handler_slug, $current_pipeline_step_id);
+    }
+
+    /**
+     * Filter tools based on enablement and configuration
+     * 
+     * @param array $all_tools All discovered tools
+     * @param string|null $handler_slug Handler slug for context
+     * @param string|null $pipeline_step_id Pipeline step ID for step-level tool filtering
+     * @return array Allowed tools that are enabled and configured
+     */
+    private static function getAllowedTools(array $all_tools, ?string $handler_slug, ?string $pipeline_step_id = null): array {
+        $allowed_tools = [];
+        
+        foreach ($all_tools as $tool_name => $tool_config) {
+            // Handler tools: Only available when next step matches handler
+            if (isset($tool_config['handler'])) {
+                if ($tool_config['handler'] === $handler_slug) {
+                    // Handler tool matches next step - always allow
+                    $allowed_tools[$tool_name] = $tool_config;
                 }
-                
-                $summary = "Local search for '{$query}' found {$results_count} results:\n\n";
-                $results = $tool_data['results'] ?? [];
-                
-                foreach (array_slice($results, 0, 5) as $result) { // Show max 5 results in summary
-                    $title = $result['title'] ?? 'Untitled';
-                    $link = $result['link'] ?? '#';
-                    $excerpt = $result['excerpt'] ?? '';
-                    
-                    $summary .= "• [{$title}]({$link})\n";
-                    if (!empty($excerpt)) {
-                        $summary .= "  " . wp_trim_words($excerpt, 15) . "\n";
-                    }
-                    $summary .= "\n";
-                }
-                
-                return $summary;
-                
-            case 'google_search':
-                $results_count = count($tool_data['results'] ?? []);
-                $query = $tool_data['query'] ?? '';
-                
-                if ($results_count === 0) {
-                    return "Google search for '{$query}' returned no results.";
-                }
-                
-                $summary = "Google search for '{$query}' found {$results_count} results:\n\n";
-                $results = $tool_data['results'] ?? [];
-                
-                foreach (array_slice($results, 0, 3) as $result) { // Show max 3 results in summary
-                    $title = $result['title'] ?? 'Untitled';
-                    $link = $result['link'] ?? '#';
-                    $snippet = $result['snippet'] ?? '';
-                    
-                    $summary .= "• [{$title}]({$link})\n";
-                    if (!empty($snippet)) {
-                        $summary .= "  " . wp_trim_words($snippet, 20) . "\n";
-                    }
-                    $summary .= "\n";
-                }
-                
-                return $summary;
-                
-            default:
-                // Generic tool result summary
-                if (!empty($tool_data)) {
-                    $data_summary = [];
-                    foreach ($tool_data as $key => $value) {
-                        if (is_scalar($value)) {
-                            $data_summary[] = "{$key}: {$value}";
-                        } elseif (is_array($value)) {
-                            $data_summary[] = "{$key}: " . count($value) . " items";
-                        }
-                    }
-                    return "Tool '{$tool_name}' executed successfully:\n" . implode(", ", $data_summary);
-                }
-                
-                return "Tool '{$tool_name}' executed successfully.";
+                // Handler tool doesn't match - skip
+                continue;
+            }
+            
+            // General tools: Check step-level enablement as final authority
+            if ($pipeline_step_id) {
+                // Create instance to access step-level tools
+                $tools_instance = new self();
+                $step_enabled_tools = $tools_instance->get_step_enabled_tools($pipeline_step_id);
+                $step_enabled = in_array($tool_name, $step_enabled_tools);
+            } else {
+                // No pipeline step ID - fall back to global enablement only
+                $step_enabled = self::isGeneralToolEnabled($tool_name);
+            }
+            
+            $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
+            $requires_config = !empty($tool_config['requires_config']);
+            
+            // Step-level enablement is the final authority - must pass all checks
+            if ($step_enabled && (!$requires_config || $tool_configured)) {
+                $allowed_tools[$tool_name] = $tool_config;
+            }
+        }
+        
+        return $allowed_tools;
+    }
+
+    /**
+     * Check if a general tool is enabled at global settings level
+     * 
+     * @param string $tool_name Tool name to check
+     * @return bool Whether tool is enabled globally
+     */
+    private static function isGeneralToolEnabled(string $tool_name): bool {
+        $settings = dm_get_data_machine_settings();
+        
+        // If enabled_tools is empty, all tools are enabled by default
+        if (empty($settings['enabled_tools'])) {
+            return true;
+        }
+        
+        // Check if tool is explicitly enabled in settings
+        return !empty($settings['enabled_tools'][$tool_name]);
+    }
+
+    /**
+     * Execute a single tool and return result
+     *
+     * @param string $tool_name Tool name to execute
+     * @param array $tool_parameters Parameters from AI tool call
+     * @param array $available_tools Available tools definition
+     * @param array $data Current data packet for parameter extraction
+     * @param string $flow_step_id Flow step ID for logging
+     * @return array Tool execution result
+     */
+    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id): array {
+        $tool_def = $available_tools[$tool_name] ?? null;
+        if (!$tool_def) {
+            return [
+                'success' => false,
+                'error' => "Tool '{$tool_name}' not found",
+                'tool_name' => $tool_name
+            ];
+        }
+
+        try {
+            // Extract additional parameters from data packet
+            $latest_data = !empty($data) ? $data[0] : [];
+            $handler_config = $tool_def['handler_config'] ?? [];
+            
+            // Extract parameters from data packet and merge with AI parameters
+            $data_packet_parameters = self::extractParametersFromData($latest_data, $handler_config);
+            
+            // AI parameters take precedence over data packet parameters
+            $complete_parameters = array_merge($data_packet_parameters, $tool_parameters);
+            
+            // Direct tool execution following established pattern
+            $class_name = $tool_def['class'];
+            if (!class_exists($class_name)) {
+                return [
+                    'success' => false,
+                    'error' => "Tool class '{$class_name}' not found",
+                    'tool_name' => $tool_name
+                ];
+            }
+            
+            $tool_handler = new $class_name();
+            $tool_result = $tool_handler->handle_tool_call($complete_parameters, $tool_def);
+            
+            return $tool_result;
+            
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'AIStepTools: Tool execution exception', [
+                'flow_step_id' => $flow_step_id,
+                'tool_name' => $tool_name,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => 'Tool execution exception: ' . $e->getMessage(),
+                'tool_name' => $tool_name
+            ];
         }
     }
+
+    /**
+     * Extract tool parameters from data entry for tool calling
+     * 
+     * @param array $data_entry Latest data entry from data packet array
+     * @param array $handler_config Handler configuration settings
+     * @return array Tool parameters extracted from data entry
+     */
+    public static function extractParametersFromData(array $data_entry, array $handler_config): array {
+        $parameters = [];
+        
+        // Extract content from data entry
+        $content_data = $data_entry['content'] ?? [];
+        
+        if (isset($content_data['title'])) {
+            $parameters['title'] = $content_data['title'];
+        }
+        
+        if (isset($content_data['body'])) {
+            $parameters['content'] = $content_data['body'];
+        }
+        
+        // Extract metadata - CRITICAL: Include original_id for updates
+        $metadata = $data_entry['metadata'] ?? [];
+        if (isset($metadata['original_id'])) {
+            $parameters['original_id'] = $metadata['original_id'];
+        }
+        if (isset($metadata['source_url'])) {
+            $parameters['source_url'] = $metadata['source_url'];
+        }
+        
+        // Extract attachments/media if available
+        $attachments = $data_entry['attachments'] ?? [];
+        if (!empty($attachments)) {
+            // Look for image attachments
+            foreach ($attachments as $attachment) {
+                if (isset($attachment['type']) && $attachment['type'] === 'image') {
+                    $parameters['image_url'] = $attachment['url'] ?? null;
+                    break;
+                }
+            }
+        }
+        
+        return $parameters;
+    }
+
+
+
 }

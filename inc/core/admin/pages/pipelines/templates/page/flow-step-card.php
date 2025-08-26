@@ -216,7 +216,7 @@ if (!$is_empty) {
                         }
                         
                         if ($show_config): ?>
-                            <div class="dm-ai-step-info dm-ai-configured">
+                            <div class="dm-ai-agent-info dm-ai-configured">
                                 <div class="dm-model-name">
                                     <strong><?php echo esc_html(ucfirst($selected_provider)); ?>: <?php echo esc_html($model_name); ?></strong>
                                 </div>
@@ -231,16 +231,22 @@ if (!$is_empty) {
                                     ?>
                                     <textarea class="dm-user-message-input dm-flow-user-message-input" 
                                               data-flow-step-id="<?php echo esc_attr($flow_step_id); ?>"
-                                              placeholder="<?php esc_attr_e('Enter user message for this AI step (e.g., topic, question, or content to process)...', 'data-machine'); ?>"
+                                              placeholder="<?php esc_attr_e('Enter user message for this AI agent (e.g., topic, question, or content to process)...', 'data-machine'); ?>"
                                               rows="<?php echo esc_attr($estimated_rows); ?>"><?php echo esc_textarea($user_message); ?></textarea>
                                 </div>
                             </div>
                         <?php else: ?>
-                            <div class="dm-placeholder-text"><?php esc_html_e('AI step not configured', 'data-machine'); ?></div>
+                            <div class="dm-placeholder-text"><?php esc_html_e('AI agent not configured', 'data-machine'); ?></div>
                         <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>
+        <?php endif; ?>
+        
+        <?php if (!$is_empty): ?>
+            <button class="dm-expand-toggle dm-expand-toggle--hidden" type="button">
+                <span class="dashicons dashicons-arrow-down"></span>
+            </button>
         <?php endif; ?>
     </div>
 </div>

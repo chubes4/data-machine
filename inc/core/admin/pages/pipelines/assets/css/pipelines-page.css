@@ -278,6 +278,11 @@
     font-size: 12px;
 }
 
+/* Initial state - expansion toggle is hidden by default until JavaScript determines if it's needed */
+.dm-expand-toggle--hidden {
+    display: none;
+}
+
 
 .dm-step-header {
     display: flex;

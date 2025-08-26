@@ -116,6 +116,14 @@ function dm_register_settings() {
     );
     
     add_settings_field(
+        'site_context_enabled',
+        __('Provide site context to agents', 'data-machine'),
+        'dm_site_context_enabled_field_callback',
+        'data-machine-settings',
+        'dm_admin_control'
+    );
+    
+    add_settings_field(
         'tool_configuration',
         __('Tool Configuration', 'data-machine'),
         'dm_tool_configuration_field_callback',
@@ -493,6 +501,34 @@ function dm_global_system_prompt_field_callback() {
 }
 
 /**
+ * Site context enabled field callback
+ */
+function dm_site_context_enabled_field_callback() {
+    $settings = dm_get_data_machine_settings();
+    $site_context_enabled = $settings['site_context_enabled'];
+    $engine_mode = $settings['engine_mode'];
+    
+    $disabled_attr = $engine_mode ? 'disabled' : '';
+    ?>
+    <fieldset <?php echo $disabled_attr; ?>>
+        <label>
+            <input type="checkbox" name="data_machine_settings[site_context_enabled]" value="1" <?php checked($site_context_enabled, true); ?> <?php echo $disabled_attr; ?>>
+            <?php esc_html_e('Provide WordPress site context to AI agents', 'data-machine'); ?>
+        </label>
+        <?php if ($engine_mode): ?>
+            <p class="description">
+                <?php esc_html_e('Site context is disabled when Engine Mode is active.', 'data-machine'); ?>
+            </p>
+        <?php else: ?>
+            <p class="description">
+                <?php esc_html_e('AI agents will receive detailed information about your WordPress site including post types, taxonomies, content counts, and theme information. This helps them make better decisions when working with your specific installation.', 'data-machine'); ?>
+            </p>
+        <?php endif; ?>
+    </fieldset>
+    <?php
+}
+
+/**
  * Tool configuration field callback
  */
 function dm_tool_configuration_field_callback() {
@@ -788,6 +824,9 @@ function dm_sanitize_settings($input) {
     if (isset($input['global_system_prompt'])) {
         $sanitized['global_system_prompt'] = wp_unslash($input['global_system_prompt']); // Preserve formatting
     }
+    
+    // Site context enabled
+    $sanitized['site_context_enabled'] = !empty($input['site_context_enabled']);
     
     // WordPress settings
     $sanitized['wordpress_settings'] = [];

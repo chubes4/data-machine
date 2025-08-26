@@ -215,6 +215,7 @@ function dm_get_data_machine_settings() {
         'enabled_pages' => [], // Empty array means all pages enabled by default
         'enabled_tools' => [],  // Empty array means all tools enabled by default
         'global_system_prompt' => '', // Empty string means no global prompt by default
+        'site_context_enabled' => true, // Default enabled for AI site context
         'wordpress_settings' => [
             'enabled_post_types' => [],    // Empty = all enabled (default)
             'enabled_taxonomies' => [],    // Empty = all enabled (default)
@@ -268,11 +269,6 @@ function dm_get_enabled_admin_pages() {
  */
 function dm_get_enabled_general_tools() {
     $settings = dm_get_data_machine_settings();
-    
-    // Engine mode - no tools available
-    if ($settings['engine_mode']) {
-        return [];
-    }
     
     // Get all registered tools
     $all_tools = apply_filters('ai_tools', []);
@@ -450,8 +446,8 @@ add_filter('ai_request', function($request, $provider_name, $streaming_callback,
     $settings = dm_get_data_machine_settings();
     $global_prompt = trim($settings['global_system_prompt'] ?? '');
     
-    // Skip if no global prompt or engine mode is active
-    if (empty($global_prompt) || $settings['engine_mode']) {
+    // Skip if no global prompt 
+    if (empty($global_prompt)) {
         return $request;
     }
     

@@ -200,18 +200,52 @@ class FilesRepository {
         // Create job-specific storage namespace
         $storage_namespace = "job_{$job_id}";
         
-        // Generate unique filename for this data packet
-        $timestamp = time();
-        $filename = "data_packet_{$timestamp}_" . uniqid() . '.json';
+        // Single accumulating filename per job (like claude.json pattern)
+        $filename = "job_{$job_id}_data.json";
         
-        // Serialize data to JSON
-        $json_data = wp_json_encode($data, JSON_UNESCAPED_UNICODE);
-        if ($json_data === false) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to encode data as JSON', [
+        // Get existing file path to check if data packet already exists
+        $existing_file_path = $this->get_repository_path($storage_namespace) . '/' . $filename;
+        $accumulated_data = [];
+        $file_existed_before = file_exists($existing_file_path);
+        
+        // Load existing data if file exists (accumulating pattern)
+        if ($file_existed_before) {
+            $existing_json = file_get_contents($existing_file_path);
+            if ($existing_json !== false) {
+                $accumulated_data = json_decode($existing_json, true);
+                if (!is_array($accumulated_data)) {
+                    $accumulated_data = []; // Reset if corrupted
+                }
+                
+                do_action('dm_log', 'debug', 'FilesRepository: Loaded existing accumulated data', [
+                    'job_id' => $job_id,
+                    'filename' => $filename,
+                    'existing_entries' => count($accumulated_data),
+                    'json_size' => strlen($existing_json)
+                ]);
+            }
+        } else {
+            do_action('dm_log', 'debug', 'FilesRepository: No existing file, starting fresh accumulation', [
                 'job_id' => $job_id,
-                'flow_step_id' => $flow_step_id
+                'filename' => $filename
             ]);
-            return ['data' => $data]; // Fallback to direct data passing
+        }
+        
+        // Merge new data with existing accumulated data (newest first with array_unshift pattern)
+        if (!empty($data)) {
+            // Step produced data entries - merge with existing accumulated data  
+            $accumulated_data = array_merge($data, $accumulated_data);
+        }
+        
+        // Serialize accumulated data to JSON
+        $json_data = wp_json_encode($accumulated_data, JSON_UNESCAPED_UNICODE);
+        if ($json_data === false) {
+            do_action('dm_log', 'error', 'FilesRepository: Failed to encode accumulated data as JSON', [
+                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
+                'data_entries' => count($accumulated_data)
+            ]);
+            return ['data' => $accumulated_data]; // Fallback to direct data passing
         }
 
         // Create temporary file and store in repository
@@ -221,10 +255,10 @@ class FilesRepository {
                 'job_id' => $job_id,
                 'temp_file' => $temp_file
             ]);
-            return ['data' => $data]; // Fallback to direct data passing
+            return ['data' => $accumulated_data]; // Fallback to direct data passing
         }
 
-        // Store in repository with job namespace
+        // Store in repository with job namespace (will overwrite existing file)
         $stored_path = $this->store_file($temp_file, $filename, $storage_namespace);
         
         // Clean up temporary file
@@ -233,28 +267,32 @@ class FilesRepository {
         }
 
         if (!$stored_path) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to store data packet in repository', [
+            do_action('dm_log', 'error', 'FilesRepository: Failed to store accumulated data packet in repository', [
                 'job_id' => $job_id,
                 'filename' => $filename
             ]);
-            return ['data' => $data]; // Fallback to direct data passing
+            return ['data' => $accumulated_data]; // Fallback to direct data passing
         }
 
-        do_action('dm_log', 'debug', 'FilesRepository: Data packet stored successfully', [
+        do_action('dm_log', 'info', 'FilesRepository: Data packet stored successfully with accumulation', [
             'job_id' => $job_id,
             'flow_step_id' => $flow_step_id,
             'filename' => $filename,
-            'data_size' => strlen($json_data)
+            'new_data_entries' => count($data),
+            'total_accumulated_entries' => count($accumulated_data),
+            'file_existed_before' => $file_existed_before,
+            'new_data_empty' => empty($data),
+            'accumulated_data_empty' => empty($accumulated_data)
         ]);
 
-        // Return lightweight reference object
+        // Return lightweight reference object (always points to same file per job)
         return [
             'is_data_reference' => true,
             'job_id' => $job_id,
             'storage_namespace' => $storage_namespace,
             'filename' => $filename,
             'flow_step_id' => $flow_step_id,
-            'stored_at' => $timestamp
+            'stored_at' => time()
         ];
     }
 
@@ -332,9 +370,19 @@ class FilesRepository {
         $storage_namespace = "job_{$job_id}";
         $deleted_count = 0;
 
-        // Get all files for this job namespace
-        $files = $this->get_all_files($storage_namespace);
+        // Single file per job pattern - delete the specific job data file
+        $filename = "job_{$job_id}_data.json";
         
+        // Check if the job data file exists and delete it
+        $file_path = $this->get_repository_path($storage_namespace) . '/' . $filename;
+        if (file_exists($file_path)) {
+            if ($this->delete_file($filename, $storage_namespace)) {
+                $deleted_count++;
+            }
+        }
+        
+        // Also clean up any legacy data_packet_ files (backward compatibility)
+        $files = $this->get_all_files($storage_namespace);
         foreach ($files as $file) {
             if (str_starts_with($file['filename'], 'data_packet_')) {
                 if ($this->delete_file($file['filename'], $storage_namespace)) {

@@ -54,8 +54,8 @@ $recent_logs = [];
 if (file_exists($log_file_path)) {
     $lines = file($log_file_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     if ($lines) {
-        // Get the last 100 lines and reverse to show newest first
-        $recent_lines = array_slice($lines, -100);
+    // Get the last 200 lines and reverse to show newest first
+    $recent_lines = array_slice($lines, -200);
         $recent_logs = array_reverse($recent_lines);
     }
 }
@@ -126,7 +126,7 @@ if (file_exists($log_file_path)) {
 
     <!-- Recent Log Entries Section -->
     <div class="dm-recent-logs">
-        <h2><?php esc_html_e('Recent Log Entries (Last 100)', 'data-machine'); ?></h2>
+    <h2><?php esc_html_e('Recent Log Entries (Last 200)', 'data-machine'); ?></h2>
         
         <?php if (empty($recent_logs)): ?>
             <p class="dm-no-logs-message">

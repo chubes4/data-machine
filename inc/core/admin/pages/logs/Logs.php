@@ -33,7 +33,7 @@ class Logs
     /**
      * Number of recent log entries to display.
      */
-    const RECENT_LOGS_COUNT = 100;
+    const RECENT_LOGS_COUNT = 200;
 
     /**
      * Log file path.
@@ -259,7 +259,7 @@ class Logs
         }
 
         try {
-            $recent_logs = apply_filters('dm_log_file', [], 'get_recent', 100);
+            $recent_logs = apply_filters('dm_log_file', [], 'get_recent', 200);
             wp_send_json_success(['logs' => $recent_logs]);
         } catch (Exception $e) {
             do_action('dm_log', 'error', 'Exception caught in handle_refresh_logs_ajax', [

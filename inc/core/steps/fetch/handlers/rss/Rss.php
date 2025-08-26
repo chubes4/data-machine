@@ -38,7 +38,6 @@ class Rss {
      * @throws Exception If data cannot be retrieved or is invalid.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        do_action('dm_log', 'debug', 'RSS Input: Starting RSS feed processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
             do_action('dm_log', 'error', 'RSS Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
@@ -86,7 +85,6 @@ class Rss {
         }
 
         // Fetch the RSS feed
-        do_action('dm_log', 'debug', 'RSS Input: Fetching RSS feed.', ['feed_url' => $feed_url, 'pipeline_id' => $pipeline_id]);
         
         // Use dm_request filter for feed fetching
         $args = [
@@ -111,7 +109,6 @@ class Rss {
         }
 
         // Parse the RSS feed
-        do_action('dm_log', 'debug', 'RSS Input: Parsing RSS feed content.', ['pipeline_id' => $pipeline_id]);
         
         // Disable WordPress automatic feed parsing errors
         libxml_use_internal_errors(true);
@@ -137,22 +134,18 @@ class Rss {
         if (isset($xml->channel->item)) {
             // RSS 2.0 format
             $items = $xml->channel->item;
-            do_action('dm_log', 'debug', 'RSS Input: Detected RSS 2.0 format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } elseif (isset($xml->item)) {
             // RSS 1.0 format
             $items = $xml->item;
-            do_action('dm_log', 'debug', 'RSS Input: Detected RSS 1.0 format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } elseif (isset($xml->entry)) {
             // Atom format
             $items = $xml->entry;
-            do_action('dm_log', 'debug', 'RSS Input: Detected Atom format.', ['item_count' => count($items), 'pipeline_id' => $pipeline_id]);
         } else {
             do_action('dm_log', 'error', 'RSS Input: Unsupported feed format or no items found in feed.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
             return ['processed_items' => []];
         }
 
         if (empty($items)) {
-            do_action('dm_log', 'debug', 'RSS Input: No items found in RSS feed.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
@@ -177,7 +170,6 @@ class Rss {
             // Check if already processed
             $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'rss', $guid);
             if ($is_processed) {
-                do_action('dm_log', 'debug', 'RSS Input: Skipping already processed item.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                 continue;
             }
 
@@ -206,13 +198,11 @@ class Rss {
                     }
                 }
                 if (!$found_keyword) {
-                    do_action('dm_log', 'debug', 'RSS Input: Skipping item not matching search keywords.', ['guid' => $guid, 'pipeline_id' => $pipeline_id]);
                     continue;
                 }
             }
 
             // Found first eligible item - create standardized packet and return
-            do_action('dm_log', 'debug', 'RSS Input: Found eligible RSS item.', ['guid' => $guid, 'title' => $title, 'total_checked' => $total_checked, 'pipeline_id' => $pipeline_id]);
             
             // Mark item as processed immediately after confirming eligibility
             if ($flow_step_id) {

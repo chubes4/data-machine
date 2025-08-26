@@ -552,4 +552,5 @@ class AI_HTTP_Gemini_Provider {
         return $gemini_tools;
     }
     
+    
 }
