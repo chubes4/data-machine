@@ -125,15 +125,19 @@ class TwitterAuth {
     /**
      * Get the authorization URL for direct connection to Twitter OAuth
      *
-     * @return string|WP_Error Authorization URL or error
+     * @return string Authorization URL
      */
-    public function get_authorization_url() {
+    public function get_authorization_url(): string {
         // 1. Get API Key/Secret from configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
         if (empty($api_key) || empty($api_secret)) {
-            return new WP_Error('twitter_missing_app_keys', __('Twitter API Key/Secret not configured.', 'data-machine'));
+            do_action('dm_log', 'error', 'Twitter OAuth Error: API Key/Secret not configured.', [
+                'handler' => 'twitter',
+                'operation' => 'get_authorization_url'
+            ]);
+            return '';
         }
 
         // 2. Define Callback URL  
@@ -151,9 +155,11 @@ class TwitterAuth {
                 $error_message = 'Failed to get request token from Twitter.';
                 do_action('dm_log', 'error', 'Twitter OAuth Error: ' . $error_message, [
                     'http_code' => $connection->getLastHttpCode(),
-                    'response' => $connection->getLastBody()
+                    'response' => $connection->getLastBody(),
+                    'handler' => 'twitter',
+                    'operation' => 'get_authorization_url'
                 ]);
-                return new WP_Error('twitter_request_token_failed', __('Failed to get request token from Twitter.', 'data-machine'));
+                return '';
             }
 
             // 6. Store Request Token Secret temporarily
@@ -163,8 +169,11 @@ class TwitterAuth {
             return $connection->url('oauth/authenticate', ['oauth_token' => $request_token['oauth_token']]);
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Twitter OAuth Exception: ' . $e->getMessage());
-            return new WP_Error('twitter_init_exception', __('Twitter OAuth initialization failed.', 'data-machine'));
+            do_action('dm_log', 'error', 'Twitter OAuth Exception: ' . $e->getMessage(), [
+                'handler' => 'twitter',
+                'operation' => 'get_authorization_url'
+            ]);
+            return '';
         }
     }
 

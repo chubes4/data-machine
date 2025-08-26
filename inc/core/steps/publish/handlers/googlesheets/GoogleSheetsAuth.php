@@ -200,16 +200,20 @@ class GoogleSheetsAuth {
     /**
      * Get the authorization URL for direct connection to Google OAuth
      *
-     * @return string|WP_Error Authorization URL or error
+     * @return string Authorization URL
      */
-    public function get_authorization_url() {
+    public function get_authorization_url(): string {
         // 1. Get OAuth configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         
         if (empty($client_id) || empty($client_secret)) {
-            return new WP_Error('googlesheets_missing_oauth_config', __('Google Sheets Client ID/Secret not configured.', 'data-machine'));
+            do_action('dm_log', 'error', 'Google Sheets OAuth Error: Client ID/Secret not configured.', [
+                'handler' => 'googlesheets',
+                'operation' => 'get_authorization_url'
+            ]);
+            return '';
         }
 
         // 2. Generate state parameter for security

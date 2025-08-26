@@ -75,14 +75,18 @@ class RedditAuth {
     /**
      * Get the authorization URL for direct connection to Reddit OAuth
      *
-     * @return string|WP_Error Authorization URL or error
+     * @return string Authorization URL
      */
-    public function get_authorization_url() {
+    public function get_authorization_url(): string {
         // 1. Get Client ID from configuration
         $config = apply_filters('dm_oauth', [], 'get_config', 'reddit');
         $client_id = $config['client_id'] ?? '';
         if (empty($client_id)) {
-            return new WP_Error('reddit_missing_client_id', __('Reddit Client ID not configured.', 'data-machine'));
+            do_action('dm_log', 'error', 'Reddit OAuth Error: Client ID not configured.', [
+                'handler' => 'reddit',
+                'operation' => 'get_authorization_url'
+            ]);
+            return '';
         }
 
         // 2. Define Redirect URI (MUST match the one registered on Reddit Dev App settings)
