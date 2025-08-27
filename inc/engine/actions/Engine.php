@@ -119,8 +119,9 @@ function dm_register_execution_engine() {
                         'job_id' => $job_id,
                         'flow_step_id' => $flow_step_id
                     ]);
-                    do_action('dm_update_job_status', $job_id, 'failed', 'data_retrieval_failure');
-                    $repository->cleanup_job_data_packets($job_id);
+                    do_action('dm_fail_job', $job_id, 'data_retrieval_failure', [
+                        'flow_step_id' => $flow_step_id
+                    ]);
                     return false;
                 }
             }
@@ -131,10 +132,10 @@ function dm_register_execution_engine() {
                     'job_id' => $job_id,
                     'flow_step_id' => $flow_step_id
                 ]);
-                do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-                if ($repository) {
-                    $repository->cleanup_job_data_packets($job_id);
-                }
+                do_action('dm_fail_job', $job_id, 'step_execution_failure', [
+                    'flow_step_id' => $flow_step_id,
+                    'reason' => 'failed_to_load_flow_step_configuration'
+                ]);
                 return false;
             }
 
@@ -148,10 +149,11 @@ function dm_register_execution_engine() {
                     'flow_step_id' => $flow_step_id,
                     'step_type' => $step_type
                 ]);
-                do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-                if ($repository) {
-                    $repository->cleanup_job_data_packets($job_id);
-                }
+                do_action('dm_fail_job', $job_id, 'step_execution_failure', [
+                    'flow_step_id' => $flow_step_id,
+                    'step_type' => $step_type,
+                    'reason' => 'step_type_not_found_in_registry'
+                ]);
                 return false;
             }
             
@@ -191,10 +193,11 @@ function dm_register_execution_engine() {
                     'flow_step_id' => $flow_step_id,
                     'class' => $step_class
                 ]);
-                do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-                if ($repository) {
-                    $repository->cleanup_job_data_packets($job_id);
-                }
+                do_action('dm_fail_job', $job_id, 'step_execution_failure', [
+                    'flow_step_id' => $flow_step_id,
+                    'class' => $step_class,
+                    'reason' => 'empty_data_packet_returned'
+                ]);
             }
 
 
@@ -206,10 +209,12 @@ function dm_register_execution_engine() {
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            do_action('dm_update_job_status', $job_id, 'failed', 'step_execution_failure');
-            if ($repository) {
-                $repository->cleanup_job_data_packets($job_id);
-            }
+            do_action('dm_fail_job', $job_id, 'step_execution_failure', [
+                'flow_step_id' => $flow_step_id,
+                'exception_message' => $e->getMessage(),
+                'exception_trace' => $e->getTraceAsString(),
+                'reason' => 'throwable_exception_in_step_execution'
+            ]);
             return false;
         }
     }, 10, 3 );

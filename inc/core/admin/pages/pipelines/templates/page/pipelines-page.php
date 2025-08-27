@@ -57,7 +57,7 @@ if (!empty($selected_pipeline_id) && !empty($all_pipelines)) {
     </div>
     
     <div class="dm-pipeline-page-header">
-        <select class="dm-pipeline-dropdown" id="dm-pipeline-selector" <?php echo empty($all_pipelines) ? 'style="display:none;"' : ''; ?>>
+        <select class="dm-pipeline-dropdown <?php echo empty($all_pipelines) ? 'dm-hidden' : ''; ?>" id="dm-pipeline-selector">
             <?php foreach ($all_pipelines as $pipeline): ?>
                 <option value="<?php echo esc_attr($pipeline['pipeline_id']); ?>" 
                     <?php selected($selected_pipeline_id, $pipeline['pipeline_id']); ?>>

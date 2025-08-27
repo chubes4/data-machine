@@ -15,18 +15,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Files {
 
-    /**
-     * Parameter-less constructor for pure filter-based architecture.
-     */
 	public function __construct() {
-		// No parameters needed - all services accessed via filters
+		// Filter-based architecture
 	}
 
 
     /**
      * Get repository instance via filter discovery
-     *
-     * @return \DataMachine\Engine\FilesRepository|null
      */
 	private function get_repository(): ?\DataMachine\Engine\FilesRepository {
 		$repositories = apply_filters('dm_files_repository', []);
@@ -35,12 +30,6 @@ class Files {
 
     /**
      * Processes uploaded files and prepares fetch data.
-     *
-     * @param int $pipeline_id Pipeline ID for context.
-     * @param array  $handler_config Handler configuration array.
-     * @param string|null $job_id The job ID for processed items tracking.
-     * @return array Array with 'processed_items' key containing eligible items.
-     * @throws Exception If file is missing, invalid, or cannot be processed.
      */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         // Validate pipeline ID
@@ -133,11 +122,6 @@ class Files {
 
     /**
      * Find the next unprocessed file for a flow step.
-     *
-     * @param string|null $flow_step_id Flow step ID for granular processed items tracking.
-     * @param array $config Files configuration.
-     * @param string|null $job_id Job ID for processed items tracking.
-     * @return array|null File info or null if no unprocessed files.
      */
     private function find_next_unprocessed_file(?string $flow_step_id, array $config, ?string $job_id = null): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
@@ -171,45 +155,22 @@ class Files {
 
     /**
      * Get MIME type from file path using WordPress
-     *
-     * @param string $file_path Path to file
-     * @return string MIME type
      */
     private function get_mime_type_from_file(string $file_path): string {
         $file_info = wp_check_filetype($file_path);
         return $file_info['type'] ?? 'application/octet-stream';
     }
-
-
-
-
     
-    /**
-     * Sanitize settings for the Files fetch handler.
-     * This handler currently has no specific settings.
-     *
-     * @param array $raw_settings
-     * @return array
-     */
     public function sanitize_settings(array $raw_settings): array {
-        // No settings to sanitize
         return [];
     }
 
-    /**
-     * Get the user-friendly label for this handler.
-     *
-     * @return string The label.
-     */
     public static function get_label(): string {
         return __('File Upload', 'data-machine');
     }
 
     /**
      * Convert PHP upload error codes to human-readable messages.
-     *
-     * @param int $error_code The PHP UPLOAD_ERR_* constant.
-     * @return string The error message.
      */
     private function get_upload_error_message(int $error_code): string {
         switch ($error_code) {
@@ -243,10 +204,6 @@ class Files {
 
     /**
      * Basic security validation - only block dangerous executable files
-     *
-     * @param string $file_path Path to file
-     * @param string $filename Original filename
-     * @return bool True if file passes validation, false otherwise
      */
     private function validate_file_basic(string $file_path, string $filename): bool {
         // Only block obviously dangerous executable extensions for security

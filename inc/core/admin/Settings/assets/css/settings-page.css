@@ -123,3 +123,93 @@
 .dm-tool-status.not-configured {
     color: #d63638;
 }
+
+/* ========================================================================
+   TABBED INTERFACE STYLES
+   ======================================================================== */
+
+/* Settings page container */
+.dm-settings-page {
+    max-width: 1200px;
+}
+
+/* Tab navigation wrapper */
+.dm-nav-tab-wrapper {
+    margin: 20px 0 0 0;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+/* Tab content containers */
+.dm-tab-content {
+    display: none;
+    padding-top: 20px;
+}
+
+.dm-tab-content.active {
+    display: block;
+}
+
+/* Form styling */
+.dm-settings-form {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-top: none;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Submit button container */
+.dm-submit-container {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+/* Section headers within tabs */
+.dm-tab-content h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 16px;
+    color: #23282d;
+}
+
+/* Enhanced form table styling for tabs */
+.dm-tab-content .form-table {
+    margin-top: 0;
+}
+
+.dm-tab-content .form-table th {
+    padding-left: 0;
+    width: 200px;
+    vertical-align: top;
+}
+
+.dm-tab-content .form-table td {
+    padding-left: 20px;
+}
+
+/* Responsive design for smaller screens */
+@media screen and (max-width: 782px) {
+    .dm-nav-tab-wrapper .nav-tab {
+        margin-bottom: 5px;
+        margin-right: 5px;
+    }
+    
+    .dm-settings-form {
+        padding: 15px;
+    }
+    
+    .dm-tab-content .form-table th,
+    .dm-tab-content .form-table td {
+        width: auto;
+        padding: 10px 0;
+        display: block;
+    }
+    
+    .dm-tab-content .form-table td {
+        padding-left: 0;
+    }
+}

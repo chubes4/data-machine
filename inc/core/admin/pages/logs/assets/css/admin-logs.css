@@ -90,6 +90,20 @@
     margin-left: 10px;
 }
 
+.dm-copy-logs {
+    margin-left: 10px;
+}
+
+.dm-copy-logs.dm-copy-success {
+    background-color: #00a32a;
+    color: white;
+}
+
+.dm-copy-logs.dm-copy-error {
+    background-color: #d63638;
+    color: white;
+}
+
 /* Recent logs section */
 .dm-recent-logs {
     background: #fff;

@@ -109,17 +109,6 @@ class AI_HTTP_OpenAI_Provider {
         
         $raw_response = json_decode($result['data'], true);
         
-        // Debug: Log raw OpenAI response to see what we actually get back
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            do_action('dm_log', 'debug', 'OpenAI Provider: Raw response from API', [
-                'response_structure' => array_keys($raw_response ?? []),
-                'has_output' => isset($raw_response['output']),
-                'output_count' => isset($raw_response['output']) ? count($raw_response['output']) : 0,
-                'output_items' => $raw_response['output'] ?? 'NOT_SET',
-                'status' => $raw_response['status'] ?? 'NOT_SET',
-                'error' => $raw_response['error'] ?? 'NOT_SET'
-            ]);
-        }
         
         // Convert OpenAI format to standard format
         return $this->format_response($raw_response);
@@ -737,16 +726,6 @@ class AI_HTTP_OpenAI_Provider {
             'total_tokens' => isset($response['usage']['total_tokens']) ? $response['usage']['total_tokens'] : 0
         );
 
-        // Debug: Log final parsed response before returning to AIStep
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            do_action('dm_log', 'debug', 'OpenAI Provider: Final parsed response', [
-                'content_length' => strlen($content),
-                'content_preview' => substr($content, 0, 100) . '...',
-                'tool_calls_count' => count($tool_calls),
-                'tool_calls' => $tool_calls,
-                'finish_reason' => isset($response['status']) ? $response['status'] : 'unknown'
-            ]);
-        }
 
         return array(
             'success' => true,

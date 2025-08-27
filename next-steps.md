@@ -1,11 +1,20 @@
 **CURRENT KNOWN ISSUES**
-- The Run button has a visual indicator, but it disappears too quick to be helpful
-- We need to review our Status Management System to ensure that we are properly accounting for all combinations of statuses. It has not been updated since before we added the update step to the system. 
-- When opening the step configuration modal, it ALWAYS shows a blank api field. It loads openai first which is fine. but IF api key exists for openai, then we should also be loading the key and the models upon modal open. Currently, it only loads them when we switch providers via the dropdown
-- In the case of AI-Publish, if we do this: 1. Enter use message, run job. 2. change user message, run job again, sometimes the user message from run 1 is lost. We must investigate and identify why this happens. it is likely because the job pulls the flow config from the database and if we change it before it pulls that it will grab the new one instead of the old one. We can work around this by creating a new flow, but i am wondering if we can find a way to get around it without creating a new flow
+- Status Management System needs review for Update step compatibility and all status combinations
+- API key-only tools (Google Search) should have streamlined configuration UI without OAuth flows
+- Tool configuration modals should update authentication state in real-time after saving
 
 **NEXT FEATURES TO IMPLEMENT**
-1. Google Search Console general tool for the AI agent. Enables AI agents to view data from Google Search Console to aid in workflows. Such as, post updates fetching seo data from google search console to add new keywords to a post.
-2. Webhook receiver step type. This step type has handlers for specific platform integrations. It allows the triggering of flow steps via a webhook. This must support both mid-pipeline and first-step in pipeline execution. Required handlers: Fareharbor, Discord, Research Airbnb, which does not provide a public api
-3. Pipeline template system: A few pre-configured pipeline templates. This will be a modal that pops up when you press the add new pipeline button. It will have a custom pipeline option, it will have a fetch - ai - publish option, it will have an ai - publish option, and it will have a fetch - ai - update option. Once the webhook is implemented, it will also include a webhook - ai - publish template. These templates will each have their own description. We will be using filter discovery for pipeline templates. Look at the dm-structured-data plugin for a successful example of atomic pipeline creation (except in this case, we wont be configuring flow handlers in advance, just creating the steps, however, the example stands)
-4. Run All button for Pipelines, right next to the pipeline page title. This is just like the flow level run button, except it will run all flows in the pipeline. the action can be dm_run_pipeline_now
+
+**Webhook Receiver Step**
+- New step type supporting webhook-triggered flows (mid-pipeline and first-step)
+- Planned handlers: Fareharbor, Discord, Airbnb research integration
+- Enables event-driven pipeline execution
+
+**Pipeline Template System**
+- Pre-configured pipeline templates via modal on "Add New Pipeline"
+- Templates: Custom, Fetch→AI→Publish, AI→Publish, Fetch→AI→Update, Webhook→AI→Publish
+- Filter-based discovery system for extensibility
+
+**Pipeline Bulk Operations**
+- "Run All" button for pipeline page - executes all flows in pipeline
+- Action: `dm_run_pipeline_now`

@@ -58,6 +58,7 @@ SiteContext::clear_cache();
 // System
 do_action('dm_log', $level, $message, $context);
 do_action('dm_auto_save', $pipeline_id);
+do_action('dm_fail_job', $job_id, $reason, $context_data); // Explicit job failure with configurable cleanup
 do_action('dm_cleanup_old_files'); // File repository maintenance via Action Scheduler
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 ```
@@ -105,7 +106,7 @@ dm_register_twitter_filters(); // Auto-execute at file load
 - **Pipeline+Flow**: Reusable templates + configured instances
 - **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 - **Files Repository**: Flow-isolated UUID storage with cleanup
-- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (Content modification, existing post updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress, WordPress Media) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (Content modification, existing post updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
 - **Admin**: `manage_options` only, zero user dependencies
 
 ## Database Schema
@@ -169,9 +170,9 @@ add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 3, 4);
 ```
 
 **AI Step Directive Content**:
-- Role clarification (backend processing agent)
+- Context-aware role clarification (detects next-step handlers for targeted guidance)
 - Available tools enumeration with descriptions  
-- Content quality guidelines (no raw tool output)
+- Task completion strategy and workflow context
 
 **Site Context Integration**:
 - WordPress site metadata (name, URL, language)
@@ -213,7 +214,7 @@ $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
 
 **Tool Categories**:
 - **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
-- **General Tools**: Universal (Google Search, Local Search) - available to all AI agents
+- **General Tools**: Universal (Google Search, Local Search, Google Search Console) - available to all AI agents
 
 ### Tool Registration
 
@@ -291,6 +292,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 **Tool Capabilities**:
 - **Google Search**: Web search, site restriction (API key + Search Engine ID required)
 - **Local Search**: WordPress WP_Query search (no configuration needed)
+- **Google Search Console**: SEO performance analysis, keyword opportunities, internal linking suggestions (OAuth2 required)
 
 ## Handler Matrix
 
@@ -301,6 +303,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 | Reddit | OAuth2 | Subreddit posts, comments, API-based fetching |
 | Google Sheets | OAuth2 | Spreadsheet data extraction, cell-level access |
 | WordPress | None | Post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering |
+| WordPress Media | None | Media library attachments, file URLs, metadata handling |
 
 | **Publish** | **Auth** | **Limit** | **Features** |
 |-------------|----------|-----------|--------------|
@@ -320,6 +323,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 |-------------------|----------|--------------|
 | Google Search | API Key + Search Engine ID | Web search, site restriction, 1-10 results |
 | Local Search | None | WordPress search, 1-20 results |
+| Google Search Console | OAuth2 | SEO performance analysis, keyword opportunities, internal link suggestions |
 
 ## DataPacket Structure
 
@@ -379,10 +383,11 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
 ## Settings
 
-**Controls**: Engine Mode (headless - disables admin pages only), admin page toggles, tool toggles, site context toggle, global system prompt
+**Controls**: Engine Mode (headless - disables admin pages only), admin page toggles, tool toggles, site context toggle, global system prompt, job data cleanup on failure
 **WordPress Defaults**: Site-wide post type, taxonomy, author, status defaults
 **Tool Configuration**: Modal setup for API keys and service configurations
 **Site Context**: Automatic WordPress context injection (enabled by default)
+**Job Data Cleanup**: Clean up job data files on failure (enabled by default, disable for debugging failed jobs)
 
 ```php
 // Direct function access (internal system components)
@@ -545,7 +550,7 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 54 `*Filters.php` files auto-loaded via composer.json (containing 68+ filter registrations)
+**Filter Registration**: 29 `*Filters.php` files auto-loaded via composer.json (containing 85+ filter registrations)
 **Key Auto-loaded Classes**: `AIStepDirective.php`, `AIConversationState.php` - automatic filter registration
 
 ## Extensions
@@ -686,6 +691,7 @@ $disabled = $requires_config && !$tool_configured;
 - **Facebook**: OAuth2 (app_id/app_secret)
 - **Threads**: OAuth2 (same as Facebook)
 - **Google Sheets**: OAuth2 (client_id/client_secret)
+- **Google Search Console**: OAuth2 (client_id/client_secret)
 - **Bluesky**: App Password (username/app_password)
 - **Google Search**: API Key + Custom Search Engine ID (not OAuth)
 

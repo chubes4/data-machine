@@ -287,7 +287,7 @@ class AIStep {
                 if ($turn_count > 1) {
                     $turn_context = "Turn {$turn_count}/{$max_turns}. ";
                     if ($turn_count >= 3) {
-                        $turn_context .= "Focus on task completion - avoid repetitive tool usage.";
+                        $turn_context .= "Complete your task using available tools.";
                     } else {
                         $turn_context .= "Use tools efficiently to complete your task.";
                     }
@@ -309,6 +309,15 @@ class AIStep {
                         'error' => $ai_response['error'] ?? 'Unknown error',
                         'provider' => $ai_response['provider'] ?? 'Unknown'
                     ]);
+                    
+                    // Fail the job when AI processing fails
+                    do_action('dm_fail_job', $job_id, 'ai_processing_failed', [
+                        'flow_step_id' => $flow_step_id,
+                        'turn_count' => $turn_count,
+                        'ai_error' => $ai_response['error'] ?? 'Unknown error',
+                        'ai_provider' => $ai_response['provider'] ?? 'Unknown'
+                    ]);
+                    
                     return [];
                 }
 

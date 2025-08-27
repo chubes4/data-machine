@@ -72,13 +72,14 @@ class Twitter {
             ];
         }
 
-        // Get handler configuration from tool definition
+        // Get handler configuration from tool definition and extract Twitter-specific config
         $handler_config = $tool_def['handler_config'] ?? [];
+        $twitter_config = $handler_config['twitter'] ?? $handler_config;
         
         do_action('dm_log', 'debug', 'Twitter Tool: Using handler configuration', [
-            'include_source' => $handler_config['twitter_include_source'] ?? true,
-            'enable_images' => $handler_config['twitter_enable_images'] ?? true,
-            'url_as_reply' => $handler_config['twitter_url_as_reply'] ?? false
+            'include_source' => $twitter_config['twitter_include_source'] ?? true,
+            'enable_images' => $twitter_config['twitter_enable_images'] ?? true,
+            'url_as_reply' => $twitter_config['twitter_url_as_reply'] ?? false
         ]);
 
         // Extract parameters
@@ -86,10 +87,10 @@ class Twitter {
         $content = $parameters['content'] ?? '';
         $source_url = $parameters['source_url'] ?? null;
         
-        // Get config from handler settings (280 character limit is hardcoded)
-        $include_source = $handler_config['twitter_include_source'] ?? true;
-        $enable_images = $handler_config['twitter_enable_images'] ?? true;
-        $url_as_reply = $handler_config['twitter_url_as_reply'] ?? false;
+        // Get config from Twitter-specific settings (280 character limit is hardcoded)
+        $include_source = $twitter_config['twitter_include_source'] ?? true;
+        $enable_images = $twitter_config['twitter_enable_images'] ?? true;
+        $url_as_reply = $twitter_config['twitter_url_as_reply'] ?? false;
 
         // Get authenticated connection
         $connection = $this->auth->get_connection();
@@ -141,6 +142,17 @@ class Twitter {
             
             // Handle image upload if provided
             $media_id = null;
+            
+            // Debug logging for image parameter
+            do_action('dm_log', 'debug', 'Twitter Handler: Image upload processing', [
+                'enable_images' => $enable_images,
+                'image_url_provided' => isset($parameters['image_url']),
+                'image_url' => $parameters['image_url'] ?? 'not_provided',
+                'image_url_empty' => empty($parameters['image_url']),
+                'image_url_is_string' => is_string($parameters['image_url'] ?? null),
+                'image_url_length' => isset($parameters['image_url']) ? strlen($parameters['image_url']) : 0
+            ]);
+            
             if ($enable_images && !empty($parameters['image_url'])) {
                 $image_url = $parameters['image_url'];
                 if (filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url)) {

@@ -233,7 +233,7 @@
                             const currentContext = $('.dm-modal-content').data('context') || {};
                             
                             // Reload the auth modal content
-                            dmCoreModal.loadContent(currentTemplate, currentContext);
+                            dmCoreModal.open(currentTemplate, currentContext);
                         }, 1000);
                         
                     } else {

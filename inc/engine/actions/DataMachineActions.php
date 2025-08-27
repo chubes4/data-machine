@@ -22,6 +22,7 @@
  * ORGANIZED ACTIONS (WordPress-native registration):
  * - dm_create, dm_delete: CRUD operations via organized action classes
  * - dm_update_job_status, dm_update_flow_schedule, dm_auto_save, dm_update_flow_handler, dm_sync_steps_to_flow: Update operations (Update.php)
+ * - dm_fail_job: Explicit job failure with configurable cleanup (Update.php)
  * - External Plugin Actions: Plugins register custom actions using standard add_action() patterns
  *
  * EXTENSIBILITY EXAMPLES:
@@ -60,6 +61,7 @@ require_once __DIR__ . '/Engine.php';
  * Actions registered:
  * - dm_run_flow_now($flow_id, $context): Central flow execution trigger
  * - dm_update_job_status($job_id, $new_status, $context, $old_status): Intelligent status updates
+ * - dm_fail_job($job_id, $reason, $context_data): Explicit job failure with configurable cleanup
  * - dm_execute_step($job_id, $execution_order, $pipeline_id, $flow_id, $pipeline_config, $previous_datas): Core step execution
  * - dm_auto_save($pipeline_id): Central pipeline auto-save operations
  * - dm_mark_item_processed($flow_step_id, $source_type, $item_identifier, $job_id): Universal processed item marking
@@ -70,7 +72,8 @@ require_once __DIR__ . '/Engine.php';
  * 
  * Usage Examples:
  * do_action('dm_run_flow_now', $flow_id, 'run_now');
- * do_action('dm_update_job_status', $job_id, 'failed', 'complete');
+ * do_action('dm_update_job_status', $job_id, 'completed', 'complete');
+ * do_action('dm_fail_job', $job_id, 'handler_failed', ['error' => 'Connection timeout']);
  * do_action('dm_execute_step', $job_id, 0, $pipeline_id, $flow_id, $job_config, []);
  * do_action('dm_auto_save', $pipeline_id);
  * do_action('dm_mark_item_processed', $flow_step_id, 'rss', $item_guid, $job_id);

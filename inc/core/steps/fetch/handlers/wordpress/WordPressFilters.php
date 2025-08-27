@@ -30,12 +30,12 @@ if (!defined('ABSPATH')) {
  */
 function dm_register_wordpress_fetch_filters() {
     
-    // Handler registration - WordPress declares itself as fetch handler (pure discovery mode)
+    // Handler registration - WordPress Posts declares itself as fetch handler (pure discovery mode)
     add_filter('dm_handlers', function($handlers) {
-        $handlers['wordpress_fetch'] = [
+        $handlers['wordpress_posts'] = [
             'type' => 'fetch',
             'class' => WordPress::class,
-            'label' => __('WordPress', 'data-machine'),
+            'label' => __('WordPress Posts', 'data-machine'),
             'description' => __('Source content from WordPress posts and pages', 'data-machine')
         ];
         return $handlers;
@@ -44,7 +44,7 @@ function dm_register_wordpress_fetch_filters() {
     
     // Settings registration - pure discovery mode
     add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['wordpress_fetch'] = new WordPressSettings();
+        $all_settings['wordpress_posts'] = new WordPressSettings();
         return $all_settings;
     });
     

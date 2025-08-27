@@ -458,8 +458,8 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
             continue;
         }
         
-        // Check if value differs from default (or is a WordPress taxonomy that's not "skip")
-        if ($current_value !== $default_value || ($handler_slug === 'wordpress_publish' && strpos($setting_key, 'taxonomy_') === 0 && $current_value !== 'skip')) {
+        // Show all settings for non-WordPress handlers, or WordPress settings that differ from defaults (or taxonomies that aren't "skip")
+        if ($handler_slug !== 'wordpress_publish' || $current_value !== $default_value || (strpos($setting_key, 'taxonomy_') === 0 && $current_value !== 'skip')) {
             $field_config = $fields[$setting_key] ?? [];
             $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $setting_key));
             

@@ -176,6 +176,11 @@ class WordPressSettings {
                 'label' => __('Search Term Filter', 'data-machine'),
                 'description' => __('Filter items using a search term.', 'data-machine'),
             ],
+            'randomize_selection' => [
+                'type' => 'checkbox',
+                'label' => __('Randomize selection', 'data-machine'),
+                'description' => __('Select a random post instead of most recently modified.', 'data-machine'),
+            ],
         ];
     }
 
@@ -192,6 +197,7 @@ class WordPressSettings {
         // Sanitize common fields
         $sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
         $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
+        $sanitized['randomize_selection'] = !empty($raw_settings['randomize_selection']);
 
         return $sanitized;
     }
@@ -276,6 +282,7 @@ class WordPressSettings {
             'post_status' => 'publish',
             'timeframe_limit' => 'all_time',
             'search' => '',
+            'randomize_selection' => false,
         ];
 
         // Add dynamic taxonomy filter defaults (all set to 0 = "All")

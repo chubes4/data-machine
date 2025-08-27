@@ -71,6 +71,9 @@ class Update {
         
         // Pipeline system prompt management action hook - enables AI step template updates
         add_action('dm_update_system_prompt', [$instance, 'handle_system_prompt_update'], 10, 2);
+        
+        // Explicit job failure action hook - simplified job failure interface
+        add_action('dm_fail_job', [$instance, 'handle_job_failure'], 10, 3);
     }
 
     /**
@@ -505,11 +508,6 @@ class Update {
             return false;
         }
 
-        do_action('dm_log', 'info', 'Flow user message updated successfully', [
-            'flow_id' => $flow_id,
-            'flow_step_id' => $flow_step_id,
-            'message_length' => strlen($user_message)
-        ]);
 
         return true;
     }
@@ -590,8 +588,73 @@ class Update {
             return false;
         }
 
-        do_action('dm_log', 'info', 'System prompt updated successfully');
 
+        return true;
+    }
+
+    /**
+     * Handle explicit job failure with cleanup and logging.
+     * 
+     * Simplified interface for failing jobs from any component.
+     * Always marks job as failed, cleans up processed items, and logs failure details.
+     *
+     * @param int $job_id Job ID to mark as failed
+     * @param string $reason Failure reason for logging
+     * @param array $context_data Additional context data for debugging
+     * @return bool Success status
+     * @since NEXT_VERSION
+     */
+    public function handle_job_failure($job_id, $reason, $context_data = []) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
+        
+        if (!$db_jobs) {
+            do_action('dm_log', 'error', 'Job failure failed - database service unavailable', [
+                'job_id' => $job_id,
+                'reason' => $reason,
+                'context' => $context_data
+            ]);
+            return false;
+        }
+        
+        // Always use complete_job method for failed status (sets completion timestamp)
+        $success = $db_jobs->complete_job($job_id, 'failed');
+        
+        if (!$success) {
+            do_action('dm_log', 'error', 'Failed to mark job as failed in database', [
+                'job_id' => $job_id,
+                'reason' => $reason
+            ]);
+            return false;
+        }
+        
+        // Clean up processed items to allow retry (existing logic from handle_job_status_update)
+        do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
+        
+        // Conditional file cleanup based on settings
+        $settings = dm_get_data_machine_settings();
+        $cleanup_files = $settings['cleanup_job_data_on_failure'] ?? true;
+        $files_cleaned = false;
+        
+        if ($cleanup_files) {
+            $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
+            if ($files_repo) {
+                $deleted_count = $files_repo->cleanup_job_data_packets($job_id);
+                $files_cleaned = $deleted_count > 0;
+            }
+        }
+        
+        // Enhanced logging with failure details
+        do_action('dm_log', 'error', 'Job marked as failed', [
+            'job_id' => $job_id,
+            'failure_reason' => $reason,
+            'triggered_by' => 'dm_fail_job_action',
+            'context_data' => $context_data,
+            'processed_items_cleaned' => true,
+            'files_cleanup_enabled' => $cleanup_files,
+            'files_cleaned' => $files_cleaned
+        ]);
+        
         return true;
     }
 

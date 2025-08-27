@@ -262,6 +262,37 @@
                             
                             // Initialize the component
                             window.AIHttpProviderManager.init(componentId, config);
+                            
+                            // Check if we need to auto-load provider settings or fetch models
+                            const $component = $(this);
+                            const $providerSelect = $component.find('[data-component-type="provider_selector"]');
+                            const $apiKeyInput = $component.find('input[type="password"]');
+                            const $modelSelect = $component.find('select[data-component-type="model_selector"]');
+                            
+                            if ($providerSelect.length && $apiKeyInput.length) {
+                                const selectedProvider = $providerSelect.val();
+                                const currentApiKey = $apiKeyInput.val();
+                                const hasModels = $modelSelect.length && $modelSelect.find('option').length > 1; // More than just placeholder
+                                
+                                if (selectedProvider) {
+                                    if (!currentApiKey) {
+                                        // API key field is empty - try to load from storage
+                                        window.AIHttpProviderManager.loadProviderSettings(componentId, selectedProvider)
+                                            .then(() => {
+                                                // Check if API key was loaded and fetch models
+                                                if ($apiKeyInput.val()) {
+                                                    window.AIHttpProviderManager.fetchModels(componentId);
+                                                }
+                                            })
+                                            .catch(error => {
+                                                // No API key in storage, normal behavior
+                                            });
+                                    } else if (currentApiKey && !hasModels) {
+                                        // API key exists but no models loaded - fetch models directly
+                                        window.AIHttpProviderManager.fetchModels(componentId);
+                                    }
+                                }
+                            }
                         }
                     });
                 }

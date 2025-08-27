@@ -26,13 +26,11 @@ if ( ! defined( 'WPINC' ) ) {
 class AIStepTools {
     
     /**
-     * Get globally enabled tools from settings
+     * Get all general tools that are available (configured tools appear in step selection)
      * 
-     * @return array Available tools filtered by settings page
+     * @return array Available tools for step-level selection
      */
     public function get_global_enabled_tools(): array {
-        $settings = dm_get_data_machine_settings();
-        
         // Get all registered tools and filter to general tools only
         $all_tools = apply_filters('ai_tools', []);
         $general_tools = [];
@@ -44,18 +42,8 @@ class AIStepTools {
             }
         }
         
-        // Apply settings filtering - determines which tools appear in modal
-        if (empty($settings['enabled_tools'])) {
-            return $general_tools; // Default: all tools available in modal
-        } else {
-            $filtered_tools = [];
-            foreach ($general_tools as $tool_name => $tool_config) {
-                if (!empty($settings['enabled_tools'][$tool_name])) {
-                    $filtered_tools[$tool_name] = $tool_config;
-                }
-            }
-            return $filtered_tools;
-        }
+        // All general tools are available - no global enable/disable filtering
+        return $general_tools;
     }
     
     /**
@@ -94,7 +82,7 @@ class AIStepTools {
             
             foreach ($raw_enabled_tools as $tool_id) {
                 if (!isset($global_enabled_tools[$tool_id])) {
-                    continue; // Tool not available globally
+                    continue; // Tool not available
                 }
                 
                 $tool_config = $global_enabled_tools[$tool_id];
@@ -254,15 +242,14 @@ class AIStepTools {
      * @return bool Whether tool is enabled globally
      */
     private static function isGeneralToolEnabled(string $tool_name): bool {
-        $settings = dm_get_data_machine_settings();
+        // All general tools are enabled - check configuration status only
+        $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
+        $all_tools = apply_filters('ai_tools', []);
+        $tool_config = $all_tools[$tool_name] ?? [];
+        $requires_config = !empty($tool_config['requires_config']);
         
-        // If enabled_tools is empty, all tools are enabled by default
-        if (empty($settings['enabled_tools'])) {
-            return true;
-        }
-        
-        // Check if tool is explicitly enabled in settings
-        return !empty($settings['enabled_tools'][$tool_name]);
+        // Tool is enabled if it doesn't require config OR if it's properly configured
+        return !$requires_config || $tool_configured;
     }
 
     /**
@@ -287,14 +274,51 @@ class AIStepTools {
 
         try {
             // Extract additional parameters from data packet
-            $latest_data = !empty($data) ? $data[0] : [];
             $handler_config = $tool_def['handler_config'] ?? [];
             
-            // Extract parameters from data packet and merge with AI parameters
-            $data_packet_parameters = self::extractParametersFromData($latest_data, $handler_config);
+            // Search through ALL data entries to find original_id (like UpdateStep does)
+            $data_packet_parameters = [];
+            foreach ($data as $data_entry) {
+                $entry_parameters = self::extractParametersFromData($data_entry, $handler_config);
+                if (isset($entry_parameters['original_id'])) {
+                    $data_packet_parameters = $entry_parameters;
+                    do_action('dm_log', 'debug', 'AIStepTools: Found original_id in data entry', [
+                        'flow_step_id' => $flow_step_id,
+                        'tool_name' => $tool_name,
+                        'original_id' => $entry_parameters['original_id'],
+                        'data_entry_type' => $data_entry['type'] ?? 'unknown',
+                        'data_entry_source' => $data_entry['metadata']['source_type'] ?? 'unknown'
+                    ]);
+                    break; // Found the entry with original_id - use it
+                }
+            }
+            
+            // If no original_id found, use the latest data entry as fallback
+            if (empty($data_packet_parameters) && !empty($data)) {
+                $data_packet_parameters = self::extractParametersFromData($data[0], $handler_config);
+                do_action('dm_log', 'debug', 'AIStepTools: No original_id found, using latest data entry', [
+                    'flow_step_id' => $flow_step_id,
+                    'tool_name' => $tool_name,
+                    'latest_entry_type' => $data[0]['type'] ?? 'unknown',
+                    'latest_entry_source' => $data[0]['metadata']['source_type'] ?? 'unknown'
+                ]);
+            }
             
             // AI parameters take precedence over data packet parameters
             $complete_parameters = array_merge($data_packet_parameters, $tool_parameters);
+            
+            // Debug logging for complete parameters sent to tool
+            do_action('dm_log', 'debug', 'AI Step Tools: Complete parameters for tool execution', [
+                'flow_step_id' => $flow_step_id,
+                'tool_name' => $tool_name,
+                'data_packet_source_url' => $data_packet_parameters['source_url'] ?? 'not_set',
+                'tool_param_source_url' => $tool_parameters['source_url'] ?? 'not_set', 
+                'final_source_url' => $complete_parameters['source_url'] ?? 'not_set',
+                'data_packet_image_url' => $data_packet_parameters['image_url'] ?? 'not_set',
+                'tool_param_image_url' => $tool_parameters['image_url'] ?? 'not_set',
+                'final_image_url' => $complete_parameters['image_url'] ?? 'not_set',
+                'all_parameter_keys' => array_keys($complete_parameters)
+            ]);
             
             // Direct tool execution following established pattern
             $class_name = $tool_def['class'];
@@ -355,6 +379,12 @@ class AIStepTools {
         }
         if (isset($metadata['source_url'])) {
             $parameters['source_url'] = $metadata['source_url'];
+            
+            do_action('dm_log', 'debug', 'AI Step Tools: Source URL extracted from metadata', [
+                'metadata_source_url' => $metadata['source_url'],
+                'extracted_source_url' => $parameters['source_url'],
+                'data_entry_type' => $data_entry['type'] ?? 'unknown'
+            ]);
         }
         
         // Extract attachments/media if available
@@ -367,6 +397,21 @@ class AIStepTools {
                     break;
                 }
             }
+        }
+        
+        // Extract image URL from metadata (WordPress Media Fetch pattern)
+        if (isset($metadata['image_source_url'])) {
+            $parameters['image_url'] = $metadata['image_source_url'];
+            
+            do_action('dm_log', 'debug', 'AI Step Tools: Image URL extracted from metadata', [
+                'metadata_image_source_url' => $metadata['image_source_url'],
+                'extracted_image_url' => $parameters['image_url'],
+                'url_is_valid' => filter_var($parameters['image_url'], FILTER_VALIDATE_URL)
+            ]);
+        } else {
+            do_action('dm_log', 'debug', 'AI Step Tools: No image_source_url in metadata', [
+                'metadata_keys' => array_keys($metadata)
+            ]);
         }
         
         return $parameters;

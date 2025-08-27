@@ -34,11 +34,6 @@ class FacebookSettings {
      */
     public static function get_fields(array $current_config = []): array {
         return [
-            'facebook_target_id' => [
-                'type' => 'text',
-                'label' => __('Target Page/Group/User ID', 'data-machine'),
-                'description' => __('Enter the Facebook Page ID, Group ID, or leave empty/use "me" to post to the authenticated user\'s feed.', 'data-machine'),
-            ],
             'include_images' => [
                 'type' => 'checkbox',
                 'label' => __('Include Images', 'data-machine'),
@@ -54,8 +49,7 @@ class FacebookSettings {
                 'label' => __('Link Handling', 'data-machine'),
                 'description' => __('How to handle links in posts.', 'data-machine'),
                 'options' => [
-                    'append' => __('Append to content', 'data-machine'),
-                    'replace' => __('Replace content', 'data-machine'),
+                    'append' => __('Include in post content', 'data-machine'),
                     'comment' => __('Post as comment', 'data-machine'),
                     'none' => __('No links', 'data-machine')
                 ],
@@ -71,14 +65,13 @@ class FacebookSettings {
      */
     public static function sanitize(array $raw_settings): array {
         $sanitized = [];
-        $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
         $sanitized['include_images'] = isset($raw_settings['include_images']) && $raw_settings['include_images'] == '1';
         $sanitized['include_videos'] = isset($raw_settings['include_videos']) && $raw_settings['include_videos'] == '1';
         $link_handling = $raw_settings['link_handling'] ?? 'append';
-        if (!in_array($link_handling, ['append', 'replace', 'comment', 'none'])) {
+        if (!in_array($link_handling, ['append', 'comment', 'none'])) {
             do_action('dm_log', 'error', 'Facebook Settings: Invalid link_handling parameter provided', [
                 'provided_value' => $link_handling,
-                'valid_options' => ['append', 'replace', 'comment', 'none']
+                'valid_options' => ['append', 'comment', 'none']
             ]);
             $link_handling = 'append'; // Fall back to default
         }
@@ -93,7 +86,6 @@ class FacebookSettings {
      */
     public static function get_defaults(): array {
         return [
-            'facebook_target_id' => 'me',
             'include_images' => false,
             'include_videos' => false,
             'link_handling' => 'append',

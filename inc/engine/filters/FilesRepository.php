@@ -8,7 +8,7 @@
  *
  * @package DataMachine
  * @subpackage Engine\Filters
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
 
 namespace DataMachine\Engine;
@@ -180,10 +180,6 @@ class FilesRepository {
             return false;
         }
 
-        do_action('dm_log', 'debug', 'FilesRepository: File stored successfully.', [
-            'filename' => $safe_filename,
-            'size' => filesize($destination_path)
-        ]);
 
         return $destination_path;
     }
@@ -217,18 +213,7 @@ class FilesRepository {
                     $accumulated_data = []; // Reset if corrupted
                 }
                 
-                do_action('dm_log', 'debug', 'FilesRepository: Loaded existing accumulated data', [
-                    'job_id' => $job_id,
-                    'filename' => $filename,
-                    'existing_entries' => count($accumulated_data),
-                    'json_size' => strlen($existing_json)
-                ]);
             }
-        } else {
-            do_action('dm_log', 'debug', 'FilesRepository: No existing file, starting fresh accumulation', [
-                'job_id' => $job_id,
-                'filename' => $filename
-            ]);
         }
         
         // Merge new data with existing accumulated data (newest first with array_unshift pattern)
@@ -351,11 +336,6 @@ class FilesRepository {
             return null;
         }
 
-        do_action('dm_log', 'debug', 'FilesRepository: Data packet retrieved successfully', [
-            'job_id' => $job_id,
-            'filename' => $filename,
-            'data_size' => strlen($json_data)
-        ]);
 
         return $data;
     }

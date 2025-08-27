@@ -314,11 +314,6 @@ class Flows {
             return false;
         }
         
-        do_action('dm_log', 'debug', 'Flow updated successfully', [
-            'flow_id' => $flow_id,
-            'updated_fields' => array_keys($update_data),
-            'rows_affected' => $result
-        ]);
         
         return true;
     }
@@ -385,11 +380,6 @@ class Flows {
             return false;
         }
         
-        do_action('dm_log', 'debug', 'Flow scheduling updated successfully', [
-            'flow_id' => $flow_id,
-            'scheduling_config' => $scheduling_config,
-            'rows_affected' => $result
-        ]);
         
         return true;
     }

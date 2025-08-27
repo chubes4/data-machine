@@ -33,10 +33,26 @@ class AIStepDirective {
     public static function generate_dynamic_directive(array $tools): string {
         $directive = "You are an AI content processing agent in the Data Machine WordPress plugin pipeline system.\n\n";
         
-        $directive .= "WORKFLOW CONTEXT:\n";
-        $directive .= "- You receive data from previous pipeline steps\n";
-        $directive .= "- Your job: Process this data according to the user's instructions\n";
-        $directive .= "- Goal: Create content ready for the next pipeline step\n\n";
+        // Detect handler tools from existing tools array (simple approach)
+        $handler_tools = [];
+        foreach ($tools as $tool_name => $tool_config) {
+            if (isset($tool_config['handler'])) {
+                $handler_tools[] = $tool_config['handler'];
+            }
+        }
+        
+        if (!empty($handler_tools)) {
+            $unique_handlers = array_unique($handler_tools);
+            $directive .= "PIPELINE DESTINATION:\n";
+            $directive .= "- Next Step: Publishing to " . implode(', ', $unique_handlers) . "\n";
+            $directive .= "- Your Role: Prepare content for publication to these platforms\n";
+            $directive .= "- Objective: Process the input data to create platform-ready content\n\n";
+        } else {
+            $directive .= "WORKFLOW CONTEXT:\n";
+            $directive .= "- You receive data from previous pipeline steps\n";
+            $directive .= "- Your job: Process this data according to the user's instructions\n";
+            $directive .= "- Goal: Create content ready for the next pipeline step\n\n";
+        }
         
         $directive .= "DATA PACKET FORMAT:\n";
         $directive .= "- Messages prefixed 'TASK INSTRUCTIONS:' contain your primary objective\n";
@@ -45,10 +61,9 @@ class AIStepDirective {
         $directive .= "- Focus on TASK INSTRUCTIONS, use tool results and input data as supporting material\n\n";
         
         $directive .= "TASK COMPLETION STRATEGY:\n";
-        $directive .= "- PRIORITY: Use tools marked [COMPLETES TASK] to fulfill the user's request\n";
-        $directive .= "- Tools marked [RESEARCH ONLY] provide context if necessary\n";
-        $directive .= "- After gathering context, immediately use completion tools to finish the task\n";
-        $directive .= "- You have 5 turns maximum: research in turn 1-2, complete task by turn 3\n";
+        $directive .= "- Use available tools immediately to fulfill the user's request\n";
+        $directive .= "- Tools are provided to complete your task efficiently\n";
+        $directive .= "- Execute tools as needed to process input data and complete objectives\n";
         
         if (!empty($tools)) {
             $directive .= "AVAILABLE TOOLS:\n";
@@ -57,23 +72,13 @@ class AIStepDirective {
             
             foreach ($tools as $tool_name => $tool_config) {
                 $description = $tool_config['description'] ?? 'No description available';
-                $is_handler_tool = isset($tool_config['handler']) ? ' [COMPLETES TASK]' : ' [RESEARCH ONLY]';
-                $directive .= "- {$tool_name}: {$description}{$is_handler_tool}\n";
-                
-                if (isset($tool_config['handler'])) {
-                    $completion_tools[] = $tool_name;
-                } else {
-                    $research_tools[] = $tool_name;
-                }
+                $directive .= "- {$tool_name}: {$description}\n";
             }
             
-            // Add explicit usage instructions
-            if (!empty($completion_tools) && !empty($research_tools)) {
-                $directive .= "\nTOOL USAGE RULES:\n";
-                $directive .= "1. Research tools (" . implode(', ', $research_tools) . ")\n";
-                $directive .= "2. Completion tools (" . implode(', ', $completion_tools) . ") - USE TO FULFILL USER REQUEST\n";
-                $directive .= "3. Workflow: Optional research → Mandatory completion tool usage\n";
-            }
+            $directive .= "\nTOOL USAGE:\n";
+            $directive .= "- Use tools as needed to complete the task described in TASK INSTRUCTIONS\n";
+            $directive .= "- Tools are available to help you process input data and fulfill requests\n";
+            $directive .= "- Execute tools immediately when they will help complete your objective\n";
         }
 
         return trim($directive);

@@ -1,8 +1,9 @@
 <?php
 /**
- * Local WordPress fetch handler.
+ * Local WordPress Posts fetch handler.
  *
- * Handles WordPress content from local installation using WP_Query.
+ * Handles WordPress post and page content from local installation using WP_Query.
+ * For media files, use the separate WordPressMedia handler.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
@@ -54,7 +55,7 @@ class WordPress {
         $user_id = get_current_user_id();
 
         // Access config from handler config structure
-        $config = $handler_config['wordpress_fetch'] ?? [];
+        $config = $handler_config['wordpress_posts'] ?? [];
         
         // Fetch from local WordPress installation
         $items = $this->fetch_local_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
@@ -84,8 +85,11 @@ class WordPress {
         // Otherwise continue with normal query-based fetching
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
         $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
-        $orderby = 'modified';
-        $order = 'DESC';
+        
+        // Check for randomize option
+        $randomize = !empty($config['randomize_selection']);
+        $orderby = $randomize ? 'rand' : 'modified';
+        $order = $randomize ? 'ASC' : 'DESC'; // Order irrelevant for rand, but WP expects it
 
         // Direct config parsing
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
@@ -304,7 +308,7 @@ class WordPress {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('WordPress', 'data-machine');
+        return __('WordPress Posts', 'data-machine');
     }
 }
 

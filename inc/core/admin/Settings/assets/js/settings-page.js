@@ -24,6 +24,7 @@
          */
         init: function() {
             this.bindEvents();
+            this.initTabManager();
         },
 
         /**
@@ -32,6 +33,12 @@
         bindEvents: function() {
             // Tool configuration save handler - intercepts data-template clicks
             $(document).on('click', '[data-template="tool-config-save"]', this.handleToolConfigSave.bind(this));
+            
+            // Tab navigation handlers
+            $('.dm-nav-tab-wrapper .nav-tab').on('click', this.handleTabClick.bind(this));
+            
+            // Form submission handler to preserve tab state
+            $('.dm-settings-form').on('submit', this.handleFormSubmit.bind(this));
         },
 
         /**
@@ -221,6 +228,95 @@
                     this.showError('Network error: Unable to initiate OAuth connection');
                 }
             });
+        },
+        
+        /**
+         * Initialize tab management functionality
+         */
+        initTabManager: function() {
+            this.tabManager = {
+                /**
+                 * Get active tab from URL or localStorage
+                 */
+                getActiveTab: function() {
+                    // First check URL parameter
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const urlTab = urlParams.get('tab');
+                    
+                    if (urlTab && ['admin', 'agent', 'wordpress'].includes(urlTab)) {
+                        return urlTab;
+                    }
+                    
+                    // Fallback to localStorage
+                    return localStorage.getItem('dm_settings_active_tab') || 'admin';
+                },
+                
+                /**
+                 * Set active tab in localStorage and URL
+                 */
+                setActiveTab: function(tab) {
+                    localStorage.setItem('dm_settings_active_tab', tab);
+                    
+                    // Update URL without page reload
+                    if (history.pushState) {
+                        const newUrl = new URL(window.location);
+                        newUrl.searchParams.set('tab', tab);
+                        history.pushState({ tab: tab }, '', newUrl);
+                    }
+                },
+                
+                /**
+                 * Show specific tab content
+                 */
+                showTab: function(tab) {
+                    // Hide all tab content
+                    $('.dm-tab-content').removeClass('active').hide();
+                    
+                    // Show selected tab
+                    $('#dm-tab-' + tab).addClass('active').fadeIn(200);
+                    
+                    // Update nav tab active state
+                    $('.dm-nav-tab-wrapper .nav-tab').removeClass('nav-tab-active');
+                    $('.dm-nav-tab-wrapper .nav-tab[href*="tab=' + tab + '"]').addClass('nav-tab-active');
+                    
+                    // Store selection
+                    this.setActiveTab(tab);
+                }
+            };
+            
+            // Initialize correct tab on page load
+            const activeTab = this.tabManager.getActiveTab();
+            this.tabManager.showTab(activeTab);
+        },
+        
+        /**
+         * Handle tab navigation click
+         */
+        handleTabClick: function(e) {
+            e.preventDefault();
+            
+            const $tab = $(e.currentTarget);
+            const href = $tab.attr('href');
+            const tabMatch = href.match(/tab=([^&]+)/);
+            
+            if (tabMatch && tabMatch[1]) {
+                this.tabManager.showTab(tabMatch[1]);
+            }
+        },
+        
+        /**
+         * Handle form submission to preserve tab state
+         */
+        handleFormSubmit: function(e) {
+            const activeTab = this.tabManager.getActiveTab();
+            
+            // Add hidden field with current tab to preserve state after form submission
+            const $form = $(e.currentTarget);
+            $form.find('input[name="dm_active_tab"]').remove(); // Remove existing if any
+            $form.append('<input type="hidden" name="dm_active_tab" value="' + activeTab + '">');
+            
+            // Store in localStorage as backup
+            localStorage.setItem('dm_settings_active_tab', activeTab);
         }
     };
 

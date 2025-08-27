@@ -80,7 +80,6 @@ class GoogleSearchConsoleAuth {
      * @return \Google\Client|\WP_Error Authenticated client object or WP_Error on failure.
      */
     public function get_connection() {
-        do_action('dm_log', 'debug', 'Attempting to get authenticated Google Search Console connection.');
 
         // Check if Google Client library is available
         if (!class_exists('Google\Client')) {
@@ -121,8 +120,6 @@ class GoogleSearchConsoleAuth {
 
             // Check if token needs refresh
             if ($client->isAccessTokenExpired()) {
-                do_action('dm_log', 'debug', 'Google Search Console access token expired, attempting refresh.');
-                
                 if (!empty($credentials['refresh_token'])) {
                     $client->refreshToken($credentials['refresh_token']);
                     $new_token = $client->getAccessToken();
@@ -130,15 +127,12 @@ class GoogleSearchConsoleAuth {
                     // Update stored credentials
                     $updated_credentials = array_merge($credentials, $new_token);
                     apply_filters('dm_oauth', null, 'store', 'google_search_console', $updated_credentials);
-                    
-                    do_action('dm_log', 'debug', 'Google Search Console access token refreshed successfully.');
                 } else {
                     do_action('dm_log', 'error', 'Google Search Console token expired and no refresh token available.');
                     return new \WP_Error('gsc_token_expired', __('Google Search Console authentication expired. Please re-authenticate.', 'data-machine'));
                 }
             }
 
-            do_action('dm_log', 'debug', 'Successfully created authenticated Google Search Console client.');
             return $client;
 
         } catch (\Exception $e) {
@@ -187,7 +181,6 @@ class GoogleSearchConsoleAuth {
             // 5. Get Authorization URL
             $auth_url = $client->createAuthUrl();
 
-            do_action('dm_log', 'debug', 'Google Search Console authorization URL generated successfully.');
             return $auth_url;
 
         } catch (\Exception $e) {

@@ -59,7 +59,6 @@ if (!$is_empty) {
 
 $has_handlers = !$is_empty && !empty($available_handlers);
 $step_uses_handlers = !$is_empty && ($step_type !== 'ai');
-$handler_configured = !$is_empty && !empty($current_handler);
 
 $status_class = '';
 if (!$is_empty) {
@@ -71,7 +70,7 @@ if (!$is_empty) {
         ]);
     }
     elseif ($step_uses_handlers) {
-        if (!$handler_configured) {
+        if (empty($current_handler)) {
             $status = 'red';
         } else {
             $handler_slug = $current_handler['handler_slug'] ?? '';
@@ -156,53 +155,39 @@ if (!$is_empty) {
                 </div>
                 <div class="dm-step-actions">
                     <?php if ($step_uses_handlers && $has_handlers): ?>
-                        <?php if (!$handler_configured): ?>
-                            <button type="button" class="button button-small dm-modal-open" 
-                                    data-template="handler-selection"
-                                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
-                                <?php esc_html_e('Add Handler', 'data-machine'); ?>
-                            </button>
-                        <?php else: ?>
-                            <?php
-                            $handler_slug = $current_handler['handler_slug'] ?? '';
-                            
-                            $template_slug = $handler_slug;
-                            ?>
-                            <button type="button" class="button button-small dm-modal-open" 
-                                    data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
-                                <?php esc_html_e('Edit Handler', 'data-machine'); ?>
-                            </button>
-                        <?php endif; ?>
+                        <?php
+                        $handler_slug = $current_handler['handler_slug'] ?? '';
+                        $template_slug = $handler_slug ?: 'default';
+                        ?>
+                        <button type="button" class="button button-small dm-modal-open" 
+                                data-template="<?php echo empty($handler_slug) ? 'handler-selection' : 'handler-settings/' . esc_attr($template_slug); ?>"
+                                data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                            <?php echo empty($handler_slug) ? esc_html__('Add Handler', 'data-machine') : esc_html__('Edit Handler', 'data-machine'); ?>
+                        </button>
                     <?php elseif ($step_type === 'ai'): ?>
                     <?php endif; ?>
                 </div>
             </div>
             <div class="dm-step-body">
                 <div class="dm-flow-step-info">
-                    <?php if ($step_uses_handlers && $handler_configured): ?>
-                        <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($current_handler['handler_slug'] ?? ''); ?>">
-                            <span class="dm-handler-name"><?php echo esc_html($current_handler['handler_slug'] ?? 'Unknown'); ?></span>
-                        </div>
+                    <?php if ($step_uses_handlers): ?>
+                        <?php if (!empty($current_handler)): ?>
+                            <div class="dm-handler-tag" data-handler-key="<?php echo esc_attr($current_handler['handler_slug'] ?? ''); ?>">
+                                <span class="dm-handler-name"><?php echo esc_html($current_handler['handler_slug'] ?? 'Unknown'); ?></span>
+                            </div>
+                        <?php endif; ?>
                         
-                        <?php 
-                        $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
-                        ?>
                         <div class="dm-handler-customizations">
-                            <?php if (!empty($customizations)): ?>
+                            <?php 
+                            $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
+                            if (!empty($customizations)): ?>
                                 <?php foreach ($customizations as $customization): ?>
                                     <div>
                                         <?php echo esc_html(empty($customization['label']) ? $customization['display_value'] : $customization['label'] . ': ' . $customization['display_value']); ?>
                                     </div>
                                 <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="dm-not-configured">
-                                    <?php esc_html_e('Not configured', 'data-machine'); ?>
-                                </div>
                             <?php endif; ?>
                         </div>
-                    <?php elseif ($step_uses_handlers): ?>
-                        <div class="dm-placeholder-text"><?php esc_html_e('No handlers configured', 'data-machine'); ?></div>
                     <?php elseif ($step_type === 'ai'): ?>
                         <?php
                         $ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);

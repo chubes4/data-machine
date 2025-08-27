@@ -54,7 +54,6 @@ class Logs
         // AJAX handlers
         add_action('wp_ajax_dm_clear_logs', [$this, 'ajax_clear_logs']);
         add_action('wp_ajax_dm_update_log_level', [$this, 'ajax_update_log_level']);
-        add_action('wp_ajax_dm_refresh_logs', [$this, 'handle_refresh_logs_ajax']);
     }
 
 
@@ -246,31 +245,6 @@ class Logs
     }
     
 
-    /**
-     * Handle AJAX request to refresh logs.
-     */
-    public function handle_refresh_logs_ajax() {
-        // Verify nonce using standard AJAX nonce verification
-        check_ajax_referer('dm_refresh_logs', 'nonce');
-        
-        // Check user capability
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Permission denied.', 'data-machine')]);
-        }
-
-        try {
-            $recent_logs = apply_filters('dm_log_file', [], 'get_recent', 200);
-            wp_send_json_success(['logs' => $recent_logs]);
-        } catch (Exception $e) {
-            do_action('dm_log', 'error', 'Exception caught in handle_refresh_logs_ajax', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'method' => __METHOD__,
-                'user_id' => get_current_user_id()
-            ]);
-            wp_send_json_error(['message' => 'Failed to retrieve logs: ' . $e->getMessage()]);
-        }
-    }
 }
 
 // Auto-instantiate for self-registration

@@ -216,6 +216,7 @@ function dm_get_data_machine_settings() {
         'enabled_tools' => [],  // Empty array means all tools enabled by default
         'global_system_prompt' => '', // Empty string means no global prompt by default
         'site_context_enabled' => true, // Default enabled for AI site context
+        'cleanup_job_data_on_failure' => true, // Default enabled for job data cleanup
         'wordpress_settings' => [
             'enabled_post_types' => [],    // Empty = all enabled (default)
             'enabled_taxonomies' => [],    // Empty = all enabled (default)

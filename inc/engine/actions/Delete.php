@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Provides consistent validation, permission checking, and service discovery
  * patterns for all deletion types.
  *
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
 class Delete {
 
@@ -27,7 +27,7 @@ class Delete {
      * Registers the central dm_delete action hook that routes to specific
      * deletion handlers based on entity type.
      *
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public static function register() {
         $instance = new self();
@@ -46,7 +46,7 @@ class Delete {
      * 
      * @param int $pipeline_id Pipeline ID to resequence
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function resequence_pipeline_steps($pipeline_id) {
         if (!current_user_can('manage_options')) {
@@ -101,7 +101,7 @@ class Delete {
      * @param string $delete_type Type of entity to delete (pipeline|flow|step)
      * @param mixed $target_id Target entity ID or identifier
      * @param array $context Additional context information
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_delete($delete_type, $target_id, $context = []) {
         // Verify user capabilities - universal requirement for all deletions
@@ -184,7 +184,7 @@ class Delete {
      * @param int $pipeline_id Pipeline ID to delete
      * @param object $db_pipelines Pipelines database service
      * @param object $db_flows Flows database service
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     private function handle_pipeline_deletion($pipeline_id, $db_pipelines, $db_flows) {
         // Get pipeline data for response before deletion
@@ -236,7 +236,7 @@ class Delete {
      * 
      * @param int $flow_id Flow ID to delete
      * @param object $db_flows Flows database service
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     private function handle_flow_deletion($flow_id, $db_flows) {
         // Get flow data for response before deletion
@@ -279,7 +279,7 @@ class Delete {
      * @param int $pipeline_id Pipeline ID containing the step
      * @param object $db_pipelines Pipelines database service
      * @param object $db_flows Flows database service
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     private function handle_step_deletion($pipeline_step_id, $pipeline_id, $db_pipelines, $db_flows) {
         // Get pipeline data for response
@@ -374,7 +374,7 @@ class Delete {
      * 
      * @param mixed $target_id Target identifier (job_id, flow_id, source_type, or flow_step_id)
      * @param array $context Context containing 'delete_by' criteria
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     private function handle_processed_items_deletion($target_id, $context) {
         $all_databases = apply_filters('dm_db', []);
@@ -455,7 +455,7 @@ class Delete {
      * @param string $clear_type Type of jobs to clear ('all' or 'failed')
      * @param array $context Context containing cleanup options
      * @param object $db_jobs Jobs database service
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     private function handle_jobs_deletion($clear_type, $context, $db_jobs) {
         $cleanup_processed = !empty($context['cleanup_processed']);

@@ -121,6 +121,10 @@ if (file_exists($log_file_path)) {
             <button type="button" class="button dm-refresh-logs">
                 <?php esc_html_e('Refresh Logs', 'data-machine'); ?>
             </button>
+            
+            <button type="button" class="button dm-copy-logs" data-copy-target=".dm-log-viewer">
+                <?php esc_html_e('Copy Logs', 'data-machine'); ?>
+            </button>
         </div>
     </div>
 

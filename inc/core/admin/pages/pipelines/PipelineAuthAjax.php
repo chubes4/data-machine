@@ -20,11 +20,6 @@ class PipelineAuthAjax
 {
     /**
      * Register all pipeline authentication AJAX handlers.
-     *
-     * Self-contained registration pattern following WordPress-native approach.
-     * Registers all authentication-related AJAX actions this class handles.
-     *
-     * @since 1.0.0
      */
     public static function register() {
         $instance = new self();
@@ -193,13 +188,21 @@ class PipelineAuthAjax
         $config_fields = $auth_instance->get_config_fields();
         $config_data = [];
 
+        // Get existing configuration to handle unchanged saves
+        $existing_config = apply_filters('dm_oauth', [], 'get_config', $handler_slug);
+
         // Validate and sanitize each field
         foreach ($config_fields as $field_name => $field_config) {
             $value = sanitize_text_field(wp_unslash($_POST[$field_name] ?? ''));
             
-            // Check required fields
-            if (($field_config['required'] ?? false) && empty($value)) {
+            // Check required fields only if no existing config and value is empty
+            if (($field_config['required'] ?? false) && empty($value) && empty($existing_config[$field_name] ?? '')) {
                 wp_send_json_error(['message' => sprintf(__('%s is required', 'data-machine'), $field_config['label'])]);
+            }
+            
+            // Use existing value if form value is empty (handles unchanged saves)
+            if (empty($value) && !empty($existing_config[$field_name] ?? '')) {
+                $value = $existing_config[$field_name];
             }
             
             $config_data[$field_name] = $value;

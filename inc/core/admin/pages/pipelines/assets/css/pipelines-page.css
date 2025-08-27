@@ -428,13 +428,8 @@
     font-size: 11px;
 }
 
-.dm-handler-customizations div:not(.dm-not-configured) {
+.dm-handler-customizations div {
     background: #f0f0f0;
-}
-
-.dm-handler-customizations .dm-not-configured {
-    background: #fff3cd;
-    color: #856404;
 }
 
 /* Flow placeholder when no pipeline steps exist */

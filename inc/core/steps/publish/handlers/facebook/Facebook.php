@@ -87,7 +87,6 @@ class Facebook {
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'Facebook Tool: Using handler configuration', [
-            'facebook_target_id' => $handler_config['facebook_target_id'] ?? '',
             'include_images' => $handler_config['include_images'] ?? true,
             'include_videos' => $handler_config['include_videos'] ?? true,
             'link_handling' => $handler_config['link_handling'] ?? 'append'
@@ -100,23 +99,22 @@ class Facebook {
         $image_url = $parameters['image_url'] ?? null;
         
         // Get config from handler settings
-        $target_id = trim($handler_config['facebook_target_id'] ?? '');
         $include_images = $handler_config['include_images'] ?? true;
         $include_videos = $handler_config['include_videos'] ?? true;
         $link_handling = $handler_config['link_handling'] ?? 'append';
 
-        // Validate target ID
-        if (empty($target_id)) {
-            return [
-                'success' => false,
-                'error' => 'Facebook target ID is required',
-                'tool_name' => 'facebook_publish'
-            ];
-        }
-
         // Get authenticated credentials
         $page_id = $this->auth->get_page_id();
         $page_access_token = $this->auth->get_page_access_token();
+
+        // Validate auto-discovered page ID
+        if (empty($page_id)) {
+            return [
+                'success' => false,
+                'error' => 'Facebook page not found. Please re-authenticate your Facebook account.',
+                'tool_name' => 'facebook_publish'
+            ];
+        }
 
         if (empty($page_access_token)) {
             return [
@@ -131,12 +129,8 @@ class Facebook {
             $post_text = $title ? $title . "\n\n" . $content : $content;
             
             // Handle links based on configuration (exclude comment mode - handled after post creation)
-            if (!empty($source_url) && $link_handling !== 'none' && $link_handling !== 'comment') {
-                if ($link_handling === 'append') {
-                    $post_text .= "\n\n" . $source_url;
-                } elseif ($link_handling === 'replace') {
-                    $post_text = $source_url;
-                }
+            if (!empty($source_url) && $link_handling === 'append') {
+                $post_text .= "\n\n" . $source_url;
             }
 
             // Prepare Facebook API request
@@ -147,14 +141,14 @@ class Facebook {
 
             // Handle image upload if provided and enabled
             if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
-                $image_result = $this->upload_image_to_facebook($image_url, $page_access_token, $target_id);
+                $image_result = $this->upload_image_to_facebook($image_url, $page_access_token, $page_id);
                 if ($image_result && isset($image_result['id'])) {
                     $post_data['object_attachment'] = $image_result['id'];
                 }
             }
 
             // Make API request to Facebook
-            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$target_id}/feed";
+            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$page_id}/feed";
             $response = wp_remote_post($api_url, [
                 'body' => $post_data,
                 'timeout' => 30
@@ -176,7 +170,7 @@ class Facebook {
 
             if (isset($response_data['id'])) {
                 $post_id = $response_data['id'];
-                $post_url = "https://www.facebook.com/{$target_id}/posts/{$post_id}";
+                $post_url = "https://www.facebook.com/{$page_id}/posts/{$post_id}";
                 
                 do_action('dm_log', 'debug', 'Facebook Tool: Post created successfully', [
                     'post_id' => $post_id,
@@ -324,10 +318,10 @@ class Facebook {
      *
      * @param string $image_url Image URL to upload.
      * @param string $access_token Facebook access token.
-     * @param string $target_id Facebook target ID.
+     * @param string $page_id Facebook page ID.
      * @return array|null Photo object or null on failure.
      */
-    private function upload_image_to_facebook(string $image_url, string $access_token, string $target_id): ?array {
+    private function upload_image_to_facebook(string $image_url, string $access_token, string $page_id): ?array {
         do_action('dm_log', 'debug', 'Attempting to upload image to Facebook.', ['image_url' => $image_url]);
         
         if (!function_exists('download_url')) {
@@ -345,7 +339,7 @@ class Facebook {
 
         try {
             // Upload to Facebook
-            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$target_id}/photos";
+            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$page_id}/photos";
             $photo_data = [
                 'source' => new \CURLFile($temp_image_path),
                 'published' => 'false', // Upload but don't publish yet
@@ -404,8 +398,6 @@ class Facebook {
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
         
-        // facebook_target_id - provide default if missing
-        $sanitized['facebook_target_id'] = sanitize_text_field($raw_settings['facebook_target_id'] ?? 'me');
         
         // include_images - provide default if missing
         $sanitized['include_images'] = (bool) ($raw_settings['include_images'] ?? false);
@@ -414,7 +406,7 @@ class Facebook {
         $sanitized['include_videos'] = (bool) ($raw_settings['include_videos'] ?? false);
         
         // link_handling - provide default and validate
-        $valid_link_options = ['append', 'replace', 'comment', 'none'];
+        $valid_link_options = ['append', 'comment', 'none'];
         $link_handling = $raw_settings['link_handling'] ?? 'append';
         if (!in_array($link_handling, $valid_link_options)) {
             do_action('dm_log', 'error', 'Facebook Handler: Invalid link_handling parameter in sanitize method', [

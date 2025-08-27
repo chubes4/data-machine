@@ -42,9 +42,14 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 2. Add credentials at Settings → Data Machine → Tool Configuration
 3. Free tier: 100 queries/day
 
+**Google Search Console** (optional):
+1. Create OAuth2 app with Google Console API access
+2. Add credentials at Settings → Data Machine → Tool Configuration
+3. Provides SEO analysis, keyword opportunities, internal linking suggestions
+
 **OAuth Providers**:
 - Twitter: OAuth 1.0a
-- Reddit/Facebook/Threads/Google Sheets: OAuth2
+- Reddit/Facebook/Threads/Google Sheets/Google Search Console: OAuth2
 - Bluesky: App Password
 
 Auth via `/dm-oauth/{provider}/` popup flow.
@@ -75,7 +80,7 @@ RSS → AI → Twitter → AI → Facebook
 - **Site Context**: WordPress site information injection
 - **Dual-Layer Persistence**: Pipeline-level system prompts + flow-level user messages
 - **Three-Layer Tools**: Global settings → per-step selection → configuration validation  
-- **Tool Categories**: Handler tools (next step) + general tools (Google Search, Local Search)
+- **Tool Categories**: Handler tools (next step) + general tools (Google Search, Local Search, Google Search Console)
 - **Standalone Execution**: AI steps can run independently using flow-specific user messages
 
 **Advanced Examples**:
@@ -91,6 +96,11 @@ RSS → AI → Twitter → AI → Facebook
 - **Flow A** (Independent Agent): RSS tech blogs → AI agent instance → user message "Create professional Twitter threads for developers" → Twitter (daily)
 - **Flow B** (Independent Agent): Reddit r/programming discussions → AI agent instance → user message "Create engaging Facebook posts highlighting trends" → Facebook (twice daily)  
 - **Flow C** (Independent Agent): WordPress tech sites → AI agent instance → user message "Create detailed analysis articles" → WordPress (weekly)
+
+**Media Content Automation**:
+- **Pipeline Template**: Fetch → AI → Publish with system prompt "You are a social media content curator. Create engaging posts that highlight visual content with compelling descriptions."
+- **Flow A** (Independent Agent): WordPress Media (recent uploads) → AI agent instance → user message "Create Instagram-style posts with hashtags" → Twitter (daily)
+- **Flow B** (Independent Agent): WordPress Media (product images) → AI agent instance → user message "Generate product showcases with features" → Facebook (twice weekly)
 
 **Research Intelligence System**:
 - **Pipeline Template**: Fetch → AI → Analysis with system prompt "You are a research analyst. Identify trends, synthesize insights, and flag significant developments across multiple data sources."
@@ -142,11 +152,11 @@ Complete extension system with LLM-powered development:
 
 ## Available Handlers
 
-**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, Google Sheets  
+**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, WordPress media, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
 **Update Handlers**: WordPress content updates (title, content, meta, taxonomy)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
-**General Tools**: Google Search, Local WordPress Search
+**General Tools**: Google Search, Local WordPress Search, Google Search Console
 
 *For detailed specifications, see `CLAUDE.md`*
 

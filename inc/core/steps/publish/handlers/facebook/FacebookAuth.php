@@ -292,7 +292,8 @@ class FacebookAuth {
      * @return string
      */
     private function get_client_id() {
-        return get_option('facebook_app_id', '');
+        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        return $config['app_id'] ?? '';
     }
 
     /**
