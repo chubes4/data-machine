@@ -83,7 +83,6 @@ class Twitter {
         ]);
 
         // Extract parameters
-        $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $parameters['source_url'] ?? null;
         
@@ -108,7 +107,7 @@ class Twitter {
         }
 
         // Format tweet content (Twitter's character limit is 280)
-        $tweet_text = $title ? $title . ": " . $content : $content;
+        $tweet_text = $content;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
         
@@ -156,7 +155,7 @@ class Twitter {
             if ($enable_images && !empty($parameters['image_url'])) {
                 $image_url = $parameters['image_url'];
                 if (filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url)) {
-                    $media_id = $this->upload_image_to_twitter($connection, $image_url, $title ?: substr($content, 0, 50));
+                    $media_id = $this->upload_image_to_twitter($connection, $image_url, substr($content, 0, 50));
                 }
             }
             

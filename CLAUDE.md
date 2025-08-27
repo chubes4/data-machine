@@ -152,7 +152,7 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 $result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
     'model' => 'gpt-5-mini'
-], 'anthropic');
+], 'openai');
 ```
 
 ### AI Request Pipeline

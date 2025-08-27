@@ -121,7 +121,7 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 $response = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
     'model' => 'gpt-5-mini'
-], 'anthropic');
+], 'openai');
 
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);

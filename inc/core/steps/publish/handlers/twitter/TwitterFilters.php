@@ -107,11 +107,6 @@ function dm_get_twitter_tool(array $handler_config = []): array {
                 'type' => 'string',
                 'required' => true,
                 'description' => 'Tweet content (will be formatted and truncated if needed)'
-            ],
-            'title' => [
-                'type' => 'string',
-                'required' => false,
-                'description' => 'Optional title to prepend to content'
             ]
         ]
     ];
