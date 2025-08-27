@@ -89,6 +89,32 @@ add_filter('ai_tools', function($tools) {
 });
 
 /**
+ * Register Read Post Tool
+ */
+add_filter('ai_tools', function($tools) {
+    $tools['read_post'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\ReadPost',
+        'method' => 'handle_tool_call',
+        'description' => 'Read full content of existing WordPress posts and pages by ID. Use this after finding posts with local_search to get complete content for analysis or modification.',
+        'requires_config' => false, // No configuration needed - uses WordPress core
+        'parameters' => [
+            'post_id' => [
+                'type' => 'integer',
+                'required' => true,
+                'description' => 'WordPress post ID to retrieve content from'
+            ],
+            'include_meta' => [
+                'type' => 'boolean',
+                'required' => false,
+                'description' => 'Include custom fields in response (default: false)'
+            ]
+        ]
+    ];
+    
+    return $tools;
+});
+
+/**
  * Register Google Search Console Tool
  */
 add_filter('ai_tools', function($tools) {
@@ -137,6 +163,9 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
             return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
         
         case 'local_search':
+            return true; // Always configured - no setup required
+        
+        case 'read_post':
             return true; // Always configured - no setup required
         
         case 'google_search_console':

@@ -120,7 +120,7 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 // AI integration
 $response = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'claude-3-5-sonnet-20241022'
+    'model' => 'gpt-5-mini'
 ], 'anthropic');
 
 // Service discovery

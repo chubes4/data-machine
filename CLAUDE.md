@@ -151,7 +151,7 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 ```php
 $result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'claude-3-5-sonnet-20241022'
+    'model' => 'gpt-5-mini'
 ], 'anthropic');
 ```
 
