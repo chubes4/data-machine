@@ -121,35 +121,19 @@ function dm_get_twitter_tool(array $handler_config = []): array {
     $enable_images = $twitter_config['twitter_enable_images'] ?? true;
     $url_as_reply = $twitter_config['twitter_url_as_reply'] ?? false;
     
-    // Add conditional parameters based on configuration
-    if ($include_source) {
-        $description = $url_as_reply ? 'Optional source URL to post as reply tweet' : 'Optional source URL to append to tweet';
-        $tool['parameters']['source_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => $description
-        ];
-    }
-    
-    if ($enable_images) {
-        $tool['parameters']['image_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => 'Optional image URL to attach to tweet'
-        ];
-    }
+    // URL parameters handled by system - AI only provides content
     
     // Update description based on enabled features
     $description_parts = ['Post content to Twitter (280 character limit)'];
     if ($include_source) {
         if ($url_as_reply) {
-            $description_parts[] = 'source URLs will be posted as reply tweets';
+            $description_parts[] = 'source URLs from data will be posted as reply tweets';
         } else {
-            $description_parts[] = 'source URLs will be appended';
+            $description_parts[] = 'source URLs from data will be appended';
         }
     }
     if ($enable_images) {
-        $description_parts[] = 'images will be uploaded if provided';
+        $description_parts[] = 'images from data will be uploaded automatically';
     }
     $tool['description'] = implode(', ', $description_parts);
     

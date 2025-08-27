@@ -107,11 +107,6 @@ function dm_get_facebook_tool(array $handler_config = []): array {
                 'type' => 'string',
                 'required' => true,
                 'description' => 'Post content'
-            ],
-            'title' => [
-                'type' => 'string',
-                'required' => false,
-                'description' => 'Optional title to prepend to content'
             ]
         ]
     ];
@@ -126,38 +121,22 @@ function dm_get_facebook_tool(array $handler_config = []): array {
     $include_videos = $facebook_config['include_videos'] ?? true;
     $link_handling = $facebook_config['link_handling'] ?? 'append';
     
-    // Add conditional parameters based on configuration
-    if ($link_handling !== 'none') {
-        $description = $link_handling === 'comment' ? 'Optional source URL to post as Facebook comment' : 'Optional source URL (will be ' . $link_handling . 'ed to post)';
-        $tool['parameters']['source_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => $description
-        ];
-    }
-    
-    if ($include_images) {
-        $tool['parameters']['image_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => 'Optional image URL to attach to post'
-        ];
-    }
+    // URL parameters handled by system - AI only provides content
     
     // Update description based on enabled features
     $description_parts = ['Post content to Facebook'];
     if ($link_handling !== 'none') {
         if ($link_handling === 'comment') {
-            $description_parts[] = 'source URLs will be posted as comments';
+            $description_parts[] = 'source URLs from data will be posted as comments';
         } else {
-            $description_parts[] = "links will be {$link_handling}ed";
+            $description_parts[] = "links from data will be {$link_handling}ed";
         }
     }
     if ($include_images) {
-        $description_parts[] = 'images will be uploaded if provided';
+        $description_parts[] = 'images from data will be uploaded automatically';
     }
     if ($include_videos) {
-        $description_parts[] = 'video links will be included';
+        $description_parts[] = 'video links from data will be included';
     }
     $tool['description'] = implode(', ', $description_parts);
     

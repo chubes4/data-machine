@@ -304,8 +304,14 @@ class AIStepTools {
                 ]);
             }
             
-            // AI parameters take precedence over data packet parameters
-            $complete_parameters = array_merge($data_packet_parameters, $tool_parameters);
+            // System parameters take precedence over AI parameters for predetermined fields
+            $system_managed = ['original_id', 'source_url', 'image_url'];
+            $complete_parameters = $tool_parameters; // Start with AI parameters
+            foreach ($system_managed as $param) {
+                if (isset($data_packet_parameters[$param])) {
+                    $complete_parameters[$param] = $data_packet_parameters[$param];
+                }
+            }
             
             // Debug logging for complete parameters sent to tool
             do_action('dm_log', 'debug', 'AI Step Tools: Complete parameters for tool execution', [

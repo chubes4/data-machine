@@ -107,11 +107,6 @@ function dm_get_threads_tool(array $handler_config = []): array {
                 'type' => 'string',
                 'required' => true,
                 'description' => 'Post content (will be formatted and truncated if needed)'
-            ],
-            'title' => [
-                'type' => 'string',
-                'required' => false,
-                'description' => 'Optional title to prepend to content'
             ]
         ]
     ];
@@ -124,19 +119,12 @@ function dm_get_threads_tool(array $handler_config = []): array {
     // Get configuration values with defaults from extracted config
     $include_images = $threads_config['include_images'] ?? true;
     
-    // Add conditional parameters based on configuration
-    if ($include_images) {
-        $tool['parameters']['image_url'] = [
-            'type' => 'string',
-            'required' => false,
-            'description' => 'Optional image URL to attach to post'
-        ];
-    }
+    // Image parameters handled by system - AI only provides content
     
     // Update description based on enabled features
     $description_parts = ['Post content to Threads (500 character limit)'];
     if ($include_images) {
-        $description_parts[] = 'images will be uploaded if provided';
+        $description_parts[] = 'images from data will be uploaded automatically';
     }
     $tool['description'] = implode(', ', $description_parts);
     
