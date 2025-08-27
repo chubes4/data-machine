@@ -458,6 +458,14 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
             continue;
         }
         
+        // For Facebook handlers, skip authentication and internal fields that shouldn't be displayed
+        if ($handler_slug === 'facebook') {
+            $facebook_internal_fields = ['page_id', 'page_name', 'user_id', 'user_name', 'access_token', 'page_access_token', 'user_access_token', 'token_type', 'authenticated_at', 'token_expires_at', 'target_id'];
+            if (in_array($setting_key, $facebook_internal_fields)) {
+                continue;
+            }
+        }
+        
         // Show all settings for non-WordPress handlers, or WordPress settings that differ from defaults (or taxonomies that aren't "skip")
         if ($handler_slug !== 'wordpress_publish' || $current_value !== $default_value || (strpos($setting_key, 'taxonomy_') === 0 && $current_value !== 'skip')) {
             $field_config = $fields[$setting_key] ?? [];
