@@ -33,11 +33,11 @@ add_filter('dm_auth_providers', function($providers) {
 add_filter('dm_tool_configured', function($configured, $tool_id) {
     if ($tool_id === 'google_search_console') {
         // Check if OAuth configuration exists
-        $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
         $has_config = !empty($config['client_id']) && !empty($config['client_secret']);
         
         // Check if authenticated (has tokens)
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
         $has_tokens = !empty($account['access_token']);
         
         return $has_config && $has_tokens;
@@ -53,7 +53,7 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
  */
 add_filter('dm_get_tool_config', function($config, $tool_id) {
     if ($tool_id === 'google_search_console') {
-        return apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+        return apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
     }
     
     return $config;
@@ -83,7 +83,7 @@ add_action('dm_save_tool_config', function($tool_id, $config_data) {
         ];
         
         // Save configuration via OAuth system
-        if (apply_filters('dm_oauth', null, 'store_config', 'google_search_console', $oauth_config)) {
+        if (apply_filters('dm_store_oauth_keys', $oauth_config, 'google_search_console')) {
             wp_send_json_success([
                 'message' => __('Google Search Console configuration saved successfully. You can now connect your account.', 'data-machine'),
                 'configured' => true,

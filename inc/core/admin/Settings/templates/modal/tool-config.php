@@ -208,7 +208,7 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
                                         </span>
                                         <p class="description">
                                             <?php 
-                                            $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+                                            $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
                                             if (!empty($account['last_verified_at'])) {
                                                 echo sprintf(
                                                     __('Last authenticated: %s', 'data-machine'),

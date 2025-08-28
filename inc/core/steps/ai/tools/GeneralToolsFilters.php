@@ -171,10 +171,10 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
         case 'google_search_console':
             // GSC tool configuration is handled by GoogleSearchConsoleFilters.php
             // Check if OAuth configuration exists and user is authenticated
-            $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+            $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
             $has_config = !empty($config['client_id']) && !empty($config['client_secret']);
             
-            $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+            $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
             $has_tokens = !empty($account['access_token']);
             
             return $has_config && $has_tokens;

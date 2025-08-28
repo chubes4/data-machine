@@ -34,7 +34,7 @@ class BlueskyAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $auth_data = apply_filters('dm_oauth', [], 'retrieve', 'bluesky');
+        $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
         return !empty($auth_data) && 
                !empty($auth_data['username']) && 
                !empty($auth_data['app_password']);
@@ -46,16 +46,15 @@ class BlueskyAuth {
      * @return array|\WP_Error Session data array or WP_Error on failure.
      */
     public function get_session() {
-        do_action('dm_log', 'debug', 'Attempting to get authenticated Bluesky session.');
 
         // Get credentials from centralized OAuth filter
-        $auth_data = apply_filters('dm_oauth', [], 'retrieve', 'bluesky');
+        $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
 
         if (empty($handle) || empty($password)) {
             do_action('dm_log', 'error', 'Bluesky handle or app password missing in site options.');
-            return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured on the API Keys page.', 'data-machine'));
+            return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured.', 'data-machine'));
         }
 
         // Authenticate with Bluesky and get session
@@ -88,11 +87,6 @@ class BlueskyAuth {
         // Add handle to session data for URL building
         $session_data['handle'] = $handle;
 
-        do_action('dm_log', 'debug', 'Bluesky authentication successful.', [
-            'did' => $did,
-            'pds' => $pds_url,
-            'handle' => $handle
-        ]);
 
         return $session_data;
     }
@@ -117,7 +111,6 @@ class BlueskyAuth {
             return new \WP_Error('bluesky_json_encode_error', __('Could not encode authentication request.', 'data-machine'));
         }
 
-        do_action('dm_log', 'debug', 'Attempting Bluesky authentication (createSession).', ['handle' => $handle, 'url' => $url]);
 
         $result = apply_filters('dm_request', null, 'POST', $url, [
             'headers' => [
@@ -205,7 +198,7 @@ class BlueskyAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $auth_data = apply_filters('dm_oauth', [], 'retrieve', 'bluesky');
+        $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
         
@@ -227,6 +220,6 @@ class BlueskyAuth {
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        return apply_filters('dm_oauth', false, 'clear', 'bluesky');
+        return apply_filters('dm_clear_oauth_account', false, 'bluesky');
     }
 }

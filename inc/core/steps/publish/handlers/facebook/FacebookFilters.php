@@ -118,7 +118,6 @@ function dm_get_facebook_tool(array $handler_config = []): array {
     
     // Get configuration values with defaults from extracted config
     $include_images = $facebook_config['include_images'] ?? true;
-    $include_videos = $facebook_config['include_videos'] ?? true;
     $link_handling = $facebook_config['link_handling'] ?? 'append';
     
     // URL parameters handled by system - AI only provides content
@@ -135,16 +134,12 @@ function dm_get_facebook_tool(array $handler_config = []): array {
     if ($include_images) {
         $description_parts[] = 'images from data will be uploaded automatically';
     }
-    if ($include_videos) {
-        $description_parts[] = 'video links from data will be included';
-    }
     $tool['description'] = implode(', ', $description_parts);
     
     do_action('dm_log', 'debug', 'Facebook Tool: Generation complete', [
         'parameter_count' => count($tool['parameters']),
         'parameter_names' => array_keys($tool['parameters']),
         'include_images' => $include_images,
-        'include_videos' => $include_videos,
         'link_handling' => $link_handling
     ]);
     

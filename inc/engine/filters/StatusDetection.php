@@ -154,7 +154,7 @@ function dm_handle_red_flow_statuses($default_status, $context, $data) {
         }
         
         // Check if handler has authentication data
-        $auth_data = apply_filters('dm_oauth', [], 'retrieve', $handler_slug);
+        $auth_data = apply_filters('dm_retrieve_oauth_account', [], $handler_slug);
         
         if (empty($auth_data)) {
             return 'red'; // No authentication data

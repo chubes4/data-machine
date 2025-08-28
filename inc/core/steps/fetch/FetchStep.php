@@ -24,7 +24,7 @@ class FetchStep {
      * @param array $flow_step_config Flow step configuration including handler settings
      * @return array Updated data packet array with fetch data added
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
         try {
             // Fetch steps generate data from external sources 
             do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [

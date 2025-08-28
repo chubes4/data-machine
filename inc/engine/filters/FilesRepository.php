@@ -64,10 +64,6 @@ add_action('dm_cleanup_old_files', function() {
             }
         }
         
-        do_action('dm_log', 'debug', 'FilesRepository: Universal cleanup completed', [
-            'deleted_files' => $deleted_count,
-            'deleted_job_data' => $job_data_deleted
-        ]);
     }
 });
 
@@ -259,16 +255,6 @@ class FilesRepository {
             return ['data' => $accumulated_data]; // Fallback to direct data passing
         }
 
-        do_action('dm_log', 'info', 'FilesRepository: Data packet stored successfully with accumulation', [
-            'job_id' => $job_id,
-            'flow_step_id' => $flow_step_id,
-            'filename' => $filename,
-            'new_data_entries' => count($data),
-            'total_accumulated_entries' => count($accumulated_data),
-            'file_existed_before' => $file_existed_before,
-            'new_data_empty' => empty($data),
-            'accumulated_data_empty' => empty($accumulated_data)
-        ]);
 
         // Return lightweight reference object (always points to same file per job)
         return [
@@ -371,12 +357,6 @@ class FilesRepository {
             }
         }
 
-        if ($deleted_count > 0) {
-            do_action('dm_log', 'debug', 'FilesRepository: Job data packet cleanup completed', [
-                'job_id' => $job_id,
-                'deleted_count' => $deleted_count
-            ]);
-        }
 
         return $deleted_count;
     }
@@ -469,11 +449,6 @@ class FilesRepository {
         }
 
         $deleted = unlink($file_path);
-        if ($deleted) {
-            do_action('dm_log', 'debug', 'FilesRepository: File deleted successfully.', [
-                'filename' => $safe_filename
-            ]);
-        }
 
         return $deleted;
     }
@@ -502,12 +477,6 @@ class FilesRepository {
             }
         }
 
-        if ($deleted_count > 0) {
-            do_action('dm_log', 'debug', 'FilesRepository: Cleanup completed.', [
-                'deleted_count' => $deleted_count,
-                'cutoff_days' => $days
-            ]);
-        }
 
         return $deleted_count;
     }

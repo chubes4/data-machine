@@ -25,7 +25,7 @@ class PublishStep {
      * @param array $flow_step_config Flow step configuration including handler settings
      * @return array Updated data packet array with publish result added
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
         try {
             do_action('dm_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);
 

@@ -73,12 +73,6 @@ class ProcessedItems {
         // Check if it exists first to avoid unnecessary insert attempts and duplicate key errors
         if ($this->has_item_been_processed($flow_step_id, $source_type, $item_identifier)) {
             // Item already processed - return true to indicate success (idempotent behavior)
-            do_action('dm_log', 'debug', "Item already processed, skipping duplicate insert.", [
-                'flow_step_id' => $flow_step_id,
-                'source_type' => $source_type,
-                'item_identifier' => substr($item_identifier, 0, 100) . '...',
-                'job_id' => $job_id
-            ]);
             return true;
         }
 
@@ -105,12 +99,6 @@ class ProcessedItems {
              
              // If it's a duplicate key error, treat as success (race condition handling)
              if (strpos($db_error, 'Duplicate entry') !== false) {
-                 do_action('dm_log', 'debug', "Duplicate key detected during insert - item already processed by another process.", [
-                     'flow_step_id' => $flow_step_id,
-                     'source_type' => $source_type,
-                     'item_identifier' => substr($item_identifier, 0, 100) . '...',
-                     'job_id' => $job_id
-                 ]);
                  return true; // Treat duplicate as success
              }
              

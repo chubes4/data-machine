@@ -41,6 +41,10 @@
             
             // Auth configuration form handler
             $(document).on('submit', '.dm-auth-config-form', this.handleAuthConfigSave.bind(this));
+            
+            // OAuth event listeners for immediate UI updates
+            window.addEventListener('dm-auth-success', this.handleAuthSuccess.bind(this));
+            window.addEventListener('dm-auth-error', this.handleAuthError.bind(this));
 
             // Tab switching handled by core modal system based on CSS classes
 
@@ -135,6 +139,59 @@
                 const context = $modalContent.data('context') || {};
                 dmCoreModal.open('modal/handler-auth-form', context);
             }
+        },
+
+        /**
+         * Handle OAuth authentication success event
+         * @param {CustomEvent} event The dm-auth-success event
+         */
+        handleAuthSuccess: function(event) {
+            console.log('Data Machine Modal: Auth success received', event.detail);
+            
+            const provider = event.detail.provider;
+            
+            // Refresh the auth modal to show connected state
+            this.refreshAuthModal();
+            
+            // Also trigger flow step card updates if available
+            if (typeof window.dmPipelineCards !== 'undefined' && window.dmPipelineCards.refreshAll) {
+                window.dmPipelineCards.refreshAll();
+            }
+            
+            // Show success notification
+            this.showAuthNotification(true, provider);
+        },
+
+        /**
+         * Handle OAuth authentication error event  
+         * @param {CustomEvent} event The dm-auth-error event
+         */
+        handleAuthError: function(event) {
+            console.log('Data Machine Modal: Auth error received', event.detail);
+            
+            const provider = event.detail.provider;
+            const error = event.detail.error;
+            
+            // Show error notification
+            this.showAuthNotification(false, provider, error);
+        },
+
+        /**
+         * Show authentication success/error notification
+         * @param {boolean} success Whether authentication succeeded
+         * @param {string} provider The OAuth provider name
+         * @param {string} error Error message if failed
+         */
+        showAuthNotification: function(success, provider, error) {
+            // Simple notification - you might want to integrate with existing notification system
+            const message = success 
+                ? `${provider.charAt(0).toUpperCase() + provider.slice(1)} connected successfully!`
+                : `${provider.charAt(0).toUpperCase() + provider.slice(1)} connection failed: ${error || 'Unknown error'}`;
+            
+            console.log('Data Machine: ' + message);
+            
+            // Could add visual notification here if desired
+            // For now, the modal refresh and flow card updates provide the visual feedback
         },
 
         /**

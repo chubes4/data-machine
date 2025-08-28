@@ -24,8 +24,6 @@ class ThreadsAuth {
     const AUTH_URL = 'https://graph.facebook.com/oauth/authorize'; // Use FB authorize endpoint
     const TOKEN_URL = 'https://graph.threads.net/oauth/access_token';
     const REFRESH_URL = 'https://graph.threads.net/refresh_access_token';
-    const API_BASE_URL = 'https://graph.threads.net/v1.0'; // Base for API calls
-    const GRAPH_API_URL = 'https://graph.facebook.com/v19.0'; // Facebook Graph API URL for token revocation
     const SCOPES = 'threads_basic,threads_content_publish';
 
     /**
@@ -63,7 +61,7 @@ class ThreadsAuth {
      * @return bool True if OAuth credentials are configured, false otherwise
      */
     public function is_configured(): bool {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
@@ -83,7 +81,7 @@ class ThreadsAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'threads');
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -109,7 +107,7 @@ class ThreadsAuth {
      * @return string|null Access token or null if not found/valid.
      */
     public function get_access_token(): ?string {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'threads');
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
@@ -137,7 +135,7 @@ class ThreadsAuth {
                 $account['access_token'] = $refreshed_data['access_token'];
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
                 // Update the site option immediately
-                apply_filters('dm_oauth', null, 'store', 'threads', $account);
+                apply_filters('dm_store_oauth_account', $account, 'threads');
                 return $refreshed_data['access_token']; // Return the new plaintext token
             } else {
                 // If refresh fails and token is already expired, return null
@@ -160,7 +158,7 @@ class ThreadsAuth {
      * @return string|null Page ID or null if not found.
      */
     public function get_page_id(): ?string {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'threads');
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -310,7 +308,7 @@ class ThreadsAuth {
         // Store token directly
 
         // Update site option with all collected details for admin-only architecture
-        apply_filters('dm_oauth', null, 'store', 'threads', $account_details);
+        apply_filters('dm_store_oauth_account', $account_details, 'threads');
         do_action('dm_log', 'debug', 'Threads account authenticated and token stored.', ['page_id' => $account_details['page_id']]);
 
         return true;
@@ -322,7 +320,7 @@ class ThreadsAuth {
      * @return string
      */
     private function get_client_id() {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         return $config['app_id'] ?? '';
     }
 
@@ -332,7 +330,7 @@ class ThreadsAuth {
      * @return string
      */
     private function get_client_secret() {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         return $config['app_secret'] ?? '';
     }
 
@@ -430,7 +428,7 @@ class ThreadsAuth {
      */
     public function remove_account(): bool {
         // Try to get the stored token to attempt revocation
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'threads');
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {
@@ -439,7 +437,7 @@ class ThreadsAuth {
 
         if ($token) {
             // Attempt token revocation with Facebook Graph API (Threads uses Facebook infrastructure)
-            $url = self::GRAPH_API_URL . '/me/permissions';
+            $url = 'https://graph.facebook.com/v19.0/me/permissions';
             $result = apply_filters('dm_request', null, 'DELETE', $url, [
                 'body' => ['access_token' => $token],
             ], 'Threads Authentication');
@@ -455,7 +453,7 @@ class ThreadsAuth {
         }
 
         // Always attempt to delete the site option regardless of revocation success
-        return apply_filters('dm_oauth', false, 'clear', 'threads');
+        return apply_filters('dm_clear_oauth_account', false, 'threads');
     }
 
     /**
@@ -465,7 +463,7 @@ class ThreadsAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'threads');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'threads');
         if (empty($account) || !is_array($account)) {
             return null;
         }
@@ -487,10 +485,7 @@ class ThreadsAuth {
             $error = sanitize_text_field(wp_unslash($_GET['error']));
             $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : 'No description provided.';
             do_action('dm_log', 'error', 'Threads OAuth Error (Callback Init): User denied access or error occurred.', ['error' => $error, 'description' => $error_description]);
-            // Add an admin notice by storing in transient and display on API keys page
-            set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_description), 60);
-            // Redirect back to the API keys page cleanly, removing error params
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=error'));
+            wp_redirect(add_query_arg('auth_error', 'threads_oauth_error', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
@@ -501,18 +496,11 @@ class ThreadsAuth {
             exit;
         }
 
-        // Check user permissions (should be logged in to WP admin)
-        if (!current_user_can('manage_options')) {
-             do_action('dm_log', 'error', 'Threads OAuth Error: User does not have permission.');
-             wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-pipelines')));
-             exit;
-        }
-
         $code = sanitize_text_field(wp_unslash($_GET['code']));
         $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // Retrieve stored app credentials from global options
-        $config = apply_filters('dm_oauth', [], 'get_config', 'threads');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         $app_id = $config['app_id'] ?? '';
         $app_secret = $config['app_secret'] ?? '';
         if (empty($app_id) || empty($app_secret)) {
@@ -528,12 +516,10 @@ class ThreadsAuth {
             $error_code = $result->get_error_code();
             $error_message = $result->get_error_message();
             do_action('dm_log', 'error', 'Threads OAuth Callback Failed.', ['error_code' => $error_code, 'error_message' => $error_message]);
-            set_transient('dm_oauth_error_threads', 'Threads authentication failed: ' . esc_html($error_message), 60);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=error_token'));
+            wp_redirect(add_query_arg('auth_error', 'threads_token_exchange_failed', admin_url('admin.php?page=dm-pipelines')));
         } else {
             do_action('dm_log', 'debug', 'Threads OAuth Callback Successful.');
-            set_transient('dm_oauth_success_threads', 'Threads account connected successfully!', 60);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&dm_oauth_status=success'));
+            wp_redirect(add_query_arg('auth_success', 'threads', admin_url('admin.php?page=dm-pipelines')));
         }
         exit;
     }

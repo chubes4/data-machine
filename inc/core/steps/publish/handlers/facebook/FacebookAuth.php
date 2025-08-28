@@ -21,10 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class FacebookAuth {
 
     // Constants for Facebook OAuth
-    const AUTH_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
-    const TOKEN_URL = 'https://graph.facebook.com/v19.0/oauth/access_token';
-    const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts';
-    const GRAPH_API_URL = 'https://graph.facebook.com/v19.0';
+    const AUTH_URL = 'https://www.facebook.com/v23.0/dialog/oauth';
+    const TOKEN_URL = 'https://graph.facebook.com/v23.0/oauth/access_token';
+    const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_comments,business_management';
+    const GRAPH_API_URL = 'https://graph.facebook.com/v23.0';
 
     /**
      * Constructor - parameter-less for pure filter-based architecture
@@ -61,7 +61,7 @@ class FacebookAuth {
      * @return bool True if OAuth credentials are configured, false otherwise
      */
     public function is_configured(): bool {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
@@ -81,7 +81,7 @@ class FacebookAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'facebook');
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -106,7 +106,7 @@ class FacebookAuth {
      * @return string|null Page Access token or null if not found/valid.
      */
     public function get_page_access_token(): ?string {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'facebook');
         if (empty($account) || !is_array($account) || empty($account['page_access_token'])) {
             return null;
         }
@@ -127,7 +127,7 @@ class FacebookAuth {
      * @return string|null Page ID or null if not found.
      */
     public function get_page_id(): ?string {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'facebook');
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -251,7 +251,7 @@ class FacebookAuth {
         ];
 
         // Store details in site options for admin-only architecture
-        apply_filters('dm_oauth', null, 'store', 'facebook', $account_details);
+        apply_filters('dm_store_oauth_account', $account_details, 'facebook');
         do_action('dm_log', 'debug',
             'Facebook account authenticated. User and Page credentials stored.',
             [
@@ -292,7 +292,7 @@ class FacebookAuth {
      * @return string
      */
     private function get_client_id() {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         return $config['app_id'] ?? '';
     }
 
@@ -302,7 +302,7 @@ class FacebookAuth {
      * @return string
      */
     private function get_client_secret() {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         return $config['app_secret'] ?? '';
     }
 
@@ -393,13 +393,40 @@ class FacebookAuth {
 
     /**
      * Fetches the Pages the user manages using the User Access Token.
+     * Uses /me/pages endpoint which is appropriate for manage_pages permission.
      *
      * @param string $user_access_token The valid User Access Token.
      * @return array|\WP_Error An array containing the first page's 'id', 'name', and 'access_token', or WP_Error on failure.
      */
     private function get_page_credentials(string $user_access_token): array|\WP_Error {
-        do_action('dm_log', 'debug', 'Fetching Facebook page credentials.');
+        do_action('dm_log', 'debug', 'Fetching Facebook page credentials.', [
+            'token_length' => strlen($user_access_token),
+            'token_preview' => substr($user_access_token, 0, 15) . '...',
+            'api_version' => str_replace('https://graph.facebook.com/', '', self::GRAPH_API_URL)
+        ]);
+        
+        // First, check permissions to help debug "no pages found" issue
+        $permissions_url = self::GRAPH_API_URL . '/me/permissions';
+        $permissions_result = apply_filters('dm_request', null, 'GET', $permissions_url, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $user_access_token,
+            ],
+        ], 'Facebook Permissions Check');
+        
+        if ($permissions_result['success']) {
+            $permissions_data = json_decode($permissions_result['data'], true);
+            do_action('dm_log', 'debug', 'Facebook permissions check', [
+                'permissions' => $permissions_data['data'] ?? [],
+                'raw_response' => $permissions_result['data']
+            ]);
+        }
+        
+        // Use /me/accounts endpoint (recommended for pages_show_list permission)
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
+
+        do_action('dm_log', 'debug', 'Attempting to fetch Facebook pages from /me/accounts endpoint.', [
+            'url' => $url
+        ]);
 
         // Use dm_request filter for Facebook pages fetch
         $result = apply_filters('dm_request', null, 'GET', $url, [
@@ -409,7 +436,9 @@ class FacebookAuth {
         ], 'Facebook Authentication');
         
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Facebook Page Fetch Error: Request failed.', ['error' => $result['error']]);
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: Request failed.', [
+                'error' => $result['error']
+            ]);
             return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $result['error']);
         }
         
@@ -417,26 +446,88 @@ class FacebookAuth {
         $data = json_decode($body, true);
         $http_code = $result['status_code'];
 
+        // Enhanced debugging for "no pages found" issue
+        do_action('dm_log', 'debug', 'Facebook pages API response', [
+            'url' => $url,
+            'http_code' => $http_code,
+            'response_body' => $body,
+            'response_length' => strlen($body),
+            'data_structure' => is_array($data) ? array_keys($data) : 'not_array',
+            'data_content' => $data,
+            'has_data_key' => isset($data['data']),
+            'data_array_count' => isset($data['data']) && is_array($data['data']) ? count($data['data']) : 'not_array',
+            'token_length' => strlen($user_access_token),
+            'token_prefix' => substr($user_access_token, 0, 10) . '...',
+        ]);
+
         if ($http_code !== 200 || !isset($data['data'])) {
             $error_message = $data['error']['message'] ?? 'Failed to retrieve pages from Facebook.';
-            do_action('dm_log', 'error', 'Facebook Page Fetch Error: API error.', ['http_code' => $http_code, 'response' => $body]);
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: API error.', [
+                'http_code' => $http_code, 
+                'response' => $body
+            ]);
             return new \WP_Error('facebook_page_api_error', $error_message, $data);
         }
 
         if (empty($data['data'])) {
-            do_action('dm_log', 'error', 'Facebook Page Fetch Error: No pages found for this user.', ['response' => $body]);
-            return new \WP_Error('facebook_no_pages_found', __('No Facebook pages associated with this account were found. Please ensure the account manages at least one page and granted necessary permissions.', 'data-machine'));
+            do_action('dm_log', 'error', 'Facebook Page Fetch Error: No pages found for this user.', [
+                'response' => $body,
+                'data_isset' => isset($data['data']),
+                'data_is_array' => isset($data['data']) ? is_array($data['data']) : false,
+                'data_empty' => isset($data['data']) ? empty($data['data']) : true,
+                'full_data_structure' => $data,
+                'error_triggered_condition' => 'empty($data[\'data\']) returned true',
+                'endpoint_used' => '/me/accounts',
+                'permission_required' => 'pages_show_list'
+            ]);
+            
+            // Check if we have permission data to provide more helpful error message
+            $error_message = __('No Facebook pages were found for this account using the /me/accounts endpoint.', 'data-machine');
+            
+            if ($permissions_result['success']) {
+                $permissions_data = json_decode($permissions_result['data'], true);
+                $has_manage_pages = false;
+                
+                if (isset($permissions_data['data']) && is_array($permissions_data['data'])) {
+                    foreach ($permissions_data['data'] as $permission) {
+                        if (isset($permission['permission']) && $permission['permission'] === 'pages_show_list' && $permission['status'] === 'granted') {
+                            $has_manage_pages = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($has_manage_pages) {
+                    $error_message = __('No Facebook pages found despite having "pages_show_list" permission. This may indicate: 1) The account has no pages, 2) The account is not an admin/editor of any pages, or 3) Pages are managed through Business Manager and require different API access patterns.', 'data-machine');
+                } else {
+                    $error_message = __('The "pages_show_list" permission was not granted or is not active. Please ensure you grant the "pages_show_list" permission during authentication and that your account has admin/editor access to at least one Facebook page.', 'data-machine');
+                }
+            }
+            
+            return new \WP_Error('facebook_no_pages_found', $error_message);
         }
 
         // Return the first page found
         $first_page = $data['data'][0];
+        
+        do_action('dm_log', 'debug', 'Facebook: Processing first page from API response', [
+            'total_pages_found' => count($data['data']),
+            'first_page_keys' => array_keys($first_page),
+            'page_id' => $first_page['id'] ?? 'missing',
+            'page_name' => $first_page['name'] ?? 'missing',
+            'has_access_token' => !empty($first_page['access_token'])
+        ]);
 
         if (empty($first_page['id']) || empty($first_page['access_token']) || empty($first_page['name'])) {
-             do_action('dm_log', 'error', 'Facebook Page Fetch Error: Incomplete data for the first page.', ['page_data' => $first_page]);
+             do_action('dm_log', 'error', 'Facebook Page Fetch Error: Incomplete data for the first page.', [
+                 'page_data' => $first_page
+             ]);
             return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'data-machine'));
         }
 
-        do_action('dm_log', 'debug', 'Successfully fetched credentials for Facebook page.', ['page_id' => $first_page['id']]);
+        do_action('dm_log', 'debug', 'Successfully fetched credentials for Facebook page.', [
+            'page_id' => $first_page['id']
+        ]);
 
         return [
             'id'           => $first_page['id'],
@@ -454,7 +545,7 @@ class FacebookAuth {
      */
     public function remove_account(): bool {
         // Try to get the stored token to attempt deauthorization
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'facebook');
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['user_access_token'])) {
@@ -477,7 +568,48 @@ class FacebookAuth {
         }
 
         // Always attempt to delete the site option regardless of deauth success
-        return apply_filters('dm_oauth', false, 'clear', 'facebook');
+        return apply_filters('dm_clear_oauth_account', false, 'facebook');
+    }
+
+    /**
+     * Check if the authenticated account has comment permissions
+     *
+     * @return bool True if comment permissions are available, false otherwise
+     */
+    public function has_comment_permission(): bool {
+        $page_access_token = $this->get_page_access_token();
+        if (!$page_access_token) {
+            return false;
+        }
+
+        // Check permissions for the page access token
+        $permissions_url = self::GRAPH_API_URL . '/me/permissions?access_token=' . $page_access_token;
+        
+        $result = apply_filters('dm_request', null, 'GET', $permissions_url, [], 'Facebook Comment Permission Check');
+        
+        if (!$result['success']) {
+            do_action('dm_log', 'debug', 'Facebook: Failed to check comment permissions', [
+                'error' => $result['error']
+            ]);
+            return false;
+        }
+        
+        $data = json_decode($result['data'], true);
+        
+        if (!isset($data['data']) || !is_array($data['data'])) {
+            return false;
+        }
+        
+        // Look for pages_manage_comments permission
+        foreach ($data['data'] as $permission) {
+            if (isset($permission['permission']) && 
+                $permission['permission'] === 'pages_manage_comments' && 
+                $permission['status'] === 'granted') {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -487,7 +619,7 @@ class FacebookAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'facebook');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'facebook');
         if (empty($account) || !is_array($account)) {
             return null;
         }
@@ -520,18 +652,11 @@ class FacebookAuth {
             exit;
         }
 
-        // Check user permissions (should be logged in to WP admin)
-        if (!current_user_can('manage_options')) {
-             do_action('dm_log', 'error', 'Facebook OAuth Error: User does not have permission.');
-             wp_redirect(add_query_arg('auth_error', 'permission_denied', admin_url('admin.php?page=dm-pipelines')));
-             exit;
-        }
-
         $code = sanitize_text_field(wp_unslash($_GET['code']));
         $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // Retrieve stored app credentials from global options
-        $config = apply_filters('dm_oauth', [], 'get_config', 'facebook');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         $app_id = $config['app_id'] ?? '';
         $app_secret = $config['app_secret'] ?? '';
         if (empty($app_id) || empty($app_secret)) {

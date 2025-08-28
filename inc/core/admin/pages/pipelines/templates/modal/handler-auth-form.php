@@ -50,7 +50,7 @@ if (!$has_auth) {
 }
 
 // Get current configuration and authentication status
-$current_config = apply_filters('dm_oauth', [], 'get_config', $handler_slug);
+$current_config = apply_filters('dm_retrieve_oauth_keys', [], $handler_slug);
 $is_authenticated = $auth_instance->is_authenticated();
 $config_fields = method_exists($auth_instance, 'get_config_fields') ? $auth_instance->get_config_fields() : [];
 $account_details = null;
@@ -191,7 +191,7 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         // EXACT COPY FROM EDIT HANDLER BUTTON
         $template_slug = $handler_slug;
         ?>
-        <button type="button" class="button button-secondary dm-modal-open" 
+        <button type="button" class="button button-secondary dm-modal-content" 
                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
                 data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
             <?php esc_html_e('Back to Settings', 'data-machine'); ?>

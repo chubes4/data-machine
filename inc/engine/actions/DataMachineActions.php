@@ -118,14 +118,6 @@ function dm_register_core_actions() {
         
         $success = $processed_items->add_processed_item($flow_step_id, $source_type, $item_identifier, $job_id);
         
-        // Centralized logging for processed item tracking
-        do_action('dm_log', 'debug', 'Item marked as processed via hook', [
-            'flow_step_id' => $flow_step_id,
-            'job_id' => $job_id,
-            'source_type' => $source_type,
-            'identifier' => substr($item_identifier, 0, 50) . '...',
-            'success' => $success
-        ]);
         
         return $success;
     }, 10, 4);

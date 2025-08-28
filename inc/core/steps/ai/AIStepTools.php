@@ -262,7 +262,7 @@ class AIStepTools {
      * @param string $flow_step_id Flow step ID for logging
      * @return array Tool execution result
      */
-    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id): array {
+    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, $original_id = null): array {
         $tool_def = $available_tools[$tool_name] ?? null;
         if (!$tool_def) {
             return [
@@ -273,57 +273,14 @@ class AIStepTools {
         }
 
         try {
-            // Extract additional parameters from data packet
+            // Build parameters using engine-provided original_id and data packet content
             $handler_config = $tool_def['handler_config'] ?? [];
+            $complete_parameters = self::buildToolParameters($tool_parameters, $data, $handler_config, $original_id);
             
-            // Search through ALL data entries to find original_id (like UpdateStep does)
-            $data_packet_parameters = [];
-            foreach ($data as $data_entry) {
-                $entry_parameters = self::extractParametersFromData($data_entry, $handler_config);
-                if (isset($entry_parameters['original_id'])) {
-                    $data_packet_parameters = $entry_parameters;
-                    do_action('dm_log', 'debug', 'AIStepTools: Found original_id in data entry', [
-                        'flow_step_id' => $flow_step_id,
-                        'tool_name' => $tool_name,
-                        'original_id' => $entry_parameters['original_id'],
-                        'data_entry_type' => $data_entry['type'] ?? 'unknown',
-                        'data_entry_source' => $data_entry['metadata']['source_type'] ?? 'unknown'
-                    ]);
-                    break; // Found the entry with original_id - use it
-                }
-            }
-            
-            // If no original_id found, use the latest data entry as fallback
-            if (empty($data_packet_parameters) && !empty($data)) {
-                $data_packet_parameters = self::extractParametersFromData($data[0], $handler_config);
-                do_action('dm_log', 'debug', 'AIStepTools: No original_id found, using latest data entry', [
-                    'flow_step_id' => $flow_step_id,
-                    'tool_name' => $tool_name,
-                    'latest_entry_type' => $data[0]['type'] ?? 'unknown',
-                    'latest_entry_source' => $data[0]['metadata']['source_type'] ?? 'unknown'
-                ]);
-            }
-            
-            // System parameters take precedence over AI parameters for predetermined fields
-            $system_managed = ['original_id', 'source_url', 'image_url'];
-            $complete_parameters = $tool_parameters; // Start with AI parameters
-            foreach ($system_managed as $param) {
-                if (isset($data_packet_parameters[$param])) {
-                    $complete_parameters[$param] = $data_packet_parameters[$param];
-                }
-            }
-            
-            // Debug logging for complete parameters sent to tool
-            do_action('dm_log', 'debug', 'AI Step Tools: Complete parameters for tool execution', [
+            do_action('dm_log', 'debug', 'AIStepTools: Executing tool', [
                 'flow_step_id' => $flow_step_id,
                 'tool_name' => $tool_name,
-                'data_packet_source_url' => $data_packet_parameters['source_url'] ?? 'not_set',
-                'tool_param_source_url' => $tool_parameters['source_url'] ?? 'not_set', 
-                'final_source_url' => $complete_parameters['source_url'] ?? 'not_set',
-                'data_packet_image_url' => $data_packet_parameters['image_url'] ?? 'not_set',
-                'tool_param_image_url' => $tool_parameters['image_url'] ?? 'not_set',
-                'final_image_url' => $complete_parameters['image_url'] ?? 'not_set',
-                'all_parameter_keys' => array_keys($complete_parameters)
+                'has_original_id' => isset($complete_parameters['original_id'])
             ]);
             
             // Direct tool execution following established pattern
@@ -358,6 +315,40 @@ class AIStepTools {
     }
 
     /**
+     * Build tool parameters using engine-provided original_id and data packet content
+     * 
+     * @param array $tool_parameters AI-provided parameters
+     * @param array $data Complete data packet array
+     * @param array $handler_config Handler configuration settings
+     * @param string|null $original_id Engine-provided original_id
+     * @return array Complete tool parameters
+     */
+    private static function buildToolParameters(array $tool_parameters, array $data, array $handler_config, $original_id = null): array {
+        $complete_parameters = $tool_parameters;
+        
+        // Add engine-provided original_id if available
+        if ($original_id !== null) {
+            $complete_parameters['original_id'] = $original_id;
+        }
+        
+        // Extract additional parameters from latest data entry
+        if (!empty($data)) {
+            $latest_entry = $data[0];
+            $additional_params = self::extractParametersFromData($latest_entry, $handler_config);
+            
+            // System parameters take precedence over AI parameters for specific fields
+            $system_managed = ['source_url', 'image_url'];
+            foreach ($system_managed as $param) {
+                if (isset($additional_params[$param])) {
+                    $complete_parameters[$param] = $additional_params[$param];
+                }
+            }
+        }
+        
+        return $complete_parameters;
+    }
+
+    /**
      * Extract tool parameters from data entry for tool calling
      * 
      * @param array $data_entry Latest data entry from data packet array
@@ -369,34 +360,25 @@ class AIStepTools {
         
         // Extract content from data entry
         $content_data = $data_entry['content'] ?? [];
-        
         if (isset($content_data['title'])) {
             $parameters['title'] = $content_data['title'];
         }
-        
         if (isset($content_data['body'])) {
             $parameters['content'] = $content_data['body'];
         }
         
-        // Extract metadata - CRITICAL: Include original_id for updates
+        // Extract metadata
         $metadata = $data_entry['metadata'] ?? [];
         if (isset($metadata['original_id'])) {
             $parameters['original_id'] = $metadata['original_id'];
         }
         if (isset($metadata['source_url'])) {
             $parameters['source_url'] = $metadata['source_url'];
-            
-            do_action('dm_log', 'debug', 'AI Step Tools: Source URL extracted from metadata', [
-                'metadata_source_url' => $metadata['source_url'],
-                'extracted_source_url' => $parameters['source_url'],
-                'data_entry_type' => $data_entry['type'] ?? 'unknown'
-            ]);
         }
         
-        // Extract attachments/media if available
+        // Extract image URL from attachments or metadata
         $attachments = $data_entry['attachments'] ?? [];
         if (!empty($attachments)) {
-            // Look for image attachments
             foreach ($attachments as $attachment) {
                 if (isset($attachment['type']) && $attachment['type'] === 'image') {
                     $parameters['image_url'] = $attachment['url'] ?? null;
@@ -405,19 +387,9 @@ class AIStepTools {
             }
         }
         
-        // Extract image URL from metadata (WordPress Media Fetch pattern)
+        // WordPress Media Fetch pattern
         if (isset($metadata['image_source_url'])) {
             $parameters['image_url'] = $metadata['image_source_url'];
-            
-            do_action('dm_log', 'debug', 'AI Step Tools: Image URL extracted from metadata', [
-                'metadata_image_source_url' => $metadata['image_source_url'],
-                'extracted_image_url' => $parameters['image_url'],
-                'url_is_valid' => filter_var($parameters['image_url'], FILTER_VALIDATE_URL)
-            ]);
-        } else {
-            do_action('dm_log', 'debug', 'AI Step Tools: No image_source_url in metadata', [
-                'metadata_keys' => array_keys($metadata)
-            ]);
         }
         
         return $parameters;

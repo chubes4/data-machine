@@ -35,7 +35,7 @@ class GoogleSearchConsoleAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -70,7 +70,7 @@ class GoogleSearchConsoleAuth {
      * @return bool True if OAuth credentials are configured, false otherwise
      */
     public function is_configured(): bool {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
         return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 
@@ -87,13 +87,13 @@ class GoogleSearchConsoleAuth {
             return new \WP_Error('gsc_client_missing', __('Google Client library not available. Please install google/apiclient via Composer.', 'data-machine'));
         }
 
-        $credentials = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+        $credentials = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
         if (empty($credentials) || empty($credentials['access_token'])) {
             do_action('dm_log', 'error', 'Missing Google Search Console credentials.');
             return new \WP_Error('gsc_missing_credentials', __('Google Search Console credentials not found. Please authenticate on the Settings page.', 'data-machine'));
         }
 
-        $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         if (empty($client_id) || empty($client_secret)) {
@@ -126,7 +126,7 @@ class GoogleSearchConsoleAuth {
                     
                     // Update stored credentials
                     $updated_credentials = array_merge($credentials, $new_token);
-                    apply_filters('dm_oauth', null, 'store', 'google_search_console', $updated_credentials);
+                    apply_filters('dm_store_oauth_account', $updated_credentials, 'google_search_console');
                 } else {
                     do_action('dm_log', 'error', 'Google Search Console token expired and no refresh token available.');
                     return new \WP_Error('gsc_token_expired', __('Google Search Console authentication expired. Please re-authenticate.', 'data-machine'));
@@ -148,15 +148,17 @@ class GoogleSearchConsoleAuth {
      */
     public function get_authorization_url() {
         // 1. Get Client ID/Secret from configuration
-        $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         if (empty($client_id) || empty($client_secret)) {
+            do_action('dm_log', 'error', 'Google Search Console OAuth configuration incomplete for URL generation.');
             return new \WP_Error('gsc_missing_config', __('Google Search Console Client ID/Secret not configured.', 'data-machine'));
         }
 
         // Check if Google Client library is available
         if (!class_exists('Google\Client')) {
+            do_action('dm_log', 'error', 'Google Client library not found during OAuth URL generation. Install google/apiclient via Composer.');
             return new \WP_Error('gsc_client_missing', __('Google Client library not available.', 'data-machine'));
         }
 
@@ -196,7 +198,7 @@ class GoogleSearchConsoleAuth {
     public function handle_oauth_callback() {
         // --- 1. Initial Checks --- 
         if (!current_user_can('manage_options')) {
-             wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_permission_denied'));
+             wp_redirect(add_query_arg('auth_error', 'gsc_permission_denied', admin_url('admin.php?page=data-machine')));
              exit;
         }
 
@@ -204,14 +206,14 @@ class GoogleSearchConsoleAuth {
         if (isset($_GET['error'])) {
             $error = sanitize_text_field(wp_unslash($_GET['error']));
             do_action('dm_log', 'warning', 'Google Search Console OAuth Error: ' . $error);
-            wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_' . $error));
+            wp_redirect(add_query_arg('auth_error', 'gsc_' . $error, admin_url('admin.php?page=data-machine')));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
             do_action('dm_log', 'error', 'Google Search Console OAuth Error: Missing code or state parameter.');
-            wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_missing_params'));
+            wp_redirect(add_query_arg('auth_error', 'gsc_missing_params', admin_url('admin.php?page=data-machine')));
             exit;
         }
 
@@ -224,17 +226,17 @@ class GoogleSearchConsoleAuth {
 
         if (empty($stored_state) || $stored_state !== $state) {
             do_action('dm_log', 'error', 'Google Search Console OAuth Error: Invalid state parameter.');
-            wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_invalid_state'));
+            wp_redirect(add_query_arg('auth_error', 'gsc_invalid_state', admin_url('admin.php?page=data-machine')));
             exit;
         }
 
         // --- 3. Get Configuration --- 
-        $config = apply_filters('dm_oauth', [], 'get_config', 'google_search_console');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         if (empty($client_id) || empty($client_secret)) {
             do_action('dm_log', 'error', 'Google Search Console OAuth Error: Missing configuration during callback.');
-            wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_missing_config'));
+            wp_redirect(add_query_arg('auth_error', 'gsc_missing_config', admin_url('admin.php?page=data-machine')));
             exit;
         }
 
@@ -253,7 +255,7 @@ class GoogleSearchConsoleAuth {
             // Check for errors during token exchange
             if (isset($access_token['error'])) {
                 do_action('dm_log', 'error', 'Google Search Console OAuth Error: ' . $access_token['error']);
-                wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_token_exchange_failed'));
+                wp_redirect(add_query_arg('auth_error', 'gsc_token_exchange_failed', admin_url('admin.php?page=data-machine')));
                 exit;
             }
 
@@ -268,16 +270,16 @@ class GoogleSearchConsoleAuth {
             ];
 
             // Store in centralized OAuth system
-            apply_filters('dm_oauth', null, 'store', 'google_search_console', $account_data);
+            apply_filters('dm_store_oauth_account', $account_data, 'google_search_console');
 
             // --- 6. Redirect on Success --- 
             do_action('dm_log', 'info', 'Google Search Console OAuth authentication successful.');
-            wp_redirect(admin_url('admin.php?page=data-machine&auth_success=google_search_console'));
+            wp_redirect(add_query_arg('auth_success', 'google_search_console', admin_url('admin.php?page=data-machine')));
             exit;
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Google Search Console OAuth Exception during callback: ' . $e->getMessage());
-            wp_redirect(admin_url('admin.php?page=data-machine&auth_error=gsc_callback_exception'));
+            wp_redirect(add_query_arg('auth_error', 'gsc_callback_exception', admin_url('admin.php?page=data-machine')));
             exit;
         }
     }
@@ -289,7 +291,7 @@ class GoogleSearchConsoleAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'google_search_console');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
@@ -303,7 +305,7 @@ class GoogleSearchConsoleAuth {
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        return apply_filters('dm_oauth', false, 'clear', 'google_search_console');
+        return apply_filters('dm_clear_oauth_account', false, 'google_search_console');
     }
 
     /**

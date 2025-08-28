@@ -74,7 +74,7 @@ dm_register_importexport_filters();
  * - dm_auth_providers: Authentication provider discovery
  * - dm_handler_settings: Handler configuration discovery  
  * - dm_handler_directives: AI directive discovery for handlers
- * - dm_oauth: Central OAuth operations for all handlers
+ * - OAuth operations moved to OAuth.php (dm_store_oauth_account, dm_retrieve_oauth_account, etc.)
  * - dm_request: WordPress HTTP request wrapper with logging
  * - dm_scheduler_intervals: Scheduler interval definitions
  * - dm_step_settings: Step configuration discovery (engine-level)
@@ -145,11 +145,6 @@ function dm_register_utility_filters() {
             $args['method'] = $method;
         }
 
-        // Log request initiation
-        do_action('dm_log', 'debug', "HTTP Request: {$method} to {$context}", [
-            'url' => $url, 
-            'method' => $method
-        ]);
 
         // Make the request using appropriate WordPress function
         $response = ($method === 'GET') ? wp_remote_get($url, $args) : wp_remote_request($url, $args);
@@ -243,13 +238,6 @@ function dm_register_utility_filters() {
             return ['success' => false, 'error' => $error_message];
         }
 
-        // Success - return structured response
-        do_action('dm_log', 'debug', "HTTP Request: Successful {$method} to {$context}", [
-            'url' => $url,
-            'method' => $method,
-            'status_code' => $status_code,
-            'content_length' => strlen($body)
-        ]);
 
         return [
             'success' => true,
@@ -329,6 +317,30 @@ function dm_register_utility_filters() {
     }, 10, 3);
     
     // OAuth operations moved to OAuth.php for URL rewrite system integration
+    
+    // Step Additional Parameters System - Engine-level extensible parameter passing
+    // Usage: Components register via: add_filter('dm_step_additional_parameters', function($params, $data, $config, $step_type) { ... }, 10, 4);
+    // Engine calls: $params = apply_filters('dm_step_additional_parameters', [], $data, $flow_step_config, $step_type, $flow_step_id);
+    // Parameters are passed via: $step->execute($job_id, $flow_step_id, $data, $config, ...$params);
+    add_filter('dm_step_additional_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+        // Extract original_id parameter for update and ai steps
+        if (in_array($step_type, ['update', 'ai'])) {
+            $original_id = null;
+            
+            // Search data packet for original_id (once, at engine level)
+            foreach ($data as $data_entry) {
+                $metadata = $data_entry['metadata'] ?? [];
+                if (isset($metadata['original_id'])) {
+                    $original_id = $metadata['original_id'];
+                    break;
+                }
+            }
+            
+            $parameters[] = $original_id;
+        }
+        
+        return $parameters;
+    }, 10, 5);
     
     /**
      * AI API Error Logging Hook

@@ -57,70 +57,51 @@ function dm_register_oauth_system() {
         exit;
     }, 5);
     
-    // Central OAuth operations filter - eliminates handler-specific OAuth code duplication
-    // Account data: apply_filters('dm_oauth', [], 'retrieve', 'twitter'); apply_filters('dm_oauth', null, 'store', 'twitter', $data);
-    // Config data: apply_filters('dm_oauth', [], 'get_config', 'twitter'); apply_filters('dm_oauth', null, 'store_config', 'twitter', $config);
-    add_filter('dm_oauth', function($result, $operation, $handler, $data = null) {
-        // Use centralized option for all auth data
+    // Direct OAuth operations filters - eliminates action-type switching for better maintainability
+    // Account data: apply_filters('dm_retrieve_oauth_account', [], 'twitter'); apply_filters('dm_store_oauth_account', $data, 'twitter');
+    // Config data: apply_filters('dm_retrieve_oauth_keys', [], 'twitter'); apply_filters('dm_store_oauth_keys', $config, 'twitter');
+    
+    // Store OAuth account data (access tokens, user info)
+    add_filter('dm_store_oauth_account', function($data, $provider) {
         $all_auth_data = get_option('dm_auth_data', []);
-        
-        switch ($operation) {
-            case 'store':
-                // Store account data (access tokens, etc.)
-                if (!isset($all_auth_data[$handler])) {
-                    $all_auth_data[$handler] = [];
-                }
-                $all_auth_data[$handler]['account'] = $data;
-                return update_option('dm_auth_data', $all_auth_data);
-                
-            case 'retrieve':
-                // Retrieve account data
-                return $all_auth_data[$handler]['account'] ?? [];
-                
-            case 'clear':
-                // Clear account data only
-                if (isset($all_auth_data[$handler]['account'])) {
-                    unset($all_auth_data[$handler]['account']);
-                    return update_option('dm_auth_data', $all_auth_data);
-                }
-                return true;
-                
-            case 'store_config':
-                // Store configuration data (API keys, client secrets, etc.)
-                if (!isset($all_auth_data[$handler])) {
-                    $all_auth_data[$handler] = [];
-                }
-                $all_auth_data[$handler]['config'] = $data;
-                return update_option('dm_auth_data', $all_auth_data);
-                
-            case 'get_config':
-                // Retrieve configuration data
-                return $all_auth_data[$handler]['config'] ?? [];
-                
-            case 'clear_config':
-                // Clear configuration data only
-                if (isset($all_auth_data[$handler]['config'])) {
-                    unset($all_auth_data[$handler]['config']);
-                    return update_option('dm_auth_data', $all_auth_data);
-                }
-                return true;
-                
-            case 'clear_all':
-                // Clear both config and account data for handler
-                if (isset($all_auth_data[$handler])) {
-                    unset($all_auth_data[$handler]);
-                    return update_option('dm_auth_data', $all_auth_data);
-                }
-                return true;
-                
-            default:
-                do_action('dm_log', 'error', 'Invalid OAuth operation', [
-                    'operation' => $operation,
-                    'handler' => $handler
-                ]);
-                return false;
+        if (!isset($all_auth_data[$provider])) {
+            $all_auth_data[$provider] = [];
         }
-    }, 10, 4);
+        $all_auth_data[$provider]['account'] = $data;
+        return update_option('dm_auth_data', $all_auth_data);
+    }, 10, 2);
+    
+    // Retrieve OAuth account data
+    add_filter('dm_retrieve_oauth_account', function($result, $provider) {
+        $all_auth_data = get_option('dm_auth_data', []);
+        return $all_auth_data[$provider]['account'] ?? [];
+    }, 10, 2);
+    
+    // Clear OAuth account data only
+    add_filter('dm_clear_oauth_account', function($result, $provider) {
+        $all_auth_data = get_option('dm_auth_data', []);
+        if (isset($all_auth_data[$provider]['account'])) {
+            unset($all_auth_data[$provider]['account']);
+            return update_option('dm_auth_data', $all_auth_data);
+        }
+        return true;
+    }, 10, 2);
+    
+    // Store OAuth configuration data (API keys, client secrets)
+    add_filter('dm_store_oauth_keys', function($data, $provider) {
+        $all_auth_data = get_option('dm_auth_data', []);
+        if (!isset($all_auth_data[$provider])) {
+            $all_auth_data[$provider] = [];
+        }
+        $all_auth_data[$provider]['config'] = $data;
+        return update_option('dm_auth_data', $all_auth_data);
+    }, 10, 2);
+    
+    // Retrieve OAuth configuration data
+    add_filter('dm_retrieve_oauth_keys', function($result, $provider) {
+        $all_auth_data = get_option('dm_auth_data', []);
+        return $all_auth_data[$provider]['config'] ?? [];
+    }, 10, 2);
     
     // OAuth callback URL filter - provides public callback URLs for external APIs
     add_filter('dm_get_oauth_url', function($url, $provider) {
@@ -144,6 +125,7 @@ function dm_register_oauth_system() {
             return $auth_instance->get_authorization_url();
         }
         
+        do_action('dm_log', 'error', 'OAuth Error: Unknown provider requested.', ['provider' => $provider]);
         return new WP_Error('unknown_provider', __('Unknown OAuth provider.', 'data-machine'));
     }, 10, 2);
 }

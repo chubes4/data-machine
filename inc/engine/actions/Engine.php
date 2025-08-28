@@ -162,8 +162,9 @@ function dm_register_execution_engine() {
             // Create step instance (parameter-less constructor)
             $flow_step = new $step_class();
             
-            // Execute step with explicit job_id parameter
-            $data = $flow_step->execute( $job_id, $flow_step_id, $data ?: [], $flow_step_config );
+            // Execute step with core parameters + optional additional parameters
+            $additional_parameters = apply_filters('dm_step_additional_parameters', [], $data ?: [], $flow_step_config, $step_type, $flow_step_id);
+            $data = $flow_step->execute( $job_id, $flow_step_id, $data ?: [], $flow_step_config, ...$additional_parameters );
             
             // Success = non-empty data packet array, failure = empty array
             $step_success = ! empty( $data );

@@ -126,7 +126,7 @@ $response = apply_filters('ai_request', [
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
 $auth_providers = apply_filters('dm_auth_providers', []);
-$auth_account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+$auth_account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
 $settings = dm_get_data_machine_settings();
 
 // Tool management

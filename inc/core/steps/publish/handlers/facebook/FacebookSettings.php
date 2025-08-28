@@ -39,11 +39,6 @@ class FacebookSettings {
                 'label' => __('Include Images', 'data-machine'),
                 'description' => __('Attach images from the original content when available.', 'data-machine'),
             ],
-            'include_videos' => [
-                'type' => 'checkbox',
-                'label' => __('Include Video Links', 'data-machine'),
-                'description' => __('Include video links in the post content.', 'data-machine'),
-            ],
             'link_handling' => [
                 'type' => 'select',
                 'label' => __('Link Handling', 'data-machine'),
@@ -66,7 +61,6 @@ class FacebookSettings {
     public static function sanitize(array $raw_settings): array {
         $sanitized = [];
         $sanitized['include_images'] = isset($raw_settings['include_images']) && $raw_settings['include_images'] == '1';
-        $sanitized['include_videos'] = isset($raw_settings['include_videos']) && $raw_settings['include_videos'] == '1';
         $link_handling = $raw_settings['link_handling'] ?? 'append';
         if (!in_array($link_handling, ['append', 'comment', 'none'])) {
             do_action('dm_log', 'error', 'Facebook Settings: Invalid link_handling parameter provided', [
@@ -87,7 +81,6 @@ class FacebookSettings {
     public static function get_defaults(): array {
         return [
             'include_images' => false,
-            'include_videos' => false,
             'link_handling' => 'append',
         ];
     }

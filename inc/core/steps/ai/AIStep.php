@@ -35,9 +35,10 @@ class AIStep {
      * @param string $flow_step_id The flow step ID to process
      * @param array $data The cumulative data packet array for this job
      * @param array $flow_step_config The merged step configuration
+     * @param string|null $original_id The original ID for tool operations (passed from engine)
      * @return array Updated data packet array with AI output added
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null): array {
         try {
             // Pure filter architecture - no client instance needed
 
@@ -137,11 +138,6 @@ class AIStep {
                     'content' => $user_message
                 ]);
                 
-                do_action('dm_log', 'debug', 'AI Agent: Added user message as context', [
-                    'flow_step_id' => $flow_step_id,
-                    'message_length' => strlen($user_message),
-                    'total_messages' => count($messages)
-                ]);
             }
             
             // Ensure we have at least one message
@@ -193,14 +189,6 @@ class AIStep {
                 $available_tools = AIStepTools::getAvailableToolsForNextStep([], $pipeline_step_id);
             }
             
-            // Debug logging for tool availability
-            do_action('dm_log', 'debug', 'AI Agent: Tool discovery completed', [
-                'flow_step_id' => $flow_step_id,
-                'pipeline_step_id' => $pipeline_step_id,
-                'enabled_tools_config' => $step_ai_config['enabled_tools'] ?? [],
-                'total_available_tools' => count($available_tools),
-                'available_tool_names' => array_keys($available_tools)
-            ]);
             
             
             // Prepare AI request with messages and step configuration
@@ -248,12 +236,6 @@ class AIStep {
             $max_turns = 5; // Safety limit to prevent infinite loops
             $turn_count = 0;
             
-            do_action('dm_log', 'debug', 'AI Agent: Starting conversational loop', [
-                'flow_step_id' => $flow_step_id,
-                'initial_messages_count' => count($conversation_messages),
-                'available_tools' => array_keys($available_tools),
-                'max_turns' => $max_turns
-            ]);
 
             do {
                 $turn_count++;
@@ -262,17 +244,8 @@ class AIStep {
                 if ($turn_count > 1) {
                     $conversation_messages = AIConversationState::buildFromDataPackets($data, $messages);
                     
-                    do_action('dm_log', 'info', 'AI: Rebuilt conversation with context preservation', [
-                        'turn' => $turn_count,
-                        'total_messages' => count($conversation_messages)
-                    ]);
                 }
                 
-                do_action('dm_log', 'debug', 'AI Agent: Conversation turn starting', [
-                    'flow_step_id' => $flow_step_id,
-                    'turn_count' => $turn_count,
-                    'messages_count' => count($conversation_messages)
-                ]);
                 
                 // Make AI request for this turn
                 $current_request = [
@@ -324,16 +297,6 @@ class AIStep {
                 $tool_calls = $ai_response['data']['tool_calls'] ?? [];
                 $ai_content = $ai_response['data']['content'] ?? '';
                 
-                // Enhanced logging for natural tool calling behavior
-                do_action('dm_log', 'debug', 'AI Agent: Turn response analysis', [
-                    'flow_step_id' => $flow_step_id,
-                    'turn_count' => $turn_count,
-                    'has_tool_calls' => !empty($tool_calls),
-                    'tool_calls_count' => count($tool_calls),
-                    'has_ai_content' => !empty($ai_content),
-                    'ai_content_length' => strlen($ai_content),
-                    'ai_chose_tools_naturally' => !empty($tool_calls)
-                ]);
                 
                 // Store AI response in data packet for conversation continuity (claude.json pattern)
                 // Store response even if content is empty but tool calls exist
@@ -367,22 +330,9 @@ class AIStep {
                         'timestamp' => time()
                     ]);
                     
-                    do_action('dm_log', 'debug', 'AI Agent: Stored AI response in data packet', [
-                        'flow_step_id' => $flow_step_id,
-                        'turn_count' => $turn_count,
-                        'response_length' => strlen($response_body),
-                        'has_tool_calls' => !empty($tool_calls),
-                        'data_packet_count' => count($data)
-                    ]);
                 }
                 
                 if (!empty($tool_calls)) {
-                    do_action('dm_log', 'debug', 'AI Agent: Processing tool calls (natural selection)', [
-                        'flow_step_id' => $flow_step_id,
-                        'turn_count' => $turn_count,
-                        'tool_calls_count' => count($tool_calls),
-                        'tool_names' => array_column($tool_calls, 'name')
-                    ]);
                     
                     // AI chose to use tools - process each tool call
                     
@@ -401,7 +351,7 @@ class AIStep {
                         }
                         
                         // Execute tool using extracted class
-                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id);
+                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $original_id);
                         
                         // Tool result will be stored as data packet entry if it's a general tool
                         
@@ -410,13 +360,6 @@ class AIStep {
                         $is_handler_tool = $tool_def && isset($tool_def['handler']);
                         
                         if ($is_handler_tool && $tool_result['success']) {
-                            // Handler tool executed successfully - step complete
-                            do_action('dm_log', 'debug', 'AI Agent: Handler tool executed - step complete', [
-                                'flow_step_id' => $flow_step_id,
-                                'turn_count' => $turn_count,
-                                'handler_tool' => $tool_name,
-                                'total_conversation_turns' => $turn_count
-                            ]);
                             
                             $handler_tool_executed = true;
                             
@@ -455,21 +398,10 @@ class AIStep {
                             // Add tool result entry to front of data packet
                             array_unshift($data, $tool_result_entry);
                             
-                            do_action('dm_log', 'debug', 'AI Agent: Handler tool result added to data packet', [
-                                'flow_step_id' => $flow_step_id,
-                                'tool_name' => $tool_name,
-                                'entry_type' => 'ai_handler_complete',
-                                'data_packet_count' => count($data)
-                            ]);
                             
                             // Handler tool successful - conversation complete
                             $conversation_complete = true;
                             
-                            do_action('dm_log', 'info', 'AI: Handler tool executed successfully - step complete', [
-                                'turn' => $turn_count,
-                                'tool' => $tool_name,
-                                'handler' => $tool_def['handler'] ?? 'unknown'
-                            ]);
                             
                             break; // Exit tool loop
                             
@@ -504,11 +436,6 @@ class AIStep {
                                 'content' => $tool_result_content
                             ];
                             
-                            do_action('dm_log', 'info', 'AI: Tool result received and added to data packet', [
-                                'turn' => $turn_count,
-                                'tool' => $tool_name,
-                                'success' => $tool_result['success'] ?? false
-                            ]);
                         }
                     }
                     
@@ -519,16 +446,6 @@ class AIStep {
                     // Tool results already stored as data packet entries - no separate conversation storage needed
                     
                 } else {
-                    // No tool calls - AI chose not to use tools (natural behavior)
-                    do_action('dm_log', 'debug', 'AI Agent: No tool calls - AI chose not to use tools', [
-                        'flow_step_id' => $flow_step_id,
-                        'turn_count' => $turn_count,
-                        'has_content' => !empty($ai_content),
-                        'content_length' => strlen($ai_content),
-                        'tools_were_available' => !empty($available_tools),
-                        'available_tool_count' => count($available_tools),
-                        'ai_natural_choice' => 'no_tools'
-                    ]);
                     
                     $conversation_complete = true;
                     
@@ -546,12 +463,6 @@ class AIStep {
                 ]);
             }
             
-            do_action('dm_log', 'debug', 'AI Agent: Conversational loop complete', [
-                'flow_step_id' => $flow_step_id,
-                'total_turns' => $turn_count,
-                'conversation_complete' => $conversation_complete,
-                'final_data_count' => count($data)
-            ]);
             
             // Return updated data packet array
             return $data;

@@ -39,6 +39,7 @@
         // Send result to parent window if it exists
         if (window.opener && !window.opener.closed) {
             try {
+                // Send postMessage for backward compatibility
                 window.opener.postMessage({
                     type: 'oauth_complete',
                     success: !!authSuccess,
@@ -46,7 +47,31 @@
                     error: errorDetails
                 }, window.location.origin);
                 
+                // Fire new custom events for dm-auth-success/error
+                const eventType = authSuccess ? 'dm-auth-success' : 'dm-auth-error';
+                const eventDetail = {
+                    provider: provider
+                };
+                
+                if (authSuccess) {
+                    // Get account details for successful auth if available
+                    eventDetail.accountDetails = {
+                        provider: provider,
+                        authenticated_at: Date.now()
+                    };
+                } else {
+                    eventDetail.error = errorDetails || 'Authentication failed';
+                }
+                
+                console.log('Data Machine OAuth: Firing event', eventType, eventDetail);
+                
+                // Fire custom event on parent window
+                window.opener.dispatchEvent(new CustomEvent(eventType, {
+                    detail: eventDetail
+                }));
+                
             } catch (error) {
+                console.error('Data Machine OAuth: Error firing events', error);
             }
         }
         

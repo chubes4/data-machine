@@ -19,7 +19,7 @@ Core runtime contracts (filters/actions)
 - Execution: `dm_run_flow_now`, `dm_execute_step`, `dm_schedule_next_step`, `dm_generate_flow_step_id`, `dm_get_next_flow_step_id`.
 - Items/dedup: `dm_mark_item_processed`, `dm_is_item_processed`.
 - AI & tools: `ai_request`, `ai_tools`, `dm_tool_configured`, `dm_get_tool_config`, `dm_apply_global_defaults`.
-- OAuth & HTTP: `dm_oauth`, `dm_get_oauth_url`, `dm_auth_providers`, `dm_request` (HTTP wrapper).
+- OAuth & HTTP: `dm_retrieve_oauth_account`, `dm_store_oauth_account`, `dm_clear_oauth_account`, `dm_retrieve_oauth_keys`, `dm_store_oauth_keys`, `dm_get_oauth_url`, `dm_auth_providers`, `dm_request` (HTTP wrapper).
 - Files repo & status: `dm_files_repository`, `dm_detect_status`, `dm_log`.
 
 Project-specific conventions

@@ -39,7 +39,7 @@ class TwitterAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -74,7 +74,7 @@ class TwitterAuth {
      * @return bool True if API credentials are configured, false otherwise
      */
     public function is_configured(): bool {
-        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
         return !empty($config['api_key']) && !empty($config['api_secret']);
     }
 
@@ -84,19 +84,18 @@ class TwitterAuth {
      * @return TwitterOAuth|\WP_Error Authenticated connection object or WP_Error on failure.
      */
     public function get_connection() {
-        do_action('dm_log', 'debug', 'Attempting to get authenticated Twitter connection.');
 
-        $credentials = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+        $credentials = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
             do_action('dm_log', 'error', 'Missing Twitter credentials in options.');
-            return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate on the API Keys page.', 'data-machine'));
+            return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate.', 'data-machine'));
         }
 
         // Get the stored tokens directly
         $access_token = $credentials['access_token'];
         $access_token_secret = $credentials['access_token_secret'];
 
-        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
         $consumer_key = $config['api_key'] ?? '';
         $consumer_secret = $config['api_secret'] ?? '';
         if (empty($consumer_key) || empty($consumer_secret)) {
@@ -106,7 +105,6 @@ class TwitterAuth {
 
         try {
             $connection = new TwitterOAuth($consumer_key, $consumer_secret, $access_token, $access_token_secret);
-            do_action('dm_log', 'debug', 'Successfully created authenticated Twitter connection.');
             return $connection;
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Exception creating TwitterOAuth connection: ' . $e->getMessage());
@@ -129,7 +127,7 @@ class TwitterAuth {
      */
     public function get_authorization_url(): string {
         // 1. Get API Key/Secret from configuration
-        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
         if (empty($api_key) || empty($api_secret)) {
@@ -184,7 +182,7 @@ class TwitterAuth {
     public function handle_oauth_callback() {
         // --- 1. Initial Checks --- 
         if (!current_user_can('manage_options')) {
-             wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_permission_denied'));
+             wp_redirect(add_query_arg('auth_error', 'twitter_permission_denied', admin_url('admin.php?page=dm-pipelines')));
              exit;
         }
 
@@ -194,14 +192,14 @@ class TwitterAuth {
             // Clean up transient if we can identify it (optional)
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
             do_action('dm_log', 'warning', 'Twitter OAuth Warning: User denied access.', ['denied_token' => $denied_token]);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_access_denied'));
+            wp_redirect(add_query_arg('auth_error', 'twitter_access_denied', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['oauth_token']) || !isset($_GET['oauth_verifier'])) {
             do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['query_params' => $_GET]);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_callback_params'));
+            wp_redirect(add_query_arg('auth_error', 'twitter_missing_callback_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
@@ -215,16 +213,16 @@ class TwitterAuth {
 
         if (empty($oauth_token_secret)) {
             do_action('dm_log', 'error', 'Twitter OAuth Error: Request token secret missing or expired in transient.', ['oauth_token' => $oauth_token]);
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_token_secret_expired'));
+            wp_redirect(add_query_arg('auth_error', 'twitter_token_secret_expired', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
-        $config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
         if (empty($api_key) || empty($api_secret)) {
             do_action('dm_log', 'error', 'Twitter OAuth Error: API Key/Secret missing during callback.');
-            wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_missing_app_keys'));
+            wp_redirect(add_query_arg('auth_error', 'twitter_missing_app_keys', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
@@ -242,7 +240,7 @@ class TwitterAuth {
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
                 ]);
-                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_access_token_failed'));
+                wp_redirect(add_query_arg('auth_error', 'twitter_access_token_failed', admin_url('admin.php?page=dm-pipelines')));
                 exit;
             }
 
@@ -257,39 +255,19 @@ class TwitterAuth {
             ];
 
             // Store in site options for admin-only authentication
-            apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
+            apply_filters('dm_store_oauth_account', $account_data, 'twitter');
 
             // --- 5. Redirect on Success --- 
-            // Check if this is a modal context request
-            $modal_context = isset($_GET['modal_context']) && $_GET['modal_context'] === '1';
-            
-            if ($modal_context) {
-                // Modal context - show simple success page that closes window
-                $this->show_modal_oauth_result('success', 'twitter');
-                exit;
-            } else {
-                // Traditional context - redirect to pipelines page
-                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_success=twitter'));
-                exit;
-            }
+            wp_redirect(add_query_arg('auth_success', 'twitter', admin_url('admin.php?page=dm-pipelines')));
+            exit;
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Twitter OAuth Exception during callback: ' . $e->getMessage());
-            
-            // Check if this is a modal context request
-            $modal_context = isset($_GET['modal_context']) && $_GET['modal_context'] === '1';
-            
-            if ($modal_context) {
-                // Modal context - show simple error page
-                $this->show_modal_oauth_result('error', 'twitter', 'callback_exception', $e->getMessage());
-                exit;
-            } else {
-                // Traditional context - redirect to pipelines page
-                wp_redirect(admin_url('admin.php?page=dm-pipelines&auth_error=twitter_callback_exception'));
-                exit;
-            }
+            wp_redirect(add_query_arg('auth_error', 'twitter_callback_exception', admin_url('admin.php?page=dm-pipelines')));
+            exit;
         }
     }
+
 
     /**
      * Retrieves the stored Twitter account details.
@@ -298,7 +276,7 @@ class TwitterAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['access_token_secret'])) {
             return null;
         }
@@ -312,7 +290,7 @@ class TwitterAuth {
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        return apply_filters('dm_oauth', false, 'clear', 'twitter');
+        return apply_filters('dm_clear_oauth_account', false, 'twitter');
     }
 
 }

@@ -118,7 +118,11 @@ public function execute($job_id, $flow_step_id, array $data = [], array $flow_st
 - `apply_filters('dm_get_flow_config', [], $flow_id)`
 - `apply_filters('dm_create_pipeline', null, $data)`
 - `apply_filters('dm_create_step', null, $data)`
-- `apply_filters('dm_oauth', [], 'operation', 'handler')`
+- `apply_filters('dm_retrieve_oauth_account', [], 'handler')`
+- `apply_filters('dm_store_oauth_account', $data, 'handler')`
+- `apply_filters('dm_clear_oauth_account', false, 'handler')`
+- `apply_filters('dm_retrieve_oauth_keys', [], 'handler')`
+- `apply_filters('dm_store_oauth_keys', $config, 'handler')`
 
 **Available Actions:**
 - `do_action('dm_log', $level, $message, $context)`

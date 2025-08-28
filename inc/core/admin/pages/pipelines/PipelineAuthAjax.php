@@ -55,7 +55,7 @@ class PipelineAuthAjax
         }
 
         // Clear OAuth credentials using dm_oauth filter
-        $cleared = apply_filters('dm_oauth', false, 'clear', $handler_slug);
+        $cleared = apply_filters('dm_clear_oauth_account', false, $handler_slug);
         
         if ($cleared) {
             do_action('dm_log', 'debug', 'Account disconnected successfully', [
@@ -189,7 +189,7 @@ class PipelineAuthAjax
         $config_data = [];
 
         // Get existing configuration to handle unchanged saves
-        $existing_config = apply_filters('dm_oauth', [], 'get_config', $handler_slug);
+        $existing_config = apply_filters('dm_retrieve_oauth_keys', [], $handler_slug);
 
         // Validate and sanitize each field
         foreach ($config_fields as $field_name => $field_config) {
@@ -209,7 +209,7 @@ class PipelineAuthAjax
         }
 
         // Save configuration using dm_oauth filter
-        $saved = apply_filters('dm_oauth', null, 'store_config', $handler_slug, $config_data);
+        $saved = apply_filters('dm_store_oauth_keys', $config_data, $handler_slug);
         
         if ($saved) {
             wp_send_json_success(['message' => __('Configuration saved successfully', 'data-machine')]);

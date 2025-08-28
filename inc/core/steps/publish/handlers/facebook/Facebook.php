@@ -86,10 +86,14 @@ class Facebook {
         // Get handler configuration from tool definition
         $handler_config = $tool_def['handler_config'] ?? [];
         
+        // Extract Facebook-specific configuration (it's nested under 'facebook' key)
+        $facebook_config = $handler_config['facebook'] ?? [];
+        
         do_action('dm_log', 'debug', 'Facebook Tool: Using handler configuration', [
-            'include_images' => $handler_config['include_images'] ?? true,
-            'include_videos' => $handler_config['include_videos'] ?? true,
-            'link_handling' => $handler_config['link_handling'] ?? 'append'
+            'full_handler_config' => $handler_config,
+            'facebook_config' => $facebook_config,
+            'include_images' => $facebook_config['include_images'] ?? false,
+            'link_handling' => $facebook_config['link_handling'] ?? 'append'
         ]);
 
         // Extract parameters
@@ -98,10 +102,9 @@ class Facebook {
         $source_url = $parameters['source_url'] ?? null;
         $image_url = $parameters['image_url'] ?? null;
         
-        // Get config from handler settings
-        $include_images = $handler_config['include_images'] ?? true;
-        $include_videos = $handler_config['include_videos'] ?? true;
-        $link_handling = $handler_config['link_handling'] ?? 'append';
+        // Get config from Facebook-specific settings
+        $include_images = $facebook_config['include_images'] ?? false;
+        $link_handling = $facebook_config['link_handling'] ?? 'append';
 
         // Get authenticated credentials
         $page_id = $this->auth->get_page_id();
@@ -140,10 +143,12 @@ class Facebook {
             ];
 
             // Handle image upload if provided and enabled
+            // Handle image upload if provided and enabled
             if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
                 $image_result = $this->upload_image_to_facebook($image_url, $page_access_token, $page_id);
                 if ($image_result && isset($image_result['id'])) {
-                    $post_data['object_attachment'] = $image_result['id'];
+                    // Use the correct parameter name for Facebook API
+                    $post_data['attached_media'] = json_encode([['media_fbid' => $image_result['id']]]);
                 }
             }
 
@@ -180,7 +185,34 @@ class Facebook {
                 // Handle URL as comment if configured
                 $comment_result = null;
                 if ($link_handling === 'comment' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
-                    $comment_result = $this->post_comment($post_id, $source_url, $page_access_token);
+                    // Check if we have comment permissions before attempting to post
+                    if ($this->auth && $this->auth->has_comment_permission()) {
+                        do_action('dm_log', 'debug', 'Facebook Tool: Attempting to post link as comment', [
+                            'post_id' => $post_id,
+                            'source_url' => $source_url,
+                            'link_handling' => $link_handling
+                        ]);
+                        $comment_result = $this->post_comment($post_id, $source_url, $page_access_token);
+                    } else {
+                        $comment_result = [
+                            'success' => false,
+                            'error' => 'Facebook comment skipped: Missing pages_manage_comments permission. Please re-authenticate your Facebook account to enable comment functionality.',
+                            'requires_reauth' => true
+                        ];
+                        
+                        do_action('dm_log', 'warning', 'Facebook Tool: Comment skipped due to missing permissions', [
+                            'post_id' => $post_id,
+                            'source_url' => $source_url,
+                            'requires_reauth' => true
+                        ]);
+                    }
+                } else {
+                    do_action('dm_log', 'debug', 'Facebook Tool: Comment conditions not met', [
+                        'link_handling' => $link_handling,
+                        'has_source_url' => !empty($source_url),
+                        'source_url_valid' => !empty($source_url) ? filter_var($source_url, FILTER_VALIDATE_URL) : false,
+                        'source_url' => $source_url ?? 'null'
+                    ]);
                 }
 
                 $result_data = [
@@ -290,14 +322,30 @@ class Facebook {
                 ];
             } else {
                 $error_msg = 'Facebook comment API error: ' . ($response_data['error']['message'] ?? 'Unknown error');
-                do_action('dm_log', 'warning', 'Facebook Tool: Comment posting failed', [
-                    'response_data' => $response_data,
-                    'post_id' => $post_id
-                ]);
+                $error_code = $response_data['error']['code'] ?? null;
+                
+                // Check if this is a permissions error
+                if ($error_code === 200 && strpos($error_msg, 'sufficient permissions') !== false) {
+                    $error_msg = 'Facebook comment failed: Missing pages_manage_comments permission. Please re-authenticate your Facebook account to enable comment functionality.';
+                    
+                    do_action('dm_log', 'warning', 'Facebook Tool: Comment failed due to missing permissions', [
+                        'error_code' => $error_code,
+                        'error_message' => $response_data['error']['message'] ?? 'No message',
+                        'post_id' => $post_id,
+                        'requires_reauth' => true
+                    ]);
+                } else {
+                    do_action('dm_log', 'warning', 'Facebook Tool: Comment posting failed', [
+                        'response_data' => $response_data,
+                        'post_id' => $post_id,
+                        'error_code' => $error_code
+                    ]);
+                }
 
                 return [
                     'success' => false,
-                    'error' => $error_msg
+                    'error' => $error_msg,
+                    'requires_reauth' => $error_code === 200
                 ];
             }
         } catch (\Exception $e) {
@@ -338,10 +386,10 @@ class Facebook {
         }
 
         try {
-            // Upload to Facebook
+            // Try Facebook's URL-based upload first (simpler and often more reliable)
             $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$page_id}/photos";
             $photo_data = [
-                'source' => new \CURLFile($temp_image_path),
+                'url' => $image_url,
                 'published' => 'false', // Upload but don't publish yet
                 'access_token' => $access_token
             ];
@@ -401,9 +449,6 @@ class Facebook {
         
         // include_images - provide default if missing
         $sanitized['include_images'] = (bool) ($raw_settings['include_images'] ?? false);
-        
-        // include_videos - provide default if missing
-        $sanitized['include_videos'] = (bool) ($raw_settings['include_videos'] ?? false);
         
         // link_handling - provide default and validate
         $valid_link_options = ['append', 'comment', 'none'];

@@ -75,7 +75,7 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch'
             </div>
             <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="modal/handler-auth-form"
-                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>"}'>
+                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>","flow_step_id":"<?php echo esc_attr($flow_step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'>
                 <?php esc_html_e('Manage Authentication', 'data-machine'); ?>
             </button>
         </div>

@@ -25,7 +25,7 @@ apply_filters('dm_get_tool_config', [], $tool_id);
 do_action('dm_save_tool_config', $tool_id, $config_data);
 
 // OAuth
-apply_filters('dm_oauth', [], 'retrieve', 'handler');
+apply_filters('dm_retrieve_oauth_account', [], 'handler');
 apply_filters('dm_get_oauth_url', '', 'provider');
 $providers = apply_filters('dm_auth_providers', []);
 
@@ -657,13 +657,13 @@ try {
 
 ```php
 // Account operations
-$account = apply_filters('dm_oauth', [], 'retrieve', 'twitter');
-apply_filters('dm_oauth', null, 'store', 'twitter', $account_data);
-apply_filters('dm_oauth', false, 'clear', 'twitter');
+$account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
+apply_filters('dm_store_oauth_account', $account_data, 'twitter');
+apply_filters('dm_clear_oauth_account', false, 'twitter');
 
 // Configuration with validation
-$config = apply_filters('dm_oauth', [], 'get_config', 'twitter');
-apply_filters('dm_oauth', null, 'store_config', 'twitter', $config_data);
+$config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
+apply_filters('dm_store_oauth_keys', $config_data, 'twitter');
 $is_configured = apply_filters('dm_tool_configured', false, 'twitter');
 
 // URLs
