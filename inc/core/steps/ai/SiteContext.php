@@ -1,12 +1,10 @@
 <?php
 /**
- * Site Context Data Collection
- * 
- * Provides comprehensive WordPress site information for AI model context.
- * Uses caching to optimize performance and includes automatic cache invalidation.
+ * WordPress site context for AI models
+ *
+ * Collects site metadata, post types, and taxonomies with caching.
  *
  * @package DataMachine\Core\Steps\AI
- * @author Chris Huber <https://chubes.net>
  */
 
 namespace DataMachine\Core\Steps\AI;
@@ -14,10 +12,7 @@ namespace DataMachine\Core\Steps\AI;
 defined('ABSPATH') || exit;
 
 /**
- * WordPress Site Context Collector
- * 
- * Gathers detailed site information including post types, taxonomies,
- * and metadata to provide AI models with comprehensive site context.
+ * WordPress site context collector
  */
 class SiteContext {
 
@@ -32,9 +27,9 @@ class SiteContext {
     const CACHE_DURATION = 3600;
 
     /**
-     * Get complete site context data
+     * Get site context data
      * 
-     * @return array Complete site context information
+     * @return array Site context information
      */
     public static function get_context(): array {
         // Check cache first

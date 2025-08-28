@@ -1,18 +1,12 @@
 <?php
 /**
- * Update Step - Updates existing content with processed data
- * 
- * "Plugins Within Plugins" Architecture Implementation
- * 
- * Processes cumulative data packet array and updates existing content.
- * Uses pure filter-based architecture following Data Machine patterns.
- * 
- * Update steps bridge AI processing with existing content modifications,
- * distinct from publish steps which create new content.
- * 
+ * Update existing content using processed data
+ *
+ * Processes data packets and updates existing content via handler tools.
+ * Supports AI-generated updates and direct handler execution.
+ *
  * @package DataMachine
  * @subpackage Core\Steps\Update
- * @since 0.1.0
  */
 
 namespace DataMachine\Core\Steps\Update;
@@ -23,25 +17,19 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Update Step - Updates existing content with processed data
- * 
- * Processes cumulative data packet array and updates existing content
- * based on AI analysis and handler configuration.
+ * Updates existing content with processed data
  */
 class UpdateStep {
 
     /**
      * Execute update processing
      * 
-     * Processes cumulative data packet array and updates existing content
-     * based on AI analysis and handler configuration.
-     * 
-     * @param string $job_id The job ID for context tracking
-     * @param string $flow_step_id The flow step ID to process
-     * @param array $data The cumulative data packet array for this job
-     * @param array $flow_step_config The merged step configuration
-     * @param string|null $original_id The original ID for update operations (passed from engine)
-     * @return array Updated data packet array with update results added
+     * @param string $job_id Job identifier
+     * @param string $flow_step_id Flow step identifier
+     * @param array $data Data packet array
+     * @param array $flow_step_config Step configuration
+     * @param string|null $original_id Original content ID for updates
+     * @return array Updated data packet array
      */
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null): array {
         try {
@@ -151,13 +139,13 @@ class UpdateStep {
     }
 
     /**
-     * Execute update handler with data packet
+     * Execute update handler
      * 
-     * @param string $handler_slug Handler slug to execute
-     * @param array $data Complete data packet array
+     * @param string $handler_slug Handler to execute
+     * @param array $data Data packet array
      * @param array $handler_config Handler configuration
-     * @param array $flow_step_config Complete flow step configuration
-     * @param string|null $original_id The original ID from engine (eliminates data packet search)
+     * @param array $flow_step_config Step configuration
+     * @param string|null $original_id Original content ID
      * @return array|null Handler result or null on failure
      */
     private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $original_id = null) {
@@ -230,12 +218,12 @@ class UpdateStep {
     }
 
     /**
-     * Build handler parameters directly using engine-provided data
+     * Build parameters for handler execution
      * 
-     * @param array $data Complete data packet array
-     * @param array $handler_settings Handler configuration settings
-     * @param string|null $original_id The original ID from engine
-     * @return array Parameters for handler execution
+     * @param array $data Data packet array
+     * @param array $handler_settings Handler settings
+     * @param string|null $original_id Original content ID
+     * @return array Handler parameters
      */
     private function build_handler_parameters(array $data, array $handler_settings, $original_id = null): array {
         $parameters = [];
@@ -286,11 +274,11 @@ class UpdateStep {
 
 
     /**
-     * Find tool_result entry for the specified handler in the data packet.
+     * Find tool result entry for handler
      * 
      * @param array $data Data packet array
-     * @param string $handler Handler slug to look for
-     * @return array|null Tool result entry or null if not found
+     * @param string $handler Handler slug
+     * @return array|null Tool result entry or null
      */
     private function find_tool_result_for_handler(array $data, string $handler): ?array {
         foreach ($data as $entry) {
@@ -312,13 +300,13 @@ class UpdateStep {
 
 
     /**
-     * Create update entry from successful tool result.
+     * Create update entry from tool result
      * 
-     * @param array $tool_result_entry The tool result entry from AI step
+     * @param array $tool_result_entry Tool result from AI step
      * @param array $data Current data packet
      * @param string $handler Handler slug
      * @param string $flow_step_id Flow step ID
-     * @return array Updated data packet with update entry
+     * @return array Updated data packet
      */
     private function create_update_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];

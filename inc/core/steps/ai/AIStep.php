@@ -13,30 +13,23 @@ require_once __DIR__ . '/AIStepTools.php';
 // Pure array-based data packet system - no object dependencies
 
 /**
- * Universal AI Agent - AI processing with dual tool discovery
- * 
- * Processes cumulative data packet array and adds AI response.
- * Uses pure filter-based architecture with no interface requirements.
- * 
- * Tool Discovery:
- * - Handler tools: Available only when next step matches handler (publishing tools)
- * - General tools: Architecture ready but no tools currently implemented
+ * AI processing step with tool-based execution
+ *
+ * Processes data packets and executes AI requests with available tools.
+ * Supports multi-turn conversations and handler-specific tool discovery.
  */
 class AIStep {
 
 
     /**
-     * Execute AI processing
+     * Execute AI processing with tool support
      * 
-     * Processes cumulative data packet array and user message (if provided).
-     * User messages are prepended as additional context before pipeline data.
-     * 
-     * @param string $job_id The job ID for context tracking
-     * @param string $flow_step_id The flow step ID to process
-     * @param array $data The cumulative data packet array for this job
-     * @param array $flow_step_config The merged step configuration
-     * @param string|null $original_id The original ID for tool operations (passed from engine)
-     * @return array Updated data packet array with AI output added
+     * @param string $job_id Job identifier
+     * @param string $flow_step_id Flow step identifier
+     * @param array $data Cumulative data packet array
+     * @param array $flow_step_config Step configuration
+     * @param string|null $original_id Original ID for tool operations
+     * @return array Updated data packet array with AI responses
      */
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null): array {
         try {

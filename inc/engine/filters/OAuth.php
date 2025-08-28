@@ -1,10 +1,9 @@
 <?php
 
 /**
- * OAuth URL rewrite system and centralized OAuth operations
- * 
- * Provides public OAuth callback URLs and unified OAuth data management
- * External APIs can access: /dm-oauth/{provider} instead of wp-admin URLs
+ * OAuth system with URL rewrites and data management
+ *
+ * Provides public OAuth callbacks and unified data operations.
  */
 
 if (!defined('WPINC')) {
@@ -12,7 +11,7 @@ if (!defined('WPINC')) {
 }
 
 /**
- * Register OAuth URL rewrite system and filters
+ * Register OAuth system
  */
 function dm_register_oauth_system() {
     

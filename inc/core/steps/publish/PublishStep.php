@@ -10,20 +10,18 @@ if (!defined('ABSPATH')) {
 // Pure array-based data packet system - no object dependencies
 
 /**
- * Universal Publish Step - Executes any publish handler
- * 
- * Publishes data to configured destinations using filter-based handler discovery.
+ * Publishes data using configured handlers
  */
 class PublishStep {
 
     /**
-     * Execute publish publishing
+     * Execute publish processing
      * 
-     * @param string $job_id The job ID for context tracking
-     * @param string $flow_step_id The flow step ID to process
-     * @param array $data The cumulative data packet array for this job
-     * @param array $flow_step_config Flow step configuration including handler settings
-     * @return array Updated data packet array with publish result added
+     * @param string $job_id Job identifier
+     * @param string $flow_step_id Flow step identifier
+     * @param array $data Data packet array
+     * @param array $flow_step_config Step configuration
+     * @return array Updated data packet array
      */
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
         try {
@@ -85,13 +83,13 @@ class PublishStep {
 
 
     /**
-     * Execute publish handler using tool-first architecture
+     * Execute publish handler
      * 
-     * @param string $handler_name Publish handler name
-     * @param array $data_entry Latest data entry from data packet array
-     * @param array $flow_step_config Flow step configuration
+     * @param string $handler_name Handler name
+     * @param array $data_entry Data entry
+     * @param array $flow_step_config Step configuration
      * @param array $handler_settings Handler settings
-     * @return array|null Publish result or null on failure
+     * @return array|null Handler result or null on failure
      */
     private function execute_publish_handler_direct(string $handler_name, array $data_entry, array $flow_step_config, array $handler_settings): ?array {
         // Get handler object directly from handler system
@@ -158,11 +156,11 @@ class PublishStep {
     }
 
     /**
-     * Extract tool parameters from data entry for tool calling
+     * Extract parameters from data entry
      * 
-     * @param array $data_entry Latest data entry from data packet array
-     * @param array $handler_settings Handler configuration settings
-     * @return array Tool parameters extracted from data entry
+     * @param array $data_entry Data entry
+     * @param array $handler_settings Handler settings
+     * @return array Extracted parameters
      */
     private function extract_tool_parameters_from_data(array $data_entry, array $handler_settings): array {
         $metadata = $data_entry['metadata'] ?? [];
@@ -232,14 +230,11 @@ class PublishStep {
     }
 
     /**
-     * Get handler object directly from the handler system.
+     * Get handler object from registration
      * 
-     * Uses the object-based handler registration to get
-     * instantiated handler objects directly, eliminating class discovery.
-     * 
-     * @param string $handler_name Handler name/key
-     * @param string $handler_type Handler type (fetch/publish)
-     * @return object|null Handler object or null if not found
+     * @param string $handler_name Handler name
+     * @param string $handler_type Handler type
+     * @return object|null Handler object or null
      */
     private function get_handler_object(string $handler_name, string $handler_type): ?object {
         // Direct handler discovery - no redundant filtering needed
@@ -262,11 +257,11 @@ class PublishStep {
     // PublishStep receives cumulative data packet array from engine via $data parameter
 
     /**
-     * Find tool_result entry for the specified handler in the data packet.
+     * Find tool result for handler
      * 
      * @param array $data Data packet array
-     * @param string $handler Handler slug to look for
-     * @return array|null Tool result entry or null if not found
+     * @param string $handler Handler slug
+     * @return array|null Tool result entry or null
      */
     private function find_tool_result_for_handler(array $data, string $handler): ?array {
         do_action('dm_log', 'debug', 'PublishStep: Searching for tool result or ai_handler_complete entry', [
@@ -349,13 +344,13 @@ class PublishStep {
     }
 
     /**
-     * Create publish entry from successful tool result.
+     * Create publish entry from tool result
      * 
-     * @param array $tool_result_entry The tool result entry from AI step
+     * @param array $tool_result_entry Tool result entry
      * @param array $data Current data packet
      * @param string $handler Handler slug
      * @param string $flow_step_id Flow step ID
-     * @return array Updated data packet with publish entry
+     * @return array Updated data packet
      */
     private function create_publish_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];

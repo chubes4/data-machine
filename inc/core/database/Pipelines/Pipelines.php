@@ -1,13 +1,12 @@
 <?php
 /**
- * Manages database operations for pipeline workflow definitions.
+ * Pipeline database operations
  *
- * Handles creating the pipelines table and performing CRUD operations.
- * Pipelines define reusable workflow templates without scheduling logic.
+ * CRUD operations for pipeline workflow definitions.
+ * Pipelines are reusable workflow templates.
  *
- * @package    DataMachine
+ * @package DataMachine
  * @subpackage Core\Database\Pipelines
- * @since      0.1.0
  */
 
 namespace DataMachine\Core\Database\Pipelines;
@@ -19,16 +18,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Pipelines {
 
 	/**
-	 * The name of the pipelines database table.
-	 * @var string
+	 * @var string Database table name
 	 */
 	private $table_name;
 
 	/**
-	 * Initialize pipeline database operations.
-	 *
-	 * Sets up database table reference using WordPress global $wpdb.
-	 * No external dependencies - follows self-contained architecture pattern.
+	 * Initialize database operations
 	 */
 	public function __construct() {
 		global $wpdb;
@@ -36,10 +31,10 @@ class Pipelines {
 	}
 
 	/**
-	 * Create a new pipeline.
+	 * Create a new pipeline
 	 *
-	 * @param array $pipeline_data Pipeline data with pipeline_name and pipeline_config.
-	 * @return int|false The pipeline ID on success, false on failure.
+	 * @param array $pipeline_data Pipeline data
+	 * @return int|false Pipeline ID or false on failure
 	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
 		global $wpdb;
@@ -90,10 +85,10 @@ class Pipelines {
 	}
 
 	/**
-	 * Retrieve a specific pipeline by its ID.
+	 * Get pipeline by ID
 	 *
-	 * @param int $pipeline_id The ID of the pipeline.
-	 * @return array|null The pipeline array or null if not found.
+	 * @param int $pipeline_id Pipeline ID
+	 * @return array|null Pipeline data or null
 	 */
 	public function get_pipeline( int $pipeline_id ): ?array {
 		global $wpdb;
@@ -112,9 +107,9 @@ class Pipelines {
 	}
 
 	/**
-	 * Retrieve all pipelines.
+	 * Get all pipelines
 	 *
-	 * @return array Array of pipeline arrays.
+	 * @return array Array of pipelines
 	 */
 	public function get_all_pipelines(): array {
 		global $wpdb;
@@ -128,11 +123,11 @@ class Pipelines {
 	}
 
 	/**
-	 * Update an existing pipeline.
+	 * Update existing pipeline
 	 *
-	 * @param int   $pipeline_id   The ID of the pipeline to update.
-	 * @param array $pipeline_data Updated pipeline data.
-	 * @return bool True on success, false on failure.
+	 * @param int $pipeline_id Pipeline ID
+	 * @param array $pipeline_data Updated data
+	 * @return bool Success status
 	 */
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
 		global $wpdb;
@@ -199,10 +194,10 @@ class Pipelines {
 	}
 
 	/**
-	 * Delete a pipeline.
+	 * Delete pipeline
 	 *
-	 * @param int $pipeline_id The ID of the pipeline to delete.
-	 * @return bool True on success, false on failure.
+	 * @param int $pipeline_id Pipeline ID
+	 * @return bool Success status
 	 */
 	public function delete_pipeline( int $pipeline_id ): bool {
 		global $wpdb;
@@ -248,10 +243,10 @@ class Pipelines {
 
 
 	/**
-	 * Get pipeline configuration.
+	 * Get pipeline configuration
 	 *
-	 * @param int $pipeline_id The ID of the pipeline.
-	 * @return array Array of pipeline configuration.
+	 * @param int $pipeline_id Pipeline ID
+	 * @return array Configuration data
 	 */
 	public function get_pipeline_config( int $pipeline_id ): array {
 		global $wpdb;
@@ -275,9 +270,9 @@ class Pipelines {
 
 
 	/**
-	 * Get pipelines count for list table pagination.
+	 * Get pipeline count
 	 *
-	 * @return int Total number of pipelines.
+	 * @return int Total pipelines
 	 */
 	public function get_pipelines_count(): int {
 		global $wpdb;
@@ -287,10 +282,10 @@ class Pipelines {
 	}
 
 	/**
-	 * Get pipelines for list table display.
+	 * Get pipelines for list display
 	 *
-	 * @param array $args Arguments including orderby, order, per_page, offset.
-	 * @return array Array of pipeline records.
+	 * @param array $args Query arguments
+	 * @return array Pipeline records
 	 */
 	public function get_pipelines_for_list_table( array $args ): array {
 		global $wpdb;
@@ -323,9 +318,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Create the pipelines database table on plugin activation.
-	 *
-	 * @since 0.1.0
+	 * Create database table
 	 */
 	public static function create_table() {
 		global $wpdb;

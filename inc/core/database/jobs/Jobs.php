@@ -1,15 +1,12 @@
 <?php
 /**
- * Jobs database coordinator class - maintains public API while delegating to focused components.
+ * Job database operations
  *
- * Follows handler-style modular architecture where the main class coordinates
- * between focused internal components for single responsibility compliance.
+ * Coordinates between operations and status management components.
+ * Handles job execution tracking and lifecycle management.
  *
- * Pipeline → Flow architecture implementation.
- *
- * @package    Data_Machine
+ * @package DataMachine
  * @subpackage Core\Database\Jobs
- * @since      0.15.0
  */
 
 namespace DataMachine\Core\Database\Jobs;
@@ -21,8 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Jobs {
 
     /**
-     * The name of the jobs database table.
-     * @var string
+     * @var string Database table name
      */
     private $table_name;
 
@@ -33,8 +29,7 @@ class Jobs {
     private $status;
 
     /**
-     * Initialize the coordinator and internal components.
-     * Uses direct instantiation - no caching complexity.
+     * Initialize database operations
      */
     public function __construct() {
         global $wpdb;

@@ -1,13 +1,10 @@
 <?php
 /**
- * AI Step Tools Management
- * 
- * Centralized management for AI step tool discovery, state management,
- * HTML generation, and form processing. Single source of truth for
- * all AI step tool operations.
+ * AI step tool management
+ *
+ * Tool discovery, configuration, and HTML generation for AI steps.
  *
  * @package DataMachine\Core\Steps\AI
- * @author Chris Huber <https://chubes.net>
  */
 
 namespace DataMachine\Core\Steps\AI;
@@ -18,17 +15,14 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * AI Step Tools Management Class
- * 
- * Handles all aspects of AI step tool management including discovery,
- * state persistence, HTML generation, and form processing.
+ * AI step tool management
  */
 class AIStepTools {
     
     /**
-     * Get all general tools that are available (configured tools appear in step selection)
+     * Get available general tools
      * 
-     * @return array Available tools for step-level selection
+     * @return array Available tools
      */
     public function get_global_enabled_tools(): array {
         // Get all registered tools and filter to general tools only
@@ -47,10 +41,10 @@ class AIStepTools {
     }
     
     /**
-     * Get step-level enabled tools for a specific pipeline step
+     * Get enabled tools for pipeline step
      * 
      * @param string $pipeline_step_id Pipeline step UUID
-     * @return array Tools enabled for this specific step
+     * @return array Enabled tools
      */
     public function get_step_enabled_tools(string $pipeline_step_id): array {
         if (empty($pipeline_step_id)) {

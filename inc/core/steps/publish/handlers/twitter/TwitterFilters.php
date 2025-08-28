@@ -1,16 +1,11 @@
 <?php
 /**
- * Twitter Component Filter Registration
- * 
- * "Plugins Within Plugins" Architecture Implementation
- * 
- * This file serves as Twitter's complete interface contract with the engine,
- * demonstrating complete self-containment and zero bootstrap dependencies.
- * Each handler component manages its own filter registration.
- * 
+ * Twitter filter registration
+ *
+ * Registers Twitter as publish handler with authentication and tool support.
+ *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\Twitter
- * @since 0.1.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
@@ -21,12 +16,9 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register all Twitter component filters
- * 
- * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers Twitter capabilities purely through filter-based discovery.
- * 
- * @since 0.1.0
+ * Register Twitter filters
+ *
+ * Self-registration for handler, authentication, and AI tool discovery.
  */
 function dm_register_twitter_filters() {
     

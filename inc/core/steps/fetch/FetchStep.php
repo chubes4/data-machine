@@ -9,20 +9,18 @@ if (!defined('ABSPATH')) {
 // Pure array-based data packet system - no object dependencies
 
 /**
- * Universal Fetch Step - Executes any fetch handler
- * 
- * Gathers data from configured fetch sources using filter-based handler discovery.
+ * Fetches data using configured handlers
  */
 class FetchStep {
 
     /**
-     * Execute fetch data collection
+     * Execute fetch processing
      * 
-     * @param string $job_id The job ID for context tracking
-     * @param string $flow_step_id The flow step ID to process
-     * @param array $data The cumulative data packet array for this job  
-     * @param array $flow_step_config Flow step configuration including handler settings
-     * @return array Updated data packet array with fetch data added
+     * @param string $job_id Job identifier
+     * @param string $flow_step_id Flow step identifier
+     * @param array $data Data packet array
+     * @param array $flow_step_config Step configuration
+     * @return array Updated data packet array
      */
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
         try {
@@ -89,13 +87,13 @@ class FetchStep {
 
 
     /**
-     * Execute fetch handler directly using pure auto-discovery
+     * Execute fetch handler
      * 
-     * @param string $handler_name Fetch handler name
-     * @param array $flow_step_config Flow step configuration including pipeline/flow IDs
+     * @param string $handler_name Handler name
+     * @param array $flow_step_config Step configuration
      * @param array $handler_settings Handler settings
-     * @param string $job_id Job ID for processed items tracking
-     * @return array|null Fetch entry array or null on failure
+     * @param string $job_id Job identifier
+     * @return array|null Fetch entry or null on failure
      */
     private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings, string $job_id): ?array {
         // Get handler object directly from handler system
@@ -224,14 +222,10 @@ class FetchStep {
 
 
     /**
-     * Get handler object directly from the handler system.
+     * Get handler object from registration
      * 
-     * Uses the object-based handler registration to get
-     * instantiated handler objects directly, eliminating class discovery.
-     * 
-     * @param string $handler_name Handler name/key
-     * @param string $handler_type Handler type (input/output)
-     * @return object|null Handler object or null if not found
+     * @param string $handler_name Handler name
+     * @return object|null Handler object or null
      */
     private function get_handler_object(string $handler_name): ?object {
         // Direct handler discovery - no redundant filtering needed

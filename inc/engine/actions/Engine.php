@@ -1,21 +1,11 @@
 <?php
 /**
- * Data Machine Core Execution Engine
+ * Core pipeline execution engine
  *
- * Three-action execution engine providing complete pipeline orchestration through
- * Action Scheduler integration, filter-based service discovery, and functional
- * step execution. KISS compliance with zero overhead architecture.
- * 
- * EXECUTION FLOW:
- * 1. dm_run_flow_now: Pipeline initiation via organized dm_create action
- * 2. dm_execute_step: Core functional step execution with DataPacket flow
- * 3. dm_schedule_next_step: Action Scheduler step transitions
- * 
- * EXECUTION CYCLE:
- * dm_run_flow_now → [creates job] → dm_schedule_next_step → dm_execute_step → dm_schedule_next_step → dm_execute_step...
+ * Three-action execution cycle: flow initiation, step execution, and scheduling.
+ * Integrates with Action Scheduler for asynchronous processing.
  *
  * @package DataMachine
- * @since NEXT_VERSION
  */
 
 // If this file is called directly, abort.
@@ -25,14 +15,12 @@ if ( ! defined( 'WPINC' ) ) {
 
 
 /**
- * Register core pipeline execution engine actions.
- * 
- * Registers the 3 fundamental actions that drive all pipeline execution:
- * - dm_run_flow_now: Entry point for pipeline execution
- * - dm_execute_step: Pure functional step orchestration  
- * - dm_schedule_next_step: Action Scheduler step transitions
- * 
- * @since NEXT_VERSION
+ * Register pipeline execution actions
+ *
+ * Registers three core actions for pipeline execution:
+ * - dm_run_flow_now: Flow initiation
+ * - dm_execute_step: Step execution
+ * - dm_schedule_next_step: Step scheduling
  */
 function dm_register_execution_engine() {
 

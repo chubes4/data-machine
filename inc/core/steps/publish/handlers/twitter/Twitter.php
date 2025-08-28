@@ -1,14 +1,11 @@
 <?php
 /**
- * Modular Twitter publish handler.
+ * Twitter publishing handler
  *
- * Posts content to a specified Twitter account using the self-contained
- * TwitterAuth class for authentication. This modular approach separates
- * concerns between main handler logic and authentication functionality.
+ * Posts content to Twitter with media support and authentication.
  *
- * @package    DataMachine
+ * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\Twitter
- * @since      0.1.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
@@ -25,7 +22,7 @@ class Twitter {
     private $auth;
 
     /**
-     * Constructor - direct auth initialization for security
+     * Initialize handler with authentication
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
@@ -34,7 +31,7 @@ class Twitter {
     }
 
     /**
-     * Get Twitter auth handler - internal implementation.
+     * Get authentication handler
      * 
      * @return TwitterAuth
      */
@@ -43,11 +40,11 @@ class Twitter {
     }
 
     /**
-     * Handle AI tool call for Twitter publishing.
+     * Handle AI tool call for publishing
      *
-     * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
-     * @return array Tool execution result.
+     * @param array $parameters Tool parameters
+     * @param array $tool_def Tool definition
+     * @return array Tool execution result
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         do_action('dm_log', 'debug', 'Twitter Tool: Handling tool call', [

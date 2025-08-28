@@ -18,7 +18,7 @@ apply_filters('dm_get_pipelines', [], $pipeline_id);
 apply_filters('dm_get_flow_config', [], $flow_id);
 
 // AI & Tools
-$result = apply_filters('ai_request', $request, 'openrouter');
+$result = apply_filters('ai_request', $request, 'anthropic');
 $tools = apply_filters('ai_tools', []);
 apply_filters('dm_tool_configured', false, $tool_id);
 apply_filters('dm_get_tool_config', [], $tool_id);
@@ -118,7 +118,7 @@ dm_register_twitter_filters(); // Auto-execute at file load
 wp_dm_pipelines: pipeline_id, pipeline_name, pipeline_config, created_at, updated_at
 
 -- Flow instances (scheduled + configured)
-wp_dm_flows: flow_id, pipeline_id, flow_name, cron_expression, flow_config_json, status, created_at, updated_at
+wp_dm_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config, display_order
 
 -- Job executions
 wp_dm_jobs: job_id, flow_id, pipeline_id, status, job_data_json, started_at, completed_at, error_message
@@ -151,8 +151,8 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 ```php
 $result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'gpt-5-mini'
-], 'openai');
+    'model' => 'claude-3-5-sonnet-20241022'
+], 'anthropic');
 ```
 
 ### AI Request Pipeline
@@ -550,7 +550,7 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 29 `*Filters.php` files auto-loaded via composer.json (containing 85+ filter registrations)
+**Filter Registration**: 38+ `*Filters.php` files auto-loaded via composer.json (containing 85+ filter registrations)
 **Key Auto-loaded Classes**: `AIStepDirective.php`, `AIConversationState.php` - automatic filter registration
 
 ## Extensions
