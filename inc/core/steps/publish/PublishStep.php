@@ -184,49 +184,7 @@ class PublishStep {
             return $parameters;
         }
         
-        // LEGACY: For regular data entries, extract from content structure
-        $parameters = [];
-        
-        // Extract content from data entry
-        $content_data = $data_entry['content'] ?? [];
-        
-        if (isset($content_data['title'])) {
-            $parameters['title'] = $content_data['title'];
-        }
-        
-        if (isset($content_data['body'])) {
-            $parameters['content'] = $content_data['body'];
-        }
-        
-        // Extract source URL from metadata if available
-        if (isset($metadata['source_url'])) {
-            $parameters['source_url'] = $metadata['source_url'];
-        }
-        
-        // Extract attachments/media if available
-        $attachments = $data_entry['attachments'] ?? [];
-        if (!empty($attachments)) {
-            // Look for image attachments
-            foreach ($attachments as $attachment) {
-                if (isset($attachment['type']) && $attachment['type'] === 'image') {
-                    $parameters['image_url'] = $attachment['url'] ?? null;
-                    break;
-                }
-            }
-        }
-        
-        // Merge any additional parameters from handler settings
-        // This allows handler-specific configuration to be passed through
-        if (!empty($handler_settings)) {
-            // Filter out internal settings, only pass through tool-relevant ones
-            $tool_relevant_settings = array_filter($handler_settings, function($key) {
-                return !in_array($key, ['handler_slug', 'auth_config', 'internal_config']);
-            }, ARRAY_FILTER_USE_KEY);
-            
-            $parameters = array_merge($parameters, $tool_relevant_settings);
-        }
-        
-        return $parameters;
+        return [];
     }
 
     /**

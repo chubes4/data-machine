@@ -13,7 +13,6 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
@@ -68,7 +67,6 @@ class Facebook {
             'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
         ]);
 
-        // Validate required parameters
         if (empty($parameters['content'])) {
             $error_msg = 'Facebook tool call missing required content parameter';
             do_action('dm_log', 'error', $error_msg, [

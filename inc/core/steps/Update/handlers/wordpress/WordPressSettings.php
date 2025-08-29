@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -188,17 +183,6 @@ class WordPressSettings {
     }
 
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'allow_title_updates' => true,
-            'allow_content_updates' => true,
-        ];
-    }
 
     /**
      * Get default values for all available taxonomies.

@@ -33,9 +33,6 @@ class ProcessedItems {
         $this->table_name = $wpdb->prefix . 'dm_processed_items';
     }
 
-    // ========================================
-    // Core Operations - Essential duplicate prevention functionality
-    // ========================================
 
     /**
      * Checks if a specific item has already been processed for a given flow step and source type.
@@ -220,9 +217,6 @@ class ProcessedItems {
         return $result;
     }
 
-    // ========================================
-    // Static Methods (table creation)
-    // ========================================
 
     /**
      * Creates or updates the database table schema.

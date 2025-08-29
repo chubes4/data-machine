@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -106,18 +101,6 @@ class GoogleSheetsSettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'googlesheets_spreadsheet_id' => '',
-            'googlesheets_worksheet_name' => 'Data Machine Output',
-            'googlesheets_column_mapping' => self::get_default_column_mapping()
-        ];
-    }
 
     /**
      * Get default column mapping configuration.

@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class RedditSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -126,20 +121,4 @@ class RedditSettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'subreddit' => '',
-            'sort_by' => 'hot',
-            'timeframe_limit' => 'all_time',
-            'min_upvotes' => 0,
-            'min_comment_count' => 0,
-            'comment_count' => 0,
-            'search' => '',
-        ];
-    }
 }

@@ -238,7 +238,7 @@ class WordPressMedia {
                 'original_id' => $post_id,
                 'source_url' => get_permalink($parent_post),
                 'original_title' => $title,
-                'image_source_url' => $media_url && filter_var($media_url, FILTER_VALIDATE_URL) ? $media_url : wp_get_attachment_url($post_id), // URL for publish handlers
+                'image_url' => $media_url && filter_var($media_url, FILTER_VALIDATE_URL) ? $media_url : wp_get_attachment_url($post_id), // URL for publish handlers
                 'file_path' => $file_path,        // Local path for AI processing
                 'mime_type' => $file_type,        // Required by AI Step
                 'original_date_gmt' => $post->post_date_gmt,
@@ -254,7 +254,7 @@ class WordPressMedia {
             'parent_post_id' => $parent_post->ID, // Now guaranteed to exist due to query filter
             'parent_post_title' => $parent_post->post_title,
             'source_url' => $input_data['metadata']['source_url'],
-            'image_source_url' => $input_data['metadata']['image_source_url'],
+            'image_url' => $input_data['metadata']['image_url'],
             'file_path' => $file_path,
             'file_exists' => $file_path ? file_exists($file_path) : false,
             'attached_media_confirmed' => true

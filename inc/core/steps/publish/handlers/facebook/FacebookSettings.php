@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class FacebookSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -73,15 +68,4 @@ class FacebookSettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'include_images' => false,
-            'link_handling' => 'append',
-        ];
-    }
 }

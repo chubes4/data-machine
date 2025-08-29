@@ -252,11 +252,13 @@ class AIStepTools {
      * @param string $tool_name Tool name to execute
      * @param array $tool_parameters Parameters from AI tool call
      * @param array $available_tools Available tools definition
-     * @param array $data Current data packet for parameter extraction
+     * @param array $data Data packet for content extraction
      * @param string $flow_step_id Flow step ID for logging
+     * @param string|null $source_url Source URL from engine
+     * @param string|null $image_url Image URL from engine
      * @return array Tool execution result
      */
-    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, $original_id = null): array {
+    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, $source_url = null, $image_url = null): array {
         $tool_def = $available_tools[$tool_name] ?? null;
         if (!$tool_def) {
             return [
@@ -267,14 +269,14 @@ class AIStepTools {
         }
 
         try {
-            // Build parameters using engine-provided original_id and data packet content
+            // Build parameters using engine-provided parameters and data content
             $handler_config = $tool_def['handler_config'] ?? [];
-            $complete_parameters = self::buildToolParameters($tool_parameters, $data, $handler_config, $original_id);
+            $complete_parameters = self::buildToolParameters($tool_parameters, $data, $source_url, $image_url);
             
             do_action('dm_log', 'debug', 'AIStepTools: Executing tool', [
                 'flow_step_id' => $flow_step_id,
                 'tool_name' => $tool_name,
-                'has_original_id' => isset($complete_parameters['original_id'])
+                'has_source_url' => isset($complete_parameters['source_url'])
             ]);
             
             // Direct tool execution following established pattern
@@ -309,34 +311,37 @@ class AIStepTools {
     }
 
     /**
-     * Build tool parameters using engine-provided original_id and data packet content
+     * Build tool parameters using engine-provided parameters and data content
      * 
      * @param array $tool_parameters AI-provided parameters
-     * @param array $data Complete data packet array
-     * @param array $handler_config Handler configuration settings
-     * @param string|null $original_id Engine-provided original_id
+     * @param array $data Data packet array for content extraction
+     * @param string|null $source_url Engine-provided source_url
+     * @param string|null $image_url Engine-provided image_url
      * @return array Complete tool parameters
      */
-    private static function buildToolParameters(array $tool_parameters, array $data, array $handler_config, $original_id = null): array {
+    private static function buildToolParameters(array $tool_parameters, array $data, $source_url = null, $image_url = null): array {
         $complete_parameters = $tool_parameters;
         
-        // Add engine-provided original_id if available
-        if ($original_id !== null) {
-            $complete_parameters['original_id'] = $original_id;
-        }
-        
-        // Extract additional parameters from latest data entry
+        // Extract content from data (title and body for tool calls) - only if not already provided by AI
         if (!empty($data)) {
             $latest_entry = $data[0];
-            $additional_params = self::extractParametersFromData($latest_entry, $handler_config);
+            $content_params = self::extractParametersFromData($latest_entry, []);
             
-            // System parameters take precedence over AI parameters for specific fields
-            $system_managed = ['source_url', 'image_url'];
-            foreach ($system_managed as $param) {
-                if (isset($additional_params[$param])) {
-                    $complete_parameters[$param] = $additional_params[$param];
-                }
+            // Add content parameters only if they exist in data AND not already provided by AI
+            if (isset($content_params['title']) && !isset($complete_parameters['title'])) {
+                $complete_parameters['title'] = $content_params['title'];
             }
+            if (isset($content_params['content']) && !isset($complete_parameters['content'])) {
+                $complete_parameters['content'] = $content_params['content'];
+            }
+        }
+        
+        // Add engine-provided metadata parameters directly
+        if ($source_url !== null) {
+            $complete_parameters['source_url'] = $source_url;
+        }
+        if ($image_url !== null) {
+            $complete_parameters['image_url'] = $image_url;
         }
         
         return $complete_parameters;
@@ -344,6 +349,9 @@ class AIStepTools {
 
     /**
      * Extract tool parameters from data entry for tool calling
+     * 
+     * Used by buildToolParameters to extract content (title, body) and metadata
+     * while engine-provided parameters (source_url, image_url, original_id) are handled separately
      * 
      * @param array $data_entry Latest data entry from data packet array
      * @param array $handler_config Handler configuration settings
@@ -363,9 +371,6 @@ class AIStepTools {
         
         // Extract metadata
         $metadata = $data_entry['metadata'] ?? [];
-        if (isset($metadata['original_id'])) {
-            $parameters['original_id'] = $metadata['original_id'];
-        }
         if (isset($metadata['source_url'])) {
             $parameters['source_url'] = $metadata['source_url'];
         }
@@ -382,8 +387,8 @@ class AIStepTools {
         }
         
         // WordPress Media Fetch pattern
-        if (isset($metadata['image_source_url'])) {
-            $parameters['image_url'] = $metadata['image_source_url'];
+        if (isset($metadata['image_url'])) {
+            $parameters['image_url'] = $metadata['image_url'];
         }
         
         return $parameters;

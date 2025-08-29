@@ -98,15 +98,9 @@ function dm_files_should_schedule_cleanup(): bool {
     $all_settings = apply_filters('dm_handler_settings', []);
     $files_settings = $all_settings['files'] ?? null;
     
-    if (!$files_settings) {
-        return true;
-    }
-    
-    $defaults = $files_settings->get_defaults();
-    
-    // For now, use defaults. In the future, this could check actual handler configurations
-    // across all flows to see if any have auto_cleanup_enabled set to true
-    return $defaults['auto_cleanup_enabled'] ?? true;
+    // Default to auto cleanup enabled. In the future, this could check actual handler 
+    // configurations across all flows to see if any have auto_cleanup_enabled set to true
+    return true;
 }
 
 // Auto-register when file loads - achieving complete self-containment

@@ -40,9 +40,6 @@ class Jobs {
         $this->status = new JobsStatus();
     }
 
-    // ========================================
-    // CRUD Operations (delegated to JobsOperations)
-    // ========================================
 
     /**
      * Create a new pipeline+flow-based job record.
@@ -72,9 +69,6 @@ class Jobs {
         return $this->operations->get_jobs_for_list_table($args);
     }
 
-    // ========================================
-    // Status Management (delegated to JobsStatus)
-    // ========================================
 
     /**
      * Update the status for a job.
@@ -121,9 +115,6 @@ class Jobs {
 
 
 
-    // ========================================
-    // Static Methods (table creation)
-    // ========================================
 
     /**
      * Create the jobs database table on plugin activation.

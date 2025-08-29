@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -270,25 +265,6 @@ class WordPressSettings {
     }
 
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        $defaults = [
-            'post_id' => 0,
-            'post_type' => 'any',
-            'post_status' => 'publish',
-            'timeframe_limit' => 'all_time',
-            'search' => '',
-            'randomize_selection' => false,
-        ];
-
-        // Add dynamic taxonomy filter defaults (all set to 0 = "All")
-        $taxonomy_defaults = self::get_taxonomy_filter_defaults();
-        return array_merge($defaults, $taxonomy_defaults);
-    }
 
     /**
      * Get default values for all available taxonomy filters.

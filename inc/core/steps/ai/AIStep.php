@@ -29,9 +29,13 @@ class AIStep {
      * @param array $data Cumulative data packet array
      * @param array $flow_step_config Step configuration
      * @param string|null $original_id Original ID for tool operations
+     * @param string|null $source_url Source URL from metadata
+     * @param string|null $image_url Image URL from metadata
+     * @param string|null $file_path File path from metadata
+     * @param string|null $mime_type MIME type from metadata
      * @return array Updated data packet array with AI responses
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null, $source_url = null, $image_url = null, $file_path = null, $mime_type = null): array {
         try {
             // Pure filter architecture - no client instance needed
 
@@ -66,8 +70,7 @@ class AIStep {
                 $metadata = $input['metadata'] ?? [];
                 
                 
-                // Check if this input has a file to process
-                $file_path = $metadata['file_path'] ?? '';
+                // Check if this input has a file to process (use engine-provided file_path)
                 if ($file_path && file_exists($file_path)) {
                     
                     // Add file as user message
@@ -77,7 +80,7 @@ class AIStep {
                             [
                                 'type' => 'file',
                                 'file_path' => $file_path,
-                                'mime_type' => $metadata['mime_type'] ?? ''
+                                'mime_type' => $mime_type ?? ''
                             ]
                         ]
                     ];
@@ -344,7 +347,7 @@ class AIStep {
                         }
                         
                         // Execute tool using extracted class
-                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $original_id);
+                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $original_id, $source_url, $image_url);
                         
                         // Tool result will be stored as data packet entry if it's a general tool
                         

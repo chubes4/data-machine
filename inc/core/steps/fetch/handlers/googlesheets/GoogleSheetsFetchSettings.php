@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsFetchSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -102,20 +97,6 @@ class GoogleSheetsFetchSettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'googlesheets_fetch_spreadsheet_id' => '',
-            'googlesheets_fetch_worksheet_name' => 'Sheet1',
-            'googlesheets_fetch_cell_range' => 'A1:Z1000',
-            'googlesheets_fetch_has_header_row' => true,
-            'googlesheets_fetch_row_limit' => 100
-        ];
-    }
 
     /**
      * Get help text explaining how to find spreadsheet ID.

@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BlueskySettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -60,15 +55,4 @@ class BlueskySettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'bluesky_include_source' => true,
-            'bluesky_enable_images' => true,
-        ];
-    }
 }

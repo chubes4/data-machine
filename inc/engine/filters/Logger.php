@@ -35,18 +35,6 @@ use Monolog\Level;
  * @since 0.1.0
  */
 function dm_register_logger_filters() {
-    /**
-     * Logger file information filter.
-     * 
-     * Handles operations that GET information without modifying state.
-     * 
-     * USAGE:
-     * $recent_logs = apply_filters('dm_log_file', [], 'get_recent', 100);
-     * $file_size = apply_filters('dm_log_file', 0, 'get_size');
-     * $log_level = apply_filters('dm_log_file', '', 'get_level');
-     * $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
-     * $log_path = apply_filters('dm_log_file', '', 'get_path');
-     */
     add_filter('dm_log_file', function($result, $operation, $param1 = null) {
         switch ($operation) {
             case 'get_recent':
@@ -64,9 +52,6 @@ function dm_register_logger_filters() {
     }, 10, 3);
 }
 
-// ========================================================================
-// CORE LOGGER FUNCTIONS
-// ========================================================================
 
 /**
  * Get Monolog instance with request-level caching.
@@ -232,9 +217,6 @@ function dm_log_critical(string|\Stringable $message, array $context = []): void
     dm_log_message(Level::Critical, $message, $context);
 }
 
-// ========================================================================
-// FILE OPERATIONS
-// ========================================================================
 
 /**
  * Get log file path.
@@ -335,9 +317,6 @@ function dm_clear_log_files(): bool {
     return true;
 }
 
-// ========================================================================
-// CONFIGURATION FUNCTIONS
-// ========================================================================
 
 /**
  * Get current log level setting.

@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -196,8 +191,8 @@ class WordPress {
      * @return string Content with prepended image if available.
      */
     private function prepend_image_if_available(string $content, array $input_metadata): string {
-        if (!empty($input_metadata['image_source_url'])) {
-            $image_url = esc_url($input_metadata['image_source_url']);
+        if (!empty($input_metadata['image_url'])) {
+            $image_url = esc_url($input_metadata['image_url']);
             $content = "![Image]({$image_url})\n\n" . $content;
         }
         return $content;

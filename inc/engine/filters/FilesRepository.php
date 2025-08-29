@@ -346,16 +346,6 @@ class FilesRepository {
                 $deleted_count++;
             }
         }
-        
-        // Also clean up any legacy data_packet_ files (backward compatibility)
-        $files = $this->get_all_files($storage_namespace);
-        foreach ($files as $file) {
-            if (str_starts_with($file['filename'], 'data_packet_')) {
-                if ($this->delete_file($file['filename'], $storage_namespace)) {
-                    $deleted_count++;
-                }
-            }
-        }
 
 
         return $deleted_count;

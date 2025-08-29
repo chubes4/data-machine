@@ -13,9 +13,6 @@ if ( ! defined( 'WPINC' ) ) {
  */
 function dm_register_admin_filters() {
     
-    // ========================================================================
-    // ADMIN PAGE SYSTEM
-    // ========================================================================
     
     /**
      * Admin page discovery filter
@@ -25,9 +22,6 @@ function dm_register_admin_filters() {
         return $pages;
     }, 5, 1);
     
-    // ========================================================================
-    // MODAL SYSTEM
-    // ========================================================================
     
     /**
      * Modal content discovery filter
@@ -38,9 +32,6 @@ function dm_register_admin_filters() {
         return $modals;
     }, 5, 1);
     
-    // ========================================================================
-    // TEMPLATE SYSTEM  
-    // ========================================================================
     
     
     /**
@@ -87,9 +78,6 @@ function dm_register_admin_filters() {
 }
 
 
-// ========================================================================
-// ID EXTRACTION UTILITIES
-// ========================================================================
 
 /**
  * Split composite flow_step_id: {pipeline_step_id}_{flow_id}
@@ -119,9 +107,6 @@ add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
     ];
 }, 10, 2);
 
-// ========================================================================
-// ADMIN MENU FUNCTIONS
-// ========================================================================
 
 /**
  * Register admin menu via filter-based page discovery
@@ -210,29 +195,15 @@ add_action('init', function() {
  * Get Data Machine settings with defaults
  */
 function dm_get_data_machine_settings() {
-    $defaults = [
+    return get_option('data_machine_settings', [
         'engine_mode' => false,
-        'enabled_pages' => [], // Empty array means all pages enabled by default
-        'enabled_tools' => [],  // Empty array means all tools enabled by default
-        'global_system_prompt' => '', // Empty string means no global prompt by default
-        'site_context_enabled' => true, // Default enabled for AI site context
-        'cleanup_job_data_on_failure' => true, // Default enabled for job data cleanup
-        'wordpress_settings' => [
-            'enabled_post_types' => [],    // Empty = all enabled (default)
-            'enabled_taxonomies' => [],    // Empty = all enabled (default)
-            'default_author_id' => 0,      // 0 = show field (default)
-            'default_post_status' => '',   // Empty = show field (default)
-        ]
-    ];
-    
-    $settings = get_option('data_machine_settings', $defaults);
-    
-    // wp_parse_args doesn't handle nested arrays properly, so manually merge wordpress_settings
-    if (isset($settings['wordpress_settings'])) {
-        $settings['wordpress_settings'] = wp_parse_args($settings['wordpress_settings'], $defaults['wordpress_settings']);
-    }
-    
-    return wp_parse_args($settings, $defaults);
+        'enabled_pages' => [],
+        'enabled_tools' => [],
+        'global_system_prompt' => '',
+        'site_context_enabled' => true,
+        'cleanup_job_data_on_failure' => true,
+        'wordpress_settings' => []
+    ]);
 }
 
 /**
@@ -241,28 +212,17 @@ function dm_get_data_machine_settings() {
 function dm_get_enabled_admin_pages() {
     $settings = dm_get_data_machine_settings();
     
-    // Engine mode - no admin pages
     if ($settings['engine_mode']) {
         return [];
     }
     
-    // Get all discovered admin pages
     $all_pages = apply_filters('dm_admin_pages', []);
     
-    // If enabled_pages is empty, all pages are enabled (default behavior)
     if (empty($settings['enabled_pages'])) {
         return $all_pages;
     }
     
-    // Filter pages based on enabled settings
-    $enabled_pages = [];
-    foreach ($all_pages as $slug => $page_config) {
-        if (!empty($settings['enabled_pages'][$slug])) {
-            $enabled_pages[$slug] = $page_config;
-        }
-    }
-    
-    return $enabled_pages;
+    return array_intersect_key($all_pages, array_filter($settings['enabled_pages']));
 }
 
 /**
@@ -270,32 +230,17 @@ function dm_get_enabled_admin_pages() {
  */
 function dm_get_enabled_general_tools() {
     $settings = dm_get_data_machine_settings();
-    
-    // Get all registered tools
     $all_tools = apply_filters('ai_tools', []);
     
-    // Filter to only general tools (no handler property)
-    $general_tools = [];
-    foreach ($all_tools as $tool_name => $tool_config) {
-        if (!isset($tool_config['handler'])) {
-            $general_tools[$tool_name] = $tool_config;
-        }
-    }
+    $general_tools = array_filter($all_tools, function($tool_config) {
+        return !isset($tool_config['handler']);
+    });
     
-    // If enabled_tools is empty, all general tools are enabled (default behavior)
     if (empty($settings['enabled_tools'])) {
         return $general_tools;
     }
     
-    // Filter tools based on enabled settings
-    $enabled_tools = [];
-    foreach ($general_tools as $tool_name => $tool_config) {
-        if (!empty($settings['enabled_tools'][$tool_name])) {
-            $enabled_tools[$tool_name] = $tool_config;
-        }
-    }
-    
-    return $enabled_tools;
+    return array_intersect_key($general_tools, array_filter($settings['enabled_tools']));
 }
 
 /**
@@ -420,9 +365,6 @@ function dm_enqueue_page_assets($assets, $page_slug) {
     }
 }
 
-// ========================================================================
-// SETTINGS PAGE CALLBACKS
-// ========================================================================
 
 // Settings page rendering and callbacks moved to /inc/Core/Admin/Settings/SettingsFilters.php
 
@@ -433,9 +375,6 @@ function dm_enqueue_page_assets($assets, $page_slug) {
 
 // Settings page styles moved to /inc/Core/Admin/Settings/assets/css/settings-page.css
 
-// ========================================================================
-// GLOBAL SYSTEM PROMPT INTEGRATION
-// ========================================================================
 
 /**
  * Inject global system prompt into AI requests

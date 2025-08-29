@@ -368,6 +368,33 @@ function dm_handle_green_statuses($default_status, $context, $data) {
  */
 
 /**
+ * Check if a setting should be shown in customizations display
+ * 
+ * @param string $setting_key The setting key
+ * @param mixed $current_value The current value
+ * @param string $handler_slug The handler slug
+ * @return bool Whether to show this setting
+ */
+function dm_should_show_setting($setting_key, $current_value, $handler_slug) {
+    // Skip empty strings, false values, and meaningless defaults
+    if ($current_value === '' || $current_value === false) {
+        return false;
+    }
+    
+    // Skip empty arrays
+    if (is_array($current_value) && empty($current_value)) {
+        return false;
+    }
+    
+    // Skip common default-like values
+    if (in_array($current_value, ['all_time', 'any', 0, '0'], true)) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
  * Get handler customization data for display
  * 
  * @param array $customizations Current customizations
@@ -397,12 +424,9 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     $all_settings = apply_filters('dm_handler_settings', []);
     $handler_settings = $all_settings[$handler_slug] ?? null;
     
-    if (!$handler_settings || !method_exists($handler_settings, 'get_defaults')) {
+    if (!$handler_settings) {
         return [];
     }
-    
-    // Get default values
-    $defaults = $handler_settings->get_defaults();
     
     // Get field definitions for labels
     $fields = [];
@@ -438,16 +462,13 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                     'key' => $essential_key,
                     'label' => $label,
                     'value' => $current_value,
-                    'display_value' => $display_value,
-                    'default_value' => $defaults[$essential_key] ?? null
+                    'display_value' => $display_value
                 ];
             }
         }
     }
     
     foreach ($current_settings as $setting_key => $current_value) {
-        $default_value = $defaults[$setting_key] ?? null;
-        
         // For WordPress handlers, skip essential settings already processed above
         if ($handler_slug === 'wordpress_publish' && in_array($setting_key, ['post_type', 'post_status', 'post_author'])) {
             continue;
@@ -466,8 +487,8 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
             }
         }
         
-        // Show all settings for non-WordPress handlers, or WordPress settings that differ from defaults (or taxonomies that aren't "skip")
-        if ($handler_slug !== 'wordpress_publish' || $current_value !== $default_value || (strpos($setting_key, 'taxonomy_') === 0 && $current_value !== 'skip')) {
+        // Show settings that have meaningful values (not empty strings, false, or default-like values)
+        if (dm_should_show_setting($setting_key, $current_value, $handler_slug)) {
             $field_config = $fields[$setting_key] ?? [];
             $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $setting_key));
             
@@ -512,8 +533,7 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                 'key' => $setting_key,
                 'label' => $label,
                 'value' => $current_value,
-                'display_value' => $display_value,
-                'default_value' => $default_value
+                'display_value' => $display_value
             ];
         }
     }

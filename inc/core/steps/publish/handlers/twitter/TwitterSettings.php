@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class TwitterSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -66,16 +61,4 @@ class TwitterSettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'twitter_include_source' => true,
-            'twitter_enable_images' => true,
-            'twitter_url_as_reply' => false,
-        ];
-    }
 }

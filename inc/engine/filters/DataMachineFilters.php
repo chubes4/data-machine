@@ -323,23 +323,30 @@ function dm_register_utility_filters() {
     // Engine calls: $params = apply_filters('dm_step_additional_parameters', [], $data, $flow_step_config, $step_type, $flow_step_id);
     // Parameters are passed via: $step->execute($job_id, $flow_step_id, $data, $config, ...$params);
     add_filter('dm_step_additional_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-        // Extract original_id parameter for update and ai steps
-        if (in_array($step_type, ['update', 'ai'])) {
-            $original_id = null;
+        // Extract all common metadata parameters from data packet (once, at engine level)
+        $source_url = null;
+        $image_url = null;
+        $file_path = null;
+        $mime_type = null;
+        
+        // Search all data entries for metadata parameters
+        foreach ($data as $data_entry) {
+            $metadata = $data_entry['metadata'] ?? [];
             
-            // Search data packet for original_id (once, at engine level)
-            foreach ($data as $data_entry) {
-                $metadata = $data_entry['metadata'] ?? [];
-                if (isset($metadata['original_id'])) {
-                    $original_id = $metadata['original_id'];
-                    break;
-                }
-            }
-            
-            $parameters[] = $original_id;
+            // Collect all available parameters (first found wins)
+            $source_url = $source_url ?? $metadata['source_url'] ?? null;
+            $image_url = $image_url ?? $metadata['image_url'] ?? null;
+            $file_path = $file_path ?? $metadata['file_path'] ?? null;
+            $mime_type = $mime_type ?? $metadata['mime_type'] ?? null;
         }
         
-        return $parameters;
+        // Pass all extracted parameters to steps (benign if not needed)
+        return [
+            $source_url,   // Position 0  
+            $image_url,    // Position 1
+            $file_path,    // Position 2
+            $mime_type     // Position 3
+        ];
     }, 10, 5);
     
     /**

@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ThreadsSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -68,16 +63,4 @@ class ThreadsSettings {
         return $sanitized;
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'threads_char_limit' => 500,
-            'threads_include_images' => true,
-            'threads_include_title' => true,
-        ];
-    }
 }

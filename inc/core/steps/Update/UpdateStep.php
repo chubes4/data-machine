@@ -28,10 +28,13 @@ class UpdateStep {
      * @param string $flow_step_id Flow step identifier
      * @param array $data Data packet array
      * @param array $flow_step_config Step configuration
-     * @param string|null $original_id Original content ID for updates
+     * @param string|null $source_url Source URL from metadata
+     * @param string|null $image_url Image URL from metadata
+     * @param string|null $file_path File path from metadata
+     * @param string|null $mime_type MIME type from metadata
      * @return array Updated data packet array
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $source_url = null, $image_url = null, $file_path = null, $mime_type = null): array {
         try {
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'Update Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
@@ -73,7 +76,7 @@ class UpdateStep {
             }
 
             // Get handler instance and execute update
-            $handler_result = $this->execute_handler($handler_slug, $data, $handler, $flow_step_config, $original_id);
+            $handler_result = $this->execute_handler($handler_slug, $data, $handler, $flow_step_config);
             
             if ($handler_result === null) {
                 do_action('dm_log', 'error', 'Update Step: Handler execution failed', [
@@ -145,10 +148,9 @@ class UpdateStep {
      * @param array $data Data packet array
      * @param array $handler_config Handler configuration
      * @param array $flow_step_config Step configuration
-     * @param string|null $original_id Original content ID
      * @return array|null Handler result or null on failure
      */
-    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $original_id = null) {
+    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config) {
         try {
             // Get all registered update handlers
             $all_handlers = apply_filters('dm_handlers', []);
@@ -175,8 +177,8 @@ class UpdateStep {
                 return null;
             }
 
-            // Build parameters directly using engine-provided original_id and latest content
-            $parameters = $this->build_handler_parameters($data, $handler_config, $original_id);
+            // Build parameters directly using data content
+            $parameters = $this->build_handler_parameters($data, $handler_config);
             
             // Get handler tools for conditional execution
             $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
@@ -222,16 +224,10 @@ class UpdateStep {
      * 
      * @param array $data Data packet array
      * @param array $handler_settings Handler settings
-     * @param string|null $original_id Original content ID
      * @return array Handler parameters
      */
-    private function build_handler_parameters(array $data, array $handler_settings, $original_id = null): array {
+    private function build_handler_parameters(array $data, array $handler_settings): array {
         $parameters = [];
-        
-        // Use engine-provided original_id directly
-        if ($original_id !== null) {
-            $parameters['original_id'] = $original_id;
-        }
         
         // Get content from latest entry (data[0] - typically AI-generated)
         $latest_entry = !empty($data) ? $data[0] : [];
@@ -244,7 +240,7 @@ class UpdateStep {
             $parameters['content'] = $content_data['body'];
         }
         
-        // Extract additional metadata from latest entry
+        // Extract source_url from metadata if available
         $metadata = $latest_entry['metadata'] ?? [];
         if (isset($metadata['source_url'])) {
             $parameters['source_url'] = $metadata['source_url'];
@@ -289,7 +285,7 @@ class UpdateStep {
                 if ($tool_handler === $handler) {
                     return $entry;
                 }
-                // Fallback: check if tool name contains handler name pattern
+                // Check if tool name contains handler name pattern
                 if (strpos($tool_name, $handler) !== false || strpos($handler, $tool_name) !== false) {
                     return $entry;
                 }

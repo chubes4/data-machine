@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -42,11 +37,11 @@ class WordPress {
         ]);
 
         // Validate required parameters
-        if (empty($parameters['original_id'])) {
-            $error_msg = 'WordPress update tool call missing required original_id parameter';
+        if (empty($parameters['source_url'])) {
+            $error_msg = 'WordPress update tool call missing required source_url parameter';
             do_action('dm_log', 'error', $error_msg, [
                 'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['original_id']
+                'required_parameters' => ['source_url']
             ]);
             
             return [
@@ -56,7 +51,21 @@ class WordPress {
             ];
         }
 
-        $post_id = (int) $parameters['original_id'];
+        // Extract post ID from WordPress URL
+        $post_id = url_to_postid($parameters['source_url']);
+        if (!$post_id) {
+            $error_msg = "Could not extract valid WordPress post ID from URL: {$parameters['source_url']}";
+            do_action('dm_log', 'error', $error_msg, [
+                'source_url' => $parameters['source_url'],
+                'extracted_post_id' => $post_id
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_update'
+            ];
+        }
         
         // Validate that the post exists
         $existing_post = get_post($post_id);

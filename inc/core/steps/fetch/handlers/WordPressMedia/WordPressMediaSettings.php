@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressMediaSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -116,20 +111,6 @@ class WordPressMediaSettings {
         return empty($sanitized) ? ['image'] : array_unique($sanitized);
     }
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        return [
-            'file_types' => ['image'],
-            'include_parent_content' => false,
-            'timeframe_limit' => 'all_time',
-            'search' => '',
-            'randomize_selection' => false,
-        ];
-    }
 
     /**
      * Determine if authentication is required based on current configuration.

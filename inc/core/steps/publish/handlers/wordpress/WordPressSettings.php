@@ -18,12 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressSettings {
 
-    /**
-     * Constructor.
-     * Pure filter-based architecture - no dependencies.
-     */
     public function __construct() {
-        // No constructor dependencies - all services accessed via filters
     }
 
     /**
@@ -259,23 +254,6 @@ class WordPressSettings {
     }
 
 
-    /**
-     * Get default values for all settings.
-     *
-     * @return array Default values for all settings.
-     */
-    public static function get_defaults(): array {
-        $defaults = [
-            'post_type' => 'post',
-            'post_status' => 'draft',
-            'post_date_source' => 'current_date',
-            'post_author' => get_current_user_id(), // Add missing default author
-        ];
-
-        // Add dynamic taxonomy defaults (all skip by default)
-        $taxonomy_defaults = self::get_taxonomy_defaults();
-        return array_merge($defaults, $taxonomy_defaults);
-    }
 
     /**
      * Get default values for all available taxonomies.
