@@ -470,7 +470,7 @@ class PipelineModalAjax
         
         // Extract flow_step_id from request for proper file isolation
         // Use the flow_step_id provided by the frontend form
-        $flow_step_id = sanitize_text_field($_POST['flow_step_id'] ?? '');
+        $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
         
         if (empty($flow_step_id)) {
             wp_send_json_error(['message' => __('Missing flow step ID from form data.', 'data-machine')]);

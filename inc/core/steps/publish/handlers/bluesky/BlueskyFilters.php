@@ -85,14 +85,6 @@ function dm_get_bluesky_tool(array $handler_config = []): array {
     // Extract Bluesky-specific config from nested structure
     $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
     
-    // Debug logging for tool generation
-    if (!empty($handler_config)) {
-        do_action('dm_log', 'debug', 'Bluesky Tool: Generating with configuration', [
-            'handler_config_keys' => array_keys($handler_config),
-            'bluesky_config_keys' => array_keys($bluesky_config),
-            'bluesky_config_values' => $bluesky_config
-        ]);
-    }
     
     // Base tool definition
     $tool = [
@@ -129,13 +121,6 @@ function dm_get_bluesky_tool(array $handler_config = []): array {
         $description_parts[] = 'images from data will be uploaded automatically';
     }
     $tool['description'] = implode(', ', $description_parts);
-    
-    do_action('dm_log', 'debug', 'Bluesky Tool: Generation complete', [
-        'parameter_count' => count($tool['parameters']),
-        'parameter_names' => array_keys($tool['parameters']),
-        'include_source' => $include_source,
-        'enable_images' => $enable_images
-    ]);
     
     return $tool;
 }

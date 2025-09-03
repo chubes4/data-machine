@@ -20,11 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
-    /**
-     * Parameter-less constructor for pure filter-based architecture.
-     */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
     }
 
 

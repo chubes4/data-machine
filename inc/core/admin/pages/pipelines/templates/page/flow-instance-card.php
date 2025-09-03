@@ -32,7 +32,7 @@ if (!$last_run) {
 
 $next_run = null;
 if (function_exists('as_next_scheduled_action')) {
-    $next_action = as_next_scheduled_action("dm_execute_flow_{$flow_id}", ['flow_id' => $flow_id], 'data-machine');
+    $next_action = as_next_scheduled_action('dm_run_flow_now', [$flow_id], 'data-machine');
     if ($next_action) {
         $next_run = date('Y-m-d H:i:s', $next_action);
     }

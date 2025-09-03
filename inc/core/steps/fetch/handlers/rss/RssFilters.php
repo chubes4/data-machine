@@ -49,8 +49,6 @@ function dm_register_rss_fetch_filters() {
     
     // Modal registrations removed - now handled by generic modal system via pure discovery
     
-    // DataPacket creation removed - engine uses universal DataPacket constructor
-    // RSS handler returns properly formatted data for direct constructor usage
 }
 
 // Auto-register when file loads - achieving complete self-containment

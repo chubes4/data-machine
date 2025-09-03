@@ -47,12 +47,6 @@ class Twitter {
      * @return array Tool execution result
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('dm_log', 'debug', 'Twitter Tool: Handling tool call', [
-            'parameters' => $parameters,
-            'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
-        ]);
 
         // Validate required parameters
         if (empty($parameters['content'])) {
@@ -73,11 +67,6 @@ class Twitter {
         $handler_config = $tool_def['handler_config'] ?? [];
         $twitter_config = $handler_config['twitter'] ?? $handler_config;
         
-        do_action('dm_log', 'debug', 'Twitter Tool: Using handler configuration', [
-            'include_source' => $twitter_config['twitter_include_source'] ?? true,
-            'enable_images' => $twitter_config['twitter_enable_images'] ?? true,
-            'url_as_reply' => $twitter_config['twitter_url_as_reply'] ?? false
-        ]);
 
         // Extract parameters
         $content = $parameters['content'] ?? '';

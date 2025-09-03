@@ -44,6 +44,9 @@
             // Direct delete action handler for flow deletion
             $(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
             
+            // Schedule save action handler for flow scheduling
+            $(document).on('click', '[data-template="save-schedule-action"]', this.handleSaveScheduleAction.bind(this));
+            
         },
 
 
@@ -500,6 +503,71 @@
             const stepHtml = stepData.step_html || stepData.html;
             $container.append(stepHtml);
             return Promise.resolve();
+        },
+
+        /**
+         * Handle save schedule action via data attributes
+         * Triggered when user clicks save button in flow-schedule modal
+         */
+        handleSaveScheduleAction: function(e) {
+            e.preventDefault();
+            
+            const $button = $(e.currentTarget);
+            const context = $button.data('context') || {};
+            const flow_id = context.flow_id;
+            
+            if (!flow_id) {
+                return;
+            }
+            
+            // Collect form data from modal
+            const schedule_interval = $('#schedule_interval').val() || 'manual';
+            
+            // Show loading state
+            const originalText = $button.text();
+            $button.text('Saving...').prop('disabled', true);
+            
+            // Make AJAX call to existing backend handler
+            $.ajax({
+                url: dmPipelineBuilder.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_save_flow_schedule',
+                    flow_id: flow_id,
+                    schedule_interval: schedule_interval,
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        // Close modal and refresh UI components
+                        dmCoreModal.close();
+                        
+                        // Refresh flow card UI interactions to show updated schedule
+                        if (typeof window.dmPipelineCards !== 'undefined' && window.dmPipelineCards.refreshAll) {
+                            window.dmPipelineCards.refreshAll();
+                        }
+                        
+                        // Refresh pipeline status to show updated schedule info
+                        const $pipelineCard = $('.dm-pipeline-card').first();
+                        const pipelineId = $pipelineCard.data('pipeline-id');
+                        if (pipelineId) {
+                            PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
+                                // Status refresh failed after schedule save - continue silently
+                            });
+                        }
+                    } else {
+                        console.error('Schedule save failed:', response.data?.message);
+                        alert(response.data?.message || 'Failed to save schedule');
+                    }
+                },
+                error: () => {
+                    console.error('Schedule save request failed');
+                    alert('Error connecting to server');
+                },
+                complete: () => {
+                    $button.text(originalText).prop('disabled', false);
+                }
+            });
         }
     };
 

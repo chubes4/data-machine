@@ -64,7 +64,7 @@ $next_run_time = $next_run_time ?? null;
         
         <!-- Actions -->
         <div class="dm-schedule-actions">
-            <button type="button" class="button button-secondary dm-cancel-schedule"
+            <button type="button" class="button button-secondary dm-cancel-schedule dm-modal-close"
                     aria-label="<?php echo esc_attr(sprintf(__('Cancel: %s', 'data-machine'), $flow_name)); ?>">
                 <?php esc_html_e('Cancel', 'data-machine'); ?>
             </button>

@@ -271,7 +271,7 @@ class AIStepTools {
         try {
             // Build parameters using engine-provided parameters and data content
             $handler_config = $tool_def['handler_config'] ?? [];
-            $complete_parameters = self::buildToolParameters($tool_parameters, $data, $source_url, $image_url);
+            $complete_parameters = self::buildToolParameters($tool_parameters, $data, $source_url, $image_url, $available_tools, $tool_name);
             
             do_action('dm_log', 'debug', 'AIStepTools: Executing tool', [
                 'flow_step_id' => $flow_step_id,
@@ -317,9 +317,11 @@ class AIStepTools {
      * @param array $data Data packet array for content extraction
      * @param string|null $source_url Engine-provided source_url
      * @param string|null $image_url Engine-provided image_url
+     * @param array $available_tools Available tools definition to check parameter requirements
+     * @param string $tool_name Tool name to check parameter definition
      * @return array Complete tool parameters
      */
-    private static function buildToolParameters(array $tool_parameters, array $data, $source_url = null, $image_url = null): array {
+    private static function buildToolParameters(array $tool_parameters, array $data, $source_url = null, $image_url = null, array $available_tools = [], string $tool_name = ''): array {
         $complete_parameters = $tool_parameters;
         
         // Extract content from data (title and body for tool calls) - only if not already provided by AI
@@ -328,8 +330,13 @@ class AIStepTools {
             $content_params = self::extractParametersFromData($latest_entry, []);
             
             // Add content parameters only if they exist in data AND not already provided by AI
+            // AND the tool definition explicitly declares them as parameters
             if (isset($content_params['title']) && !isset($complete_parameters['title'])) {
-                $complete_parameters['title'] = $content_params['title'];
+                $tool_def = $available_tools[$tool_name] ?? [];
+                $tool_parameters_def = $tool_def['parameters'] ?? [];
+                if (isset($tool_parameters_def['title'])) {
+                    $complete_parameters['title'] = $content_params['title'];
+                }
             }
             if (isset($content_params['content']) && !isset($complete_parameters['content'])) {
                 $complete_parameters['content'] = $content_params['content'];
@@ -351,7 +358,7 @@ class AIStepTools {
      * Extract tool parameters from data entry for tool calling
      * 
      * Used by buildToolParameters to extract content (title, body) and metadata
-     * while engine-provided parameters (source_url, image_url, original_id) are handled separately
+     * while engine-provided parameters (source_url, image_url, file_path, mime_type) are handled separately
      * 
      * @param array $data_entry Latest data entry from data packet array
      * @param array $handler_config Handler configuration settings

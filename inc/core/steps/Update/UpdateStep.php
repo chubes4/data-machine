@@ -28,13 +28,15 @@ class UpdateStep {
      * @param string $flow_step_id Flow step identifier
      * @param array $data Data packet array
      * @param array $flow_step_config Step configuration
-     * @param string|null $source_url Source URL from metadata
-     * @param string|null $image_url Image URL from metadata
-     * @param string|null $file_path File path from metadata
-     * @param string|null $mime_type MIME type from metadata
+     * @param mixed ...$additional_parameters Engine-provided parameters via dm_step_additional_parameters filter
      * @return array Updated data packet array
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $source_url = null, $image_url = null, $file_path = null, $mime_type = null): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
+        // Extract engine-provided parameters by position (performance optimized)
+        $source_url = $additional_parameters[0] ?? null;
+        $image_url = $additional_parameters[1] ?? null;  
+        $file_path = $additional_parameters[2] ?? null;
+        $mime_type = $additional_parameters[3] ?? null;
         try {
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'Update Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
@@ -177,8 +179,8 @@ class UpdateStep {
                 return null;
             }
 
-            // Build parameters directly using data content
-            $parameters = $this->build_handler_parameters($data, $handler_config);
+            // Build parameters using engine parameters first, fallback to data content
+            $parameters = $this->build_handler_parameters($data, $handler_config, $source_url, $image_url, $file_path, $mime_type);
             
             // Get handler tools for conditional execution
             $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
@@ -220,13 +222,17 @@ class UpdateStep {
     }
 
     /**
-     * Build parameters for handler execution
+     * Build parameters for handler execution using engine parameters first, data fallback
      * 
      * @param array $data Data packet array
      * @param array $handler_settings Handler settings
+     * @param string|null $source_url Engine-provided source URL
+     * @param string|null $image_url Engine-provided image URL
+     * @param string|null $file_path Engine-provided file path
+     * @param string|null $mime_type Engine-provided MIME type
      * @return array Handler parameters
      */
-    private function build_handler_parameters(array $data, array $handler_settings): array {
+    private function build_handler_parameters(array $data, array $handler_settings, $source_url = null, $image_url = null, $file_path = null, $mime_type = null): array {
         $parameters = [];
         
         // Get content from latest entry (data[0] - typically AI-generated)
@@ -240,10 +246,21 @@ class UpdateStep {
             $parameters['content'] = $content_data['body'];
         }
         
-        // Extract source_url from metadata if available
-        $metadata = $latest_entry['metadata'] ?? [];
-        if (isset($metadata['source_url'])) {
-            $parameters['source_url'] = $metadata['source_url'];
+        // Use ONLY engine parameters - no fallbacks to hide errors
+        if ($source_url !== null) {
+            $parameters['source_url'] = $source_url;
+        }
+        
+        if ($image_url !== null) {
+            $parameters['image_url'] = $image_url;
+        }
+        
+        if ($file_path !== null) {
+            $parameters['file_path'] = $file_path;
+        }
+        
+        if ($mime_type !== null) {
+            $parameters['mime_type'] = $mime_type;
         }
         
         // Include AI analysis results from latest entry

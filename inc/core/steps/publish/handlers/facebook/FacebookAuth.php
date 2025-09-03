@@ -23,7 +23,7 @@ class FacebookAuth {
     // Constants for Facebook OAuth
     const AUTH_URL = 'https://www.facebook.com/v23.0/dialog/oauth';
     const TOKEN_URL = 'https://graph.facebook.com/v23.0/oauth/access_token';
-    const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_comments,business_management';
+    const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,business_management';
     const GRAPH_API_URL = 'https://graph.facebook.com/v23.0';
 
     /**
@@ -118,6 +118,26 @@ class FacebookAuth {
 
         // Get page token directly
         return $account['page_access_token'];
+    }
+
+    /**
+     * Retrieves the stored User access token.
+     * Uses global site options for admin-only authentication.
+     *
+     * @return string|null User Access token or null if not found/valid.
+     */
+    public function get_user_access_token(): ?string {
+        $account = apply_filters('dm_retrieve_oauth_account', [], 'facebook');
+        if (empty($account) || !is_array($account) || empty($account['user_access_token'])) {
+            return null;
+        }
+
+        // Check user token expiry
+        if (isset($account['token_expires_at']) && time() > $account['token_expires_at']) {
+            return null;
+        }
+
+        return $account['user_access_token'];
     }
 
     /**
@@ -577,18 +597,19 @@ class FacebookAuth {
      * @return bool True if comment permissions are available, false otherwise
      */
     public function has_comment_permission(): bool {
-        $page_access_token = $this->get_page_access_token();
-        if (!$page_access_token) {
+        $user_access_token = $this->get_user_access_token();
+        if (!$user_access_token) {
+            do_action('dm_log', 'error', 'Facebook: No user access token available for permission check', []);
             return false;
         }
 
-        // Check permissions for the page access token
-        $permissions_url = self::GRAPH_API_URL . '/me/permissions?access_token=' . $page_access_token;
+        // Check permissions for the user access token (not page token)
+        $permissions_url = self::GRAPH_API_URL . '/me/permissions?access_token=' . $user_access_token;
         
         $result = apply_filters('dm_request', null, 'GET', $permissions_url, [], 'Facebook Comment Permission Check');
         
         if (!$result['success']) {
-            do_action('dm_log', 'debug', 'Facebook: Failed to check comment permissions', [
+            do_action('dm_log', 'error', 'Facebook: Failed to check comment permissions', [
                 'error' => $result['error']
             ]);
             return false;
@@ -597,18 +618,27 @@ class FacebookAuth {
         $data = json_decode($result['data'], true);
         
         if (!isset($data['data']) || !is_array($data['data'])) {
+            do_action('dm_log', 'error', 'Facebook: Invalid permission response format', [
+                'response_data' => $data
+            ]);
             return false;
         }
         
-        // Look for pages_manage_comments permission
+        // Look for pages_manage_engagement permission
         foreach ($data['data'] as $permission) {
             if (isset($permission['permission']) && 
-                $permission['permission'] === 'pages_manage_comments' && 
+                $permission['permission'] === 'pages_manage_engagement' && 
                 $permission['status'] === 'granted') {
                 return true;
             }
         }
         
+        do_action('dm_log', 'error', 'Facebook: pages_manage_engagement permission not granted', [
+            'available_permissions' => array_column($data['data'], 'permission'),
+            'granted_permissions' => array_column(array_filter($data['data'], function($p) { 
+                return $p['status'] === 'granted'; 
+            }), 'permission')
+        ]);
         return false;
     }
 

@@ -172,6 +172,11 @@ class PipelinePageAjax
      */
     public function handle_save_flow_schedule()
     {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+        
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
         $schedule_interval = sanitize_text_field(wp_unslash($_POST['schedule_interval'] ?? 'manual'));
 
@@ -192,8 +197,10 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
         }
 
-        // Parse existing scheduling config
-        $scheduling_config = json_decode($flow['scheduling_config'] ?? '{}', true);
+        // Parse existing scheduling config - handle both string and array types
+        $scheduling_config = is_array($flow['scheduling_config']) ? 
+            $flow['scheduling_config'] : 
+            json_decode($flow['scheduling_config'] ?? '{}', true);
         $old_interval = $scheduling_config['interval'] ?? 'manual';
 
         // Update scheduling config

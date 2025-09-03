@@ -41,8 +41,6 @@ function dm_register_publish_step_filters() {
         return $steps;
     });
     
-    // DataPacket creation removed - engine uses universal DataPacket constructor
-    // Publish step returns properly formatted data for direct constructor usage
 }
 
 // Auto-register when file loads - achieving complete self-containment

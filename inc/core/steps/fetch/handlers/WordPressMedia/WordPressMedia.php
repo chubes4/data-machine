@@ -20,11 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressMedia {
 
-    /**
-     * Parameter-less constructor for pure filter-based architecture.
-     */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
     }
 
     /**
@@ -183,14 +179,18 @@ class WordPressMedia {
         // Get parent post for URL and optional content
         $parent_post = null;
         $parent_content = '';
+        $parent_content_included = false;
         if ($post->post_parent > 0) {
             $parent_post = get_post($post->post_parent);
             
-            // Add parent content if requested
+            // Add parent content if requested - enhanced formatting for better AI comprehension
             if ($include_parent_content && $parent_post) {
                 $parent_title = $parent_post->post_title ?: 'Untitled';
                 $parent_body = $parent_post->post_content ?: '';
-                $parent_content = "\n\nAttached to: {$parent_title}\n{$parent_body}";
+                
+                // Enhanced formatting with clear AI instructions
+                $parent_content = "\n\n=== SOURCE POST CONTENT ===\nTitle: {$parent_title}\n\nContent:\n{$parent_body}\n=== END SOURCE POST ===\n\n[AI Instructions: Reference and build upon the source post content above when creating social media content. Use the source content as context and inspiration for your response.]";
+                $parent_content_included = true;
             }
         }
         
@@ -247,7 +247,7 @@ class WordPressMedia {
             ]
         ];
         
-        // Debug logging for data flow tracking
+        // Debug logging for data flow tracking with parent content details
         do_action('dm_log', 'debug', 'WordPress Media: Data packet created (attached media only)', [
             'post_id' => $post_id,
             'media_url' => $media_url,
@@ -257,7 +257,11 @@ class WordPressMedia {
             'image_url' => $input_data['metadata']['image_url'],
             'file_path' => $file_path,
             'file_exists' => $file_path ? file_exists($file_path) : false,
-            'attached_media_confirmed' => true
+            'attached_media_confirmed' => true,
+            'include_parent_content_setting' => $include_parent_content,
+            'parent_content_included' => $parent_content_included,
+            'parent_content_length' => $parent_content_included ? strlen($parent_content) : 0,
+            'total_content_length' => strlen($content_string)
         ]);
         
         return $input_data;

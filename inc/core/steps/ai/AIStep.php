@@ -21,59 +21,32 @@ require_once __DIR__ . '/AIStepTools.php';
 class AIStep {
 
 
-    /**
-     * Execute AI processing with tool support
-     * 
-     * @param string $job_id Job identifier
-     * @param string $flow_step_id Flow step identifier
-     * @param array $data Cumulative data packet array
-     * @param array $flow_step_config Step configuration
-     * @param string|null $original_id Original ID for tool operations
-     * @param string|null $source_url Source URL from metadata
-     * @param string|null $image_url Image URL from metadata
-     * @param string|null $file_path File path from metadata
-     * @param string|null $mime_type MIME type from metadata
-     * @return array Updated data packet array with AI responses
-     */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], $original_id = null, $source_url = null, $image_url = null, $file_path = null, $mime_type = null): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
+        // Extract engine-provided parameters by position (performance optimized)
+        $source_url = $additional_parameters[0] ?? null;
+        $image_url = $additional_parameters[1] ?? null;  
+        $file_path = $additional_parameters[2] ?? null;
+        $mime_type = $additional_parameters[3] ?? null;
         try {
-            // Pure filter architecture - no client instance needed
-
-
-            // Use step configuration directly - no pipeline introspection needed
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'AI Agent: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return [];
             }
 
-            // AI configuration managed by AI HTTP Client - no validation needed here
-            $title = $flow_step_config['title'] ?? 'AI Processing';
-
-            // Process ALL data packet entries (oldest to newest for logical message flow)
-            // Note: User messages are now handled separately and always functional
             if (empty($data)) {
                 $user_message = trim($flow_step_config['user_message'] ?? '');
                 if (empty($user_message)) {
                     do_action('dm_log', 'error', 'AI Agent: No data found and no user message configured', ['flow_step_id' => $flow_step_id]);
                     return $data;
                 }
-                // Continue processing - user message will be added to empty messages array
             }
-            
-
-            // Build messages from all data packet entries (reverse order for oldest-to-newest)
             $messages = [];
             $data_reversed = array_reverse($data);
             
-            foreach ($data_reversed as $index => $input) {
-                $input_type = $input['type'] ?? 'unknown';
+            foreach ($data_reversed as $input) {
                 $metadata = $input['metadata'] ?? [];
                 
-                
-                // Check if this input has a file to process (use engine-provided file_path)
                 if ($file_path && file_exists($file_path)) {
-                    
-                    // Add file as user message
                     $messages[] = [
                         'role' => 'user',
                         'content' => [
@@ -84,9 +57,7 @@ class AIStep {
                             ]
                         ]
                     ];
-                    
                 } else {
-                    // Process text content
                     $content = '';
                     if (isset($input['content'])) {
                         if (!empty($input['content']['title'])) {
@@ -347,7 +318,7 @@ class AIStep {
                         }
                         
                         // Execute tool using extracted class
-                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $original_id, $source_url, $image_url);
+                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $source_url, $image_url);
                         
                         // Tool result will be stored as data packet entry if it's a general tool
                         

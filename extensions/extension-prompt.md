@@ -77,7 +77,7 @@ public function handle_tool_call(array $parameters, array $tool_def = []): array
 
 **AI Agents:**
 ```php
-public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
     // Process data array, add new entry to front
     array_unshift($data, $processed_entry);
     return $data;
@@ -86,7 +86,7 @@ public function execute($job_id, $flow_step_id, array $data = [], array $flow_st
 
 **Custom Steps:**
 ```php
-public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
     // Your custom processing logic
     return $data; // Always return the data array
 }

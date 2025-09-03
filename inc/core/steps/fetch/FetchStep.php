@@ -20,6 +20,7 @@ class FetchStep {
      * @param string $flow_step_id Flow step identifier
      * @param array $data Data packet array
      * @param array $flow_step_config Step configuration
+     * @param mixed ...$additional_parameters Engine-provided parameters via dm_step_additional_parameters filter
      * @return array Updated data packet array
      */
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {

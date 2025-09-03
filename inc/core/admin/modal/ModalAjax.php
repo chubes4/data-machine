@@ -126,6 +126,54 @@ class ModalAjax
             return apply_filters('dm_render_template', '', 'modal/handler-settings', $context);
         }
         
+        // Special data preparation for flow-schedule modal
+        if ($template === 'modal/flow-schedule') {
+            $context['intervals'] = apply_filters('dm_scheduler_intervals', []);
+            
+            // Get flow-specific scheduling data if flow_id exists
+            if (!empty($context['flow_id'])) {
+                // Query actual flow data from database
+                $all_databases = apply_filters('dm_db', []);
+                $db_flows = $all_databases['flows'] ?? null;
+                
+                if ($db_flows) {
+                    $flow = $db_flows->get_flow($context['flow_id']);
+                    if ($flow) {
+                        // Handle both string and array types (same as PipelinePageAjax fix)
+                        $scheduling_config = is_array($flow['scheduling_config']) ? 
+                            $flow['scheduling_config'] : 
+                            json_decode($flow['scheduling_config'] ?? '{}', true);
+                        
+                        $context['current_interval'] = $scheduling_config['interval'] ?? 'manual';
+                        $context['last_run_at'] = $scheduling_config['last_run_at'] ?? null;
+                        
+                        // Query actual next run time from Action Scheduler
+                        $next_run_time = null;
+                        if (function_exists('as_next_scheduled_action')) {
+                            $next_action = as_next_scheduled_action('dm_run_flow_now', [$context['flow_id']], 'data-machine');
+                            if ($next_action) {
+                                $next_run_time = date('Y-m-d H:i:s', $next_action);
+                            }
+                        }
+                        $context['next_run_time'] = $next_run_time;
+                        $context['flow_name'] = $flow['flow_name'] ?? 'Flow';
+                    } else {
+                        // Flow not found - this is a critical system error
+                        do_action('dm_log', 'error', 'Flow-schedule modal failed - flow not found', [
+                            'flow_id' => $context['flow_id']
+                        ]);
+                        return '<!-- Flow not found: Critical system error -->';
+                    }
+                } else {
+                    // Database service unavailable - critical system error
+                    do_action('dm_log', 'error', 'Flow-schedule modal failed - database service unavailable', [
+                        'flow_id' => $context['flow_id']
+                    ]);
+                    return '<!-- Database service unavailable: Critical system error -->';
+                }
+            }
+        }
+        
         // Use ONLY the universal template filter for non-handler-specific templates
         return apply_filters('dm_render_template', '', $template, $context);
     }

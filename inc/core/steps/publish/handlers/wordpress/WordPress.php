@@ -29,12 +29,6 @@ class WordPress {
      * @return array Tool execution result.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('dm_log', 'debug', 'WordPress Tool: Handling tool call', [
-            'parameters' => $parameters,
-            'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
-        ]);
         
         // Validate required parameters
         if (empty($parameters['title']) || empty($parameters['content'])) {

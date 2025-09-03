@@ -60,12 +60,6 @@ class Facebook {
      * @return array Tool execution result.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('dm_log', 'debug', 'Facebook Tool: Handling tool call', [
-            'parameters' => $parameters,
-            'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
-        ]);
 
         if (empty($parameters['content'])) {
             $error_msg = 'Facebook tool call missing required content parameter';
@@ -87,12 +81,6 @@ class Facebook {
         // Extract Facebook-specific configuration (it's nested under 'facebook' key)
         $facebook_config = $handler_config['facebook'] ?? [];
         
-        do_action('dm_log', 'debug', 'Facebook Tool: Using handler configuration', [
-            'full_handler_config' => $handler_config,
-            'facebook_config' => $facebook_config,
-            'include_images' => $facebook_config['include_images'] ?? false,
-            'link_handling' => $facebook_config['link_handling'] ?? 'append'
-        ]);
 
         // Extract parameters
         $title = $parameters['title'] ?? '';
@@ -194,13 +182,15 @@ class Facebook {
                     } else {
                         $comment_result = [
                             'success' => false,
-                            'error' => 'Facebook comment skipped: Missing pages_manage_comments permission. Please re-authenticate your Facebook account to enable comment functionality.',
+                            'error' => 'Facebook comment skipped: Missing pages_manage_engagement permission. Please re-authenticate your Facebook account to enable comment functionality.',
                             'requires_reauth' => true
                         ];
                         
-                        do_action('dm_log', 'warning', 'Facebook Tool: Comment skipped due to missing permissions', [
+                        do_action('dm_log', 'error', 'Facebook Tool: Comment skipped due to missing permissions', [
                             'post_id' => $post_id,
                             'source_url' => $source_url,
+                            'link_handling' => $link_handling,
+                            'required_permission' => 'pages_manage_engagement',
                             'requires_reauth' => true
                         ]);
                     }
@@ -224,10 +214,13 @@ class Facebook {
                     $result_data['comment_id'] = $comment_result['comment_id'];
                     $result_data['comment_url'] = $comment_result['comment_url'];
                 } elseif ($comment_result && !$comment_result['success']) {
-                    // Comment failed but main post succeeded - log but don't fail the whole operation
-                    do_action('dm_log', 'warning', 'Facebook Tool: Main post created but comment failed', [
+                    // Comment failed but main post succeeded - log error but don't fail the whole operation
+                    do_action('dm_log', 'error', 'Facebook Tool: Main post created but comment failed', [
                         'post_id' => $post_id,
-                        'comment_error' => $comment_result['error']
+                        'post_url' => $post_url,
+                        'comment_error' => $comment_result['error'],
+                        'link_handling' => 'comment',
+                        'source_url' => $source_url
                     ]);
                 }
 
@@ -324,7 +317,7 @@ class Facebook {
                 
                 // Check if this is a permissions error
                 if ($error_code === 200 && strpos($error_msg, 'sufficient permissions') !== false) {
-                    $error_msg = 'Facebook comment failed: Missing pages_manage_comments permission. Please re-authenticate your Facebook account to enable comment functionality.';
+                    $error_msg = 'Facebook comment failed: Missing pages_manage_engagement permission. Please re-authenticate your Facebook account to enable comment functionality.';
                     
                     do_action('dm_log', 'warning', 'Facebook Tool: Comment failed due to missing permissions', [
                         'error_code' => $error_code,

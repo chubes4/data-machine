@@ -158,7 +158,7 @@ class Update {
             // Direct Action Scheduler call using universal flow execution entry point
             if (function_exists('as_schedule_recurring_action')) {
                 $action_id = as_schedule_recurring_action(
-                    time(),
+                    time() + $interval_seconds,
                     $interval_seconds,
                     'dm_run_flow_now',
                     [$flow_id],

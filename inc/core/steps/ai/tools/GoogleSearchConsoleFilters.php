@@ -111,7 +111,7 @@ add_action('wp_ajax_dm_get_oauth_auth_url', function() {
         wp_send_json_error(['message' => __('Security check failed', 'data-machine')]);
     }
     
-    $provider = sanitize_text_field($_POST['provider'] ?? '');
+    $provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? ''));
     
     if ($provider === 'google_search_console') {
         $auth_url = apply_filters('dm_get_oauth_auth_url', '', 'google_search_console');

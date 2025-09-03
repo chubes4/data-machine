@@ -60,8 +60,6 @@ function dm_register_googlesheets_fetch_filters() {
         return $providers;
     });
     
-    // DataPacket creation removed - engine uses universal DataPacket constructor
-    // Google Sheets handler returns properly formatted data for direct constructor usage
 }
 
 // Auto-register when file loads - achieving complete self-containment

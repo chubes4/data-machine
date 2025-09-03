@@ -120,8 +120,8 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 // AI integration
 $response = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'claude-3-5-sonnet-20241022'
-], 'anthropic');
+    'model' => 'gpt-5-mini'
+], 'openai');
 
 // Service discovery
 $handlers = apply_filters('dm_handlers', []);
@@ -134,6 +134,10 @@ $configured = apply_filters('dm_tool_configured', false, 'google_search');
 do_action('dm_save_tool_config', 'google_search', $config_data);
 $tools = apply_filters('ai_tools', []);
 $enabled_tools = dm_get_enabled_general_tools();
+
+// Tool-specific calls (Read Post example)
+$tools = apply_filters('ai_tools', []);
+$read_post_tool = $tools['read_post'] ?? null;
 
 // AI step configuration
 do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
@@ -156,7 +160,7 @@ Complete extension system with LLM-powered development:
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
 **Update Handlers**: WordPress content updates (title, content, meta, taxonomy)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
-**General Tools**: Google Search, Local WordPress Search, Google Search Console
+**General Tools**: Google Search, Local WordPress Search, Read Post, Google Search Console
 
 *For detailed specifications, see `CLAUDE.md`*
 

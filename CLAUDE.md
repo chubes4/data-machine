@@ -151,8 +151,8 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 ```php
 $result = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'claude-3-5-sonnet-20241022'
-], 'anthropic');
+    'model' => 'gpt-5-mini'
+], 'openai');
 ```
 
 ### AI Request Pipeline
@@ -246,6 +246,17 @@ add_filter('ai_tools', function($tools) {
         'parameters' => ['query' => ['type' => 'string', 'required' => true]]
         // No 'handler' property = universal tool
     ];
+    
+    $tools['read_post'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\ReadPost',
+        'method' => 'handle_tool_call',
+        'description' => 'Read full content of existing WordPress posts/pages by ID',
+        'requires_config' => false,
+        'parameters' => [
+            'post_id' => ['type' => 'integer', 'required' => true],
+            'include_meta' => ['type' => 'boolean', 'required' => false]
+        ]
+    ];
     return $tools;
 });
 ```
@@ -292,6 +303,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 **Tool Capabilities**:
 - **Google Search**: Web search, site restriction (API key + Search Engine ID required)
 - **Local Search**: WordPress WP_Query search (no configuration needed)
+- **Read Post**: Read full content of existing WordPress posts/pages by ID (no configuration needed)
 - **Google Search Console**: SEO performance analysis, keyword opportunities, internal linking suggestions (OAuth2 required)
 
 ## Handler Matrix
@@ -323,6 +335,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 |-------------------|----------|--------------|
 | Google Search | API Key + Search Engine ID | Web search, site restriction, 1-10 results |
 | Local Search | None | WordPress search, 1-20 results |
+| Read Post | None | Read full content of WordPress posts/pages by ID |
 | Google Search Console | OAuth2 | SEO performance analysis, keyword opportunities, internal link suggestions |
 
 ## DataPacket Structure
@@ -405,7 +418,13 @@ apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $ste
 **Pipeline Steps**:
 ```php
 class MyStep {
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array {
+    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
+        // Extract engine-provided parameters by position
+        $source_url = $additional_parameters[0] ?? null;
+        $image_url = $additional_parameters[1] ?? null;
+        $file_path = $additional_parameters[2] ?? null;
+        $mime_type = $additional_parameters[3] ?? null;
+        
         do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
         
         array_unshift($data, [
@@ -449,8 +468,8 @@ class MyPublishHandler {
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $handler_config = $tool_def['handler_config'] ?? [];
-        $original_id = $parameters['original_id'] ?? null; // Required for updates
-        return ['success' => true, 'data' => ['updated_id' => $original_id, 'modifications' => $changes]];
+        $source_url = $parameters['source_url'] ?? null; // Required for updates - extracted from metadata
+        return ['success' => true, 'data' => ['updated_id' => $post_id, 'modifications' => $changes]];
     }
 }
 
@@ -540,7 +559,7 @@ apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pi
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Note**: AI agents discover handler tools for immediate next step only. Update step requires `original_id` in metadata for content modification.
+> **Note**: AI agents discover handler tools for immediate next step only. Update step requires `source_url` in metadata for content modification.
 
 ## Development
 
@@ -638,8 +657,8 @@ new MyExtension();
 **Required Interfaces**:
 - **Fetch**: `get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array`
 - **Publish**: `handle_tool_call(array $parameters, array $tool_def = []): array`
-- **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `original_id`)
-- **Steps**: `execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = []): array`
+- **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `source_url` from metadata)
+- **Steps**: `execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array`
 
 **Error Handling**:
 ```php
@@ -653,7 +672,7 @@ try {
 
 ## OAuth Integration
 
-**Unified System**: Centralized `dm_oauth` filter handles all providers with configuration validation
+**Direct Filter System**: Five dedicated filters handle all OAuth operations with simplified maintainability
 
 ```php
 // Account operations
