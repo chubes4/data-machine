@@ -2,8 +2,8 @@
 /**
  * Job database operations
  *
- * Coordinates between operations and status management components.
- * Handles job execution tracking and lifecycle management.
+ * Coordinates job lifecycle management through operations and status components.
+ * Tracks pipeline+flow execution with comprehensive error handling.
  *
  * @package DataMachine
  * @subpackage Core\Database\Jobs
@@ -23,7 +23,8 @@ class Jobs {
     private $table_name;
 
     /**
-     * Internal components for focused responsibilities.
+     * @var JobsOperations Operations component
+     * @var JobsStatus Status management component  
      */
     private $operations;
     private $status;

@@ -327,7 +327,7 @@ class Twitter {
      * @return string|null Media ID or null on failure.
      */
     private function upload_image_to_twitter($connection, string $image_url, string $alt_text): ?string {
-        do_action('dm_log', 'debug', 'Attempting to upload image to X/Twitter using v2 API.', ['image_url' => $image_url]);
+        do_action('dm_log', 'debug', 'Attempting to upload image to Twitter using v1.1 media API.', ['image_url' => $image_url]);
         
         if (!function_exists('download_url')) {
             require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -356,57 +356,63 @@ class Twitter {
                 return null;
             }
 
-            do_action('dm_log', 'debug', 'Using TwitterOAuth library for media upload.', [
+            // Get file size for upload method selection
+            $file_size = filesize($temp_image_path);
+            
+            do_action('dm_log', 'debug', 'Twitter image upload: File analysis complete.', [
                 'temp_image_path' => $temp_image_path,
-                'mime_type' => $mime_type
+                'mime_type' => $mime_type,
+                'file_size' => $file_size,
+                'upload_method' => $file_size > 1048576 ? 'chunked' : 'simple'
             ]);
 
-            // Use TwitterOAuth library's upload method
-            $media_result = $connection->upload('media/upload', [
-                'media' => $temp_image_path,
-                'media_category' => 'tweet_image'
-            ]);
+            // Switch to v1.1 API for media upload (required for all media operations)
+            $connection->setApiVersion('1.1');
+            
+            $media_id = null;
+            
+            // Use chunked upload for files > 1MB or try simple upload first
+            if ($file_size > 1048576) {
+                $media_id = $this->upload_image_chunked($connection, $temp_image_path, $mime_type);
+            } else {
+                $media_id = $this->upload_image_simple($connection, $temp_image_path, $mime_type);
+                
+                // Fallback to chunked if simple upload fails and file exists
+                if (!$media_id && $file_size > 0) {
+                    do_action('dm_log', 'debug', 'Simple upload failed, attempting chunked upload.', [
+                        'file_size' => $file_size,
+                        'image_url' => $image_url
+                    ]);
+                    $media_id = $this->upload_image_chunked($connection, $temp_image_path, $mime_type);
+                }
+            }
 
-            $http_code = $connection->getLastHttpCode();
-            do_action('dm_log', 'debug', 'TwitterOAuth media upload response received.', [
-                'http_code' => $http_code,
-                'has_media_id' => isset($media_result->media_id_string),
-                'response_type' => gettype($media_result)
-            ]);
+            // Switch back to v2 API for tweet operations
+            $connection->setApiVersion('2');
 
-            if ($http_code == 200 && isset($media_result->media_id_string)) {
-                $media_id = $media_result->media_id_string;
-
+            if ($media_id) {
                 // Note: Alt text would need to be added via separate API call
-                // TwitterOAuth library upload method doesn't directly support alt text
                 if (!empty($alt_text)) {
-                    do_action('dm_log', 'debug', 'Alt text provided but not yet implemented with TwitterOAuth method.', [
+                    do_action('dm_log', 'debug', 'Alt text provided but not yet implemented.', [
                         'media_id' => $media_id,
                         'alt_text_length' => strlen($alt_text)
                     ]);
                 }
 
-                do_action('dm_log', 'debug', 'Successfully uploaded image to Twitter using TwitterOAuth library.', ['media_id' => $media_id]);
+                do_action('dm_log', 'debug', 'Successfully uploaded image to Twitter.', ['media_id' => $media_id]);
                 return $media_id;
             } else {
-                $upload_error = 'Twitter media upload failed via TwitterOAuth library.';
-                $error_details = [
-                    'http_code' => $http_code,
-                    'image_url' => $image_url
-                ];
-                
-                if (isset($media_result->errors)) {
-                    $first_error = $media_result->errors[0];
-                    $upload_error .= ' API Error: ' . $first_error->message;
-                    $error_details['api_errors'] = $media_result->errors;
-                } else {
-                    $upload_error .= ' HTTP ' . $http_code;
-                }
-                
-                do_action('dm_log', 'error', $upload_error, $error_details);
+                do_action('dm_log', 'error', 'All Twitter media upload methods failed.', [
+                    'image_url' => $image_url,
+                    'file_size' => $file_size,
+                    'mime_type' => $mime_type
+                ]);
                 return null;
             }
         } catch (\Exception $e) {
+            // Ensure we switch back to v2 API even if exception occurs
+            $connection->setApiVersion('2');
+            
             do_action('dm_log', 'error', 'Twitter image upload exception: ' . $e->getMessage(), [
                 'exception_type' => get_class($e),
                 'image_url' => $image_url
@@ -417,6 +423,211 @@ class Twitter {
                 wp_delete_file($temp_image_path);
                 do_action('dm_log', 'debug', 'Temporary image file cleaned up.', ['image_url' => $image_url]);
             }
+        }
+    }
+
+    /**
+     * Simple image upload using TwitterOAuth library (for files < 1MB)
+     *
+     * @param object $connection Twitter connection object (must be set to v1.1 API)
+     * @param string $temp_image_path Local file path to image
+     * @param string $mime_type Image MIME type
+     * @return string|null Media ID or null on failure
+     */
+    private function upload_image_simple($connection, string $temp_image_path, string $mime_type): ?string {
+        do_action('dm_log', 'debug', 'Twitter: Attempting simple image upload using TwitterOAuth.', [
+            'temp_image_path' => $temp_image_path,
+            'mime_type' => $mime_type
+        ]);
+
+        try {
+            // Use TwitterOAuth library's upload method (simple upload)
+            $media_result = $connection->upload('media/upload', [
+                'media' => $temp_image_path,
+                'media_category' => 'TWEET_IMAGE'
+            ]);
+
+            $http_code = $connection->getLastHttpCode();
+            do_action('dm_log', 'debug', 'Twitter: Simple upload response received.', [
+                'http_code' => $http_code,
+                'has_media_id' => isset($media_result->media_id_string),
+                'response_type' => gettype($media_result)
+            ]);
+
+            if ($http_code == 200 && isset($media_result->media_id_string)) {
+                do_action('dm_log', 'debug', 'Twitter: Simple upload successful.', [
+                    'media_id' => $media_result->media_id_string
+                ]);
+                return $media_result->media_id_string;
+            } else {
+                $error_details = [
+                    'http_code' => $http_code,
+                    'has_errors' => isset($media_result->errors),
+                    'response' => $media_result
+                ];
+                
+                if (isset($media_result->errors)) {
+                    $error_details['first_error'] = $media_result->errors[0]->message ?? 'Unknown API error';
+                }
+                
+                do_action('dm_log', 'warning', 'Twitter: Simple upload failed.', $error_details);
+                return null;
+            }
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Twitter: Simple upload exception.', [
+                'exception' => $e->getMessage(),
+                'exception_type' => get_class($e)
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Chunked image upload for large files using Twitter v1.1 API (INIT→APPEND→FINALIZE)
+     *
+     * @param object $connection Twitter connection object (must be set to v1.1 API)  
+     * @param string $temp_image_path Local file path to image
+     * @param string $mime_type Image MIME type
+     * @return string|null Media ID or null on failure
+     */
+    private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
+        do_action('dm_log', 'debug', 'Twitter: Starting chunked image upload.', [
+            'temp_image_path' => $temp_image_path,
+            'mime_type' => $mime_type,
+            'file_size' => filesize($temp_image_path)
+        ]);
+
+        try {
+            $file_size = filesize($temp_image_path);
+            
+            // STEP 1: INIT - Initialize chunked upload
+            do_action('dm_log', 'debug', 'Twitter: Chunked upload INIT phase.', [
+                'total_bytes' => $file_size,
+                'media_type' => $mime_type
+            ]);
+
+            $init_response = $connection->post('media/upload', [
+                'command' => 'INIT',
+                'media_type' => $mime_type,
+                'media_category' => 'TWEET_IMAGE',  
+                'total_bytes' => $file_size
+            ]);
+
+            $http_code = $connection->getLastHttpCode();
+            if ($http_code !== 200 || !isset($init_response->media_id_string)) {
+                do_action('dm_log', 'error', 'Twitter: Chunked upload INIT failed.', [
+                    'http_code' => $http_code,
+                    'response' => $init_response
+                ]);
+                return null;
+            }
+
+            $media_id = $init_response->media_id_string;
+            do_action('dm_log', 'debug', 'Twitter: Chunked upload INIT successful.', [
+                'media_id' => $media_id
+            ]);
+
+            // STEP 2: APPEND - Upload file in chunks
+            $handle = fopen($temp_image_path, 'rb');
+            if (!$handle) {
+                do_action('dm_log', 'error', 'Twitter: Cannot open image file for chunked upload.', [
+                    'temp_image_path' => $temp_image_path
+                ]);
+                return null;
+            }
+
+            $segment_index = 0;
+            $chunk_size = 1048576; // 1MB chunks
+
+            while (!feof($handle)) {
+                $chunk = fread($handle, $chunk_size);
+                if ($chunk === false) {
+                    fclose($handle);
+                    do_action('dm_log', 'error', 'Twitter: Failed to read chunk from image file.', [
+                        'segment_index' => $segment_index
+                    ]);
+                    return null;
+                }
+
+                do_action('dm_log', 'debug', 'Twitter: Uploading chunk.', [
+                    'segment_index' => $segment_index,
+                    'chunk_size' => strlen($chunk)
+                ]);
+
+                $append_response = $connection->post('media/upload', [
+                    'command' => 'APPEND',
+                    'media_id' => $media_id,
+                    'segment_index' => $segment_index,
+                    'media_data' => base64_encode($chunk)
+                ]);
+
+                $http_code = $connection->getLastHttpCode();
+                if ($http_code !== 204) { // APPEND returns 204 No Content on success
+                    fclose($handle);
+                    do_action('dm_log', 'error', 'Twitter: Chunked upload APPEND failed.', [
+                        'http_code' => $http_code,
+                        'segment_index' => $segment_index,
+                        'response' => $append_response
+                    ]);
+                    return null;
+                }
+
+                $segment_index++;
+            }
+
+            fclose($handle);
+            do_action('dm_log', 'debug', 'Twitter: All chunks uploaded successfully.', [
+                'total_segments' => $segment_index
+            ]);
+
+            // STEP 3: FINALIZE - Complete the upload
+            do_action('dm_log', 'debug', 'Twitter: Chunked upload FINALIZE phase.', [
+                'media_id' => $media_id
+            ]);
+
+            $finalize_response = $connection->post('media/upload', [
+                'command' => 'FINALIZE',
+                'media_id' => $media_id
+            ]);
+
+            $http_code = $connection->getLastHttpCode();
+            if ($http_code !== 200 || !isset($finalize_response->media_id_string)) {
+                do_action('dm_log', 'error', 'Twitter: Chunked upload FINALIZE failed.', [
+                    'http_code' => $http_code,
+                    'response' => $finalize_response
+                ]);
+                return null;
+            }
+
+            // Check for processing info (some files may need processing time)
+            if (isset($finalize_response->processing_info)) {
+                $processing_info = $finalize_response->processing_info;
+                do_action('dm_log', 'debug', 'Twitter: Media processing required.', [
+                    'media_id' => $media_id,
+                    'processing_state' => $processing_info->state ?? 'unknown',
+                    'check_after_secs' => $processing_info->check_after_secs ?? 0
+                ]);
+
+                // For images, processing is usually immediate, but we'll log if needed
+                if (($processing_info->state ?? '') === 'pending') {
+                    do_action('dm_log', 'debug', 'Twitter: Media upload pending processing, but proceeding.', [
+                        'media_id' => $media_id
+                    ]);
+                }
+            }
+
+            do_action('dm_log', 'debug', 'Twitter: Chunked upload completed successfully.', [
+                'media_id' => $finalize_response->media_id_string
+            ]);
+
+            return $finalize_response->media_id_string;
+
+        } catch (\Exception $e) {
+            do_action('dm_log', 'error', 'Twitter: Chunked upload exception.', [
+                'exception' => $e->getMessage(),
+                'exception_type' => get_class($e)
+            ]);
+            return null;
         }
     }
 

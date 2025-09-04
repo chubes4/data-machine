@@ -2,7 +2,8 @@
 /**
  * WordPress site context for AI models
  *
- * Collects site metadata, post types, and taxonomies with caching.
+ * Collects and formats WordPress site data for AI prompt injection.
+ * Provides cached site metadata, content statistics, and capability information.
  *
  * @package DataMachine\Core\Steps\AI
  */
@@ -13,6 +14,9 @@ defined('ABSPATH') || exit;
 
 /**
  * WordPress site context collector
+ * 
+ * Gathers WordPress site information for AI model context injection.
+ * Includes content statistics, post types, taxonomies, and site metadata.
  */
 class SiteContext {
 

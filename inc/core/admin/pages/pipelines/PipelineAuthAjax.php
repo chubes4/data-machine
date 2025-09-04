@@ -208,6 +208,24 @@ class PipelineAuthAjax
             $config_data[$field_name] = $value;
         }
 
+        // Check if data has actually changed before attempting to save
+        if (!empty($existing_config)) {
+            $data_changed = false;
+            
+            // Compare only the fields that are being submitted in the form
+            foreach ($config_data as $field_name => $new_value) {
+                $existing_value = $existing_config[$field_name] ?? '';
+                if ($new_value !== $existing_value) {
+                    $data_changed = true;
+                    break;
+                }
+            }
+            
+            if (!$data_changed) {
+                wp_send_json_success(['message' => __('Configuration is already up to date - no changes detected', 'data-machine')]);
+            }
+        }
+
         // Save configuration using dm_oauth filter
         $saved = apply_filters('dm_store_oauth_keys', $config_data, $handler_slug);
         

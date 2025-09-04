@@ -147,20 +147,22 @@ $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
 
 ### Extension Development
 
-Complete extension system with LLM-powered development:
-- **Types**: Fetch, Publish, Update handlers, AI tools, Admin pages
-- **Discovery**: Filter-based auto-registration  
-- **Templates**: `/extensions/` directory with LLM prompts (development builds)
+Complete extension system with filter-based auto-discovery:
+- **Types**: Fetch, Publish, Update handlers, AI tools, Database services
+- **Registration**: WordPress filter system for seamless integration  
+- **Development**: LLM-assisted templates available in development builds
 
 *See `CLAUDE.md` for complete technical specifications*
 
 ## Available Handlers
 
-**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, WordPress media, Google Sheets  
+**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, WordPress media library, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
 **Update Handlers**: WordPress content updates (title, content, meta, taxonomy)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
 **General Tools**: Google Search, Local WordPress Search, Read Post, Google Search Console
+
+*Each handler supports OAuth authentication where required and includes comprehensive error handling*
 
 *For detailed specifications, see `CLAUDE.md`*
 

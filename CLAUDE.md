@@ -315,7 +315,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 | Reddit | OAuth2 | Subreddit posts, comments, API-based fetching |
 | Google Sheets | OAuth2 | Spreadsheet data extraction, cell-level access |
 | WordPress | None | Post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering |
-| WordPress Media | None | Media library attachments, file URLs, metadata handling |
+| WordPress Media | None | Media library attachments, file URLs, metadata handling, recent uploads filtering |
 
 | **Publish** | **Auth** | **Limit** | **Features** |
 |-------------|----------|-----------|--------------|
@@ -569,16 +569,16 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 38+ `*Filters.php` files auto-loaded via composer.json (containing 85+ filter registrations)
+**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json (containing 90+ filter registrations)
 **Key Auto-loaded Classes**: `AIStepDirective.php`, `AIConversationState.php` - automatic filter registration
 
 ## Extensions
 
-**Extension System**: Complete extension development framework with LLM prompt templates in `/extensions/` (development builds only)
+**Extension System**: Complete extension development framework for custom handlers and tools
 
-**Discovery**: Filter-based auto-discovery system - extensions register using WordPress filters
-**Template**: `/extensions/extension-prompt.md` - Fill placeholders, give to LLM for complete extensions
-**Types**: Fetch handlers, Publish handlers, Update handlers, AI tools, Admin pages, Database services
+**Discovery**: Filter-based auto-discovery system - extensions register using WordPress filters  
+**Types**: Fetch handlers, Publish handlers, Update handlers, AI tools, Database services
+**Development**: Extension templates available in development builds for rapid LLM-assisted creation
 
 **Extension Points**:
 ```php
@@ -672,7 +672,7 @@ try {
 
 ## OAuth Integration
 
-**Direct Filter System**: Five dedicated filters handle all OAuth operations with simplified maintainability
+**Unified OAuth System**: Streamlined OAuth operations with automatic provider discovery and validation
 
 ```php
 // Account operations
@@ -680,14 +680,12 @@ $account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
 apply_filters('dm_store_oauth_account', $account_data, 'twitter');
 apply_filters('dm_clear_oauth_account', false, 'twitter');
 
-// Configuration with validation
-$config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
-apply_filters('dm_store_oauth_keys', $config_data, 'twitter');
+// Configuration with validation  
 $is_configured = apply_filters('dm_tool_configured', false, 'twitter');
+$provider_url = apply_filters('dm_get_oauth_url', '', 'twitter');
 
-// URLs
-$callback_url = apply_filters('dm_get_oauth_url', '', 'twitter');
-$auth_url = apply_filters('dm_get_oauth_auth_url', '', 'twitter');
+// Provider discovery
+$providers = apply_filters('dm_auth_providers', []);
 ```
 
 **Configuration Validation**: Tools requiring configuration are automatically validated before enablement:

@@ -59,6 +59,9 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
     $account_details = $auth_instance->get_account_details();
 }
 
+// Detect if this provider uses OAuth flow vs simple credential storage
+$uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
+
 ?>
 <div class="dm-handler-auth-container">
     <div class="dm-handler-auth-header">
@@ -104,11 +107,16 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
             
             <div class="dm-config-actions">
                 <button type="submit" class="button button-secondary">
-                    <?php esc_html_e('Save Configuration', 'data-machine'); ?>
+                    <?php if ($uses_oauth): ?>
+                        <?php esc_html_e('Save Configuration', 'data-machine'); ?>
+                    <?php else: ?>
+                        <?php esc_html_e('Save Credentials', 'data-machine'); ?>
+                    <?php endif; ?>
                 </button>
             </div>
         </form>
         
+        <?php if ($uses_oauth): ?>
         <!-- Redirect URI Display for OAuth providers -->
         <div class="dm-redirect-uri-section">
             <h5><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'data-machine'), ucfirst($handler_slug))); ?></h5>
@@ -117,9 +125,11 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
                 <?php echo esc_html(apply_filters('dm_get_oauth_url', '', $handler_slug)); ?>
             </code>
         </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
     
+    <?php if ($uses_oauth): ?>
     <!-- Connection Status & Actions -->
     <div class="dm-auth-connection-section">
         <h4><?php esc_html_e('Account Connection', 'data-machine'); ?></h4>
@@ -151,7 +161,11 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
                         <span class="dashicons dashicons-warning"></span>
                         <strong><?php esc_html_e('Not Connected', 'data-machine'); ?></strong>
                     </span>
-                    <p><?php echo esc_html(sprintf(__('Connect your %s account to enable this handler.', 'data-machine'), $handler_label)); ?></p>
+                    <?php if ($uses_oauth): ?>
+                        <p><?php echo esc_html(sprintf(__('Connect your %s account to enable this handler.', 'data-machine'), $handler_label)); ?></p>
+                    <?php else: ?>
+                        <p><?php echo esc_html(sprintf(__('Configure your %s credentials to enable this handler.', 'data-machine'), $handler_label)); ?></p>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
             
@@ -163,28 +177,36 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
                         <?php esc_html_e('Disconnect', 'data-machine'); ?>
                     </button>
                 <?php else: ?>
-                    <?php
-                    // Get direct provider authorization URL - bare metal connection
-                    $oauth_url = apply_filters('dm_get_oauth_auth_url', '', $handler_slug);
-                    
-                    // Handle errors from authorization URL generation
-                    if (is_wp_error($oauth_url)) {
-                        $oauth_url = '#';
-                        $has_config = false; // Disable button if URL generation failed
-                    } else {
-                        $has_config = !empty($current_config);
-                    }
-                    ?>
-                    <button type="button" class="button button-primary dm-connect-oauth" 
-                            data-handler="<?php echo esc_attr($handler_slug); ?>"
-                            data-oauth-url="<?php echo esc_attr($oauth_url); ?>"
-                            <?php if (!$has_config): ?>disabled title="<?php esc_attr_e('Save configuration first', 'data-machine'); ?>"<?php endif; ?>>
-                        <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
-                    </button>
+                    <?php if ($uses_oauth): ?>
+                        <?php
+                        // Get direct provider authorization URL - bare metal connection
+                        $oauth_url = apply_filters('dm_get_oauth_auth_url', '', $handler_slug);
+                        
+                        // Handle errors from authorization URL generation
+                        if (is_wp_error($oauth_url)) {
+                            $oauth_url = '#';
+                            $has_config = false; // Disable button if URL generation failed
+                        } else {
+                            $has_config = !empty($current_config);
+                        }
+                        ?>
+                        <button type="button" class="button button-primary dm-connect-oauth" 
+                                data-handler="<?php echo esc_attr($handler_slug); ?>"
+                                data-oauth-url="<?php echo esc_attr($oauth_url); ?>"
+                                <?php if (!$has_config): ?>disabled title="<?php esc_attr_e('Save configuration first', 'data-machine'); ?>"<?php endif; ?>>
+                            <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
+                        </button>
+                    <?php else: ?>
+                        <!-- Simple credential providers just need config saved -->
+                        <p class="dm-simple-auth-message">
+                            <?php echo esc_html(sprintf(__('Save your %s credentials above to enable this handler.', 'data-machine'), $handler_label)); ?>
+                        </p>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
     </div>
+    <?php endif; ?>
     
     <div class="dm-modal-navigation">
         <?php 
