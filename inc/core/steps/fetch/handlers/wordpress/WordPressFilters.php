@@ -35,8 +35,8 @@ function dm_register_wordpress_fetch_filters() {
         $handlers['wordpress_posts'] = [
             'type' => 'fetch',
             'class' => WordPress::class,
-            'label' => __('WordPress Posts', 'data-machine'),
-            'description' => __('Source content from WordPress posts and pages', 'data-machine')
+            'label' => __('Local WordPress Posts', 'data-machine'),
+            'description' => __('Fetch posts and pages from this WordPress installation', 'data-machine')
         ];
         return $handlers;
     });

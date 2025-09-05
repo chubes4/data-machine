@@ -2,9 +2,16 @@
 /**
  * Read Post AI Tool
  *
- * Provides AI models with the ability to read full content of existing 
- * WordPress posts and pages by ID. Use this tool after finding posts 
- * with local_search to get complete content for analysis or modification.
+ * Provides AI models with targeted access to specific WordPress posts by ID.
+ * Designed for workflow chaining: discover posts via Google Search Console or 
+ * Local Search tools, then use read_post for detailed content analysis before
+ * making updates via Update handlers. Differs from Fetch handlers which provide
+ * bulk post retrieval as pipeline data sources.
+ *
+ * Example workflows:
+ * 1. GSC tool finds underperforming posts → read_post analyzes content → WordPress Update optimizes
+ * 2. Local Search discovers related posts → read_post reads content for context → content generation
+ * 3. External audit identifies target posts → read_post provides full content → targeted improvements
  *
  * @package DataMachine\Core\Steps\AI\Tools
  * @since 1.0.0
@@ -18,8 +25,9 @@ defined('ABSPATH') || exit;
 /**
  * Read Post Tool Implementation
  * 
- * Enables AI models to retrieve full content of existing WordPress posts
- * and pages for analysis, optimization, or content understanding workflows.
+ * Enables targeted post analysis within AI workflows. Retrieves complete 
+ * post content by ID for detailed analysis, typically after post discovery
+ * via Google Search Console or Local Search, and before targeted updates.
  */
 class ReadPost {
 

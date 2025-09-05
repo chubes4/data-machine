@@ -29,6 +29,7 @@ class ComposerStaticInitcd717fba75f4aad91a7b956f8febd8b9
         '65024cde431f9683d2dd329cee23dd9c' => __DIR__ . '/../..' . '/inc/Core/Admin/Pages/Jobs/JobsFilters.php',
         '51d6cd9d8eecaf119838cd2239e73069' => __DIR__ . '/../..' . '/inc/Core/Steps/Fetch/FetchStepFilters.php',
         'c653fa1c29f3248a10fe001381b2549c' => __DIR__ . '/../..' . '/inc/Core/Steps/Fetch/Handlers/WordPress/WordPressFilters.php',
+        '38f2b287a7cabe50b7ab8dd14fa124f8' => __DIR__ . '/../..' . '/inc/Core/Steps/Fetch/Handlers/WordPressAPI/WordPressAPIFilters.php',
         '54874aededfa9c73b4354d5e314dc090' => __DIR__ . '/../..' . '/inc/Core/Steps/Fetch/Handlers/WordPressMedia/WordPressMediaFilters.php',
         '676fa27f84512b174d6c60cb626791fd' => __DIR__ . '/../..' . '/inc/Core/Steps/Fetch/Handlers/Rss/RssFilters.php',
         '24d17d3fe1bd8e61047f491b01e8e0ff' => __DIR__ . '/../..' . '/inc/Core/Steps/Fetch/Handlers/GoogleSheets/GoogleSheetsFetchFilters.php',

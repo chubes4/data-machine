@@ -75,7 +75,7 @@ function dm_register_twitter_filters() {
     add_filter('dm_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'publish',
-            'class' => Twitter::class,
+            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
             'label' => __('Twitter', 'data-machine'),
             'description' => __('Post content to Twitter with media support', 'data-machine')
         ];
@@ -106,7 +106,7 @@ dm_register_twitter_filters(); // Auto-execute at file load
 - **Pipeline+Flow**: Reusable templates + configured instances
 - **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 - **Files Repository**: Flow-isolated UUID storage with cleanup
-- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress, WordPress Media) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (Content modification, existing post updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (WordPress content updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
 - **Admin**: `manage_options` only, zero user dependencies
 
 ## Database Schema
@@ -214,7 +214,7 @@ $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
 
 **Tool Categories**:
 - **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
-- **General Tools**: Universal (Google Search, Local Search, Google Search Console) - available to all AI agents
+- **General Tools**: Universal (Google Search, Local Search, Read Post, Google Search Console) - available to all AI agents
 
 ### Tool Registration
 
@@ -314,8 +314,9 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 | RSS | None | Feed parsing, deduplication tracking |
 | Reddit | OAuth2 | Subreddit posts, comments, API-based fetching |
 | Google Sheets | OAuth2 | Spreadsheet data extraction, cell-level access |
-| WordPress | None | Post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering |
+| WordPress Local | None | Local post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering |
 | WordPress Media | None | Media library attachments, file URLs, metadata handling, recent uploads filtering |
+| WordPress API | None | External WordPress sites via REST API, structured data access, modern RSS alternative |
 
 | **Publish** | **Auth** | **Limit** | **Features** |
 |-------------|----------|-----------|--------------|
@@ -328,14 +329,14 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 
 | **Update** | **Auth** | **Features** |
 |------------|----------|---------------|
-| WordPress | None | Post/page modification, taxonomy updates, meta field updates |
+| WordPress Update | None | Existing post/page modification, taxonomy updates, requires source_url |
 | *Extensible* | *Varies* | *Custom update handlers via extensions* |
 
 | **General Tools** | **Auth** | **Features** |
 |-------------------|----------|--------------|
 | Google Search | API Key + Search Engine ID | Web search, site restriction, 1-10 results |
 | Local Search | None | WordPress search, 1-20 results |
-| Read Post | None | Read full content of WordPress posts/pages by ID |
+| Read Post | None | Read full content of WordPress posts/pages by ID, optional meta fields |
 | Google Search Console | OAuth2 | SEO performance analysis, keyword opportunities, internal link suggestions |
 
 ## DataPacket Structure
@@ -415,15 +416,21 @@ apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $ste
 
 ## Step Implementation
 
-**Pipeline Steps**:
+**Parameter Passing Architecture**: Engine passes contextual parameters via `$additional_parameters` variadic arguments, extracted by position:
+
 ```php
 class MyStep {
     public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
-        // Extract engine-provided parameters by position
-        $source_url = $additional_parameters[0] ?? null;
-        $image_url = $additional_parameters[1] ?? null;
-        $file_path = $additional_parameters[2] ?? null;
-        $mime_type = $additional_parameters[3] ?? null;
+        // Extract engine-provided parameters by position (standard pattern)
+        $source_url = $additional_parameters[0] ?? null;    // Primary URL from metadata
+        $image_url = $additional_parameters[1] ?? null;     // Image URL from metadata  
+        $file_path = $additional_parameters[2] ?? null;     // Local file path if available
+        $mime_type = $additional_parameters[3] ?? null;     // File MIME type if available
+        
+        // Example: Update step requires source_url for WordPress post identification
+        if (!$source_url) {
+            return $data; // Cannot update without source URL
+        }
         
         do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
         
@@ -467,8 +474,15 @@ class MyPublishHandler {
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        // source_url is required for WordPress updates - identifies target post  
+        if (empty($parameters['source_url'])) {
+            return ['success' => false, 'error' => 'Missing required source_url parameter'];
+        }
+        
         $handler_config = $tool_def['handler_config'] ?? [];
-        $source_url = $parameters['source_url'] ?? null; // Required for updates - extracted from metadata
+        $post_id = url_to_postid($parameters['source_url']); // Convert URL to post ID
+        
+        // Update logic here
         return ['success' => true, 'data' => ['updated_id' => $post_id, 'modifications' => $changes]];
     }
 }
@@ -552,14 +566,14 @@ $pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'Mu
 
 **Content Update (Fetch→AI→Update pattern)**:
 ```php
-// WordPress content enhancement workflow
+// WordPress content enhancement workflow  
 $pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'Content Enhancement']);
 apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
 apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Note**: AI agents discover handler tools for immediate next step only. Update step requires `source_url` in metadata for content modification.
+> **Critical**: Update steps require `source_url` from fetch metadata to identify target content. WordPress Local/API fetch handlers provide this automatically. AI agents discover handler tools for immediate next step only.
 
 ## Development
 

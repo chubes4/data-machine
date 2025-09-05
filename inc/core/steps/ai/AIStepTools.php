@@ -2,7 +2,8 @@
 /**
  * AI step tool management
  *
- * Tool discovery, configuration, and HTML generation for AI steps.
+ * Three-layer tool management: global enablement → modal selection → configuration validation.
+ * Handles handler-specific tools (next-step context) and general tools (universal).
  *
  * @package DataMachine\Core\Steps\AI
  */
@@ -134,6 +135,9 @@ class AIStepTools {
             // Generate simple tool name from tool_id (e.g., "local_search" -> "Local Search")
             $tool_name = $tool_config['name'] ?? ucwords(str_replace('_', ' ', $tool_id));
             
+            // Get tool description for tooltip
+            $tool_description = $tool_config['description'] ?? '';
+            
             $html .= '            <div class="dm-tool-option">' . "\n";
             $html .= '                <label>' . "\n";
             
@@ -143,6 +147,12 @@ class AIStepTools {
             
             $html .= '                    <input type="checkbox" name="enabled_tools[]" value="' . esc_attr($tool_id) . '" ' . $checked_attr . ' ' . $disabled_attr . ' />' . "\n";
             $html .= '                    <span>' . esc_html($tool_name) . '</span>' . "\n";
+            
+            // Add info icon with tooltip if description exists
+            if (!empty($tool_description)) {
+                $html .= '                    <span class="dm-tool-info" data-tooltip="' . esc_attr($tool_description) . '">ⓘ</span>' . "\n";
+            }
+            
             $html .= '                </label>' . "\n";
             
             // Only show configuration link for tools that need configuration but aren't configured

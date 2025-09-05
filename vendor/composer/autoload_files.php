@@ -28,6 +28,7 @@ return array(
     '65024cde431f9683d2dd329cee23dd9c' => $baseDir . '/inc/Core/Admin/Pages/Jobs/JobsFilters.php',
     '51d6cd9d8eecaf119838cd2239e73069' => $baseDir . '/inc/Core/Steps/Fetch/FetchStepFilters.php',
     'c653fa1c29f3248a10fe001381b2549c' => $baseDir . '/inc/Core/Steps/Fetch/Handlers/WordPress/WordPressFilters.php',
+    '38f2b287a7cabe50b7ab8dd14fa124f8' => $baseDir . '/inc/Core/Steps/Fetch/Handlers/WordPressAPI/WordPressAPIFilters.php',
     '54874aededfa9c73b4354d5e314dc090' => $baseDir . '/inc/Core/Steps/Fetch/Handlers/WordPressMedia/WordPressMediaFilters.php',
     '676fa27f84512b174d6c60cb626791fd' => $baseDir . '/inc/Core/Steps/Fetch/Handlers/Rss/RssFilters.php',
     '24d17d3fe1bd8e61047f491b01e8e0ff' => $baseDir . '/inc/Core/Steps/Fetch/Handlers/GoogleSheets/GoogleSheetsFetchFilters.php',

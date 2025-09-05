@@ -38,6 +38,7 @@
             "inc/Core/Admin/Pages/Jobs/JobsFilters.php",
             "inc/Core/Steps/Fetch/FetchStepFilters.php",
             "inc/Core/Steps/Fetch/Handlers/WordPress/WordPressFilters.php",
+            "inc/Core/Steps/Fetch/Handlers/WordPressAPI/WordPressAPIFilters.php",
             "inc/Core/Steps/Fetch/Handlers/WordPressMedia/WordPressMediaFilters.php",
             "inc/Core/Steps/Fetch/Handlers/Rss/RssFilters.php",
             "inc/Core/Steps/Fetch/Handlers/GoogleSheets/GoogleSheetsFetchFilters.php",

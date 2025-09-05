@@ -284,15 +284,6 @@
                             });
                         }, 3000);
                         
-                        // Reload modal content to show auth status instead of config form
-                        setTimeout(() => {
-                            const currentTemplate = $('.dm-modal-content').data('template') || 'modal/handler-auth-form';
-                            const currentContext = $('.dm-modal-content').data('context') || {};
-                            
-                            // Reload the auth modal content
-                            dmCoreModal.open(currentTemplate, currentContext);
-                        }, 1000);
-                        
                     } else {
                         const message = response.data?.message || 'Failed to save configuration';
                         const $error = $('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');

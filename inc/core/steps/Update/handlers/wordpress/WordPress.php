@@ -1,8 +1,9 @@
 <?php
 /**
- * Local WordPress update handler.
+ * WordPress Update handler.
  *
- * Handles WordPress content updates to local installation using wp_update_post.
+ * Updates existing WordPress posts/pages via source_url parameter. Handles title, content,
+ * and taxonomy modifications using wp_update_post. Requires source_url from fetch metadata.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Update\Handlers\WordPress

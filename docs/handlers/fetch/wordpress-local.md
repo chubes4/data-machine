@@ -1,0 +1,191 @@
+# WordPress Local Fetch Handler
+
+Retrieves WordPress post and page content from the local installation using WP_Query. For media files, use the separate WordPress Media handler.
+
+## Configuration Options
+
+### Basic Settings
+
+**Post Type**
+- Default: `post`
+- Options: Any registered post type (post, page, custom post types)
+- Purpose: Determines which content type to fetch
+
+**Post Status** 
+- Default: `publish`
+- Options: publish, draft, private, pending
+- Purpose: Filter by publication status
+
+**Post ID**
+- Default: Empty (query-based selection)
+- Purpose: Target specific post by ID (bypasses all other filters)
+
+### Selection Options
+
+**Randomize Selection**
+- Default: false (chronological by modified date)
+- Purpose: Random post selection vs. most recently modified
+
+**Search Terms**
+- Default: Empty
+- Purpose: Filter posts containing specific keywords
+
+### Timeframe Filtering
+
+**Timeframe Limit**
+- Default: `all_time`
+- Options:
+  - `all_time` - No time restriction
+  - `24_hours` - Last 24 hours
+  - `72_hours` - Last 72 hours  
+  - `7_days` - Last 7 days
+  - `30_days` - Last 30 days
+
+### Taxonomy Filtering
+
+**Dynamic Taxonomy Filters**
+- Format: `taxonomy_{slug}_filter`
+- Value: Term ID
+- Purpose: Filter posts by taxonomy terms
+- Example: `taxonomy_category_filter` = 5 (category term ID)
+
+## Data Output
+
+### DataPacket Structure
+
+```php
+[
+    'data' => [
+        'content_string' => "Source: Site Name\n\nTitle: Post Title\n\nPost Content...",
+        'file_info' => null
+    ],
+    'metadata' => [
+        'source_type' => 'wordpress_local',
+        'item_identifier_to_log' => 123, // Post ID
+        'original_id' => 123,
+        'source_url' => 'https://site.com/post-slug/',
+        'original_title' => 'Post Title',
+        'image_source_url' => 'https://site.com/image.jpg', // Featured image if available
+        'original_date_gmt' => '2023-01-01 12:00:00'
+    ]
+]
+```
+
+### Metadata Fields
+
+**source_type**: Always `wordpress_local`
+**source_url**: Full permalink to the post
+**image_source_url**: Featured image URL (null if none)
+**original_title**: Post title as stored in database
+**original_date_gmt**: Post publication date in GMT
+
+## Processing Behavior
+
+### Deduplication
+
+Uses processed items tracking to prevent duplicate processing:
+
+```php
+$is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id);
+```
+
+**Tracking**: Each processed post is marked by flow step and post ID
+**Scope**: Per-flow deduplication (same post can be processed by different flows)
+
+### Query Optimization
+
+**Performance Settings**:
+- `posts_per_page` = 10 (finds first eligible item)
+- `no_found_rows` = true
+- `update_post_meta_cache` = false  
+- `update_post_term_cache` = false
+
+### Selection Strategy
+
+1. **Query Execution** - Retrieves up to 10 posts matching criteria
+2. **Deduplication Check** - Tests each post against processed items
+3. **First Match** - Returns first unprocessed post immediately
+4. **Single Item** - Always returns exactly one post or empty array
+
+## Implementation Examples
+
+### Basic WordPress Fetch
+
+```php
+$handler_config = [
+    'wordpress_posts' => [
+        'post_type' => 'post',
+        'post_status' => 'publish',
+        'timeframe_limit' => '7_days'
+    ]
+];
+
+$items = $wordpress_handler->get_fetch_data($pipeline_id, $handler_config, $job_id);
+```
+
+### Specific Post Targeting
+
+```php
+$handler_config = [
+    'wordpress_posts' => [
+        'post_id' => 123 // Overrides all other criteria
+    ]
+];
+```
+
+### Advanced Filtering
+
+```php
+$handler_config = [
+    'wordpress_posts' => [
+        'post_type' => 'product',
+        'search' => 'keyword',
+        'taxonomy_category_filter' => 5,
+        'taxonomy_product_tag_filter' => 12,
+        'timeframe_limit' => '30_days',
+        'randomize_selection' => true
+    ]
+];
+```
+
+## Error Handling
+
+### Missing Configuration
+
+**Invalid Pipeline ID**: Returns empty array
+**Missing Flow Step ID**: Disables processed items tracking (logs debug message)
+
+### Database Errors
+
+**No Matching Posts**: Returns empty array (normal operation)
+**Invalid Post ID**: Returns empty array with warning log
+**Trashed Posts**: Skipped with warning log
+
+### Content Processing
+
+**Missing Title**: Uses 'N/A' as fallback
+**Empty Content**: Passes empty string (not filtered)
+**Missing Featured Image**: Sets image_source_url to null
+
+## Integration Notes
+
+### WordPress Core Dependency
+
+- Uses `WP_Query` for database operations
+- Requires `get_post()`, `get_permalink()`, `get_post_thumbnail_id()`
+- Utilizes `wp_get_attachment_image_url()` for featured images
+- Leverages `get_bloginfo('name')` for source identification
+
+### Performance Considerations
+
+- **Single Post Strategy** - Returns immediately upon finding eligible post
+- **Optimized Query** - Disables unnecessary WordPress features
+- **Targeted Selection** - Uses specific criteria to reduce query scope
+- **Memory Efficient** - Processes one post at a time
+
+### WordPress Compatibility
+
+- **Post Types** - Works with any registered post type
+- **Taxonomies** - Dynamic support for all taxonomies
+- **Custom Fields** - Content includes shortcode-expanded custom fields
+- **Multisite** - Operates within current site context

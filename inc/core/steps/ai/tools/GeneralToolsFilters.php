@@ -43,7 +43,7 @@ add_filter('ai_tools', function($tools) {
     $tools['google_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Search Google for current information and context',
+        'description' => 'Search Google for current information, facts, and external context. Provides real-time web data to inform content creation, fact-checking, and research. Complements local WordPress content with external sources.',
         'requires_config' => true, // Flag for UI to show configure link
         'parameters' => [
             'query' => [
@@ -74,7 +74,7 @@ add_filter('ai_tools', function($tools) {
     $tools['local_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Find existing posts on this WordPress site to create accurate internal links. Use this tool whenever you want to link to site content instead of guessing URLs. Returns real permalinks in the "link" field.',
+        'description' => 'Search for existing posts on this WordPress site by keywords or phrases. Returns titles, excerpts, and exact permalinks for accurate internal linking or content discovery. Use before read_post to get complete content.',
         'requires_config' => false, // No configuration needed - uses WordPress core
         'parameters' => [
             'query' => [
@@ -95,7 +95,7 @@ add_filter('ai_tools', function($tools) {
     $tools['read_post'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\ReadPost',
         'method' => 'handle_tool_call',
-        'description' => 'Read full content of existing WordPress posts and pages by ID. Use this after finding posts with local_search to get complete content for analysis or modification.',
+        'description' => 'Read specific posts by ID for detailed content analysis. Typically used after discovering posts with Google Search Console or Local Search tools, before making targeted updates via Update handlers.',
         'requires_config' => false, // No configuration needed - uses WordPress core
         'parameters' => [
             'post_id' => [
@@ -121,7 +121,7 @@ add_filter('ai_tools', function($tools) {
     $tools['google_search_console'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearchConsole',
         'method' => 'handle_tool_call',
-        'description' => 'Analyze Google Search Console data for SEO optimization. Get keyword performance, find content opportunities, and suggest internal links based on search data.',
+        'description' => 'Analyze Google Search Console performance data to identify SEO optimization opportunities. Discovers underperforming content, keyword gaps, and improvement needs. Perfect for finding posts that need updates via read_post and Update handlers.',
         'requires_config' => true, // Requires OAuth authentication
         'parameters' => [
             'page_url' => [

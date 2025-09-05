@@ -200,7 +200,7 @@ class AIStep {
             $conversation_messages = $messages;
             
             $conversation_complete = false;
-            $max_turns = 5; // Safety limit to prevent infinite loops
+            $max_turns = 8; // Safety limit to prevent infinite loops
             $turn_count = 0;
             
 

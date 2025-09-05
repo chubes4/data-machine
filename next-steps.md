@@ -3,6 +3,7 @@
 - API key-only tools (Google Search) should have streamlined configuration UI without OAuth flows
 - Tool configuration modals should update authentication state in real-time after saving
 
+
 **NEXT FEATURES TO IMPLEMENT**
 
 **Webhook Receiver Step**

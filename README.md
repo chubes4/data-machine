@@ -85,33 +85,17 @@ RSS → AI → Twitter → AI → Facebook
 
 **Advanced Examples**:
 
-**Automated Health News WordPress Site**:
-- **Pipeline Template**: Fetch → AI → WordPress with system prompt "You are a medical content specialist. Create accurate, well-researched articles with proper citations. Use clear, accessible language while maintaining scientific rigor."
-- **Flow A** (Independent Agent): PubMed cardiology research + American Heart Association → AI agent instance → user message "Focus on cardiovascular breakthroughs and heart disease prevention" → WordPress (daily)
-- **Flow B** (Independent Agent): FDA RSS + CDC health alerts → AI agent instance → user message "Focus on regulatory updates and public health emergencies" → WordPress (twice daily)  
-- **Flow C** (Independent Agent): Nutrition journals + Mayo Clinic blog → AI agent instance → user message "Focus on evidence-based diet and lifestyle interventions" → WordPress (weekly)
+**Content Automation**: RSS → AI → Twitter (single platform, recommended)
+**Multi-Platform Publishing**: RSS → AI → Twitter → AI → Facebook (advanced pattern)
+**Content Enhancement**: WordPress Local → AI → WordPress Update (requires source_url from fetch)
+**Research Processing**: Files (PDFs) → AI → WordPress (document analysis)
 
-**Multi-Platform Content Distribution**:
-- **Pipeline Template**: Fetch → AI → Publish with system prompt "Transform technical content into platform-appropriate formats while preserving key insights and maintaining brand voice."
-- **Flow A** (Independent Agent): RSS tech blogs → AI agent instance → user message "Create professional Twitter threads for developers" → Twitter (daily)
-- **Flow B** (Independent Agent): Reddit r/programming discussions → AI agent instance → user message "Create engaging Facebook posts highlighting trends" → Facebook (twice daily)  
-- **Flow C** (Independent Agent): WordPress tech sites → AI agent instance → user message "Create detailed analysis articles" → WordPress (weekly)
-
-**Media Content Automation**:
-- **Pipeline Template**: Fetch → AI → Publish with system prompt "You are a social media content curator. Create engaging posts that highlight visual content with compelling descriptions."
-- **Flow A** (Independent Agent): WordPress Media (recent uploads) → AI agent instance → user message "Create Instagram-style posts with hashtags" → Twitter (daily)
-- **Flow B** (Independent Agent): WordPress Media (product images) → AI agent instance → user message "Generate product showcases with features" → Facebook (twice weekly)
-
-**Research Intelligence System**:
-- **Pipeline Template**: Fetch → AI → Analysis with system prompt "You are a research analyst. Identify trends, synthesize insights, and flag significant developments across multiple data sources."
-- **Flow A** (Independent Agent): Google Sheets industry data → AI agent instance → user message "Analyze competitive intelligence metrics" → Google Sheets (daily)
-- **Flow B** (Independent Agent): Reddit discussions + RSS feeds → AI agent instance → user message "Track brand mentions and sentiment" → WordPress (brand monitoring posts)
-- **Flow C** (Independent Agent): Files (PDF reports) → AI agent instance → user message "Extract key innovation insights" → WordPress (weekly research summaries)
+*For detailed examples and technical specifications, see `CLAUDE.md`*
 
 ## Programmatic Usage
 
 ```php
-// Pipeline creation
+// Pipeline creation and execution  
 $pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'My Pipeline']);
 $step_id = apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
 $flow_id = apply_filters('dm_create_flow', null, ['pipeline_id' => $pipeline_id]);
@@ -122,47 +106,25 @@ $response = apply_filters('ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
     'model' => 'gpt-5-mini'
 ], 'openai');
-
-// Service discovery
-$handlers = apply_filters('dm_handlers', []);
-$auth_providers = apply_filters('dm_auth_providers', []);
-$auth_account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
-$settings = dm_get_data_machine_settings();
-
-// Tool management
-$configured = apply_filters('dm_tool_configured', false, 'google_search');
-do_action('dm_save_tool_config', 'google_search', $config_data);
-$tools = apply_filters('ai_tools', []);
-$enabled_tools = dm_get_enabled_general_tools();
-
-// Tool-specific calls (Read Post example)
-$tools = apply_filters('ai_tools', []);
-$read_post_tool = $tools['read_post'] ?? null;
-
-// AI step configuration
-do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
-do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
-$step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
 ```
+
+*For complete API documentation, see `CLAUDE.md`*
 
 ### Extension Development
 
-Complete extension system with filter-based auto-discovery:
-- **Types**: Fetch, Publish, Update handlers, AI tools, Database services
-- **Registration**: WordPress filter system for seamless integration  
-- **Development**: LLM-assisted templates available in development builds
+Complete extension framework supporting Fetch, Publish, Update handlers, AI tools, and Database services with filter-based auto-discovery.
 
-*See `CLAUDE.md` for complete technical specifications*
+*See `CLAUDE.md` for development guides and technical specifications*
 
 ## Available Handlers
 
-**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress content, WordPress media library, Google Sheets  
+**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress Local, WordPress Media, WordPress API, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
-**Update Handlers**: WordPress content updates (title, content, meta, taxonomy)  
+**Update Handlers**: WordPress Update (existing post/page modification via source_url)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
-**General Tools**: Google Search, Local WordPress Search, Read Post, Google Search Console
+**General Tools**: Google Search, Local Search, Read Post, Google Search Console
 
-*Each handler supports OAuth authentication where required and includes comprehensive error handling*
+*All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
 *For detailed specifications, see `CLAUDE.md`*
 

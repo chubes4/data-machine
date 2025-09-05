@@ -1,0 +1,110 @@
+# RSS Feed Fetch Handler
+
+Fetches and processes RSS/Atom feed data with automatic deduplication, timeframe filtering, and content search capabilities.
+
+## Feed Format Support
+
+**RSS Formats**:
+- RSS 2.0 (`<channel><item>`)
+- RSS 1.0 (`<item>`)
+- Atom feeds (`<entry>`)
+
+**Content Extraction**:
+- Title from `<title>` element
+- Description from `<description>`, `<summary>`, `<content>`, or `content:encoded`
+- Link from `<link>` element (supports Atom href attribute)
+- Publication date from `<pubDate>`, `<published>`, `<updated>`, or Dublin Core `dc:date`
+- Author from `<author>` or Dublin Core `dc:creator`
+- Categories from `<category>` elements
+- Media enclosures from `<enclosure>` elements
+
+## Configuration Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `feed_url` | string | Yes | Valid RSS/Atom feed URL |
+| `timeframe_limit` | string | No | Filter items by age: `all_time`, `24_hours`, `72_hours`, `7_days`, `30_days` |
+| `search` | string | No | Comma-separated keywords to filter content |
+
+## Usage Examples
+
+**Basic RSS Feed**:
+```php
+$handler_config = [
+    'rss' => [
+        'feed_url' => 'https://example.com/feed.xml'
+    ]
+];
+```
+
+**With Time and Search Filters**:
+```php
+$handler_config = [
+    'rss' => [
+        'feed_url' => 'https://news.site/rss',
+        'timeframe_limit' => '24_hours',
+        'search' => 'technology, AI, development'
+    ]
+];
+```
+
+## Data Processing
+
+**Item Selection**: Processes only the first eligible item that passes all filters (timeframe, search, deduplication).
+
+**Deduplication**: Uses GUID, ID, or source URL as unique identifier. Previously processed items are skipped automatically.
+
+**Content Format**:
+```
+Source: RSS Feed
+
+Title: {item_title}
+
+Content:
+{item_description}
+
+Source URL: {item_link}
+```
+
+## Output Structure
+
+**DataPacket Content**:
+```php
+[
+    'data' => [
+        'content_string' => '...',  // Formatted content
+        'file_info' => [            // If enclosure present
+            'url' => 'media_url',
+            'type' => 'mime_type',
+            'mime_type' => 'mime_type'
+        ]
+    ],
+    'metadata' => [
+        'source_type' => 'rss',
+        'original_id' => 'item_guid',
+        'source_url' => 'item_link',
+        'original_title' => 'item_title',
+        'original_date_gmt' => 'iso_date',
+        'author' => 'item_author',
+        'categories' => ['cat1', 'cat2'],
+        'feed_url' => 'source_feed_url',
+        'enclosure_url' => 'media_url'
+    ]
+]
+```
+
+## Error Handling
+
+**Validation Errors**:
+- Missing or invalid feed URL
+- Failed HTTP request to feed
+- Invalid XML format
+- Unsupported feed structure
+
+**Logging**: Uses `dm_log` action with debug/error levels for feed parsing and item processing status.
+
+## Media Support
+
+**Enclosure Detection**: Automatically detects media attachments from RSS enclosures with MIME type detection based on file extension.
+
+**Supported Types**: Images (JPEG, PNG, GIF, WebP), Audio (MP3), Video (MP4), Documents (PDF, ZIP).

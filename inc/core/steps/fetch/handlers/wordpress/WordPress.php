@@ -1,9 +1,9 @@
 <?php
 /**
- * Local WordPress Posts fetch handler.
+ * WordPress Local fetch handler.
  *
- * Handles WordPress post and page content from local installation using WP_Query.
- * For media files, use the separate WordPressMedia handler.
+ * Fetches post/page content from local WordPress installation using WP_Query.
+ * Provides source_url in metadata for Update step compatibility. For media files, use WordPressMedia handler.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
@@ -304,7 +304,7 @@ class WordPress {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('WordPress Posts', 'data-machine');
+        return __('Local WordPress Posts', 'data-machine');
     }
 }
 
