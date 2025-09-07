@@ -36,7 +36,7 @@ function dm_register_wordpress_publish_filters() {
             'type' => 'publish',
             'class' => WordPress::class,
             'label' => __('WordPress', 'data-machine'),
-            'description' => __('Create and update WordPress posts and pages', 'data-machine')
+            'description' => __('Create WordPress posts and pages', 'data-machine')
         ];
         return $handlers;
     });

@@ -22,7 +22,7 @@ Three-action execution cycle:
 - `wp_dm_processed_items` - Deduplication tracking per execution
 
 ### Step Types
-- **Fetch**: Data retrieval (RSS, Reddit, Google Sheets, WordPress, Files)
+- **Fetch**: Data retrieval (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
 - **AI**: Content processing with multi-provider support (OpenAI, Anthropic, Google, Grok)
 - **Publish**: Content distribution (Twitter, Facebook, Threads, Bluesky, WordPress)
 - **Update**: Content modification (WordPress posts/pages)

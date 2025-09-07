@@ -52,7 +52,6 @@ $pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
 
 // Site Context
 $context = SiteContext::get_context();
-$formatted_context = SiteContext::format_for_ai($context);
 SiteContext::clear_cache();
 
 // System
@@ -155,18 +154,32 @@ $result = apply_filters('ai_request', [
 ], 'openai');
 ```
 
-### AI Request Pipeline
+### AI Request Priority System
 
-**Message Injection Priority System**: AI requests receive multiple system messages in priority order:
+**5-Tier Message Injection Priority System**: AI requests receive multiple system messages in standardized priority order with 10-unit spacing for extensibility:
 
-1. **Priority 1 - AI Step Directives** (`AIStepDirective`): Dynamic tool-specific prompts
-2. **Priority 3 - Site Context** (`AIStepDirective`): WordPress site information injection  
-3. **Priority 5 - Global System Prompt**: User-configured system prompt
+1. **Priority 10 - Global System Prompt** (`AIStepDirective`): User-configured background guidance from settings
+2. **Priority 20 - Pipeline System Prompt** (`AIStepDirective`): User-configured pipeline instructions and internal linking guidance
+3. **Priority 30 - Tool Definitions and Directives** (`AIStepDirective`): Dynamic tool-specific prompts and usage instructions
+4. **Priority 35 - Data Packet Structure Directive** (`AIStepDirective`): Explains workflow data format and structure for AI interpretation
+5. **Priority 40 - WordPress Site Context** (`AIStepDirective`): WordPress environment information (lowest priority)
 
 ```php
-// Automatic directive injection via ai_request filter hooks
-add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 1, 4);
-add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 3, 4);
+// Centralized AI message priority system with standardized spacing
+// Priority 10: Global system prompt (background guidance)
+add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt'], 10, 5);
+
+// Priority 20: Pipeline system prompt (user configuration - internal linking instructions)
+add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+
+// Priority 30: Tool definitions and directives (how to use available tools)
+add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);
+
+// Priority 35: Data packet structure explanation (workflow data format)
+add_filter('ai_request', [AIStepDirective::class, 'inject_data_packet_directive'], 35, 5);
+
+// Priority 40: WordPress site context (environment info - lowest priority)
+add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5);
 ```
 
 **AI Step Directive Content**:
@@ -283,6 +296,41 @@ class Twitter {
 }
 ```
 
+### Tool Parameter Architecture
+
+**AIStepToolParameters Class**: Centralized flat parameter building for AI tool execution with unified structure compatible with all handler tool call methods.
+
+```php
+// Standard AI tool parameter building - creates flat parameter structure  
+$parameters = AIStepToolParameters::buildParameters(
+    $ai_tool_parameters,     // Parameters from AI tool call
+    $unified_parameters,     // Unified parameter structure from engine
+    $tool_definition         // Tool definition from ai_tools filter
+);
+
+// Handler tools with engine parameters merged - for Update handlers requiring source_url
+$parameters = AIStepToolParameters::buildForHandlerTool(
+    $ai_tool_parameters,     // AI tool call parameters
+    $data,                   // Data packet array for content extraction
+    $tool_definition,        // Tool specification
+    $engine_parameters,      // Additional parameters from engine context (source_url, etc.)
+    $handler_config         // Handler-specific settings
+);
+```
+
+**Parameter Building Process**:
+- Starts with engine parameters as base flat structure (job_id, flow_step_id, data, flow_step_config)
+- Extracts content/title from data packets based on tool parameter specifications
+- Adds tool metadata (tool_definition, tool_name, handler_config) directly to flat structure
+- Merges AI-provided parameters directly - overwrites any conflicting keys
+- For handler tools: merges engine parameters (like source_url) for Update handlers
+
+**Flat Parameter Benefits**:
+- **Unified Interface**: Single flat array structure for all tool execution methods
+- **Simple Extraction**: No complex nested structures - all data at root level
+- **Extensible**: New metadata automatically available as additional parameters
+- **Compatible**: Works with existing handler tool call method signatures
+
 
 ### Tool Configuration
 
@@ -296,7 +344,7 @@ do_action('dm_save_tool_config', 'google_search', $config_data);
 **Modal HTML Generation**:
 ```php
 // Automatic tool selection rendering in pipeline modals
-$html = AIStepTools->render_tools_html($pipeline_step_id);
+$data = AIStepTools->get_tools_data($pipeline_step_id);
 // Includes configuration warnings and per-step enablement checkboxes
 ```
 
@@ -324,7 +372,7 @@ $html = AIStepTools->render_tools_html($pipeline_step_id);
 | Bluesky | App Password | 300 chars | Media upload, AT Protocol integration |
 | Threads | OAuth2 | 500 chars | Media upload |
 | Facebook | OAuth2 | No limit | Comment mode, link handling |
-| WordPress | None | No limit | Taxonomy assignment |
+| WordPress | Required Config | No limit | Post creation, Gutenberg blocks, dynamic taxonomy management, content sanitization, configurable post settings |
 | Google Sheets | OAuth2 | No limit | Row insertion |
 
 | **Update** | **Auth** | **Features** |
@@ -414,23 +462,103 @@ apply_filters('dm_enabled_settings', $fields, $handler_slug, $step_type, $contex
 apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
 ```
 
+## Parameter Systems
+
+**Simplified Two-Parameter Architecture**:
+
+### 1. Core Parameters (Always Static)
+Core parameters are always the same and passed to ALL steps:
+```php
+$core_parameters = [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'data' => $data,  // Data packet array
+    'flow_step_config' => $flow_step_config  // Step configuration
+];
+```
+
+### 2. Flat Parameter Structure  
+All parameters flow through the single `dm_engine_parameters` filter as a simple flat array:
+```php
+// Flat parameter structure built by engine
+$parameters = apply_filters('dm_engine_parameters', [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'flow_step_config' => $flow_step_config,
+    'data' => $data
+    // Additional parameters added by filters as needed
+], $data, $flow_step_config, $step_type, $flow_step_id);
+```
+
+### Step Implementation Pattern
+```php
+class MyStep {
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
+        
+        // Extract what this step needs
+        $source_url = $parameters['source_url'] ?? null;
+        // ... use parameters as needed
+        
+        return $data;
+    }
+}
+```
+
+
+### Tool Parameters (AI Tools Only)
+
+**AIStepToolParameters Class**: Builds standardized parameter structures for AI tool execution with unified flat parameter format compatible with handler tool call methods.
+
+```php
+// Standard AI tool parameter building - creates flat parameter structure
+$parameters = AIStepToolParameters::buildParameters(
+    $ai_tool_parameters,     // Parameters from AI tool call
+    $unified_parameters,     // Unified parameter structure from engine
+    $tool_definition         // Tool definition from ai_tools filter
+);
+
+// Handler tools with engine parameters merged - for Update handlers requiring source_url
+$parameters = AIStepToolParameters::buildForHandlerTool(
+    $ai_tool_parameters,     // AI tool call parameters
+    $data,                   // Data packet array for content extraction
+    $tool_definition,        // Tool specification
+    $engine_parameters,      // Additional parameters from engine context (source_url, etc.)
+    $handler_config         // Handler-specific settings
+);
+```
+
+**Parameter Structure**: Merges AI-provided parameters with engine context and extracted content data into flat structure:
+- Extracts `content` and `title` from data packets based on tool specifications
+- Adds `tool_definition`, `tool_name`, `handler_config` to parameter structure  
+- Merges all AI tool parameters directly into flat structure
+- For handler tools: merges engine parameters (like `source_url`) for Update handlers
+
+**Benefits**:
+- ✅ **Truly Flexible**: ANY metadata becomes available as additional parameters
+- ✅ **Clean Signatures**: 2 structured parameters instead of 5 individual ones
+- ✅ **Filter-Based**: Steps declare requirements, no hard-coded extraction
+- ✅ **Extensible**: New metadata types automatically available
+
 ## Step Implementation
 
-**Parameter Passing Architecture**: Engine passes contextual parameters via `$additional_parameters` variadic arguments, extracted by position:
+**New Simplified Step Pattern**:
 
 ```php
 class MyStep {
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
-        // Extract engine-provided parameters by position (standard pattern)
-        $source_url = $additional_parameters[0] ?? null;    // Primary URL from metadata
-        $image_url = $additional_parameters[1] ?? null;     // Image URL from metadata  
-        $file_path = $additional_parameters[2] ?? null;     // Local file path if available
-        $mime_type = $additional_parameters[3] ?? null;     // File MIME type if available
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
         
-        // Example: Update step requires source_url for WordPress post identification
-        if (!$source_url) {
-            return $data; // Cannot update without source URL
-        }
+        // Extract what this step needs
+        $source_url = $parameters['source_url'] ?? null;
         
         do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
         
@@ -448,6 +576,7 @@ add_filter('dm_steps', function($steps) {
     $steps['my_step'] = ['name' => __('My Step'), 'class' => 'MyStep', 'position' => 50];
     return $steps;
 });
+
 ```
 
 **Fetch Handlers**:
@@ -464,6 +593,7 @@ class MyFetchHandler {
 ```php
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        // $parameters built by AIStepToolParameters (see Tool Parameters above)
         $handler_config = $tool_def['handler_config'] ?? [];
         return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
     }
@@ -474,15 +604,15 @@ class MyPublishHandler {
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // source_url is required for WordPress updates - identifies target post  
+        // $parameters built by AIStepToolParameters with engine parameters merged
+        // source_url comes from engine parameters, required for WordPress updates
         if (empty($parameters['source_url'])) {
             return ['success' => false, 'error' => 'Missing required source_url parameter'];
         }
         
         $handler_config = $tool_def['handler_config'] ?? [];
-        $post_id = url_to_postid($parameters['source_url']); // Convert URL to post ID
+        $post_id = url_to_postid($parameters['source_url']);
         
-        // Update logic here
         return ['success' => true, 'data' => ['updated_id' => $post_id, 'modifications' => $changes]];
     }
 }
@@ -584,7 +714,7 @@ composer install && composer test
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
 **Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json (containing 90+ filter registrations)
-**Key Auto-loaded Classes**: `AIStepDirective.php`, `AIConversationState.php` - automatic filter registration
+**Key Auto-loaded Classes**: `AIStepDirective.php`, `AIStepToolParameters.php` - automatic filter registration and parameter building
 
 ## Extensions
 
@@ -592,7 +722,7 @@ composer install && composer test
 
 **Discovery**: Filter-based auto-discovery system - extensions register using WordPress filters  
 **Types**: Fetch handlers, Publish handlers, Update handlers, AI tools, Database services
-**Development**: Extension templates available in development builds for rapid LLM-assisted creation
+**Development**: Extensions use WordPress plugin pattern with filter-based auto-discovery
 
 **Extension Points**:
 ```php
@@ -672,7 +802,7 @@ new MyExtension();
 - **Fetch**: `get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array`
 - **Publish**: `handle_tool_call(array $parameters, array $tool_def = []): array`
 - **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `source_url` from metadata)
-- **Steps**: `execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array`
+- **Steps**: `execute(array $parameters): array`
 
 **Error Handling**:
 ```php

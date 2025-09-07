@@ -53,6 +53,41 @@ function dm_register_reddit_fetch_filters() {
         return $all_settings;
     });
     
+    // Metadata parameter injection - Reddit specific
+    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+        // Only process for steps that come after reddit fetch
+        if (empty($data) || !is_array($data)) {
+            return $parameters;
+        }
+        
+        $latest_entry = $data[0] ?? [];
+        $metadata = $latest_entry['metadata'] ?? [];
+        $source_type = $metadata['source_type'] ?? '';
+        
+        // Only inject Reddit metadata
+        if ($source_type === 'reddit') {
+            // Add Reddit specific parameters to flat structure
+            $parameters['source_url'] = $metadata['source_url'] ?? '';
+            $parameters['original_id'] = $metadata['original_id'] ?? '';
+            $parameters['original_title'] = $metadata['original_title'] ?? '';
+            $parameters['original_date_gmt'] = $metadata['original_date_gmt'] ?? '';
+            $parameters['subreddit'] = $metadata['subreddit'] ?? '';
+            $parameters['upvotes'] = $metadata['upvotes'] ?? 0;
+            $parameters['comment_count'] = $metadata['comment_count'] ?? 0;
+            $parameters['author'] = $metadata['author'] ?? '';
+            $parameters['is_self_post'] = $metadata['is_self_post'] ?? false;
+            
+            do_action('dm_log', 'debug', 'Reddit: Metadata injected into engine parameters', [
+                'flow_step_id' => $flow_step_id,
+                'source_url' => $parameters['source_url'],
+                'subreddit' => $parameters['subreddit'],
+                'upvotes' => $parameters['upvotes']
+            ]);
+        }
+        
+        return $parameters;
+    }, 10, 5);
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
     
 }

@@ -276,16 +276,23 @@ class Create {
         // Use provided flow name or fallback  
         $flow_name = isset($data['flow_name']) ? sanitize_text_field(wp_unslash($data['flow_name'])) : 'Flow';
         
-        // Get next display order for this pipeline
-        $display_order = $db_flows->get_next_display_order($pipeline_id);
+        // Increment existing flow orders to place new flow at top
+        $increment_success = $db_flows->increment_existing_flow_orders($pipeline_id);
+        if (!$increment_success) {
+            do_action('dm_log', 'error', 'Failed to increment existing flow orders for new flow creation', [
+                'pipeline_id' => $pipeline_id,
+                'flow_name' => $flow_name
+            ]);
+            return false;
+        }
         
-        // Create flow with cascade step sync
+        // Create flow with display_order = 0 (top position)
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
             'flow_config' => json_encode([]),
             'scheduling_config' => json_encode(['interval' => 'manual']),
-            'display_order' => $display_order
+            'display_order' => 0 // New flows always appear at top
         ];
         
         $flow_id = $db_flows->create_flow($flow_data);

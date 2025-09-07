@@ -377,27 +377,8 @@ function dm_enqueue_page_assets($assets, $page_slug) {
 
 
 /**
- * Inject global system prompt into AI requests
+ * Global system prompt injection moved to AIStepDirective.php
  * 
- * Hooks into the AI HTTP Client's ai_request filter to prepend a global
- * system message for consistent brand voice and editorial guidelines.
+ * All AI directive handling is now centralized in AIStepDirective.php
+ * with standardized priorities and 5-parameter filter signature.
  */
-add_filter('ai_request', function($request, $provider_name, $streaming_callback, $tools) {
-    $settings = dm_get_data_machine_settings();
-    $global_prompt = trim($settings['global_system_prompt'] ?? '');
-    
-    // Skip if no global prompt 
-    if (empty($global_prompt)) {
-        return $request;
-    }
-    
-    // Inject global system message as separate entry
-    if (isset($request['messages']) && is_array($request['messages'])) {
-        array_unshift($request['messages'], [
-            'role' => 'system',
-            'content' => $global_prompt
-        ]);
-    }
-    
-    return $request;
-}, 5, 4); // Priority 5 to run before AI HTTP Client's processing

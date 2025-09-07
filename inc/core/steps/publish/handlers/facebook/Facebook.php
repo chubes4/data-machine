@@ -75,14 +75,14 @@ class Facebook {
             ];
         }
 
-        // Get handler configuration from tool definition
-        $handler_config = $tool_def['handler_config'] ?? [];
+        // Get handler configuration from flat parameter structure
+        $handler_config = $parameters['handler_config'] ?? [];
         
         // Extract Facebook-specific configuration (it's nested under 'facebook' key)
-        $facebook_config = $handler_config['facebook'] ?? [];
+        $facebook_config = $handler_config['facebook'] ?? $handler_config;
         
 
-        // Extract parameters
+        // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $parameters['source_url'] ?? null;
@@ -90,7 +90,18 @@ class Facebook {
         
         // Get config from Facebook-specific settings
         $include_images = $facebook_config['include_images'] ?? false;
-        $link_handling = $facebook_config['link_handling'] ?? 'append';
+        $link_handling = $facebook_config['link_handling'] ?? 'append'; // 'none', 'append', or 'comment'
+        
+        // Debug logging to verify parameter flow
+        do_action('dm_log', 'debug', 'Facebook Handler: Parameter extraction complete', [
+            'source_url' => $source_url,
+            'image_url' => $image_url,
+            'include_images' => $include_images,
+            'image_url_empty' => empty($image_url),
+            'image_url_valid' => $image_url ? filter_var($image_url, FILTER_VALIDATE_URL) : false,
+            'upload_condition' => $include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL),
+            'facebook_config_keys' => array_keys($facebook_config)
+        ]);
 
         // Get authenticated credentials
         $page_id = $this->auth->get_page_id();
@@ -117,8 +128,8 @@ class Facebook {
             // Format post content
             $post_text = $title ? $title . "\n\n" . $content : $content;
             
-            // Handle links based on configuration (exclude comment mode - handled after post creation)
-            if (!empty($source_url) && $link_handling === 'append') {
+            // Handle source URL based on consolidated link_handling setting
+            if ($link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
                 $post_text .= "\n\n" . $source_url;
             }
 
@@ -436,23 +447,8 @@ class Facebook {
      */
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
-        
-        
-        // include_images - provide default if missing
-        $sanitized['include_images'] = (bool) ($raw_settings['include_images'] ?? false);
-        
-        // link_handling - provide default and validate
-        $valid_link_options = ['append', 'comment', 'none'];
-        $link_handling = $raw_settings['link_handling'] ?? 'append';
-        if (!in_array($link_handling, $valid_link_options)) {
-            do_action('dm_log', 'error', 'Facebook Handler: Invalid link_handling parameter in sanitize method', [
-                'provided_value' => $link_handling,
-                'valid_options' => $valid_link_options
-            ]);
-            $link_handling = 'append'; // Fall back to default
-        }
-        $sanitized['link_handling'] = $link_handling;
-        
+        $sanitized['include_source'] = (bool) ($raw_settings['include_source'] ?? false);
+        $sanitized['enable_images'] = (bool) ($raw_settings['enable_images'] ?? false);
         return $sanitized;
     }
 

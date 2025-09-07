@@ -63,19 +63,18 @@ class Twitter {
             ];
         }
 
-        // Get handler configuration from tool definition and extract Twitter-specific config
-        $handler_config = $tool_def['handler_config'] ?? [];
+        // Get handler configuration from flat parameter structure
+        $handler_config = $parameters['handler_config'] ?? [];
         $twitter_config = $handler_config['twitter'] ?? $handler_config;
         
 
-        // Extract parameters
+        // Extract parameters from flat structure
         $content = $parameters['content'] ?? '';
         $source_url = $parameters['source_url'] ?? null;
         
         // Get config from Twitter-specific settings (280 character limit is hardcoded)
-        $include_source = $twitter_config['twitter_include_source'] ?? true;
-        $enable_images = $twitter_config['twitter_enable_images'] ?? true;
-        $url_as_reply = $twitter_config['twitter_url_as_reply'] ?? false;
+        $include_images = $twitter_config['include_images'] ?? true;
+        $link_handling = $twitter_config['link_handling'] ?? 'append'; // 'none', 'append', or 'reply'
 
         // Get authenticated connection
         $connection = $this->auth->get_connection();
@@ -97,8 +96,8 @@ class Twitter {
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
         
-        // Handle URL based on configuration
-        $should_append_url = $include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL) && !$url_as_reply;
+        // Handle URL based on consolidated link_handling setting
+        $should_append_url = $link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL);
         $link = $should_append_url ? ' ' . $source_url : '';
         $link_length = $link ? 24 : 0; // t.co link length
         $available_chars = 280 - $link_length;
@@ -138,7 +137,7 @@ class Twitter {
             
             // Debug logging for image parameter
             do_action('dm_log', 'debug', 'Twitter Handler: Image upload processing', [
-                'enable_images' => $enable_images,
+                'include_images' => $include_images,
                 'image_url_provided' => isset($parameters['image_url']),
                 'image_url' => $parameters['image_url'] ?? 'not_provided',
                 'image_url_empty' => empty($parameters['image_url']),
@@ -146,7 +145,7 @@ class Twitter {
                 'image_url_length' => isset($parameters['image_url']) ? strlen($parameters['image_url']) : 0
             ]);
             
-            if ($enable_images && !empty($parameters['image_url'])) {
+            if ($include_images && !empty($parameters['image_url'])) {
                 $image_url = $parameters['image_url'];
                 if (filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url)) {
                     $media_id = $this->upload_image_to_twitter($connection, $image_url, substr($content, 0, 50));
@@ -173,7 +172,7 @@ class Twitter {
 
                 // Handle URL as reply if configured
                 $reply_result = null;
-                if ($url_as_reply && $include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
+                if ($link_handling === 'reply' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
                     $reply_result = $this->post_reply_tweet($connection, $tweet_id, $source_url, $screen_name);
                 }
 

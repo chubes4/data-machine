@@ -29,16 +29,21 @@ class BlueskySettings {
      */
     public static function get_fields(array $current_config = []): array {
         return [
-            'bluesky_include_source' => [
-                'type' => 'checkbox',
-                'label' => __('Include Source Link', 'data-machine'),
-                'description' => __('Append the original source URL to the post (if available and fits within the 300 character limit).', 'data-machine'),
+            'link_handling' => [
+                'type' => 'select',
+                'label' => __('Source URL Handling', 'data-machine'),
+                'description' => __('Choose how to handle source URLs when posting to Bluesky.', 'data-machine'),
+                'options' => [
+                    'none' => __('No URL - exclude source link entirely', 'data-machine'),
+                    'append' => __('Append to post - add URL to post content', 'data-machine')
+                ],
+                'default' => 'append'
             ],
-            'bluesky_enable_images' => [
+            'include_images' => [
                 'type' => 'checkbox',
                 'label' => __('Enable Image Posting', 'data-machine'),
                 'description' => __('Attempt to find and upload an image from the source data (if available). Images must be under 1MB.', 'data-machine'),
-            ],
+            ]
         ];
     }
 
@@ -50,8 +55,10 @@ class BlueskySettings {
      */
     public static function sanitize(array $raw_settings): array {
         $sanitized = [];
-        $sanitized['bluesky_include_source'] = isset($raw_settings['bluesky_include_source']) && $raw_settings['bluesky_include_source'] == '1';
-        $sanitized['bluesky_enable_images'] = isset($raw_settings['bluesky_enable_images']) && $raw_settings['bluesky_enable_images'] == '1';
+        $sanitized['link_handling'] = in_array($raw_settings['link_handling'] ?? 'append', ['none', 'append']) 
+            ? $raw_settings['link_handling'] 
+            : 'append';
+        $sanitized['include_images'] = isset($raw_settings['include_images']) && $raw_settings['include_images'] == '1';
         return $sanitized;
     }
 

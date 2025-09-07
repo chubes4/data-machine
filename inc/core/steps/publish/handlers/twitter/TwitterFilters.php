@@ -1,11 +1,11 @@
 <?php
 /**
- * Twitter filter registration
+ * Twitter Handler Registration
  *
- * Registers Twitter as publish handler with authentication and tool support.
+ * Auto-registers Twitter publish handler, authentication, and AI tools via filter system.
  *
- * @package DataMachine
- * @subpackage Core\Steps\Publish\Handlers\Twitter
+ * @package DataMachine\Core\Steps\Publish\Handlers\Twitter
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
@@ -16,13 +16,14 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register Twitter filters
+ * Register all Twitter-related filters
  *
- * Self-registration for handler, authentication, and AI tool discovery.
+ * Registers handler, authentication provider, settings, and AI tools.
+ * Called automatically when file loads.
  */
 function dm_register_twitter_filters() {
     
-    // Handler registration - Twitter declares itself as publish handler (pure discovery mode)
+    // Register as publish handler
     add_filter('dm_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'publish',
@@ -33,25 +34,25 @@ function dm_register_twitter_filters() {
         return $handlers;
     });
     
-    // Authentication registration - pure discovery mode
+    // Register authentication provider
     add_filter('dm_auth_providers', function($providers) {
         $providers['twitter'] = new TwitterAuth();
         return $providers;
     });
     
-    // Settings registration - pure discovery mode
+    // Register settings handler
     add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['twitter'] = new TwitterSettings();
         return $all_settings;
     });
     
-    // Handler directive registration - pure discovery mode
+    // Register AI directive for Twitter-specific guidance
     add_filter('dm_handler_directives', function($directives) {
         $directives['twitter'] = 'When posting to Twitter, format your response as concise, engaging content under 280 characters. Use relevant hashtags and mention handles when appropriate. Keep the tone conversational and engaging.';
         return $directives;
     });
     
-    // Twitter tool registration with AI HTTP Client library
+    // Register AI tool for handler-specific publishing
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         // Only generate Twitter tool when it's the target handler
         if ($handler_slug === 'twitter') {
@@ -61,19 +62,17 @@ function dm_register_twitter_filters() {
     }, 10, 3);
 
     
-    // Modal registrations removed - now handled by generic modal system via pure discovery
+    // Modal handling via generic discovery system
 }
 
 /**
- * Generate Twitter tool definition with dynamic parameters based on handler configuration.
+ * Generate Twitter tool definition
  *
- * Dynamically constructs tool parameters based on Twitter-specific settings:
- * - Conditionally includes source_url parameter based on include_source setting
- * - Conditionally includes image_url parameter based on enable_images setting
- * - Modifies parameter descriptions based on url_as_reply setting
+ * Creates AI tool definition with dynamic configuration based on handler settings.
+ * Tool description reflects enabled features (link handling, image support).
  *
- * @param array $handler_config Handler configuration containing Twitter-specific settings.
- * @return array Complete Twitter tool configuration for AI HTTP Client.
+ * @param array $handler_config Twitter-specific handler configuration
+ * @return array Complete tool definition for ai_tools filter
  */
 function dm_get_twitter_tool(array $handler_config = []): array {
     // Extract Twitter-specific config from nested structure
@@ -109,22 +108,19 @@ function dm_get_twitter_tool(array $handler_config = []): array {
     }
     
     // Get configuration values with defaults from extracted config
-    $include_source = $twitter_config['twitter_include_source'] ?? true;
-    $enable_images = $twitter_config['twitter_enable_images'] ?? true;
-    $url_as_reply = $twitter_config['twitter_url_as_reply'] ?? false;
+    $include_images = $twitter_config['include_images'] ?? true;
+    $link_handling = $twitter_config['link_handling'] ?? 'append';
     
     // URL parameters handled by system - AI only provides content
     
     // Update description based on enabled features
     $description_parts = ['Post content to Twitter (280 character limit)'];
-    if ($include_source) {
-        if ($url_as_reply) {
-            $description_parts[] = 'source URLs from data will be posted as reply tweets';
-        } else {
-            $description_parts[] = 'source URLs from data will be appended';
-        }
+    if ($link_handling === 'append') {
+        $description_parts[] = 'source URLs from data will be appended to tweets';
+    } elseif ($link_handling === 'reply') {
+        $description_parts[] = 'source URLs from data will be posted as reply tweets';
     }
-    if ($enable_images) {
+    if ($include_images) {
         $description_parts[] = 'images from data will be uploaded automatically';
     }
     $tool['description'] = implode(', ', $description_parts);
@@ -132,9 +128,8 @@ function dm_get_twitter_tool(array $handler_config = []): array {
     do_action('dm_log', 'debug', 'Twitter Tool: Generation complete', [
         'parameter_count' => count($tool['parameters']),
         'parameter_names' => array_keys($tool['parameters']),
-        'include_source' => $include_source,
-        'enable_images' => $enable_images,
-        'url_as_reply' => $url_as_reply
+        'include_images' => $include_images,
+        'link_handling' => $link_handling
     ]);
     
     return $tool;

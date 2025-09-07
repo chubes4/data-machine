@@ -40,8 +40,13 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 
 **Step Execution Pattern**:
 ```php
-$additional_parameters = apply_filters('dm_step_additional_parameters', [], $data, $flow_step_config, $step_type, $flow_step_id);
-$data = $flow_step->execute($job_id, $flow_step_id, $data, $flow_step_config, ...$additional_parameters);
+$parameters = apply_filters('dm_engine_parameters', [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'flow_step_config' => $flow_step_config,
+    'data' => $data
+], $data, $flow_step_config, $step_type, $flow_step_id);
+$data = $flow_step->execute($parameters);
 ```
 
 ### 3. Step Scheduling (`dm_schedule_next_step`)
@@ -101,7 +106,19 @@ All steps implement the same interface:
 
 ```php
 class MyStep {
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
+        
+        // Extract parameters as needed
+        $source_url = $parameters['source_url'] ?? null;
+        $image_url = $parameters['image_url'] ?? null;
+        $file_path = $parameters['file_path'] ?? null;
+        $mime_type = $parameters['mime_type'] ?? null;
+        
         // Process data packet
         array_unshift($data, [
             'type' => 'my_step',
@@ -117,19 +134,46 @@ class MyStep {
 
 ## Parameter Passing
 
-### Additional Parameters
+### Flat Parameter Architecture
 
-Engine provides contextual parameters via variadic arguments:
+Engine uses unified flat parameter passing through single filter system:
 
+**Unified Parameters** (single flat array):
 ```php
-$additional_parameters = apply_filters('dm_step_additional_parameters', [], $data, $flow_step_config, $step_type, $flow_step_id);
+$parameters = apply_filters('dm_engine_parameters', [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'flow_step_config' => $flow_step_config,
+    'data' => $data
+    // Additional parameters added by filters as needed
+], $data, $flow_step_config, $step_type, $flow_step_id);
 ```
 
-**Standard Parameters** (extracted by position):
-- `$source_url` - Primary URL from metadata
-- `$image_url` - Image URL from metadata
-- `$file_path` - Local file path if available
-- `$mime_type` - File MIME type if available
+**Benefits**:
+- ✅ **Simple Interface**: Single flat array for all parameters
+- ✅ **Extensible**: Filters can add any metadata as parameters
+- ✅ **Consistent**: Same pattern across all step types
+
+**Step Implementation Pattern**:
+```php
+class MyStep {
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
+        
+        // Extract what this step needs
+        $source_url = $parameters['source_url'] ?? null;
+        $image_url = $parameters['image_url'] ?? null;
+        $file_path = $parameters['file_path'] ?? null;
+        $mime_type = $parameters['mime_type'] ?? null;
+        
+        return $data;
+    }
+}
+```
 
 ## Job Management
 
@@ -172,7 +216,7 @@ All step execution is wrapped in try-catch blocks:
 
 ```php
 try {
-    $data = $flow_step->execute($job_id, $flow_step_id, $data, $flow_step_config, ...$additional_parameters);
+    $data = $flow_step->execute($parameters);
     return !empty($data); // Success = non-empty data packet
 } catch (\Throwable $e) {
     do_action('dm_log', 'error', 'Step execution failed', [

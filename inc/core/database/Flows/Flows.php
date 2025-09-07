@@ -549,6 +549,37 @@ class Flows {
     }
 
     /**
+     * Increment display_order for all existing flows in a pipeline by 1
+     * Used when inserting a new flow at the top (display_order = 0)
+     * 
+     * @param int $pipeline_id Pipeline ID
+     * @return bool True on success, false on failure
+     */
+    public function increment_existing_flow_orders(int $pipeline_id): bool {
+        $result = $this->wpdb->query(
+            $this->wpdb->prepare(
+                "UPDATE {$this->table_name} SET display_order = display_order + 1 WHERE pipeline_id = %d",
+                $pipeline_id
+            )
+        );
+        
+        if ($result === false) {
+            do_action('dm_log', 'error', 'Failed to increment existing flow orders', [
+                'pipeline_id' => $pipeline_id,
+                'wpdb_error' => $this->wpdb->last_error
+            ]);
+            return false;
+        }
+        
+        do_action('dm_log', 'debug', 'Successfully incremented existing flow orders', [
+            'pipeline_id' => $pipeline_id,
+            'affected_rows' => $this->wpdb->rows_affected
+        ]);
+        
+        return true;
+    }
+
+    /**
      * Update display orders for multiple flows in a pipeline
      * 
      * @param int $pipeline_id Pipeline ID

@@ -157,6 +157,16 @@ class WordPressSettings {
      */
     private static function get_common_fields(): array {
         return [
+            'include_source' => [
+                'type' => 'checkbox',
+                'label' => __('Include Source Link', 'data-machine'),
+                'description' => __('Append the original source URL to the post content when available.', 'data-machine'),
+            ],
+            'enable_images' => [
+                'type' => 'checkbox',
+                'label' => __('Enable Featured Images', 'data-machine'),
+                'description' => __('Set the image from source data as the featured image for the post when available.', 'data-machine'),
+            ],
             'post_date_source' => [
                 'type' => 'select',
                 'label' => __('Post Date Setting', 'data-machine'),
@@ -180,6 +190,9 @@ class WordPressSettings {
         $sanitized = self::sanitize_local_settings($raw_settings);
 
         // Sanitize common fields - provide defaults for missing values
+        $sanitized['include_source'] = isset($raw_settings['include_source']) && $raw_settings['include_source'] == '1';
+        $sanitized['enable_images'] = isset($raw_settings['enable_images']) && $raw_settings['enable_images'] == '1';
+        
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
         if (!in_array($date_source, $valid_date_sources)) {

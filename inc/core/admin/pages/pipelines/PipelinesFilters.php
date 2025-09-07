@@ -1,16 +1,12 @@
 <?php
 /**
- * Pipelines Admin Page Component Filter Registration
+ * Pipelines Admin Page Registration
  * 
- * "Plugins Within Plugins" Architecture Implementation
+ * Self-contained admin page registration following filter-based discovery architecture.
+ * Registers page, assets, and modal integration via dm_admin_pages filter.
  * 
- * Unified admin page architecture with embedded asset configuration and modal integration.
- * Demonstrates complete self-containment through direct dm_admin_pages registration
- * with zero bridge systems or legacy compatibility layers.
- * 
- * @package DataMachine
- * @subpackage Core\Admin\Pages\Pipelines
- * @since 0.1.0
+ * @package DataMachine\Core\Admin\Pages\Pipelines
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Admin\Pages\Pipelines;
@@ -21,12 +17,10 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register all Pipelines Admin Page component filters
+ * Register Pipelines admin page components
  * 
- * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers Pipelines Admin Page capabilities purely through filter-based discovery.
- * 
- * @since 0.1.0
+ * Self-registration pattern using filter-based discovery.
+ * Engine discovers page capabilities through dm_admin_pages filter.
  */
 function dm_register_pipelines_admin_page_filters() {
     

@@ -22,13 +22,16 @@ class WordPressAPI {
     }
 
     /**
-     * Fetches and prepares WordPress REST API data from remote WordPress sites.
+     * Fetch content from WordPress REST API endpoints
      *
-     * @param int $pipeline_id The pipeline ID for this execution context.
-     * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
-     * @param string|null $job_id The job ID for processed items tracking.
-     * @return array Array with 'processed_items' key containing eligible items.
-     * @throws Exception If fetch data is invalid or cannot be retrieved.
+     * Retrieves posts/pages from remote WordPress sites via REST API with automatic
+     * deduplication tracking. Provides structured data access and source_url metadata
+     * required for Update handlers.
+     *
+     * @param int $pipeline_id Pipeline execution identifier for item tracking
+     * @param array $handler_config Handler configuration with wordpress_api settings and flow_step_id
+     * @param string|null $job_id Job identifier for deduplication tracking (optional)
+     * @return array Array with 'processed_items' key containing formatted post data
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -68,15 +71,17 @@ class WordPressAPI {
     }
 
     /**
-     * Fetch data from remote WordPress site via REST API.
+     * Fetch data from remote WordPress site via REST API
      *
-     * @param int   $pipeline_id Module ID for tracking processed items.
-     * @param array $config Configuration array.
-     * @param string $site_url Base URL of the WordPress site.
-     * @param string|null $flow_step_id Flow step ID for processed items tracking.
-     * @param string|null $job_id Job ID for processed items tracking.
-     * @return array Array of item data packets.
-     * @throws Exception If data cannot be retrieved.
+     * Makes HTTP request to WordPress REST API endpoint and processes response.
+     * Returns first unprocessed item with automatic deduplication tracking.
+     *
+     * @param int $pipeline_id Pipeline execution identifier
+     * @param array $config Handler configuration with site_url and filtering options
+     * @param string $site_url Base URL of target WordPress site
+     * @param string|null $flow_step_id Flow step ID for deduplication tracking
+     * @param string|null $job_id Job ID for item tracking
+     * @return array Array containing single eligible post data packet or empty array
      */
     private function fetch_remote_data(int $pipeline_id, array $config, string $site_url, ?string $flow_step_id = null, ?string $job_id = null): array {
         $post_type = sanitize_text_field($config['post_type'] ?? 'posts');

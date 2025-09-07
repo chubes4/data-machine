@@ -1,12 +1,12 @@
 <?php
 /**
- * Update existing content using processed data
+ * Update Step - Content Modification
  *
- * Processes data packets and updates existing content via handler tools.
+ * Updates existing content using processed data via handler tools.
  * Supports AI-generated updates and direct handler execution.
  *
- * @package DataMachine
- * @subpackage Core\Steps\Update
+ * @package DataMachine\Core\Steps\Update
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Update;
@@ -17,30 +17,39 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Updates existing content with processed data
+ * Update Step - Modifies Existing Content
+ *
+ * Processes data packets and updates existing content via handler tools.
+ * Detects AI tool execution or executes handlers directly.
  */
 class UpdateStep {
 
     /**
      * Execute update processing
      * 
-     * @param string $job_id Job identifier
-     * @param string $flow_step_id Flow step identifier
-     * @param array $data Data packet array
-     * @param array $flow_step_config Step configuration
-     * @param mixed ...$additional_parameters Engine-provided parameters via dm_step_additional_parameters filter
-     * @return array Updated data packet array
+     * Updates existing content using processed data via handler tools.
+     * Detects if AI has already executed the tool or executes handler directly.
+     * 
+     * @param array $parameters Flat parameter structure from dm_engine_parameters filter:
+     *   - job_id: Job execution identifier
+     *   - flow_step_id: Flow step identifier  
+     *   - flow_step_config: Step configuration data
+     *   - data: Data packet array for processing
+     *   - source_url: Required for content identification (from metadata)
+     *   - Additional parameters: image_url, file_path, mime_type (as available)
+     * @return array Updated data packet array with update results
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
-        // Extract engine-provided parameters by position (performance optimized)
-        $source_url = $additional_parameters[0] ?? null;
-        $image_url = $additional_parameters[1] ?? null;  
-        $file_path = $additional_parameters[2] ?? null;
-        $mime_type = $additional_parameters[3] ?? null;
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
+        
         try {
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'Update Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
-                return [];
+                return $data;
             }
 
             // Get handler configuration from flow step
@@ -104,14 +113,7 @@ class UpdateStep {
             ];
 
             // Add to front of data array following established pattern
-            array_unshift($data, $update_entry);
-
-            do_action('dm_log', 'info', 'Update Step: Processing completed', [
-                'flow_step_id' => $flow_step_id,
-                'handler_slug' => $handler_slug,
-                'success' => $handler_result['success'] ?? false,
-                'data_entries' => count($data)
-            ]);
+            $data = apply_filters('dm_data_packet', $data, $update_entry, $flow_step_id, 'update');
 
             // Check for handler failure and fail the job if update failed
             $handler_success = $handler_result['success'] ?? false;
@@ -144,13 +146,13 @@ class UpdateStep {
     }
 
     /**
-     * Execute update handler
+     * Execute update handler via tool calling
      * 
-     * @param string $handler_slug Handler to execute
-     * @param array $data Data packet array
-     * @param array $handler_config Handler configuration
-     * @param array $flow_step_config Step configuration
-     * @return array|null Handler result or null on failure
+     * @param string $handler_slug Handler slug (wordpress, etc.)
+     * @param array $data Data packet array for content extraction
+     * @param array $handler_config Handler-specific configuration
+     * @param array $flow_step_config Complete step configuration
+     * @return array|null Handler result with success/error data or null on failure
      */
     private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config) {
         try {
@@ -179,18 +181,41 @@ class UpdateStep {
                 return null;
             }
 
-            // Build parameters using engine parameters first, fallback to data content
-            $parameters = $this->build_handler_parameters($data, $handler_config, $source_url, $image_url, $file_path, $mime_type);
-            
             // Get handler tools for conditional execution
             $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
             $handler_tools = array_filter($all_tools, function($tool) use ($handler_slug) {
                 return isset($tool['handler']) && $tool['handler'] === $handler_slug;
             });
+            
+            // Extract variables from parameters before compacting
+            $source_url = $parameters['source_url'] ?? null;
+            $image_url = $parameters['image_url'] ?? null;
+            $file_path = $parameters['file_path'] ?? null;
+            $mime_type = $parameters['mime_type'] ?? null;
+            
+            // Build parameters using AIStepToolParameters with engine context
+            $engine_parameters = compact('source_url', 'image_url', 'file_path', 'mime_type');
+            
+            if (!empty($handler_tools)) {
+                $tool_name = array_key_first($handler_tools);
+                $tool_def = $handler_tools[$tool_name];
+                
+                // Build flat parameters with engine context (includes source_url for content identification)
+                $parameters = \DataMachine\Core\Steps\AI\AIStepToolParameters::buildForHandlerTool(
+                    [], // No AI parameters - direct handler execution
+                    $data,
+                    $tool_def,
+                    $engine_parameters,
+                    $handler_config
+                );
+            } else {
+                // Fallback for handlers without tools
+                $parameters = $engine_parameters;
+            }
 
             $handler_instance = new $handler_class();
 
-            // Execute via tool calling if tools are available (following established pattern)
+            // Execute via tool calling interface (standardized for all handler types)
             if (!empty($handler_tools)) {
                 $tool_name = array_key_first($handler_tools);
                 $tool_def = $handler_tools[$tool_name];
@@ -221,69 +246,6 @@ class UpdateStep {
         }
     }
 
-    /**
-     * Build parameters for handler execution using engine parameters first, data fallback
-     * 
-     * @param array $data Data packet array
-     * @param array $handler_settings Handler settings
-     * @param string|null $source_url Engine-provided source URL
-     * @param string|null $image_url Engine-provided image URL
-     * @param string|null $file_path Engine-provided file path
-     * @param string|null $mime_type Engine-provided MIME type
-     * @return array Handler parameters
-     */
-    private function build_handler_parameters(array $data, array $handler_settings, $source_url = null, $image_url = null, $file_path = null, $mime_type = null): array {
-        $parameters = [];
-        
-        // Get content from latest entry (data[0] - typically AI-generated)
-        $latest_entry = !empty($data) ? $data[0] : [];
-        $content_data = $latest_entry['content'] ?? [];
-        
-        if (isset($content_data['title'])) {
-            $parameters['title'] = $content_data['title'];
-        }
-        if (isset($content_data['body'])) {
-            $parameters['content'] = $content_data['body'];
-        }
-        
-        // Use ONLY engine parameters - no fallbacks to hide errors
-        if ($source_url !== null) {
-            $parameters['source_url'] = $source_url;
-        }
-        
-        if ($image_url !== null) {
-            $parameters['image_url'] = $image_url;
-        }
-        
-        if ($file_path !== null) {
-            $parameters['file_path'] = $file_path;
-        }
-        
-        if ($mime_type !== null) {
-            $parameters['mime_type'] = $mime_type;
-        }
-        
-        // Include AI analysis results from latest entry
-        foreach ($content_data as $key => $value) {
-            if (strpos($key, 'ai_') === 0 || in_array($key, [
-                'content_type', 'audience_level', 'skill_prerequisites', 
-                'content_characteristics', 'primary_intent', 'actionability',
-                'complexity_score', 'estimated_completion_time'
-            ])) {
-                $parameters[$key] = $value;
-            }
-        }
-        
-        // Merge handler settings
-        if (!empty($handler_settings)) {
-            $tool_relevant_settings = array_filter($handler_settings, function($key) {
-                return !in_array($key, ['handler_slug', 'auth_config', 'internal_config']);
-            }, ARRAY_FILTER_USE_KEY);
-            $parameters = array_merge($parameters, $tool_relevant_settings);
-        }
-        
-        return $parameters;
-    }
 
 
     /**
@@ -342,15 +304,7 @@ class UpdateStep {
         ];
         
         // Add update entry to front of data packet array (newest first)
-        array_unshift($data, $update_entry);
-        
-        do_action('dm_log', 'info', 'Update Step: Completed successfully via AI tool call', [
-            'flow_step_id' => $flow_step_id,
-            'handler_slug' => $handler,
-            'tool_result_keys' => array_keys($tool_result_data),
-            'success' => $tool_result_data['success'] ?? false,
-            'data_entries' => count($data)
-        ]);
+        $data = apply_filters('dm_data_packet', $data, $update_entry, $flow_step_id, 'update');
 
         return $data;
     }

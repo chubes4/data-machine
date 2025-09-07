@@ -9,21 +9,32 @@ if (!defined('ABSPATH')) {
 // Pure array-based data packet system - no object dependencies
 
 /**
- * Fetches data using configured handlers
+ * Fetch Step - Data Collection from External Sources
+ *
+ * Executes configured fetch handlers to collect data from external sources.
+ * Generates initial data packets for pipeline processing.
  */
 class FetchStep {
 
     /**
      * Execute fetch processing
      * 
-     * @param string $job_id Job identifier
-     * @param string $flow_step_id Flow step identifier
-     * @param array $data Data packet array
-     * @param array $flow_step_config Step configuration
-     * @param mixed ...$additional_parameters Engine-provided parameters via dm_step_additional_parameters filter
-     * @return array Updated data packet array
+     * Fetches data from external sources using configured handlers.
+     * Generates new data entries from sources like RSS feeds, files, APIs, etc.
+     * 
+     * @param array $parameters Flat parameter structure from dm_engine_parameters filter:
+     *   - job_id: Job execution identifier
+     *   - flow_step_id: Flow step identifier
+     *   - flow_step_config: Step configuration data
+     *   - data: Data packet array (typically empty for fetch steps)
+     * @return array Updated data packet array with fetched content
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
         try {
             // Fetch steps generate data from external sources 
             do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [
@@ -63,15 +74,7 @@ class FetchStep {
             }
 
             // Add fetch entry to front of data packet array (newest first)
-            array_unshift($data, $fetch_entry);
-
-            do_action('dm_log', 'debug', 'Fetch Step: Data collection completed', [
-                'flow_step_id' => $flow_step_id,
-                'handler' => $handler,
-                'content_length' => strlen($fetch_entry['content']['body'] ?? '') + strlen($fetch_entry['content']['title'] ?? ''),
-                'source_type' => $fetch_entry['metadata']['source_type'] ?? '',
-                'total_items' => count($data)
-            ]);
+            $data = apply_filters('dm_data_packet', $data, $fetch_entry, $flow_step_id, 'fetch');
 
             return $data;
 
@@ -90,11 +93,11 @@ class FetchStep {
     /**
      * Execute fetch handler
      * 
-     * @param string $handler_name Handler name
-     * @param array $flow_step_config Step configuration
-     * @param array $handler_settings Handler settings
-     * @param string $job_id Job identifier
-     * @return array|null Fetch entry or null on failure
+     * @param string $handler_name Handler slug (rss, files, reddit, etc.)
+     * @param array $flow_step_config Complete step configuration
+     * @param array $handler_settings Handler-specific settings
+     * @param string $job_id Job identifier for deduplication tracking
+     * @return array|null Fetch entry data packet or null on failure
      */
     private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings, string $job_id): ?array {
         // Get handler object directly from handler system
@@ -223,10 +226,10 @@ class FetchStep {
 
 
     /**
-     * Get handler object from registration
+     * Get handler object from filter-based registry
      * 
-     * @param string $handler_name Handler name
-     * @return object|null Handler object or null
+     * @param string $handler_name Handler slug from dm_handlers filter
+     * @return object|null Instantiated handler object or null if not found
      */
     private function get_handler_object(string $handler_name): ?object {
         // Direct handler discovery - no redundant filtering needed

@@ -6,7 +6,7 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Dynamic AI Directives, Site Context Integration, Three-Layer Tool Management, Social Publishing, OAuth System, Headless Mode
+**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 5-Tier AI Request Priority System, Dynamic AI Directives, AIStepToolParameters, Site Context Integration, Three-Layer Tool Management, Social Publishing, OAuth System, Headless Mode
 
 **Requirements**: WordPress 5.0+, PHP 8.0+, Composer
 
@@ -64,31 +64,14 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 
 ## Examples
 
-### Content Automation
-```
-// Single Platform (Recommended)
-RSS → AI → Twitter
+### Workflow Patterns
 
-// Multi-Platform (Advanced)
-RSS → AI → Twitter → AI → Facebook
-```
+**Single Platform**: RSS → AI → Twitter (recommended)
+**Multi-Platform**: RSS → AI → Twitter → AI → Facebook  
+**Content Updates**: WordPress Local → AI → WordPress Update
+**Document Analysis**: Files → AI → WordPress
 
-> **Note**: AI agents discover handler tools for the immediate next step only. For multi-platform, use AI→Publish→AI→Publish pattern.
-
-**AI Enhancement**: 
-- **Dynamic Directives**: Automatic tool-specific prompts
-- **Site Context**: WordPress site information injection
-- **Dual-Layer Persistence**: Pipeline-level system prompts + flow-level user messages
-- **Three-Layer Tools**: Global settings → per-step selection → configuration validation  
-- **Tool Categories**: Handler tools (next step) + general tools (Google Search, Local Search, Google Search Console)
-- **Standalone Execution**: AI steps can run independently using flow-specific user messages
-
-**Advanced Examples**:
-
-**Content Automation**: RSS → AI → Twitter (single platform, recommended)
-**Multi-Platform Publishing**: RSS → AI → Twitter → AI → Facebook (advanced pattern)
-**Content Enhancement**: WordPress Local → AI → WordPress Update (requires source_url from fetch)
-**Research Processing**: Files (PDFs) → AI → WordPress (document analysis)
+> **Note**: Multi-platform uses AI→Publish→AI→Publish pattern. Update steps require source_url from fetch metadata.
 
 *For detailed examples and technical specifications, see `CLAUDE.md`*
 
@@ -145,8 +128,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 **Settings** (WordPress Settings → Data Machine):
 - Engine Mode (headless), page controls, tool toggles
-- Site Context toggle (WordPress info injection)
-- Global system prompt + dynamic AI directives
+- Site Context toggle (WordPress info injection)  
+- 5-Tier AI priority system: Global system prompt → Pipeline prompts → Tool directives → Data packet structure → Site context
+- Dynamic AI directives with tool-specific guidance
+- AIStepToolParameters flat parameter architecture
 - Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies)
 - Three-layer tool management (global → modal → validation)
@@ -160,7 +145,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: See `CLAUDE.md` for complete technical details
+**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, 5-tier AI request priority system, AIStepToolParameters class for unified tool execution. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

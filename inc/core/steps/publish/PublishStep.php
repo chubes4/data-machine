@@ -10,21 +10,34 @@ if (!defined('ABSPATH')) {
 // Pure array-based data packet system - no object dependencies
 
 /**
- * Publishes data using configured handlers
+ * Publish Step - Content Distribution
+ *
+ * Publishes processed content to external platforms via handler tools.
+ * Relies on AI agents to execute handler tools during conversation workflow.
  */
 class PublishStep {
 
     /**
      * Execute publish processing
      * 
-     * @param string $job_id Job identifier
-     * @param string $flow_step_id Flow step identifier
-     * @param array $data Data packet array
-     * @param array $flow_step_config Step configuration
-     * @param mixed ...$additional_parameters Engine-provided parameters via dm_step_additional_parameters filter
-     * @return array Updated data packet array
+     * Publishes processed data to external platforms via handler tools.
+     * Expects AI agents to execute handler tools during conversation workflow.
+     * 
+     * @param array $parameters Flat parameter structure from dm_engine_parameters filter:
+     *   - job_id: Job execution identifier
+     *   - flow_step_id: Flow step identifier
+     *   - flow_step_config: Step configuration data
+     *   - data: Data packet array containing processed content
+     *   - Additional parameters: source_url, image_url, file_path, mime_type (as available)
+     * @return array Updated data packet array with publish results
      */
-    public function execute($job_id, $flow_step_id, array $data = [], array $flow_step_config = [], ...$additional_parameters): array {
+    public function execute(array $parameters): array {
+        // Extract from flat parameter structure
+        $job_id = $parameters['job_id'];
+        $flow_step_id = $parameters['flow_step_id'];
+        $data = $parameters['data'] ?? [];
+        $flow_step_config = $parameters['flow_step_config'] ?? [];
+        
         try {
             do_action('dm_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);
 
@@ -126,8 +139,8 @@ class PublishStep {
                 $tool_name = array_key_first($handler_tools);
                 $tool_def = $handler_tools[$tool_name];
                 
-                // Extract tool parameters from data entry
-                $parameters = $this->extract_tool_parameters_from_data($data_entry, $handler_settings);
+                // Build parameters using unified parameter structure
+                $parameters = $this->build_handler_parameters($data_entry, $handler_settings, []);
                 
                 do_action('dm_log', 'debug', 'Publish Step: Executing handler via tool calling', [
                     'handler' => $handler_name,
@@ -157,35 +170,29 @@ class PublishStep {
     }
 
     /**
-     * Extract parameters from data entry
+     * Build parameters for handler execution using unified parameter structure
      * 
-     * @param array $data_entry Data entry
+     * @param array $data_entry Data entry  
      * @param array $handler_settings Handler settings
-     * @return array Extracted parameters
+     * @param array $unified_parameters Unified parameters from engine
+     * @return array Complete parameters for handler execution
      */
-    private function extract_tool_parameters_from_data(array $data_entry, array $handler_settings): array {
+    private function build_handler_parameters(array $data_entry, array $handler_settings, array $unified_parameters = []): array {
         $metadata = $data_entry['metadata'] ?? [];
         $entry_type = $data_entry['type'] ?? '';
         
-        // NEW: For ai_handler_complete entries, use clean separated parameters from metadata
+        // For ai_handler_complete entries, use tool parameters from metadata
         if ($entry_type === 'ai_handler_complete' && isset($metadata['tool_parameters'])) {
-            // Use clean separated parameters stored by AIStep
-            $clean_parameters = $metadata['tool_parameters'];
-            
-            // Use handler_config from metadata if available, otherwise fall back to handler_settings
-            $handler_config = $metadata['handler_config'] ?? $handler_settings;
-            
-            // Merge handler config into parameters for tool execution
-            if (!empty($handler_config)) {
-                $parameters = array_merge($clean_parameters, $handler_config);
-            } else {
-                $parameters = $clean_parameters;
-            }
-            
+            // AI already built the tool parameters - use them as base and add handler config to flat structure
+            $parameters = $metadata['tool_parameters'];
+            $parameters['handler_config'] = $metadata['handler_config'] ?? $handler_settings;
             return $parameters;
         }
         
-        return [];
+        // For other entries, build flat parameter structure
+        $parameters = $unified_parameters;
+        $parameters['handler_config'] = $handler_settings;
+        return $parameters;
     }
 
     /**
@@ -341,14 +348,7 @@ class PublishStep {
         ];
         
         // Add publish entry to front of data packet array (newest first)
-        array_unshift($data, $publish_entry);
-        
-        do_action('dm_log', 'debug', 'Publish Step: Completed successfully via AI tool call', [
-            'flow_step_id' => $flow_step_id,
-            'handler' => $handler,
-            'tool_result_keys' => array_keys($tool_result_data),
-            'total_items_in_packet' => count($data)
-        ]);
+        $data = apply_filters('dm_data_packet', $data, $publish_entry, $flow_step_id, 'publish');
 
         return $data;
     }

@@ -118,11 +118,13 @@ function dm_get_threads_tool(array $handler_config = []): array {
     
     // Get configuration values with defaults from extracted config
     $include_images = $threads_config['include_images'] ?? true;
-    
-    // Image parameters handled by system - AI only provides content
+    $link_handling = $threads_config['link_handling'] ?? 'append';
     
     // Update description based on enabled features
     $description_parts = ['Post content to Threads (500 character limit)'];
+    if ($link_handling === 'append') {
+        $description_parts[] = 'source URLs from data will be appended to posts';
+    }
     if ($include_images) {
         $description_parts[] = 'images from data will be uploaded automatically';
     }

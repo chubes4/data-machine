@@ -69,20 +69,24 @@ class Threads {
             ];
         }
 
-        // Get handler configuration from tool definition
-        $handler_config = $tool_def['handler_config'] ?? [];
+        // Get handler configuration from flat parameter structure
+        $handler_config = $parameters['handler_config'] ?? [];
+        $threads_config = $handler_config['threads'] ?? $handler_config;
         
         do_action('dm_log', 'debug', 'Threads Tool: Using handler configuration', [
-            'include_images' => $handler_config['include_images'] ?? true
+            'include_images' => $threads_config['include_images'] ?? true,
+            'link_handling' => $threads_config['link_handling'] ?? 'append'
         ]);
 
-        // Extract parameters
+        // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
+        $source_url = $parameters['source_url'] ?? null;
         $image_url = $parameters['image_url'] ?? null;
         
         // Get config from handler settings (500 character limit is hardcoded)
-        $include_images = $handler_config['include_images'] ?? true;
+        $include_images = $threads_config['include_images'] ?? true;
+        $link_handling = $threads_config['link_handling'] ?? 'append';
 
         // Get authenticated access token
         $access_token = $this->auth->get_access_token();
@@ -106,12 +110,17 @@ class Threads {
 
         // Format post content (Threads' character limit is 500)
         $post_text = $title ? $title . "\n\n" . $content : $content;
+        
+        // Handle source URL based on consolidated link_handling setting
+        $link = ($link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) ? "\n\n" . $source_url : '';
         $ellipsis = '...';
-        $max_length = 500;
+        $max_length = 500 - strlen($link);
         
         if (strlen($post_text) > $max_length) {
             $post_text = substr($post_text, 0, $max_length - strlen($ellipsis)) . $ellipsis;
         }
+        
+        $post_text .= $link;
 
         if (empty($post_text)) {
             return [

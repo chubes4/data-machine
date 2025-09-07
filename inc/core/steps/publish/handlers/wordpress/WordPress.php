@@ -24,13 +24,12 @@ class WordPress {
     /**
      * Handle AI tool call for WordPress publishing.
      *
-     * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
-     * @return array Tool execution result.
+     * @param array $parameters Parameters from AI tool call
+     * @param array $tool_def Tool definition including handler configuration
+     * @return array Tool execution result
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
-        // Validate required parameters
         if (empty($parameters['title']) || empty($parameters['content'])) {
             $error_msg = 'WordPress tool call missing required parameters';
             do_action('dm_log', 'error', $error_msg, [
@@ -49,7 +48,6 @@ class WordPress {
             ];
         }
 
-        // Get handler configuration from tool definition
         $handler_config = $tool_def['handler_config'] ?? [];
         
         
@@ -61,7 +59,6 @@ class WordPress {
             'has_post_type' => isset($handler_config['post_type'])
         ]);
         
-        // Validate required WordPress configuration - fail job if missing
         if (empty($handler_config['post_author'])) {
             $error_msg = 'WordPress publish handler missing required post_author configuration';
             do_action('dm_log', 'error', $error_msg, [
@@ -104,10 +101,22 @@ class WordPress {
             ];
         }
         
-        // Prepare post data using configuration from handler settings
+        // Get settings for source and image handling
+        $include_source = $handler_config['include_source'] ?? true;
+        $enable_images = $handler_config['enable_images'] ?? true;
+        
+        // Process content with source URL if enabled
+        $content = wp_kses_post(wp_unslash($parameters['content']));
+        $source_url = $parameters['source_url'] ?? null;
+        $image_url = $parameters['image_url'] ?? null;
+        
+        if ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
+            $content .= "\n\n---\n\nSource: [{$source_url}]({$source_url})";
+        }
+        
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
-            'post_content' => wp_kses_post(wp_unslash($parameters['content'])),
+            'post_content' => $content,
             'post_status' => $handler_config['post_status'],
             'post_type' => $handler_config['post_type'],
             'post_author' => $handler_config['post_author']
@@ -121,7 +130,6 @@ class WordPress {
             'content_length' => strlen($post_data['post_content'])
         ]);
 
-        // Insert the post
         $post_id = wp_insert_post($post_data);
 
         if (is_wp_error($post_id)) {
@@ -138,7 +146,6 @@ class WordPress {
             ];
         }
 
-        // Handle taxonomies if provided
         $taxonomy_results = [];
         if (!empty($parameters['category'])) {
             $category_result = $this->assign_taxonomy($post_id, 'category', $parameters['category']);
@@ -150,20 +157,25 @@ class WordPress {
             $taxonomy_results['tags'] = $tags_result;
         }
 
-        // Handle other taxonomies dynamically - exclude core content parameters  
         $excluded_params = ['title', 'content', 'category', 'tags'];
         foreach ($parameters as $param_name => $param_value) {
             if (!in_array($param_name, $excluded_params) && !empty($param_value) && is_string($param_value)) {
-                // Only process string values as potential taxonomy terms, not arrays/objects which are likely config
                 $taxonomy_result = $this->assign_taxonomy($post_id, $param_name, $param_value);
                 $taxonomy_results[$param_name] = $taxonomy_result;
             }
         }
 
+        // Handle featured image if enabled and available
+        $featured_image_result = null;
+        if ($enable_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+            $featured_image_result = $this->set_featured_image($post_id, $image_url);
+        }
+
         do_action('dm_log', 'debug', 'WordPress Tool: Post created successfully', [
             'post_id' => $post_id,
             'post_url' => get_permalink($post_id),
-            'taxonomy_results' => $taxonomy_results
+            'taxonomy_results' => $taxonomy_results,
+            'featured_image_result' => $featured_image_result
         ]);
 
         return [
@@ -171,7 +183,8 @@ class WordPress {
             'data' => [
                 'post_id' => $post_id,
                 'post_url' => get_permalink($post_id),
-                'taxonomy_results' => $taxonomy_results
+                'taxonomy_results' => $taxonomy_results,
+                'featured_image_result' => $featured_image_result
             ],
             'tool_name' => 'wordpress_publish'
         ];
@@ -220,95 +233,6 @@ class WordPress {
         return __('WordPress', 'data-machine');
     }
 
-    /**
-     * Create Gutenberg blocks from structured content.
-     * 
-     * Converts structured content to proper Gutenberg blocks using WordPress native functions.
-     * Uses serialize_blocks() to ensure proper block format and compatibility.
-     *
-     * @param string $content The content to convert to blocks.
-     * @return string Properly formatted Gutenberg block content.
-     */
-    private function create_gutenberg_blocks_from_content(string $content): string {
-        if (empty($content)) {
-            return '';
-        }
-
-        // Sanitize HTML content using WordPress KSES
-        $sanitized_html = wp_kses_post($content);
-
-        // Check if content already contains blocks - if so, return as-is
-        if (has_blocks($sanitized_html)) {
-            return $sanitized_html;
-        }
-
-        // Convert HTML to WordPress block structure
-        $blocks = $this->convert_html_to_blocks($sanitized_html);
-        
-        // Use WordPress native serialize_blocks() to convert block array to proper HTML
-        return serialize_blocks($blocks);
-    }
-
-    /**
-     * Convert HTML content to WordPress block structure.
-     * 
-     * Creates proper block arrays that WordPress can serialize correctly.
-     *
-     * @param string $html_content The HTML content to convert.
-     * @return array Array of WordPress block structures.
-     */
-    private function convert_html_to_blocks(string $html_content): array {
-        $blocks = [];
-        
-        // Split content by double line breaks to identify separate content blocks
-        $paragraphs = preg_split('/\n\s*\n/', trim($html_content));
-        
-        foreach ($paragraphs as $paragraph) {
-            $paragraph = trim($paragraph);
-            if (empty($paragraph)) {
-                continue;
-            }
-
-            // Check for heading tags
-            if (preg_match('/^<h([1-6])[^>]*>(.*?)<\/h[1-6]>$/is', $paragraph, $matches)) {
-                $level = (int) $matches[1];
-                $content_text = trim($matches[2]);
-                
-                $blocks[] = [
-                    'blockName' => 'core/heading',
-                    'attrs' => [
-                        'level' => $level
-                    ],
-                    'innerBlocks' => [],
-                    'innerHTML' => sprintf('<h%d>%s</h%d>', $level, $content_text, $level),
-                    'innerContent' => [sprintf('<h%d>%s</h%d>', $level, $content_text, $level)]
-                ];
-                
-            } elseif (preg_match('/^<p[^>]*>(.*?)<\/p>$/is', $paragraph, $matches)) {
-                $content_text = trim($matches[1]);
-                
-                $blocks[] = [
-                    'blockName' => 'core/paragraph',
-                    'attrs' => [],
-                    'innerBlocks' => [],
-                    'innerHTML' => sprintf('<p>%s</p>', $content_text),
-                    'innerContent' => [sprintf('<p>%s</p>', $content_text)]
-                ];
-                
-            } else {
-                // Wrap other content in paragraph blocks
-                $blocks[] = [
-                    'blockName' => 'core/paragraph',
-                    'attrs' => [],
-                    'innerBlocks' => [],
-                    'innerHTML' => sprintf('<p>%s</p>', $paragraph),
-                    'innerContent' => [sprintf('<p>%s</p>', $paragraph)]
-                ];
-            }
-        }
-        
-        return $blocks;
-    }
 
 
     /**
@@ -372,6 +296,79 @@ class WordPress {
             'term_count' => count($term_ids),
             'terms' => $terms
         ];
+    }
+
+    /**
+     * Set featured image for post from image URL.
+     *
+     * @param int    $post_id   Post ID.
+     * @param string $image_url Image URL.
+     * @return array|null Result of featured image operation.
+     */
+    private function set_featured_image(int $post_id, string $image_url): ?array {
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+
+        try {
+            // Download image to temp file
+            $temp_file = download_url($image_url);
+            if (is_wp_error($temp_file)) {
+                do_action('dm_log', 'warning', 'WordPress Featured Image: Failed to download image', [
+                    'image_url' => $image_url,
+                    'error' => $temp_file->get_error_message()
+                ]);
+                return ['success' => false, 'error' => 'Failed to download image'];
+            }
+
+            // Get image info and validate
+            $file_array = [
+                'name' => basename($image_url),
+                'tmp_name' => $temp_file
+            ];
+
+            // Upload to media library
+            $attachment_id = media_handle_sideload($file_array, $post_id);
+            
+            if (is_wp_error($attachment_id)) {
+                @unlink($temp_file);
+                do_action('dm_log', 'warning', 'WordPress Featured Image: Failed to create attachment', [
+                    'image_url' => $image_url,
+                    'error' => $attachment_id->get_error_message()
+                ]);
+                return ['success' => false, 'error' => 'Failed to create media attachment'];
+            }
+
+            // Set as featured image
+            $result = set_post_thumbnail($post_id, $attachment_id);
+            
+            if (!$result) {
+                do_action('dm_log', 'warning', 'WordPress Featured Image: Failed to set featured image', [
+                    'post_id' => $post_id,
+                    'attachment_id' => $attachment_id
+                ]);
+                return ['success' => false, 'error' => 'Failed to set featured image'];
+            }
+
+            do_action('dm_log', 'debug', 'WordPress Featured Image: Successfully set featured image', [
+                'post_id' => $post_id,
+                'attachment_id' => $attachment_id,
+                'image_url' => $image_url
+            ]);
+
+            return [
+                'success' => true,
+                'attachment_id' => $attachment_id,
+                'attachment_url' => wp_get_attachment_url($attachment_id)
+            ];
+
+        } catch (Exception $e) {
+            do_action('dm_log', 'error', 'WordPress Featured Image: Exception occurred', [
+                'image_url' => $image_url,
+                'exception' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => 'Exception during image processing'];
+        }
     }
 }
 

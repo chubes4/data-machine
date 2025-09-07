@@ -2,23 +2,16 @@
 /**
  * Data Machine Engine - Backend Processing Filters
  *
- * BACKEND-ONLY ARCHITECTURE: Pure backend processing filters with zero admin/UI logic.
- * All admin/template/modal filters have been moved to Admin.php for clean separation.
+ * Pure backend processing filters with clean separation from admin/UI logic.
  * 
- * Engine Bootstrap Functions (Backend Processing Only):
- * - dm_register_utility_filters(): Core backend processing filters
+ * Core Functions:
+ * - dm_register_utility_filters(): Backend processing filters
+ * - dm_register_importexport_filters(): Import/export functionality
  * 
- * Database functions moved to Database.php:
- * - dm_register_database_service_system(), dm_register_database_filters()
- * 
- * Backend Filter Categories:
- * - Handler Services: Authentication, settings, and directive discovery  
+ * Filter Categories:
+ * - Handler Services: Authentication, settings, directive discovery  
  * - Processing Services: HTTP requests, scheduling
- * - Step Services: Step configuration and discovery (engine-level)
- * 
- * Specialized filter files:
- * - Database filters: inc/Engine/Filters/Database.php
- * - Admin/UI filters: inc/Engine/Filters/Admin.php
+ * - Step Services: Configuration and discovery
  *
  * @package DataMachine
  * @subpackage Engine\Filters
@@ -47,9 +40,6 @@ function dm_register_importexport_filters() {
         return $modals;
     }, 10, 1);
     
-    /**
-     * Importer service discovery (returns action handler instance)
-     */
     add_filter('dm_importer', function($service) {
         if ($service === null) {
             require_once DATA_MACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
@@ -66,38 +56,30 @@ dm_register_importexport_filters();
 /**
  * Register core backend processing filters.
  * 
- * BACKEND-ONLY FILTERS: Provides discovery infrastructure for backend processing only.
- * All admin/UI filters (templates, modals, pages) are in Admin.php.
- * Action hooks are in DataMachineActions.php for architectural separation.
+ * Backend filters for discovery infrastructure and processing services.
+ * Admin/UI filters are in Admin.php, action hooks in DataMachineActions.php.
  * 
- * Backend Filters Registered:
+ * Key Filters:
  * - dm_auth_providers: Authentication provider discovery
  * - dm_handler_settings: Handler configuration discovery  
- * - dm_handler_directives: AI directive discovery for handlers
- * - OAuth operations moved to OAuth.php (dm_store_oauth_account, dm_retrieve_oauth_account, etc.)
- * - dm_request: WordPress HTTP request wrapper with logging
+ * - dm_handler_directives: AI directive discovery
+ * - dm_request: WordPress HTTP request wrapper
  * - dm_scheduler_intervals: Scheduler interval definitions
- * - dm_step_settings: Step configuration discovery (engine-level)
- * - dm_files_repository: Universal files repository discovery (allows custom storage)
- * 
- * Database filters moved to Database.php:
- * - dm_db, dm_get_*, dm_is_item_processed
+ * - dm_step_settings: Step configuration discovery
+ * - dm_files_repository: Files repository discovery
+ * - dm_engine_parameters: Unified parameter passing system
  * 
  * @since 0.1.0
  */
 function dm_register_utility_filters() {
     
-    // Pure discovery authentication system - consistent with handler discovery patterns
-    // Usage: $all_auth = apply_filters('dm_auth_providers', []); $twitter_auth = $all_auth['twitter'] ?? null;
     add_filter('dm_auth_providers', function($providers) {
-        // Auto-register hooks for all auth providers
         static $registered_hooks = [];
         
         foreach ($providers as $auth_instance) {
             if (is_object($auth_instance) && method_exists($auth_instance, 'register_hooks')) {
                 $auth_class = get_class($auth_instance);
                 
-                // Only register hooks once per auth class
                 if (!isset($registered_hooks[$auth_class])) {
                     $auth_instance->register_hooks();
                     $registered_hooks[$auth_class] = true;
@@ -105,26 +87,17 @@ function dm_register_utility_filters() {
             }
         }
         
-        return $providers; // Return collection unchanged - components self-register via this same filter
+        return $providers;
     }, 5, 1);
     
-    // Pure discovery handler settings system - consistent with all other discovery filters
-    // Usage: $all_settings = apply_filters('dm_handler_settings', []); $settings = $all_settings[$handler_slug] ?? null;
     add_filter('dm_handler_settings', function($all_settings) {
-        // Components self-register via *Filters.php files following established patterns
-        // Bootstrap provides only pure filter hook - components add their own logic
-        return $all_settings; // Components self-register via filters
+        return $all_settings;
     }, 10, 1);
     
-    // Pure discovery handler directives system - cross-component AI directive discovery
-    // Usage: $all_directives = apply_filters('dm_handler_directives', []); $directive = $all_directives[$handler_slug] ?? '';
     add_filter('dm_handler_directives', '__return_empty_array');
     
     
-    // WordPress HTTP request wrapper system - centralized HTTP handling with context logging
-    // Usage: $result = apply_filters('dm_request', null, 'POST', $url, $args, 'Context Description');
     add_filter('dm_request', function($default, $method, $url, $args, $context) {
-        // Input validation
         $valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
         $method = strtoupper($method);
         if (!in_array($method, $valid_methods)) {
@@ -132,27 +105,21 @@ function dm_register_utility_filters() {
             return ['success' => false, 'error' => __('Invalid HTTP method', 'data-machine')];
         }
 
-        // Default args with Data Machine user agent and timeout
         $args = wp_parse_args($args, [
             'user-agent' => sprintf('DataMachine/%s (+%s)', 
                 defined('DATA_MACHINE_VERSION') ? DATA_MACHINE_VERSION : '1.0', 
                 home_url()),
-            'timeout' => 120  // 120-second timeout for external API calls
+            'timeout' => 120
         ]);
 
-        // Set method for non-GET requests
         if ($method !== 'GET') {
             $args['method'] = $method;
         }
 
-
-        // Make the request using appropriate WordPress function
         $response = ($method === 'GET') ? wp_remote_get($url, $args) : wp_remote_request($url, $args);
 
-        // Handle WordPress HTTP errors (network issues, timeouts, etc.)
         if (is_wp_error($response)) {
             $error_message = sprintf(
-                /* translators: %1$s: context/service name, %2$s: error message */
                 __('Failed to connect to %1$s: %2$s', 'data-machine'),
                 $context,
                 $response->get_error_message()
@@ -169,11 +136,8 @@ function dm_register_utility_filters() {
             return ['success' => false, 'error' => $error_message];
         }
 
-        // Check HTTP status code
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
-        
-        // Determine success status codes based on HTTP method
         $success_codes = [];
         switch ($method) {
             case 'GET':
@@ -195,17 +159,13 @@ function dm_register_utility_filters() {
         
         if (!in_array($status_code, $success_codes)) {
             $error_message = sprintf(
-                /* translators: %1$s: context/service name, %2$s: HTTP method, %3$d: HTTP status code */
                 __('%1$s %2$s returned HTTP %3$d', 'data-machine'),
                 $context,
                 $method,
                 $status_code
             );
-
-            // Try to extract error details from response body
             $error_details = null;
             if (!empty($body)) {
-                // Try to parse as JSON first for structured error messages
                 $decoded = json_decode($body, true);
                 if (is_array($decoded)) {
                     $error_keys = ['message', 'error', 'error_description', 'detail'];
@@ -216,7 +176,6 @@ function dm_register_utility_filters() {
                         }
                     }
                 }
-                // If not JSON, use first line of body
                 if (!$error_details) {
                     $first_line = strtok($body, "\n");
                     $error_details = strlen($first_line) > 100 ? substr($first_line, 0, 97) . '...' : $first_line;
@@ -247,9 +206,6 @@ function dm_register_utility_filters() {
             'response' => $response
         ];
     }, 10, 5);
-
-    // Extensible scheduler intervals system - allows external plugins to add custom intervals
-    // Usage: $all_intervals = apply_filters('dm_scheduler_intervals', []); $hourly = $all_intervals['hourly'] ?? null;
     add_filter('dm_scheduler_intervals', function($intervals) {
         return [
             'every_5_minutes' => [
@@ -288,22 +244,10 @@ function dm_register_utility_filters() {
     }, 10);
     
     
-    // Step configurations collection filter - infrastructure hook for step components
-    // Usage: $all_step_settings = apply_filters('dm_step_settings', []); $settings = $all_step_settings[$step_type] ?? null;
     add_filter('dm_step_settings', function($configs) {
-        // Engine provides the filter hook infrastructure
-        // Step components self-register their configuration capabilities via this same filter
         return $configs;
     }, 5);
-
-    // Files repository system moved to dedicated FilesRepositoryFilters.php
-    
-    // Central Flow Step ID Generation Utility
-    // Provides consistent flow_step_id generation across all system components
-    // Flow step IDs use the pattern: {pipeline_step_id}_{flow_id}
-    // Usage: $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
     add_filter('dm_generate_flow_step_id', function($existing_id, $pipeline_step_id, $flow_id) {
-        // Validate required parameters
         if (empty($pipeline_step_id) || empty($flow_id)) {
             do_action('dm_log', 'error', 'Invalid flow step ID generation parameters', [
                 'pipeline_step_id' => $pipeline_step_id,
@@ -312,51 +256,34 @@ function dm_register_utility_filters() {
             return '';
         }
         
-        // Generate consistent flow_step_id using established pattern
         return $pipeline_step_id . '_' . $flow_id;
     }, 10, 3);
-    
-    // OAuth operations moved to OAuth.php for URL rewrite system integration
-    
-    // Step Additional Parameters System - Engine-level extensible parameter passing
-    // Usage: Components register via: add_filter('dm_step_additional_parameters', function($params, $data, $config, $step_type) { ... }, 10, 4);
-    // Engine calls: $params = apply_filters('dm_step_additional_parameters', [], $data, $flow_step_config, $step_type, $flow_step_id);
-    // Parameters are passed via: $step->execute($job_id, $flow_step_id, $data, $config, ...$params);
-    add_filter('dm_step_additional_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-        // Extract all common metadata parameters from data packet (once, at engine level)
-        $source_url = null;
-        $image_url = null;
-        $file_path = null;
-        $mime_type = null;
-        
-        // Search all data entries for metadata parameters
-        foreach ($data as $data_entry) {
-            $metadata = $data_entry['metadata'] ?? [];
-            
-            // Collect all available parameters (first found wins)
-            $source_url = $source_url ?? $metadata['source_url'] ?? null;
-            $image_url = $image_url ?? $metadata['image_url'] ?? null;
-            $file_path = $file_path ?? $metadata['file_path'] ?? null;
-            $mime_type = $mime_type ?? $metadata['mime_type'] ?? null;
-        }
-        
-        // Pass all extracted parameters to steps (benign if not needed)
-        return [
-            $source_url,   // Position 0  
-            $image_url,    // Position 1
-            $file_path,    // Position 2
-            $mime_type     // Position 3
-        ];
+    /**
+     * Flat parameter system using single filter architecture
+     * 
+     * Simple flat parameter array for all step execution.
+     * All parameters flow through this single filter for consistency and simplicity.
+     * 
+     * Base parameters:
+     * - job_id: Current job identifier
+     * - flow_step_id: Current step identifier  
+     * - flow_step_config: Step configuration
+     * - data: Data packet array
+     * - Additional parameters: Added by filters as needed (source_url, image_url, content, etc.)
+     */
+    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+        // Simple flat structure - no arbitrary nesting
+        // Fetch steps and other filters can add parameters directly to flat array
+        return $parameters;
     }, 10, 5);
     
-    /**
-     * AI API Error Logging Hook
-     * Listens for AI HTTP Client errors and logs them via dm_log
-     */
+    
     add_action('ai_api_error', function($error_data) {
-        // Log AI API errors through Data Machine's logging system
         do_action('dm_log', 'error', $error_data['message'], $error_data);
     });
+    
+    // Load DataPacket filter for centralized data packet management
+    require_once __DIR__ . '/DataPacket.php';
     
     
 }

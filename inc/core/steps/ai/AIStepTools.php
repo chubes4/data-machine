@@ -2,13 +2,26 @@
 /**
  * AI step tool management
  *
- * Three-layer tool management: global enablement → modal selection → configuration validation.
- * Handles handler-specific tools (next-step context) and general tools (universal).
+ * Three-layer tool enablement system: global availability → modal selection → configuration validation.
+ * Handles handler-specific tools (context-aware) and general tools (universal availability).
+ * Integrates with AIStepToolParameters for consistent parameter building across all tool types.
+ *
+ * Tool Discovery:
+ * - Handler tools: Available only when next step matches handler type
+ * - General tools: Available to all AI agents when enabled and configured
+ * - Dynamic tool generation: Tools are discovered via ai_tools filter with handler context
+ * 
+ * Validation Pipeline:
+ * - Global tools: All registered tools are available by default
+ * - Modal enablement: Per-step tool selection in pipeline configuration
+ * - Configuration check: Tools requiring configuration must pass dm_tool_configured filter
  *
  * @package DataMachine\Core\Steps\AI
  */
 
 namespace DataMachine\Core\Steps\AI;
+
+use DataMachine\Core\Steps\AI\AIStepToolParameters;
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -17,6 +30,9 @@ if ( ! defined( 'WPINC' ) ) {
 
 /**
  * AI step tool management
+ * 
+ * Provides comprehensive tool management for AI processing steps with three-layer validation:
+ * global availability, modal selection, and configuration requirements.
  */
 class AIStepTools {
     
@@ -97,79 +113,26 @@ class AIStepTools {
     }
     
     /**
-     * Render tools HTML for modal
+     * Get tools data for template rendering
      * 
      * @param string $pipeline_step_id Pipeline step UUID
-     * @return string HTML for tool selection checkboxes
+     * @return array Tools data for template consumption
      */
-    public function render_tools_html(string $pipeline_step_id): string {
+    public function get_tools_data(string $pipeline_step_id): array {
         $global_enabled_tools = $this->get_global_enabled_tools();
         
         // No tools available
         if (empty($global_enabled_tools)) {
-            return '';
+            return [];
         }
         
         $modal_enabled_tools = $this->get_step_enabled_tools($pipeline_step_id);
         
-        $html = '<tr class="form-field">' . "\n";
-        $html .= '    <th scope="row">' . "\n";
-        $html .= '        <label>' . esc_html__('Available Tools', 'data-machine') . '</label>' . "\n";
-        $html .= '    </th>' . "\n";
-        $html .= '    <td>' . "\n";
-        $html .= '        <fieldset>' . "\n";
-        $html .= '            <legend class="screen-reader-text">' . esc_html__('Select available tools for this AI step', 'data-machine') . '</legend>' . "\n";
-        
-        foreach ($global_enabled_tools as $tool_id => $tool_config) {
-            // Configuration requirements
-            $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
-            $requires_config = !empty($tool_config['requires_config']);
-            $config_needed = $requires_config && !$tool_configured;
-            
-            // Modal checkbox state: what user selected for this specific pipeline step
-            $tool_modal_enabled = in_array($tool_id, $modal_enabled_tools);
-            
-            // Simple logic: checkbox checked if tool is in enabled_tools array (period)
-            $should_be_checked = $tool_modal_enabled;
-            
-            // Generate simple tool name from tool_id (e.g., "local_search" -> "Local Search")
-            $tool_name = $tool_config['name'] ?? ucwords(str_replace('_', ' ', $tool_id));
-            
-            // Get tool description for tooltip
-            $tool_description = $tool_config['description'] ?? '';
-            
-            $html .= '            <div class="dm-tool-option">' . "\n";
-            $html .= '                <label>' . "\n";
-            
-            // Generate the checkbox HTML attributes
-            $checked_attr = checked($should_be_checked, true, false);
-            $disabled_attr = disabled($config_needed, true, false);
-            
-            $html .= '                    <input type="checkbox" name="enabled_tools[]" value="' . esc_attr($tool_id) . '" ' . $checked_attr . ' ' . $disabled_attr . ' />' . "\n";
-            $html .= '                    <span>' . esc_html($tool_name) . '</span>' . "\n";
-            
-            // Add info icon with tooltip if description exists
-            if (!empty($tool_description)) {
-                $html .= '                    <span class="dm-tool-info" data-tooltip="' . esc_attr($tool_description) . '">ⓘ</span>' . "\n";
-            }
-            
-            $html .= '                </label>' . "\n";
-            
-            // Only show configuration link for tools that need configuration but aren't configured
-            if ($config_needed) {
-                $html .= '                <span class="dm-tool-config-warning">' . "\n";
-                $html .= '                    ⚠ <a href="' . esc_url(admin_url('options-general.php?page=data-machine-settings')) . '" target="_blank">' . esc_html__('Configure in settings', 'data-machine') . '</a>' . "\n";
-                $html .= '                </span>' . "\n";
-            }
-            
-            $html .= '            </div>' . "\n";
-        }
-        
-        $html .= '        </fieldset>' . "\n";
-        $html .= '    </td>' . "\n";
-        $html .= '</tr>' . "\n";
-        
-        return $html;
+        return [
+            'global_enabled_tools' => $global_enabled_tools,
+            'modal_enabled_tools' => $modal_enabled_tools,
+            'pipeline_step_id' => $pipeline_step_id
+        ];
     }
     
     
@@ -257,18 +220,20 @@ class AIStepTools {
     }
 
     /**
-     * Execute a single tool and return result
+     * Execute a single tool using flat parameter structure
+     *
+     * All tools receive standardized flat parameter structure built by AIStepToolParameters.
+     * Handles both handler-specific and general tools uniformly.
      *
      * @param string $tool_name Tool name to execute
      * @param array $tool_parameters Parameters from AI tool call
      * @param array $available_tools Available tools definition
      * @param array $data Data packet for content extraction
      * @param string $flow_step_id Flow step ID for logging
-     * @param string|null $source_url Source URL from engine
-     * @param string|null $image_url Image URL from engine
+     * @param array $unified_parameters Unified parameter structure from engine
      * @return array Tool execution result
      */
-    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, $source_url = null, $image_url = null): array {
+    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, array $unified_parameters): array {
         $tool_def = $available_tools[$tool_name] ?? null;
         if (!$tool_def) {
             return [
@@ -279,14 +244,18 @@ class AIStepTools {
         }
 
         try {
-            // Build parameters using engine-provided parameters and data content
-            $handler_config = $tool_def['handler_config'] ?? [];
-            $complete_parameters = self::buildToolParameters($tool_parameters, $data, $source_url, $image_url, $available_tools, $tool_name);
+            // Unified parameter building for all tools
+            $complete_parameters = AIStepToolParameters::buildParameters(
+                $tool_parameters, 
+                $unified_parameters, 
+                $tool_def
+            );
             
-            do_action('dm_log', 'debug', 'AIStepTools: Executing tool', [
+            do_action('dm_log', 'debug', 'AIStepTools: Using unified parameter building', [
                 'flow_step_id' => $flow_step_id,
                 'tool_name' => $tool_name,
-                'has_source_url' => isset($complete_parameters['source_url'])
+                'handler' => $tool_def['handler'] ?? null,
+                'has_metadata' => !empty($unified_parameters['metadata'])
             ]);
             
             // Direct tool execution following established pattern
@@ -320,96 +289,7 @@ class AIStepTools {
         }
     }
 
-    /**
-     * Build tool parameters using engine-provided parameters and data content
-     * 
-     * @param array $tool_parameters AI-provided parameters
-     * @param array $data Data packet array for content extraction
-     * @param string|null $source_url Engine-provided source_url
-     * @param string|null $image_url Engine-provided image_url
-     * @param array $available_tools Available tools definition to check parameter requirements
-     * @param string $tool_name Tool name to check parameter definition
-     * @return array Complete tool parameters
-     */
-    private static function buildToolParameters(array $tool_parameters, array $data, $source_url = null, $image_url = null, array $available_tools = [], string $tool_name = ''): array {
-        $complete_parameters = $tool_parameters;
-        
-        // Extract content from data (title and body for tool calls) - only if not already provided by AI
-        if (!empty($data)) {
-            $latest_entry = $data[0];
-            $content_params = self::extractParametersFromData($latest_entry, []);
-            
-            // Add content parameters only if they exist in data AND not already provided by AI
-            // AND the tool definition explicitly declares them as parameters
-            if (isset($content_params['title']) && !isset($complete_parameters['title'])) {
-                $tool_def = $available_tools[$tool_name] ?? [];
-                $tool_parameters_def = $tool_def['parameters'] ?? [];
-                if (isset($tool_parameters_def['title'])) {
-                    $complete_parameters['title'] = $content_params['title'];
-                }
-            }
-            if (isset($content_params['content']) && !isset($complete_parameters['content'])) {
-                $complete_parameters['content'] = $content_params['content'];
-            }
-        }
-        
-        // Add engine-provided metadata parameters directly
-        if ($source_url !== null) {
-            $complete_parameters['source_url'] = $source_url;
-        }
-        if ($image_url !== null) {
-            $complete_parameters['image_url'] = $image_url;
-        }
-        
-        return $complete_parameters;
-    }
 
-    /**
-     * Extract tool parameters from data entry for tool calling
-     * 
-     * Used by buildToolParameters to extract content (title, body) and metadata
-     * while engine-provided parameters (source_url, image_url, file_path, mime_type) are handled separately
-     * 
-     * @param array $data_entry Latest data entry from data packet array
-     * @param array $handler_config Handler configuration settings
-     * @return array Tool parameters extracted from data entry
-     */
-    public static function extractParametersFromData(array $data_entry, array $handler_config): array {
-        $parameters = [];
-        
-        // Extract content from data entry
-        $content_data = $data_entry['content'] ?? [];
-        if (isset($content_data['title'])) {
-            $parameters['title'] = $content_data['title'];
-        }
-        if (isset($content_data['body'])) {
-            $parameters['content'] = $content_data['body'];
-        }
-        
-        // Extract metadata
-        $metadata = $data_entry['metadata'] ?? [];
-        if (isset($metadata['source_url'])) {
-            $parameters['source_url'] = $metadata['source_url'];
-        }
-        
-        // Extract image URL from attachments or metadata
-        $attachments = $data_entry['attachments'] ?? [];
-        if (!empty($attachments)) {
-            foreach ($attachments as $attachment) {
-                if (isset($attachment['type']) && $attachment['type'] === 'image') {
-                    $parameters['image_url'] = $attachment['url'] ?? null;
-                    break;
-                }
-            }
-        }
-        
-        // WordPress Media Fetch pattern
-        if (isset($metadata['image_url'])) {
-            $parameters['image_url'] = $metadata['image_url'];
-        }
-        
-        return $parameters;
-    }
 
 
 

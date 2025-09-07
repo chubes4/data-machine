@@ -15,7 +15,7 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 ### Pipeline Steps
 
-1. **Fetch Steps** - Retrieve content from various sources (RSS, WordPress, Reddit, Files, Google Sheets)
+1. **Fetch Steps** - Retrieve content from various sources (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
 2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok) with available tools
 3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress)
 4. **Update Steps** - Modify existing content (WordPress posts/pages)

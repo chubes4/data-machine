@@ -60,3 +60,6 @@ plan.md
 
 # System files (additional)
 .DS_Store 
+
+# Docs tooling
+docs/.docs-sync.json

@@ -51,11 +51,14 @@ class Bluesky {
     }
 
     /**
-     * Handle AI tool call for Bluesky publishing.
+     * Handle AI tool call for Bluesky publishing
      *
-     * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
-     * @return array Tool execution result.
+     * Executes Bluesky post creation using flat parameter structure built by AIStepToolParameters.
+     * Supports content publishing with optional media upload and URL handling.
+     *
+     * @param array $parameters Flat parameter structure with content, handler_config, and tool metadata
+     * @param array $tool_def Tool definition including handler configuration and method details
+     * @return array Tool execution result with success status and published post data
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         do_action('dm_log', 'debug', 'Bluesky Tool: Handling tool call', [
@@ -79,23 +82,24 @@ class Bluesky {
             ];
         }
 
-        // Get handler configuration from tool definition
-        $handler_config = $tool_def['handler_config'] ?? [];
+        // Get handler configuration from flat parameter structure
+        $handler_config = $parameters['handler_config'] ?? [];
+        $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
         
         do_action('dm_log', 'debug', 'Bluesky Tool: Using handler configuration', [
-            'include_source' => $handler_config['bluesky_include_source'] ?? true,
-            'enable_images' => $handler_config['bluesky_enable_images'] ?? true
+            'include_images' => $bluesky_config['include_images'] ?? true,
+            'link_handling' => $bluesky_config['link_handling'] ?? 'append'
         ]);
 
-        // Extract parameters
+        // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $parameters['source_url'] ?? null;
         $image_url = $parameters['image_url'] ?? null;
         
         // Get config from handler settings (300 character limit is hardcoded)
-        $include_source = $handler_config['bluesky_include_source'] ?? true;
-        $enable_images = $handler_config['bluesky_enable_images'] ?? true;
+        $include_images = $bluesky_config['include_images'] ?? true;
+        $link_handling = $bluesky_config['link_handling'] ?? 'append';
 
         // Get authenticated session
         $session = $this->auth->get_session();
@@ -128,7 +132,7 @@ class Bluesky {
         $post_text = $title ? $title . ": " . $content : $content;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
-        $link = ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) ? "\n\n" . $source_url : '';
+        $link = ($link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) ? "\n\n" . $source_url : '';
         $link_length = $link ? (mb_strlen("\n\n", 'UTF-8') + 22) : 0; // URLs count as 22 chars in Bluesky
         $available_chars = 300 - $link_length;
         
@@ -169,7 +173,7 @@ class Bluesky {
             }
 
             // Handle image upload if provided and enabled
-            if ($enable_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+            if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
                 $image_alt_text = $title ?: substr($content, 0, 50);
                 $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_url, $image_alt_text);
                 
@@ -254,8 +258,8 @@ class Bluesky {
      */
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
-        $sanitized['bluesky_include_source'] = ($raw_settings['bluesky_include_source'] ?? false) == '1';
-        $sanitized['bluesky_enable_images'] = ($raw_settings['bluesky_enable_images'] ?? false) == '1';
+        $sanitized['include_source'] = ($raw_settings['include_source'] ?? false) == '1';
+        $sanitized['enable_images'] = ($raw_settings['enable_images'] ?? false) == '1';
         return $sanitized;
     }
 

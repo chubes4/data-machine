@@ -1,23 +1,9 @@
 <?php
 /**
- * AI Agent Filters Registration
+ * AI Step Registration
  *
- * WordPress-Native AI Processing
- * 
- * This file enables sophisticated AI workflows through comprehensive self-registration,
- * making AI agent functionality completely modular and WordPress-native.
- * 
- * AI Innovation Features:
- * - Multi-provider AI client integration (OpenAI, Anthropic, Google, Grok, OpenRouter)
- * - Intelligent pipeline context management and processing
- * - Universal DataPacket conversion for AI workflows
- * - Self-contained AI component architecture
- * 
- * Implementation Pattern:
- * Components self-register via dedicated *Filters.php files, enabling:
- * - Modular functionality without bootstrap modifications
- * - Clean separation of AI logic from core architecture
- * - Template for extensible AI component development
+ * Auto-registers AI step type, configuration UI, and tool integration via filter system.
+ * Supports multi-provider AI integration with dynamic tool discovery.
  *
  * @package DataMachine\Core\Steps\AI
  * @since 1.0.0
@@ -31,16 +17,10 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register AI step filters for pipeline integration and configuration support.
+ * Register AI step filters for pipeline integration
  *
- * Establishes complete AI agent functionality through self-registration:
- * - Registers AI step type for pipeline discovery with consume_all_packets capability
- * - Enables step configuration UI with modal support
- * - Integrates tool selection and system prompt configuration
- *
- * Called automatically when AI components are loaded via dm_autoload_core_steps().
- *
- * @since 1.0.0
+ * Registers AI step type with consume_all_packets capability and configuration UI support.
+ * Enables tool selection and system prompt configuration via modal interface.
  */
 function dm_register_ai_step_filters() {
     
@@ -113,11 +93,25 @@ add_filter('ai_render_component', function($output, $config) {
     // Add tool configuration UI if pipeline step ID is available
     if (isset($config['step_context']['pipeline_step_id'])) {
         $pipeline_step_id = $config['step_context']['pipeline_step_id'];
-        $extensions .= $tools_manager->render_tools_html($pipeline_step_id);
+        $tools_data = $tools_manager->get_tools_data($pipeline_step_id);
         
-        // Add description
-        if (!empty($extensions)) {
-            $extensions = str_replace('</tr>', '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'data-machine') . '</p>' . "\n" . '        </fieldset>' . "\n" . '    </td>' . "\n" . '</tr>', $extensions);
+        // Render tools using template if tools are available
+        if (!empty($tools_data)) {
+            // Extract data for template
+            $global_enabled_tools = $tools_data['global_enabled_tools'];
+            $modal_enabled_tools = $tools_data['modal_enabled_tools'];
+            
+            // Render template
+            ob_start();
+            include __DIR__ . '/../Admin/Pages/Pipelines/templates/modal/ai-step-tools.php';
+            $tools_html = ob_get_clean();
+            
+            // Add description before closing tags
+            if (!empty($tools_html)) {
+                $tools_html = str_replace('</fieldset>', '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'data-machine') . '</p>' . "\n" . '        </fieldset>', $tools_html);
+            }
+            
+            $extensions .= $tools_html;
         }
     }
     

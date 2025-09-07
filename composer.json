@@ -54,7 +54,6 @@
             "inc/Core/Steps/AI/AIStepFilters.php",
             "inc/Core/Steps/AI/Tools/GeneralToolsFilters.php",
             "inc/Core/Steps/AI/AIStepDirective.php",
-            "inc/Core/Steps/AI/AIConversationState.php",
             "inc/Core/Steps/Update/UpdateStepFilters.php",
             "inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
             "inc/Engine/Filters/FilesRepository.php"

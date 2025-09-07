@@ -38,7 +38,7 @@ Publish handlers distribute processed content to external platforms using AI too
 - **Features**: Taxonomy assignment, post status control, custom fields
 - **API**: WordPress core functions
 
-**Google Sheets** (`google_sheets_publish`)
+**Google Sheets** (`googlesheets_output`)
 - **Character Limit**: No limit
 - **Authentication**: OAuth2 (Google)
 - **Features**: Row insertion, cell targeting, spreadsheet creation

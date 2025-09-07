@@ -107,17 +107,17 @@ function dm_get_bluesky_tool(array $handler_config = []): array {
     }
     
     // Get configuration values with defaults from extracted config
-    $include_source = $bluesky_config['bluesky_include_source'] ?? true;
-    $enable_images = $bluesky_config['bluesky_enable_images'] ?? true;
+    $include_images = $bluesky_config['include_images'] ?? true;
+    $link_handling = $bluesky_config['link_handling'] ?? 'append';
     
     // URL parameters handled by system - AI only provides content
     
     // Update description based on enabled features
     $description_parts = ['Post content to Bluesky (300 character limit)'];
-    if ($include_source) {
-        $description_parts[] = 'source URLs from data will be appended';
+    if ($link_handling === 'append') {
+        $description_parts[] = 'source URLs from data will be appended to posts';
     }
-    if ($enable_images) {
+    if ($include_images) {
         $description_parts[] = 'images from data will be uploaded automatically';
     }
     $tool['description'] = implode(', ', $description_parts);

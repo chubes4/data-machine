@@ -2,8 +2,8 @@
 /**
  * WordPress site context for AI models
  *
- * Collects and formats WordPress site data for AI prompt injection.
- * Provides cached site metadata, content statistics, and capability information.
+ * Collects comprehensive WordPress site data for AI prompt injection.
+ * Provides cached site metadata, content statistics, and capability information as structured data.
  *
  * @package DataMachine\Core\Steps\AI
  */
@@ -15,8 +15,8 @@ defined('ABSPATH') || exit;
 /**
  * WordPress site context collector
  * 
- * Gathers WordPress site information for AI model context injection.
- * Includes content statistics, post types, taxonomies, and site metadata.
+ * Gathers comprehensive WordPress site information as structured data for AI model consumption.
+ * Includes content statistics, post types, taxonomies, user data, and site metadata.
  */
 class SiteContext {
 
@@ -188,75 +188,6 @@ class SiteContext {
         return $theme_info;
     }
 
-    /**
-     * Format context data as readable text for AI models
-     * 
-     * @param array $context Site context data
-     * @return string Formatted context text
-     */
-    public static function format_for_ai(array $context): string {
-        $formatted = "WordPress Site Context:\n\n";
-
-        // Site information
-        if (!empty($context['site'])) {
-            $site = $context['site'];
-            $formatted .= "Site: {$site['name']}";
-            if (!empty($site['tagline'])) {
-                $formatted .= " - {$site['tagline']}";
-            }
-            $formatted .= "\nURL: {$site['url']}\n";
-            $formatted .= "Language: {$site['language']}\n\n";
-        }
-
-        // Post types
-        if (!empty($context['post_types'])) {
-            $formatted .= "Content Types:\n";
-            foreach ($context['post_types'] as $slug => $data) {
-                $formatted .= "- {$data['label']} ({$slug}): {$data['count']} published";
-                if ($data['hierarchical']) {
-                    $formatted .= " (hierarchical)";
-                }
-                $formatted .= "\n";
-            }
-            $formatted .= "\n";
-        }
-
-        // Taxonomies
-        if (!empty($context['taxonomies'])) {
-            $formatted .= "Taxonomies:\n";
-            foreach ($context['taxonomies'] as $slug => $data) {
-                $formatted .= "- {$data['label']} ({$slug}): {$data['terms']} terms, {$data['posts']} total associations";
-                if ($data['hierarchical']) {
-                    $formatted .= " (hierarchical)";
-                }
-                $formatted .= "\n";
-            }
-            $formatted .= "\n";
-        }
-
-        // Users
-        if (!empty($context['users']['total'])) {
-            $formatted .= "Users: {$context['users']['total']} total\n";
-            if (!empty($context['users']['roles'])) {
-                $roles = array_map(function($role, $count) {
-                    return "{$role} ({$count})";
-                }, array_keys($context['users']['roles']), $context['users']['roles']);
-                $formatted .= "Roles: " . implode(', ', $roles) . "\n";
-            }
-            $formatted .= "\n";
-        }
-
-        // Theme
-        if (!empty($context['theme']['name'])) {
-            $formatted .= "Active Theme: {$context['theme']['name']}";
-            if (!empty($context['theme']['parent']['name'])) {
-                $formatted .= " (child of {$context['theme']['parent']['name']})";
-            }
-            $formatted .= "\n";
-        }
-
-        return trim($formatted);
-    }
 
     /**
      * Clear site context cache

@@ -53,7 +53,6 @@ class Delete {
             return false;
         }
         
-        // Get database service
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
@@ -61,7 +60,6 @@ class Delete {
             return false;
         }
         
-        // Get current pipeline steps
         $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         if (empty($current_steps)) {
             return true; // Nothing to resequence
@@ -128,7 +126,6 @@ class Delete {
             return;
         }
         
-        // Get database services using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;

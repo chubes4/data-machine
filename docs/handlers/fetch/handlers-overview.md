@@ -38,7 +38,7 @@ Fetch handlers retrieve content from various sources and convert it into standar
 - **Data Source**: Reddit API
 - **Key Features**: Subreddit filtering, comment retrieval
 
-**Google Sheets** (`google_sheets_fetch`)
+**Google Sheets** (`googlesheets_fetch`)
 - **Purpose**: Extract data from Google Sheets
 - **Authentication**: OAuth2 (client_id, client_secret)
 - **Data Source**: Google Sheets API
@@ -118,7 +118,7 @@ if (!$is_processed) {
 - `rss` - RSS feed items
 - `reddit` - Reddit posts
 - `google_sheets` - Spreadsheet data
-- `wordpress_api` - External WordPress content
+- `wordpress_api` - External WordPress API content
 
 ## Configuration Patterns
 
@@ -199,6 +199,31 @@ Most handlers return exactly one item per execution:
 - Minimal API calls per execution
 - Efficient queries with proper filtering
 - Connection pooling where available
+
+## Integration with AI Steps
+
+### Pipeline Context Integration
+
+Fetch handlers provide essential metadata that AI steps use for content processing and tool execution:
+
+**Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers provide `source_url` metadata enabling Update steps to modify existing content.
+
+**Content Structure**: All handlers structure content in consistent format that AI steps process through the 5-tier message priority system.
+
+**Metadata Preservation**: Handler metadata (original titles, dates, URLs) flows through pipeline to AI tools via AIStepToolParameters.
+
+### Tool-First Architecture Support
+
+Fetch handlers seamlessly integrate with the tool-first AI architecture:
+
+```php
+// Fetch provides source_url in metadata
+$data_packet['metadata']['source_url'] = 'https://site.com/post/123';
+
+// AI step processes content with available tools
+// Update tools automatically receive source_url via AIStepToolParameters
+// Publishing tools receive content via AIStepToolParameters  
+```
 
 ## Integration Examples
 

@@ -102,13 +102,24 @@ $tools['tool_name'] = [
 
 ### `ai_request`
 
-**Purpose**: Process AI requests with provider routing
+**Purpose**: Process AI requests with provider routing and 5-tier priority system message injection
 
 **Parameters**:
 - `$request` (array) - AI request data
 - `$provider` (string) - AI provider slug
+- `$streaming_callback` (mixed) - Streaming callback function
+- `$tools` (array) - Available tools array
+- `$pipeline_step_id` (string|null) - Pipeline step ID for context
 
 **Return**: Array with AI response
+
+**5-Tier Priority System**: System messages automatically injected in order:
+
+**Priority 10**: Global system prompt (background guidance)
+**Priority 20**: Pipeline system prompt (user configuration)
+**Priority 30**: Tool definitions and directives (usage instructions)
+**Priority 35**: Data packet structure explanation (workflow data format)
+**Priority 40**: WordPress site context (environment info)
 
 **Request Structure**:
 ```php
@@ -119,6 +130,24 @@ $request = [
     'model' => 'model-name',
     'tools' => $tools_array // Optional
 ];
+```
+
+**Priority Registration**:
+```php
+// Priority 10: Global system prompt (background guidance)
+add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt'], 10, 5);
+
+// Priority 20: Pipeline system prompt (user configuration)
+add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+
+// Priority 30: Tool definitions and directives (how to use available tools)
+add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);
+
+// Priority 35: Data packet structure explanation (workflow data format)
+add_filter('ai_request', [AIStepDirective::class, 'inject_data_packet_directive'], 35, 5);
+
+// Priority 40: WordPress site context (environment info - lowest priority)
+add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5);
 ```
 
 ## Pipeline Operations Filters
@@ -248,6 +277,55 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Array of settings class instances
 
+## Parameter Processing Filters
+
+### `dm_engine_parameters`
+
+**Purpose**: Unified flat parameter passing system for step execution
+
+**Parameters**:
+- `$parameters` (array) - Base parameters array containing core execution data
+- `$data` (array) - Data packet array from previous steps
+- `$flow_step_config` (array) - Flow step configuration
+- `$step_type` (string) - Step type identifier
+- `$flow_step_id` (string) - Flow step identifier
+
+**Return**: Flat array of all parameters for step execution
+
+**Base Parameters Structure**:
+```php
+$parameters = [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'flow_step_config' => $flow_step_config,
+    'data' => $data
+    // Additional parameters added by filters as needed
+];
+```
+
+**Usage Example**:
+```php
+add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+    // Extract source_url from latest data packet for Update steps
+    if ($step_type === 'update' && !empty($data[0]['metadata']['source_url'])) {
+        $parameters['source_url'] = $data[0]['metadata']['source_url'];
+    }
+    
+    // Add file path from Files handler
+    if (!empty($data[0]['metadata']['file_path'])) {
+        $parameters['file_path'] = $data[0]['metadata']['file_path'];
+    }
+    
+    return $parameters;
+}, 10, 5);
+```
+
+**Benefits**:
+- ✅ **Flat Structure**: Single array containing all parameters
+- ✅ **Extensible**: Any component can add parameters via filters
+- ✅ **Consistent**: Same pattern across all step types
+- ✅ **Flexible**: Steps extract only what they need
+
 ## Data Processing Filters
 
 ### `dm_is_item_processed`
@@ -273,18 +351,6 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Status string ('red', 'yellow', 'green')
 
-### `dm_step_additional_parameters`
-
-**Purpose**: Provide additional parameters to step execution
-
-**Parameters**:
-- `$additional` (array) - Empty array for additional parameters
-- `$data` (array) - Current data packet
-- `$flow_step_config` (array) - Step configuration
-- `$step_type` (string) - Step type
-- `$flow_step_id` (string) - Flow step ID
-
-**Return**: Array of additional parameters for step execution
 
 ## Files Repository Filters
 

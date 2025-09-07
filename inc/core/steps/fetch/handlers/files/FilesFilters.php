@@ -47,6 +47,39 @@ function dm_register_files_fetch_filters() {
         return $all_settings;
     });
     
+    // Metadata parameter injection - Files specific
+    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+        // Only process for steps that come after files fetch
+        if (empty($data) || !is_array($data)) {
+            return $parameters;
+        }
+        
+        $latest_entry = $data[0] ?? [];
+        $metadata = $latest_entry['metadata'] ?? [];
+        $source_type = $metadata['source_type'] ?? '';
+        
+        // Only inject Files metadata
+        if ($source_type === 'files') {
+            // Add Files specific parameters to flat structure
+            $parameters['file_path'] = $metadata['file_path'] ?? '';
+            $parameters['file_name'] = $metadata['file_name'] ?? '';
+            $parameters['mime_type'] = $metadata['mime_type'] ?? '';
+            $parameters['file_size'] = $metadata['file_size'] ?? 0;
+            $parameters['original_id'] = $metadata['original_id'] ?? '';
+            $parameters['original_title'] = $metadata['original_title'] ?? '';
+            $parameters['original_date_gmt'] = $metadata['original_date_gmt'] ?? '';
+            
+            do_action('dm_log', 'debug', 'Files: Metadata injected into engine parameters', [
+                'flow_step_id' => $flow_step_id,
+                'file_path' => $parameters['file_path'],
+                'file_name' => $parameters['file_name'],
+                'mime_type' => $parameters['mime_type']
+            ]);
+        }
+        
+        return $parameters;
+    }, 10, 5);
+    
     // Files custom template registration - provides specialized upload interface
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         if ($template_name === 'modal/handler-settings/files') {

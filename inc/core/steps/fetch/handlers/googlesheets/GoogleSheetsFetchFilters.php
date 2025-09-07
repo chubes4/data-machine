@@ -50,6 +50,39 @@ function dm_register_googlesheets_fetch_filters() {
         return $all_settings;
     });
     
+    // Metadata parameter injection - Google Sheets Fetch specific
+    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+        // Only process for steps that come after googlesheets_fetch
+        if (empty($data) || !is_array($data)) {
+            return $parameters;
+        }
+        
+        $latest_entry = $data[0] ?? [];
+        $metadata = $latest_entry['metadata'] ?? [];
+        $source_type = $metadata['source_type'] ?? '';
+        
+        // Only inject Google Sheets Fetch metadata
+        if ($source_type === 'googlesheets_fetch') {
+            // Add Google Sheets Fetch specific parameters to flat structure
+            $parameters['source_url'] = $metadata['source_url'] ?? '';
+            $parameters['spreadsheet_id'] = $metadata['spreadsheet_id'] ?? '';
+            $parameters['worksheet_name'] = $metadata['worksheet_name'] ?? '';
+            $parameters['row_number'] = $metadata['row_number'] ?? 0;
+            $parameters['row_data'] = $metadata['row_data'] ?? [];
+            $parameters['headers'] = $metadata['headers'] ?? [];
+            $parameters['original_id'] = $metadata['original_id'] ?? '';
+            
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: Metadata injected into engine parameters', [
+                'flow_step_id' => $flow_step_id,
+                'spreadsheet_id' => $parameters['spreadsheet_id'],
+                'worksheet_name' => $parameters['worksheet_name'],
+                'row_number' => $parameters['row_number']
+            ]);
+        }
+        
+        return $parameters;
+    }, 10, 5);
+    
     // Modal registrations removed - now handled by generic modal system via pure discovery
     
     // Authentication registration - pure discovery mode
