@@ -32,18 +32,8 @@ class Files {
      * Processes uploaded files and prepares fetch data.
      */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        // Validate pipeline ID
-        if (empty($pipeline_id)) {
-            do_action('dm_log', 'error', 'Files Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
         
         $repository = $this->get_repository();
-        
-        if (!$repository) {
-            do_action('dm_log', 'error', 'Files Input: Repository service not available.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
 
         // Extract flow_step_id for proper file isolation
         $flow_step_id = $handler_config['flow_step_id'] ?? null;

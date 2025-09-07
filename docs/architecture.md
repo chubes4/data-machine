@@ -36,8 +36,10 @@ Unified OAuth2 and API key management:
 ### Tool-First AI Architecture
 AI agents use tools to interact with handlers:
 - Handler-specific tools for publish/update operations
-- General tools for search and analysis
+- General tools for search and analysis  
 - Automatic tool discovery and configuration
+- AIStepToolParameters class provides unified flat parameter building
+- 5-tier AI message priority system for contextual guidance
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
@@ -71,9 +73,11 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
+- 5-tier message priority system: Global → Pipeline → Tool directives → Data structure → Site context
+- AIStepToolParameters class for unified tool execution
 - Conversation state management
-- Site context injection
-- Dynamic directive system
+- Site context injection  
+- Dynamic directive system with handler-specific guidance
 - Tool result formatting
 
 ### Data Processing

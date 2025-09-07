@@ -43,6 +43,8 @@ Each step receives and returns a **DataPacket** array containing:
 
 - **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
+- **5-Tier Message Priority** - Structured system messages: Global → Pipeline → Tool directives → Data structure → Site context
+- **AIStepToolParameters** - Unified flat parameter building for tool execution
 - **Context-Aware** - Automatic WordPress site context injection
 - **Conversational** - Multi-turn conversations with tool results
 

@@ -52,36 +52,11 @@ class Reddit {
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
-		if ( empty( $pipeline_id ) ) {
-			do_action('dm_log', 'error', 'Reddit Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return ['processed_items' => []];
-		}
-		
 		// Extract flow_step_id from handler config for processed items tracking
 		$flow_step_id = $handler_config['flow_step_id'] ?? null;
 
 		// Get services via filter-based access (current architecture)
 		$oauth_reddit = $this->oauth_reddit; // Internal auth instance
-
-		// Validate authentication service availability
-		if (!$oauth_reddit) {
-			do_action('dm_log', 'error', 'Reddit Input: Authentication service not available.', [
-				'pipeline_id' => $pipeline_id
-			]);
-			return ['processed_items' => []];
-		}
-
-		// Job ID is provided via method parameter for processed items tracking
-		
-		if (!$job_id) {
-			do_action('dm_log', 'error', 'Reddit Input: Could not determine job context for processed items tracking.', [
-				'pipeline_id' => $pipeline_id
-			]);
-			// Continue without processed items tracking rather than fail completely
-		}
-
-		// Note: ProcessedItems service discovered via filter when needed
-		// No upfront service validation required with filter-based architecture
 
 		// --- Retrieve Reddit OAuth Token & Refresh if needed ---
 		$reddit_account = apply_filters('dm_retrieve_oauth_account', [], 'reddit');

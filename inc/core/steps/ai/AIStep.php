@@ -46,18 +46,6 @@ class AIStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         try {
-            if (empty($flow_step_config)) {
-                do_action('dm_log', 'error', 'AI Agent: No step configuration provided', ['flow_step_id' => $flow_step_id]);
-                return [];
-            }
-
-            if (empty($data)) {
-                $user_message = trim($flow_step_config['user_message'] ?? '');
-                if (empty($user_message)) {
-                    do_action('dm_log', 'error', 'AI Agent: No data found and no user message configured', ['flow_step_id' => $flow_step_id]);
-                    return $data;
-                }
-            }
             // Build simple message structure with raw data packets
             $user_message = trim($flow_step_config['user_message'] ?? '');
             $file_path = $parameters['file_path'] ?? null;
@@ -93,17 +81,6 @@ class AIStep {
                     'role' => 'user',
                     'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT)
                 ];
-            }
-            
-            // Ensure we have at least one message
-            if (empty($messages)) {
-                do_action('dm_log', 'error', 'AI Agent: No processable content found', [
-                    'flow_step_id' => $flow_step_id,
-                    'has_data' => !empty($data),
-                    'has_user_message' => !empty($user_message),
-                    'has_file' => !empty($file_path)
-                ]);
-                return $data;
             }
             
             

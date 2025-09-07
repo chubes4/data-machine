@@ -48,21 +48,6 @@ class Twitter {
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
-        // Validate required parameters
-        if (empty($parameters['content'])) {
-            $error_msg = 'Twitter tool call missing required content parameter';
-            do_action('dm_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['content']
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'twitter_publish'
-            ];
-        }
-
         // Get handler configuration from flat parameter structure
         $handler_config = $parameters['handler_config'] ?? [];
         $twitter_config = $handler_config['twitter'] ?? $handler_config;
@@ -111,14 +96,6 @@ class Twitter {
             $tweet_text .= $link;
         }
         $tweet_text = trim($tweet_text);
-
-        if (empty($tweet_text)) {
-            return [
-                'success' => false,
-                'error' => 'Formatted tweet content is empty',
-                'tool_name' => 'twitter_publish'
-            ];
-        }
 
         try {
             // Ensure we're using API v2 for tweet posting

@@ -39,28 +39,14 @@ class Rss {
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
-        if (empty($pipeline_id)) {
-            do_action('dm_log', 'error', 'RSS Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
-        
         // Extract flow_step_id from handler config for processed items tracking
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
 
         // Access config from handler config structure
         $config = $handler_config['rss'] ?? [];
         
-        // Configuration validation
+        // Extract feed URL from configuration
         $feed_url = trim($config['feed_url'] ?? '');
-        if (empty($feed_url)) {
-            do_action('dm_log', 'error', 'RSS Input: RSS feed URL is required.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
-        
-        if (!filter_var($feed_url, FILTER_VALIDATE_URL)) {
-            do_action('dm_log', 'error', 'RSS Input: Invalid RSS feed URL format.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
-            return ['processed_items' => []];
-        }
 
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search_term = trim($config['search'] ?? '');

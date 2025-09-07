@@ -37,21 +37,6 @@ class WordPress {
             'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
         ]);
 
-        // Validate required parameters
-        if (empty($parameters['source_url'])) {
-            $error_msg = 'WordPress update tool call missing required source_url parameter';
-            do_action('dm_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['source_url']
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'wordpress_update'
-            ];
-        }
-
         // Extract post ID from WordPress URL
         $post_id = url_to_postid($parameters['source_url']);
         if (!$post_id) {

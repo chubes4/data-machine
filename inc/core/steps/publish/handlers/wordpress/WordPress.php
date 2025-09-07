@@ -50,7 +50,6 @@ class WordPress {
 
         $handler_config = $tool_def['handler_config'] ?? [];
         
-        
         do_action('dm_log', 'debug', 'WordPress Tool: Using handler configuration', [
             'has_post_author' => isset($handler_config['post_author']),
             'post_author_config' => $handler_config['post_author'] ?? 'NOT_SET',
@@ -58,34 +57,6 @@ class WordPress {
             'has_post_status' => isset($handler_config['post_status']),
             'has_post_type' => isset($handler_config['post_type'])
         ]);
-        
-        if (empty($handler_config['post_author'])) {
-            $error_msg = 'WordPress publish handler missing required post_author configuration';
-            do_action('dm_log', 'error', $error_msg, [
-                'handler_config_keys' => array_keys($handler_config),
-                'provided_post_author' => $handler_config['post_author'] ?? 'NOT_SET'
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'wordpress_publish'
-            ];
-        }
-
-        if (empty($handler_config['post_status'])) {
-            $error_msg = 'WordPress publish handler missing required post_status configuration';
-            do_action('dm_log', 'error', $error_msg, [
-                'handler_config_keys' => array_keys($handler_config),
-                'provided_post_status' => $handler_config['post_status'] ?? 'NOT_SET'
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'wordpress_publish'
-            ];
-        }
 
         if (empty($handler_config['post_type'])) {
             $error_msg = 'WordPress publish handler missing required post_type configuration';

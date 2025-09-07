@@ -87,7 +87,7 @@ class UpdateStep {
             }
 
             // Get handler instance and execute update
-            $handler_result = $this->execute_handler($handler_slug, $data, $handler, $flow_step_config);
+            $handler_result = $this->execute_handler($handler_slug, $data, $handler, $flow_step_config, $parameters);
             
             if ($handler_result === null) {
                 do_action('dm_log', 'error', 'Update Step: Handler execution failed', [
@@ -152,9 +152,10 @@ class UpdateStep {
      * @param array $data Data packet array for content extraction
      * @param array $handler_config Handler-specific configuration
      * @param array $flow_step_config Complete step configuration
+     * @param array $parameters Flat parameter structure from engine
      * @return array|null Handler result with success/error data or null on failure
      */
-    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config) {
+    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $parameters) {
         try {
             // Get all registered update handlers
             $all_handlers = apply_filters('dm_handlers', []);
@@ -187,7 +188,7 @@ class UpdateStep {
                 return isset($tool['handler']) && $tool['handler'] === $handler_slug;
             });
             
-            // Extract variables from parameters before compacting
+            // Extract variables from flat parameter structure for engine context
             $source_url = $parameters['source_url'] ?? null;
             $image_url = $parameters['image_url'] ?? null;
             $file_path = $parameters['file_path'] ?? null;
@@ -201,7 +202,7 @@ class UpdateStep {
                 $tool_def = $handler_tools[$tool_name];
                 
                 // Build flat parameters with engine context (includes source_url for content identification)
-                $parameters = \DataMachine\Core\Steps\AI\AIStepToolParameters::buildForHandlerTool(
+                $handler_parameters = \DataMachine\Core\Steps\AI\AIStepToolParameters::buildForHandlerTool(
                     [], // No AI parameters - direct handler execution
                     $data,
                     $tool_def,
@@ -210,7 +211,7 @@ class UpdateStep {
                 );
             } else {
                 // Fallback for handlers without tools
-                $parameters = $engine_parameters;
+                $handler_parameters = $engine_parameters;
             }
 
             $handler_instance = new $handler_class();
@@ -224,10 +225,10 @@ class UpdateStep {
                 do_action('dm_log', 'debug', 'Update Step: Executing handler via tool calling', [
                     'handler' => $handler_slug,
                     'tool_name' => $tool_name,
-                    'parameters_count' => count($parameters)
+                    'parameters_count' => count($handler_parameters)
                 ]);
 
-                return $handler_instance->handle_tool_call($parameters, $tool_def);
+                return $handler_instance->handle_tool_call($handler_parameters, $tool_def);
             }
 
             // No tool calling available - direct execution would go here if needed
