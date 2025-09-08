@@ -135,6 +135,30 @@ function dm_register_database_filters() {
         return null;
     }, 10, 2);
     
+    add_filter('dm_get_previous_flow_step_id', function($default, $flow_step_id) {
+        $current_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+        if (!$current_config) {
+            return null;
+        }
+
+        $flow_id = $current_config['flow_id'];
+        $current_execution_order = $current_config['execution_order'];
+        $previous_execution_order = $current_execution_order - 1;
+
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        if (empty($flow_config)) {
+            return null;
+        }
+
+        foreach ($flow_config as $flow_step_id => $config) {
+            if (($config['execution_order'] ?? -1) === $previous_execution_order) {
+                return $flow_step_id;
+            }
+        }
+
+        return null;
+    }, 10, 2);
+    
     add_filter('dm_get_next_pipeline_step_id', function($default, $pipeline_step_id) {
         if (!$pipeline_step_id) {
             return null;

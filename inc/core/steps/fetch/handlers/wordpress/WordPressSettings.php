@@ -60,10 +60,10 @@ class WordPressSettings {
         $taxonomy_fields = self::get_taxonomy_filter_fields();
 
         $fields = [
-            'post_id' => [
+            'source_url' => [
                 'type' => 'text',
-                'label' => __('Specific Post ID', 'data-machine'),
-                'description' => __('Target a specific post by ID. When provided, other filters are ignored.', 'data-machine'),
+                'label' => __('Specific Post URL', 'data-machine'),
+                'description' => __('Target a specific post by URL. When provided, other filters are ignored.', 'data-machine'),
                 'placeholder' => __('Leave empty for general query', 'data-machine'),
             ],
             'post_type' => [
@@ -205,7 +205,7 @@ class WordPressSettings {
      */
     private static function sanitize_local_settings(array $raw_settings): array {
         $sanitized = [
-            'post_id' => function_exists('absint') ? absint($raw_settings['post_id'] ?? 0) : intval(abs($raw_settings['post_id'] ?? 0)),
+            'source_url' => sanitize_url($raw_settings['source_url'] ?? ''),
             'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'any'),
             'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'publish'),
         ];

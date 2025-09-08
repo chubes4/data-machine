@@ -95,13 +95,13 @@ add_filter('ai_tools', function($tools) {
     $tools['read_post'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\ReadPost',
         'method' => 'handle_tool_call',
-        'description' => 'Read specific posts by ID for detailed content analysis. Typically used after discovering posts with Google Search Console or Local Search tools, before making targeted updates via Update handlers.',
+        'description' => 'Read specific posts by URL for detailed content analysis. Typically used after discovering posts with Google Search Console or Local Search tools, before making targeted updates via Update handlers.',
         'requires_config' => false, // No configuration needed - uses WordPress core
         'parameters' => [
-            'post_id' => [
-                'type' => 'integer',
+            'source_url' => [
+                'type' => 'string',
                 'required' => true,
-                'description' => 'WordPress post ID to retrieve content from'
+                'description' => 'WordPress post URL to retrieve content from'
             ],
             'include_meta' => [
                 'type' => 'boolean',

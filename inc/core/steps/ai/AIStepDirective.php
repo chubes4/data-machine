@@ -365,6 +365,189 @@ class AIStepDirective {
     }
 
     /**
+     * Inject pipeline workflow context directive into request messages
+     * 
+     * Adds complete pipeline structure visualization as system message at priority 25 position
+     * between pipeline system prompt and tool directives. Shows AI agent where it sits in the
+     * complete workflow with previous/next step context.
+     * 
+     * @param array $request AI request array
+     * @param string $provider_name Provider identifier
+     * @param mixed $streaming_callback Streaming callback
+     * @param array $tools Available tools array
+     * @param string|null $pipeline_step_id Pipeline step ID for context
+     * @return array Modified AI request with pipeline workflow context
+     */
+    public static function inject_pipeline_context_directive($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
+        // Validate request structure
+        if (!isset($request['messages']) || !is_array($request['messages'])) {
+            return $request;
+        }
+
+        // Skip if no pipeline step ID provided
+        if (empty($pipeline_step_id)) {
+            return $request;
+        }
+
+        // Generate pipeline workflow context
+        $context_directive = self::generate_pipeline_workflow_context($pipeline_step_id);
+        
+        if (empty($context_directive)) {
+            return $request;
+        }
+
+        // Inject pipeline context as system message
+        array_unshift($request['messages'], [
+            'role' => 'system',
+            'content' => $context_directive
+        ]);
+
+        do_action('dm_log', 'debug', 'Pipeline Context Directive: Injected workflow context', [
+            'pipeline_step_id' => $pipeline_step_id,
+            'context_length' => strlen($context_directive),
+            'provider' => $provider_name,
+            'total_messages' => count($request['messages'])
+        ]);
+
+        return $request;
+    }
+
+    /**
+     * Generate pipeline workflow context showing complete pipeline structure
+     * 
+     * @param string $pipeline_step_id Current AI step's pipeline step ID
+     * @return string Generated workflow context directive
+     */
+    public static function generate_pipeline_workflow_context($pipeline_step_id): string {
+        // Get current AI step configuration to find flow context
+        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        if (empty($step_config)) {
+            do_action('dm_log', 'warning', 'Pipeline Context: Unable to find pipeline step config', [
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return '';
+        }
+
+        $pipeline_id = $step_config['pipeline_id'] ?? null;
+        if (!$pipeline_id) {
+            return '';
+        }
+
+        // Get complete pipeline structure
+        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        if (empty($pipeline_steps)) {
+            return '';
+        }
+
+        // Sort steps by execution order
+        uasort($pipeline_steps, function($a, $b) {
+            $order_a = $a['execution_order'] ?? 999;
+            $order_b = $b['execution_order'] ?? 999;
+            return $order_a <=> $order_b;
+        });
+
+        // Generate workflow structure
+        $directive = "PIPELINE WORKFLOW CONTEXT:\n\n";
+        $directive .= "Complete Pipeline Structure:\n";
+        
+        $current_position = 0;
+        $total_steps = count($pipeline_steps);
+        $step_counter = 1;
+        
+        foreach ($pipeline_steps as $step_id => $step_config) {
+            $step_type = $step_config['step_type'] ?? 'Unknown';
+            $handler_info = $step_config['handler'] ?? [];
+            $handler_slug = $handler_info['handler_slug'] ?? '';
+            
+            // Generate readable step description
+            $step_description = self::get_readable_step_description($step_type, $handler_slug);
+            
+            // Check if this is the current AI step
+            $is_current = ($step_id === $pipeline_step_id);
+            if ($is_current) {
+                $current_position = $step_counter;
+            }
+            
+            $current_marker = $is_current ? ' [YOU ARE HERE]' : '';
+            $directive .= "{$step_counter}. {$step_description}{$current_marker}\n";
+            
+            $step_counter++;
+        }
+        
+        $directive .= "\nYour Position: Step {$current_position} of {$total_steps}\n";
+        
+        // Add context about adjacent steps
+        if ($current_position > 1) {
+            $previous_steps = array_slice($pipeline_steps, 0, $current_position - 1, true);
+            $last_previous = array_slice($previous_steps, -1, 1, true);
+            if (!empty($last_previous)) {
+                $prev_step = reset($last_previous);
+                $prev_description = self::get_readable_step_description(
+                    $prev_step['step_type'] ?? 'Unknown',
+                    $prev_step['handler']['handler_slug'] ?? ''
+                );
+                $directive .= "Previous Step: {$prev_description} completed\n";
+            }
+        }
+        
+        if ($current_position < $total_steps) {
+            $remaining_steps = array_slice($pipeline_steps, $current_position, null, true);
+            if (!empty($remaining_steps)) {
+                $next_step = reset($remaining_steps);
+                $next_description = self::get_readable_step_description(
+                    $next_step['step_type'] ?? 'Unknown',
+                    $next_step['handler']['handler_slug'] ?? ''
+                );
+                $directive .= "Next Step: {$next_description} awaiting your output\n";
+            }
+        }
+        
+        $directive .= "\nData Flow: Process the input data packets to prepare content for the next pipeline step.";
+        
+        return $directive;
+    }
+
+    /**
+     * Convert technical step types and handlers to readable descriptions
+     * 
+     * @param string $step_type Technical step type
+     * @param string $handler_slug Handler slug if applicable
+     * @return string Human-readable step description
+     */
+    private static function get_readable_step_description($step_type, $handler_slug = ''): string {
+        // Handler-specific descriptions
+        $handler_map = [
+            'twitter' => 'Twitter',
+            'facebook' => 'Facebook',
+            'threads' => 'Threads',
+            'bluesky' => 'Bluesky',
+            'wordpress' => 'WordPress',
+            'google_sheets' => 'Google Sheets',
+            'rss' => 'RSS Feed',
+            'reddit' => 'Reddit',
+            'files' => 'File Upload',
+            'wordpress_media' => 'WordPress Media',
+            'wordpress_api' => 'WordPress API'
+        ];
+        
+        $handler_name = $handler_map[$handler_slug] ?? ucfirst(str_replace('_', ' ', $handler_slug));
+        
+        // Step type descriptions
+        switch ($step_type) {
+            case 'fetch':
+                return $handler_name ? "Fetch: {$handler_name}" : "Fetch Data";
+            case 'ai':
+                return $handler_name ? "AI Agent: {$handler_name} Processing" : "AI Agent: Content Processing";
+            case 'publish':
+                return $handler_name ? "Publish: {$handler_name}" : "Publish Content";
+            case 'update':
+                return $handler_name ? "Update: {$handler_name}" : "Update Content";
+            default:
+                return $handler_name ? "{$handler_name}" : ucfirst($step_type);
+        }
+    }
+
+    /**
      * Inject data packet structure directive into request messages
      * 
      * Adds data packet structure explanation as system message at priority 35 position
@@ -416,6 +599,7 @@ class AIStepDirective {
  * Priority order for system message injection:
  * - Priority 10: Global system prompt (background guidance)
  * - Priority 20: Pipeline system prompt (user configuration)
+ * - Priority 25: Pipeline workflow context (complete workflow structure)
  * - Priority 30: Tool definitions and directives (how to use tools)
  * - Priority 35: Data packet structure explanation (workflow data format)
  * - Priority 40: WordPress site context (environment info)
@@ -426,6 +610,9 @@ add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt']
 
 // Priority 20: Pipeline system prompt (user configuration - internal linking instructions)
 add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+
+// Priority 25: Pipeline workflow context (complete workflow structure)
+add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_context_directive'], 25, 5);
 
 // Priority 30: Tool definitions and directives (how to use available tools)
 add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);

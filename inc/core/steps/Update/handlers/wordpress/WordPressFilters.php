@@ -73,10 +73,10 @@ function dm_get_wordpress_update_base_tool(array $handler_config = []): array {
         'handler' => 'wordpress_update',
         'description' => 'Update existing WordPress content',
         'parameters' => [
-            'original_id' => [
-                'type' => 'integer',
+            'source_url' => [
+                'type' => 'string',
                 'required' => true,
-                'description' => 'WordPress post/page ID to update'
+                'description' => 'WordPress post/page URL to update'
             ]
         ]
     ];

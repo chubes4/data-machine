@@ -71,11 +71,19 @@ class WordPress {
      * @throws Exception If data cannot be retrieved.
      */
     private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null): array {
-        $post_id = function_exists('absint') ? absint($config['post_id'] ?? 0) : intval(abs($config['post_id'] ?? 0));
+        $source_url = sanitize_url($config['source_url'] ?? '');
         
-        // If specific post ID is provided, fetch only that post
-        if ($post_id > 0) {
-            return $this->fetch_specific_post($post_id, $flow_step_id, $job_id);
+        // If specific post URL is provided, fetch only that post
+        if (!empty($source_url)) {
+            $post_id = url_to_postid($source_url);
+            if ($post_id > 0) {
+                return $this->fetch_specific_post($post_id, $flow_step_id, $job_id);
+            } else {
+                do_action('dm_log', 'warning', 'WordPress Fetch: Could not extract post ID from URL', [
+                    'source_url' => $source_url
+                ]);
+                return ['processed_items' => []];
+            }
         }
         
         // Otherwise continue with normal query-based fetching

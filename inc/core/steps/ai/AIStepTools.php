@@ -137,24 +137,50 @@ class AIStepTools {
     
     
     /**
-     * Get available tools for the next step in pipeline
+     * Get available tools from both adjacent steps in pipeline
      * 
-     * Discovers handler-specific and general tools based on next step configuration.
-     * Handler tools are only available when the next step matches the handler type.
+     * Discovers handler-specific and general tools from previous and next steps.
+     * Handler tools are available when either adjacent step matches the handler type.
      * 
-     * @param array $next_step_config Next step configuration including handler info
+     * @param array|null $previous_step_config Previous step configuration including handler info
+     * @param array|null $next_step_config Next step configuration including handler info
      * @param string|null $current_pipeline_step_id Current AI step's pipeline step ID for tool filtering
      * @return array Available tools filtered by step configuration and enablement
      */
-    public static function getAvailableToolsForNextStep(array $next_step_config, ?string $current_pipeline_step_id = null): array {
-        // Determine handler context from next step
-        $handler_slug = $next_step_config['handler']['handler_slug'] ?? null;
-        $handler_config = $next_step_config['handler']['settings'] ?? [];
+    public static function getAvailableTools(?array $previous_step_config = null, ?array $next_step_config = null, ?string $current_pipeline_step_id = null): array {
+        $available_tools = [];
         
-        // Pass handler context to ai_tools filter for dynamic tool generation
-        $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
+        // Get tools from previous step handler
+        if ($previous_step_config) {
+            $prev_handler_slug = $previous_step_config['handler']['handler_slug'] ?? null;
+            $prev_handler_config = $previous_step_config['handler']['settings'] ?? [];
+            
+            if ($prev_handler_slug) {
+                $prev_tools = apply_filters('ai_tools', [], $prev_handler_slug, $prev_handler_config);
+                $allowed_prev_tools = self::getAllowedTools($prev_tools, $prev_handler_slug, $current_pipeline_step_id);
+                $available_tools = array_merge($available_tools, $allowed_prev_tools);
+            }
+        }
         
-        return self::getAllowedTools($all_tools, $handler_slug, $current_pipeline_step_id);
+        // Get tools from next step handler
+        if ($next_step_config) {
+            $next_handler_slug = $next_step_config['handler']['handler_slug'] ?? null;
+            $next_handler_config = $next_step_config['handler']['settings'] ?? [];
+            
+            if ($next_handler_slug) {
+                $next_tools = apply_filters('ai_tools', [], $next_handler_slug, $next_handler_config);
+                $allowed_next_tools = self::getAllowedTools($next_tools, $next_handler_slug, $current_pipeline_step_id);
+                $available_tools = array_merge($available_tools, $allowed_next_tools);
+            }
+        }
+        
+        // Get general tools (no handler context)
+        $general_tools = apply_filters('ai_tools', []);
+        $allowed_general_tools = self::getAllowedTools($general_tools, null, $current_pipeline_step_id);
+        $available_tools = array_merge($available_tools, $allowed_general_tools);
+        
+        // Remove duplicates while preserving array keys
+        return array_unique($available_tools, SORT_REGULAR);
     }
 
     /**

@@ -95,13 +95,16 @@ class AIStep {
             $pipeline_step_id = $flow_step_config['pipeline_step_id'];
             
             $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+            
+            // Get both previous and next step configs for bidirectional tool detection
+            $previous_flow_step_id = apply_filters('dm_get_previous_flow_step_id', null, $flow_step_id);
+            $previous_step_config = $previous_flow_step_id ? apply_filters('dm_get_flow_step_config', [], $previous_flow_step_id) : null;
+            
             $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
-            if ($next_flow_step_id) {
-                $next_step_config = apply_filters('dm_get_flow_step_config', [], $next_flow_step_id);
-                $available_tools = AIStepTools::getAvailableToolsForNextStep($next_step_config, $pipeline_step_id);
-            } else {
-                $available_tools = AIStepTools::getAvailableToolsForNextStep([], $pipeline_step_id);
-            }
+            $next_step_config = $next_flow_step_id ? apply_filters('dm_get_flow_step_config', [], $next_flow_step_id) : null;
+            
+            // Get available tools from both adjacent steps
+            $available_tools = AIStepTools::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
             $ai_request = [
                 'messages' => $messages
             ];

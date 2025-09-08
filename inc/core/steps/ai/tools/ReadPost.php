@@ -41,22 +41,24 @@ class ReadPost {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
         // Validate required parameters
-        if (empty($parameters['post_id'])) {
+        if (empty($parameters['source_url'])) {
             return [
                 'success' => false,
-                'error' => 'Read Post tool call missing required post_id parameter',
+                'error' => 'Read Post tool call missing required source_url parameter',
                 'tool_name' => 'read_post'
             ];
         }
 
         // Extract and validate parameters
-        $post_id = intval($parameters['post_id']);
+        $source_url = sanitize_url($parameters['source_url']);
         $include_meta = !empty($parameters['include_meta']);
         
-        if ($post_id <= 0) {
+        // Convert URL to post ID
+        $post_id = url_to_postid($source_url);
+        if (!$post_id) {
             return [
                 'success' => false,
-                'error' => 'Invalid post_id parameter - must be a positive integer',
+                'error' => sprintf('Could not extract valid WordPress post ID from URL: %s', $source_url),
                 'tool_name' => 'read_post'
             ];
         }
@@ -67,7 +69,7 @@ class ReadPost {
         if (!$post || $post->post_status === 'trash') {
             return [
                 'success' => false,
-                'error' => sprintf('Post ID %d not found or is trashed', $post_id),
+                'error' => sprintf('Post at URL %s (ID: %d) not found or is trashed', $source_url, $post_id),
                 'tool_name' => 'read_post'
             ];
         }
