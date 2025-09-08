@@ -1,0 +1,46 @@
+# Development files
+.git/
+.gitignore
+.github/
+.DS_Store
+*.log
+
+# Build system (exclude build files but not the final product)
+build.sh
+.buildignore
+build/
+
+# Testing
+tests/
+phpunit.xml
+coverage/
+
+# Development dependencies (handled by composer --no-dev)
+vendor/phpunit/
+vendor/yoast/
+vendor/php-stubs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Composer development files
+composer.lock
+
+# Node.js (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# OS files
+Thumbs.db
+
+# Documentation that should be excluded from distribution
+CLAUDE.md
+extensions/
+
+# Temporary and cache files
+*.tmp
+*.cache

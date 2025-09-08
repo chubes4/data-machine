@@ -1,0 +1,65 @@
+{
+    "name": "chubes4/ai-http-client",
+    "description": "A professional WordPress library for unified AI provider communication. Supports OpenAI, Anthropic, Google Gemini, Grok, and OpenRouter with standardized request/response formats.",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Chris Huber",
+            "email": "chris@chubes.net",
+            "homepage": "https://chubes.net"
+        }
+    ],
+    "keywords": [
+        "wordpress",
+        "ai",
+        "openai",
+        "anthropic",
+        "gemini",
+        "grok",
+        "openrouter",
+        "http-client",
+        "artificial-intelligence"
+    ],
+    "homepage": "https://github.com/chubes4/ai-http-client",
+    "support": {
+        "issues": "https://github.com/chubes4/ai-http-client/issues",
+        "source": "https://github.com/chubes4/ai-http-client"
+    },
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0 || ^10.0",
+        "phpstan/phpstan": "^1.0"
+    },
+    "autoload": {
+        "classmap": [
+            "src/"
+        ],
+        "files": [
+            "ai-http-client.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AIHttpClient\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "composer/installers": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse src --level=5",
+        "check": [
+            "@test",
+            "@analyse"
+        ]
+    }
+}

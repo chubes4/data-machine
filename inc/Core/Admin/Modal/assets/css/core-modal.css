@@ -1,0 +1,212 @@
+/**
+ * Data Machine Core Modal System CSS
+ *
+ * Universal modal styles for the entire plugin. This provides the foundational
+ * modal structure and animations that can be used by any admin page component.
+ *
+ * Modal content styling should remain in component-specific CSS files.
+ *
+ * @package DataMachine\Core\Admin\Modal
+ * @since 1.0.0
+ */
+
+/* ===== UNIVERSAL MODAL STRUCTURE ===== */
+
+.dm-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+}
+
+.dm-modal.dm-modal-active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dm-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.dm-modal-container {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.dm-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dm-modal-title {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+
+.dm-modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* ===== MODAL ANIMATIONS ===== */
+
+.dm-modal {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dm-modal.dm-modal-active {
+    opacity: 1;
+}
+
+.dm-modal-container {
+    transform: translateY(-50px);
+    transition: transform 0.3s ease;
+}
+
+.dm-modal.dm-modal-active .dm-modal-container {
+    transform: translateY(0);
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+@media (max-width: 768px) {
+    .dm-modal-container {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .dm-modal-header {
+        padding: 15px;
+    }
+    
+    .dm-modal-body {
+        padding: 15px;
+        max-height: 70vh;
+    }
+    
+    .dm-modal-title {
+        font-size: 18px;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+.dm-modal[aria-hidden="true"] {
+    display: none !important;
+}
+
+.dm-modal-container {
+    outline: none;
+}
+
+.dm-modal-close:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+/* ===== LOADING STATE ===== */
+
+.dm-modal-loading .dm-modal-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.dm-modal-loading .dm-modal-body::before {
+    content: "";
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
+    border-radius: 50%;
+    animation: dm-modal-spin 1s linear infinite;
+}
+
+@keyframes dm-modal-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== MODAL NOTICE SYSTEM ===== */
+
+.dm-modal-notice {
+    padding: 12px 20px;
+    margin: 0;
+    border-left: 4px solid;
+    font-size: 14px;
+    line-height: 1.4;
+    position: relative;
+    animation: dm-modal-notice-slide-in 0.3s ease-out;
+}
+
+.dm-modal-notice--success {
+    border-color: #46b450;
+    background: #ecf7ed;
+    color: #155724;
+}
+
+.dm-modal-notice--error {
+    border-color: #dc3232;
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.dm-modal-notice--warning {
+    border-color: #ffb900;
+    background: #fff3cd;
+    color: #856404;
+}
+
+.dm-modal-notice--info {
+    border-color: #0073aa;
+    background: #e6f3ff;
+    color: #0c5460;
+}
+
+/* Modal error message styling */
+.dm-modal-error-message {
+    color: #d63638;
+    margin: 20px 0;
+}
+
+@keyframes dm-modal-notice-slide-in {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== FORM FIELD STYLING ===== */
+
+/* Readonly field styling */
+.dm-readonly-field {
+    background-color: #f9f9f9 !important;
+    color: #666 !important;
+}
