@@ -40,7 +40,7 @@ function dm_register_oauth_system() {
         
         // Security check - ensure user has admin capabilities for OAuth operations
         if (!current_user_can('manage_options')) {
-            wp_die(__('Insufficient permissions for OAuth operations.', 'data-machine'));
+            wp_die(esc_html__('Insufficient permissions for OAuth operations.', 'data-machine'));
         }
         
         // Route to OAuth callback handlers via filter-based discovery
@@ -50,7 +50,7 @@ function dm_register_oauth_system() {
         if ($auth_instance && method_exists($auth_instance, 'handle_oauth_callback')) {
             $auth_instance->handle_oauth_callback();
         } else {
-            wp_die(__('Unknown OAuth provider.', 'data-machine'));
+            wp_die(esc_html__('Unknown OAuth provider.', 'data-machine'));
         }
         
         exit;
@@ -103,7 +103,7 @@ function dm_register_oauth_system() {
     }, 10, 2);
     
     // OAuth callback URL filter - provides public callback URLs for external APIs
-    add_filter('dm_get_oauth_url', function($url, $provider) {
+    add_filter('dm_oauth_callback', function($url, $provider) {
         if (empty($url)) {
             $url = site_url("/dm-oauth/{$provider}/");
         }
@@ -111,7 +111,7 @@ function dm_register_oauth_system() {
     }, 10, 2);
     
     // OAuth authorization URL filter - provides direct provider auth URLs for Connect buttons
-    add_filter('dm_get_oauth_auth_url', function($auth_url, $provider) {
+    add_filter('dm_oauth_url', function($auth_url, $provider) {
         if (!empty($auth_url)) {
             return $auth_url;
         }

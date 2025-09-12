@@ -75,7 +75,7 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch'
             </div>
             <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="modal/handler-auth-form"
-                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>","flow_step_id":"<?php echo esc_attr($flow_step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'>
+                    data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? '', 'flow_id' => $flow_id ?? ''])); ?>'>
                 <?php esc_html_e('Manage Authentication', 'data-machine'); ?>
             </button>
         </div>
@@ -83,7 +83,7 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch'
     
     <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
-        <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('dm_ajax_actions'); ?>" />
+        <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('dm_ajax_actions')); ?>" />
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />
@@ -128,12 +128,12 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch'
             </button>
             <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="handler-selection"
-                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+                    data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'pipeline_id' => $pipeline_id])); ?>'>
                 <?php esc_html_e('Change Handler Type', 'data-machine'); ?>
             </button>
             <button type="button" class="button button-primary dm-modal-close" 
                     data-template="add-handler-action"
-                    data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type ?? ''); ?>","flow_step_id":"<?php echo esc_attr($flow_step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>"}'>
+                    data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? ''])); ?>'>
                 <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
             </button>
         </div>

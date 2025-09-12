@@ -1,67 +1,49 @@
 <?php
 /**
- * Twitter publishing handler
+ * Twitter Publishing Handler
  *
- * Posts content to Twitter with media support and authentication.
+ * Publishes content to Twitter with 280-character limit, media support, and OAuth 1.0a.
  *
  * @package DataMachine
- * @subpackage Core\Steps\Publish\Handlers\Twitter
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
-}
+defined('ABSPATH') || exit;
 
 class Twitter {
 
     /**
-     * @var TwitterAuth Authentication handler instance
+     * @var TwitterAuth OAuth 1.0a authentication handler
      */
     private $auth;
 
-    /**
-     * Initialize handler with authentication
-     */
     public function __construct() {
-        // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['twitter'] ?? null;
     }
 
-    /**
-     * Get authentication handler
-     * 
-     * @return TwitterAuth
-     */
     private function get_auth() {
         return $this->auth;
     }
 
     /**
-     * Handle AI tool call for publishing
+     * Handle AI tool call for Twitter publishing
      *
-     * @param array $parameters Tool parameters
-     * @param array $tool_def Tool definition
-     * @return array Tool execution result
+     * @param array $parameters Flat parameter structure
+     * @param array $tool_def Tool definition from ai_tools filter
+     * @return array Success/error result with tweet data
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
-        // Get handler configuration from flat parameter structure
         $handler_config = $parameters['handler_config'] ?? [];
         $twitter_config = $handler_config['twitter'] ?? $handler_config;
-        
-
-        // Extract parameters from flat structure
         $content = $parameters['content'] ?? '';
         $source_url = $parameters['source_url'] ?? null;
         
-        // Get config from Twitter-specific settings (280 character limit is hardcoded)
         $include_images = $twitter_config['include_images'] ?? true;
         $link_handling = $twitter_config['link_handling'] ?? 'append'; // 'none', 'append', or 'reply'
 
-        // Get authenticated connection
         $connection = $this->auth->get_connection();
         if (is_wp_error($connection)) {
             $error_msg = 'Twitter authentication failed: ' . $connection->get_error_message();
@@ -76,12 +58,10 @@ class Twitter {
             ];
         }
 
-        // Format tweet content (Twitter's character limit is 280)
         $tweet_text = $content;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
         
-        // Handle URL based on consolidated link_handling setting
         $should_append_url = $link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL);
         $link = $should_append_url ? ' ' . $source_url : '';
         $link_length = $link ? 24 : 0; // t.co link length
@@ -98,7 +78,6 @@ class Twitter {
         $tweet_text = trim($tweet_text);
 
         try {
-            // Ensure we're using API v2 for tweet posting
             $connection->setApiVersion('2');
             
             do_action('dm_log', 'debug', 'Twitter Tool: Using X API v2 for tweet posting', [
@@ -106,13 +85,10 @@ class Twitter {
                 'tweet_length' => mb_strlen($tweet_text, 'UTF-8')
             ]);
             
-            // Post tweet using API v2
             $v2_payload = ['text' => $tweet_text];
             
-            // Handle image upload if provided
             $media_id = null;
             
-            // Debug logging for image parameter
             do_action('dm_log', 'debug', 'Twitter Handler: Image upload processing', [
                 'include_images' => $include_images,
                 'image_url_provided' => isset($parameters['image_url']),
@@ -147,7 +123,6 @@ class Twitter {
                     'tweet_url' => $tweet_url
                 ]);
 
-                // Handle URL as reply if configured
                 $reply_result = null;
                 if ($link_handling === 'reply' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
                     $reply_result = $this->post_reply_tweet($connection, $tweet_id, $source_url, $screen_name);
@@ -159,12 +134,10 @@ class Twitter {
                     'content' => $tweet_text
                 ];
 
-                // Add reply information if a reply was posted
                 if ($reply_result && $reply_result['success']) {
                     $result_data['reply_tweet_id'] = $reply_result['reply_tweet_id'];
                     $result_data['reply_tweet_url'] = $reply_result['reply_tweet_url'];
                 } elseif ($reply_result && !$reply_result['success']) {
-                    // Reply failed but main tweet succeeded - log but don't fail the whole operation
                     do_action('dm_log', 'warning', 'Twitter Tool: Main tweet posted but reply failed', [
                         'tweet_id' => $tweet_id,
                         'reply_error' => $reply_result['error']
@@ -207,13 +180,13 @@ class Twitter {
     }
 
     /**
-     * Post a reply tweet with URL.
+     * Post reply tweet with URL
      *
-     * @param object $connection Twitter connection object.
-     * @param string $original_tweet_id ID of the tweet to reply to.
-     * @param string $source_url URL to post in the reply.
-     * @param string $screen_name Screen name for generating reply URL.
-     * @return array Result of reply posting operation.
+     * @param object $connection Twitter connection
+     * @param string $original_tweet_id Tweet ID to reply to
+     * @param string $source_url URL for reply
+     * @param string $screen_name Screen name
+     * @return array Reply posting result
      */
     private function post_reply_tweet($connection, string $original_tweet_id, string $source_url, string $screen_name): array {
         do_action('dm_log', 'debug', 'Twitter Tool: Posting URL as reply tweet', [
@@ -222,10 +195,8 @@ class Twitter {
         ]);
 
         try {
-            // Ensure we're using API v2 for reply tweet
             $connection->setApiVersion('2');
             
-            // Create reply tweet with just the URL
             $reply_payload = [
                 'text' => $source_url,
                 'reply' => [
@@ -281,26 +252,14 @@ class Twitter {
         }
     }
 
-    /**
-     * Build OAuth 1.0a authorization header for manual API requests.
-     *
-     * @param string $consumer_key Consumer key
-     * @param string $consumer_secret Consumer secret
-     * @param string $access_token Access token
-     * @param string $access_token_secret Access token secret
-     * @param string $method HTTP method
-     * @param string $url Request URL
-     * @param array $params Additional parameters
-     * @return string OAuth authorization header
-     */
 
     /**
-     * Upload image to Twitter and return media ID.
+     * Upload image to Twitter
      *
-     * @param object $connection Twitter connection object.
-     * @param string $image_url Image URL to upload.
-     * @param string $alt_text Alt text for the image.
-     * @return string|null Media ID or null on failure.
+     * @param object $connection Twitter connection
+     * @param string $image_url Image URL
+     * @param string $alt_text Alt text
+     * @return string|null Media ID or null on failure
      */
     private function upload_image_to_twitter($connection, string $image_url, string $alt_text): ?string {
         do_action('dm_log', 'debug', 'Attempting to upload image to Twitter using v1.1 media API.', ['image_url' => $image_url]);
@@ -319,7 +278,6 @@ class Twitter {
         }
 
         try {
-            // Determine MIME type
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime_type = finfo_file($finfo, $temp_image_path);
             finfo_close($finfo);
@@ -332,7 +290,6 @@ class Twitter {
                 return null;
             }
 
-            // Get file size for upload method selection
             $file_size = filesize($temp_image_path);
             
             do_action('dm_log', 'debug', 'Twitter image upload: File analysis complete.', [
@@ -342,18 +299,15 @@ class Twitter {
                 'upload_method' => $file_size > 1048576 ? 'chunked' : 'simple'
             ]);
 
-            // Switch to v1.1 API for media upload (required for all media operations)
             $connection->setApiVersion('1.1');
             
             $media_id = null;
             
-            // Use chunked upload for files > 1MB or try simple upload first
             if ($file_size > 1048576) {
                 $media_id = $this->upload_image_chunked($connection, $temp_image_path, $mime_type);
             } else {
                 $media_id = $this->upload_image_simple($connection, $temp_image_path, $mime_type);
                 
-                // Fallback to chunked if simple upload fails and file exists
                 if (!$media_id && $file_size > 0) {
                     do_action('dm_log', 'debug', 'Simple upload failed, attempting chunked upload.', [
                         'file_size' => $file_size,
@@ -363,11 +317,9 @@ class Twitter {
                 }
             }
 
-            // Switch back to v2 API for tweet operations
             $connection->setApiVersion('2');
 
             if ($media_id) {
-                // Note: Alt text would need to be added via separate API call
                 if (!empty($alt_text)) {
                     do_action('dm_log', 'debug', 'Alt text provided but not yet implemented.', [
                         'media_id' => $media_id,
@@ -386,7 +338,6 @@ class Twitter {
                 return null;
             }
         } catch (\Exception $e) {
-            // Ensure we switch back to v2 API even if exception occurs
             $connection->setApiVersion('2');
             
             do_action('dm_log', 'error', 'Twitter image upload exception: ' . $e->getMessage(), [
@@ -403,12 +354,12 @@ class Twitter {
     }
 
     /**
-     * Simple image upload using TwitterOAuth library (for files < 1MB)
+     * Simple image upload for files < 1MB
      *
-     * @param object $connection Twitter connection object (must be set to v1.1 API)
-     * @param string $temp_image_path Local file path to image
-     * @param string $mime_type Image MIME type
-     * @return string|null Media ID or null on failure
+     * @param object $connection Twitter connection (v1.1 API)
+     * @param string $temp_image_path Local file path
+     * @param string $mime_type MIME type
+     * @return string|null Media ID or null
      */
     private function upload_image_simple($connection, string $temp_image_path, string $mime_type): ?string {
         do_action('dm_log', 'debug', 'Twitter: Attempting simple image upload using TwitterOAuth.', [
@@ -417,7 +368,6 @@ class Twitter {
         ]);
 
         try {
-            // Use TwitterOAuth library's upload method (simple upload)
             $media_result = $connection->upload('media/upload', [
                 'media' => $temp_image_path,
                 'media_category' => 'TWEET_IMAGE'
@@ -459,12 +409,12 @@ class Twitter {
     }
 
     /**
-     * Chunked image upload for large files using Twitter v1.1 API (INIT→APPEND→FINALIZE)
+     * Chunked upload for large files (INIT→APPEND→FINALIZE)
      *
-     * @param object $connection Twitter connection object (must be set to v1.1 API)  
-     * @param string $temp_image_path Local file path to image
-     * @param string $mime_type Image MIME type
-     * @return string|null Media ID or null on failure
+     * @param object $connection Twitter connection (v1.1 API)
+     * @param string $temp_image_path Local file path
+     * @param string $mime_type MIME type
+     * @return string|null Media ID or null
      */
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
         do_action('dm_log', 'debug', 'Twitter: Starting chunked image upload.', [
@@ -476,7 +426,6 @@ class Twitter {
         try {
             $file_size = filesize($temp_image_path);
             
-            // STEP 1: INIT - Initialize chunked upload
             do_action('dm_log', 'debug', 'Twitter: Chunked upload INIT phase.', [
                 'total_bytes' => $file_size,
                 'media_type' => $mime_type
@@ -503,7 +452,6 @@ class Twitter {
                 'media_id' => $media_id
             ]);
 
-            // STEP 2: APPEND - Upload file in chunks
             $handle = fopen($temp_image_path, 'rb');
             if (!$handle) {
                 do_action('dm_log', 'error', 'Twitter: Cannot open image file for chunked upload.', [
@@ -538,7 +486,7 @@ class Twitter {
                 ]);
 
                 $http_code = $connection->getLastHttpCode();
-                if ($http_code !== 204) { // APPEND returns 204 No Content on success
+                if ($http_code !== 204) { // APPEND returns 204 on success
                     fclose($handle);
                     do_action('dm_log', 'error', 'Twitter: Chunked upload APPEND failed.', [
                         'http_code' => $http_code,
@@ -556,7 +504,6 @@ class Twitter {
                 'total_segments' => $segment_index
             ]);
 
-            // STEP 3: FINALIZE - Complete the upload
             do_action('dm_log', 'debug', 'Twitter: Chunked upload FINALIZE phase.', [
                 'media_id' => $media_id
             ]);
@@ -575,7 +522,6 @@ class Twitter {
                 return null;
             }
 
-            // Check for processing info (some files may need processing time)
             if (isset($finalize_response->processing_info)) {
                 $processing_info = $finalize_response->processing_info;
                 do_action('dm_log', 'debug', 'Twitter: Media processing required.', [
@@ -584,7 +530,6 @@ class Twitter {
                     'check_after_secs' => $processing_info->check_after_secs ?? 0
                 ]);
 
-                // For images, processing is usually immediate, but we'll log if needed
                 if (($processing_info->state ?? '') === 'pending') {
                     do_action('dm_log', 'debug', 'Twitter: Media upload pending processing, but proceeding.', [
                         'media_id' => $media_id
@@ -609,9 +554,9 @@ class Twitter {
 
 
     /**
-     * Returns the user-friendly label for this publish handler.
+     * User-friendly label for handler
      *
-     * @return string The label.
+     * @return string Handler label
      */
     public static function get_label(): string {
         return __('Post to Twitter', 'data-machine');
@@ -619,13 +564,12 @@ class Twitter {
 
 
     /**
-     * Check if an image URL is accessible by making a HEAD request
+     * Check image URL accessibility
      *
-     * @param string $image_url The image URL to check
-     * @return bool True if accessible, false otherwise
+     * @param string $image_url Image URL to check
+     * @return bool True if accessible
      */
     private function is_image_accessible(string $image_url): bool {
-        // Skip certain problematic domains/patterns
         $problematic_patterns = [
             'preview.redd.it', // Reddit preview URLs often have access restrictions
             'i.redd.it'        // Reddit image URLs may have restrictions
@@ -638,7 +582,6 @@ class Twitter {
             }
         }
 
-        // Test accessibility with HEAD request
         $response = wp_remote_head($image_url, [
             'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
         ]);
@@ -651,7 +594,6 @@ class Twitter {
         $http_code = wp_remote_retrieve_response_code($response);
         $content_type = wp_remote_retrieve_header($response, 'content-type');
 
-        // Check for successful response and image content type
         if ($http_code >= 200 && $http_code < 300 && strpos($content_type, 'image/') === 0) {
             return true;
         }
@@ -664,5 +606,3 @@ class Twitter {
         return false;
     }
 }
-
-

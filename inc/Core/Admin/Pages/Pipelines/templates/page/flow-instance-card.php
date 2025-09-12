@@ -34,7 +34,7 @@ $next_run = null;
 if (function_exists('as_next_scheduled_action')) {
     $next_action = as_next_scheduled_action('dm_run_flow_now', [absint($flow_id)], 'data-machine');
     if ($next_action) {
-        $next_run = date('Y-m-d H:i:s', $next_action);
+        $next_run = wp_date('Y-m-d H:i:s', $next_action);
     }
 }
 
@@ -76,13 +76,13 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
         <div class="dm-flow-actions">
             <button type="button" class="button button-small dm-modal-open" 
                     data-template="flow-schedule"
-                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'
+                    data-context='<?php echo esc_attr(wp_json_encode(['flow_id' => $flow_id])); ?>'
                     aria-label="<?php echo esc_attr(sprintf('Schedule: %s', $flow_name)); ?>">
                 <?php echo esc_html__('Schedule', 'data-machine'); ?>
             </button>
             <button type="button" class="button button-small button-delete dm-modal-open" 
                     data-template="confirm-delete"
-                    data-context='{"delete_type":"flow","flow_id":"<?php echo esc_attr($flow_id); ?>","flow_name":"<?php echo esc_attr($flow_name); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'
+                    data-context='<?php echo esc_attr(wp_json_encode(['delete_type' => 'flow', 'flow_id' => $flow_id, 'flow_name' => $flow_name, 'pipeline_id' => $pipeline_id])); ?>'
                     aria-label="<?php echo esc_attr(sprintf('Delete: %s', $flow_name)); ?>">
                 <?php echo esc_html__('Delete', 'data-machine'); ?>
             </button>
@@ -118,9 +118,9 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
     
     <div class="dm-flow-meta">
         <small>
-            <?php echo esc_html(sprintf(__('Last: %s | Next: %s', 'data-machine'), 
-                $last_run ? date('M j, Y g:i a', strtotime($last_run)) : __('Never', 'data-machine'),
-                $next_run ? date('M j, Y g:i a', strtotime($next_run)) : __('Manual', 'data-machine')
+            <?php echo esc_html(sprintf(__('Last: %1$s | Next: %2$s', 'data-machine'), 
+                $last_run ? wp_date('M j, Y g:i a', strtotime($last_run)) : __('Never', 'data-machine'),
+                $next_run ? wp_date('M j, Y g:i a', strtotime($next_run)) : __('Manual', 'data-machine')
             )); ?>
         </small>
     </div>

@@ -53,12 +53,6 @@ function dm_register_facebook_filters() {
         return $all_settings;
     });
     
-    // Handler directive registration - pure discovery mode
-    add_filter('dm_handler_directives', function($directives) {
-        $directives['facebook'] = 'When posting to Facebook, create engaging content that encourages interaction. Use compelling headlines, appropriate emojis, and ask questions to drive engagement. Format with clear paragraphs and include relevant hashtags.';
-        return $directives;
-    });
-    
     // Facebook tool registration with AI HTTP Client library
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         // Only generate Facebook tool when it's the target handler

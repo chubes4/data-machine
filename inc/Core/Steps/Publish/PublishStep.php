@@ -273,9 +273,9 @@ class PublishStep {
                     'entry_metadata' => $entry['metadata'] ?? []
                 ]);
                 
-                // Match handler tool to handler (e.g., 'wordpress_publish' matches 'wordpress_publish' handler)
-                if ($handler_tool === $handler) {
-                    do_action('dm_log', 'debug', 'PublishStep: Matched ai_handler_complete entry from unified conversation system', [
+                // Accept any ai_handler_complete entry with valid tool result data
+                if (!empty($entry['metadata']['tool_result'])) {
+                    do_action('dm_log', 'debug', 'PublishStep: Using ai_handler_complete entry with valid tool result', [
                         'handler' => $handler,
                         'handler_tool' => $handler_tool,
                         'entry_type' => 'ai_handler_complete',

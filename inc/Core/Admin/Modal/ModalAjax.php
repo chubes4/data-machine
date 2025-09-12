@@ -139,10 +139,8 @@ class ModalAjax
                 if ($db_flows) {
                     $flow = $db_flows->get_flow($context['flow_id']);
                     if ($flow) {
-                        // Handle both string and array types (same as PipelinePageAjax fix)
-                        $scheduling_config = is_array($flow['scheduling_config']) ? 
-                            $flow['scheduling_config'] : 
-                            json_decode($flow['scheduling_config'] ?? '{}', true);
+                        // Database method already decodes JSON - just handle missing data
+                        $scheduling_config = $flow['scheduling_config'] ?? [];
                         
                         $context['current_interval'] = $scheduling_config['interval'] ?? 'manual';
                         $context['last_run_at'] = $scheduling_config['last_run_at'] ?? null;
@@ -152,7 +150,7 @@ class ModalAjax
                         if (function_exists('as_next_scheduled_action')) {
                             $next_action = as_next_scheduled_action('dm_run_flow_now', [$context['flow_id']], 'data-machine');
                             if ($next_action) {
-                                $next_run_time = date('Y-m-d H:i:s', $next_action);
+                                $next_run_time = wp_date('Y-m-d H:i:s', $next_action);
                             }
                         }
                         $context['next_run_time'] = $next_run_time;

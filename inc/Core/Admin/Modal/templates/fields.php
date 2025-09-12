@@ -1,12 +1,8 @@
 <?php
 /**
- * Modal Form Fields Template
- *
- * Unified template for rendering all form field types in modals.
- * Replaces direct HTML generation with clean template separation.
+ * Unified template for rendering all form field types in modals
  *
  * @package DataMachine\Core\Admin\Modal\Templates
- * @since 1.0.0
  */
 
 if (!defined('WPINC')) {
@@ -44,7 +40,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                        id="<?php echo esc_attr($field_name); ?>" 
                        name="<?php echo esc_attr($field_name); ?>" 
                        value="<?php echo esc_attr($current_value ?? ''); ?>" 
-                       class="regular-text"<?php echo $attrs; ?><?php echo $disabled_attr; ?> />
+                       class="regular-text"<?php echo esc_attr($attrs); ?><?php echo esc_attr($disabled_attr); ?> />
                 <?php
                 break;
                 
@@ -54,7 +50,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                        id="<?php echo esc_attr($field_name); ?>" 
                        name="<?php echo esc_attr($field_name); ?>" 
                        value="<?php echo esc_attr($current_value ?? ''); ?>" 
-                       class="regular-text"<?php echo $attrs; ?><?php echo $disabled_attr; ?> />
+                       class="regular-text"<?php echo esc_attr($attrs); ?><?php echo esc_attr($disabled_attr); ?> />
                 <?php
                 break;
                 
@@ -63,7 +59,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                 <textarea id="<?php echo esc_attr($field_name); ?>" 
                           name="<?php echo esc_attr($field_name); ?>" 
                           rows="5" 
-                          class="large-text"<?php echo $attrs; ?><?php echo $disabled_attr; ?>><?php echo esc_textarea($current_value ?? ''); ?></textarea>
+                          class="large-text"<?php echo esc_attr($attrs); ?><?php echo esc_attr($disabled_attr); ?>><?php echo esc_textarea($current_value ?? ''); ?></textarea>
                 <?php
                 break;
                 
@@ -71,7 +67,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                 ?>
                 <select id="<?php echo esc_attr($field_name); ?>" 
                         name="<?php echo esc_attr($field_name); ?>" 
-                        class="regular-text"<?php echo $attrs; ?><?php echo $disabled_attr; ?>>
+                        class="regular-text"<?php echo esc_attr($attrs); ?><?php echo esc_attr($disabled_attr); ?>>
                     <?php foreach ($options as $option_value => $option_label): ?>
                         <option value="<?php echo esc_attr($option_value); ?>"<?php selected($current_value, $option_value); ?>>
                             <?php echo esc_html($option_label); ?>
@@ -87,7 +83,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                     <input type="checkbox" 
                            id="<?php echo esc_attr($field_name); ?>" 
                            name="<?php echo esc_attr($field_name); ?>" 
-                           value="1"<?php checked(!empty($current_value)); ?><?php echo $attrs; ?><?php echo $disabled_attr; ?> />
+                           value="1"<?php checked(!empty($current_value)); ?><?php echo esc_attr($attrs); ?><?php echo esc_attr($disabled_attr); ?> />
                     <?php echo esc_html($label); ?>
                 </label>
                 <?php
@@ -100,7 +96,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                        name="<?php echo esc_attr($field_name); ?>" 
                        value="<?php echo esc_attr($field_config['value'] ?? $current_value ?? ''); ?>" 
                        class="regular-text dm-readonly-field" 
-                       readonly<?php echo $attrs; ?> />
+                       readonly<?php echo esc_attr($attrs); ?> />
                 <?php
                 break;
         }

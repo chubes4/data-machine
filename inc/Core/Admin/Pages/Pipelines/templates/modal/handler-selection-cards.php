@@ -33,7 +33,7 @@ if (!defined('WPINC')) {
             ?>
             <div class="dm-handler-selection-card dm-modal-content" 
                  data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                 data-context='{"handler_slug":"<?php echo esc_attr($handler_slug); ?>","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","flow_step_id":"<?php echo esc_attr($flow_step_id ?? ''); ?>"}'
+                 data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type, 'pipeline_id' => $pipeline_id ?? '', 'flow_step_id' => $flow_step_id ?? ''])); ?>'
                  data-handler-slug="<?php echo esc_attr($handler_slug); ?>" 
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 

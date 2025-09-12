@@ -299,22 +299,16 @@ function dm_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): bool {
 function dm_clear_log_files(): bool {
     $log_file = dm_get_log_file_path();
     
-    // Clear main log file
-    if (file_exists($log_file)) {
-        
-        $delete_result = wp_delete_file($log_file);
-        
-        
-        if ($delete_result) {
-            dm_log_debug('Log file cleared successfully.');
-            return true;
-        } else {
-            dm_log_error('Failed to clear log file.');
-            return false;
-        }
-    }
+    // Clear log file contents (don't delete the file)
+    $clear_result = file_put_contents($log_file, '');
     
-    return true;
+    if ($clear_result !== false) {
+        dm_log_debug('Log file cleared successfully.');
+        return true;
+    } else {
+        dm_log_error('Failed to clear log file.');
+        return false;
+    }
 }
 
 

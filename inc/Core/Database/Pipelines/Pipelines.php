@@ -1,19 +1,15 @@
 <?php
 /**
- * Pipeline database operations
+ * Pipeline Database Operations
  *
- * CRUD operations for pipeline workflow definitions.
- * Pipelines are reusable workflow templates.
+ * CRUD operations for reusable pipeline workflow templates.
  *
  * @package DataMachine
- * @subpackage Core\Database\Pipelines
  */
 
 namespace DataMachine\Core\Database\Pipelines;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly.
-}
+defined('ABSPATH') || exit;
 
 class Pipelines {
 
@@ -23,7 +19,7 @@ class Pipelines {
 	private $table_name;
 
 	/**
-	 * Initialize database operations
+	 * Initialize pipeline database operations
 	 */
 	public function __construct() {
 		global $wpdb;
@@ -31,10 +27,10 @@ class Pipelines {
 	}
 
 	/**
-	 * Create a new pipeline
+	 * Create pipeline
 	 *
 	 * @param array $pipeline_data Pipeline data
-	 * @return int|false Pipeline ID or false on failure
+	 * @return int|false Pipeline ID or false
 	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
 		global $wpdb;
@@ -123,10 +119,10 @@ class Pipelines {
 	}
 
 	/**
-	 * Update existing pipeline
+	 * Update pipeline
 	 *
 	 * @param int $pipeline_id Pipeline ID
-	 * @param array $pipeline_data Updated data
+	 * @param array $pipeline_data Update data
 	 * @return bool Success status
 	 */
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
@@ -272,7 +268,7 @@ class Pipelines {
 	/**
 	 * Get pipeline count
 	 *
-	 * @return int Total pipelines
+	 * @return int Total count
 	 */
 	public function get_pipelines_count(): int {
 		global $wpdb;

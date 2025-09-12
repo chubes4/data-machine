@@ -5,6 +5,7 @@
  * Self-contained authentication system that provides all OAuth functionality
  * needed by the Twitter publish handler including credential management,
  * OAuth flow handling, and authenticated connection creation.
+ * Uses the unified OAuth rewrite system and filter-based architecture.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\Twitter
@@ -21,7 +22,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class TwitterAuth {
 
-    const OAUTH_CALLBACK_ACTION = 'dm_twitter_oauth_callback';
     const TEMP_TOKEN_SECRET_TRANSIENT_PREFIX = 'dm_twitter_req_secret_'; // Prefix + request_token
 
     /**
@@ -55,13 +55,13 @@ class TwitterAuth {
         return [
             'api_key' => [
                 'label' => __('API Key', 'data-machine'),
-                'type' => 'password',
+                'type' => 'text',
                 'required' => true,
                 'description' => __('Your Twitter application API key from developer.twitter.com', 'data-machine')
             ],
             'api_secret' => [
                 'label' => __('API Secret', 'data-machine'),
-                'type' => 'password',
+                'type' => 'text',
                 'required' => true,
                 'description' => __('Your Twitter application API secret from developer.twitter.com', 'data-machine')
             ]
@@ -112,13 +112,6 @@ class TwitterAuth {
         }
     }
 
-    /**
-     * Registers the necessary WordPress action hooks for OAuth flow.
-     * This should be called from the main plugin setup.
-     */
-    public function register_hooks() {
-        add_action('admin_post_' . self::OAUTH_CALLBACK_ACTION, array($this, 'handle_oauth_callback'));
-    }
 
     /**
      * Get the authorization URL for direct connection to Twitter OAuth
@@ -139,7 +132,7 @@ class TwitterAuth {
         }
 
         // 2. Define Callback URL  
-        $callback_url = apply_filters('dm_get_oauth_url', '', 'twitter');
+        $callback_url = apply_filters('dm_oauth_callback', '', 'twitter');
 
         try {
             // 3. Instantiate TwitterOAuth
@@ -177,7 +170,7 @@ class TwitterAuth {
 
     /**
      * Handles the callback from Twitter after user authorization.
-     * Hooked to 'admin_post_dm_twitter_oauth_callback'.
+     * Called via the unified OAuth rewrite system at /dm-oauth/twitter/.
      */
     public function handle_oauth_callback() {
         // --- 1. Initial Checks --- 

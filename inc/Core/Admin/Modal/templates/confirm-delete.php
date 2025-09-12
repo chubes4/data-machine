@@ -91,7 +91,7 @@ if ($delete_type === 'pipeline' && isset($pipeline_id)) {
                         <li class="dm-flow-item">
                             <span class="dm-flow-name"><?php echo esc_html($flow['name'] ?? __('Unnamed Flow', 'data-machine')); ?></span>
                             <span class="dm-flow-info">
-                                (<?php echo esc_html(sprintf(__('Created %s', 'data-machine'), date('M j, Y', strtotime($flow['created_at'] ?? 'now')))); ?>)
+                                (<?php echo esc_html(sprintf(__('Created %s', 'data-machine'), wp_date('M j, Y', strtotime($flow['created_at'] ?? 'now')))); ?>)
                             </span>
                         </li>
                     <?php endforeach; ?>
@@ -140,7 +140,7 @@ if ($delete_type === 'pipeline' && isset($pipeline_id)) {
     <div class="dm-modal-actions">
         <button type="button" class="button button-primary button-large dm-modal-close" 
                 data-template="delete-action"
-                data-context='{"delete_type":"<?php echo esc_attr($delete_type); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id ?? ''); ?>"}'>
+                data-context='<?php echo esc_attr(wp_json_encode(['delete_type' => $delete_type, 'pipeline_step_id' => $pipeline_step_id ?? '', 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id ?? ''])); ?>'>
             <?php if ($delete_type === 'pipeline'): ?>
                 <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
             <?php elseif ($delete_type === 'flow'): ?>

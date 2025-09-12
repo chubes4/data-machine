@@ -23,6 +23,13 @@ defined('ABSPATH') || exit;
 class LocalSearch {
 
     /**
+     * Constructor - Register success message formatter
+     */
+    public function __construct() {
+        add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+    }
+
+    /**
      * Handle tool call from AI model
      * 
      * @param array $parameters Tool call parameters from AI model
@@ -147,5 +154,31 @@ class LocalSearch {
         ], 'names');
         
         return array_values($post_types);
+    }
+    
+    /**
+     * Format success message for local search results
+     * 
+     * @param string $message Default message
+     * @param string $tool_name Tool name
+     * @param array $tool_result Tool execution result
+     * @param array $tool_parameters Tool parameters
+     * @return string Formatted success message
+     */
+    public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
+        if ($tool_name !== 'local_search') {
+            return $message;
+        }
+        
+        $data = $tool_result['data'] ?? [];
+        $results = $data['results'] ?? [];
+        $result_count = $data['results_count'] ?? count($results);
+        $query = $tool_parameters['query'] ?? 'your query';
+        
+        if (empty($results)) {
+            return "SEARCH COMPLETE: No WordPress posts/pages found matching \"{$query}\".";
+        }
+        
+        return "SEARCH COMPLETE: Found {$result_count} WordPress posts matching \"{$query}\".\nSearch Results:";
     }
 }

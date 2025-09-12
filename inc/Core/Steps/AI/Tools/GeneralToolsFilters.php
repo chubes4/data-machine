@@ -1,10 +1,9 @@
 <?php
 /**
- * General AI Tools - Filter Registration
+ * General AI Tools Registration
  * 
- * Register general-purpose AI tools that are available to all AI steps
- * regardless of the next step's handler. These tools provide capabilities
- * like search, data processing, analysis, etc.
+ * Registers universal AI tools available to all AI steps regardless of next step handler.
+ * General tools lack 'handler' property, distinguishing them from handler-specific tools.
  *
  * @package DataMachine\Core\Steps\AI\Tools
  * @author Chris Huber <https://chubes.net>
@@ -13,53 +12,35 @@
 defined('ABSPATH') || exit;
 
 /**
- * Register general AI tools filter
+ * Tool Registration Pattern
  * 
- * General tools do NOT have a 'handler' property, making them available
- * to all AI steps regardless of what the next pipeline step is.
- * 
- * Example tool registration:
- * 
- * add_filter('ai_tools', function($tools) {
- *     $tools['my_general_tool'] = [
- *         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\MyTool',
- *         'method' => 'handle_tool_call',
- *         'description' => 'Description of what this tool does',
- *         'parameters' => [
- *             'input' => [
- *                 'type' => 'string',
- *                 'required' => true,
- *                 'description' => 'Input parameter description'
- *             ]
- *         ]
- * *     ];
- *     return $tools;
- * });
+ * General tools lack 'handler' property, making them available to all AI steps.
+ * Handler-specific tools include 'handler' property and appear only for matching next steps.
  */
 /**
- * Register Google Search Tool
+ * Google Search Tool - Web search with configurable restrictions
  */
 add_filter('ai_tools', function($tools) {
     $tools['google_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Search Google for current information, facts, and external context. Provides real-time web data to inform content creation, fact-checking, and research. Complements local WordPress content with external sources.',
-        'requires_config' => true, // Flag for UI to show configure link
+        'description' => 'Search Google and return structured JSON results with titles, links, and snippets from external websites. Use for external information, current events, and fact-checking. Returns complete web search data in JSON format with title, link, snippet for each result.',
+        'requires_config' => true,
         'parameters' => [
             'query' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Search query to find information about'
+                'description' => 'Search query for external web information. Returns JSON with "results" array containing web search results.'
             ],
             'max_results' => [
                 'type' => 'integer',
                 'required' => false,
-                'description' => 'Maximum number of results to return (1-10, default: 5)'
+                'description' => 'Maximum number of results to return (1-10, default: 5). Limit to reduce response size.'
             ],
             'site_restrict' => [
                 'type' => 'string',
                 'required' => false,
-                'description' => 'Restrict search to specific domain (e.g., "wikipedia.org")'
+                'description' => 'Restrict search to specific domain (e.g., "wikipedia.org" for Wikipedia only)'
             ]
         ]
     ];
@@ -68,19 +49,29 @@ add_filter('ai_tools', function($tools) {
 });
 
 /**
- * Register Local Search Tool
+ * Local Search Tool - WordPress content discovery
  */
 add_filter('ai_tools', function($tools) {
     $tools['local_search'] = [
         'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Search for existing posts on this WordPress site by keywords or phrases. Returns titles, excerpts, and exact permalinks for accurate internal linking or content discovery. Use before read_post to get complete content.',
-        'requires_config' => false, // No configuration needed - uses WordPress core
+        'description' => 'Search this WordPress site and return structured JSON results with post titles, excerpts, permalinks, and metadata. Use ONCE to find existing content before creating new content. Returns complete search data in JSON format - avoid calling multiple times for the same query.',
+        'requires_config' => false,
         'parameters' => [
             'query' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Search terms to find relevant posts for internal linking. Use the returned "link" field for accurate URLs.'
+                'description' => 'Search terms to find relevant posts. Returns JSON with "results" array containing title, link, excerpt, post_type, publish_date, author for each match.'
+            ],
+            'max_results' => [
+                'type' => 'integer',
+                'required' => false,
+                'description' => 'Maximum results to return (1-20, default: 10). Limit to reduce response size.'
+            ],
+            'post_types' => [
+                'type' => 'array',
+                'required' => false,
+                'description' => 'Post types to search (default: ["post", "page"]). Available types depend on site configuration.'
             ]
         ]
     ];
@@ -88,72 +79,9 @@ add_filter('ai_tools', function($tools) {
     return $tools;
 });
 
-/**
- * Register Read Post Tool
- */
-add_filter('ai_tools', function($tools) {
-    $tools['read_post'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\ReadPost',
-        'method' => 'handle_tool_call',
-        'description' => 'Read specific posts by URL for detailed content analysis. Typically used after discovering posts with Google Search Console or Local Search tools, before making targeted updates via Update handlers.',
-        'requires_config' => false, // No configuration needed - uses WordPress core
-        'parameters' => [
-            'source_url' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'WordPress post URL to retrieve content from'
-            ],
-            'include_meta' => [
-                'type' => 'boolean',
-                'required' => false,
-                'description' => 'Include custom fields in response (default: false)'
-            ]
-        ]
-    ];
-    
-    return $tools;
-});
 
 /**
- * Register Google Search Console Tool
- */
-add_filter('ai_tools', function($tools) {
-    $tools['google_search_console'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearchConsole',
-        'method' => 'handle_tool_call',
-        'description' => 'Analyze Google Search Console performance data to identify SEO optimization opportunities. Discovers underperforming content, keyword gaps, and improvement needs. Perfect for finding posts that need updates via read_post and Update handlers.',
-        'requires_config' => true, // Requires OAuth authentication
-        'parameters' => [
-            'page_url' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'URL of the page to analyze (must match a page in your Search Console account)'
-            ],
-            'analysis_type' => [
-                'type' => 'string',
-                'required' => false,
-                'description' => 'Type of analysis: performance, keywords, opportunities, or internal_links (default: performance)'
-            ],
-            'date_range' => [
-                'type' => 'string',
-                'required' => false,
-                'description' => 'Date range for analysis: 7d, 30d, or 90d (default: 30d)'
-            ],
-            'include_internal_links' => [
-                'type' => 'boolean',
-                'required' => false,
-                'description' => 'Whether to include internal linking suggestions (default: false)'
-            ]
-        ]
-    ];
-    
-    return $tools;
-});
-
-/**
- * Tool Configuration Detection Filter
- * 
- * Checks if a tool is properly configured and ready for use
+ * Check tool configuration status for UI enablement
  */
 add_filter('dm_tool_configured', function($configured, $tool_id) {
     switch ($tool_id) {
@@ -165,29 +93,13 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
         case 'local_search':
             return true; // Always configured - no setup required
         
-        case 'read_post':
-            return true; // Always configured - no setup required
-        
-        case 'google_search_console':
-            // GSC tool configuration is handled by GoogleSearchConsoleFilters.php
-            // Check if OAuth configuration exists and user is authenticated
-            $config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
-            $has_config = !empty($config['client_id']) && !empty($config['client_secret']);
-            
-            $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
-            $has_tokens = !empty($account['access_token']);
-            
-            return $has_config && $has_tokens;
-        
         default:
             return $configured;
     }
 }, 10, 2);
 
 /**
- * Tool Configuration Retrieval Filter
- * 
- * Retrieves stored configuration for a specific tool
+ * Retrieve stored tool configuration
  */
 add_filter('dm_get_tool_config', function($config, $tool_id) {
     switch ($tool_id) {
@@ -201,14 +113,12 @@ add_filter('dm_get_tool_config', function($config, $tool_id) {
 }, 10, 2);
 
 /**
- * Save Tool Configuration Action
- * 
- * Handles saving tool configuration data
+ * Save tool configuration with validation
  */
 add_action('dm_save_tool_config', function($tool_id, $config_data) {
     switch ($tool_id) {
         case 'google_search':
-            // Validate and sanitize Google Search configuration
+            // Validate required Google Search fields
             $api_key = sanitize_text_field($config_data['api_key'] ?? '');
             $search_engine_id = sanitize_text_field($config_data['search_engine_id'] ?? '');
             
@@ -217,14 +127,14 @@ add_action('dm_save_tool_config', function($tool_id, $config_data) {
                 return;
             }
             
-            // Get existing config and update Google Search section
+            // Update Google Search configuration
             $stored_config = get_option('dm_search_config', []);
             $stored_config['google_search'] = [
                 'api_key' => $api_key,
                 'search_engine_id' => $search_engine_id
             ];
             
-            // Save updated configuration
+            // Persist configuration
             if (update_option('dm_search_config', $stored_config)) {
                 wp_send_json_success([
                     'message' => __('Google Search configuration saved successfully', 'data-machine'),

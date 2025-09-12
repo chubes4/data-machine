@@ -46,9 +46,7 @@ class SiteContext {
         $context = [
             'site' => self::get_site_metadata(),
             'post_types' => self::get_post_types_data(),
-            'taxonomies' => self::get_taxonomies_data(),
-            'users' => self::get_user_statistics(),
-            'theme' => self::get_theme_info()
+            'taxonomies' => self::get_taxonomies_data()
         ];
 
         // Cache the result
@@ -56,8 +54,7 @@ class SiteContext {
 
         do_action('dm_log', 'debug', 'Site Context: Generated fresh context data', [
             'post_types_count' => count($context['post_types']),
-            'taxonomies_count' => count($context['taxonomies']),
-            'users_count' => $context['users']['total'] ?? 0
+            'taxonomies_count' => count($context['taxonomies'])
         ]);
 
         return $context;
@@ -96,7 +93,6 @@ class SiteContext {
                 'label' => $post_type->label,
                 'singular_label' => $post_type->labels->singular_name ?? $post_type->label,
                 'count' => (int) $published_count,
-                'supports' => get_all_post_type_supports($post_type->name),
                 'hierarchical' => $post_type->hierarchical
             ];
         }
@@ -124,70 +120,34 @@ class SiteContext {
             $terms = get_terms([
                 'taxonomy' => $taxonomy->name,
                 'hide_empty' => false,
-                'count' => true
+                'count' => true,
+                'orderby' => 'count',
+                'order' => 'DESC'
             ]);
 
-            $term_count = is_array($terms) ? count($terms) : 0;
-            $posts_with_terms = 0;
-
+            $term_data = [];
             if (is_array($terms)) {
                 foreach ($terms as $term) {
-                    $posts_with_terms += $term->count;
+                    if ($term->count > 0) { // Only include terms with posts
+                        $term_data[$term->name] = (int) $term->count;
+                    }
                 }
             }
 
-            $taxonomies_data[$taxonomy->name] = [
-                'label' => $taxonomy->label,
-                'singular_label' => $taxonomy->labels->singular_name ?? $taxonomy->label,
-                'terms' => $term_count,
-                'posts' => $posts_with_terms,
-                'hierarchical' => $taxonomy->hierarchical,
-                'post_types' => $taxonomy->object_type ?? []
-            ];
+            // Only include taxonomies that have terms with posts
+            if (!empty($term_data)) {
+                $taxonomies_data[$taxonomy->name] = [
+                    'label' => $taxonomy->label,
+                    'singular_label' => $taxonomy->labels->singular_name ?? $taxonomy->label,
+                    'terms' => $term_data,
+                    'hierarchical' => $taxonomy->hierarchical,
+                    'post_types' => $taxonomy->object_type ?? []
+                ];
+            }
         }
 
         return $taxonomies_data;
     }
-
-    /**
-     * Get user statistics
-     * 
-     * @return array User counts by role and total
-     */
-    private static function get_user_statistics(): array {
-        $user_count = count_users();
-        
-        return [
-            'total' => $user_count['total_users'],
-            'roles' => $user_count['avail_roles'] ?? []
-        ];
-    }
-
-    /**
-     * Get current theme information
-     * 
-     * @return array Theme name, version, and parent theme if applicable
-     */
-    private static function get_theme_info(): array {
-        $theme = wp_get_theme();
-        
-        $theme_info = [
-            'name' => $theme->get('Name'),
-            'version' => $theme->get('Version'),
-            'template' => $theme->get_template()
-        ];
-
-        // Add parent theme info if child theme
-        if ($theme->parent()) {
-            $theme_info['parent'] = [
-                'name' => $theme->parent()->get('Name'),
-                'version' => $theme->parent()->get('Version')
-            ];
-        }
-
-        return $theme_info;
-    }
-
 
     /**
      * Clear site context cache

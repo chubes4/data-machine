@@ -110,7 +110,7 @@ class AI_HTTP_Gemini_Provider {
         ], 'Gemini');
         
         if (!$result['success']) {
-            throw new Exception('Gemini API request failed: ' . $result['error']);
+            throw new Exception('Gemini API request failed: ' . esc_html($result['error']));
         }
         
         $raw_response = json_decode($result['data'], true);
@@ -148,7 +148,7 @@ class AI_HTTP_Gemini_Provider {
         ], 'Gemini Streaming', true, $callback);
         
         if (!$result['success']) {
-            throw new Exception('Gemini streaming request failed: ' . $result['error']);
+            throw new Exception('Gemini streaming request failed: ' . esc_html($result['error']));
         }
 
         // Return standardized streaming response
@@ -185,7 +185,7 @@ class AI_HTTP_Gemini_Provider {
         ], 'Gemini');
 
         if (!$result['success']) {
-            throw new Exception('Gemini API request failed: ' . $result['error']);
+            throw new Exception('Gemini API request failed: ' . esc_html($result['error']));
         }
 
         return json_decode($result['data'], true);
@@ -205,7 +205,7 @@ class AI_HTTP_Gemini_Provider {
         }
 
         if (!file_exists($file_path)) {
-            throw new Exception("File not found: {$file_path}");
+            throw new Exception('File not found: ' . esc_html($file_path));
         }
 
         // Google Gemini file upload endpoint
@@ -246,7 +246,7 @@ class AI_HTTP_Gemini_Provider {
         ], 'Gemini File Upload');
 
         if (!$result['success']) {
-            throw new Exception('Gemini file upload failed: ' . $result['error']);
+            throw new Exception('Gemini file upload failed: ' . esc_html($result['error']));
         }
 
         $response_body = $result['data'];
@@ -279,7 +279,7 @@ class AI_HTTP_Gemini_Provider {
         $result = apply_filters('ai_http', [], 'DELETE', $url, [], 'Gemini File Delete');
 
         if (!$result['success']) {
-            throw new Exception('Gemini file delete failed: ' . $result['error']);
+            throw new Exception('Gemini file delete failed: ' . esc_html($result['error']));
         }
 
         return $result['status_code'] === 200;

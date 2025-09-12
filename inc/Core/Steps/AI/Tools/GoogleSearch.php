@@ -23,6 +23,13 @@ defined('ABSPATH') || exit;
 class GoogleSearch {
 
     /**
+     * Constructor - Register success message formatter
+     */
+    public function __construct() {
+        add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+    }
+
+    /**
      * Handle tool call from AI model
      * 
      * @param array $parameters Tool call parameters from AI model
@@ -162,5 +169,31 @@ class GoogleSearch {
     public static function get_config(): array {
         $config = get_option('dm_search_config', []);
         return $config['google_search'] ?? [];
+    }
+    
+    /**
+     * Format success message for Google search results
+     * 
+     * @param string $message Default message
+     * @param string $tool_name Tool name
+     * @param array $tool_result Tool execution result
+     * @param array $tool_parameters Tool parameters
+     * @return string Formatted success message
+     */
+    public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
+        if ($tool_name !== 'google_search') {
+            return $message;
+        }
+        
+        $data = $tool_result['data'] ?? [];
+        $results = $data['results'] ?? $data ?? [];
+        $query = $tool_parameters['query'] ?? 'your query';
+        
+        if (empty($results)) {
+            return "SEARCH COMPLETE: No results found for \"{$query}\". Search task finished.";
+        }
+        
+        $result_count = count($results);
+        return "SEARCH COMPLETE: Found {$result_count} results for \"{$query}\".\nSearch Results:";
     }
 }

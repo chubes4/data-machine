@@ -202,7 +202,7 @@ class WordPressAPI {
                     'original_id' => $post_id,
                     'source_url' => $source_link,
                     'original_title' => $title,
-                    'image_source_url' => $image_url,
+                    'image_url' => $image_url,
                     'original_date_gmt' => $post_date,
                     'site_url' => $site_url,
                     'excerpt' => wp_strip_all_tags($excerpt)

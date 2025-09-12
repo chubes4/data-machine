@@ -48,7 +48,7 @@ class SettingsPageAjax
         }
 
         $tool_id = sanitize_text_field(wp_unslash($_POST['tool_id'] ?? ''));
-        $config_data = $_POST['config_data'] ?? [];
+        $config_data = wp_unslash($_POST['config_data'] ?? []);
         
         if (empty($tool_id)) {
             wp_send_json_error(['message' => __('Tool ID is required', 'data-machine')]);

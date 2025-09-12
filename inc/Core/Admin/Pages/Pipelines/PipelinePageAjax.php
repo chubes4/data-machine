@@ -814,7 +814,7 @@ class PipelinePageAjax
         }
         
         $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
-        $user_message = wp_unslash($_POST['user_message'] ?? ''); // Don't sanitize - preserve formatting
+        $user_message = sanitize_textarea_field(wp_unslash($_POST['user_message'] ?? ''));
         
         if (!$flow_step_id) {
             wp_send_json_error(['message' => __('Flow step ID required', 'data-machine')]);
@@ -844,7 +844,7 @@ class PipelinePageAjax
         }
         
         $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
-        $system_prompt = wp_unslash($_POST['system_prompt'] ?? ''); // Don't sanitize - preserve formatting
+        $system_prompt = sanitize_textarea_field(wp_unslash($_POST['system_prompt'] ?? ''));
         
         if (!$pipeline_step_id) {
             wp_send_json_error(['message' => __('Pipeline step ID required', 'data-machine')]);

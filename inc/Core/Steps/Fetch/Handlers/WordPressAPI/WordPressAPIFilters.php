@@ -64,7 +64,7 @@ function dm_register_wordpress_api_fetch_filters() {
             $parameters['source_url'] = $metadata['source_url'] ?? '';
             $parameters['original_id'] = $metadata['original_id'] ?? '';
             $parameters['original_title'] = $metadata['original_title'] ?? '';
-            $parameters['image_source_url'] = $metadata['image_source_url'] ?? '';
+            $parameters['image_url'] = $metadata['image_url'] ?? '';
             $parameters['original_date_gmt'] = $metadata['original_date_gmt'] ?? '';
             $parameters['site_url'] = $metadata['site_url'] ?? '';
             $parameters['excerpt'] = $metadata['excerpt'] ?? '';
@@ -73,7 +73,7 @@ function dm_register_wordpress_api_fetch_filters() {
                 'flow_step_id' => $flow_step_id,
                 'source_url' => $parameters['source_url'],
                 'site_url' => $parameters['site_url'],
-                'image_source_url' => $parameters['image_source_url']
+                'image_url' => $parameters['image_url']
             ]);
         }
         

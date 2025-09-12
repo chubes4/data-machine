@@ -2,6 +2,8 @@
 
 namespace DataMachine\Core\Steps\AI;
 
+use DataMachine\Core\Steps\AI\AIStepConversationManager;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -9,51 +11,30 @@ if (!defined('ABSPATH')) {
 require_once __DIR__ . '/AIStepTools.php';
 
 /**
- * AI Processing Step
- *
- * Executes multi-turn AI conversations with dynamic tool discovery and workflow integration.
- * Supports standalone execution via flow-level user messages or data-driven processing.
- * 
- * Features:
- * - Tool discovery based on next step handler type
- * - Multi-turn conversation management with 8-turn limit
- * - Automatic parameter building via AIStepToolParameters
- * - Handler tool completion detection
- * - Context-aware message building from data packet history
- * - AI directive injection for workflow guidance
+ * Multi-turn AI conversation engine with dynamic tool discovery and 5-tier directive system.
+ * Executes handler tools (publish, update) and general tools (search, read) via agentic workflows.
  */
 class AIStep {
 
 
     /**
-     * Execute AI processing step with tool-based execution
+     * Execute AI step with multi-turn conversation and dynamic tool discovery.
      * 
-     * Processes data packets through multi-turn AI conversations with automatic tool discovery
-     * and workflow-aware directive injection.
-     * 
-     * @param array $parameters Flat parameter structure from dm_engine_parameters filter:
-     *   - job_id: Job execution identifier
-     *   - flow_step_id: Flow step identifier
-     *   - flow_step_config: Step configuration data
-     *   - data: Data packet array for processing
-     *   - Additional parameters: source_url, image_url, file_path, mime_type (as available)
-     * @return array Updated data packet array with AI responses and tool execution results
+     * @param array $parameters Flat parameter structure from dm_engine_parameters filter
+     * @return array Updated data packet array with AI responses and tool results
      */
     public function execute(array $parameters): array {
-        // Extract from flat parameter structure
         $job_id = $parameters['job_id'];
         $flow_step_id = $parameters['flow_step_id'];
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         try {
-            // Build simple message structure with raw data packets
             $user_message = trim($flow_step_config['user_message'] ?? '');
             $file_path = $parameters['file_path'] ?? null;
             $mime_type = $parameters['mime_type'] ?? null;
             
             $messages = [];
             
-            // Handle file input
             if ($file_path && file_exists($file_path)) {
                 $messages[] = [
                     'role' => 'user',
@@ -67,24 +48,22 @@ class AIStep {
                 ];
             }
             
-            // Add user message if provided
             if (!empty($user_message)) {
                 $messages[] = [
                     'role' => 'user',
-                    'content' => $user_message
+                    'content' => 'ORIGINAL REQUEST (for context): ' . $user_message
                 ];
             }
             
-            // Add data packets as structured JSON
             if (!empty($data)) {
                 $messages[] = [
                     'role' => 'user',
-                    'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT)
+                    'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                 ];
             }
             
             
-            // Pipeline step ID required for AI HTTP Client step-aware configuration
+            // Pipeline step ID required for step-aware AI client configuration
             if (empty($flow_step_config['pipeline_step_id'])) {
                 do_action('dm_log', 'error', 'AI Agent: Missing required pipeline_step_id from pipeline configuration', [
                     'flow_step_id' => $flow_step_id,
@@ -96,14 +75,12 @@ class AIStep {
             
             $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
             
-            // Get both previous and next step configs for bidirectional tool detection
             $previous_flow_step_id = apply_filters('dm_get_previous_flow_step_id', null, $flow_step_id);
             $previous_step_config = $previous_flow_step_id ? apply_filters('dm_get_flow_step_config', [], $previous_flow_step_id) : null;
             
             $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
             $next_step_config = $next_flow_step_id ? apply_filters('dm_get_flow_step_config', [], $next_flow_step_id) : null;
             
-            // Get available tools from both adjacent steps
             $available_tools = AIStepTools::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
             $ai_request = [
                 'messages' => $messages
@@ -122,7 +99,7 @@ class AIStep {
                 throw new \Exception($error_message);
             }
             
-            // Transform tools to AI provider format  
+  
             $ai_provider_tools = [];
             foreach ($available_tools as $tool_name => $tool_config) {
                 $ai_provider_tools[] = [
@@ -132,68 +109,32 @@ class AIStep {
                 ];
             }
             
-            // Local conversation state management
             $conversation_messages = $messages;
             
             $conversation_complete = false;
-            $max_turns = 25;
+            $max_turns = 8;
             $turn_count = 0;
 
             do {
                 $turn_count++;
                 
+                // Update data packets with current state for multi-turn context
                 if ($turn_count > 1) {
-                    // Rebuild messages with updated data packets for multi-turn
-                    $conversation_messages = [];
-                    
-                    // Handle file input
-                    if ($file_path && file_exists($file_path)) {
-                        $conversation_messages[] = [
-                            'role' => 'user',
-                            'content' => [
-                                [
-                                    'type' => 'file',
-                                    'file_path' => $file_path,
-                                    'mime_type' => $mime_type ?? ''
-                                ]
-                            ]
-                        ];
-                    }
-                    
-                    // Add user message if provided
-                    if (!empty($user_message)) {
-                        $conversation_messages[] = [
-                            'role' => 'user',
-                            'content' => $user_message
-                        ];
-                    }
-                    
-                    // Add updated data packets as structured JSON
-                    if (!empty($data)) {
-                        $conversation_messages[] = [
-                            'role' => 'user',
-                            'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT)
-                        ];
-                    }
+                    $conversation_messages = AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
                 }
+                
                 
                 $current_request = [
                     'messages' => $conversation_messages,
                     'model' => $step_ai_config['model'] ?? null
                 ];
-                if ($turn_count > 1) {
-                    $turn_context = "Turn {$turn_count}/{$max_turns}. ";
-                    if ($turn_count >= 3) {
-                        $turn_context .= "Complete your task using available tools.";
-                    } else {
-                        $turn_context .= "Use tools efficiently to complete your task.";
-                    }
-                    
-                    $current_request['messages'][] = [
-                        'role' => 'system',
-                        'content' => $turn_context
-                    ];
-                }
+                
+                do_action('dm_log', 'debug', 'AI Agent: Full conversation being sent to AI', [
+                    'flow_step_id' => $flow_step_id,
+                    'turn_count' => $turn_count,
+                    'message_count' => count($current_request['messages']),
+                    'messages' => $current_request['messages']
+                ]);
                 
                 $ai_response = apply_filters('ai_request', $current_request, $provider_name, null, $ai_provider_tools, $pipeline_step_id);
 
@@ -206,7 +147,6 @@ class AIStep {
                         'provider' => $ai_response['provider'] ?? 'Unknown'
                     ]);
                     
-                    // Fail the job when AI processing fails
                     do_action('dm_fail_job', $job_id, 'ai_processing_failed', [
                         'flow_step_id' => $flow_step_id,
                         'turn_count' => $turn_count,
@@ -247,6 +187,10 @@ class AIStep {
                         ]
                     ], $flow_step_id, 'ai');
                     
+                    // Add AI response to conversation history in chronological order
+                    if (!empty($ai_content)) {
+                        array_push($conversation_messages, AIStepConversationManager::buildConversationMessage('assistant', $ai_content));
+                    }
                 }
                 
                 if (!empty($tool_calls)) {
@@ -264,9 +208,21 @@ class AIStep {
                             continue;
                         }
                         
+                        // Add AI action record to conversation BEFORE executing tool
+                        $tool_call_message = AIStepConversationManager::formatToolCallMessage(
+                            $tool_name, $tool_parameters, $turn_count
+                        );
+                        array_push($conversation_messages, $tool_call_message);
+                        
                         $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $parameters);
                         $tool_def = $available_tools[$tool_name] ?? null;
                         $is_handler_tool = $tool_def && isset($tool_def['handler']);
+                        
+                        // Feed tool result back to AI conversation in chronological order
+                        $tool_result_message = AIStepConversationManager::formatToolResultMessage(
+                            $tool_name, $tool_result, $tool_parameters, $is_handler_tool, $turn_count
+                        );
+                        array_push($conversation_messages, $tool_result_message);
                         
                         if ($is_handler_tool && $tool_result['success']) {
                             $handler_tool_executed = true;
@@ -299,41 +255,27 @@ class AIStep {
                             ];
                             
                             $data = apply_filters('dm_data_packet', $data, $tool_result_entry, $flow_step_id, 'ai');
-                            $conversation_complete = true;
-                            break;
                             
                         } else {
-                            $tool_result_data = $tool_result['data'] ?? [];
-                            $tool_result_content = json_encode([
-                                'tool_name' => $tool_name,
-                                'data' => $tool_result_data,
-                                'parameters' => $tool_parameters
-                            ], JSON_PRETTY_PRINT);
+                            // General tools - use success messaging
+                            $success_message = AIStepConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
                             
                             $data = apply_filters('dm_data_packet', $data, [
                                 'type' => 'tool_result',
                                 'tool_name' => $tool_name,
                                 'content' => [
                                     'title' => ucwords(str_replace('_', ' ', $tool_name)) . ' Result',
-                                    'body' => $tool_result_content
+                                    'body' => $success_message
                                 ],
                                 'metadata' => [
                                     'tool_name' => $tool_name,
                                     'tool_parameters' => $tool_parameters,
                                     'tool_success' => $tool_result['success'] ?? false,
+                                    'tool_result' => $tool_result['data'] ?? [],
                                     'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'
                                 ]
                             ], $flow_step_id, 'ai');
-                            
-                            $conversation_messages[] = [
-                                'role' => 'user',
-                                'content' => $tool_result_content
-                            ];
                         }
-                    }
-                    
-                    if ($handler_tool_executed) {
-                        break;
                     }
                 } else {
                     $conversation_complete = true;
@@ -360,8 +302,4 @@ class AIStep {
             return $data;
         }
     }
-
-
 }
-
-

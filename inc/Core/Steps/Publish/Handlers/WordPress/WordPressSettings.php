@@ -138,7 +138,7 @@ class WordPressSettings {
                 'type' => 'select',
                 'label' => $taxonomy_label,
                 'description' => sprintf(
-                    __('Configure %s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %s.', 'data-machine'),
+                    __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'data-machine'),
                     strtolower($taxonomy_label),
                     $taxonomy->hierarchical ? __('category', 'data-machine') : __('term', 'data-machine')
                 ),

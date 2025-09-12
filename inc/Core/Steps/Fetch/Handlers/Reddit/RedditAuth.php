@@ -41,7 +41,7 @@ class RedditAuth {
             ],
             'client_secret' => [
                 'label' => __('Client Secret', 'data-machine'),
-                'type' => 'password',
+                'type' => 'text',
                 'required' => true,
                 'description' => __('Your Reddit application Client Secret from reddit.com/prefs/apps', 'data-machine')
             ],
@@ -64,13 +64,6 @@ class RedditAuth {
         return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 
-    /**
-     * Registers the necessary WordPress action hooks.
-     * This should be called from the main plugin setup.
-     */
-    public function register_hooks() {
-        add_action('admin_post_dm_reddit_oauth_callback', array($this, 'handle_oauth_callback'));
-    }
 
     /**
      * Get the authorization URL for direct connection to Reddit OAuth
@@ -90,7 +83,7 @@ class RedditAuth {
         }
 
         // 2. Define Redirect URI (MUST match the one registered on Reddit Dev App settings)
-        $redirect_uri = apply_filters('dm_get_oauth_url', '', 'reddit');
+        $redirect_uri = apply_filters('dm_oauth_callback', '', 'reddit');
 
         // 3. Generate State parameter
         $state = wp_create_nonce('dm_reddit_oauth_state');
@@ -113,7 +106,7 @@ class RedditAuth {
 
     /**
      * Handles the callback from Reddit after user authorization.
-     * Hooked to 'admin_post_dm_reddit_oauth_callback'.
+     * Called via the unified OAuth rewrite system at /dm-oauth/reddit/.
      */
     public function handle_oauth_callback() {
         // --- 1. Verify State and Check for Errors --- 
@@ -127,8 +120,8 @@ class RedditAuth {
         delete_transient('dm_reddit_oauth_state'); // Clean up transient immediately
 
         // Verify State
-        if ( empty($state_received) || empty($stored_state) || !hash_equals($stored_state, $state_received) ) {
-            do_action('dm_log', 'error', 'Reddit OAuth Error: State mismatch or missing.', ['received' => $state_received]);
+        if (empty($stored_state) || !wp_verify_nonce($state_received, 'dm_reddit_oauth_state')) {
+            do_action('dm_log', 'error', 'Reddit OAuth Error: State mismatch or expired.');
             wp_redirect(add_query_arg('auth_error', 'reddit_state_mismatch', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
@@ -160,7 +153,7 @@ class RedditAuth {
         }
 
         $token_url = 'https://www.reddit.com/api/v1/access_token';
-        $redirect_uri = apply_filters('dm_get_oauth_url', '', 'reddit'); // Must match exactly
+        $redirect_uri = apply_filters('dm_oauth_callback', '', 'reddit'); // Must match exactly
         $developer_username = $config['developer_username'] ?? '';
         if (empty($developer_username)) {
             do_action('dm_log', 'error', 'Reddit OAuth Error: Developer username not configured.');

@@ -45,7 +45,7 @@ $has_steps = !empty($pipeline_steps);
             <?php if (!$is_new_pipeline): ?>
                 <button type="button" class="button button-secondary dm-modal-open" 
                         data-template="confirm-delete"
-                        data-context='{"delete_type":"pipeline","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_name":"<?php echo esc_attr($pipeline_name); ?>"}'>
+                        data-context='<?php echo esc_attr(wp_json_encode(['delete_type' => 'pipeline', 'pipeline_id' => $pipeline_id, 'pipeline_name' => $pipeline_name])); ?>'>
                     <?php esc_html_e('Delete Pipeline', 'data-machine'); ?>
                 </button>
             <?php endif; ?>
@@ -67,7 +67,7 @@ $has_steps = !empty($pipeline_steps);
                         'pipeline_id' => $pipeline_id,
                         'step_data' => $step
                     ]);
-                    throw new \RuntimeException("Pipeline {$pipeline_id} contains corrupted step data - cannot render");
+                    throw new \RuntimeException(esc_html("Pipeline {$pipeline_id} contains corrupted step data - cannot render"));
                 }
                 
                 // Validate required fields exist
@@ -79,7 +79,7 @@ $has_steps = !empty($pipeline_steps);
                             'missing_field' => $field,
                             'step_data' => $step
                         ]);
-                        throw new \RuntimeException("Pipeline {$pipeline_id} step missing required field: {$field}");
+                        throw new \RuntimeException(esc_html("Pipeline {$pipeline_id} step missing required field: {$field}"));
                     }
                 }
                 

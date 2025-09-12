@@ -196,7 +196,7 @@ class WordPress {
                     'original_id' => $post_id,
                     'source_url' => $source_link,
                     'original_title' => $title,
-                    'image_source_url' => $image_url,
+                    'image_url' => $image_url,
                     'original_date_gmt' => $post->post_date_gmt
                 ]
             ];
@@ -257,7 +257,7 @@ class WordPress {
                 'original_id' => $post_id,
                 'source_url' => $source_link,
                 'original_title' => $title,
-                'image_source_url' => $image_url,
+                'image_url' => $image_url,
                 'original_date_gmt' => $post->post_date_gmt
             ]
         ];

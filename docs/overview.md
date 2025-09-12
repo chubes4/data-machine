@@ -16,8 +16,8 @@ Data Machine uses a Pipeline+Flow architecture where:
 ### Pipeline Steps
 
 1. **Fetch Steps** - Retrieve content from various sources (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
-2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok) with available tools
-3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress)
+2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok, OpenRouter) with available tools
+3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress, Google Sheets)
 4. **Update Steps** - Modify existing content (WordPress posts/pages)
 
 ### Data Flow
@@ -43,10 +43,11 @@ Each step receives and returns a **DataPacket** array containing:
 
 - **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
-- **5-Tier Message Priority** - Structured system messages: Global → Pipeline → Tool directives → Data structure → Site context
+- **4-Tier AI Directive System** - Structured system messages via auto-registering directive classes: Global → Pipeline → Tool directives → Site context
+- **AIStepConversationManager** - Centralized conversation state management for multi-turn AI conversations
 - **AIStepToolParameters** - Unified flat parameter building for tool execution
 - **Context-Aware** - Automatic WordPress site context injection
-- **Conversational** - Multi-turn conversations with tool results
+- **Clear Tool Result Messaging** - Human-readable success messages enabling natural conversation termination
 
 ### Authentication
 

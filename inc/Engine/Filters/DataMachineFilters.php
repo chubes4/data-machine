@@ -74,28 +74,12 @@ dm_register_importexport_filters();
 function dm_register_utility_filters() {
     
     add_filter('dm_auth_providers', function($providers) {
-        static $registered_hooks = [];
-        
-        foreach ($providers as $auth_instance) {
-            if (is_object($auth_instance) && method_exists($auth_instance, 'register_hooks')) {
-                $auth_class = get_class($auth_instance);
-                
-                if (!isset($registered_hooks[$auth_class])) {
-                    $auth_instance->register_hooks();
-                    $registered_hooks[$auth_class] = true;
-                }
-            }
-        }
-        
         return $providers;
     }, 5, 1);
     
     add_filter('dm_handler_settings', function($all_settings) {
         return $all_settings;
     }, 10, 1);
-    
-    add_filter('dm_handler_directives', '__return_empty_array');
-    
     
     add_filter('dm_request', function($default, $method, $url, $args, $context) {
         $valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -281,6 +265,15 @@ function dm_register_utility_filters() {
     add_action('ai_api_error', function($error_data) {
         do_action('dm_log', 'error', $error_data['message'], $error_data);
     });
+    
+    // Global execution context for directives
+    add_filter('dm_current_flow_step_id', function($default) {
+        return $default;
+    }, 5, 1);
+    
+    add_filter('dm_current_job_id', function($default) {
+        return $default;
+    }, 5, 1);
     
     // Load DataPacket filter for centralized data packet management
     require_once __DIR__ . '/DataPacket.php';

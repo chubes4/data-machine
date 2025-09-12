@@ -34,7 +34,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
         <th scope="row"><?php esc_html_e('Enabled Post Types', 'data-machine'); ?></th>
         <td>
             <?php if ($post_types): ?>
-                <fieldset <?php echo $disabled_attr; ?>>
+                <fieldset <?php echo esc_attr($disabled_attr); ?>>
                     <?php foreach ($post_types as $post_type): ?>
                         <?php $is_enabled = !$enabled_post_types || ($enabled_post_types[$post_type->name] ?? false); ?>
                         <label class="dm-settings-page-item">
@@ -42,7 +42,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
                                    name="data_machine_settings[wordpress_settings][enabled_post_types][<?php echo esc_attr($post_type->name); ?>]" 
                                    value="1" 
                                    <?php checked($is_enabled, true); ?>
-                                   <?php echo $disabled_attr; ?>>
+                                   <?php echo esc_attr($disabled_attr); ?>>
                             <?php echo esc_html($post_type->labels->name ?? $post_type->label); ?>
                             <span class="description">(<?php echo esc_html($post_type->name); ?>)</span>
                         </label>
@@ -66,7 +66,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
         <th scope="row"><?php esc_html_e('Enabled Taxonomies', 'data-machine'); ?></th>
         <td>
             <?php if ($filtered_taxonomies): ?>
-                <fieldset <?php echo $disabled_attr; ?>>
+                <fieldset <?php echo esc_attr($disabled_attr); ?>>
                     <?php foreach ($filtered_taxonomies as $taxonomy): ?>
                         <?php 
                         $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
@@ -77,7 +77,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
                                    name="data_machine_settings[wordpress_settings][enabled_taxonomies][<?php echo esc_attr($taxonomy->name); ?>]" 
                                    value="1" 
                                    <?php checked($is_enabled, true); ?>
-                                   <?php echo $disabled_attr; ?>>
+                                   <?php echo esc_attr($disabled_attr); ?>>
                             <?php echo esc_html($taxonomy_label); ?>
                             <span class="description">(<?php echo esc_html($taxonomy->name); ?>)</span>
                         </label>
@@ -100,7 +100,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
     <tr>
         <th scope="row"><?php esc_html_e('Default Author', 'data-machine'); ?></th>
         <td>
-            <select name="data_machine_settings[wordpress_settings][default_author_id]" <?php echo $disabled_attr; ?>>
+            <select name="data_machine_settings[wordpress_settings][default_author_id]" <?php echo esc_attr($disabled_attr); ?>>
                 <option value="0"><?php esc_html_e('-- No Default --', 'data-machine'); ?></option>
                 <?php foreach ($users as $user): ?>
                     <?php $display_name = $user->display_name ?: $user->user_login; ?>
@@ -124,7 +124,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
     <tr>
         <th scope="row"><?php esc_html_e('Default Post Status', 'data-machine'); ?></th>
         <td>
-            <select name="data_machine_settings[wordpress_settings][default_post_status]" <?php echo $disabled_attr; ?>>
+            <select name="data_machine_settings[wordpress_settings][default_post_status]" <?php echo esc_attr($disabled_attr); ?>>
                 <option value=""><?php esc_html_e('-- No Default --', 'data-machine'); ?></option>
                 <?php foreach ($post_statuses as $status => $label): ?>
                     <option value="<?php echo esc_attr($status); ?>" 

@@ -51,6 +51,8 @@ class Logs
         
         // Admin page registration now handled by LogsFilters.php
         
+        // Form handling moved to template - admin_init timing issues
+        
         // AJAX handlers
         add_action('wp_ajax_dm_clear_logs', [$this, 'ajax_clear_logs']);
         add_action('wp_ajax_dm_update_log_level', [$this, 'ajax_update_log_level']);
@@ -160,6 +162,33 @@ class Logs
     }
 
     /**
+     * Handle form submissions on admin_init.
+     */
+    public function handle_form_submissions()
+    {
+        do_action('dm_log', 'debug', 'Clear logs: handle_form_submissions called', [
+            'page' => $_GET['page'] ?? 'not set',
+            'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
+            'post_data_count' => count($_POST)
+        ]);
+        
+        // Only process on logs page
+        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-logs') {
+            do_action('dm_log', 'debug', 'Clear logs: Wrong page, skipping', ['page' => $_GET['page'] ?? 'not set']);
+            return;
+        }
+        
+        // Only process POST requests
+        if (empty($_POST)) {
+            do_action('dm_log', 'debug', 'Clear logs: No POST data, skipping');
+            return;
+        }
+        
+        do_action('dm_log', 'debug', 'Clear logs: Calling handle_form_actions', ['post_keys' => array_keys($_POST)]);
+        $this->handle_form_actions();
+    }
+
+    /**
      * Handle form actions.
      */
     public function handle_form_actions()
@@ -172,7 +201,9 @@ class Logs
 
         switch ($action) {
             case 'clear_all':
+                do_action('dm_log', 'debug', 'Clear logs: About to call dm_log clear_all action');
                 do_action('dm_log', 'clear_all');
+                do_action('dm_log', 'debug', 'Clear logs: dm_log clear_all action completed');
                 $this->add_admin_notice(
                     __('Logs cleared successfully.', 'data-machine'),
                     'success'
@@ -215,7 +246,7 @@ class Logs
      */
     public function ajax_clear_logs()
     {
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_clear_logs')) {
+        if (!wp_verify_nonce(wp_unslash($_POST['dm_logs_nonce'] ?? ''), 'dm_logs_action')) {
             wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 

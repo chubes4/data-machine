@@ -144,7 +144,7 @@ if (!$is_empty) {
             <div class="dm-step-empty-content">
                 <button type="button" class="button button-secondary dm-modal-open dm-step-add-button"
                         data-template="step-selection"
-                        data-context='{"context":"flow_builder","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                        data-context='<?php echo esc_attr(wp_json_encode(['context' => 'flow_builder', 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id])); ?>'>
                     <?php esc_html_e('Add Step', 'data-machine'); ?>
                 </button>
             </div>
@@ -161,7 +161,7 @@ if (!$is_empty) {
                         ?>
                         <button type="button" class="button button-small dm-modal-open" 
                                 data-template="<?php echo empty($handler_slug) ? 'handler-selection' : 'handler-settings/' . esc_attr($template_slug); ?>"
-                                data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                                data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'handler_slug' => $handler_slug, 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id])); ?>'>
                             <?php echo empty($handler_slug) ? esc_html__('Add Handler', 'data-machine') : esc_html__('Edit Handler', 'data-machine'); ?>
                         </button>
                     <?php elseif ($step_type === 'ai'): ?>

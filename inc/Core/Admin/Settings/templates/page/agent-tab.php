@@ -37,9 +37,9 @@ foreach ($all_tools as $tool_name => $tool_config) {
                             </span>
                             <?php if (!$engine_mode): ?>
                                 <button type="button" 
-                                        class="button dm-configure-tool-btn" 
-                                        data-tool="<?php echo esc_attr($tool_name); ?>"
-                                        data-description="<?php echo esc_attr($tool_config['description'] ?? ''); ?>">
+                                        class="button dm-modal-open" 
+                                        data-template="tool-config"
+                                        data-context='<?php echo esc_attr(wp_json_encode(['tool_id' => $tool_name])); ?>'>
                                     <?php esc_html_e('Configure', 'data-machine'); ?>
                                 </button>
                             <?php endif; ?>
@@ -64,9 +64,9 @@ foreach ($all_tools as $tool_name => $tool_config) {
                       rows="8" 
                       cols="70" 
                       class="large-text code"
-                      <?php echo $disabled_attr; ?>><?php echo esc_textarea($global_prompt); ?></textarea>
+                      <?php echo esc_attr($disabled_attr); ?>><?php echo esc_textarea($global_prompt); ?></textarea>
             <p class="description">
-                <?php esc_html_e('Global system prompt applied to all AI interactions as the lowest priority system message.', 'data-machine'); ?>
+                <?php esc_html_e('Primary system message that sets the tone and overall behavior for all AI agents. This is the first and most important instruction that influences every AI response in your workflows.', 'data-machine'); ?>
             </p>
             <?php if ($engine_mode): ?>
                 <p class="description">
@@ -79,14 +79,14 @@ foreach ($all_tools as $tool_name => $tool_config) {
     <tr>
         <th scope="row"><?php esc_html_e('Provide site context to agents', 'data-machine'); ?></th>
         <td>
-            <fieldset <?php echo $disabled_attr; ?>>
+            <fieldset <?php echo esc_attr($disabled_attr); ?>>
                 <label for="site_context_enabled">
                     <input type="checkbox" 
                            id="site_context_enabled"
                            name="data_machine_settings[site_context_enabled]" 
                            value="1" 
                            <?php checked($site_context_enabled, true); ?>
-                           <?php echo $disabled_attr; ?>>
+                           <?php echo esc_attr($disabled_attr); ?>>
                     <?php esc_html_e('Include WordPress site context in AI requests', 'data-machine'); ?>
                 </label>
                 <p class="description">

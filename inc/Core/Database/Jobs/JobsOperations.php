@@ -133,6 +133,12 @@ class JobsOperations {
             $order = 'DESC';
         }
         
+        // Validate orderby column to prevent SQL injection
+        $allowed_orderby = ['j.job_id', 'j.pipeline_id', 'j.flow_id', 'j.status', 'j.started_at', 'j.completed_at', 'p.pipeline_name', 'f.flow_name'];
+        if (!in_array($orderby, $allowed_orderby)) {
+            $orderby = 'j.job_id';
+        }
+        
         $pipelines_table = $wpdb->prefix . 'dm_pipelines';
         $flows_table = $wpdb->prefix . 'dm_flows';
         

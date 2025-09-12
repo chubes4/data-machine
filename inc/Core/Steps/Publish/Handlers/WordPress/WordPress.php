@@ -82,7 +82,7 @@ class WordPress {
         $image_url = $parameters['image_url'] ?? null;
         
         if ($include_source && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
-            $content .= "\n\n---\n\nSource: [{$source_url}]({$source_url})";
+            $content .= "\n\n<!-- wp:separator --><hr class=\"wp-block-separator has-alpha-channel-opacity\"/><!-- /wp:separator -->\n\n<!-- wp:paragraph --><p>Source: <a href=\"" . esc_url($source_url) . "\">" . esc_url($source_url) . "</a></p><!-- /wp:paragraph -->";
         }
         
         $post_data = [
@@ -137,6 +137,7 @@ class WordPress {
             'success' => true,
             'data' => [
                 'post_id' => $post_id,
+                'post_title' => $parameters['title'],
                 'post_url' => get_permalink($post_id),
                 'taxonomy_results' => $taxonomy_results,
                 'featured_image_result' => $featured_image_result

@@ -1,16 +1,8 @@
 <?php
 /**
- * Fetch Step Component Filter Registration
- * 
- * Modular Component System Implementation
- * 
- * This file serves as Fetch Step's complete interface contract with the engine,
- * demonstrating systematic self-containment and comprehensive organization
- * for AI workflow data collection.
- * 
- * @package DataMachine
- * @subpackage Core\Steps\Fetch
- * @since 0.1.0
+ * Fetch Step Filter Registration
+ *
+ * @package DataMachine\Core\Steps\Fetch
  */
 
 namespace DataMachine\Core\Steps\Fetch;
@@ -20,14 +12,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register all Fetch Step component filters
- * 
- * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers Fetch Step capabilities purely through filter-based discovery.
- * 
- * @since 0.1.0
- */
 function dm_register_fetch_step_filters() {
     
     // Step registration - Fetch declares itself as 'fetch' step type (pure discovery mode)

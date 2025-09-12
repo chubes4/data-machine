@@ -39,7 +39,8 @@ AI agents use tools to interact with handlers:
 - General tools for search and analysis  
 - Automatic tool discovery and configuration
 - AIStepToolParameters class provides unified flat parameter building
-- 5-tier AI message priority system for contextual guidance
+- Modular AI directive system with auto-registration for contextual guidance
+- AIStepConversationManager for conversation state and tool result formatting
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
@@ -73,12 +74,13 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- 5-tier message priority system: Global → Pipeline → Tool directives → Data structure → Site context
+- 4-tier AI directive priority system: Global → Pipeline → Tool directives → Site context
+- Modular AI directive architecture with auto-registration (GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective)
+- AIStepConversationManager for centralized conversation state management and multi-turn conversation support
 - AIStepToolParameters class for unified tool execution
-- Conversation state management
-- Site context injection  
-- Dynamic directive system with handler-specific guidance
-- Tool result formatting
+- Clear tool result messaging enabling natural AI agent conversation termination
+- Site context injection with automatic cache invalidation
+- Tool result formatting with success/failure messages
 
 ### Data Processing
 - DataPacket structure for consistent data flow

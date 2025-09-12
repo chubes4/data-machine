@@ -33,8 +33,6 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 ### AI Tools
 - [Google Search](ai-tools/google-search.md) - Web search with Custom Search API
 - [Local Search](ai-tools/local-search.md) - WordPress internal search
-- [Read Post](ai-tools/read-post.md) - Post content retrieval  
-- [Google Search Console](ai-tools/google-search-console.md) - SEO performance analysis
 
 ### API Reference
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
@@ -73,8 +71,6 @@ docs/
 ├── ai-tools/
 │   ├── google-search.md                # Web search tool
 │   ├── local-search.md                 # WordPress internal search
-│   ├── read-post.md                    # Post content retrieval
-│   └── google-search-console.md        # SEO performance analysis
 ├── admin-interface/
 │   ├── pipeline-builder.md             # Visual interface
 │   ├── settings-configuration.md       # Configuration options
@@ -179,9 +175,13 @@ docs/
 
 ### AI Integration  
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- 4-tier AI directive system with auto-registration and complete workflow context
+- AIStepConversationManager for centralized conversation state management
 - Tool-first architecture for agentic execution
 - Context-aware processing with WordPress site context
-- Conversation state management
+- Clear tool result messaging enabling natural conversation termination
+- AIStepToolParameters for unified flat parameter building
+- Modular directive classes for targeted AI guidance
 
 ### Extension System
 - Filter-based service discovery

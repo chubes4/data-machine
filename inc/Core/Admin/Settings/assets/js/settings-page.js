@@ -194,7 +194,7 @@
                 url: dmSettings.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'dm_get_oauth_auth_url',
+                    action: 'dm_oauth_url',
                     provider: provider,
                     nonce: dmSettings.dm_ajax_nonce
                 },

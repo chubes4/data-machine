@@ -4,7 +4,7 @@
  *
  * Admin-global authentication system providing OAuth functionality with site-level
  * credential storage, long-lived token management, and automatic page token acquisition.
- * Uses filter-based HTTP requests and centralized logging.
+ * Uses the unified OAuth rewrite system, filter-based HTTP requests and centralized logging.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\Facebook
@@ -48,7 +48,7 @@ class FacebookAuth {
             ],
             'app_secret' => [
                 'label' => __('App Secret', 'data-machine'),
-                'type' => 'password',
+                'type' => 'text',
                 'required' => true,
                 'description' => __('Your Facebook application App Secret from developers.facebook.com', 'data-machine')
             ]
@@ -65,13 +65,6 @@ class FacebookAuth {
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
-    /**
-     * Registers the necessary WordPress action hooks for OAuth callback flow.
-     * This should be called from the main plugin setup.
-     */
-    public function register_hooks() {
-        add_action('admin_post_dm_facebook_oauth_callback', array($this, 'handle_oauth_callback'));
-    }
 
 
 
@@ -177,10 +170,11 @@ class FacebookAuth {
         }
 
         // 2. Exchange code for access token
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         $token_params = [
-            'client_id'     => $this->get_client_id(),
-            'client_secret' => $this->get_client_secret(),
-            'redirect_uri'  => $this->get_redirect_uri(),
+            'client_id'     => $config['app_id'] ?? '',
+            'client_secret' => $config['app_secret'] ?? '',
+            'redirect_uri'  => apply_filters('dm_oauth_callback', '', 'facebook'),
             'code'          => $code,
         ];
         $token_url = self::TOKEN_URL . '?' . http_build_query($token_params);
@@ -295,9 +289,10 @@ class FacebookAuth {
         // Store state in admin-global transient for verification
         set_transient('dm_facebook_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
 
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         $params = [
-            'client_id'     => $this->get_client_id(),
-            'redirect_uri'  => $this->get_redirect_uri(),
+            'client_id'     => $config['app_id'] ?? '',
+            'redirect_uri'  => apply_filters('dm_oauth_callback', '', 'facebook'),
             'scope'         => self::SCOPES,
             'response_type' => 'code',
             'state'         => $state,
@@ -306,34 +301,6 @@ class FacebookAuth {
         return self::AUTH_URL . '?' . http_build_query($params);
     }
 
-    /**
-     * Get Facebook client ID from options
-     *
-     * @return string
-     */
-    private function get_client_id() {
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
-        return $config['app_id'] ?? '';
-    }
-
-    /**
-     * Get Facebook client secret from options
-     *
-     * @return string
-     */
-    private function get_client_secret() {
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
-        return $config['app_secret'] ?? '';
-    }
-
-    /**
-     * Get redirect URI
-     *
-     * @return string
-     */
-    private function get_redirect_uri() {
-        return apply_filters('dm_get_oauth_url', '', 'facebook');
-    }
 
     /**
      * Retrieves user profile information from Facebook Graph API.
@@ -373,10 +340,11 @@ class FacebookAuth {
      */
     private function exchange_for_long_lived_token(string $short_lived_token): array|\WP_Error {
         do_action('dm_log', 'debug', 'Exchanging Facebook short-lived token for long-lived token.');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         $params = [
             'grant_type'        => 'fb_exchange_token',
-            'client_id'         => $this->get_client_id(),
-            'client_secret'     => $this->get_client_secret(),
+            'client_id'         => $config['app_id'] ?? '',
+            'client_secret'     => $config['app_secret'] ?? '',
             'fb_exchange_token' => $short_lived_token,
         ];
         $url = self::TOKEN_URL . '?' . http_build_query($params);
@@ -658,7 +626,7 @@ class FacebookAuth {
 
     /**
      * Handle OAuth callback from Facebook.
-     * Hooked to 'admin_post_dm_facebook_oauth_callback'.
+     * Called via the unified OAuth rewrite system at /dm-oauth/facebook/.
      */
     public function handle_oauth_callback() {
         // 1. Verify admin capability

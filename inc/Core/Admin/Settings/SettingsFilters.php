@@ -38,15 +38,35 @@ function dm_register_settings_admin_page_filters() {
     add_filter('dm_admin_assets', function($assets, $context) {
         if ($context === 'settings') {
             $assets['css'] = [
+                'dm-core-modal' => [
+                    'src' => '../Modal/assets/css/core-modal.css',
+                    'deps' => []
+                ],
                 'dm-settings-page' => [
                     'src' => 'assets/css/settings-page.css',
-                    'deps' => []
+                    'deps' => ['dm-core-modal']
                 ]
             ];
             $assets['js'] = [
+                'dm-core-modal' => [
+                    'src' => '../Modal/assets/js/core-modal.js',
+                    'deps' => ['jquery'],
+                    'localize' => [
+                        'object' => 'dmCoreModal',
+                        'data' => [
+                            'ajax_url' => admin_url('admin-ajax.php'),
+                            'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
+                            'strings' => [
+                                'loading' => __('Loading...', 'data-machine'),
+                                'error' => __('Error', 'data-machine'),
+                                'close' => __('Close', 'data-machine')
+                            ]
+                        ]
+                    ]
+                ],
                 'dm-settings-page' => [
                     'src' => 'assets/js/settings-page.js',
-                    'deps' => ['jquery']
+                    'deps' => ['jquery', 'dm-core-modal']
                 ]
             ];
         }
@@ -225,6 +245,7 @@ add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $
         }
         
         if ($field_name === 'post_author' && $default_author_id) {
+            /* translators: %s: author display name */
             $field_config['global_indicator'] = sprintf(__('Set globally: %s', 'data-machine'), 
                 get_userdata($default_author_id)->display_name ?? 'Unknown');
         }
@@ -236,6 +257,7 @@ add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $
                 'private' => __('Private', 'data-machine')
             ];
             $status_label = $status_labels[$default_post_status] ?? ucfirst($default_post_status);
+            /* translators: %s: post status label */
             $field_config['global_indicator'] = sprintf(__('Set globally: %s', 'data-machine'), $status_label);
         }
         

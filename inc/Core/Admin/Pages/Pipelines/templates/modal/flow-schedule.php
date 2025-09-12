@@ -49,13 +49,13 @@ $next_run_time = $next_run_time ?? null;
             <h4><?php esc_html_e('Schedule Information', 'data-machine'); ?></h4>
             <div class="dm-schedule-details">
                 <?php if ($last_run_at): ?>
-                    <p><strong><?php esc_html_e('Last Run:', 'data-machine'); ?></strong> <?php echo esc_html(date('M j, Y g:i A', strtotime($last_run_at))); ?></p>
+                    <p><strong><?php esc_html_e('Last Run:', 'data-machine'); ?></strong> <?php echo esc_html(wp_date('M j, Y g:i A', strtotime($last_run_at))); ?></p>
                 <?php else: ?>
                     <p><strong><?php esc_html_e('Last Run:', 'data-machine'); ?></strong> <?php esc_html_e('Never', 'data-machine'); ?></p>
                 <?php endif; ?>
                 
                 <?php if ($next_run_time): ?>
-                    <p><strong><?php esc_html_e('Next Run:', 'data-machine'); ?></strong> <?php echo esc_html(date('M j, Y g:i A', strtotime($next_run_time))); ?></p>
+                    <p><strong><?php esc_html_e('Next Run:', 'data-machine'); ?></strong> <?php echo esc_html(wp_date('M j, Y g:i A', strtotime($next_run_time))); ?></p>
                 <?php else: ?>
                     <p><strong><?php esc_html_e('Next Run:', 'data-machine'); ?></strong> <?php esc_html_e('Not scheduled', 'data-machine'); ?></p>
                 <?php endif; ?>
@@ -70,7 +70,7 @@ $next_run_time = $next_run_time ?? null;
             </button>
             <button type="button" class="button button-primary dm-modal-close" 
                     data-template="save-schedule-action"
-                    data-context='{"flow_id":"<?php echo esc_attr($flow_id); ?>"}'
+                    data-context='<?php echo esc_attr(wp_json_encode(['flow_id' => $flow_id])); ?>'
                     aria-label="<?php echo esc_attr(sprintf(__('Save Schedule: %s', 'data-machine'), $flow_name)); ?>">
                 <?php esc_html_e('Save Schedule', 'data-machine'); ?>
             </button>

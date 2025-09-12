@@ -94,7 +94,7 @@ class AI_HTTP_Anthropic_Provider {
         ], 'Anthropic');
         
         if (!$result['success']) {
-            throw new Exception('Anthropic API request failed: ' . $result['error']);
+            throw new Exception('Anthropic API request failed: ' . esc_html($result['error']));
         }
         
         $raw_response = json_decode($result['data'], true);
@@ -132,7 +132,7 @@ class AI_HTTP_Anthropic_Provider {
         ], 'Anthropic Streaming', true, $callback);
         
         if (!$result['success']) {
-            throw new Exception('Anthropic streaming request failed: ' . $result['error']);
+            throw new Exception('Anthropic streaming request failed: ' . esc_html($result['error']));
         }
 
         // Return standardized streaming response
@@ -180,7 +180,7 @@ class AI_HTTP_Anthropic_Provider {
         }
 
         if (!file_exists($file_path)) {
-            throw new Exception("File not found: {$file_path}");
+            throw new Exception('File not found: ' . esc_html($file_path));
         }
 
         // Anthropic file upload endpoint
@@ -214,7 +214,7 @@ class AI_HTTP_Anthropic_Provider {
         ], 'Anthropic File Upload');
 
         if (!$result['success']) {
-            throw new Exception('Anthropic file upload failed: ' . $result['error']);
+            throw new Exception('Anthropic file upload failed: ' . esc_html($result['error']));
         }
 
         $response_body = $result['data'];
@@ -247,7 +247,7 @@ class AI_HTTP_Anthropic_Provider {
         ], 'Anthropic File Delete');
 
         if (!$result['success']) {
-            throw new Exception('Anthropic file delete failed: ' . $result['error']);
+            throw new Exception('Anthropic file delete failed: ' . esc_html($result['error']));
         }
 
         return $result['status_code'] === 200;

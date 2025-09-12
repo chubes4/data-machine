@@ -40,7 +40,7 @@ if (!$has_auth) {
             ?>
             <button type="button" class="button button-secondary dm-modal-open" 
                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                    data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                    data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'handler_slug' => $handler_slug, 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id])); ?>'>
                 <?php esc_html_e('Back to Settings', 'data-machine'); ?>
             </button>
         </div>
@@ -122,7 +122,7 @@ $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_e
             <h5><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'data-machine'), ucfirst($handler_slug))); ?></h5>
             <p><?php esc_html_e('Copy this URL and paste it in your app settings under "redirect uri" or "callback URL":', 'data-machine'); ?></p>
             <code class="dm-redirect-uri-code">
-                <?php echo esc_html(apply_filters('dm_get_oauth_url', '', $handler_slug)); ?>
+                <?php echo esc_html(apply_filters('dm_oauth_callback', '', $handler_slug)); ?>
             </code>
         </div>
         <?php endif; ?>
@@ -180,7 +180,7 @@ $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_e
                     <?php if ($uses_oauth): ?>
                         <?php
                         // Get direct provider authorization URL - bare metal connection
-                        $oauth_url = apply_filters('dm_get_oauth_auth_url', '', $handler_slug);
+                        $oauth_url = apply_filters('dm_oauth_url', '', $handler_slug);
                         
                         // Handle errors from authorization URL generation
                         if (is_wp_error($oauth_url)) {
@@ -215,7 +215,7 @@ $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_e
         ?>
         <button type="button" class="button button-secondary dm-modal-content" 
                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
-                data-context='{"flow_step_id":"<?php echo esc_attr($flow_step_id); ?>","step_type":"<?php echo esc_attr($step_type); ?>","handler_slug":"<?php echo esc_attr($handler_slug); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","flow_id":"<?php echo esc_attr($flow_id); ?>"}'>
+                data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'handler_slug' => $handler_slug, 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id])); ?>'>
             <?php esc_html_e('Back to Settings', 'data-machine'); ?>
         </button>
     </div>

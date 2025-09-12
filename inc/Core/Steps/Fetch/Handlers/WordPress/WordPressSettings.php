@@ -135,7 +135,7 @@ class WordPressSettings {
                 'type' => 'select',
                 'label' => $taxonomy_label,
                 'description' => sprintf(
-                    __('Filter by specific %s or fetch from all %s.', 'data-machine'),
+                    __('Filter by specific %1$s or fetch from all %2$s.', 'data-machine'),
                     strtolower($taxonomy_label),
                     strtolower($taxonomy_label)
                 ),

@@ -222,7 +222,8 @@ function dm_get_enabled_admin_pages() {
         return $all_pages;
     }
     
-    return array_intersect_key($all_pages, array_filter($settings['enabled_pages']));
+    $enabled_keys = array_keys(array_filter($settings['enabled_pages']));
+    return array_intersect_key($all_pages, array_flip($enabled_keys));
 }
 
 /**
@@ -377,8 +378,9 @@ function dm_enqueue_page_assets($assets, $page_slug) {
 
 
 /**
- * Global system prompt injection moved to AIStepDirective.php
+ * Global system prompt injection moved to modular directive system
  * 
- * All AI directive handling is now centralized in AIStepDirective.php
- * with standardized priorities and 5-parameter filter signature.
+ * All AI directive handling is now centralized in modular directive classes:
+ * GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, 
+ * DataPacketStructureDirective, and SiteContextDirective.
  */

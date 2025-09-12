@@ -91,7 +91,7 @@ if (!empty($selected_pipeline_id) && !empty($all_pipelines)) {
                             'pipeline' => $pipeline,
                             'existing_flows' => $existing_flows,
                             'pipelines_instance' => null
-                        ]); 
+                        ]);
                         ?>
                     </div>
                 <?php endforeach; ?>

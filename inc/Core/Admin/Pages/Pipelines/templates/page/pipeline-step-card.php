@@ -62,7 +62,7 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
             <div class="dm-step-empty-content">
                 <button type="button" class="button button-secondary dm-modal-open dm-step-add-button"
                         data-template="step-selection"
-                        data-context='{"context":"pipeline_builder","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+                        data-context='<?php echo esc_attr(wp_json_encode(['context' => 'pipeline_builder', 'pipeline_id' => $pipeline_id])); ?>'>
                     <?php esc_html_e('Add Step', 'data-machine'); ?>
                 </button>
             </div>
@@ -74,13 +74,13 @@ if ($pipeline_id && !$is_empty && $pipeline_step_id) {
                 <div class="dm-step-actions">
                     <button type="button" class="button button-small button-link-delete dm-modal-open" 
                             data-template="confirm-delete"
-                            data-context='{"delete_type":"step","step_type":"<?php echo esc_attr($step_type); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>"}'>
+                            data-context='<?php echo esc_attr(wp_json_encode(['delete_type' => 'step', 'step_type' => $step_type, 'pipeline_step_id' => $pipeline_step_id, 'pipeline_id' => $pipeline_id])); ?>'>
                         <?php esc_html_e('Delete', 'data-machine'); ?>
                     </button>
                     <?php if ($has_step_settings): ?>
                         <button type="button" class="button button-small button-link-configure dm-modal-open" 
                                 data-template="configure-step"
-                                data-context='{"step_type":"<?php echo esc_attr($step_type); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id); ?>","modal_type":"<?php echo esc_attr($step_settings_info['modal_type'] ?? ''); ?>","config_type":"<?php echo esc_attr($step_settings_info['config_type'] ?? ''); ?>"}'>
+                                data-context='<?php echo esc_attr(wp_json_encode(['step_type' => $step_type, 'pipeline_id' => $pipeline_id, 'pipeline_step_id' => $pipeline_step_id, 'modal_type' => $step_settings_info['modal_type'] ?? '', 'config_type' => $step_settings_info['config_type'] ?? ''])); ?>'>
                             <?php echo esc_html($step_settings_info['button_text'] ?? __('Configure', 'data-machine')); ?>
                         </button>
                     <?php endif; ?>

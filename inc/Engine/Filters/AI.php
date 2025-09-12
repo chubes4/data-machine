@@ -93,6 +93,11 @@ function dm_register_ai_filters() {
         
         return $config;
     }, 20, 2);
+    
+    // Tool Success Message Filter Hook
+    // Allows individual tools to register their own success message formatters
+    // Tools register formatters using: add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+    // This filter is called from AIStepConversationManager::generateSuccessMessage()
 }
 
 // Initialize AI filters on WordPress init

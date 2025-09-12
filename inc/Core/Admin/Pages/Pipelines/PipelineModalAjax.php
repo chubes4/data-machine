@@ -72,11 +72,21 @@ class PipelineModalAjax
         }
         
         $template = sanitize_text_field(wp_unslash($_POST['template']));
-        $template_data = json_decode(wp_unslash($_POST['template_data']), true);
+        $raw_template_data = wp_unslash($_POST['template_data']);
+        
+        // Validate JSON structure before decoding
+        if (!is_string($raw_template_data)) {
+            wp_send_json_error(['message' => __('Template data must be a JSON string', 'data-machine')]);
+        }
+        
+        $template_data = json_decode($raw_template_data, true);
         
         if (!is_array($template_data)) {
             wp_send_json_error(['message' => __('Invalid template data format', 'data-machine')]);
         }
+        
+        // Recursively sanitize template data array
+        $template_data = $this->sanitize_template_data($template_data);
 
         if (empty($template)) {
             wp_send_json_error(['message' => __('Template name is required', 'data-machine')]);
@@ -119,7 +129,7 @@ class PipelineModalAjax
         }
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
-        $pipeline_id = (int) ($_POST['pipeline_id'] ?? 0);
+        $pipeline_id = (int) (wp_unslash($_POST['pipeline_id'] ?? 0));
         
         if (empty($step_type)) {
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
@@ -201,7 +211,7 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
         
-        $context = $_POST['context'] ?? [];
+        $context = wp_unslash($_POST['context'] ?? []);
         
         // Handle jQuery's natural JSON string serialization
         if (is_string($context)) {
@@ -212,8 +222,8 @@ class PipelineModalAjax
         if (!is_array($context)) {
             wp_send_json_error([
                 'message' => __('Invalid context data format - expected array', 'data-machine'),
-                'context_type' => gettype($_POST['context'] ?? null),
-                'received_context' => $_POST['context'] ?? null
+                'context_type' => gettype(wp_unslash($_POST['context'] ?? null)),
+                'received_context' => wp_unslash($_POST['context'] ?? null)
             ]);
         }
         
@@ -316,7 +326,7 @@ class PipelineModalAjax
                     
                     do_action('dm_log', 'debug', 'PipelineModalAjax: Before saving tool selections', [
                         'pipeline_step_id' => $pipeline_step_id,
-                        'post_enabled_tools' => $_POST['enabled_tools'] ?? null,
+                        'post_enabled_tools' => wp_unslash($_POST['enabled_tools'] ?? null),
                         'post_keys' => array_keys($_POST)
                     ]);
                     
@@ -494,12 +504,38 @@ class PipelineModalAjax
                 ));
             }
 
-            // Block dangerous extensions
-            $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr'];
+            // Block dangerous extensions with comprehensive list
+            $dangerous_extensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps', 'pht', 'phar', 'exe', 'bat', 'cmd', 'scr', 'com', 'pif', 'vbs', 'js', 'jar', 'msi', 'dll', 'sh', 'pl', 'py', 'rb', 'asp', 'aspx', 'jsp', 'htaccess'];
             $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             
-            if (in_array($file_extension, $dangerous_extensions)) {
+            if (in_array($file_extension, $dangerous_extensions, true)) {
                 throw new \Exception(__('File type not allowed for security reasons.', 'data-machine'));
+            }
+            
+            // Validate file name contains no directory traversal attempts
+            if (strpos($file['name'], '..') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
+                throw new \Exception(__('Invalid file name detected.', 'data-machine'));
+            }
+            
+            // Additional MIME type validation for common file types
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo) {
+                $detected_mime = finfo_file($finfo, $file['tmp_name']);
+                finfo_close($finfo);
+                
+                // Block executable MIME types
+                $dangerous_mimes = [
+                    'application/x-executable',
+                    'application/x-dosexec', 
+                    'application/x-msdownload',
+                    'application/x-php',
+                    'text/x-php',
+                    'application/php'
+                ];
+                
+                if (in_array($detected_mime, $dangerous_mimes, true)) {
+                    throw new \Exception(__('File content type not allowed for security reasons.', 'data-machine'));
+                }
             }
             
             // Use repository to store file with handler context
@@ -566,16 +602,25 @@ class PipelineModalAjax
         ]);
         
         // Handle both context-based (add handler) and direct form data (save settings) scenarios
-        $context = $_POST['context'] ?? [];
+        $context = wp_unslash($_POST['context'] ?? []);
         if (is_string($context)) {
             $context = json_decode(wp_unslash($context), true) ?: [];
         }
         
         // Extract data from context if available (add handler scenario), otherwise from direct form fields
-        $handler_slug = sanitize_text_field($context['handler_slug'] ?? wp_unslash($_POST['handler_slug'] ?? ''));
-        $step_type = sanitize_text_field($context['step_type'] ?? wp_unslash($_POST['step_type'] ?? ''));
-        $flow_step_id = sanitize_text_field($context['flow_step_id'] ?? wp_unslash($_POST['flow_step_id'] ?? ''));
-        $pipeline_id = sanitize_text_field($context['pipeline_id'] ?? wp_unslash($_POST['pipeline_id'] ?? ''));
+        // Note: $context is already unslashed on lines 607/218, so only unslash direct $_POST values
+        $handler_slug = isset($context['handler_slug']) ? 
+            sanitize_text_field($context['handler_slug']) : 
+            sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
+        $step_type = isset($context['step_type']) ? 
+            sanitize_text_field($context['step_type']) : 
+            sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
+        $flow_step_id = isset($context['flow_step_id']) ? 
+            sanitize_text_field($context['flow_step_id']) : 
+            sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
+        $pipeline_id = isset($context['pipeline_id']) ? 
+            sanitize_text_field($context['pipeline_id']) : 
+            sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
         // Determine if this is an "add" or "update" operation
         $action_type = !empty($context) ? 'added' : 'updated';
@@ -738,11 +783,49 @@ class PipelineModalAjax
         
         $raw_settings = [];
         foreach ($_POST as $key => $value) {
-            if (!in_array($key, ['action', 'context', 'nonce', '_wp_http_referer'])) {
-                $raw_settings[$key] = $value;
+            // Sanitize key to prevent injection
+            $safe_key = sanitize_key($key);
+            if (!in_array($safe_key, ['action', 'context', 'nonce', '_wp_http_referer'], true) && !empty($safe_key)) {
+                // Apply basic sanitization before passing to handler's sanitize method
+                if (is_array($value)) {
+                    $raw_settings[$safe_key] = array_map('sanitize_text_field', array_map('wp_unslash', $value));
+                } else {
+                    $raw_settings[$safe_key] = sanitize_text_field(wp_unslash($value));
+                }
             }
         }
         
         return $handler_settings->sanitize($raw_settings);
+    }
+    
+    /**
+     * Recursively sanitize template data array to prevent XSS
+     * 
+     * @param array $data Array to sanitize
+     * @return array Sanitized array
+     */
+    private function sanitize_template_data($data) {
+        if (!is_array($data)) {
+            return sanitize_text_field($data);
+        }
+        
+        $sanitized = [];
+        foreach ($data as $key => $value) {
+            $safe_key = sanitize_key($key);
+            if (is_array($value)) {
+                $sanitized[$safe_key] = $this->sanitize_template_data($value);
+            } elseif (is_string($value)) {
+                $sanitized[$safe_key] = sanitize_text_field($value);
+            } elseif (is_numeric($value)) {
+                $sanitized[$safe_key] = $value; // Numbers are safe
+            } elseif (is_bool($value)) {
+                $sanitized[$safe_key] = $value; // Booleans are safe
+            } else {
+                // For other types, convert to string and sanitize
+                $sanitized[$safe_key] = sanitize_text_field((string)$value);
+            }
+        }
+        
+        return $sanitized;
     }
 }

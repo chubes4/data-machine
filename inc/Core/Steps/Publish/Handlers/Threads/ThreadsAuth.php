@@ -4,7 +4,7 @@
  *
  * Admin-global authentication system providing OAuth functionality with site-level
  * credential storage, long-lived token management with automatic refresh, and 
- * Facebook Graph API integration. Uses filter-based HTTP requests.
+ * Facebook Graph API integration. Uses the unified OAuth rewrite system and filter-based HTTP requests.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\Threads
@@ -48,7 +48,7 @@ class ThreadsAuth {
             ],
             'app_secret' => [
                 'label' => __('App Secret', 'data-machine'),
-                'type' => 'password',
+                'type' => 'text',
                 'required' => true,
                 'description' => __('Your Threads application App Secret from developers.facebook.com', 'data-machine')
             ]
@@ -65,13 +65,6 @@ class ThreadsAuth {
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
-    /**
-     * Registers the necessary WordPress action hooks for OAuth callback flow.
-     * This should be called from the main plugin setup.
-     */
-    public function register_hooks() {
-        add_action('admin_post_dm_threads_oauth_callback', array($this, 'handle_oauth_callback'));
-    }
 
 
 
@@ -177,9 +170,10 @@ class ThreadsAuth {
         // Store state in admin-global transient for verification
         set_transient('dm_threads_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
 
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         $params = [
-            'client_id'     => $this->get_client_id(),
-            'redirect_uri'  => $this->get_redirect_uri(),
+            'client_id'     => $config['app_id'] ?? '',
+            'redirect_uri'  => apply_filters('dm_oauth_callback', '', 'threads'),
             'scope'         => self::SCOPES,
             'response_type' => 'code',
             'state'         => $state,
@@ -209,11 +203,12 @@ class ThreadsAuth {
         }
 
         // 2. Exchange code for access token
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         $token_params = [
-            'client_id'     => $this->get_client_id(),
-            'client_secret' => $this->get_client_secret(),
+            'client_id'     => $config['app_id'] ?? '',
+            'client_secret' => $config['app_secret'] ?? '',
             'grant_type'    => 'authorization_code',
-            'redirect_uri'  => $this->get_redirect_uri(),
+            'redirect_uri'  => apply_filters('dm_oauth_callback', '', 'threads'),
             'code'          => $code,
         ];
 
@@ -241,9 +236,10 @@ class ThreadsAuth {
 
         // 3. Exchange short-lived token for a long-lived one
         do_action('dm_log', 'debug', 'Threads OAuth: Exchanging short-lived token for long-lived token.');
+        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
         $exchange_params = [
             'grant_type'    => 'th_exchange_token',
-            'client_secret' => $this->get_client_secret(),
+            'client_secret' => $config['app_secret'] ?? '',
             'access_token'  => $initial_access_token, // Use the short-lived token here
         ];
         // The example used GET for this exchange
@@ -314,34 +310,6 @@ class ThreadsAuth {
         return true;
     }
 
-    /**
-     * Get Threads client ID from options
-     *
-     * @return string
-     */
-    private function get_client_id() {
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
-        return $config['app_id'] ?? '';
-    }
-
-    /**
-     * Get Threads client secret from options
-     *
-     * @return string
-     */
-    private function get_client_secret() {
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');
-        return $config['app_secret'] ?? '';
-    }
-
-    /**
-     * Get redirect URI
-     *
-     * @return string
-     */
-    private function get_redirect_uri() {
-        return apply_filters('dm_get_oauth_url', '', 'threads');
-    }
 
     /**
      * Retrieves user profile information from Facebook Graph API.
@@ -472,7 +440,7 @@ class ThreadsAuth {
 
     /**
      * Handle OAuth callback from Threads.
-     * Hooked to 'admin_post_dm_threads_oauth_callback'.
+     * Called via the unified OAuth rewrite system at /dm-oauth/threads/.
      */
     public function handle_oauth_callback() {
         // 1. Verify admin capability

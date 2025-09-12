@@ -43,26 +43,22 @@ class GoogleSheetsFetchSettings {
                 'placeholder' => 'Sheet1',
                 'default' => 'Sheet1'
             ],
-            'googlesheets_fetch_cell_range' => [
-                'type' => 'text',
-                'label' => __('Cell Range', 'data-machine'),
-                'description' => __('Range of cells to read using A1 notation (e.g., A1:D100). Defines the data area to process.', 'data-machine'),
-                'placeholder' => 'A1:Z1000',
-                'default' => 'A1:Z1000'
+            'googlesheets_fetch_processing_mode' => [
+                'type' => 'select',
+                'label' => __('Processing Mode', 'data-machine'),
+                'description' => __('How to process the spreadsheet data. By Row: Process one row at a time (ideal for lists). By Column: Process one column at a time. Full Spreadsheet: Process entire sheet at once.', 'data-machine'),
+                'options' => [
+                    'by_row' => __('By Row (Sequential)', 'data-machine'),
+                    'by_column' => __('By Column (Sequential)', 'data-machine'),
+                    'full_spreadsheet' => __('Full Spreadsheet (All at Once)', 'data-machine')
+                ],
+                'default' => 'by_row'
             ],
             'googlesheets_fetch_has_header_row' => [
                 'type' => 'checkbox',
                 'label' => __('First Row Contains Headers', 'data-machine'),
                 'description' => __('Check if the first row contains column headers. Headers will be used as field names in the processed data.', 'data-machine'),
                 'default' => true
-            ],
-            'googlesheets_fetch_row_limit' => [
-                'type' => 'number',
-                'label' => __('Row Limit', 'data-machine'),
-                'description' => __('Maximum number of data rows to process per execution (1-1000). Helps control processing load.', 'data-machine'),
-                'min' => 1,
-                'max' => 1000,
-                'default' => 100
             ]
         ];
     }
@@ -83,16 +79,13 @@ class GoogleSheetsFetchSettings {
         // Sanitize worksheet name
         $sanitized['googlesheets_fetch_worksheet_name'] = sanitize_text_field($raw_settings['googlesheets_fetch_worksheet_name'] ?? 'Sheet1');
         
-        // Sanitize cell range with A1 notation validation
-        $cell_range = sanitize_text_field($raw_settings['googlesheets_fetch_cell_range'] ?? 'A1:Z1000');
-        $sanitized['googlesheets_fetch_cell_range'] = preg_match('/^[A-Z]+\d+:[A-Z]+\d+$/', $cell_range) ? $cell_range : 'A1:Z1000';
+        // Processing mode validation
+        $processing_mode = sanitize_text_field($raw_settings['googlesheets_fetch_processing_mode'] ?? 'by_row');
+        $valid_modes = ['by_row', 'by_column', 'full_spreadsheet'];
+        $sanitized['googlesheets_fetch_processing_mode'] = in_array($processing_mode, $valid_modes) ? $processing_mode : 'by_row';
         
         // Header row option
         $sanitized['googlesheets_fetch_has_header_row'] = !empty($raw_settings['googlesheets_fetch_has_header_row']);
-        
-        // Row limit with bounds checking
-        $row_limit = absint($raw_settings['googlesheets_fetch_row_limit'] ?? 100);
-        $sanitized['googlesheets_fetch_row_limit'] = max(1, min(1000, $row_limit));
         
         return $sanitized;
     }

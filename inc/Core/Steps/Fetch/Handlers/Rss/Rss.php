@@ -2,9 +2,8 @@
 /**
  * RSS Fetch Handler
  *
- * Fetches and processes RSS feed data for the Data Machine pipeline.
- * This handler is responsible for fetching RSS/Atom feeds, parsing them,
- * and converting them into standardized DataPackets for processing.
+ * Fetches RSS/Atom feeds with timeframe filtering, search term matching,
+ * and deduplication tracking. Converts feed items to standardized DataPackets.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\Rss
@@ -21,31 +20,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Rss {
 
     /**
-     * Parameter-less constructor for pure filter-based architecture.
+     * Initialize RSS handler with filter-based architecture
      */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
+        // Filter-based service access
     }
 
 
     /**
-     * Fetches and prepares fetch data packets from an RSS feed.
+     * Fetch RSS feed data with filtering and deduplication
      *
-     * @param int $pipeline_id The pipeline ID for this execution context.
-     * @param array  $handler_config Decoded handler configuration specific to this handler.
-     * @param int|null $flow_id The flow ID for processed items tracking.
-     * @return array Array containing 'processed_items' key with standardized data packets for RSS items.
-     * @throws Exception If data cannot be retrieved or is invalid.
+     * @param int $pipeline_id Pipeline execution context
+     * @param array $handler_config RSS configuration (feed_url, timeframe_limit, search)
+     * @param string|null $job_id Job ID for processed items tracking
+     * @return array Processed RSS items as standardized data packets
+     * @throws Exception If feed cannot be retrieved or parsed
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
-        // Extract flow_step_id from handler config for processed items tracking
+        // Get flow step for deduplication tracking
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
 
-        // Access config from handler config structure
+        // Extract RSS configuration
         $config = $handler_config['rss'] ?? [];
-        
-        // Extract feed URL from configuration
         $feed_url = trim($config['feed_url'] ?? '');
 
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
@@ -56,7 +53,7 @@ class Rss {
             $search_keywords = array_filter($search_keywords); // Remove empty keywords
         }
 
-        // Calculate cutoff timestamp
+        // Apply timeframe filtering
         $cutoff_timestamp = null;
         if ($timeframe_limit !== 'all_time') {
             $interval_map = [
@@ -70,9 +67,7 @@ class Rss {
             }
         }
 
-        // Fetch the RSS feed
-        
-        // Use dm_request filter for feed fetching
+        // Fetch RSS feed via dm_request filter
         $args = [
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
         ];

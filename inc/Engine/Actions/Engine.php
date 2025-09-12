@@ -2,32 +2,19 @@
 /**
  * Pipeline Execution Engine
  *
- * Three-action execution cycle providing complete flow orchestration:
- * 1. dm_run_flow_now - Flow initiation and first step scheduling
- * 2. dm_execute_step - Step execution with unified parameter system
- * 3. dm_schedule_next_step - Next step scheduling via Action Scheduler
+ * Three-action execution cycle:
+ * 1. dm_run_flow_now - Flow initiation
+ * 2. dm_execute_step - Step execution
+ * 3. dm_schedule_next_step - Next step scheduling
  *
  * @package DataMachine\Engine\Actions
- * @since 1.0.0
  */
 
-// If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
-}
+defined('ABSPATH') || exit;
 
 
-/**
- * Register pipeline execution engine actions
- *
- * Registers three core WordPress actions that form the complete execution cycle:
- * - dm_run_flow_now: Initiates flow execution and schedules first step
- * - dm_execute_step: Executes individual steps with unified parameter structure
- * - dm_schedule_next_step: Schedules next step via Action Scheduler
- */
 function dm_register_execution_engine() {
 
-    // 1. PIPELINE INITIATION
     add_action('dm_run_flow_now', function($flow_id) {
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
@@ -90,7 +77,6 @@ function dm_register_execution_engine() {
     });
 
 
-    // 2. CORE STEP EXECUTION
     add_action( 'dm_execute_step', function( $job_id, $flow_step_id, $data = null ) {
         
         try {
@@ -143,7 +129,6 @@ function dm_register_execution_engine() {
             $step_class = $step_definition['class'] ?? '';
             $flow_step = new $step_class();
             
-            // Build unified flat parameter structure - all steps receive same format
             $parameters = apply_filters('dm_engine_parameters', [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
@@ -151,8 +136,16 @@ function dm_register_execution_engine() {
                 'data' => $data ?: []
             ], $data ?: [], $flow_step_config, $step_type, $flow_step_id);
             
-            // Execute step - simplified interface with single parameter array
+            // Set global execution context for directives
+            add_filter('dm_current_flow_step_id', function() use ($flow_step_id) { return $flow_step_id; }, 100);
+            add_filter('dm_current_job_id', function() use ($job_id) { return $job_id; }, 100);
+            
+            // Execute step
             $data = $flow_step->execute($parameters);
+            
+            // Clear global execution context
+            remove_all_filters('dm_current_flow_step_id', 100);
+            remove_all_filters('dm_current_job_id', 100);
             
             $step_success = ! empty( $data );
             if ( $step_success ) {
@@ -203,7 +196,6 @@ function dm_register_execution_engine() {
     }, 10, 3 );
 
     
-    // 3. STEP SCHEDULING
     add_action('dm_schedule_next_step', function($job_id, $flow_step_id, $data = []) {
         if (!function_exists('as_schedule_single_action')) {
             do_action('dm_log', 'error', 'Action Scheduler not available for step scheduling', [
@@ -216,6 +208,7 @@ function dm_register_execution_engine() {
         $repositories = apply_filters('dm_files_repository', []);
         $repository = $repositories['files'] ?? null;
         
+        // Store data packet or use direct reference
         if ($repository) {
             $data_reference = $repository->store_data_packet($data, $job_id, $flow_step_id);
         } else {
@@ -232,7 +225,7 @@ function dm_register_execution_engine() {
             'data-machine'
         );
         if (!empty($data)) {
-            do_action('dm_log', 'debug', 'Next step scheduled via centralized action hook', [
+            do_action('dm_log', 'debug', 'Next step scheduled via Action Scheduler', [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
                 'action_id' => $action_id,

@@ -1,12 +1,8 @@
 <?php
 /**
- * Configure Step Modal Template
- *
- * Pure rendering template for step configuration modal content.
- * Handles AI step configuration with proper modal action buttons.
+ * Step configuration modal content with AI model settings integration
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
- * @since 1.0.0
  */
 
 if (!defined('WPINC')) {
@@ -40,9 +36,9 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
     if ($step_config && ($step_config['config_type'] ?? '') === 'ai_configuration'):
         if (!$pipeline_step_id) {
             echo '<div class="dm-error">
-                <h4>' . __('Configuration Error', 'data-machine') . '</h4>
-                <p>' . __('Pipeline Step ID is required for AI step configuration.', 'data-machine') . '</p>
-                <p><em>' . __('Missing: pipeline_step_id', 'data-machine') . '</em></p>
+                <h4>' . esc_html__('Configuration Error', 'data-machine') . '</h4>
+                <p>' . esc_html__('Pipeline Step ID is required for AI step configuration.', 'data-machine') . '</p>
+                <p><em>' . esc_html__('Missing: pipeline_step_id', 'data-machine') . '</em></p>
             </div>';
             return;
         }
@@ -91,7 +87,7 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
         </button>
         <button type="button" class="button button-primary dm-modal-close" 
                 data-template="configure-step-action"
-                data-context='{"step_type":"<?php echo esc_attr($step_type ?? ''); ?>","pipeline_id":"<?php echo esc_attr($pipeline_id ?? ''); ?>","pipeline_step_id":"<?php echo esc_attr($pipeline_step_id ?? ''); ?>"}'>
+                data-context='<?php echo esc_attr(wp_json_encode(['step_type' => $step_type ?? '', 'pipeline_id' => $pipeline_id ?? '', 'pipeline_step_id' => $pipeline_step_id ?? ''])); ?>'>
             <?php esc_html_e('Save AI Model Settings', 'data-machine'); ?>
         </button>
     </div>

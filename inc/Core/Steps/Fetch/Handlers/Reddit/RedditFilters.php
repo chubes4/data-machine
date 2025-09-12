@@ -75,13 +75,15 @@ function dm_register_reddit_fetch_filters() {
             $parameters['upvotes'] = $metadata['upvotes'] ?? 0;
             $parameters['comment_count'] = $metadata['comment_count'] ?? 0;
             $parameters['author'] = $metadata['author'] ?? '';
+            $parameters['image_url'] = $metadata['image_url'] ?? '';
             $parameters['is_self_post'] = $metadata['is_self_post'] ?? false;
             
             do_action('dm_log', 'debug', 'Reddit: Metadata injected into engine parameters', [
                 'flow_step_id' => $flow_step_id,
                 'source_url' => $parameters['source_url'],
                 'subreddit' => $parameters['subreddit'],
-                'upvotes' => $parameters['upvotes']
+                'upvotes' => $parameters['upvotes'],
+                'image_url' => $parameters['image_url']
             ]);
         }
         

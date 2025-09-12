@@ -1,8 +1,5 @@
 /**
- * Pipeline Shared Utilities
- *
- * Shared utilities used by both pipeline-builder.js and flow-builder.js.
- * Contains template requesting, DOM helpers, and common operations.
+ * Pipeline page shared utilities for template requesting and DOM operations.
  *
  * @since 1.0.0
  */
@@ -10,16 +7,14 @@
 (function($) {
     'use strict';
 
-    /**
-     * Pipeline Shared Utilities
-     */
     window.PipelinesPage = {
         
         /**
          * Show WordPress-style admin notice
+         * @param {string} message Notice message
+         * @param {string} type Notice type (error, success, warning, info)
          */
         showNotice: function(message, type = 'error') {
-            // Remove any existing notices first
             $('.dm-admin-notice').remove();
             
             const $notice = $(`
@@ -31,21 +26,18 @@
                 </div>
             `);
             
-            // Find the best container to insert the notice
             const $container = $('.dm-admin-wrap').length ? 
                 $('.dm-admin-wrap') : 
                 $('.dm-pipelines-page').length ? $('.dm-pipelines-page') : $('body');
             
             $container.prepend($notice);
             
-            // Auto-dismiss after 5 seconds
             setTimeout(() => {
                 $notice.fadeOut(300, function() {
                     $(this).remove();
                 });
             }, 5000);
             
-            // Manual dismiss handler
             $notice.find('.notice-dismiss').on('click', function() {
                 $notice.fadeOut(300, function() {
                     $(this).remove();
@@ -53,49 +45,38 @@
             });
         },
         
-        /**
-         * Initialize pipelines page functionality
-         */
+        /** Initialize pipelines page functionality */
         init: function() {
             this.bindEvents();
         },
 
-        /**
-         * Bind pipeline page events
-         */
+        /** Bind pipeline page events */
         bindEvents: function() {
-            // Pipeline dropdown change handler
             $(document).on('change', '#dm-pipeline-selector', this.handlePipelineDropdownChange.bind(this));
         },
 
-        /**
-         * Handle pipeline dropdown selection change
-         */
+        /** Handle pipeline dropdown selection change */
         handlePipelineDropdownChange: function(e) {
             const selectedPipelineId = $(e.currentTarget).val();
             if (selectedPipelineId) {
                 this.switchToSelectedPipeline(selectedPipelineId);
                 this.updateUrlParameter('selected_pipeline_id', selectedPipelineId);
                 
-                // Save user's preference for future visits
                 this.saveSelectedPipelinePreference(selectedPipelineId);
             }
         },
 
         /**
          * Switch to show only the selected pipeline
+         * @param {string} pipelineId Pipeline ID to switch to
          */
         switchToSelectedPipeline: function(pipelineId) {
-            // First, hide all pipeline wrappers immediately for faster UI response
             $('.dm-pipeline-wrapper').hide();
             
-            // Check if pipeline is already loaded
             const $existingWrapper = $(`.dm-pipeline-wrapper[data-pipeline-id="${pipelineId}"]`);
             if ($existingWrapper.length > 0) {
-                // Pipeline already exists, just show it
                 $existingWrapper.show();
                 
-                // Trigger expansion system check after showing pipeline
                 if (typeof PipelineCardsUI !== 'undefined') {
                     // Use setTimeout to ensure the show() operation is complete
                     setTimeout(() => {
@@ -266,7 +247,7 @@
                             // Check if we need to auto-load provider settings or fetch models
                             const $component = $(this);
                             const $providerSelect = $component.find('[data-component-type="provider_selector"]');
-                            const $apiKeyInput = $component.find('input[type="password"]');
+                            const $apiKeyInput = $component.find('input[name*="key"], input[name*="secret"], input[name*="token"]');
                             const $modelSelect = $component.find('select[data-component-type="model_selector"]');
                             
                             if ($providerSelect.length && $apiKeyInput.length) {

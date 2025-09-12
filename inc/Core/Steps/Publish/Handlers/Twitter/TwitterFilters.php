@@ -15,12 +15,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register all Twitter-related filters
- *
- * Registers handler, authentication provider, settings, and AI tools.
- * Called automatically when file loads.
- */
 function dm_register_twitter_filters() {
     
     // Register as publish handler
@@ -46,12 +40,6 @@ function dm_register_twitter_filters() {
         return $all_settings;
     });
     
-    // Register AI directive for Twitter-specific guidance
-    add_filter('dm_handler_directives', function($directives) {
-        $directives['twitter'] = 'When posting to Twitter, format your response as concise, engaging content under 280 characters. Use relevant hashtags and mention handles when appropriate. Keep the tone conversational and engaging.';
-        return $directives;
-    });
-    
     // Register AI tool for handler-specific publishing
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         // Only generate Twitter tool when it's the target handler
@@ -65,15 +53,6 @@ function dm_register_twitter_filters() {
     // Modal handling via generic discovery system
 }
 
-/**
- * Generate Twitter tool definition
- *
- * Creates AI tool definition with dynamic configuration based on handler settings.
- * Tool description reflects enabled features (link handling, image support).
- *
- * @param array $handler_config Twitter-specific handler configuration
- * @return array Complete tool definition for ai_tools filter
- */
 function dm_get_twitter_tool(array $handler_config = []): array {
     // Extract Twitter-specific config from nested structure
     $twitter_config = $handler_config['twitter'] ?? $handler_config;

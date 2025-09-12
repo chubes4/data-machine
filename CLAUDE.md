@@ -26,7 +26,7 @@ do_action('dm_save_tool_config', $tool_id, $config_data);
 
 // OAuth
 apply_filters('dm_retrieve_oauth_account', [], 'handler');
-apply_filters('dm_get_oauth_url', '', 'provider');
+apply_filters('dm_oauth_callback', '', 'provider');
 $providers = apply_filters('dm_auth_providers', []);
 
 // Execution
@@ -156,30 +156,28 @@ $result = apply_filters('ai_request', [
 
 ### AI Request Priority System
 
-**5-Tier Message Injection Priority System**: AI requests receive multiple system messages in standardized priority order with 10-unit spacing for extensibility:
+**4-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes in standardized priority order with 10-unit spacing for extensibility:
 
-1. **Priority 10 - Global System Prompt** (`AIStepDirective`): User-configured background guidance from settings
-2. **Priority 20 - Pipeline System Prompt** (`AIStepDirective`): User-configured pipeline instructions and internal linking guidance
-3. **Priority 30 - Tool Definitions and Directives** (`AIStepDirective`): Dynamic tool-specific prompts and usage instructions
-4. **Priority 35 - Data Packet Structure Directive** (`AIStepDirective`): Explains workflow data format and structure for AI interpretation
-5. **Priority 40 - WordPress Site Context** (`AIStepDirective`): WordPress environment information (lowest priority)
+1. **Priority 10 - Global System Prompt** (`GlobalSystemPromptDirective`): **HIGHEST PRIORITY** - User-configured foundational instructions that set the overall tone, personality, and core behavior for ALL AI interactions. This is the first message the AI model sees and serves as the master directive that influences every response. Essential for establishing consistent AI behavior across all workflows.
+2. **Priority 20 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): User-configured pipeline instructions and internal linking guidance with complete workflow structure visualization showing AI agent position
+3. **Priority 30 - Tool Definitions and Workflow Context** (`ToolDefinitionsDirective`): Dynamic tool-specific prompts, usage instructions, and flow-specific workflow context with handler tool prioritization
+4. **Priority 50 - WordPress Site Context** (`SiteContextDirective`): WordPress environment information including post types, taxonomies, and site metadata (toggleable via settings, lowest priority)
 
 ```php
-// Centralized AI message priority system with standardized spacing
-// Priority 10: Global system prompt (background guidance)
-add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt'], 10, 5);
+// 4-tier modular AI directive system with standardized priority spacing
+// Each directive is a separate class that auto-registers with the ai_request filter
 
-// Priority 20: Pipeline system prompt (user configuration - internal linking instructions)
-add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+// Priority 10: Global system prompt (HIGHEST PRIORITY - foundational AI behavior settings)
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
 
-// Priority 30: Tool definitions and directives (how to use available tools)
-add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);
+// Priority 20: Pipeline system prompt (user configuration + workflow structure visualization)
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
 
-// Priority 35: Data packet structure explanation (workflow data format)
-add_filter('ai_request', [AIStepDirective::class, 'inject_data_packet_directive'], 35, 5);
+// Priority 30: Tool definitions and workflow context (enhanced with flow-specific context)
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
 
-// Priority 40: WordPress site context (environment info - lowest priority)
-add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5);
+// Priority 50: WordPress site context (environment info - toggleable, lowest priority)
+add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
 **AI Step Directive Content**:
@@ -195,16 +193,34 @@ add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5)
 - Cached with automatic invalidation on content changes
 
 **AI Conversation State Management**:
-- Centralized conversation history building from data packets
-- Tool result formatting for optimal AI model consumption
-- Context preservation across multi-turn conversations
+- **AIStepConversationManager**: Centralized conversation state management and message formatting
+- Tool result formatting for optimal AI model consumption with clear success/failure messages
+- Context preservation across multi-turn conversations with data packet awareness
 - Specialized formatters for search, publish, and generic tool results
+- Multi-turn conversation state updates with `updateDataPacketMessages()`
+- Clear completion messaging enabling natural AI agent conversation termination
+
+```php
+// Conversation Management Methods
+AIStepConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
+AIStepConversationManager::formatToolResultMessage($tool_name, $tool_result, $tool_parameters, $is_handler_tool);
+AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
+AIStepConversationManager::buildConversationMessage($role, $content);
+AIStepConversationManager::generateFailureMessage($tool_name, $error_message);
+AIStepConversationManager::logConversationAction($action, $context);
+```
+
+**Tool Result Message Examples**:
+- **Google Search**: "SEARCH COMPLETE: Found {count} results for \"{query}\".\nSearch Results:" or "SEARCH COMPLETE: No results found for \"{query}\". Search task finished."
+- **WordPress Publish**: "SUCCESS: WordPress post published successfully. Title: '{title}' is now live at {url} (ID: {id}). Your content has been published as requested."
+- **Default**: "SUCCESS: {Tool Name} completed successfully. The requested operation has been finished as requested." (filtered via `dm_tool_success_message`)
 
 **AI Step Execution Model**:
 - AI steps can run standalone using flow-level user messages when no fetch step precedes
 - System prompts (pipeline-level) provide consistent behavior templates
 - User messages (flow-level) enable different prompts per flow instance
 - Multi-turn conversation support with context preservation across tool executions
+- Conversation state management through AIStepConversationManager for clear AI communication
 
 ### Tool Management
 
@@ -714,7 +730,7 @@ composer install && composer test
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
 **Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json (containing 90+ filter registrations)
-**Key Auto-loaded Classes**: `AIStepDirective.php`, `AIStepToolParameters.php` - automatic filter registration and parameter building
+**Key Auto-loaded Classes**: Modular directive classes (`GlobalSystemPromptDirective.php`, `PipelineSystemPromptDirective.php`, `ToolDefinitionsDirective.php`, `SiteContextDirective.php`), `AIStepToolParameters.php`, `AIStepConversationManager.php` - automatic filter registration, parameter building, and conversation state management
 
 ## Extensions
 
@@ -826,7 +842,7 @@ apply_filters('dm_clear_oauth_account', false, 'twitter');
 
 // Configuration with validation  
 $is_configured = apply_filters('dm_tool_configured', false, 'twitter');
-$provider_url = apply_filters('dm_get_oauth_url', '', 'twitter');
+$provider_url = apply_filters('dm_oauth_callback', '', 'twitter');
 
 // Provider discovery
 $providers = apply_filters('dm_auth_providers', []);

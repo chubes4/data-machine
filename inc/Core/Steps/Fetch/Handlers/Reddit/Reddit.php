@@ -234,7 +234,7 @@ class Reddit {
 				$item_data = $post_wrapper['data'];
 				$current_item_id = $item_data['id'];
 
-				// 1. Check timeframe limit first
+				// 1. Check timeframe limit first - break early since Reddit returns chronologically sorted results
 				if ($cutoff_timestamp !== null) {
 					if (empty($item_data['created_utc'])) {
 						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
@@ -242,9 +242,9 @@ class Reddit {
 					}
 					$item_timestamp = (int) $item_data['created_utc'];
 					if ($item_timestamp < $cutoff_timestamp) {
-						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (timeframe limit).', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'pipeline_id' => $pipeline_id]);
+						do_action('dm_log', 'debug', 'Reddit Input: Hit timeframe limit - stopping processing.', ['item_id' => $current_item_id, 'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp), 'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp), 'pipeline_id' => $pipeline_id]);
 						$batch_hit_time_limit = true;
-						continue;
+						break; // Break out of item processing since all subsequent items will also be too old
 					}
 				}
 
@@ -448,7 +448,7 @@ class Reddit {
 					'author' => $item_data['author'] ?? '[deleted]',
 					'is_self_post' => $item_data['is_self'] ?? false,
 					'external_url' => (!($item_data['is_self'] ?? false) && !empty($item_data['url'])) ? $item_data['url'] : null,
-					'image_source_url' => $file_info['url'] ?? null,
+					'image_url' => $file_info['url'] ?? null,
 				];
 				$metadata['raw_reddit_data'] = $item_data; // Include raw data
 

@@ -57,6 +57,21 @@ function dm_register_wordpress_publish_filters() {
         return $tools;
     }, 10, 3);
 
+    // WordPress-specific success message formatting
+    add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
+        if ($tool_name === 'wordpress_publish' && !empty($tool_result['data']['post_title'])) {
+            $title = $tool_result['data']['post_title'];
+            $url = $tool_result['data']['post_url'] ?? '';
+            $post_id = $tool_result['data']['post_id'] ?? '';
+            
+            if (!empty($url)) {
+                return "SUCCESS: WordPress post published successfully. Title: '{$title}' is now live at {$url} (ID: {$post_id}). Your content has been published as requested.";
+            } else {
+                return "SUCCESS: WordPress post created successfully. Title: '{$title}' (ID: {$post_id}). Your content has been published to WordPress as requested.";
+            }
+        }
+        return $default_message;
+    }, 10, 4);
     
     // WordPress handler does not register any modals - site-local publishing only
 }

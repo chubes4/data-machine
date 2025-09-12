@@ -15,7 +15,6 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-// Check minimum requirements and deactivate plugin if not met
 if ( ! dm_check_requirements() ) {
 	return;
 }
@@ -43,10 +42,8 @@ function run_data_machine() {
     dm_register_status_detection_filters();
     dm_register_core_actions();
     
-    // Register create filters
     \DataMachine\Engine\Filters\Create::register();
     
-    // Register AJAX handler classes
     \DataMachine\Core\Admin\Pages\Pipelines\PipelinePageAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\PipelineModalAjax::register();
 }

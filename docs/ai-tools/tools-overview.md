@@ -18,15 +18,6 @@ Available to all AI steps regardless of next pipeline step:
 - **Configuration**: None required (uses WordPress core)
 - **Use Cases**: Content discovery, internal link suggestions
 
-**Read Post** (`read_post`)
-- **Purpose**: Retrieve full content of specific WordPress posts by ID
-- **Configuration**: None required (uses WordPress core)
-- **Use Cases**: Content analysis, detailed content retrieval
-
-**Google Search Console** (`google_search_console`)
-- **Purpose**: SEO performance analysis and optimization opportunities
-- **Configuration**: OAuth2 authentication required
-- **Use Cases**: SEO research, keyword analysis, performance insights
 
 ### Handler-Specific Tools
 
@@ -160,10 +151,6 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
             $google_config = $config['google_search'] ?? [];
             return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
         
-        case 'google_search_console':
-            $oauth_config = apply_filters('dm_retrieve_oauth_keys', [], 'google_search_console');
-            $account = apply_filters('dm_retrieve_oauth_account', [], 'google_search_console');
-            return !empty($oauth_config['client_id']) && !empty($account['access_token']);
     }
     return $configured;
 }, 10, 2);
@@ -194,15 +181,22 @@ AI agents receive available tools based on:
 
 ### Conversation Integration
 
-**Tool Results Formatting**:
-- Structured data converted to readable format
-- Search results formatted for AI consumption
-- Error messages provide actionable feedback
+**AIStepConversationManager** (Centralized State Management):
 
-**Multi-Turn Support**:
-- Tool results preserved in conversation history
-- Context maintained across multiple tool calls
-- Conversation state managed automatically
+All tool results flow through AIStepConversationManager for consistent conversation formatting:
+
+- **Success Messaging**: `generateSuccessMessage()` creates platform-specific completion messages (Twitter: "Tweet posted successfully", WordPress: "Post published successfully")
+- **Tool Result Formatting**: `formatToolResultMessage()` converts tool outputs to AI-consumable conversation messages with proper role assignment
+- **Data Packet Updates**: `updateDataPacketMessages()` maintains current workflow data state across multi-turn conversations
+- **Failure Handling**: `generateFailureMessage()` provides clear error feedback for tool execution failures
+- **Conversation Building**: `buildConversationMessage()` creates standardized message structures for AI consumption
+- **Debug Logging**: `logConversationAction()` tracks conversation state changes and tool interactions
+
+**Tool Results Processing**:
+- All tool responses automatically formatted through AIStepConversationManager
+- Structured data converted to human-readable success messages
+- Platform-specific messaging enables natural AI agent conversation termination
+- Multi-turn context preservation across tool executions
 
 ## Tool Implementation Examples
 

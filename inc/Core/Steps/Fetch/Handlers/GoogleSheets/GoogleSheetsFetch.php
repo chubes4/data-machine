@@ -62,9 +62,8 @@ class GoogleSheetsFetch {
         }
         
         $worksheet_name = trim($config['worksheet_name'] ?? 'Sheet1');
-        $cell_range = trim($config['cell_range'] ?? 'A1:Z1000');
+        $processing_mode = $config['processing_mode'] ?? 'by_row';
         $has_header_row = !empty($config['has_header_row']);
-        $process_limit = max(1, absint($config['row_limit'] ?? 100));
 
         // Get Google Sheets authentication service
         $all_auth = apply_filters('dm_auth_providers', []);
@@ -84,14 +83,14 @@ class GoogleSheetsFetch {
             return ['processed_items' => []];
         }
 
-        // Build Google Sheets API URL
-        $range_param = urlencode($worksheet_name . '!' . $cell_range);
+        // Build Google Sheets API URL - get entire worksheet
+        $range_param = urlencode($worksheet_name);
         $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
         
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Fetching spreadsheet data.', [
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
-            'range' => $cell_range,
+            'processing_mode' => $processing_mode,
             'pipeline_id' => $pipeline_id
         ]);
 
@@ -138,6 +137,7 @@ class GoogleSheetsFetch {
         $rows = $sheet_data['values'];
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Retrieved spreadsheet data.', [
             'total_rows' => count($rows),
+            'processing_mode' => $processing_mode,
             'pipeline_id' => $pipeline_id
         ]);
 
@@ -154,11 +154,96 @@ class GoogleSheetsFetch {
             ]);
         }
 
-        // Process data rows
-        $eligible_items_packets = [];
-        $rows_processed = 0;
+        // Process based on mode
+        switch ($processing_mode) {
+            case 'full_spreadsheet':
+                return $this->process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id);
+            
+            case 'by_column':
+                return $this->process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id);
+            
+            case 'by_row':
+            default:
+                return $this->process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id);
+        }
+    }
 
-        for ($i = $data_start_index; $i < count($rows) && $rows_processed < $process_limit; $i++) {
+    /**
+     * Process entire spreadsheet at once
+     */
+    private function process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
+        $sheet_identifier = $spreadsheet_id . '_' . $worksheet_name . '_full';
+        
+        // Check if already processed
+        $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $sheet_identifier);
+        if ($is_processed) {
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: Full spreadsheet already processed.', [
+                'sheet_identifier' => $sheet_identifier,
+                'pipeline_id' => $pipeline_id
+            ]);
+            return ['processed_items' => []];
+        }
+        
+        // Mark as processed
+        if ($flow_step_id) {
+            do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $sheet_identifier, $job_id);
+        }
+
+        // Build data for all rows
+        $all_data = [];
+        for ($i = $data_start_index; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            if (empty(array_filter($row, 'strlen'))) {
+                continue;
+            }
+            
+            $row_data = [];
+            foreach ($row as $col_index => $cell_value) {
+                $cell_value = trim($cell_value);
+                if (!empty($cell_value)) {
+                    $column_key = $headers[$col_index] ?? 'Column_' . chr(65 + $col_index);
+                    $row_data[$column_key] = $cell_value;
+                }
+            }
+            
+            if (!empty($row_data)) {
+                $all_data[] = $row_data;
+            }
+        }
+
+        $metadata = [
+            'source_type' => 'googlesheets_fetch',
+            'processing_mode' => 'full_spreadsheet',
+            'source_url' => "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}/edit",
+            'spreadsheet_id' => $spreadsheet_id,
+            'worksheet_name' => $worksheet_name,
+            'headers' => $headers,
+            'total_rows' => count($all_data)
+        ];
+
+        $fetch_data = [
+            'data' => [
+                'content_string' => json_encode($all_data, JSON_PRETTY_PRINT),
+                'structured_data' => $all_data,
+                'file_info' => null
+            ],
+            'metadata' => $metadata
+        ];
+
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
+            'total_rows' => count($all_data),
+            'pipeline_id' => $pipeline_id
+        ]);
+
+        return ['processed_items' => [$fetch_data]];
+    }
+
+    /**
+     * Process one row at a time
+     */
+    private function process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
+        // Find next unprocessed row
+        for ($i = $data_start_index; $i < count($rows); $i++) {
             $row = $rows[$i];
             
             // Skip empty rows
@@ -166,91 +251,142 @@ class GoogleSheetsFetch {
                 continue;
             }
 
-            // Create unique identifier for this row
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
             $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $row_identifier);
             if ($is_processed) {
-                do_action('dm_log', 'debug', 'Google Sheets Fetch: Skipping already processed row.', [
-                    'row_identifier' => $row_identifier,
-                    'pipeline_id' => $pipeline_id
-                ]);
                 continue;
             }
             
-            // Mark item as processed immediately after confirming eligibility
+            // Mark as processed
             if ($flow_step_id) {
                 do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $row_identifier, $job_id);
             }
 
-            // Build content string
-            $content_parts = [];
-            $content_parts[] = "Source: Google Sheets";
-            $content_parts[] = "Spreadsheet: " . $spreadsheet_id;
-            $content_parts[] = "Worksheet: " . $worksheet_name;
-            $content_parts[] = "Row: " . ($i + 1);
-            $content_parts[] = "";
-            
-            // Process row data
+            // Build row data
             $row_data = [];
             foreach ($row as $col_index => $cell_value) {
                 $cell_value = trim($cell_value);
-                if (empty($cell_value)) {
-                    continue;
+                if (!empty($cell_value)) {
+                    $column_key = $headers[$col_index] ?? 'Column_' . chr(65 + $col_index);
+                    $row_data[$column_key] = $cell_value;
                 }
-                
-                $column_key = $headers[$col_index] ?? 'Column_' . chr(65 + $col_index);
-                $row_data[$column_key] = $cell_value;
-                $content_parts[] = $column_key . ": " . $cell_value;
             }
             
             if (empty($row_data)) {
-                continue; // Skip rows with no meaningful data
+                continue;
             }
 
-            $content_string = implode("\n", $content_parts);
-
-            // Create metadata
             $metadata = [
                 'source_type' => 'googlesheets_fetch',
-                'item_identifier_to_log' => $row_identifier,
-                'original_id' => $row_identifier,
+                'processing_mode' => 'by_row',
                 'source_url' => "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}/edit",
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet_name' => $worksheet_name,
                 'row_number' => $i + 1,
-                'row_data' => $row_data,
-                'headers' => $headers,
-                'original_date_gmt' => gmdate('Y-m-d\TH:i:s\Z') // Current timestamp as creation time
+                'headers' => $headers
             ];
 
             $fetch_data = [
                 'data' => [
-                    'content_string' => $content_string,
-                    'file_info' => null // No file info for spreadsheet data
+                    'content_string' => json_encode($row_data, JSON_PRETTY_PRINT),
+                    'structured_data' => $row_data,
+                    'file_info' => null
                 ],
                 'metadata' => $metadata
             ];
             
-            $eligible_items_packets[] = $fetch_data;
-            $rows_processed++;
-            
-            do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed spreadsheet row.', [
-                'row_identifier' => $row_identifier,
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed row.', [
                 'row_number' => $i + 1,
                 'pipeline_id' => $pipeline_id
             ]);
+
+            return ['processed_items' => [$fetch_data]];
         }
 
-        $found_count = count($eligible_items_packets);
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: Finished processing Google Sheets data.', [
-            'found_count' => $found_count,
-            'total_rows' => count($rows),
-            'pipeline_id' => $pipeline_id
-        ]);
+        // No unprocessed rows found
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: No unprocessed rows found.', ['pipeline_id' => $pipeline_id]);
+        return ['processed_items' => []];
+    }
 
-        return ['processed_items' => $eligible_items_packets];
+    /**
+     * Process one column at a time
+     */
+    private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
+        if (empty($rows)) {
+            return ['processed_items' => []];
+        }
+
+        // Determine max columns
+        $max_cols = 0;
+        foreach ($rows as $row) {
+            $max_cols = max($max_cols, count($row));
+        }
+
+        // Find next unprocessed column
+        for ($col_index = 0; $col_index < $max_cols; $col_index++) {
+            $column_letter = chr(65 + $col_index);
+            $column_identifier = $spreadsheet_id . '_' . $worksheet_name . '_col_' . $column_letter;
+            
+            // Check if already processed
+            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $column_identifier);
+            if ($is_processed) {
+                continue;
+            }
+            
+            // Build column data
+            $column_data = [];
+            $column_header = $headers[$col_index] ?? 'Column_' . $column_letter;
+            
+            for ($i = $data_start_index; $i < count($rows); $i++) {
+                $cell_value = trim($rows[$i][$col_index] ?? '');
+                if (!empty($cell_value)) {
+                    $column_data[] = $cell_value;
+                }
+            }
+            
+            if (empty($column_data)) {
+                continue;
+            }
+            
+            // Mark as processed
+            if ($flow_step_id) {
+                do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $column_identifier, $job_id);
+            }
+
+            $metadata = [
+                'source_type' => 'googlesheets_fetch',
+                'processing_mode' => 'by_column',
+                'source_url' => "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}/edit",
+                'spreadsheet_id' => $spreadsheet_id,
+                'worksheet_name' => $worksheet_name,
+                'column_letter' => $column_letter,
+                'column_header' => $column_header,
+                'headers' => $headers
+            ];
+
+            $fetch_data = [
+                'data' => [
+                    'content_string' => json_encode([$column_header => $column_data], JSON_PRETTY_PRINT),
+                    'structured_data' => [$column_header => $column_data],
+                    'file_info' => null
+                ],
+                'metadata' => $metadata
+            ];
+            
+            do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed column.', [
+                'column_letter' => $column_letter,
+                'column_header' => $column_header,
+                'pipeline_id' => $pipeline_id
+            ]);
+
+            return ['processed_items' => [$fetch_data]];
+        }
+
+        // No unprocessed columns found
+        do_action('dm_log', 'debug', 'Google Sheets Fetch: No unprocessed columns found.', ['pipeline_id' => $pipeline_id]);
+        return ['processed_items' => []];
     }
 
     /**
@@ -272,19 +408,13 @@ class GoogleSheetsFetch {
         // Worksheet name
         $sanitized['worksheet_name'] = sanitize_text_field($raw_settings['worksheet_name'] ?? 'Sheet1');
         
-        // Cell range
-        $cell_range = sanitize_text_field($raw_settings['cell_range'] ?? 'A1:Z1000');
-        // Basic validation for A1 notation
-        if (!preg_match('/^[A-Z]+\d+:[A-Z]+\d+$/', $cell_range)) {
-            throw new \InvalidArgumentException(esc_html__('Invalid cell range format. Use A1 notation (e.g., A1:D100).', 'data-machine'));
-        }
-        $sanitized['cell_range'] = $cell_range;
+        // Processing mode validation
+        $processing_mode = sanitize_text_field($raw_settings['processing_mode'] ?? 'by_row');
+        $valid_modes = ['by_row', 'by_column', 'full_spreadsheet'];
+        $sanitized['processing_mode'] = in_array($processing_mode, $valid_modes) ? $processing_mode : 'by_row';
         
         // Header row option
         $sanitized['has_header_row'] = !empty($raw_settings['has_header_row']);
-        
-        // Row limit
-        $sanitized['row_limit'] = max(1, min(1000, absint($raw_settings['row_limit'] ?? 100)));
         
         return $sanitized;
     }

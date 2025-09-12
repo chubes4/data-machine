@@ -102,7 +102,7 @@ $tools['tool_name'] = [
 
 ### `ai_request`
 
-**Purpose**: Process AI requests with provider routing and 5-tier priority system message injection
+**Purpose**: Process AI requests with provider routing and modular directive system message injection
 
 **Parameters**:
 - `$request` (array) - AI request data
@@ -113,13 +113,12 @@ $tools['tool_name'] = [
 
 **Return**: Array with AI response
 
-**5-Tier Priority System**: System messages automatically injected in order:
+**4-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
 
-**Priority 10**: Global system prompt (background guidance)
-**Priority 20**: Pipeline system prompt (user configuration)
-**Priority 30**: Tool definitions and directives (usage instructions)
-**Priority 35**: Data packet structure explanation (workflow data format)
-**Priority 40**: WordPress site context (environment info)
+**Priority 10**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
+**Priority 20**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
+**Priority 30**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
+**Priority 50**: WordPress site context (`SiteContextDirective`) - environment info
 
 **Request Structure**:
 ```php
@@ -132,22 +131,19 @@ $request = [
 ];
 ```
 
-**Priority Registration**:
+**4-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
 ```php
 // Priority 10: Global system prompt (background guidance)
-add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt'], 10, 5);
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
 
 // Priority 20: Pipeline system prompt (user configuration)
-add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
 
 // Priority 30: Tool definitions and directives (how to use available tools)
-add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
 
-// Priority 35: Data packet structure explanation (workflow data format)
-add_filter('ai_request', [AIStepDirective::class, 'inject_data_packet_directive'], 35, 5);
-
-// Priority 40: WordPress site context (environment info - lowest priority)
-add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5);
+// Priority 50: WordPress site context (environment info - lowest priority)
+add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
 ## Pipeline Operations Filters
@@ -236,7 +232,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Array of account information
 
-### `dm_get_oauth_url`
+### `dm_oauth_callback`
 
 **Purpose**: Generate OAuth authorization URL
 
@@ -400,18 +396,53 @@ add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_confi
 
 **Return**: String next flow step ID or null if last step
 
-## Handler Directives Filter
+## AI Conversation Management
 
-### `dm_handler_directives`
+### AIStepConversationManager Static Methods
 
-**Purpose**: Register AI directives for specific handlers
+**Purpose**: Centralized conversation state management and message formatting for AI steps
 
-**Parameters**:
-- `$directives` (array) - Current directives array
+**Core Methods**:
 
-**Return**: Array of handler-specific AI directives
-
-**Structure**:
+#### `generateSuccessMessage()`
 ```php
-$directives['handler_slug'] = 'AI instruction text for this handler...';
+AIStepConversationManager::generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string
 ```
+Creates human-readable success messages for tool execution results, enabling natural AI agent conversation termination.
+
+#### `formatToolResultMessage()`
+```php  
+AIStepConversationManager::formatToolResultMessage(string $tool_name, array $tool_result, array $tool_parameters, bool $is_handler_tool = false): array
+```
+Formats tool results into conversation message structure for AI consumption.
+
+#### `updateDataPacketMessages()`
+```php
+AIStepConversationManager::updateDataPacketMessages(array $conversation_messages, array $data): array
+```
+Updates data packet messages in multi-turn conversations to keep AI aware of current data state.
+
+#### `buildConversationMessage()`
+```php
+AIStepConversationManager::buildConversationMessage(string $role, string $content): array
+```
+Creates standardized conversation message structure with proper role assignment.
+
+#### `generateFailureMessage()`
+```php
+AIStepConversationManager::generateFailureMessage(string $tool_name, string $error_message): string
+```
+Generates clear error messages when tools fail to execute properly.
+
+#### `logConversationAction()`
+```php
+AIStepConversationManager::logConversationAction(string $action, array $context = []): void
+```
+Provides debug logging for conversation message generation with context data.
+
+**Key Features**:
+- Platform-specific success message templates (Twitter, WordPress, Google Search, etc.)
+- Clear completion messaging enabling natural conversation termination
+- Multi-turn conversation state preservation
+- Centralized conversation history building
+- Tool result formatting for optimal AI model consumption

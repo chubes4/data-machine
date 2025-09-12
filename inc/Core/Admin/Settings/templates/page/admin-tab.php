@@ -37,7 +37,7 @@ $all_pages = apply_filters('dm_admin_pages', []);
         <th scope="row"><?php esc_html_e('Admin Pages', 'data-machine'); ?></th>
         <td>
             <?php if ($all_pages): ?>
-                <fieldset <?php echo $disabled_attr; ?>>
+                <fieldset <?php echo esc_attr($disabled_attr); ?>>
                     <?php foreach ($all_pages as $slug => $page_config): ?>
                         <?php
                         $page_title = $page_config['menu_title'] ?? $page_config['page_title'] ?? ucfirst($slug);
@@ -48,7 +48,7 @@ $all_pages = apply_filters('dm_admin_pages', []);
                                    name="data_machine_settings[enabled_pages][<?php echo esc_attr($slug); ?>]" 
                                    value="1" 
                                    <?php checked($is_enabled, true); ?>
-                                   <?php echo $disabled_attr; ?>>
+                                   <?php echo esc_attr($disabled_attr); ?>>
                             <?php echo esc_html($page_title); ?>
                         </label>
                     <?php endforeach; ?>
@@ -70,14 +70,14 @@ $all_pages = apply_filters('dm_admin_pages', []);
     <tr>
         <th scope="row"><?php esc_html_e('Clean up job data on failure', 'data-machine'); ?></th>
         <td>
-            <fieldset <?php echo $disabled_attr; ?>>
+            <fieldset <?php echo esc_attr($disabled_attr); ?>>
                 <label for="cleanup_job_data_on_failure">
                     <input type="checkbox" 
                            id="cleanup_job_data_on_failure"
                            name="data_machine_settings[cleanup_job_data_on_failure]" 
                            value="1" 
                            <?php checked($cleanup_enabled, true); ?>
-                           <?php echo $disabled_attr; ?>>
+                           <?php echo esc_attr($disabled_attr); ?>>
                     <?php esc_html_e('Remove job data files when jobs fail', 'data-machine'); ?>
                 </label>
                 <p class="description">

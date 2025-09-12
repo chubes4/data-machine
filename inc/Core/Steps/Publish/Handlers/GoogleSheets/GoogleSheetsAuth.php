@@ -4,7 +4,7 @@
  *
  * Admin-global authentication system providing OAuth functionality with site-level
  * credential storage, refresh token management, and Google Sheets API access.
- * Uses filter-based HTTP requests and centralized logging.
+ * Uses the unified OAuth rewrite system, filter-based HTTP requests and centralized logging.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
@@ -19,7 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsAuth {
 
-    const OAUTH_CALLBACK_ACTION = 'dm_googlesheets_oauth_callback';
     const STATE_TRANSIENT_PREFIX = 'dm_googlesheets_state_'; // Prefix + state value
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets'; // Google Sheets read/write scope
 
@@ -60,7 +59,7 @@ class GoogleSheetsAuth {
             ],
             'client_secret' => [
                 'label' => __('Client Secret', 'data-machine'),
-                'type' => 'password',
+                'type' => 'text',
                 'required' => true,
                 'description' => __('Your Google application Client Secret from console.cloud.google.com', 'data-machine')
             ]
@@ -189,13 +188,6 @@ class GoogleSheetsAuth {
         apply_filters('dm_store_oauth_account', $account_data, 'googlesheets');
     }
 
-    /**
-     * Registers the necessary WordPress action hooks for OAuth flow.
-     * This should be called from the main plugin setup.
-     */
-    public function register_hooks() {
-        add_action('admin_post_' . self::OAUTH_CALLBACK_ACTION, array($this, 'handle_oauth_callback'));
-    }
 
     /**
      * Get the authorization URL for direct connection to Google OAuth
@@ -221,7 +213,7 @@ class GoogleSheetsAuth {
         set_transient(self::STATE_TRANSIENT_PREFIX . $state, 'admin_authenticated', 15 * MINUTE_IN_SECONDS);
 
         // 3. Build authorization URL
-        $callback_url = apply_filters('dm_get_oauth_url', '', 'googlesheets');
+        $callback_url = apply_filters('dm_oauth_callback', '', 'googlesheets');
         
         $auth_params = [
             'client_id' => $client_id,
@@ -238,7 +230,7 @@ class GoogleSheetsAuth {
 
     /**
      * Handles the callback from Google after user authorization.
-     * Hooked to 'admin_post_dm_googlesheets_oauth_callback'.
+     * Called via the unified OAuth rewrite system at /dm-oauth/googlesheets/.
      */
     public function handle_oauth_callback() {
         
@@ -280,7 +272,7 @@ class GoogleSheetsAuth {
         $config = apply_filters('dm_retrieve_oauth_keys', [], 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
-        $callback_url = apply_filters('dm_get_oauth_url', '', 'googlesheets');
+        $callback_url = apply_filters('dm_oauth_callback', '', 'googlesheets');
 
         $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
             'body' => [

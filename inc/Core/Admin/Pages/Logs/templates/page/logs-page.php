@@ -12,9 +12,28 @@ if (!defined('WPINC')) {
     die;
 }
 
-if (!empty($_POST)) {
-    $logs_instance = new \DataMachine\Core\Admin\Pages\Logs\Logs();
-    $logs_instance->handle_form_actions();
+// Handle form submissions directly in template (admin_init timing issues)
+if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
+    // Verify nonce for security
+    if (!wp_verify_nonce(wp_unslash($_POST['dm_logs_nonce'] ?? ''), 'dm_logs_action')) {
+        wp_die(esc_html__('Security check failed.', 'data-machine'));
+    }
+    
+    $action = sanitize_text_field(wp_unslash($_POST['dm_logs_action']));
+    
+    switch ($action) {
+        case 'clear_all':
+            do_action('dm_log', 'clear_all');
+            break;
+            
+        case 'update_log_level':
+            $new_level = sanitize_text_field(wp_unslash($_POST['log_level'] ?? ''));
+            $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
+            if (array_key_exists($new_level, $available_levels)) {
+                do_action('dm_log', 'set_level', $new_level);
+            }
+            break;
+    }
 }
 
 $current_log_level = apply_filters('dm_log_file', 'error', 'get_level');
@@ -110,7 +129,7 @@ if (file_exists($log_file_path)) {
         </p>
         
         <div class="dm-log-actions">
-            <form method="post" action="" class="dm-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
+            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=dm-logs')); ?>" class="dm-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
                 <?php wp_nonce_field('dm_logs_action', 'dm_logs_nonce'); ?>
                 <input type="hidden" name="dm_logs_action" value="clear_all">
                 <button type="submit" class="button">
