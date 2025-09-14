@@ -201,9 +201,7 @@ $result = $google_search_tool->handle_tool_call([
 
 ### Complementary Tools
 
-**Local Search**: Use before Google Search to check internal content
-**Read Post**: Use after Google Search to get detailed content
-**Google Search Console**: Use for SEO-focused research
+**Local Search**: Use before Google Search to check internal content for related posts and existing coverage
 
 ### WordPress Integration
 

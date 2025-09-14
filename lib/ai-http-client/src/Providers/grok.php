@@ -102,7 +102,7 @@ class AI_HTTP_Grok_Provider {
         ], 'Grok');
         
         if (!$result['success']) {
-            throw new Exception('Grok API request failed: ' . $result['error']);
+            throw new Exception('Grok API request failed: ' . esc_html($result['error']));
         }
         
         $raw_response = json_decode($result['data'], true);
@@ -140,7 +140,7 @@ class AI_HTTP_Grok_Provider {
         ], 'Grok Streaming', true, $callback);
         
         if (!$result['success']) {
-            throw new Exception('Grok streaming request failed: ' . $result['error']);
+            throw new Exception('Grok streaming request failed: ' . esc_html($result['error']));
         }
 
         // Return standardized streaming response
@@ -177,7 +177,7 @@ class AI_HTTP_Grok_Provider {
         ], 'Grok');
 
         if (!$result['success']) {
-            throw new Exception('Grok API request failed: ' . $result['error']);
+            throw new Exception('Grok API request failed: ' . esc_html($result['error']));
         }
 
         return json_decode($result['data'], true);
@@ -197,7 +197,7 @@ class AI_HTTP_Grok_Provider {
         }
 
         if (!file_exists($file_path)) {
-            throw new Exception("File not found: {$file_path}");
+            throw new Exception('File not found: ' . esc_html($file_path));
         }
 
         // Grok uses OpenAI-compatible file upload endpoint
@@ -231,7 +231,7 @@ class AI_HTTP_Grok_Provider {
         ], 'Grok File Upload');
 
         if (!$result['success']) {
-            throw new Exception('Grok file upload failed: ' . $result['error']);
+            throw new Exception('Grok file upload failed: ' . esc_html($result['error']));
         }
 
         $response_body = $result['data'];
@@ -264,7 +264,7 @@ class AI_HTTP_Grok_Provider {
         ], 'Grok File Delete');
 
         if (!$result['success']) {
-            throw new Exception('Grok file delete failed: ' . $result['error']);
+            throw new Exception('Grok file delete failed: ' . esc_html($result['error']));
         }
 
         return $result['status_code'] === 200;

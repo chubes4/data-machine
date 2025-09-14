@@ -30,15 +30,39 @@ delete_option( 'dm_reddit_user_meta' );
 delete_option( 'dm_threads_user_meta' );
 delete_option( 'dm_facebook_user_meta' );
 
-// Delete user meta for all users
+// Delete user meta for all users - WordPress compliant approach
 global $wpdb;
-$wpdb->query( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE 'dm_%'" );
+// Use prepared statement for security and WordPress compliance
+$pattern = 'dm_%';
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s", $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
-// Drop custom tables
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_pipelines" );
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_flows" );
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_jobs" );
-$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dm_processed_items" );
+// Clear any related caches
+wp_cache_flush();
+
+// Drop custom tables - WordPress compliant approach
+// Check for proper capabilities (should be admin-only in uninstall context)
+if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+    error_log( 'Data Machine: Starting database cleanup during uninstall' );
+
+    // Drop tables in reverse dependency order
+    $tables_to_drop = [
+        $wpdb->prefix . 'dm_processed_items',
+        $wpdb->prefix . 'dm_jobs',
+        $wpdb->prefix . 'dm_flows',
+        $wpdb->prefix . 'dm_pipelines'
+    ];
+
+    foreach ( $tables_to_drop as $table_name ) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
+        $wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
+        error_log( "Data Machine: Dropped table {$table_name}" );
+    }
+
+    // Clear all WordPress caches to ensure clean state
+    wp_cache_flush();
+
+    error_log( 'Data Machine: Database cleanup completed' );
+}
 
 
 // Clear Action Scheduler jobs if available

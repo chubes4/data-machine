@@ -35,11 +35,15 @@ Unified OAuth2 and API key management:
 
 ### Tool-First AI Architecture
 AI agents use tools to interact with handlers:
-- Handler-specific tools for publish/update operations
-- General tools for search and analysis  
+- Handler-specific tools for publish/update operations (twitter_publish, wordpress_update)
+- General tools for search and analysis (Google Search, Local Search, WebFetch)
 - Automatic tool discovery and configuration
-- AIStepToolParameters class provides unified flat parameter building
-- 5-tier AI message priority system for contextual guidance
+- AIStepToolParameters class provides unified flat parameter building:
+  - Content/title extraction from data packets
+  - Tool metadata integration (tool_definition, tool_name, handler_config)
+  - Engine parameter merging for Update handlers (source_url)
+- Three-layer tool enablement: Global settings → Modal selection → Runtime validation
+- AIStepConversationManager for conversation state and tool result formatting with turn tracking
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
@@ -73,15 +77,33 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- 5-tier message priority system: Global → Pipeline → Tool directives → Data structure → Site context
-- AIStepToolParameters class for unified tool execution
-- Conversation state management
-- Site context injection  
-- Dynamic directive system with handler-specific guidance
-- Tool result formatting
+- 5-tier AI directive priority system with standardized 10-unit spacing for extensibility:
+  - **Priority 10**: GlobalSystemPromptDirective (foundational AI behavior)
+  - **Priority 20**: PipelineSystemPromptDirective (workflow structure visualization)
+  - **Priority 30**: ToolDefinitionsDirective (tool definitions + workflow context)
+  - **Priority 40**: DataPacketStructureDirective (JSON structure explanation)
+  - **Priority 50**: SiteContextDirective (WordPress environment info)
+- AIStepConversationManager for centralized conversation state management:
+  - Turn-based conversation loops with chronological message ordering
+  - AI tool calls recorded before execution with turn number tracking
+  - Enhanced tool result messaging with temporal context ("Turn X")
+  - Conversation completion with natural AI agent termination
+  - Data packet synchronization via `updateDataPacketMessages()`
+- AIStepToolParameters class for unified tool execution:
+  - `buildParameters()` for standard AI tools
+  - `buildForHandlerTool()` for handler tools with engine parameters
+  - Flat parameter structure with content/title extraction
+- Clear tool result messaging enabling natural AI agent conversation termination
+- Site context injection with automatic cache invalidation
+- Tool result formatting with success/failure messages
 
 ### Data Processing
-- DataPacket structure for consistent data flow
+- DataPacket structure for consistent data flow with chronological ordering
+- DataPacketStructureDirective explains JSON format to AI agents:
+  - Root wrapper with data_packets array
+  - Index 0 = newest packet (chronological ordering)
+  - Type-specific fields (handler, attachments, tool_name)
+  - Workflow dynamics and turn-based updates
 - Deduplication tracking
 - Status detection system
 - Comprehensive logging

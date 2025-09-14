@@ -39,6 +39,7 @@ Thumbs.db
 
 # Documentation that should be excluded from distribution
 CLAUDE.md
+docs/
 extensions/
 
 # Temporary and cache files

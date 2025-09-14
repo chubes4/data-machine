@@ -26,7 +26,7 @@ do_action('dm_save_tool_config', $tool_id, $config_data);
 
 // OAuth
 apply_filters('dm_retrieve_oauth_account', [], 'handler');
-apply_filters('dm_get_oauth_url', '', 'provider');
+apply_filters('dm_oauth_callback', '', 'provider');
 $providers = apply_filters('dm_auth_providers', []);
 
 // Execution
@@ -156,30 +156,32 @@ $result = apply_filters('ai_request', [
 
 ### AI Request Priority System
 
-**5-Tier Message Injection Priority System**: AI requests receive multiple system messages in standardized priority order with 10-unit spacing for extensibility:
+**5-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes in standardized priority order with 10-unit spacing for extensibility:
 
-1. **Priority 10 - Global System Prompt** (`AIStepDirective`): User-configured background guidance from settings
-2. **Priority 20 - Pipeline System Prompt** (`AIStepDirective`): User-configured pipeline instructions and internal linking guidance
-3. **Priority 30 - Tool Definitions and Directives** (`AIStepDirective`): Dynamic tool-specific prompts and usage instructions
-4. **Priority 35 - Data Packet Structure Directive** (`AIStepDirective`): Explains workflow data format and structure for AI interpretation
-5. **Priority 40 - WordPress Site Context** (`AIStepDirective`): WordPress environment information (lowest priority)
+1. **Priority 10 - Global System Prompt** (`GlobalSystemPromptDirective`): **HIGHEST PRIORITY** - User-configured foundational instructions that set the overall tone, personality, and core behavior for ALL AI interactions. This is the first message the AI model sees and serves as the master directive that influences every response. Essential for establishing consistent AI behavior across all workflows.
+2. **Priority 20 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): User-configured pipeline instructions and internal linking guidance with complete workflow structure visualization showing AI agent position
+3. **Priority 30 - Tool Definitions and Workflow Context** (`ToolDefinitionsDirective`): Dynamic tool-specific prompts, usage instructions, and flow-specific workflow context with handler tool prioritization
+4. **Priority 40 - Data Packet Structure** (`DataPacketStructureDirective`): JSON structure explanation for AI agents including data packet array format, chronological ordering, and workflow dynamics
+5. **Priority 50 - WordPress Site Context** (`SiteContextDirective`): WordPress environment information including post types, taxonomies, and site metadata (toggleable via settings, lowest priority)
 
 ```php
-// Centralized AI message priority system with standardized spacing
-// Priority 10: Global system prompt (background guidance)
-add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt'], 10, 5);
+// 5-tier modular AI directive system with standardized priority spacing
+// Each directive is a separate class that auto-registers with the ai_request filter
 
-// Priority 20: Pipeline system prompt (user configuration - internal linking instructions)
-add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+// Priority 10: Global system prompt (HIGHEST PRIORITY - foundational AI behavior settings)
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
 
-// Priority 30: Tool definitions and directives (how to use available tools)
-add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);
+// Priority 20: Pipeline system prompt (user configuration + workflow structure visualization)
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
 
-// Priority 35: Data packet structure explanation (workflow data format)
-add_filter('ai_request', [AIStepDirective::class, 'inject_data_packet_directive'], 35, 5);
+// Priority 30: Tool definitions and workflow context (enhanced with flow-specific context)
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
 
-// Priority 40: WordPress site context (environment info - lowest priority)
-add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5);
+// Priority 40: Data packet structure explanation (JSON format and ordering)
+add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5);
+
+// Priority 50: WordPress site context (environment info - toggleable, lowest priority)
+add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
 **AI Step Directive Content**:
@@ -195,16 +197,41 @@ add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5)
 - Cached with automatic invalidation on content changes
 
 **AI Conversation State Management**:
-- Centralized conversation history building from data packets
-- Tool result formatting for optimal AI model consumption
-- Context preservation across multi-turn conversations
-- Specialized formatters for search, publish, and generic tool results
+- **AIStepConversationManager**: Centralized conversation state management and message formatting with turn-based tracking
+- **Turn-Based Conversations**: Multi-turn conversation loops with chronological message ordering using `array_push()` for temporal sequence preservation
+- **AI Action Records**: AI tool calls are recorded in conversation history before execution with turn number tracking
+- **Tool Result Messaging**: Enhanced tool result messages with temporal context (`Turn X`) and specialized formatting for different tool types
+- **Data Packet Synchronization**: Dynamic data packet updates in conversation messages via `updateDataPacketMessages()`
+- **Conversation Completion**: Natural AI agent termination with clear success/failure messaging and handler tool execution tracking
+
+```php
+// Conversation Management Methods with Turn Tracking
+AIStepConversationManager::formatToolCallMessage($tool_name, $tool_parameters, $turn_count);
+AIStepConversationManager::formatToolResultMessage($tool_name, $tool_result, $tool_parameters, $is_handler_tool, $turn_count);
+AIStepConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
+AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
+AIStepConversationManager::buildConversationMessage($role, $content);
+AIStepConversationManager::generateFailureMessage($tool_name, $error_message);
+AIStepConversationManager::logConversationAction($action, $context);
+```
+
+**Conversation Flow Architecture**:
+- **Chronological Ordering**: `array_push()` maintains temporal sequence in conversation messages (newest at end)
+- **Turn Counter**: Each conversation iteration increments turn counter for tracking multi-turn executions
+- **State Preservation**: Complete conversation history maintained across tool executions with context awareness
+- **Message Types**: System directives → User data → AI responses → Tool calls → Tool results in chronological order
+
+**Tool Result Message Examples**:
+- **Google Search**: "SEARCH COMPLETE: Found {count} results for \"{query}\".\nSearch Results:" or "SEARCH COMPLETE: No results found for \"{query}\". Search task finished."
+- **WordPress Publish**: "SUCCESS: WordPress post published successfully. Title: '{title}' is now live at {url} (ID: {id}). Your content has been published as requested."
+- **Default**: "SUCCESS: {Tool Name} completed successfully. The requested operation has been finished as requested." (filtered via `dm_tool_success_message`)
 
 **AI Step Execution Model**:
 - AI steps can run standalone using flow-level user messages when no fetch step precedes
 - System prompts (pipeline-level) provide consistent behavior templates
 - User messages (flow-level) enable different prompts per flow instance
 - Multi-turn conversation support with context preservation across tool executions
+- Conversation state management through AIStepConversationManager for clear AI communication
 
 ### Tool Management
 
@@ -227,7 +254,7 @@ $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
 
 **Tool Categories**:
 - **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
-- **General Tools**: Universal (Google Search, Local Search, Read Post, Google Search Console) - available to all AI agents
+- **General Tools**: Universal (Google Search, Local Search, WebFetch, WordPress Post Reader) - available to all AI agents
 
 ### Tool Registration
 
@@ -259,16 +286,32 @@ add_filter('ai_tools', function($tools) {
         'parameters' => ['query' => ['type' => 'string', 'required' => true]]
         // No 'handler' property = universal tool
     ];
-    
-    $tools['read_post'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\ReadPost',
+
+    $tools['local_search'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
         'method' => 'handle_tool_call',
-        'description' => 'Read full content of existing WordPress posts/pages by ID',
+        'description' => 'Search WordPress site for existing content',
         'requires_config' => false,
-        'parameters' => [
-            'post_id' => ['type' => 'integer', 'required' => true],
-            'include_meta' => ['type' => 'boolean', 'required' => false]
-        ]
+        'parameters' => ['query' => ['type' => 'string', 'required' => true]]
+        // No 'handler' property = universal tool
+    ];
+
+    $tools['web_fetch'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\WebFetch',
+        'method' => 'handle_tool_call',
+        'description' => 'Retrieve and process web page content (50K character limit)',
+        'requires_config' => false,
+        'parameters' => ['url' => ['type' => 'string', 'required' => true]]
+        // No 'handler' property = universal tool
+    ];
+
+    $tools['wordpress_post_reader'] = [
+        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\WordPressPostReader',
+        'method' => 'handle_tool_call',
+        'description' => 'Read full WordPress post content by URL for detailed analysis',
+        'requires_config' => false,
+        'parameters' => ['source_url' => ['type' => 'string', 'required' => true]]
+        // No 'handler' property = universal tool
     ];
     return $tools;
 });
@@ -351,8 +394,8 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 **Tool Capabilities**:
 - **Google Search**: Web search, site restriction (API key + Search Engine ID required)
 - **Local Search**: WordPress WP_Query search (no configuration needed)
-- **Read Post**: Read full content of existing WordPress posts/pages by ID (no configuration needed)
-- **Google Search Console**: SEO performance analysis, keyword opportunities, internal linking suggestions (OAuth2 required)
+- **WebFetch**: Retrieve and process web page content (50K character limit, no configuration needed)
+- **WordPress Post Reader**: Single WordPress post content retrieval by URL (no configuration needed)
 
 ## Handler Matrix
 
@@ -384,8 +427,8 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 |-------------------|----------|--------------|
 | Google Search | API Key + Search Engine ID | Web search, site restriction, 1-10 results |
 | Local Search | None | WordPress search, 1-20 results |
-| Read Post | None | Read full content of WordPress posts/pages by ID, optional meta fields |
-| Google Search Console | OAuth2 | SEO performance analysis, keyword opportunities, internal link suggestions |
+| WebFetch | None | Web page content retrieval, 50K character limit, HTML processing |
+| WordPress Post Reader | None | Single WordPress post content retrieval by URL, full post analysis |
 
 ## DataPacket Structure
 
@@ -714,7 +757,7 @@ composer install && composer test
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
 **Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json (containing 90+ filter registrations)
-**Key Auto-loaded Classes**: `AIStepDirective.php`, `AIStepToolParameters.php` - automatic filter registration and parameter building
+**Key Auto-loaded Classes**: Modular directive classes (`GlobalSystemPromptDirective.php`, `PipelineSystemPromptDirective.php`, `ToolDefinitionsDirective.php`, `DataPacketStructureDirective.php`, `SiteContextDirective.php`), `AIStepToolParameters.php`, `AIStepConversationManager.php` - automatic filter registration, parameter building, and conversation state management
 
 ## Extensions
 
@@ -826,7 +869,7 @@ apply_filters('dm_clear_oauth_account', false, 'twitter');
 
 // Configuration with validation  
 $is_configured = apply_filters('dm_tool_configured', false, 'twitter');
-$provider_url = apply_filters('dm_get_oauth_url', '', 'twitter');
+$provider_url = apply_filters('dm_oauth_callback', '', 'twitter');
 
 // Provider discovery
 $providers = apply_filters('dm_auth_providers', []);
@@ -852,7 +895,6 @@ $disabled = $requires_config && !$tool_configured;
 - **Facebook**: OAuth2 (app_id/app_secret)
 - **Threads**: OAuth2 (same as Facebook)
 - **Google Sheets**: OAuth2 (client_id/client_secret)
-- **Google Search Console**: OAuth2 (client_id/client_secret)
 - **Bluesky**: App Password (username/app_password)
 - **Google Search**: API Key + Custom Search Engine ID (not OAuth)
 

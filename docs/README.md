@@ -31,10 +31,10 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [WordPress Update](handlers/update/wordpress-update.md) - Modify existing WordPress content
 
 ### AI Tools
+- [Tools Overview](ai-tools/tools-overview.md) - Complete AI tools system architecture
 - [Google Search](ai-tools/google-search.md) - Web search with Custom Search API
 - [Local Search](ai-tools/local-search.md) - WordPress internal search
-- [Read Post](ai-tools/read-post.md) - Post content retrieval  
-- [Google Search Console](ai-tools/google-search-console.md) - SEO performance analysis
+- [WebFetch](ai-tools/web-fetch.md) - Web page content retrieval and processing (50K limit)
 
 ### API Reference
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
@@ -71,10 +71,10 @@ docs/
 │   └── update/
 │       └── wordpress-update.md         # WordPress content updates
 ├── ai-tools/
+│   ├── tools-overview.md                # AI tools system architecture
 │   ├── google-search.md                # Web search tool
 │   ├── local-search.md                 # WordPress internal search
-│   ├── read-post.md                    # Post content retrieval
-│   └── google-search-console.md        # SEO performance analysis
+│   └── web-fetch.md                     # Web content retrieval (50K limit)
 ├── admin-interface/
 │   ├── pipeline-builder.md             # Visual interface
 │   ├── settings-configuration.md       # Configuration options
@@ -136,8 +136,8 @@ docs/
 **General Tools (Universal)**
 - Google Search - Web search with Custom Search API
 - Local Search - WordPress internal content search
-- Read Post - Detailed WordPress post content retrieval
-- Google Search Console - OAuth2 SEO performance analysis
+- WebFetch - Web page content retrieval (50K character limit)
+- WordPress Post Reader - Single WordPress post content retrieval by URL
 
 **Handler Tools** (Generated per handler)
 - Publishing tools for each platform (twitter_publish, facebook_publish, etc.)
@@ -145,7 +145,7 @@ docs/
 
 ### ✅ Authentication Systems
 
-**OAuth 2.0** - Reddit, Google Sheets, Facebook, Threads, Google Search Console
+**OAuth 2.0** - Reddit, Google Sheets, Facebook, Threads
 **OAuth 1.0a** - Twitter
 **App Passwords** - Bluesky
 **API Keys** - Google Search, AI providers
@@ -177,11 +177,26 @@ docs/
 - Data packet structure and flow
 - Deduplication and processed items tracking
 
-### AI Integration  
+### AI Integration
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- 5-tier AI directive system with auto-registration:
+  - GlobalSystemPromptDirective (Priority 10 - foundational behavior)
+  - PipelineSystemPromptDirective (Priority 20 - workflow visualization)
+  - ToolDefinitionsDirective (Priority 30 - usage instructions)
+  - DataPacketStructureDirective (Priority 40 - JSON format explanation)
+  - SiteContextDirective (Priority 50 - WordPress environment)
+- AIStepConversationManager for centralized conversation state management:
+  - Turn-based conversation loops with chronological message ordering
+  - AI tool calls recorded before execution with turn number tracking
+  - Enhanced tool result messaging with temporal context
+  - Data packet synchronization via updateDataPacketMessages()
 - Tool-first architecture for agentic execution
+- AIStepToolParameters for unified flat parameter building:
+  - buildParameters() for standard AI tools
+  - buildForHandlerTool() for handler tools with engine parameters
+  - Content/title extraction from data packets
 - Context-aware processing with WordPress site context
-- Conversation state management
+- Clear tool result messaging enabling natural conversation termination
 
 ### Extension System
 - Filter-based service discovery
@@ -207,7 +222,7 @@ Fetch → AI → Publish → AI → Publish for platform-specific optimization
 Fetch → AI → Update workflow for improving existing content
 
 ### Research and Analysis
-AI with Google Search, Local Search, and Read Post tools for comprehensive content analysis
+AI with Google Search and Local Search tools for comprehensive content analysis
 
 ## Integration Notes
 

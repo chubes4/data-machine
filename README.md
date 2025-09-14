@@ -2,13 +2,13 @@
 
 AI-first WordPress plugin for content processing workflows. Visual pipeline builder with multi-provider AI integration.
 
-[![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
+[![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 5-Tier AI Request Priority System, Dynamic AI Directives, AIStepToolParameters, Site Context Integration, Three-Layer Tool Management, Social Publishing, OAuth System, Headless Mode
+**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 5-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Pipeline Workflow Context, Site Context Integration, Three-Layer Tool Management, Social Publishing, OAuth System, Headless Mode
 
-**Requirements**: WordPress 5.0+, PHP 8.0+, Composer
+**Requirements**: WordPress 6.0+, PHP 8.0+, Composer
 
 ## Architecture
 
@@ -16,9 +16,9 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 
 **Example**: Automated Tech News Twitter Feed
 - **Pipeline Template**: Fetch → AI → Twitter with system prompt "You are a tech news curator. Extract key insights and create engaging tweets that highlight innovation and industry impact. Maintain a professional but accessible tone."
-- **Flow A** (Independent Agent): TechCrunch + Hacker News RSS → AI agent instance → user message "Focus on AI/ML breakthroughs and venture funding" → Twitter (every 2 hours)
-- **Flow B** (Independent Agent): Reddit r/technology + GitHub trending → AI agent instance → user message "Focus on open-source projects and developer tools" → Twitter (every 4 hours)
-- **Flow C** (Independent Agent): VentureBeat + Product Hunt → AI agent instance → user message "Focus on startup launches and product innovations" → Twitter (every 6 hours)
+- **Flow A**: TechCrunch RSS → AI agent → user message "Focus on AI/ML breakthroughs and venture funding" → Twitter (every 2 hours)
+- **Flow B**: Reddit r/technology → AI agent → user message "Focus on open-source projects and developer tools" → Twitter (every 4 hours)  
+- **Flow C**: VentureBeat RSS → AI agent → user message "Focus on startup launches and product innovations" → Twitter (every 6 hours)
 
 ## Quick Start
 
@@ -42,14 +42,10 @@ AI-first WordPress plugin for content processing workflows. Visual pipeline buil
 2. Add credentials at Settings → Data Machine → Tool Configuration
 3. Free tier: 100 queries/day
 
-**Google Search Console** (optional):
-1. Create OAuth2 app with Google Console API access
-2. Add credentials at Settings → Data Machine → Tool Configuration
-3. Provides SEO analysis, keyword opportunities, internal linking suggestions
 
 **OAuth Providers**:
 - Twitter: OAuth 1.0a
-- Reddit/Facebook/Threads/Google Sheets/Google Search Console: OAuth2
+- Reddit/Facebook/Threads/Google Sheets: OAuth2
 - Bluesky: App Password
 
 Auth via `/dm-oauth/{provider}/` popup flow.
@@ -105,7 +101,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
 **Update Handlers**: WordPress Update (existing post/page modification via source_url)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
-**General Tools**: Google Search, Local Search, Read Post, Google Search Console
+**General Tools**: Google Search, Local Search, WebFetch (50K character limit), WordPress Post Reader
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -128,10 +124,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 **Settings** (WordPress Settings → Data Machine):
 - Engine Mode (headless), page controls, tool toggles
-- Site Context toggle (WordPress info injection)  
-- 5-Tier AI priority system: Global system prompt → Pipeline prompts → Tool directives → Data packet structure → Site context
-- Dynamic AI directives with tool-specific guidance
-- AIStepToolParameters flat parameter architecture
+- Site Context toggle (WordPress info injection)
+- 5-Tier AI Directive Priority System: Global system prompt → Pipeline prompts → Tool definitions → Data packet structure → Site context
+- AIStepConversationManager for multi-turn conversation state management with turn tracking and chronological message ordering
+- AIStepToolParameters flat parameter architecture with content extraction
 - Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies)
 - Three-layer tool management (global → modal → validation)
@@ -145,7 +141,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, 5-tier AI request priority system, AIStepToolParameters class for unified tool execution. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, 5-tier AI directive system with auto-registration (GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

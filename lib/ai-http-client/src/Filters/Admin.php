@@ -56,7 +56,7 @@ function ai_http_render_template($template_name, $data = []) {
 
 // AI Component Rendering filter - simplified to return only table rows
 // Usage: echo apply_filters('ai_render_component', '');
-// Usage: echo apply_filters('ai_render_component', '', ['selected_provider' => 'anthropic', 'selected_model' => 'claude-3-sonnet']);
+// Usage: echo apply_filters('ai_render_component', '', ['selected_provider' => 'anthropic', 'selected_model' => 'claude-3-5-sonnet-20241022']);
 add_filter('ai_render_component', function($html, $config = []) {
     
     // Use provided configuration or defaults

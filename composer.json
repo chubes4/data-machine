@@ -6,7 +6,7 @@
         "php": ">=8.0",
         "monolog/monolog": "^3.9",
         "abraham/twitteroauth": "^7.0",
-        "woocommerce/action-scheduler": "^3.9"
+    "woocommerce/action-scheduler": "^3.9"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0",
@@ -33,6 +33,7 @@
             "inc/Core/Database/Flows/FlowsFilters.php",
             "inc/Core/Admin/Modal/ModalFilters.php",
             "inc/Core/Admin/Pages/Pipelines/PipelinesFilters.php",
+            "inc/Core/Admin/Pages/Pipelines/Filters/PipelineTemplatesFilters.php",
             "inc/Core/Admin/Settings/SettingsFilters.php",
             "inc/Core/Admin/Pages/Logs/LogsFilters.php",
             "inc/Core/Admin/Pages/Jobs/JobsFilters.php",
@@ -53,7 +54,10 @@
             "inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyFilters.php",
             "inc/Core/Steps/AI/AIStepFilters.php",
             "inc/Core/Steps/AI/Tools/GeneralToolsFilters.php",
-            "inc/Core/Steps/AI/AIStepDirective.php",
+            "inc/Core/Steps/AI/Directives/GlobalSystemPromptDirective.php",
+            "inc/Core/Steps/AI/Directives/PipelineSystemPromptDirective.php",
+            "inc/Core/Steps/AI/Directives/ToolDefinitionsDirective.php",
+            "inc/Core/Steps/AI/Directives/SiteContextDirective.php",
             "inc/Core/Steps/Update/UpdateStepFilters.php",
             "inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
             "inc/Engine/Filters/FilesRepository.php"

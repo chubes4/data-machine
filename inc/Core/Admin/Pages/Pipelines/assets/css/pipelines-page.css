@@ -1,0 +1,894 @@
+/**
+ * Data Machine Pipeline+Flow Interface Styles
+ * 
+ * Clean slate styles for the Pipeline+Flow two-layer architecture.
+ * Component-based design with proper namespace isolation.
+ * PAGE-LEVEL STYLES ONLY - Modal styles in pipelines-modal.css
+ *
+ * @since 1.0.0
+ */
+
+/* CSS Custom Properties for consistent values */
+:root {
+    --dm-color-text-muted: #666;
+    --dm-color-text-secondary: #646970;
+    --dm-color-border: #ddd;
+    --dm-color-border-light: #e1e1e1;
+    --dm-spacing-xs: 4px;
+    --dm-spacing-sm: 8px;
+    --dm-spacing-md: 12px;
+    --dm-spacing-lg: 20px;
+    --dm-border-radius: 4px;
+    --dm-border-radius-lg: 8px;
+}
+
+/* Base page container */
+.dm-pipelines-page {
+    padding: 20px;
+}
+
+/* Admin header layout */
+.dm-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dm-admin-header-left {
+    flex: 1;
+}
+
+.dm-admin-header-right {
+    flex-shrink: 0;
+    margin-left: 20px;
+    align-self: flex-start;
+    margin-top: 10px;
+}
+
+/* Pipeline cards */
+.dm-pipeline-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dm-placeholder-pipeline {
+    border: 2px dashed #ddd;
+    background: #fafafa;
+}
+
+/* Separator between pipeline cards - simple, clean, aligned with card content */
+.dm-pipelines-list .dm-pipeline-card {
+    position: relative; /* enable pseudo-element positioning */
+}
+
+.dm-pipelines-list .dm-pipeline-card + .dm-pipeline-card::before {
+    content: "";
+    position: absolute;
+    top: -12px; /* sits slightly above the card to visually separate */
+    left: 20px; /* align with card inner padding */
+    right: 20px;
+    height: 1px;
+    background: #efefef; /* subtle neutral separator */
+    border-radius: 1px;
+    pointer-events: none;
+    opacity: 1;
+}
+
+/* Explicit separator element between pipeline cards */
+.dm-pipelines-list .dm-separator {
+    height: 1px;
+    background: linear-gradient(to right, rgba(0,0,0,0.06), rgba(0,0,0,0.03));
+    margin: 12px 20px; /* aligns with card padding */
+    border-radius: 1px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+}
+
+/* Slightly larger gap on small screens for touch targets */
+@media (max-width: 600px) {
+    .dm-pipelines-list .dm-separator {
+        margin: 18px 12px;
+    }
+}
+
+/* Pipeline header */
+.dm-pipeline-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dm-pipeline-title-section {
+    flex: 1;
+}
+
+.dm-pipeline-title-input {
+    font-size: 18px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: var(--dm-border-radius);
+    width: 100%;
+    max-width: 400px;
+}
+
+.dm-pipeline-title-input:focus {
+    border-color: #0073aa;
+    background: #fff;
+    outline: none;
+}
+
+
+/* Pipeline sections */
+.dm-pipeline-steps-section,
+.dm-pipeline-flows {
+    padding: 20px;
+}
+
+.dm-section-header h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.dm-section-description {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 13px;
+}
+
+/* Pipeline steps - horizontal flexbox layout */
+.dm-pipeline-steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Universal step containers */
+.dm-step-container {
+    display: flex;
+    align-items: center;
+    flex: 0 0 160px;
+    margin: 15px 0;
+}
+
+/* Step cards */
+.dm-step-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    flex: 1;
+    height: 100px;
+    width: 150px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Expandable card states */
+.dm-step-card.dm-expanded {
+    height: auto;
+    overflow: visible;
+    transition: all 0.3s ease;
+}
+
+/* AI Step horizontal expansion - pattern-aligned container expansion */
+.dm-step-container[data-step-type="ai"] .dm-step-card.dm-expanded {
+    min-width: auto;        /* Override fixed 150px width */
+    max-width: none;        /* Remove width constraints */  
+    width: 200px;           /* Expand to 200px */
+}
+
+/* Expand container to accommodate wider AI card */
+.dm-step-container[data-step-type="ai"]:has(.dm-step-card.dm-expanded) {
+    flex: 0 0 220px;        /* Expand from 160px to 220px */
+}
+
+/* AI Prompt Display and Editing */
+.dm-prompt-display {
+    margin-top: 8px;
+}
+
+/* Prompt excerpt styling removed - single textarea used for all states */
+
+/* AI prompt textarea styling */
+.dm-ai-prompt-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: var(--dm-border-radius);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 100px;
+    background: #fff;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.dm-ai-prompt-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+}
+
+.dm-ai-prompt-input::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+/* AI prompt always visible - no expansion state visibility rules */
+
+/* User message styling for flow step cards */
+.dm-user-message-display {
+    margin-top: 8px;
+}
+
+.dm-user-message-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: var(--dm-border-radius);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-sizing: border-box;
+}
+
+.dm-user-message-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+}
+
+.dm-user-message-input::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+.dm-expand-toggle {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    padding: 2px 4px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.dm-expand-toggle:hover {
+    background: #fff;
+    border-color: #999;
+}
+
+.dm-expand-toggle .dashicons {
+    width: 12px;
+    height: 12px;
+    font-size: 12px;
+}
+
+/* Initial state - expansion toggle is hidden by default until JavaScript determines if it's needed */
+.dm-expand-toggle--hidden {
+    display: none;
+}
+
+
+.dm-step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+
+.dm-step-title {
+    font-weight: 600;
+    color: #333;
+}
+
+
+
+
+/* Flow section */
+.dm-flows-header h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.dm-placeholder-message {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    font-style: italic;
+}
+
+.dm-placeholder-message p {
+    margin: 0;
+}
+
+/* Flow instance cards */
+.dm-flow-instance-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+
+/* Flow header */
+.dm-flow-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+}
+
+.dm-flow-title-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dm-flow-title-input {
+    font-size: 16px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 6px 8px;
+    border-radius: var(--dm-border-radius);
+    flex: 1;
+    max-width: 300px;
+    height: 28px;
+    box-sizing: border-box;
+}
+
+.dm-flow-title-input:focus {
+    border-color: #0073aa;
+    background: #fff;
+    outline: none;
+}
+
+.dm-flow-status {
+    margin-top: 4px;
+}
+
+.dm-schedule-status {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+
+/* Flow steps section */
+.dm-flow-steps-section {
+    padding: 36px 18px;
+}
+
+.dm-flow-steps-header {
+    margin-bottom: 12px;
+}
+
+.dm-flow-steps-header h5 {
+    margin: 0;
+    color: #555;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dm-flow-steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Flow step containers - uniform sizing, just different styling */
+.dm-flow-steps .dm-step-card {
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+}
+
+.dm-flow-steps .dm-step-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.dm-flow-step-info {
+    padding-top: 8px;
+}
+
+/* Handler customization badges */
+.dm-handler-customizations {
+    margin-top: 8px;
+}
+
+.dm-handler-customizations div {
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 2px 0;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.dm-handler-customizations div {
+    background: #f0f0f0;
+}
+
+/* Flow placeholder when no pipeline steps exist */
+.dm-flow-placeholder {
+    text-align: center;
+    padding: 30px 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.dm-flow-placeholder-text {
+    margin: 0;
+    font-size: 14px;
+}
+
+.dm-no-config {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+}
+
+
+.dm-flow-meta {
+    padding: 8px 16px;
+    border-top: 1px solid #eee;
+    background: #f9f9f9;
+}
+
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .dm-pipelines-page {
+        padding: 10px;
+    }
+    
+    .dm-pipeline-steps,
+    .dm-flow-steps {
+        flex-direction: column;
+    }
+    
+    .dm-step-container,
+    .dm-step-card {
+        min-width: auto;
+        max-width: none;
+        flex: 1;
+    }
+    
+    .dm-pipeline-header,
+    .dm-flow-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .dm-flow-title-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .dm-flow-instance-card {
+        margin-bottom: 20px;
+    }
+    
+    .dm-pipeline-title-input,
+    .dm-flow-title-input {
+        max-width: none;
+        width: 100%;
+    }
+    
+    /* AI step expansion disabled on mobile - follows responsive pattern */
+    .dm-step-container[data-step-type="ai"] .dm-step-card.dm-expanded {
+        width: auto !important; /* Disable expansion on mobile */
+    }
+    
+    .dm-step-container[data-step-type="ai"]:has(.dm-step-card.dm-expanded) {
+        flex: 1 !important;     /* Mobile flex pattern */
+    }
+}
+
+/* Empty step styling - minimal visual distinction */
+.dm-step-card--empty {
+    border: 1px dashed #ddd !important;
+}
+
+/* Empty step content styling - uses same card structure as populated steps */
+.dm-step-empty-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.dm-step-add-button {
+    margin: 0;
+}
+
+/* Delete button styling - WordPress standard */
+.button-link-delete {
+    color: #d63638 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-decoration: none;
+}
+
+.button-link-delete:hover {
+    color: #d63638 !important;
+    background: transparent !important;
+    text-decoration: underline;
+}
+
+/* Red delete button styling - secondary style with red border and text */
+.button-delete {
+    background: #fff !important;
+    border-color: #d63638 !important;
+    color: #d63638 !important;
+}
+
+.button-delete:hover,
+.button-delete:focus {
+    background: #f8f9fa !important;
+    border-color: #b32d2e !important;
+    color: #b32d2e !important;
+}
+
+/* Configure button styling - WordPress admin blue */
+.button-link-configure {
+    color: #0073aa !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-decoration: none;
+}
+
+.button-link-configure:hover {
+    color: #0073aa !important;
+    background: transparent !important;
+    text-decoration: underline;
+}
+
+/* Universal data flow arrows - proper flexbox child */
+.dm-data-flow-arrow {
+    margin: 12px;
+    color: #666;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.dm-data-flow-arrow .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+
+/* Flow context - smaller arrows for nested flow steps */
+.dm-flow-steps .dm-data-flow-arrow {
+    color: #888;
+    font-size: 14px;
+}
+
+.dm-flow-steps .dm-data-flow-arrow .dashicons {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+}
+/* Page-level pipeline header with dropdown and add button */
+.dm-pipeline-page-header {
+    display: flex;
+    align-items: center;
+    gap: var(--dm-spacing-md);
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+/* Pipeline selection dropdown */
+.dm-pipeline-dropdown {
+    min-width: 200px;
+    max-width: 300px;
+    flex-grow: 1;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 6px 8px;
+    border: 1px solid var(--dm-color-border);
+    border-radius: var(--dm-border-radius);
+    background: #fff;
+}
+
+.dm-pipeline-dropdown:focus {
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+    outline: none;
+}
+
+/* Responsive behavior for smaller screens */
+@media screen and (max-width: 782px) {
+    .dm-pipeline-page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .dm-pipeline-dropdown {
+        max-width: none;
+        margin-bottom: var(--dm-spacing-sm);
+    }
+}
+
+/* Loading state for pipeline switching */
+.dm-pipeline-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--dm-color-text-muted);
+    font-style: italic;
+}
+
+/* Auto-save status indicator styles removed for silent auto-save */
+
+
+/* Drag & Drop Styling */
+
+/* Hover state for draggable step cards - ONLY pipeline step cards */
+.dm-pipeline-steps .dm-step-card:not(.dm-step-card--empty):hover {
+    cursor: grab;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #0073aa;
+    transition: all 0.2s ease;
+}
+
+/* Dragging state */
+.dm-step-container.dm-dragging .dm-step-card {
+    cursor: grabbing;
+    transform: rotate(3deg);
+    opacity: 0.8;
+    z-index: 1000;
+}
+
+/* Drag placeholder styling */
+.dm-step-drag-placeholder {
+    border: 2px dashed #0073aa !important;
+    background: rgba(0, 115, 170, 0.1) !important;
+    border-radius: 6px;
+    opacity: 0.7;
+    width: 150px;
+    height: 100px;
+    margin: 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dm-step-drag-placeholder::before {
+    content: "Drop here";
+    color: #0073aa;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Sortable UI adjustments */
+.ui-sortable-helper {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+}
+
+/* Prevent text selection during drag */
+.ui-sortable-helper * {
+    user-select: none;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Hidden element utility */
+.dm-hidden {
+    display: none;
+}
+
+/* WordPress-style admin notices */
+.dm-admin-notice {
+    background: #fff;
+    border-left: 4px solid #00a32a;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    margin: 5px 0 15px;
+    padding: 1px 12px;
+    position: relative;
+    border-radius: 3px;
+}
+
+.dm-admin-notice--error {
+    border-left-color: #d63638;
+}
+
+.dm-admin-notice--warning {
+    border-left-color: #dba617;
+}
+
+.dm-admin-notice--info {
+    border-left-color: #72aee6;
+}
+
+.dm-admin-notice p {
+    margin: 0.5em 0;
+    padding: 2px;
+}
+
+.dm-admin-notice--dismissible {
+    padding-right: 38px;
+    position: relative;
+}
+
+.dm-admin-notice .notice-dismiss {
+    background: none;
+    border: none;
+    border-radius: 0;
+    color: #787c82;
+    cursor: pointer;
+    float: right;
+    font-size: 13px;
+    height: 38px;
+    margin: 0;
+    overflow: hidden;
+    padding: 9px;
+    position: absolute;
+    right: 1px;
+    text-align: center;
+    text-decoration: none;
+    top: 0;
+    width: 38px;
+    z-index: 1;
+}
+
+.dm-admin-notice .notice-dismiss:hover,
+.dm-admin-notice .notice-dismiss:active {
+    color: #d63638;
+}
+
+.dm-admin-notice .notice-dismiss:focus {
+    box-shadow: 0 0 0 1px #72aee6, 0 0 2px 1px rgba(54, 144, 192, 0.8);
+    outline: 2px solid transparent;
+}
+
+/* === Flow Reordering Controls === */
+
+/* Flow reorder controls container */
+.dm-flow-reorder-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-right: 8px;
+}
+
+/* Clean reorder arrow icons following expand-toggle pattern */
+.dm-reorder-arrow-up,
+.dm-reorder-arrow-down {
+    cursor: pointer;
+    color: #646970;
+    padding: 1px;
+    border-radius: 3px;
+    transition: all 0.15s ease-in-out;
+    display: inline-block;
+}
+
+.dm-reorder-arrow-up:hover,
+.dm-reorder-arrow-down:hover {
+    color: #0073aa;
+    background: rgba(0, 115, 170, 0.1);
+}
+
+.dm-reorder-arrow-up .dashicons,
+.dm-reorder-arrow-down .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+}
+
+/* Hidden state */
+.dm-reorder-arrow-up.dm-hidden,
+.dm-reorder-arrow-down.dm-hidden {
+    display: none;
+}
+
+/* Update flow header to accommodate reorder controls */
+.dm-flow-header {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+/* === Flow Actions === */
+
+/* Flow actions container */
+.dm-flow-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Duplicate flow button styling - neutral gray style */
+.dm-duplicate-flow-btn {
+    background: #fff !important;
+    border-color: #7e8993 !important;
+    color: #7e8993 !important;
+    position: relative;
+    font-size: 12px;
+}
+
+.dm-duplicate-flow-btn:hover,
+.dm-duplicate-flow-btn:focus {
+    background: #f8f9fa !important;
+    border-color: #646970 !important;
+    color: #646970 !important;
+    box-shadow: 0 0 0 1px #646970;
+}
+
+.dm-duplicate-flow-btn:disabled {
+    background: #f0f0f1 !important;
+    border-color: #dcdcde !important;
+    color: #a7aaad !important;
+    cursor: not-allowed;
+}
+
+/* Duplicated flow highlight animation */
+.dm-flow-duplicated {
+    border-color: #00a32a !important;
+    background: #f0f8f1 !important;
+    box-shadow: 0 2px 8px rgba(0, 163, 42, 0.15);
+    animation: dm-duplicate-highlight 2s ease-in-out;
+}
+
+@keyframes dm-duplicate-highlight {
+    0% {
+        border-color: #00a32a;
+        background: #f0f8f1;
+        box-shadow: 0 2px 8px rgba(0, 163, 42, 0.15);
+    }
+    50% {
+        border-color: #00a32a;
+        background: #f0f8f1;
+        box-shadow: 0 4px 12px rgba(0, 163, 42, 0.25);
+    }
+    100% {
+        border-color: #ddd;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+}
+
+/* Responsive flow actions - stack on small screens */
+@media (max-width: 600px) {
+    .dm-flow-actions {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .dm-flow-actions .button-small {
+        font-size: 11px;
+        padding: 2px 8px;
+        min-height: 28px;
+    }
+}
+

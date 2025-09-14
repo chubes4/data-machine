@@ -208,7 +208,7 @@ Fetch handlers provide essential metadata that AI steps use for content processi
 
 **Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers provide `source_url` metadata enabling Update steps to modify existing content.
 
-**Content Structure**: All handlers structure content in consistent format that AI steps process through the 5-tier message priority system.
+**Content Structure**: All handlers structure content in consistent format that AI steps process through the modular AI directive system.
 
 **Metadata Preservation**: Handler metadata (original titles, dates, URLs) flows through pipeline to AI tools via AIStepToolParameters.
 

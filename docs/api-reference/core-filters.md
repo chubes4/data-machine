@@ -102,7 +102,7 @@ $tools['tool_name'] = [
 
 ### `ai_request`
 
-**Purpose**: Process AI requests with provider routing and 5-tier priority system message injection
+**Purpose**: Process AI requests with provider routing and modular directive system message injection
 
 **Parameters**:
 - `$request` (array) - AI request data
@@ -113,13 +113,13 @@ $tools['tool_name'] = [
 
 **Return**: Array with AI response
 
-**5-Tier Priority System**: System messages automatically injected in order:
+**5-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
 
-**Priority 10**: Global system prompt (background guidance)
-**Priority 20**: Pipeline system prompt (user configuration)
-**Priority 30**: Tool definitions and directives (usage instructions)
-**Priority 35**: Data packet structure explanation (workflow data format)
-**Priority 40**: WordPress site context (environment info)
+**Priority 10**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
+**Priority 20**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
+**Priority 30**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
+**Priority 40**: Data packet structure (`DataPacketStructureDirective`) - JSON format explanation
+**Priority 50**: WordPress site context (`SiteContextDirective`) - environment info
 
 **Request Structure**:
 ```php
@@ -132,22 +132,22 @@ $request = [
 ];
 ```
 
-**Priority Registration**:
+**5-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
 ```php
 // Priority 10: Global system prompt (background guidance)
-add_filter('ai_request', [AIStepDirective::class, 'inject_global_system_prompt'], 10, 5);
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
 
 // Priority 20: Pipeline system prompt (user configuration)
-add_filter('ai_request', [AIStepDirective::class, 'inject_pipeline_system_prompt'], 20, 5);
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
 
 // Priority 30: Tool definitions and directives (how to use available tools)
-add_filter('ai_request', [AIStepDirective::class, 'inject_dynamic_directive'], 30, 5);
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
 
-// Priority 35: Data packet structure explanation (workflow data format)
-add_filter('ai_request', [AIStepDirective::class, 'inject_data_packet_directive'], 35, 5);
+// Priority 40: Data packet structure (JSON format and ordering explanation)
+add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5);
 
-// Priority 40: WordPress site context (environment info - lowest priority)
-add_filter('ai_request', [AIStepDirective::class, 'inject_site_context'], 40, 5);
+// Priority 50: WordPress site context (environment info - lowest priority)
+add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
 ## Pipeline Operations Filters
@@ -236,7 +236,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Array of account information
 
-### `dm_get_oauth_url`
+### `dm_oauth_callback`
 
 **Purpose**: Generate OAuth authorization URL
 
@@ -400,18 +400,90 @@ add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_confi
 
 **Return**: String next flow step ID or null if last step
 
-## Handler Directives Filter
+## AI Tool Parameter Management
 
-### `dm_handler_directives`
+### AIStepToolParameters Static Methods
 
-**Purpose**: Register AI directives for specific handlers
+**Purpose**: Centralized flat parameter building for AI tool execution with unified structure compatible with all handler tool call methods.
 
-**Parameters**:
-- `$directives` (array) - Current directives array
+**Core Methods**:
 
-**Return**: Array of handler-specific AI directives
-
-**Structure**:
+#### `buildParameters()`
 ```php
-$directives['handler_slug'] = 'AI instruction text for this handler...';
+AIStepToolParameters::buildParameters(array $ai_tool_parameters, array $unified_parameters, array $tool_definition): array
 ```
+Builds flat parameter structure for standard AI tool execution with content extraction and tool metadata.
+
+#### `buildForHandlerTool()`
+```php
+AIStepToolParameters::buildForHandlerTool(array $ai_tool_parameters, array $data, array $tool_definition, array $engine_parameters, array $handler_config): array
+```
+Builds parameters for handler-specific tools with engine parameters merged (like source_url for Update handlers).
+
+**Key Features**:
+- **Content Extraction**: Automatically extracts content and title from data packets based on tool specifications
+- **Flat Parameter Structure**: Single array containing all parameters without nested objects
+- **Tool Metadata Integration**: Adds tool_definition, tool_name, handler_config directly to parameter structure
+- **Engine Parameter Merging**: For handler tools, merges additional engine parameters like source_url
+- **AI Parameter Priority**: AI-provided parameters overwrite any conflicting keys in final structure
+
+## AI Conversation Management
+
+### AIStepConversationManager Static Methods
+
+**Purpose**: Centralized conversation state management and message formatting for AI steps with turn tracking and chronological message ordering
+
+**Core Methods**:
+
+#### `generateSuccessMessage()`
+```php
+AIStepConversationManager::generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string
+```
+Creates human-readable success messages for tool execution results, enabling natural AI agent conversation termination.
+
+#### `formatToolCallMessage()`
+```php
+AIStepConversationManager::formatToolCallMessage(string $tool_name, array $tool_parameters, int $turn_count): array
+```
+Records AI tool calls in conversation history with turn tracking before execution.
+
+#### `formatToolResultMessage()`
+```php  
+AIStepConversationManager::formatToolResultMessage(string $tool_name, array $tool_result, array $tool_parameters, bool $is_handler_tool = false, int $turn_count = 0): array
+```
+Formats tool results into conversation message structure for AI consumption with temporal context.
+
+#### `updateDataPacketMessages()`
+```php
+AIStepConversationManager::updateDataPacketMessages(array $conversation_messages, array $data): array
+```
+Updates data packet messages in multi-turn conversations to keep AI aware of current data state.
+
+#### `buildConversationMessage()`
+```php
+AIStepConversationManager::buildConversationMessage(string $role, string $content): array
+```
+Creates standardized conversation message structure with proper role assignment.
+
+#### `generateFailureMessage()`
+```php
+AIStepConversationManager::generateFailureMessage(string $tool_name, string $error_message): string
+```
+Generates clear error messages when tools fail to execute properly.
+
+#### `logConversationAction()`
+```php
+AIStepConversationManager::logConversationAction(string $action, array $context = []): void
+```
+Provides debug logging for conversation message generation with context data.
+
+**Key Features**:
+- **Turn Tracking**: Each conversation iteration tracked with turn counter for multi-turn AI executions
+- **Chronological Message Ordering**: `array_push()` maintains temporal sequence in conversation messages (newest at end)
+- **AI Action Records**: Tool calls recorded in conversation history before execution with turn number context
+- **Tool Result Messaging**: Enhanced tool result messages with temporal context (`Turn X`) and specialized formatting
+- Platform-specific success message templates (Twitter, WordPress, Google Search, etc.)
+- Clear completion messaging enabling natural conversation termination
+- Multi-turn conversation state preservation with complete conversation history
+- Centralized conversation history building with context awareness
+- Tool result formatting for optimal AI model consumption

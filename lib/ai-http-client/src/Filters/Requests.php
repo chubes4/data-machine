@@ -420,7 +420,7 @@ function ai_http_upload_file_to_provider($file_path, $purpose = 'user_data', $pr
     $provider = ai_http_create_provider($provider_name);
     
     if (!$provider) {
-        throw new Exception("{$provider_name} provider not available for Files API upload");
+        throw new Exception(esc_html($provider_name) . ' provider not available for Files API upload');
     }
     
     return $provider->upload_file($file_path, $purpose);

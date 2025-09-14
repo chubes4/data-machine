@@ -16,13 +16,13 @@ Data Machine uses a Pipeline+Flow architecture where:
 ### Pipeline Steps
 
 1. **Fetch Steps** - Retrieve content from various sources (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
-2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok) with available tools
-3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress)
+2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok, OpenRouter) with available tools (Google Search, Local Search, WebFetch, WordPress Post Reader, handler-specific tools)
+3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress, Google Sheets)
 4. **Update Steps** - Modify existing content (WordPress posts/pages)
 
 ### Data Flow
 
-Each step receives and returns a **DataPacket** array containing:
+**DataPacket Structure**: Each step receives and returns a **DataPacket** array with chronological ordering (newest packets at index 0):
 
 ```php
 [
@@ -39,18 +39,40 @@ Each step receives and returns a **DataPacket** array containing:
 ]
 ```
 
+**DataPacketStructureDirective**: AI agents receive automatic explanation of the JSON structure including:
+- Root wrapper with data_packets array
+- Chronological ordering (index 0 = newest)
+- Type-specific fields and workflow dynamics
+- Turn-based data updates for multi-turn conversations
+
 ### AI Integration
 
 - **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
-- **5-Tier Message Priority** - Structured system messages: Global → Pipeline → Tool directives → Data structure → Site context
-- **AIStepToolParameters** - Unified flat parameter building for tool execution
+- **5-Tier AI Directive System** - Structured system messages via auto-registering directive classes:
+  - **Priority 10**: Global System Prompt (foundational AI behavior)
+  - **Priority 20**: Pipeline System Prompt (workflow structure visualization)
+  - **Priority 30**: Tool Definitions (usage instructions and workflow context)
+  - **Priority 40**: Data Packet Structure (JSON format explanation for AI agents)
+  - **Priority 50**: Site Context (WordPress environment info)
+- **AIStepConversationManager** - Centralized conversation state management:
+  - Turn-based conversation loops with chronological message ordering
+  - AI tool calls recorded before execution with turn number tracking
+  - Enhanced tool result messaging with temporal context ("Turn X")
+  - Data packet synchronization via `updateDataPacketMessages()`
+  - Natural conversation termination with clear completion messaging
+- **AIStepToolParameters** - Unified flat parameter building:
+  - `buildParameters()` for standard AI tools
+  - `buildForHandlerTool()` for handler tools with engine parameters
+  - Content/title extraction from data packets
+- **General AI Tools Available** - Google Search, Local Search, WebFetch (50K limit), WordPress Post Reader
+- **Handler-Specific Tools** - Available when next step matches handler type
 - **Context-Aware** - Automatic WordPress site context injection
-- **Conversational** - Multi-turn conversations with tool results
+- **Clear Tool Result Messaging** - Human-readable success messages enabling natural conversation termination
 
 ### Authentication
 
-- **OAuth 2.0** - Reddit, Google Sheets, Facebook, Threads, Google Search Console
+- **OAuth 2.0** - Reddit, Google Sheets, Facebook, Threads
 - **OAuth 1.0a** - Twitter
 - **App Passwords** - Bluesky
 - **API Keys** - Google Search, AI providers

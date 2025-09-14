@@ -109,7 +109,7 @@ class AI_HTTP_OpenRouter_Provider {
         ], 'OpenRouter');
         
         if (!$result['success']) {
-            throw new Exception('OpenRouter API request failed: ' . $result['error']);
+            throw new Exception('OpenRouter API request failed: ' . esc_html($result['error']));
         }
         
         $raw_response = json_decode($result['data'], true);
@@ -147,7 +147,7 @@ class AI_HTTP_OpenRouter_Provider {
         ], 'OpenRouter Streaming', true, $callback);
         
         if (!$result['success']) {
-            throw new Exception('OpenRouter streaming request failed: ' . $result['error']);
+            throw new Exception('OpenRouter streaming request failed: ' . esc_html($result['error']));
         }
 
         // Return standardized streaming response
@@ -184,7 +184,7 @@ class AI_HTTP_OpenRouter_Provider {
         ], 'OpenRouter');
 
         if (!$result['success']) {
-            throw new Exception('OpenRouter API request failed: ' . $result['error']);
+            throw new Exception('OpenRouter API request failed: ' . esc_html($result['error']));
         }
 
         return json_decode($result['data'], true);
@@ -204,7 +204,7 @@ class AI_HTTP_OpenRouter_Provider {
         }
 
         if (!file_exists($file_path)) {
-            throw new Exception("File not found: {$file_path}");
+            throw new Exception('File not found: ' . esc_html($file_path));
         }
 
         // OpenRouter uses OpenAI-compatible file upload endpoint
@@ -238,7 +238,7 @@ class AI_HTTP_OpenRouter_Provider {
         ], 'OpenRouter File Upload');
 
         if (!$result['success']) {
-            throw new Exception('OpenRouter file upload failed: ' . $result['error']);
+            throw new Exception('OpenRouter file upload failed: ' . esc_html($result['error']));
         }
 
         $response_body = $result['data'];
@@ -271,7 +271,7 @@ class AI_HTTP_OpenRouter_Provider {
         ], 'OpenRouter File Delete');
 
         if (!$result['success']) {
-            throw new Exception('OpenRouter file delete failed: ' . $result['error']);
+            throw new Exception('OpenRouter file delete failed: ' . esc_html($result['error']));
         }
 
         return $result['status_code'] === 200;

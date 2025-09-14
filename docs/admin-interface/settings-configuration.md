@@ -42,9 +42,7 @@ Tabbed settings interface providing centralized control over Data Machine system
 
 **Tool Configuration Interface**:
 - Google Search: API key and Custom Search Engine ID setup
-- Google Search Console: OAuth2 authentication and property selection
 - Local Search: Always enabled, no configuration required
-- Read Post: Always enabled, no configuration required
 
 ## WordPress Tab
 
@@ -81,11 +79,6 @@ Tabbed settings interface providing centralized control over Data Machine system
 - Search result limits and filtering options
 - Test search functionality with sample queries
 
-**Google Search Console Setup**:
-- OAuth2 authentication flow with Google
-- Search Console property selection
-- Permission level validation
-- Connection status and refresh token management
 
 **Authentication Management**:
 - Centralized OAuth token management

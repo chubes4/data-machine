@@ -55,5 +55,4 @@ function ai_http_client_wordpress_init() {
     }
 }
 
-// Initialize the library
 ai_http_client_init();

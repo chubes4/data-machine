@@ -110,7 +110,7 @@ $step_context = $all_config['step_context'] ?? [];
                                 $display_name = is_array($model_name) ? 
                                     ($model_name['name'] ?? $model_name['id'] ?? $model_id) : 
                                     (string)$model_name;
-                                echo '<option value="' . esc_attr($model_id) . '" ' . $selected_attr . '>';
+                                echo '<option value="' . esc_attr($model_id) . '" ' . esc_attr($selected_attr) . '>';
                                 echo esc_html($display_name);
                                 echo '</option>';
                             }
