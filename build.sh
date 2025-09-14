@@ -71,9 +71,9 @@ REQUIRED_FILES=(
     "$TEMP_DIR/data-machine/data-machine.php"
     "$TEMP_DIR/data-machine/uninstall.php"
     "$TEMP_DIR/data-machine/vendor/autoload.php"
+    "$TEMP_DIR/data-machine/vendor/chubes4/ai-http-client"
     "$TEMP_DIR/data-machine/inc/Core"
     "$TEMP_DIR/data-machine/inc/Engine"
-    "$TEMP_DIR/data-machine/lib/ai-http-client"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
