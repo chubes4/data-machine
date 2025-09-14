@@ -30,7 +30,7 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
     require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
 }
 
-require_once __DIR__ . '/lib/ai-http-client/ai-http-client.php';
+// AI HTTP Client auto-loads via Composer (vendor/chubes4/ai-http-client)
 
 function run_data_machine() {
     dm_register_database_service_system();

@@ -55,7 +55,7 @@ function dm_register_pipelines_admin_page_filters() {
                         'media' => 'all'
                     ],
                     'ai-http-components' => [
-                        'file' => 'lib/ai-http-client/assets/css/components.css',
+                        'file' => 'vendor/chubes4/ai-http-client/assets/css/components.css',
                         'deps' => [],
                         'media' => 'all'
                     ],
@@ -161,7 +161,7 @@ function dm_register_pipelines_admin_page_filters() {
                         'in_footer' => true
                     ],
                     'ai-http-provider-manager' => [
-                        'file' => 'lib/ai-http-client/assets/js/provider-manager.js',
+                        'file' => 'vendor/chubes4/ai-http-client/assets/js/provider-manager.js',
                         'deps' => ['jquery'],
                         'in_footer' => true
                     ],
