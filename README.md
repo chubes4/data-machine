@@ -125,11 +125,13 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 **Settings** (WordPress Settings → Data Machine):
 - Engine Mode (headless), page controls, tool toggles
 - Site Context toggle (WordPress info injection)
+- Job data cleanup on failure toggle (debugging)
+- File retention settings (1-90 days)
 - 5-Tier AI Directive Priority System: Global system prompt → Pipeline prompts → Tool definitions → Data packet structure → Site context
 - AIStepConversationManager for multi-turn conversation state management with turn tracking and chronological message ordering
 - AIStepToolParameters flat parameter architecture with content extraction
 - Tool configuration (API keys, OAuth)
-- WordPress defaults (post types, taxonomies)
+- WordPress defaults (post types, taxonomies, author, status)
 - Three-layer tool management (global → modal → validation)
 
 **Features**: Drag & drop, auto-save, status indicators, real-time monitoring
@@ -141,7 +143,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, 5-tier AI directive system with auto-registration (GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, 5-tier AI directive system with auto-registration (GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, universal handler settings template system. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

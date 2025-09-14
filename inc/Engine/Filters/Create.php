@@ -21,9 +21,6 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class Create {
 
-    /**
-     * Register dm_create filter hooks.
-     */
     public static function register() {
         $instance = new self();
         // dm_create_ filter hooks following dm_update_ pattern (using filters to return values)
@@ -83,12 +80,7 @@ class Create {
     }
 
     /**
-     * Create simple pipeline with empty configuration (existing behavior).
-     *
-     * @param array $data Creation data
-     * @param object $db_pipelines Pipeline database service
-     * @param object $db_flows Flow database service
-     * @return int|false Pipeline ID on success, false on failure
+     * Creates simple pipeline with empty configuration
      */
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
         // Use provided pipeline name or fallback
@@ -127,12 +119,7 @@ class Create {
     }
 
     /**
-     * Create complete pipeline with predefined steps and configuration.
-     *
-     * @param array $data Creation data with steps
-     * @param object $db_pipelines Pipeline database service
-     * @param object $db_flows Flow database service
-     * @return int|false Pipeline ID on success, false on failure
+     * Creates complete pipeline with predefined steps and configuration
      */
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
         // Use provided pipeline name or fallback
@@ -325,11 +312,7 @@ class Create {
     }
 
     /**
-     * Handle step creation.
-     *
-     * @param mixed $default Default value (ignored)
-     * @param array $data Creation data (pipeline_id, step_type required)
-     * @return string|false Pipeline step ID on success, false on failure
+     * Creates new pipeline step with validation and sync
      */
     public function handle_create_step($default, $data = []) {
         // Permission check
@@ -444,11 +427,7 @@ class Create {
     }
 
     /**
-     * Handle flow creation.
-     *
-     * @param mixed $default Default value (ignored)
-     * @param array $data Creation data (pipeline_id required, flow_name optional)
-     * @return int|false Flow ID on success, false on failure
+     * Creates flow instance with pipeline step synchronization
      */
     public function handle_create_flow($default, $data = []) {
         // Permission check
@@ -549,11 +528,7 @@ class Create {
     }
 
     /**
-     * Handle flow duplication.
-     *
-     * @param mixed $default Default value (ignored)
-     * @param int $source_flow_id Source flow ID to duplicate
-     * @return int|false New flow ID on success, false on failure
+     * Duplicates flow with remapped flow step IDs
      */
     public function handle_duplicate_flow($default, int $source_flow_id) {
         // Permission check
@@ -598,8 +573,8 @@ class Create {
         $flow_data = [
             'pipeline_id' => $source_flow['pipeline_id'], // Same pipeline
             'flow_name' => $duplicate_flow_name,
-            'flow_config' => wp_json_encode($source_flow['flow_config']), // Copy exact configuration
-            'scheduling_config' => wp_json_encode(['interval' => 'manual']), // Set to manual for safety
+            'flow_config' => json_encode($source_flow['flow_config']), // Copy exact configuration
+            'scheduling_config' => json_encode(['interval' => 'manual']), // Set to manual for safety
             'display_order' => 0 // New flows always appear at top
         ];
 
@@ -618,7 +593,7 @@ class Create {
 
         // Update flow with remapped configuration
         $update_success = $db_flows->update_flow($new_flow_id, [
-            'flow_config' => wp_json_encode($remapped_config)
+            'flow_config' => json_encode($remapped_config)
         ]);
 
         if (!$update_success) {

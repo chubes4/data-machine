@@ -1,7 +1,6 @@
 **CURRENT KNOWN ISSUES**
-- Status Management System needs review for Update step compatibility and all status combinations
-- API key-only tools (Google Search) should have streamlined configuration UI without OAuth flows
-- Tool configuration modals should update authentication state in real-time after saving
+- Status detection for Update step types needs comprehensive testing
+- WordPress Global Settings integration with handler configuration UI
 
 
 **NEXT FEATURES TO IMPLEMENT**

@@ -56,7 +56,7 @@ $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handle
 $all_auth = apply_filters('dm_auth_providers', []);
 $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
 
-if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch') {
+if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts') {
     $has_auth_system = false;
 }
 
@@ -130,7 +130,7 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_fetch'
 
         <?php
         // Show global settings notification for WordPress handlers
-        if (in_array($handler_slug, ['wordpress_publish', 'wordpress_fetch'])) {
+        if (in_array($handler_slug, ['wordpress_publish', 'wordpress_posts'])) {
             $all_settings = get_option('data_machine_settings', []);
             $wp_settings = $all_settings['wordpress_settings'] ?? [];
             $global_settings = [];

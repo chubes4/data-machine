@@ -20,6 +20,7 @@ Tabbed settings interface providing centralized control over Data Machine system
 
 **System Behavior**:
 - Job data cleanup on failure (debugging vs. production modes)
+- File retention settings (1-90 days for flow-isolated file storage)
 - Logging level configuration and output management
 - Performance optimization settings
 

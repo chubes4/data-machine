@@ -502,7 +502,7 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                 // Special formatting for Reddit subreddits
                 $display_value = 'r/' . $current_value;
                 $label = ''; // Empty label so only r/subredditname shows
-            } elseif (in_array($handler_slug, ['wordpress_fetch', 'wordpress_publish'])) {
+            } elseif (in_array($handler_slug, ['wordpress_posts', 'wordpress_publish'])) {
                 // WordPress handlers: Use field options to get proper display labels
                 if (isset($field_config['options'])) {
                     $options = $field_config['options'];

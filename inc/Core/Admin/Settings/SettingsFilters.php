@@ -232,7 +232,7 @@ function dm_sanitize_settings($input) {
 }
 
 add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $context) {
-    if (!in_array($handler_slug, ['wordpress_fetch', 'wordpress_publish'])) {
+    if (!in_array($handler_slug, ['wordpress_posts', 'wordpress_publish'])) {
         return $fields;
     }
     
@@ -291,7 +291,7 @@ add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $
 }, 10, 4);
 
 add_filter('dm_apply_global_defaults', function($current_settings, $handler_slug, $step_type) {
-    if (!in_array($handler_slug, ['wordpress_fetch', 'wordpress_publish'])) {
+    if (!in_array($handler_slug, ['wordpress_posts', 'wordpress_publish'])) {
         return $current_settings;
     }
     

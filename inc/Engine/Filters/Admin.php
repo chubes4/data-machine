@@ -8,9 +8,6 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-/**
- * Register admin filters - discovery system for pages, modals, templates.
- */
 function dm_register_admin_filters() {
     
     
@@ -19,9 +16,6 @@ function dm_register_admin_filters() {
     }, 5, 1);
     
     
-    /**
-     * Modal content discovery filter
-     */
     add_filter('dm_modals', function($modals) {
         // Components self-register via this same filter with higher priority
         // Bootstrap provides discovery infrastructure for ModalAjax
@@ -29,9 +23,6 @@ function dm_register_admin_filters() {
     }, 5, 1);
 
 
-    /**
-     * Pipeline templates discovery filter
-     */
     add_filter('dm_pipeline_templates', function($templates) {
         // Pipeline templates self-register via this same filter with higher priority
         // Enables guided pipeline creation with pre-configured step sequences
@@ -40,9 +31,7 @@ function dm_register_admin_filters() {
     
     
     
-    /**
-     * Template rendering with dynamic discovery across registered admin pages
-     */
+    // Template rendering with dynamic discovery
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         // Template discovery and rendering
         // Dynamic discovery of all registered admin pages and their template directories
@@ -85,9 +74,7 @@ function dm_register_admin_filters() {
 
 
 
-/**
- * Split composite flow_step_id: {pipeline_step_id}_{flow_id}
- */
+// Split composite flow_step_id: {pipeline_step_id}_{flow_id}
 add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
     if (empty($flow_step_id) || !is_string($flow_step_id)) {
         return null;
@@ -114,9 +101,6 @@ add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
 }, 10, 2);
 
 
-/**
- * Register admin menu via filter-based page discovery
- */
 function dm_register_admin_menu() {
     // Get enabled admin pages based on settings (includes Engine Mode check)
     $registered_pages = dm_get_enabled_admin_pages();
@@ -197,9 +181,6 @@ add_action('init', function() {
     require_once DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/SettingsFilters.php';
 }, 1);
 
-/**
- * Get Data Machine settings with defaults
- */
 function dm_get_data_machine_settings() {
     return get_option('data_machine_settings', [
         'engine_mode' => false,
@@ -213,9 +194,6 @@ function dm_get_data_machine_settings() {
     ]);
 }
 
-/**
- * Get enabled admin pages based on settings
- */
 function dm_get_enabled_admin_pages() {
     $settings = dm_get_data_machine_settings();
     
@@ -233,9 +211,6 @@ function dm_get_enabled_admin_pages() {
     return array_intersect_key($all_pages, array_flip($enabled_keys));
 }
 
-/**
- * Get enabled general AI tools based on settings
- */
 function dm_get_enabled_general_tools() {
     $settings = dm_get_data_machine_settings();
     $all_tools = apply_filters('ai_tools', []);
@@ -251,9 +226,6 @@ function dm_get_enabled_general_tools() {
     return array_intersect_key($general_tools, array_filter($settings['enabled_tools']));
 }
 
-/**
- * Store hook suffix for asset loading
- */
 function dm_store_hook_suffix($page_slug, $hook_suffix) {
     $page_hook_suffixes = get_option('dm_page_hook_suffixes', []);
     $page_hook_suffixes[$page_slug] = $hook_suffix;
@@ -393,9 +365,6 @@ function dm_allowed_html(): array {
     return $allowed_html;
 }
 
-/**
- * Enqueue assets via dynamic page detection
- */
 function dm_enqueue_admin_assets( $hook_suffix ) {
     $page_hook_suffixes = get_option('dm_page_hook_suffixes', []);
     
@@ -424,9 +393,6 @@ function dm_enqueue_admin_assets( $hook_suffix ) {
     }
 }
 
-/**
- * Enqueue page-specific assets
- */
 function dm_enqueue_page_assets($assets, $page_slug) {
     $plugin_base_path = DATA_MACHINE_PATH;
     $plugin_base_url = DATA_MACHINE_URL;
