@@ -16,7 +16,10 @@ if (!defined('WPINC')) {
 $all_pipelines = apply_filters('dm_get_pipelines', []);
 
 // Get selected pipeline ID with priority: URL parameter → saved preference → newest pipeline
-$selected_pipeline_id = isset($_GET['selected_pipeline_id']) ? sanitize_text_field(wp_unslash($_GET['selected_pipeline_id'])) : '';
+$selected_pipeline_id = '';
+if (isset($_GET['selected_pipeline_id']) && isset($_GET['_wpnonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'dm_ajax_actions')) {
+    $selected_pipeline_id = sanitize_text_field(wp_unslash($_GET['selected_pipeline_id']));
+}
 
 if (empty($selected_pipeline_id)) {
     // Check user's saved preference

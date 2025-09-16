@@ -113,8 +113,9 @@ $tools['tool_name'] = [
 
 **Return**: Array with AI response
 
-**5-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
+**6-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
 
+**Priority 5**: Plugin core directive (`PluginCoreDirective`) - foundational AI agent identity
 **Priority 10**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
 **Priority 20**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
 **Priority 30**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
@@ -132,8 +133,11 @@ $request = [
 ];
 ```
 
-**5-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
+**6-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
 ```php
+// Priority 5: Plugin core directive (foundational AI agent identity)
+add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 5, 5);
+
 // Priority 10: Global system prompt (background guidance)
 add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
 

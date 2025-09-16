@@ -1,7 +1,6 @@
 <?php
 namespace DataMachine\Engine\Actions;
 
-use DataMachine\Core\Database\DatabaseCache;
 
 /**
  * Deletion system for pipelines, flows, steps with cascade support via dm_delete action
@@ -216,6 +215,9 @@ class Delete {
         // Trigger action for comprehensive cache invalidation
         do_action('dm_pipeline_deleted', $pipeline_id, $flow_count);
 
+        // Clear all caches before response (pipeline deletion affects everything)
+        do_action('dm_clear_all_cache');
+
         wp_send_json_success([
             'message' => sprintf(
                 /* translators: %1$s: Pipeline name, %2$d: Number of flows deleted */
@@ -256,12 +258,12 @@ class Delete {
             return;
         }
 
-        // Clear relevant caches after successful deletion
-        DatabaseCache::clear_cache('dm_pipeline_flows_' . $pipeline_id);
-        DatabaseCache::clear_flow_cache($pipeline_id);
 
         // Trigger action for cache invalidation listeners
         do_action('dm_flow_deleted', $pipeline_id, $flow_id);
+
+        // Clear pipeline cache before response (flow deletion affects pipeline)
+        do_action('dm_clear_cache', $pipeline_id);
 
         wp_send_json_success([
             'message' => sprintf(
@@ -353,12 +355,14 @@ class Delete {
             ]);
         }
 
-        // Trigger auto-save hooks
+        // Clear cache immediately after flow updates (before auto-save)
+        do_action('dm_clear_cache', $pipeline_id);
+
+        // Trigger auto-save hooks for database persistence
         do_action('dm_auto_save', $pipeline_id);
 
         // Get remaining steps count for response
         $remaining_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        
 
         wp_send_json_success([
             'message' => sprintf(
@@ -499,12 +503,6 @@ class Delete {
             return;
         }
 
-        // Clear job-related caches
-        if ($deleted_count > 0) {
-            DatabaseCache::clear_cache_pattern('dm_job*');
-            DatabaseCache::clear_cache_pattern('dm_recent_jobs*');
-            DatabaseCache::clear_cache_pattern('dm_flow_jobs*');
-        }
         
         // Clean up processed items if requested
         $processed_items_deleted = 0;
@@ -524,8 +522,12 @@ class Delete {
         }
         
         $message = implode(' ', $message_parts) . '.';
-        
-        
+
+        // Clear job-related caches before response
+        if ($deleted_count > 0) {
+            do_action('dm_clear_all_cache');
+        }
+
         wp_send_json_success([
             'message' => $message,
             'jobs_deleted' => $deleted_count,

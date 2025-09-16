@@ -14,7 +14,6 @@
 
 namespace DataMachine\Core\Database\Jobs;
 
-use DataMachine\Core\Database\DatabaseCache;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -29,10 +28,16 @@ class JobsOperations {
     private $table_name;
 
     /**
+     * @var \wpdb WordPress database instance
+     */
+    private $wpdb;
+
+    /**
      * Initialize the operations component.
      */
     public function __construct() {
         global $wpdb;
+        $this->wpdb = $wpdb;
         $this->table_name = $wpdb->prefix . 'dm_jobs';
     }
 
@@ -43,7 +48,6 @@ class JobsOperations {
      * @return int|false The job ID on success, false on failure.
      */
     public function create_job(array $job_data): int|false {
-        global $wpdb;
         
         $pipeline_id = absint($job_data['pipeline_id'] ?? 0);
         $flow_id = absint($job_data['flow_id'] ?? 0);
@@ -66,18 +70,18 @@ class JobsOperations {
         $format = ['%d', '%d', '%s'];
         
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $inserted = $wpdb->insert($this->table_name, $data, $format);
+        $inserted = $this->wpdb->insert($this->table_name, $data, $format);
         
         if (false === $inserted) {
             do_action('dm_log', 'error', 'Failed to insert pipeline+flow-based job', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
-                'db_error' => $wpdb->last_error
+                'db_error' => $this->wpdb->last_error
             ]);
             return false;
         }
         
-        $job_id = $wpdb->insert_id;
+        $job_id = $this->wpdb->insert_id;
         
         return $job_id;
     }
@@ -89,16 +93,19 @@ class JobsOperations {
      * @return object|null The job data as an object, or null if not found.
      */
     public function get_job( int $job_id ): ?object {
-        global $wpdb;
         if ( empty( $job_id ) ) {
             return null;
         }
-        $sql = $wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE job_id = %d",
-            $job_id
-        );
         $cache_key = 'dm_job_' . $job_id;
-        $job = DatabaseCache::cached_get_row( $sql, $cache_key, 'OBJECT', 300 ); // 5 min cache for job data
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE job_id = %d", $job_id ), OBJECT );
+            set_transient( $cache_key, $job, 300 ); // 5 min cache for job data
+            $cached_result = $job;
+        } else {
+            $job = $cached_result;
+        }
         return $job;
     }
 
@@ -110,11 +117,19 @@ class JobsOperations {
      * @return int Total number of jobs
      */
     public function get_jobs_count(): int {
-        global $wpdb;
         
-        $query = "SELECT COUNT(job_id) FROM {$this->table_name}";
         $cache_key = 'dm_total_jobs_count';
-        $count = DatabaseCache::cached_get_var( $query, $cache_key, 300 ); // 5 min cache for counts
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $count = $this->wpdb->get_var(
+                "SELECT COUNT(job_id) FROM {$this->table_name}"
+            );
+            set_transient( $cache_key, $count, 300 ); // 5 min cache for counts
+            $cached_result = $count;
+        } else {
+            $count = $cached_result;
+        }
         return (int) $count;
     }
 
@@ -127,7 +142,6 @@ class JobsOperations {
      * @return array Array of job records with pipeline and flow names
      */
     public function get_jobs_for_list_table(array $args): array {
-        global $wpdb;
         
         $orderby = $args['orderby'] ?? 'j.job_id';
         $order = strtoupper($args['order'] ?? 'DESC');
@@ -145,22 +159,22 @@ class JobsOperations {
             $orderby = 'j.job_id';
         }
         
-        $pipelines_table = $wpdb->prefix . 'dm_pipelines';
-        $flows_table = $wpdb->prefix . 'dm_flows';
+        $pipelines_table = $this->wpdb->prefix . 'dm_pipelines';
+        $flows_table = $this->wpdb->prefix . 'dm_flows';
         
-        $sql = $wpdb->prepare(
-            "SELECT j.*, p.pipeline_name, f.flow_name
-             FROM {$this->table_name} j
-             LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id
-             LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id
-             ORDER BY {$orderby} {$order}
-             LIMIT %d OFFSET %d",
-            $per_page,
-            $offset
-        );
-        
-        $cache_key = 'dm_recent_jobs_' . md5($sql);
-        return DatabaseCache::cached_get_results($sql, $cache_key, 'ARRAY_A', 60); // 1 min cache for recent jobs
+        $cache_key = 'dm_recent_jobs_' . md5($orderby . $order . $per_page . $offset);
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $sql = "SELECT j.*, p.pipeline_name, f.flow_name FROM {$this->table_name} j LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id ORDER BY $orderby $order";
+            $results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
+            set_transient( $cache_key, $results, 60 ); // 1 min cache for recent jobs
+            $cached_result = $results;
+        } else {
+            $results = $cached_result;
+        }
+
+        return $results;
     }
 
     /**
@@ -214,18 +228,21 @@ class JobsOperations {
      * @return array Array of job records.
      */
     public function get_jobs_for_flow(int $flow_id): array {
-        global $wpdb;
         
         if ($flow_id <= 0) {
             return [];
         }
         
-        $query = $wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE flow_id = %d ORDER BY created_at DESC",
-            $flow_id
-        );
         $cache_key = 'dm_flow_jobs_' . $flow_id;
-        $results = DatabaseCache::cached_get_results($query, $cache_key, 'ARRAY_A', 300); // 5 min cache for flow jobs
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE flow_id = %d ORDER BY created_at DESC", $flow_id ), ARRAY_A );
+            set_transient( $cache_key, $results, 300 ); // 5 min cache for flow jobs
+            $cached_result = $results;
+        } else {
+            $results = $cached_result;
+        }
         
         return $results ?: [];
     }
@@ -242,25 +259,20 @@ class JobsOperations {
      * @return int|false Number of rows deleted or false on error
      */
     public function delete_jobs(array $criteria = []): int|false {
-        global $wpdb;
         
         if (empty($criteria)) {
             do_action('dm_log', 'warning', 'No criteria provided for jobs deletion');
             return false;
         }
         
-        $where = '';
-        $where_args = [];
-        
         if (!empty($criteria['failed'])) {
-            $where = "WHERE status = 'failed'";
+            $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM {$this->table_name} WHERE status = %s", 'failed' ) );
+        } else {
+            // For 'all' - delete all records
+            $result = $this->wpdb->query(
+                "DELETE FROM {$this->table_name}"
+            );
         }
-        // For 'all', no WHERE clause needed
-        
-        $sql = "DELETE FROM {$this->table_name} {$where}";
-        
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $result = $wpdb->query($sql);
         
         do_action('dm_log', 'debug', 'Deleted jobs', [
             'criteria' => $criteria,

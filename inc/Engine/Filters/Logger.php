@@ -218,22 +218,12 @@ function dm_log_critical(string|\Stringable $message, array $context = []): void
 }
 
 
-/**
- * Get log file path.
- *
- * @return string Log file path
- */
 function dm_get_log_file_path(): string {
     $upload_dir = wp_upload_dir();
     $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
     return $log_dir . '/data-machine.log';
 }
 
-/**
- * Get log file size in MB.
- *
- * @return float Log file size in MB
- */
 function dm_get_log_file_size(): float {
     $log_file = dm_get_log_file_path();
     if (!file_exists($log_file)) {
@@ -312,21 +302,10 @@ function dm_clear_log_files(): bool {
 }
 
 
-/**
- * Get current log level setting.
- *
- * @return string Current log level
- */
 function dm_get_log_level(): string {
     return get_option('dm_log_level', 'error');
 }
 
-/**
- * Set log level setting.
- *
- * @param string $level Log level to set
- * @return bool True on success
- */
 function dm_set_log_level(string $level): bool {
     $available_levels = array_keys(dm_get_available_log_levels());
     if (!in_array($level, $available_levels)) {
@@ -336,11 +315,6 @@ function dm_set_log_level(string $level): bool {
     return update_option('dm_log_level', $level);
 }
 
-/**
- * Get available log levels.
- *
- * @return array Array of log levels with descriptions
- */
 function dm_get_available_log_levels(): array {
     return [
         'debug' => 'Debug (full logging)',

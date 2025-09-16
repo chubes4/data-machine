@@ -14,7 +14,10 @@ if (!defined('WPINC')) {
 }
 
 // Get active tab from URL parameter or default to admin
-$active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'admin';
+$active_tab = 'admin';
+if (isset($_GET['tab']) && isset($_GET['_wpnonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'dm_ajax_actions')) {
+    $active_tab = sanitize_key($_GET['tab']);
+}
 $valid_tabs = ['admin', 'agent', 'wordpress'];
 if (!in_array($active_tab, $valid_tabs)) {
     $active_tab = 'admin';

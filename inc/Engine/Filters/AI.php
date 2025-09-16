@@ -3,7 +3,7 @@
  * Data Machine Engine - AI Integration Filters
  *
  * AI-specific backend processing filters that bridge Data Machine's pipeline system
- * with the AI HTTP Client library and 5-tier directive system for step-aware AI
+ * with the AI HTTP Client library and 6-tier directive system for step-aware AI
  * configuration and conversation management.
  *
  * Key Filters:
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Register AI integration filters for 5-tier directive system support.
+ * Register AI integration filters for 6-tier directive system support.
  * Provides step-aware AI configuration from pipeline database with support
  * for multi-turn conversation management and tool result formatting.
  */

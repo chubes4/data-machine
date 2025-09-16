@@ -9,7 +9,6 @@
 
 namespace DataMachine\Core\Database\Pipelines;
 
-use DataMachine\Core\Database\DatabaseCache;
 
 defined('ABSPATH') || exit;
 
@@ -21,21 +20,17 @@ class Pipelines {
 	private $table_name;
 
 	/**
-	 * Initialize pipeline database operations
+	 * @var \wpdb WordPress database instance
 	 */
+	private $wpdb;
+
 	public function __construct() {
 		global $wpdb;
+		$this->wpdb = $wpdb;
 		$this->table_name = $wpdb->prefix . 'dm_pipelines';
 	}
 
-	/**
-	 * Create pipeline
-	 *
-	 * @param array $pipeline_data Pipeline data
-	 * @return int|false Pipeline ID or false
-	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
-		global $wpdb;
 		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] ?? '' );
 		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
 
@@ -64,17 +59,17 @@ class Pipelines {
 		$format = [ '%s', '%s', '%s', '%s' ];
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$inserted = $wpdb->insert( $this->table_name, $data, $format );
+		$inserted = $this->wpdb->insert( $this->table_name, $data, $format );
 
 		if ( false === $inserted ) {
 			do_action( 'dm_log', 'error', 'Failed to insert pipeline', [
 				'pipeline_name' => $pipeline_name,
-				'db_error' => $wpdb->last_error
+				'db_error' => $this->wpdb->last_error
 			] );
 			return false;
 		}
 
-		$pipeline_id = $wpdb->insert_id;
+		$pipeline_id = $this->wpdb->insert_id;
 		do_action( 'dm_log', 'debug', 'Successfully created pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
@@ -90,19 +85,21 @@ class Pipelines {
 	 * @return array|null Pipeline data or null
 	 */
 	public function get_pipeline( int $pipeline_id ): ?array {
-		global $wpdb;
 
 		if ( empty( $pipeline_id ) ) {
 			return null;
 		}
 
-		$sql = $wpdb->prepare(
-			"SELECT * FROM {$this->table_name} WHERE pipeline_id = %d",
-			$pipeline_id
-		);
+		$cache_key = 'dm_pipeline_' . $pipeline_id;
+		$cached_result = get_transient( $cache_key );
 
-		$cache_key = DatabaseCache::get_pipeline_cache_key( $pipeline_id );
-		$pipeline = DatabaseCache::cached_get_row( $sql, $cache_key, 'ARRAY_A' );
+		if ( false === $cached_result ) {
+			$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d", $pipeline_id ), ARRAY_A );
+			set_transient( $cache_key, $pipeline, 0 );
+			$cached_result = $pipeline;
+		} else {
+			$pipeline = $cached_result;
+		}
 		return $pipeline;
 	}
 
@@ -112,11 +109,20 @@ class Pipelines {
 	 * @return array Array of pipelines
 	 */
 	public function get_all_pipelines(): array {
-		global $wpdb;
 
-		$query = "SELECT * FROM {$this->table_name} ORDER BY pipeline_name ASC";
 		$cache_key = 'dm_all_pipelines';
-		$results = DatabaseCache::cached_get_results( $query, $cache_key, 'ARRAY_A' );
+		$cached_result = get_transient( $cache_key );
+
+		if ( false === $cached_result ) {
+			$results = $this->wpdb->get_results(
+				"SELECT * FROM {$this->table_name} ORDER BY pipeline_name ASC",
+				ARRAY_A
+			);
+			set_transient( $cache_key, $results, 0 );
+			$cached_result = $results;
+		} else {
+			$results = $cached_result;
+		}
 
 		return $results ?: [];
 	}
@@ -129,7 +135,6 @@ class Pipelines {
 	 * @return bool Success status
 	 */
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
-		global $wpdb;
 
 		if ( empty( $pipeline_id ) ) {
 			do_action( 'dm_log', 'error', 'Cannot update pipeline - missing pipeline ID' );
@@ -169,7 +174,7 @@ class Pipelines {
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$updated = $wpdb->update(
+		$updated = $this->wpdb->update(
 			$this->table_name,
 			$update_data,
 			[ 'pipeline_id' => $pipeline_id ],
@@ -180,7 +185,7 @@ class Pipelines {
 		if ( false === $updated ) {
 			do_action( 'dm_log', 'error', 'Failed to update pipeline', [
 				'pipeline_id' => $pipeline_id,
-				'db_error' => $wpdb->last_error
+				'db_error' => $this->wpdb->last_error
 			] );
 			return false;
 		}
@@ -200,7 +205,6 @@ class Pipelines {
 	 * @return bool Success status
 	 */
 	public function delete_pipeline( int $pipeline_id ): bool {
-		global $wpdb;
 
 		if ( empty( $pipeline_id ) ) {
 			do_action( 'dm_log', 'error', 'Cannot delete pipeline - missing pipeline ID' );
@@ -212,7 +216,7 @@ class Pipelines {
 		$pipeline_name = $pipeline ? $pipeline['pipeline_name'] : 'Unknown';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$deleted = $wpdb->delete(
+		$deleted = $this->wpdb->delete(
 			$this->table_name,
 			[ 'pipeline_id' => $pipeline_id ],
 			[ '%d' ]
@@ -222,7 +226,7 @@ class Pipelines {
 			do_action( 'dm_log', 'error', 'Failed to delete pipeline', [
 				'pipeline_id' => $pipeline_id,
 				'pipeline_name' => $pipeline_name,
-				'db_error' => $wpdb->last_error
+				'db_error' => $this->wpdb->last_error
 			] );
 			return false;
 		}
@@ -250,18 +254,21 @@ class Pipelines {
 	 * @return array Configuration data
 	 */
 	public function get_pipeline_config( int $pipeline_id ): array {
-		global $wpdb;
 
 		if ( empty( $pipeline_id ) ) {
 			return [];
 		}
 
-		$query = $wpdb->prepare(
-			"SELECT pipeline_config FROM {$this->table_name} WHERE pipeline_id = %d",
-			$pipeline_id
-		);
 		$cache_key = 'dm_pipeline_config_' . $pipeline_id;
-		$pipeline_config_json = DatabaseCache::cached_get_var( $query, $cache_key );
+		$cached_result = get_transient( $cache_key );
+
+		if ( false === $cached_result ) {
+			$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM {$this->table_name} WHERE pipeline_id = %d", $pipeline_id ) );
+			set_transient( $cache_key, $pipeline_config_json, 0 );
+			$cached_result = $pipeline_config_json;
+		} else {
+			$pipeline_config_json = $cached_result;
+		}
 
 		if ( empty( $pipeline_config_json ) ) {
 			return [];
@@ -278,11 +285,19 @@ class Pipelines {
 	 * @return int Total count
 	 */
 	public function get_pipelines_count(): int {
-		global $wpdb;
 
-		$query = "SELECT COUNT(pipeline_id) FROM {$this->table_name}";
 		$cache_key = 'dm_pipeline_count';
-		$count = DatabaseCache::cached_get_var( $query, $cache_key, 300 ); // 5 min cache for counts
+		$cached_result = get_transient( $cache_key );
+
+		if ( false === $cached_result ) {
+			$count = $this->wpdb->get_var(
+				"SELECT COUNT(pipeline_id) FROM {$this->table_name}"
+			);
+			set_transient( $cache_key, $count, 300 ); // 5 min cache for counts
+			$cached_result = $count;
+		} else {
+			$count = $cached_result;
+		}
 		return (int) $count;
 	}
 
@@ -293,7 +308,6 @@ class Pipelines {
 	 * @return array Pipeline records
 	 */
 	public function get_pipelines_for_list_table( array $args ): array {
-		global $wpdb;
 
 		$orderby = $args['orderby'] ?? 'pipeline_id';
 		$order = strtoupper( $args['order'] ?? 'DESC' );
@@ -311,16 +325,19 @@ class Pipelines {
 			$orderby = 'pipeline_id';
 		}
 
-		$sql = $wpdb->prepare(
-			"SELECT * FROM {$this->table_name}
-			 ORDER BY {$orderby} {$order}
-			 LIMIT %d OFFSET %d",
-			$per_page,
-			$offset
-		);
-
 		$cache_key = 'dm_pipeline_export';
-		return DatabaseCache::cached_get_results( $sql, $cache_key, 'ARRAY_A', 300 ); // 5 min cache for exports
+		$cached_result = get_transient( $cache_key );
+
+		if ( false === $cached_result ) {
+			$sql = "SELECT * FROM {$this->table_name} ORDER BY $orderby $order";
+			$results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
+			set_transient( $cache_key, $results, 300 ); // 5 min cache for exports
+			$cached_result = $results;
+		} else {
+			$results = $cached_result;
+		}
+
+		return $results;
 	}
 
 	/**

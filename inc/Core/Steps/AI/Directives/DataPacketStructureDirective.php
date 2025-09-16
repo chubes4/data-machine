@@ -5,12 +5,13 @@
  * Injects explanation of the data packet JSON structure so the AI understands
  * the workflow data format and how new packets appear across turns.
  *
- * Priority Order in 5-Tier System:
- * 1. Priority 10 - Global System Prompt
- * 2. Priority 20 - Pipeline System Prompt
- * 3. Priority 30 - Tool Definitions and Workflow Context
- * 4. Priority 40 - Data Packet Structure (THIS CLASS)
- * 5. Priority 50 - WordPress Site Context
+ * Priority Order in 6-Tier System:
+ * 1. Priority 5 - Plugin Core Directive
+ * 2. Priority 10 - Global System Prompt
+ * 3. Priority 20 - Pipeline System Prompt
+ * 4. Priority 30 - Tool Definitions and Workflow Context
+ * 5. Priority 40 - Data Packet Structure (THIS CLASS)
+ * 6. Priority 50 - WordPress Site Context
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -53,13 +54,13 @@ class DataPacketStructureDirective {
         $directive .= "WORKFLOW DYNAMICS:\n";
         $directive .= "- When you execute a tool, the system adds a new tool_result packet next turn.\n";
         $directive .= "- When a handler (publish/update) tool completes successfully an ai_handler_complete packet is added.\n";
-        $directive .= "- You NEVER mutate existing packets; you only decide next actions based on them.\n\n";
+        $directive .= "- Use packets as read-only context for your workflow decisions.\n";
+        $directive .= "- The system automatically adds new packets when you execute tools.\n";
+        $directive .= "- Packet history provides complete workflow context for decision making.\n\n";
         $directive .= "USAGE GUIDANCE:\n";
         $directive .= "1. Read newest packets first (index 0 downward).\n";
-        $directive .= "2. Use only the packets relevant to your objective.\n";
-        $directive .= "3. Execute handler tools when ready to complete the current pipeline step.\n";
-        $directive .= "4. Avoid unnecessary research/tool calls once sufficient context is present.\n";
-        $directive .= "5. Declare completion once handler objective achieved.\n";
+        $directive .= "2. Use packets as context for your workflow decisions.\n";
+        $directive .= "3. New packets appear automatically after tool execution.\n";
 
         array_push($request['messages'], [
             'role' => 'system',
@@ -76,5 +77,5 @@ class DataPacketStructureDirective {
     }
 }
 
-// Self-register (Priority 40 = fourth in 5-tier directive system)
+// Self-register (Priority 40 = fifth in 6-tier directive system)
 add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5);

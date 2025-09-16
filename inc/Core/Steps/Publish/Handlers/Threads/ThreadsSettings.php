@@ -5,21 +5,16 @@
  * Defines settings fields and sanitization for Threads publish handler.
  * Part of the modular handler architecture.
  *
- * @package    Data_Machine
- * @subpackage Core\Steps\Publish\Handlers\Threads
- * @since      NEXT_VERSION
+ * @package DataMachine
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
-}
+defined('ABSPATH') || exit;
 
 class ThreadsSettings {
 
-    public function __construct() {
-    }
 
     /**
      * Get settings fields for Threads publish handler.

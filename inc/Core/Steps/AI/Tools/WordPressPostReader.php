@@ -67,7 +67,7 @@ class WordPressPostReader {
         $author_name = get_the_author_meta('display_name', $post->post_author);
 
         $content_length = strlen($content);
-        $content_word_count = str_word_count(strip_tags($content));
+        $content_word_count = str_word_count(wp_strip_all_tags($content));
 
         $featured_image_url = null;
         $featured_image_id = get_post_thumbnail_id($post_id);

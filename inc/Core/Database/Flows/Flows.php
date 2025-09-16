@@ -2,7 +2,6 @@
 
 namespace DataMachine\Core\Database\Flows;
 
-use DataMachine\Core\Database\DatabaseCache;
 
 /**
  * Flows Database Class
@@ -36,13 +35,10 @@ class Flows {
      */
     private $wpdb;
 
-    /**
-     * Constructor
-     */
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        $this->table_name = $wpdb->prefix . 'dm_flows';
+        $this->table_name = $this->wpdb->prefix . 'dm_flows';
     }
 
     /**
@@ -56,7 +52,7 @@ class Flows {
         global $wpdb;
         
         $table_name = $wpdb->prefix . 'dm_flows';
-        
+
         $charset_collate = $wpdb->get_charset_collate();
         
         $sql = "CREATE TABLE $table_name (
@@ -82,7 +78,15 @@ class Flows {
         
         // Verify table exists
         $cache_key = 'dm_table_exists_flows_' . md5($table_name);
-        $table_exists = DatabaseCache::cached_get_var("SHOW TABLES LIKE '$table_name'", $cache_key, 300) === $table_name;
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $table_check = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) );
+            set_transient( $cache_key, $table_check, 300 );
+            $cached_result = $table_check;
+        }
+
+        $table_exists = $cached_result === $table_name;
         
         do_action('dm_log', 'debug', 'Flows table creation verified', [
             'table_exists' => $table_exists
@@ -173,12 +177,16 @@ class Flows {
      */
     public function get_flow(int $flow_id): ?array {
         
-        $query = $this->wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE flow_id = %d",
-            $flow_id
-        );
-        $cache_key = DatabaseCache::get_flow_cache_key( $flow_id );
-        $flow = DatabaseCache::cached_get_row( $query, $cache_key, 'ARRAY_A' );
+        $cache_key = 'dm_flow_config_' . $flow_id;
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE flow_id = %d", $flow_id ), ARRAY_A );
+            set_transient( $cache_key, $flow, 0 );
+            $cached_result = $flow;
+        } else {
+            $flow = $cached_result;
+        }
         
         if ($flow === null) {
             do_action('dm_log', 'warning', 'Flow not found', [
@@ -202,12 +210,16 @@ class Flows {
      */
     public function get_flows_for_pipeline(int $pipeline_id): array {
         
-        $query = $this->wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY display_order ASC, flow_id ASC",
-            $pipeline_id
-        );
         $cache_key = 'dm_pipeline_flows_' . $pipeline_id;
-        $flows = DatabaseCache::cached_get_results( $query, $cache_key, 'ARRAY_A' );
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d ORDER BY display_order ASC, flow_id ASC", $pipeline_id ), ARRAY_A );
+            set_transient( $cache_key, $flows, 0 );
+            $cached_result = $flows;
+        } else {
+            $flows = $cached_result;
+        }
         
         if ($flows === null) {
             do_action('dm_log', 'warning', 'No flows found for pipeline', [
@@ -234,11 +246,19 @@ class Flows {
      */
     public function get_all_active_flows(): array {
         
-        $query = "SELECT * FROM {$this->table_name}
-             WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual'
-             ORDER BY flow_id DESC";
         $cache_key = 'dm_all_active_flows';
-        $flows = DatabaseCache::cached_get_results( $query, $cache_key, 'ARRAY_A', 300 ); // 5 min cache for active flows
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $flows = $this->wpdb->get_results(
+                "SELECT * FROM {$this->table_name} WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' ORDER BY flow_id DESC",
+                ARRAY_A
+            );
+            set_transient( $cache_key, $flows, 300 ); // 5 min cache for active flows
+            $cached_result = $flows;
+        } else {
+            $flows = $cached_result;
+        }
         
         if ($flows === null) {
             do_action('dm_log', 'debug', 'No active flows found');
@@ -392,12 +412,16 @@ class Flows {
      */
     public function get_flow_scheduling(int $flow_id): ?array {
         
-        $query = $this->wpdb->prepare(
-            "SELECT scheduling_config FROM {$this->table_name} WHERE flow_id = %d",
-            $flow_id
-        );
         $cache_key = 'dm_flow_scheduling_' . $flow_id;
-        $scheduling_config = DatabaseCache::cached_get_var( $query, $cache_key );
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $scheduling_config = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT scheduling_config FROM {$this->table_name} WHERE flow_id = %d", $flow_id ) );
+            set_transient( $cache_key, $scheduling_config, 0 );
+            $cached_result = $scheduling_config;
+        } else {
+            $scheduling_config = $cached_result;
+        }
         
         if ($scheduling_config === null) {
             do_action('dm_log', 'warning', 'Flow scheduling configuration not found', [
@@ -428,18 +452,16 @@ class Flows {
         
         $current_time = current_time('mysql');
         
-        $query = $this->wpdb->prepare(
-            "SELECT * FROM {$this->table_name}
-             WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual'
-             AND (
-                 JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL
-                 OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s
-             )
-             ORDER BY flow_id ASC",
-            $current_time
-        );
         $cache_key = 'dm_due_flows_' . md5( $current_time );
-        $flows = DatabaseCache::cached_get_results( $query, $cache_key, 'ARRAY_A', 60 ); // 1 min cache for due flows
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' AND (JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s) ORDER BY flow_id ASC", $current_time ), ARRAY_A );
+            set_transient( $cache_key, $flows, 60 ); // 1 min cache for due flows
+            $cached_result = $flows;
+        } else {
+            $flows = $cached_result;
+        }
         
         if ($flows === null) {
             return [];
@@ -537,12 +559,16 @@ class Flows {
      * @return int Next display order value
      */
     public function get_next_display_order(int $pipeline_id): int {
-        $query = $this->wpdb->prepare(
-            "SELECT MAX(display_order) FROM {$this->table_name} WHERE pipeline_id = %d",
-            $pipeline_id
-        );
         $cache_key = 'dm_max_display_order_' . $pipeline_id;
-        $max_order = DatabaseCache::cached_get_var( $query, $cache_key, 300 ); // 5 min cache for display order
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $max_order = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT MAX(display_order) FROM {$this->table_name} WHERE pipeline_id = %d", $pipeline_id ) );
+            set_transient( $cache_key, $max_order, 300 ); // 5 min cache for display order
+            $cached_result = $max_order;
+        } else {
+            $max_order = $cached_result;
+        }
         
         return ($max_order !== null) ? (int)$max_order + 1 : 0;
     }
@@ -555,12 +581,7 @@ class Flows {
      * @return bool True on success, false on failure
      */
     public function increment_existing_flow_orders(int $pipeline_id): bool {
-        $result = $this->wpdb->query(
-            $this->wpdb->prepare(
-                "UPDATE {$this->table_name} SET display_order = display_order + 1 WHERE pipeline_id = %d",
-                $pipeline_id
-            )
-        );
+        $result = $this->wpdb->query( $this->wpdb->prepare( "UPDATE {$this->table_name} SET display_order = display_order + 1 WHERE pipeline_id = %d", $pipeline_id ) );
         
         if ($result === false) {
             do_action('dm_log', 'error', 'Failed to increment existing flow orders', [
@@ -632,32 +653,16 @@ class Flows {
      * @return bool True on success, false on failure
      */
     public function move_flow_up(int $flow_id): bool {
-        global $wpdb;
 
         // Get the current flow
-        $current_flow = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-            $wpdb->prepare(
-                "SELECT flow_id, pipeline_id, display_order FROM {$this->table_name} WHERE flow_id = %d",
-                $flow_id
-            ),
-            ARRAY_A
-        );
+        $current_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, pipeline_id, display_order FROM {$this->table_name} WHERE flow_id = %d", $flow_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         
         if (!$current_flow) {
             return false;
         }
         
         // Find the previous flow (next lower display_order in same pipeline)
-        $prev_flow = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-            $wpdb->prepare(
-                "SELECT flow_id, display_order FROM {$this->table_name}
-                 WHERE pipeline_id = %d AND display_order < %d
-                 ORDER BY display_order DESC LIMIT 1",
-                $current_flow['pipeline_id'],
-                $current_flow['display_order']
-            ),
-            ARRAY_A
-        );
+        $prev_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, display_order FROM {$this->table_name} WHERE pipeline_id = %d AND display_order < %d ORDER BY display_order DESC LIMIT 1", $current_flow['pipeline_id'], $current_flow['display_order'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
         if (!$prev_flow) {
             return false; // Already at the top
@@ -674,33 +679,16 @@ class Flows {
      * @return bool True on success, false on failure  
      */
     public function move_flow_down(int $flow_id): bool {
-        global $wpdb;
         
         // Get the current flow
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $current_flow = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT flow_id, pipeline_id, display_order FROM {$this->table_name} WHERE flow_id = %d",
-                $flow_id
-            ),
-            ARRAY_A
-        );
+        $current_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, pipeline_id, display_order FROM {$this->table_name} WHERE flow_id = %d", $flow_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         
         if (!$current_flow) {
             return false;
         }
         
         // Find the next flow (next higher display_order in same pipeline)
-        $next_flow = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-            $wpdb->prepare(
-                "SELECT flow_id, display_order FROM {$this->table_name}
-                 WHERE pipeline_id = %d AND display_order > %d
-                 ORDER BY display_order ASC LIMIT 1",
-                $current_flow['pipeline_id'],
-                $current_flow['display_order']
-            ),
-            ARRAY_A
-        );
+        $next_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, display_order FROM {$this->table_name} WHERE pipeline_id = %d AND display_order > %d ORDER BY display_order ASC LIMIT 1", $current_flow['pipeline_id'], $current_flow['display_order'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         
         if (!$next_flow) {
             return false; // Already at the bottom
@@ -718,15 +706,14 @@ class Flows {
      * @return bool True on success, false on failure
      */
     private function swap_flow_positions(array $flow1, array $flow2): bool {
-        global $wpdb;
         
         // Start transaction
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $wpdb->query('START TRANSACTION');
+        $this->wpdb->query('START TRANSACTION');
         
         try {
             // Update first flow
-            $result1 = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+            $result1 = $this->wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $this->table_name,
                 ['display_order' => $flow2['display_order']],
                 ['flow_id' => $flow1['flow_id']],
@@ -735,7 +722,7 @@ class Flows {
             );
             
             // Update second flow
-            $result2 = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+            $result2 = $this->wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $this->table_name,
                 ['display_order' => $flow1['display_order']],
                 ['flow_id' => $flow2['flow_id']],
@@ -744,19 +731,19 @@ class Flows {
             );
             
             if ($result1 === false || $result2 === false) {
-                $wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+                $this->wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 
                 do_action('dm_log', 'error', 'Failed to swap flow positions', [
                     'flow1_id' => $flow1['flow_id'],
                     'flow2_id' => $flow2['flow_id'],
-                    'wpdb_error' => $wpdb->last_error
+                    'wpdb_error' => $this->wpdb->last_error
                 ]);
                 
                 return false;
             }
             
             // Commit transaction
-            $wpdb->query('COMMIT'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+            $this->wpdb->query('COMMIT'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             
             do_action('dm_log', 'debug', 'Successfully swapped flow positions', [
                 'flow1_id' => $flow1['flow_id'],
@@ -768,7 +755,7 @@ class Flows {
             return true;
             
         } catch (Exception $e) {
-            $wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+            $this->wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             
             do_action('dm_log', 'error', 'Exception during flow position swap', [
                 'flow1_id' => $flow1['flow_id'],

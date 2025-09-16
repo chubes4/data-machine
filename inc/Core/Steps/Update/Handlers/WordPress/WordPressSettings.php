@@ -5,21 +5,16 @@
  * Defines settings fields and sanitization for WordPress update handler.
  * Part of the modular handler architecture.
  *
- * @package    Data_Machine
- * @subpackage Core\Steps\Update\Handlers\WordPress
- * @since      NEXT_VERSION
+ * @package DataMachine
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
-}
+defined('ABSPATH') || exit;
 
 class WordPressSettings {
 
-    public function __construct() {
-    }
 
     /**
      * Get settings fields for WordPress update handler.

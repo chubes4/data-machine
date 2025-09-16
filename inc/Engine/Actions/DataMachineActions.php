@@ -50,6 +50,7 @@ require_once __DIR__ . '/Delete.php';
 require_once __DIR__ . '/ImportExport.php';
 require_once __DIR__ . '/Update.php';
 require_once __DIR__ . '/Engine.php';
+require_once __DIR__ . '/Cache.php';
 
 /**
  * Register core Data Machine action hooks.
@@ -172,6 +173,7 @@ function dm_register_core_actions() {
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();
     \DataMachine\Engine\Actions\ImportExport::register();
+    \DataMachine\Engine\Actions\Cache::register();
     
 }
 

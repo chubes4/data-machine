@@ -500,32 +500,36 @@ class Reddit {
 				];
 				$metadata['raw_reddit_data'] = $item_data;
 
-				// Create data packet following Files handler pattern
+				// Create data packet matching FetchStep expectations
 				if ($stored_image) {
-					// Image post - return file data exactly like Files handler
+					// Image post - return file data with nested structure
 					$input_data = [
 						'file_path' => $stored_image['path'],
 						'file_name' => $stored_image['filename'],
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size'],
-						'source_type' => 'reddit',
-						'item_identifier_to_log' => $current_item_id,
-						'original_id' => $current_item_id,
-						'original_title' => $title,
-						'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-						'content_string' => $content_string,
-						'reddit_metadata' => $metadata
+						'data' => [
+							'content_string' => $content_string
+						],
+						'metadata' => array_merge($metadata, [
+							'original_title' => $title,
+							'original_id' => $current_item_id,
+							'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
+							'item_identifier_to_log' => $current_item_id
+						])
 					];
 				} else {
-					// Text-only post - return text data
+					// Text-only post - return text data with nested structure
 					$input_data = [
-						'source_type' => 'reddit',
-						'item_identifier_to_log' => $current_item_id,
-						'original_id' => $current_item_id,
-						'original_title' => $title,
-						'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-						'content_string' => $content_string,
-						'reddit_metadata' => $metadata
+						'data' => [
+							'content_string' => $content_string
+						],
+						'metadata' => array_merge($metadata, [
+							'original_title' => $title,
+							'original_id' => $current_item_id,
+							'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
+							'item_identifier_to_log' => $current_item_id
+						])
 					];
 				}
 				// Found first eligible item - return immediately

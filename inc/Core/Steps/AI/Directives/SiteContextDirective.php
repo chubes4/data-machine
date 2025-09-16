@@ -3,15 +3,16 @@
  * Site Context Directive - Priority 50 (Lowest Priority)
  *
  * Injects WordPress site context information as the final directive in the
- * 5-tier AI directive system. Provides comprehensive site metadata including
+ * 6-tier AI directive system. Provides comprehensive site metadata including
  * posts, taxonomies, users, and configuration. Toggleable via settings.
  *
- * Priority Order in 5-Tier System:
- * 1. Priority 10 - Global System Prompt
- * 2. Priority 20 - Pipeline System Prompt
- * 3. Priority 30 - Tool Definitions and Workflow Context
- * 4. Priority 40 - Data Packet Structure
- * 5. Priority 50 - WordPress Site Context (THIS CLASS)
+ * Priority Order in 6-Tier System:
+ * 1. Priority 5 - Plugin Core Directive
+ * 2. Priority 10 - Global System Prompt
+ * 3. Priority 20 - Pipeline System Prompt
+ * 4. Priority 30 - Tool Definitions and Workflow Context
+ * 5. Priority 40 - Data Packet Structure
+ * 6. Priority 50 - WordPress Site Context (THIS CLASS)
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -91,5 +92,5 @@ class SiteContextDirective {
     }
 }
 
-// Self-register (Priority 50 = lowest priority in 5-tier directive system)
+// Self-register (Priority 50 = lowest priority in 6-tier directive system)
 add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);

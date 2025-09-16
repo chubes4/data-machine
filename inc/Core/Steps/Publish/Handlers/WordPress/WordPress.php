@@ -386,7 +386,7 @@ class WordPress {
             $attachment_id = media_handle_sideload($file_array, $post_id);
             
             if (is_wp_error($attachment_id)) {
-                @unlink($temp_file);
+                wp_delete_file($temp_file);
                 do_action('dm_log', 'warning', 'WordPress Featured Image: Failed to create attachment', [
                     'image_url' => $image_url,
                     'error' => $attachment_id->get_error_message()

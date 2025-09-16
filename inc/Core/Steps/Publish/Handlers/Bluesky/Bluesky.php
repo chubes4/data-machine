@@ -297,20 +297,20 @@ class Bluesky {
         // Check file size (1MB limit)
         $file_size = @filesize($temp_file_path);
         if ($file_size === false || $file_size > 1000000) {
-            unlink($temp_file_path);
+            wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_image_too_large', __('Image exceeds Bluesky size limit.', 'data-machine'));
         }
 
         // Get mime type and content
         $mime_type = mime_content_type($temp_file_path);
         if (!$mime_type || strpos($mime_type, 'image/') !== 0) {
-            unlink($temp_file_path);
+            wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_invalid_image_type', __('Invalid image type.', 'data-machine'));
         }
 
         $image_content = file_get_contents($temp_file_path);
         if ($image_content === false) {
-            unlink($temp_file_path);
+            wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_image_read_failed', __('Could not read image file.', 'data-machine'));
         }
 
@@ -324,7 +324,7 @@ class Bluesky {
             'body' => $image_content,
         ], 'Bluesky API');
 
-        unlink($temp_file_path);
+        wp_delete_file($temp_file_path);
         unset($image_content);
 
         if (!$result['success']) {

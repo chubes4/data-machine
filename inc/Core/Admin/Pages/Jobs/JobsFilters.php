@@ -141,7 +141,7 @@ add_action('wp_ajax_dm_clear_processed_items_manual', function() {
     
     // Get parameters
     $clear_type = sanitize_text_field(wp_unslash($_POST['clear_type'] ?? ''));
-    $target_id = intval($_POST['target_id'] ?? 0);
+    $target_id = intval(sanitize_text_field(wp_unslash($_POST['target_id'] ?? '0')));
     
     if (!in_array($clear_type, ['pipeline', 'flow'])) {
         wp_send_json_error(['message' => __('Invalid clear type', 'data-machine')]);
@@ -182,7 +182,7 @@ add_action('wp_ajax_dm_get_pipeline_flows_for_select', function() {
         wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
     }
     
-    $pipeline_id = intval($_POST['pipeline_id'] ?? 0);
+    $pipeline_id = intval(sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? '0')));
     
     if (!$pipeline_id) {
         wp_send_json_error(['message' => __('Invalid pipeline ID', 'data-machine')]);
@@ -220,7 +220,7 @@ add_action('wp_ajax_dm_clear_jobs_manual', function() {
     
     // Get parameters
     $clear_type = sanitize_text_field(wp_unslash($_POST['clear_jobs_type'] ?? ''));
-    $cleanup_processed = !empty($_POST['cleanup_processed']);
+    $cleanup_processed = !empty(sanitize_text_field(wp_unslash($_POST['cleanup_processed'] ?? '')));
     
     if (!in_array($clear_type, ['all', 'failed'])) {
         wp_send_json_error(['message' => __('Invalid clear type', 'data-machine')]);

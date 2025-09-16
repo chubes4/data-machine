@@ -30,16 +30,13 @@ class AIStepToolParameters {
     ): array {
         $parameters = $unified_parameters;
         
-        // Extract content and title from data packets if tool requires them
         $parameters['content'] = self::extractContent($unified_parameters['data'] ?? [], $tool_definition);
         $parameters['title'] = self::extractTitle($unified_parameters['data'] ?? [], $tool_definition);
 
-        // Add tool metadata to parameter structure
         $parameters['tool_definition'] = $tool_definition;
         $parameters['tool_name'] = $tool_definition['name'] ?? null;
         $parameters['handler_config'] = $tool_definition['handler_config'] ?? [];
 
-        // Merge AI-provided parameters (overwrites any conflicting keys)
         foreach ($ai_tool_parameters as $key => $value) {
             $parameters[$key] = $value;
         }

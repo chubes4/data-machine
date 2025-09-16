@@ -3,15 +3,16 @@
  * Tool Definitions Directive - Priority 30
  *
  * Injects available tools list, workflow context, and task completion guidance
- * as the third directive in the 5-tier AI directive system. Provides complete
+ * as the fourth directive in the 6-tier AI directive system. Provides complete
  * pipeline workflow context and tool orchestration instructions.
  *
- * Priority Order in 5-Tier System:
- * 1. Priority 10 - Global System Prompt
- * 2. Priority 20 - Pipeline System Prompt
- * 3. Priority 30 - Tool Definitions and Workflow Context (THIS CLASS)
- * 4. Priority 40 - Data Packet Structure
- * 5. Priority 50 - WordPress Site Context
+ * Priority Order in 6-Tier System:
+ * 1. Priority 5 - Plugin Core Directive
+ * 2. Priority 10 - Global System Prompt
+ * 3. Priority 20 - Pipeline System Prompt
+ * 4. Priority 30 - Tool Definitions and Workflow Context (THIS CLASS)
+ * 5. Priority 40 - Data Packet Structure
+ * 6. Priority 50 - WordPress Site Context
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -82,7 +83,7 @@ class ToolDefinitionsDirective {
     }
     
     /**
-     * Generate dynamic AI role directive based on available tools.
+     * Generate dynamic tool directive based on available tools.
      *
      * @param array $tools Available tools array
      * @param array $request AI request array for context
@@ -95,7 +96,7 @@ class ToolDefinitionsDirective {
         if (empty($pipeline_step_id)) {
             return 'ERROR: Missing required pipeline context (pipeline_step_id). Job has been failed.';
         }
-        $directive = "You are an AI content processing agent in the Data Machine WordPress plugin pipeline system. Your job is to orchestrate workflows from end-to-end using the available tools.\n\n";
+        $directive = "AVAILABLE TOOLS AND WORKFLOW ORCHESTRATION:\n\n";
         
         $handler_tools = [];
         foreach ($tools as $tool_name => $tool_config) {
@@ -106,9 +107,9 @@ class ToolDefinitionsDirective {
         
         if (!empty($handler_tools)) {
             $unique_handlers = array_unique($handler_tools);
-            $directive .= "AVAILABLE TOOLS:\n";
-            $directive .= "Your primary tool for this task: " . implode(', ', $unique_handlers) . "\n";
-            $directive .= "Complete your pipeline objective using these handler tools as needed.\n\n";
+            $directive .= "PRIMARY HANDLER TOOLS:\n";
+            $directive .= "Available for this workflow: " . implode(', ', $unique_handlers) . "\n";
+            $directive .= "These tools advance your pipeline objective when executed.\n\n";
 
             $all_handler_directives = apply_filters('dm_handler_directives', []);
             foreach ($unique_handlers as $handler_slug) {
@@ -153,17 +154,11 @@ class ToolDefinitionsDirective {
             $directive .= $general_tool_directives . "\n\n";
         }
         
-        $directive .= "DATA FORMAT:\n";
-        $directive .= "- Your pipeline objective is to execute the available handler tools\n";
-        $directive .= "- JSON data_packets contain structured workflow data from previous steps\n";
-        $directive .= "- Tool execution results appear as new data packets in subsequent turns\n";
-        $directive .= "- Focus on your pipeline objective, use data_packets as context for your work\n\n";
-        
-        $directive .= "TASK COMPLETION:\n";
-        $directive .= "- Use available handler tools to complete your pipeline objective\n";
-        $directive .= "- Tool results update the data packet array automatically\n";
-        $directive .= "- Task is complete when your pipeline objective is accomplished\n";
-        $directive .= "- Report completion when objective is achieved\n";
+        $directive .= "TOOL USAGE STRATEGY:\n";
+        $directive .= "- Use research tools to gather additional context when beneficial\n";
+        $directive .= "- Use handler tools to produce pipeline outputs and advance workflow\n";
+        $directive .= "- Multiple tool interactions are encouraged when they improve results\n";
+        $directive .= "- Balance thoroughness with efficiency based on content requirements\n";
 
         
         if (!empty($tools)) {
@@ -180,24 +175,24 @@ class ToolDefinitionsDirective {
                 }
             }
             
-            // Handler tools: IMMEDIATE EXECUTION (PRIMARY)
+            // Handler tools: WORKFLOW EXECUTION
             if (!empty($handler_tools)) {
-                $directive .= "IMMEDIATE EXECUTION TOOLS (Complete Your Task Now):\n";
+                $directive .= "WORKFLOW EXECUTION TOOLS:\n";
                 foreach ($handler_tools as $tool_name => $tool_config) {
                     $description = $tool_config['description'] ?? 'No description available';
                     $directive .= "- {$tool_name}: {$description}\n";
                 }
-                $directive .= "→ These tools COMPLETE your workflow objective. Use them when ready to finish your task.\n\n";
+                $directive .= "→ These tools produce pipeline outputs and advance the workflow.\n\n";
             }
-            
-            // General tools: RESEARCH ONLY (SECONDARY)
+
+            // General tools: CONTEXT GATHERING
             if (!empty($general_tools)) {
-                $directive .= "RESEARCH TOOLS (Only If You Need More Information):\n";
+                $directive .= "CONTEXT GATHERING TOOLS:\n";
                 foreach ($general_tools as $tool_name => $tool_config) {
                     $description = $tool_config['description'] ?? 'No description available';
                     $directive .= "- {$tool_name}: {$description}\n";
                 }
-                $directive .= "→ Use these ONLY when you need additional context before using execution tools.\n→ Do NOT use research tools repeatedly - gather what you need, then execute.\n\n";
+                $directive .= "→ Use these to gather additional context when it would improve your output quality.\n\n";
             }
             
             // Real workflow context (must succeed now)
@@ -311,12 +306,12 @@ class ToolDefinitionsDirective {
                 }
             }
             
-            // Completion criteria
-            $directive .= "\nCompletion: Task is complete when ";
+            // Success criteria
+            $directive .= "\nSuccess Criteria: ";
             if (!empty($handler_tools)) {
-                $directive .= "primary objective is accomplished via handler tools";
+                $directive .= "Workflow objective achieved through effective tool usage and quality output";
             } else {
-                $directive .= "content is processed and ready for next step";
+                $directive .= "Content processed and enhanced for optimal next step performance";
             }
             $directive .= "\n";
             
@@ -428,12 +423,12 @@ class ToolDefinitionsDirective {
             }
         }
         
-        // Completion criteria
-        $directive .= "\nCompletion: Task is complete when ";
+        // Success criteria
+        $directive .= "\nSuccess Criteria: ";
         if (!empty($handler_tools)) {
-            $directive .= "primary objective is accomplished via handler tools";
+            $directive .= "Workflow objective achieved through effective tool usage and quality output";
         } else {
-            $directive .= "content is processed and ready for next step";
+            $directive .= "Content processed and enhanced for optimal next step performance";
         }
         $directive .= "\n";
         
@@ -517,5 +512,5 @@ class ToolDefinitionsDirective {
     }
 }
 
-// Self-register (Priority 30 = third in 5-tier directive system)
+// Self-register (Priority 30 = fourth in 6-tier directive system)
 add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);

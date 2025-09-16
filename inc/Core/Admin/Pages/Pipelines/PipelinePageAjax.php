@@ -252,6 +252,11 @@ class PipelinePageAjax
             do_action('dm_auto_save', $pipeline_id);
         }
 
+        // Clear pipeline cache before response
+        if ($pipeline_id > 0) {
+            do_action('dm_clear_cache', $pipeline_id);
+        }
+
         wp_send_json_success([
             /* translators: %s: Schedule interval (e.g., 'active', 'paused') */
             'message' => sprintf(__('Schedule saved successfully. Flow is now %s.', 'data-machine'), $schedule_interval),
@@ -447,7 +452,7 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
         }
         
-        $pipeline_ids = json_decode(wp_unslash($_POST['pipeline_ids'] ?? '[]'), true);
+        $pipeline_ids = json_decode(sanitize_textarea_field(wp_unslash($_POST['pipeline_ids'] ?? '[]')), true);
         
         if (empty($pipeline_ids)) {
             wp_send_json_error(['message' => __('No pipelines selected', 'data-machine')]);
@@ -479,7 +484,7 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
         }
         
-        $csv_content = wp_unslash($_POST['csv_content'] ?? '');
+        $csv_content = sanitize_textarea_field(wp_unslash($_POST['csv_content'] ?? ''));
         
         if (empty($csv_content)) {
             wp_send_json_error(['message' => __('No CSV content provided', 'data-machine')]);
@@ -514,7 +519,7 @@ class PipelinePageAjax
         }
         
         $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
-        $step_order = json_decode(wp_unslash($_POST['step_order'] ?? '[]'), true);
+        $step_order = json_decode(sanitize_textarea_field(wp_unslash($_POST['step_order'] ?? '[]')), true);
         
         if (!$pipeline_id) {
             wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
@@ -563,7 +568,10 @@ class PipelinePageAjax
         
         // Trigger auto-save
         do_action('dm_auto_save', $pipeline_id);
-        
+
+        // Clear pipeline cache before response
+        do_action('dm_clear_cache', $pipeline_id);
+
         wp_send_json_success([
             'message' => __('Step order updated successfully', 'data-machine'),
             'pipeline_id' => $pipeline_id,
@@ -583,7 +591,7 @@ class PipelinePageAjax
         }
         
         $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
-        $flow_order = json_decode(wp_unslash($_POST['flow_order'] ?? '[]'), true);
+        $flow_order = json_decode(sanitize_textarea_field(wp_unslash($_POST['flow_order'] ?? '[]')), true);
         
         if (!$pipeline_id) {
             wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
@@ -764,7 +772,10 @@ class PipelinePageAjax
         
         // Trigger auto-save for complete pipeline persistence
         do_action('dm_auto_save', $pipeline_id);
-        
+
+        // Clear pipeline cache before response
+        do_action('dm_clear_cache', $pipeline_id);
+
         wp_send_json_success([
             'message' => __('Pipeline title saved successfully', 'data-machine'),
             'pipeline_id' => $pipeline_id,
@@ -822,7 +833,12 @@ class PipelinePageAjax
         if ($pipeline_id > 0) {
             do_action('dm_auto_save', $pipeline_id);
         }
-        
+
+        // Clear pipeline cache before response
+        if ($pipeline_id > 0) {
+            do_action('dm_clear_cache', $pipeline_id);
+        }
+
         wp_send_json_success([
             'message' => __('Flow title saved successfully', 'data-machine'),
             'flow_id' => $flow_id,
@@ -850,16 +866,23 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Flow step ID required', 'data-machine')]);
         }
         
-        // Use centralized flow user message update action
-        do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
-        
-        // Note: dm_update_flow_user_message action logs its own success/failure
-        // WordPress actions don't return values, so we assume success here
-        
-        wp_send_json_success([
-            'message' => __('User message saved successfully', 'data-machine'),
-            'flow_step_id' => $flow_step_id
-        ]);
+        // Use centralized flow user message update action with validation
+        $success = apply_filters('dm_update_flow_user_message_result', false, $flow_step_id, $user_message);
+
+        // If no filter handled it, fall back to action (for backwards compatibility)
+        if (!$success) {
+            do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
+            $success = true; // Assume success since action doesn't return values
+        }
+
+        if ($success) {
+            wp_send_json_success([
+                'message' => __('User message saved successfully', 'data-machine'),
+                'flow_step_id' => $flow_step_id
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to save user message', 'data-machine')]);
+        }
     }
 
     /**
@@ -880,16 +903,23 @@ class PipelinePageAjax
             wp_send_json_error(['message' => __('Pipeline step ID required', 'data-machine')]);
         }
         
-        // Use centralized system prompt update action
-        do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
-        
-        // Note: dm_update_system_prompt action logs its own success/failure
-        // WordPress actions don't return values, so we assume success here
-        
-        wp_send_json_success([
-            'message' => __('System prompt saved successfully', 'data-machine'),
-            'pipeline_step_id' => $pipeline_step_id
-        ]);
+        // Use centralized system prompt update action with validation
+        $success = apply_filters('dm_update_system_prompt_result', false, $pipeline_step_id, $system_prompt);
+
+        // If no filter handled it, fall back to action (for backwards compatibility)
+        if (!$success) {
+            do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
+            $success = true; // Assume success since action doesn't return values
+        }
+
+        if ($success) {
+            wp_send_json_success([
+                'message' => __('System prompt saved successfully', 'data-machine'),
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to save system prompt', 'data-machine')]);
+        }
     }
 
     /**

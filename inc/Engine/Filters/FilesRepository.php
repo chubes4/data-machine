@@ -62,14 +62,51 @@ add_action('dm_cleanup_old_files', function() {
                 if (empty($repository->get_all_files($job_namespace))) {
                     $job_dir_path = $repository->get_repository_path($job_namespace);
                     if (is_dir($job_dir_path)) {
-                        rmdir($job_dir_path);
+                        // Initialize WP_Filesystem for directory removal
+                        if (!function_exists('WP_Filesystem')) {
+                            require_once(ABSPATH . 'wp-admin/includes/file.php');
+                        }
+                        if (WP_Filesystem()) {
+                            global $wp_filesystem;
+                            $wp_filesystem->rmdir($job_dir_path);
+                        }
                     }
                 }
             }
         }
-        
+
     }
 });
+
+// Schedule cleanup on WordPress init
+add_action('init', function() {
+    if (dm_files_should_schedule_cleanup() && !as_next_scheduled_action('dm_cleanup_old_files')) {
+        as_schedule_recurring_action(
+            time() + WEEK_IN_SECONDS,
+            WEEK_IN_SECONDS,
+            'dm_cleanup_old_files',
+            [],
+            'data-machine-files'
+        );
+
+        do_action('dm_log', 'debug', 'FilesRepository: Weekly cleanup scheduled.');
+    }
+});
+
+/**
+ * Check if cleanup should be scheduled based on settings
+ *
+ * @return bool True if cleanup should be scheduled
+ */
+function dm_files_should_schedule_cleanup(): bool {
+    // Get settings via filter discovery pattern
+    $all_settings = apply_filters('dm_handler_settings', []);
+    $files_settings = $all_settings['files'] ?? null;
+
+    // Default to auto cleanup enabled. In the future, this could check actual handler
+    // configurations across all flows to see if any have auto_cleanup_enabled set to true
+    return true;
+}
 
 class FilesRepository {
 
@@ -248,7 +285,7 @@ class FilesRepository {
         
         // Clean up temporary file
         if (file_exists($temp_file)) {
-            unlink($temp_file);
+            wp_delete_file($temp_file);
         }
 
         if (!$stored_path) {
@@ -442,7 +479,7 @@ class FilesRepository {
             return false;
         }
 
-        $deleted = unlink($file_path);
+        $deleted = wp_delete_file($file_path);
 
         return $deleted;
     }

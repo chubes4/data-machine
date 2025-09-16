@@ -116,17 +116,17 @@ class ImportExport {
             return false;
         }
         
-        // Build CSV
-        $output = fopen('php://temp', 'r+');
-        fputcsv($output, ['pipeline_id', 'pipeline_name', 'step_position', 'step_type', 'step_config', 'flow_id', 'flow_name', 'handler', 'settings']);
-        
+        // Build CSV using WordPress-compliant string approach
+        $csv_rows = [];
+        $csv_rows[] = ['pipeline_id', 'pipeline_name', 'step_position', 'step_type', 'step_config', 'flow_id', 'flow_name', 'handler', 'settings'];
+
         foreach ($ids as $pipeline_id) {
             $pipeline = $db_pipelines->get_pipeline($pipeline_id);
             if (!$pipeline) continue;
-            
+
             $pipeline_config = json_decode($pipeline['pipeline_config'], true) ?: [];
             $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-            
+
             $position = 0;
             // Sort steps by execution_order for consistent export
             $sorted_steps = $pipeline_config;
@@ -135,26 +135,26 @@ class ImportExport {
                     return ($a['execution_order'] ?? 0) <=> ($b['execution_order'] ?? 0);
                 });
             }
-            
+
             foreach ($sorted_steps as $step) {
                 // Export pipeline structure
-                fputcsv($output, [
+                $csv_rows[] = [
                     $pipeline_id,
                     $pipeline['pipeline_name'],
                     $position++,
                     $step['step_type'] ?? '',
                     json_encode($step),
                     '', '', '', ''
-                ]);
-                
+                ];
+
                 // Export flow configurations
                 foreach ($flows as $flow) {
                     $flow_config = json_decode($flow['flow_config'], true) ?: [];
                     $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $step['pipeline_step_id'], $flow['flow_id']);
                     $flow_step = $flow_config[$flow_step_id] ?? [];
-                    
+
                     if (!empty($flow_step['handler'])) {
-                        fputcsv($output, [
+                        $csv_rows[] = [
                             $pipeline_id,
                             $pipeline['pipeline_name'],
                             $position - 1,
@@ -164,15 +164,14 @@ class ImportExport {
                             $flow['flow_name'],
                             $flow_step['handler'],
                             json_encode($flow_step['settings'] ?? [])
-                        ]);
+                        ];
                     }
                 }
             }
         }
-        
-        rewind($output);
-        $csv = stream_get_contents($output);
-        fclose($output);
+
+        // Convert rows to CSV string
+        $csv = $this->array_to_csv($csv_rows);
         
         // Store result for filter access
         add_filter('dm_export_result', function() use ($csv) { return $csv; });
@@ -192,5 +191,26 @@ class ImportExport {
             }
         }
         return null;
+    }
+
+    /**
+     * Convert array of rows to CSV string
+     *
+     * @param array $rows Array of CSV rows
+     * @return string CSV formatted string
+     */
+    private function array_to_csv(array $rows): string {
+        $csv_content = '';
+        foreach ($rows as $row) {
+            $escaped_row = array_map(function($field) {
+                // Escape quotes and wrap in quotes if field contains comma, quote, or newline
+                if (strpos($field, ',') !== false || strpos($field, '"') !== false || strpos($field, "\n") !== false) {
+                    return '"' . str_replace('"', '""', $field) . '"';
+                }
+                return $field;
+            }, $row);
+            $csv_content .= implode(',', $escaped_row) . "\n";
+        }
+        return $csv_content;
     }
 }

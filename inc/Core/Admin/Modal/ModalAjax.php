@@ -55,6 +55,15 @@ class ModalAjax
         $all_modals = apply_filters('dm_modals', []);
         $modal_data = $all_modals[$template] ?? null;
 
+        // Handler modal fallback lookup for templates like 'handler-settings/files'
+        if (!$modal_data && strpos($template, 'handler-settings/') === 0) {
+            $modal_data = $all_modals['handler-settings'] ?? null;
+            if ($modal_data && isset($modal_data['dynamic_template'])) {
+                // Override template to pass full path to dynamic resolution
+                $modal_data['template'] = $template;
+            }
+        }
+
         if ($modal_data) {
             $title = $modal_data['title'] ?? ucfirst(str_replace('-', ' ', $template));
             
@@ -64,10 +73,7 @@ class ModalAjax
                 $content = $modal_data['content'];
             } elseif (isset($modal_data['template'])) {
                 // Dynamic content via dm_render_template (has access to AJAX context)
-                $context = $_POST['context'] ?? [];
-                if (is_string($context)) {
-                    $context = json_decode($context, true) ?: [];
-                }
+                $context = array_map('sanitize_text_field', wp_unslash($_POST['context'] ?? []));
                 
                 // Special handling for dynamic modals that need processed context
                 $content = $this->render_dynamic_modal_content($modal_data['template'], $context);
@@ -80,29 +86,14 @@ class ModalAjax
                 'template' => $title
             ]);
         } else {
-            // Dynamic modal rendering for unregistered templates
-            $context = $_POST['context'] ?? [];
-            if (is_string($context)) {
-                $context = json_decode($context, true) ?: [];
-            }
-            
-            $content = $this->render_dynamic_modal_content($template, $context);
-            
-            if (!empty($content)) {
-                $title = ucfirst(str_replace('-', ' ', $template));
-                wp_send_json_success([
-                    'content' => $content,
-                    'template' => $title
-                ]);
-            } else {
-                wp_send_json_error([
-                    'message' => sprintf(
-                        /* translators: %s: modal template name */
-                        __('Modal content not found for template: %s', 'data-machine'),
-                        $template
-                    )
-                ]);
-            }
+            // Only registered modals are allowed - architectural security
+            wp_send_json_error([
+                'message' => sprintf(
+                    /* translators: %s: modal template name */
+                    __('Modal template not registered: %s', 'data-machine'),
+                    $template
+                )
+            ]);
         }
     }
     

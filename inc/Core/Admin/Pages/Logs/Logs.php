@@ -166,25 +166,7 @@ class Logs
      */
     public function handle_form_submissions()
     {
-        do_action('dm_log', 'debug', 'Clear logs: handle_form_submissions called', [
-            'page' => $_GET['page'] ?? 'not set',
-            'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
-            'post_data_count' => count($_POST)
-        ]);
-        
-        // Only process on logs page
-        if (!isset($_GET['page']) || $_GET['page'] !== 'dm-logs') {
-            do_action('dm_log', 'debug', 'Clear logs: Wrong page, skipping', ['page' => $_GET['page'] ?? 'not set']);
-            return;
-        }
-        
-        // Only process POST requests
-        if (empty($_POST)) {
-            do_action('dm_log', 'debug', 'Clear logs: No POST data, skipping');
-            return;
-        }
-        
-        do_action('dm_log', 'debug', 'Clear logs: Calling handle_form_actions', ['post_keys' => array_keys($_POST)]);
+        // Delegate all form processing to handle_form_actions which has proper nonce verification
         $this->handle_form_actions();
     }
 
@@ -193,7 +175,8 @@ class Logs
      */
     public function handle_form_actions()
     {
-        if (!isset($_POST['dm_logs_action']) || !wp_verify_nonce(wp_unslash($_POST['dm_logs_nonce'] ?? ''), 'dm_logs_action')) {
+        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
+        if (!isset($_POST['dm_logs_action']) || !wp_verify_nonce($nonce, 'dm_logs_action')) {
             return;
         }
 
@@ -246,7 +229,8 @@ class Logs
      */
     public function ajax_clear_logs()
     {
-        if (!wp_verify_nonce(wp_unslash($_POST['dm_logs_nonce'] ?? ''), 'dm_logs_action')) {
+        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
+        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
             wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
@@ -259,7 +243,8 @@ class Logs
      */
     public function ajax_update_log_level()
     {
-        if (!wp_verify_nonce(wp_unslash($_POST['nonce'] ?? ''), 'dm_update_log_level')) {
+        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
+        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
             wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 

@@ -22,11 +22,15 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 
 **Handler Selection**: Context-aware handler selection based on step type with visual cards showing available options and their capabilities.
 
-**Configuration Modals**: Dedicated configuration interfaces for each handler type with:
+**Configuration Modals**: Universal handler settings template system eliminates code duplication with:
+- Single template (`handler-settings.php`) handling all handler types
+- Dynamic field rendering through Settings classes
+- Context-aware authentication integration
 - Input validation and real-time feedback
-- Authentication status indicators  
+- Authentication status indicators
 - Field-specific help text and examples
 - Auto-save functionality with change tracking
+- Global WordPress settings notification with direct configuration links
 
 **Settings Validation**: Real-time validation of handler configurations with visual status indicators and error messaging.
 
@@ -88,9 +92,10 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 
 ## Modal System
 
-**Standardized Modals**: Consistent modal interface pattern for:
-- Step configuration and editing
-- Handler authentication setup
+**Standardized Modals**: Universal template architecture with consistent modal interface pattern:
+- Single universal handler settings template eliminating code duplication
+- Step configuration and editing through unified Settings class system
+- Handler authentication setup with automatic detection
 - Import/export operations
 - Admin tools and utilities
 

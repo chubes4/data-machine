@@ -460,9 +460,26 @@ class Twitter {
                 'media_id' => $media_id
             ]);
 
-            $handle = fopen($temp_image_path, 'rb');
-            if (!$handle) {
-                do_action('dm_log', 'error', 'Twitter: Cannot open image file for chunked upload.', [
+            // Initialize WP_Filesystem - required for WordPress compliance
+            if (!function_exists('WP_Filesystem')) {
+                require_once(ABSPATH . 'wp-admin/includes/file.php');
+            }
+
+            // Initialize filesystem with direct method for temporary files
+            $filesystem_init = WP_Filesystem();
+            if (!$filesystem_init) {
+                do_action('dm_log', 'error', 'Twitter: WP_Filesystem initialization failed', [
+                    'temp_image_path' => $temp_image_path
+                ]);
+                return null;
+            }
+
+            global $wp_filesystem;
+
+            // Read entire file using WordPress native method (binary-safe)
+            $file_contents = $wp_filesystem->get_contents($temp_image_path);
+            if (false === $file_contents) {
+                do_action('dm_log', 'error', 'Twitter: Cannot read image file for chunked upload.', [
                     'temp_image_path' => $temp_image_path
                 ]);
                 return null;
@@ -470,16 +487,12 @@ class Twitter {
 
             $segment_index = 0;
             $chunk_size = 1048576; // 1MB chunks
+            $file_length = strlen($file_contents);
+            $offset = 0;
 
-            while (!feof($handle)) {
-                $chunk = fread($handle, $chunk_size);
-                if ($chunk === false) {
-                    fclose($handle);
-                    do_action('dm_log', 'error', 'Twitter: Failed to read chunk from image file.', [
-                        'segment_index' => $segment_index
-                    ]);
-                    return null;
-                }
+            // Process file contents in chunks (WordPress compliant approach)
+            while ($offset < $file_length) {
+                $chunk = substr($file_contents, $offset, $chunk_size);
 
                 do_action('dm_log', 'debug', 'Twitter: Uploading chunk.', [
                     'segment_index' => $segment_index,
@@ -495,7 +508,6 @@ class Twitter {
 
                 $http_code = $connection->getLastHttpCode();
                 if ($http_code !== 204) { // APPEND returns 204 on success
-                    fclose($handle);
                     do_action('dm_log', 'error', 'Twitter: Chunked upload APPEND failed.', [
                         'http_code' => $http_code,
                         'segment_index' => $segment_index,
@@ -504,10 +516,9 @@ class Twitter {
                     return null;
                 }
 
+                $offset += $chunk_size;
                 $segment_index++;
             }
-
-            fclose($handle);
             do_action('dm_log', 'debug', 'Twitter: All chunks uploaded successfully.', [
                 'total_segments' => $segment_index
             ]);

@@ -14,7 +14,6 @@
 
 namespace DataMachine\Core\Database\Jobs;
 
-use DataMachine\Core\Database\DatabaseCache;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -29,11 +28,17 @@ class JobsStatus {
     private $table_name;
 
     /**
+     * @var \wpdb WordPress database instance
+     */
+    private $wpdb;
+
+    /**
      * Initialize the status component.
      */
     public function __construct() {
         global $wpdb;
-        $this->table_name = $wpdb->prefix . 'dm_jobs';
+        $this->wpdb = $wpdb;
+        $this->table_name = $this->wpdb->prefix . 'dm_jobs';
     }
 
     /**
@@ -44,12 +49,11 @@ class JobsStatus {
      * @return bool True on success, false on failure.
      */
     public function start_job( int $job_id, string $status = 'processing' ): bool {
-        global $wpdb;
         if ( empty( $job_id ) ) {
             return false;
         }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $updated = $wpdb->update(
+        $updated = $this->wpdb->update(
             $this->table_name,
             [
                 'status' => $status,
@@ -70,7 +74,6 @@ class JobsStatus {
      * @return bool True on success, false on failure.
      */
     public function complete_job( int $job_id, string $status ): bool {
-        global $wpdb;
         // Update validation to include all final statuses
         $valid_statuses = ['completed', 'failed', 'completed_no_items'];
 
@@ -92,7 +95,7 @@ class JobsStatus {
         $format = ['%s', '%s'];
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $updated = $wpdb->update(
+        $updated = $this->wpdb->update(
             $this->table_name,
             $update_data,
             ['job_id' => $job_id],
@@ -131,7 +134,6 @@ class JobsStatus {
      * @return bool True on success, false on failure.
      */
     public function update_job_status(int $job_id, string $status): bool {
-        global $wpdb;
         
         if (empty($job_id)) {
             return false;
@@ -141,7 +143,7 @@ class JobsStatus {
         $format = ['%s'];
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $updated = $wpdb->update(
+        $updated = $this->wpdb->update(
             $this->table_name,
             $update_data,
             ['job_id' => $job_id],
@@ -162,16 +164,19 @@ class JobsStatus {
      * @return object|null The job data as an object, or null if not found.
      */
     private function get_job( int $job_id ): ?object {
-        global $wpdb;
         if ( empty( $job_id ) ) {
             return null;
         }
-        $sql = $wpdb->prepare(
-            "SELECT * FROM {$this->table_name} WHERE job_id = %d",
-            $job_id
-        );
         $cache_key = 'dm_job_status_' . $job_id;
-        $job = DatabaseCache::cached_get_row( $sql, $cache_key, 'OBJECT', 30 ); // Very short 30s cache for job status
+        $cached_result = get_transient( $cache_key );
+
+        if ( false === $cached_result ) {
+            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE job_id = %d", $job_id ), OBJECT );
+            set_transient( $cache_key, $job, 30 ); // Very short 30s cache for job status
+            $cached_result = $job;
+        } else {
+            $job = $cached_result;
+        }
         return $job;
     }
 }

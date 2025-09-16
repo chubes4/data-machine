@@ -1,6 +1,9 @@
 <?php
 /**
- * RSS/Atom feed handler with filtering and deduplication
+ * RSS/Atom feed handler with timeframe filtering, search capabilities, and item deduplication
+ *
+ * @package DataMachine\Core\Steps\Fetch\Handlers\Rss
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
@@ -16,9 +19,6 @@ class Rss {
     }
 
 
-    /**
-     * Fetch RSS feed items with timeframe and search filtering
-     */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
         $flow_step_id = $handler_config['flow_step_id'] ?? null;

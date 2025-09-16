@@ -17,7 +17,7 @@ require_once __DIR__ . '/AIStepTools.php';
  * - Multi-turn conversation management with turn tracking
  * - Dynamic tool discovery and execution
  * - Handler tool completion detection
- * - 5-tier AI directive system integration
+ * - 6-tier AI directive system integration
  * - Conversation state preservation across turns
  *
  * @package DataMachine
@@ -220,7 +220,27 @@ class AIStep {
                             ]);
                             continue;
                         }
-                        
+
+                        // Validate for duplicate tool calls with identical parameters
+                        $validation_result = AIStepConversationManager::validateToolCall(
+                            $tool_name, $tool_parameters, $conversation_messages
+                        );
+
+                        if ($validation_result['is_duplicate']) {
+                            // Add gentle correction message and skip tool execution
+                            $correction_message = AIStepConversationManager::generateDuplicateToolCallMessage($tool_name);
+                            array_push($conversation_messages, $correction_message);
+
+                            do_action('dm_log', 'info', 'AI Agent: Duplicate tool call prevented', [
+                                'flow_step_id' => $flow_step_id,
+                                'turn_count' => $turn_count,
+                                'tool_name' => $tool_name,
+                                'duplicate_prevention' => 'soft_rejection_applied'
+                            ]);
+
+                            continue; // Skip this tool execution, let AI try again
+                        }
+
                         $tool_call_message = AIStepConversationManager::formatToolCallMessage(
                             $tool_name, $tool_parameters, $turn_count
                         );

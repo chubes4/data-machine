@@ -15,7 +15,8 @@ if (!defined('WPINC')) {
 // Handle form submissions directly in template (admin_init timing issues)
 if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
     // Verify nonce for security
-    if (!wp_verify_nonce(wp_unslash($_POST['dm_logs_nonce'] ?? ''), 'dm_logs_action')) {
+    $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
+    if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
         wp_die(esc_html__('Security check failed.', 'data-machine'));
     }
     

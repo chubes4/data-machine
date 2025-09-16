@@ -75,7 +75,7 @@ class LocalSearch {
                 $excerpt = get_the_excerpt($post->ID);
                 if (empty($excerpt)) {
                     // Generate excerpt from content if none exists
-                    $content = strip_tags(get_the_content('', false, $post));
+                    $content = wp_strip_all_tags(get_the_content('', false, $post));
                     $excerpt = wp_trim_words($content, 25, '...');
                 }
                 

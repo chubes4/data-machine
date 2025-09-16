@@ -98,10 +98,10 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
     <div class="dm-flow-steps-section">
         <div class="dm-flow-steps">
             <?php if (!empty($pipeline_steps)): ?>
-                <?php 
+                <?php
                 $flow_step_count = 0; // Track actual flow steps rendered (non-empty steps only)
                 foreach ($pipeline_steps as $index => $step): ?>
-                    <?php 
+                    <?php
                         if (!($step['is_empty'] ?? false)) {
                         echo wp_kses(apply_filters('dm_render_template', '', 'page/flow-step-card', [
                             'step' => $step,

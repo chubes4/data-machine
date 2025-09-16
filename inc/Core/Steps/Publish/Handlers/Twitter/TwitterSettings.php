@@ -5,16 +5,13 @@
  * Defines settings fields and sanitization for Twitter publish handler.
  * Part of the modular handler architecture.
  *
- * @package    Data_Machine
- * @subpackage Core\Steps\Publish\Handlers\Twitter
- * @since      NEXT_VERSION
+ * @package DataMachine
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
-}
+defined('ABSPATH') || exit;
 
 class TwitterSettings {
 

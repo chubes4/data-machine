@@ -45,14 +45,20 @@ class SettingsPageAjax
         }
 
         $tool_id = sanitize_text_field(wp_unslash($_POST['tool_id'] ?? ''));
-        $config_data = wp_unslash($_POST['config_data'] ?? []);
-        
-        if (empty($tool_id)) {
-            wp_send_json_error(['message' => __('Tool ID is required', 'data-machine')]);
+
+        // Properly sanitize config_data based on its type
+        if (isset($_POST['config_data'])) {
+            if (is_array($_POST['config_data'])) {
+                $config_data = array_map('sanitize_text_field', wp_unslash($_POST['config_data']));
+            } else {
+                $config_data = sanitize_text_field(wp_unslash($_POST['config_data']));
+            }
+        } else {
+            $config_data = [];
         }
 
-        if (is_array($config_data)) {
-            $config_data = array_map('sanitize_text_field', array_map('wp_unslash', $config_data));
+        if (empty($tool_id)) {
+            wp_send_json_error(['message' => __('Tool ID is required', 'data-machine')]);
         }
 
         do_action('dm_save_tool_config', $tool_id, $config_data);

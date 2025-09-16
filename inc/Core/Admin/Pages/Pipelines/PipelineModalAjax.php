@@ -72,7 +72,7 @@ class PipelineModalAjax
         }
         
         $template = sanitize_text_field(wp_unslash($_POST['template']));
-        $raw_template_data = wp_unslash($_POST['template_data']);
+        $raw_template_data = sanitize_textarea_field(wp_unslash($_POST['template_data'] ?? ''));
         
         // Validate JSON structure before decoding
         if (!is_string($raw_template_data)) {
@@ -130,7 +130,7 @@ class PipelineModalAjax
         }
         $step_type = sanitize_text_field(wp_unslash($_POST['step_type'] ?? ''));
         $flow_id = sanitize_text_field(wp_unslash($_POST['flow_id'] ?? 'new'));
-        $pipeline_id = (int) (wp_unslash($_POST['pipeline_id'] ?? 0));
+        $pipeline_id = (int) sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? '0'));
         
         if (empty($step_type)) {
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
@@ -212,19 +212,14 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
         
-        $context = wp_unslash($_POST['context'] ?? []);
-        
-        // Handle jQuery's natural JSON string serialization
-        if (is_string($context)) {
-            $context = json_decode(wp_unslash($context), true);
-        }
-        
-        // Context data should be a native array after JSON decoding
+        $context = array_map('sanitize_text_field', wp_unslash($_POST['context'] ?? []));
+
+        // Context data should be a native array after sanitization
         if (!is_array($context)) {
             wp_send_json_error([
                 'message' => __('Invalid context data format - expected array', 'data-machine'),
-                'context_type' => gettype(wp_unslash($_POST['context'] ?? null)),
-                'received_context' => wp_unslash($_POST['context'] ?? null)
+                'context_type' => gettype($context),
+                'received_context' => $context
             ]);
         }
         
@@ -328,7 +323,7 @@ class PipelineModalAjax
                     
                     do_action('dm_log', 'debug', 'PipelineModalAjax: Before saving tool selections', [
                         'pipeline_step_id' => $pipeline_step_id,
-                        'post_enabled_tools' => wp_unslash($_POST['enabled_tools'] ?? null),
+                        'post_enabled_tools' => array_map('sanitize_text_field', wp_unslash($_POST['enabled_tools'] ?? [])),
                         'post_keys' => array_keys($_POST)
                     ]);
                     
@@ -428,14 +423,17 @@ class PipelineModalAjax
                     
                     // Trigger auto-save for additional processing
                     do_action('dm_auto_save', $pipeline_id);
-                    
+
                     do_action('dm_log', 'debug', 'AI step configuration saved successfully', [
                         'pipeline_step_id' => $pipeline_step_id,
                         'pipeline_id' => $pipeline_id,
                         'provider' => $provider,
                         'config_keys' => array_keys($step_config_data)
                     ]);
-                    
+
+                    // Clear pipeline cache before response
+                    do_action('dm_clear_cache', $pipeline_id);
+
                     wp_send_json_success([
                         'message' => __('AI step configuration saved successfully', 'data-machine'),
                         'pipeline_step_id' => $pipeline_step_id,
@@ -474,12 +472,32 @@ class PipelineModalAjax
         }
         
         // Check if file was uploaded
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        if (!isset($_FILES['file']) || !isset($_FILES['file']['error']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
             wp_send_json_error(['message' => __('File upload failed.', 'data-machine')]);
             return;
         }
-        
-        $file = $_FILES['file'];
+
+        // Validate file upload
+        if (!isset($_FILES['file']) || !is_array($_FILES['file'])) {
+            wp_send_json_error(['message' => __('No file uploaded or invalid file structure.', 'data-machine')]);
+        }
+
+        // Sanitize and validate file upload data
+        $tmp_name = $_FILES['file']['tmp_name'] ?? '';
+
+        // Validate tmp_name is a valid uploaded file
+        if (empty($tmp_name) || !is_uploaded_file($tmp_name)) {
+            wp_send_json_error(['message' => __('Invalid temporary file.', 'data-machine')]);
+            return;
+        }
+
+        $file = array(
+            'name' => sanitize_file_name($_FILES['file']['name'] ?? ''),
+            'type' => sanitize_mime_type($_FILES['file']['type'] ?? ''),
+            'tmp_name' => $tmp_name,
+            'error' => intval($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE),
+            'size' => intval($_FILES['file']['size'] ?? 0)
+        );
         
         // Extract flow_step_id from request for proper file isolation
         // Use the flow_step_id provided by the frontend form
@@ -607,13 +625,10 @@ class PipelineModalAjax
         ]);
         
         // Handle both context-based (add handler) and direct form data (save settings) scenarios
-        $context = wp_unslash($_POST['context'] ?? []);
-        if (is_string($context)) {
-            $context = json_decode(wp_unslash($context), true) ?: [];
-        }
+        $context = array_map('sanitize_text_field', wp_unslash($_POST['context'] ?? []));
         
         // Extract data from context if available (add handler scenario), otherwise from direct form fields
-        // Note: $context is already unslashed on lines 607/218, so only unslash direct $_POST values
+        // Note: $context is already unslashed and sanitized above, so only unslash direct $_POST values
         $handler_slug = isset($context['handler_slug']) ? 
             sanitize_text_field($context['handler_slug']) : 
             sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
@@ -660,7 +675,8 @@ class PipelineModalAjax
         }
         
         // Process handler settings using existing method
-        $handler_settings = $this->process_handler_settings($handler_slug);
+        $sanitized_post = array_map('sanitize_text_field', wp_unslash($_POST));
+        $handler_settings = $this->process_handler_settings($handler_slug, $sanitized_post);
         
         do_action('dm_log', 'debug', 'Handler settings processed', [
             'handler_slug' => $handler_slug,
@@ -777,19 +793,20 @@ class PipelineModalAjax
      * Returns sanitized settings array ready for storage.
      *
      * @param string $handler_slug Handler identifier for settings lookup.
+     * @param array $post_data Sanitized POST data array.
      * @return array Sanitized handler settings.
      */
-    private function process_handler_settings($handler_slug)
+    private function process_handler_settings($handler_slug, $post_data)
     {
         $all_settings = apply_filters('dm_handler_settings', []);
         $handler_settings = $all_settings[$handler_slug] ?? null;
-        
+
         if (!$handler_settings || !method_exists($handler_settings, 'sanitize')) {
             return [];
         }
-        
+
         $raw_settings = [];
-        foreach ($_POST as $key => $value) {
+        foreach ($post_data as $key => $value) {
             // Sanitize key to prevent injection
             $safe_key = sanitize_key($key);
             if (!in_array($safe_key, ['action', 'context', 'nonce', '_wp_http_referer'], true) && !empty($safe_key)) {

@@ -2,7 +2,7 @@
 namespace DataMachine\Engine\Filters;
 
 /**
- * Centralized creation for pipelines, flows, steps, jobs via dm_create action
+ * Centralized creation operations with comprehensive validation and permission checking
  */
 
 // If this file is called directly, abort.
@@ -11,19 +11,17 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Data Machine Create Actions Class
+ * Centralized Creation Operations
  *
- * Handles centralized creation operations through the dm_create action hook.
- * Provides consistent validation, permission checking, and service discovery
- * patterns for all creation types.
+ * Atomic creation workflows with comprehensive validation, permission checking,
+ * and filter-based service discovery for pipelines, flows, steps, and jobs.
  *
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
 class Create {
 
     public static function register() {
         $instance = new self();
-        // dm_create_ filter hooks following dm_update_ pattern (using filters to return values)
         add_filter('dm_create_pipeline', [$instance, 'handle_create_pipeline'], 10, 2);
         add_filter('dm_create_pipeline_from_template', [$instance, 'handle_create_pipeline_from_template'], 10, 3);
         add_filter('dm_create_step', [$instance, 'handle_create_step'], 10, 2);
@@ -32,24 +30,12 @@ class Create {
     }
 
 
-    /**
-     * Handle pipeline creation with support for both simple and complete modes.
-     *
-     * Simple Mode: Creates empty pipeline with default flow
-     * Complete Mode: Creates pipeline with predefined steps and configuration
-     *
-     * @param mixed $default Default value (ignored)
-     * @param array $data Creation data
-     * @return int|false Pipeline ID on success, false on failure
-     */
     public function handle_create_pipeline($default, $data = []) {
-        // Permission check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for pipeline creation');
             return false;
         }
 
-        // Get required database services using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
@@ -79,9 +65,6 @@ class Create {
         }
     }
 
-    /**
-     * Creates simple pipeline with empty configuration
-     */
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
         // Use provided pipeline name or fallback
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
@@ -118,9 +101,6 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows);
     }
 
-    /**
-     * Creates complete pipeline with predefined steps and configuration
-     */
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
         // Use provided pipeline name or fallback
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
@@ -260,17 +240,6 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows, 'complete');
     }
 
-    /**
-     * Finalize pipeline creation with caching, logging, and AJAX response.
-     *
-     * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
-     * @param int $flow_id Flow ID
-     * @param object $db_pipelines Pipeline database service
-     * @param object $db_flows Flow database service
-     * @param string $creation_type Creation type for response
-     * @return int Pipeline ID
-     */
     private function finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows, $creation_type = 'simple') {
         do_action('dm_log', 'info', 'Pipeline created successfully', [
             'pipeline_id' => $pipeline_id,
@@ -279,9 +248,6 @@ class Create {
             'creation_type' => $creation_type
         ]);
 
-        // Clear relevant caches after successful creation to ensure UI shows new pipeline
-        \DataMachine\Core\Database\DatabaseCache::clear_cache('dm_all_pipelines');
-        \DataMachine\Core\Database\DatabaseCache::clear_cache_pattern('dm_pipeline_*');
 
         // Trigger action for cache invalidation listeners
         do_action('dm_pipeline_created', $pipeline_id);
@@ -295,6 +261,9 @@ class Create {
             $message = $creation_type === 'complete'
                 ? __('Complete pipeline created successfully', 'data-machine')
                 : __('Pipeline created successfully', 'data-machine');
+
+            // Clear all caches before response (new pipeline affects everything)
+            do_action('dm_clear_all_cache');
 
             wp_send_json_success([
                 'message' => $message,
@@ -311,11 +280,7 @@ class Create {
         return $pipeline_id;
     }
 
-    /**
-     * Creates new pipeline step with validation and sync
-     */
     public function handle_create_step($default, $data = []) {
-        // Permission check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for step creation');
             return false;
@@ -335,7 +300,6 @@ class Create {
             return false;
         }
         
-        // Get required database services using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
@@ -396,20 +360,23 @@ class Create {
         
         // Trigger auto-save
         do_action('dm_auto_save', $pipeline_id);
-        
+
         do_action('dm_log', 'info', 'Step created successfully', [
             'pipeline_id' => $pipeline_id,
             'step_type' => $step_type,
             'pipeline_step_id' => $new_step['pipeline_step_id'],
             'execution_order' => $next_execution_order
         ]);
-        
+
         // For AJAX context, provide comprehensive response data for immediate UI updates
         if (wp_doing_ajax()) {
             // Get step configuration for comprehensive response
             $all_steps = apply_filters('dm_steps', []);
             $step_config = $all_steps[$step_type] ?? [];
-            
+
+            // Clear pipeline cache before response (step creation affects pipeline)
+            do_action('dm_clear_cache', $pipeline_id);
+
             wp_send_json_success([
                 /* translators: %s: Step type or label */
                 'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label'] ?? $step_type),
@@ -426,11 +393,7 @@ class Create {
         return $new_step['pipeline_step_id'];
     }
 
-    /**
-     * Creates flow instance with pipeline step synchronization
-     */
     public function handle_create_flow($default, $data = []) {
-        // Permission check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for flow creation');
             return false;
@@ -443,7 +406,6 @@ class Create {
             return false;
         }
         
-        // Get required database services using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         $db_pipelines = $all_databases['pipelines'] ?? null;
@@ -511,7 +473,10 @@ class Create {
         if (wp_doing_ajax()) {
             // Get complete flow data
             $flow_data = $db_flows->get_flow($flow_id);
-            
+
+            // Clear pipeline cache before response (flow creation affects pipeline)
+            do_action('dm_clear_cache', $pipeline_id);
+
             wp_send_json_success([
                 /* translators: %s: Flow name */
                 'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
@@ -527,17 +492,12 @@ class Create {
         return $flow_id;
     }
 
-    /**
-     * Duplicates flow with remapped flow step IDs
-     */
     public function handle_duplicate_flow($default, int $source_flow_id) {
-        // Permission check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for flow duplication');
             return false;
         }
 
-        // Get required database services using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
 
@@ -611,9 +571,6 @@ class Create {
             'duplicate_flow_name' => $duplicate_flow_name
         ]);
 
-        // Clear relevant caches after successful duplication to ensure UI shows new flow
-        \DataMachine\Core\Database\DatabaseCache::clear_cache('dm_pipeline_flows_' . $source_flow['pipeline_id']);
-        \DataMachine\Core\Database\DatabaseCache::clear_flow_cache($source_flow['pipeline_id']);
 
         // Trigger action for cache invalidation listeners
         do_action('dm_flow_duplicated', $source_flow['pipeline_id']);
@@ -622,6 +579,9 @@ class Create {
         if (wp_doing_ajax()) {
             // Get complete duplicated flow data
             $duplicated_flow_data = $db_flows->get_flow($new_flow_id);
+
+            // Clear pipeline cache before response (flow duplication affects pipeline)
+            do_action('dm_clear_cache', $source_flow['pipeline_id']);
 
             wp_send_json_success([
                 /* translators: %s: Duplicated flow name */
@@ -639,17 +599,6 @@ class Create {
         return $new_flow_id;
     }
 
-    /**
-     * Remap flow step IDs from old flow to new flow
-     *
-     * Flow step IDs use pattern: {pipeline_step_id}_{flow_id}
-     * When duplicating, we need to change {pipeline_step_id}_{old_flow_id} to {pipeline_step_id}_{new_flow_id}
-     *
-     * @param array $source_config Original flow configuration
-     * @param int $old_flow_id Original flow ID
-     * @param int $new_flow_id New flow ID
-     * @return array Remapped configuration
-     */
     private function remap_flow_step_ids(array $source_config, int $old_flow_id, int $new_flow_id): array {
         $remapped_config = [];
 
@@ -684,16 +633,7 @@ class Create {
         return $remapped_config;
     }
 
-    /**
-     * Handle pipeline creation from template using enhanced complete mode.
-     *
-     * @param mixed $default Default value (ignored)
-     * @param string $template_id Template identifier
-     * @param array $options Optional creation options
-     * @return int|false Pipeline ID on success, false on failure
-     */
     public function handle_create_pipeline_from_template($default, $template_id, $options = []) {
-        // Permission check
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for template pipeline creation');
             return false;

@@ -1,26 +1,19 @@
 <?php
 /**
- * Status Detection Filter System
+ * Status detection system with RED/YELLOW/GREEN priority architecture.
  *
- * Centralized status detection for UI components using filter-based architecture.
- * Provides red/yellow/green status indicators for step cards and other UI elements.
+ * Centralized filter-based status detection for pipeline viability, step configuration,
+ * handler authentication, and flow-level issues.
  *
  * @package DataMachine\Engine\Filters
  * @since 1.0.0
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
-
 /**
- * Register all status detection filters
- *
- * Organized by status level (RED/YELLOW/GREEN) and context (pipeline/flow).
- * Returns simple 'red', 'yellow', 'green' status strings.
- *
- * @since 1.0.0
+ * Register status detection filters with RED/YELLOW/GREEN priority hierarchy.
  */
 function dm_register_status_detection_filters() {
     
@@ -39,18 +32,7 @@ function dm_register_status_detection_filters() {
     add_filter('dm_get_handler_customizations', 'dm_get_handler_customizations_data', 10, 2);
 }
 
-/**
- * RED STATUS HANDLERS (Critical - Blocks Execution)
- */
-
-/**
- * Handle RED status conditions for pipeline-level issues
- * 
- * @param string $default_status Current status
- * @param string $context Status context
- * @param array $data Context data
- * @return string Status ('red' if critical issue found, otherwise $default_status)
- */
+// RED STATUS HANDLERS - Critical issues that block execution
 function dm_handle_red_pipeline_statuses($default_status, $context, $data) {
     // AI Step Missing Configuration (highest priority)
     if ($context === 'ai_step') {
@@ -137,14 +119,6 @@ function dm_handle_red_pipeline_statuses($default_status, $context, $data) {
     return $default_status;
 }
 
-/**
- * Handle RED status conditions for flow-level issues
- * 
- * @param string $default_status Current status
- * @param string $context Status context
- * @param array $data Context data
- * @return string Status ('red' if critical issue found, otherwise $default_status)
- */
 function dm_handle_red_flow_statuses($default_status, $context, $data) {
     // Handler Authentication Missing (highest priority flow issue)
     if ($context === 'handler_auth') {
@@ -206,18 +180,7 @@ function dm_handle_red_flow_statuses($default_status, $context, $data) {
     return $default_status;
 }
 
-/**
- * YELLOW STATUS HANDLERS (Warning - Suboptimal)
- */
-
-/**
- * Handle YELLOW status conditions for pipeline-level issues
- * 
- * @param string $default_status Current status
- * @param string $context Status context
- * @param array $data Context data
- * @return string Status ('yellow' if warning found, otherwise $default_status)
- */
+// YELLOW STATUS HANDLERS - Warning conditions, suboptimal but functional
 function dm_handle_yellow_pipeline_statuses($default_status, $context, $data) {
     // AI Cascading Effect (other steps affected by misconfigured AI)
     if ($context === 'pipeline_step_status') {
@@ -312,14 +275,6 @@ function dm_handle_yellow_pipeline_statuses($default_status, $context, $data) {
     return $default_status;
 }
 
-/**
- * Handle YELLOW status conditions for flow-level issues
- * 
- * @param string $default_status Current status
- * @param string $context Status context
- * @param array $data Context data
- * @return string Status ('yellow' if warning found, otherwise $default_status)
- */
 function dm_handle_yellow_flow_statuses($default_status, $context, $data) {
     // WordPress Draft Mode Warning
     if ($context === 'wordpress_draft') {
@@ -345,36 +300,16 @@ function dm_handle_yellow_flow_statuses($default_status, $context, $data) {
     return $default_status;
 }
 
-/**
- * GREEN STATUS HANDLERS (Success)
- */
+// GREEN STATUS HANDLERS - Success conditions
 
-/**
- * Handle GREEN status conditions (default success state)
- * 
- * @param string $default_status Current status
- * @param string $context Status context
- * @param array $data Context data
- * @return string Status (returns $default_status - no changes needed)
- */
 function dm_handle_green_statuses($default_status, $context, $data) {
     // Green is the default state - no specific handling needed
     // This function exists for architectural completeness
     return $default_status;
 }
 
-/**
- * UTILITY FUNCTIONS
- */
+// UTILITY FUNCTIONS
 
-/**
- * Check if a setting should be shown in customizations display
- * 
- * @param string $setting_key The setting key
- * @param mixed $current_value The current value
- * @param string $handler_slug The handler slug
- * @return bool Whether to show this setting
- */
 function dm_should_show_setting($setting_key, $current_value, $handler_slug) {
     // Skip empty strings, false values, and meaningless defaults
     if ($current_value === '' || $current_value === false) {
@@ -394,13 +329,6 @@ function dm_should_show_setting($setting_key, $current_value, $handler_slug) {
     return true;
 }
 
-/**
- * Get handler customization data for display
- * 
- * @param array $customizations Current customizations
- * @param string $flow_step_id Flow step ID
- * @return array Customized settings with labels for display
- */
 function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     if (empty($flow_step_id)) {
         return [];

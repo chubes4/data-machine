@@ -1,6 +1,7 @@
 <?php
 namespace DataMachine\Engine\Actions;
 
+
 /**
  * Data Machine Update Actions
  *
@@ -21,7 +22,7 @@ namespace DataMachine\Engine\Actions;
  * - Centralized logging and error handling
  *
  * @package DataMachine
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
 
 // If this file is called directly, abort.
@@ -36,7 +37,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Provides consistent validation, service discovery, and error handling
  * patterns for all update types.
  *
- * @since NEXT_VERSION
+ * @since 1.0.0
  */
 class Update {
 
@@ -46,7 +47,7 @@ class Update {
      * Registers update action hooks that provide intelligent method selection
      * and consistent service discovery patterns.
      *
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public static function register() {
         $instance = new self();
@@ -68,9 +69,13 @@ class Update {
         
         // Flow user message management action hook - enables AI steps to run standalone
         add_action('dm_update_flow_user_message', [$instance, 'handle_flow_user_message_update'], 10, 2);
-        
+
         // Pipeline system prompt management action hook - enables AI step template updates
         add_action('dm_update_system_prompt', [$instance, 'handle_system_prompt_update'], 10, 2);
+
+        // Filter-based versions for AJAX validation
+        add_filter('dm_update_flow_user_message_result', [$instance, 'handle_flow_user_message_update'], 10, 3);
+        add_filter('dm_update_system_prompt_result', [$instance, 'handle_system_prompt_update'], 10, 3);
         
         // Explicit job failure action hook - simplified job failure interface
         add_action('dm_fail_job', [$instance, 'handle_job_failure'], 10, 3);
@@ -87,7 +92,7 @@ class Update {
      * @param string $context Update context ('start', 'complete', 'update')
      * @param string|null $old_status Previous job status for transition logic
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_job_status_update($job_id, $new_status, $context = 'update', $old_status = null) {
         $all_databases = apply_filters('dm_db', []);
@@ -137,7 +142,7 @@ class Update {
      * @param int $flow_id Flow ID to update scheduling for
      * @param string $schedule_interval Schedule interval key
      * @param string $old_interval Previous schedule interval
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_flow_schedule_update($flow_id, $schedule_interval, $old_interval = '') {
         // Always unschedule first to prevent duplicates
@@ -178,7 +183,7 @@ class Update {
      *
      * @param int $pipeline_id Pipeline ID to auto-save everything for
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_pipeline_auto_save($pipeline_id) {
         // Get database services
@@ -251,8 +256,13 @@ class Update {
                 $flow_steps_saved += count($flow_config);
             }
         }
-        
-        
+
+        do_action('dm_log', 'debug', 'Auto-save completed', [
+            'pipeline_id' => $pipeline_id,
+            'flows_saved' => $flows_saved,
+            'flow_steps_saved' => $flow_steps_saved
+        ]);
+
         return true;
     }
 
@@ -266,7 +276,7 @@ class Update {
      * @param string $handler_slug Handler slug to add/update
      * @param array $handler_settings Handler configuration settings
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_flow_handler_update($flow_step_id, $handler_slug, $handler_settings = []) {
         // Extract flow_id from flow_step_id using universal filter
@@ -358,7 +368,7 @@ class Update {
      * @param array $steps Array of pipeline step data (single step = array with one element)
      * @param array $context Context information for logging and debugging
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_flow_steps_sync($flow_id, $steps, $context = []) {
         $all_databases = apply_filters('dm_db', []);
@@ -428,8 +438,17 @@ class Update {
             ]);
             return false;
         }
-        
-        
+
+        // Clear cache after successful flow configuration update
+        do_action('dm_clear_cache', $flow['pipeline_id']);
+
+        do_action('dm_log', 'debug', 'Flow steps sync completed successfully', [
+            'flow_id' => $flow_id,
+            'pipeline_id' => $flow['pipeline_id'],
+            'steps_count' => count($steps),
+            'context' => $context
+        ]);
+
         return true;
     }
 
@@ -442,12 +461,19 @@ class Update {
      * Flow-scoped user messages allow different content per flow instance
      * while maintaining pipeline-level system prompt templates.
      *
+     * @param string|bool $result Previous filter result (when used as filter)
      * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id)
      * @param string $user_message User message content
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
-    public function handle_flow_user_message_update($flow_step_id, $user_message) {
+    public function handle_flow_user_message_update($result, $flow_step_id, $user_message = null) {
+        // Handle both action and filter usage
+        if (is_string($result) && $user_message === null) {
+            // Called as action - $result is actually $flow_step_id
+            $user_message = $flow_step_id;
+            $flow_step_id = $result;
+        }
         // Extract flow_id from flow_step_id using universal filter
         $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
@@ -499,7 +525,7 @@ class Update {
         $success = $db_flows->update_flow($flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
-        
+
         if (!$success) {
             do_action('dm_log', 'error', 'Flow user message update failed - database update error', [
                 'flow_id' => $flow_id,
@@ -521,12 +547,19 @@ class Update {
      * Pipeline-scoped system prompts serve as templates that can be
      * inherited by flow instances while maintaining flow-specific customization.
      *
+     * @param string|bool $result Previous filter result (when used as filter)
      * @param string $pipeline_step_id Pipeline step ID (UUID4)
      * @param string $system_prompt System prompt content
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
-    public function handle_system_prompt_update($pipeline_step_id, $system_prompt) {
+    public function handle_system_prompt_update($result, $pipeline_step_id, $system_prompt = null) {
+        // Handle both action and filter usage
+        if (is_string($result) && $system_prompt === null) {
+            // Called as action - $result is actually $pipeline_step_id
+            $system_prompt = $pipeline_step_id;
+            $pipeline_step_id = $result;
+        }
         // Get database services
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
@@ -579,7 +612,7 @@ class Update {
         $success = $db_pipelines->update_pipeline($target_pipeline['pipeline_id'], [
             'pipeline_config' => json_encode($pipeline_config)
         ]);
-        
+
         if (!$success) {
             do_action('dm_log', 'error', 'System prompt update failed - database update error', [
                 'pipeline_id' => $target_pipeline['pipeline_id'],
@@ -588,6 +621,9 @@ class Update {
             return false;
         }
 
+
+        // Trigger auto-save for complete pipeline persistence consistency
+        do_action('dm_auto_save', $target_pipeline['pipeline_id']);
 
         return true;
     }
@@ -602,7 +638,7 @@ class Update {
      * @param string $reason Failure reason for logging
      * @param array $context_data Additional context data for debugging
      * @return bool Success status
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     public function handle_job_failure($job_id, $reason, $context_data = []) {
         $all_databases = apply_filters('dm_db', []);
@@ -666,7 +702,7 @@ class Update {
      *
      * @param string $interval Schedule interval key
      * @return int|false Interval in seconds or false if invalid
-     * @since NEXT_VERSION
+     * @since 1.0.0
      */
     private function get_schedule_interval_seconds($interval) {
         $intervals = apply_filters('dm_scheduler_intervals', []);

@@ -179,7 +179,8 @@ docs/
 
 ### AI Integration
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- 5-tier AI directive system with auto-registration:
+- 6-tier AI directive system with auto-registration:
+  - PluginCoreDirective (Priority 5 - foundational AI agent identity)
   - GlobalSystemPromptDirective (Priority 10 - foundational behavior)
   - PipelineSystemPromptDirective (Priority 20 - workflow visualization)
   - ToolDefinitionsDirective (Priority 30 - usage instructions)

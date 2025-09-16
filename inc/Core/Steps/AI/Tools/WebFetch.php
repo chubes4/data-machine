@@ -32,7 +32,7 @@ class WebFetch {
             ];
         }
 
-        if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'])) {
+        if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array(wp_parse_url($url, PHP_URL_SCHEME), ['http', 'https'])) {
             return [
                 'success' => false,
                 'error' => 'Invalid URL format. Must be a valid HTTP or HTTPS URL',
@@ -42,7 +42,7 @@ class WebFetch {
 
         do_action('dm_log', 'debug', 'Web Fetch: Starting content retrieval', [
             'url' => $url,
-            'url_host' => parse_url($url, PHP_URL_HOST)
+            'url_host' => wp_parse_url($url, PHP_URL_HOST)
         ]);
 
         $response = wp_remote_get($url, [
@@ -128,7 +128,7 @@ class WebFetch {
 
         $title = '';
         if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html_content, $title_matches)) {
-            $title = html_entity_decode(strip_tags($title_matches[1]), ENT_QUOTES, 'UTF-8');
+            $title = html_entity_decode(wp_strip_all_tags($title_matches[1]), ENT_QUOTES, 'UTF-8');
             $title = trim($title);
         }
 
@@ -145,7 +145,7 @@ class WebFetch {
             $content = preg_replace("/<\/{$element}>/i", "</{$element}>\n", $content);
         }
 
-        $content = strip_tags($content);
+        $content = wp_strip_all_tags($content);
 
         $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
 

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
- * Description:     AI-first WordPress plugin for content processing workflows. Visual pipeline builder with multi-provider AI integration and agentic tool calling.
+ * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
  * Version:         0.1.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net

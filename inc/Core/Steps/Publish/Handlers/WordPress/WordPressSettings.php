@@ -5,16 +5,13 @@
  * Defines settings fields and sanitization for WordPress publish handler.
  * Part of the modular handler architecture.
  *
- * @package    Data_Machine
- * @subpackage Core\Steps\Publish\Handlers\WordPress
- * @since      NEXT_VERSION
+ * @package DataMachine
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
-}
+defined('ABSPATH') || exit;
 
 class WordPressSettings {
 

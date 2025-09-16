@@ -2,9 +2,8 @@
 /**
  * Universal Handler Settings Template
  *
- * Universal template for all handler configuration modal content.
- * Uses Settings classes to render appropriate fields for any handler type.
- * Eliminates code duplication across individual handler templates.
+ * Unified configuration template supporting all handler types through Settings classes.
+ * Features dynamic field rendering, authentication integration, and context-aware configuration.
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
  * @since 1.0.0
@@ -34,7 +33,6 @@ if ($handler_slug) {
     $handler_settings = $all_settings[$settings_key] ?? null;
     
     if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
-        // Get current settings from flow step config for field generation
         $current_settings_for_fields = [];
         if (!empty($flow_step_id) && !empty($handler_slug)) {
             $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
@@ -103,7 +101,6 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
                 }
             }
             
-            // Apply global defaults for handlers
             $current_settings = apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
             
             
@@ -129,13 +126,12 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
         </div>
 
         <?php
-        // Show global settings notification for WordPress handlers
+        // Global settings notification for WordPress handlers
         if (in_array($handler_slug, ['wordpress_publish', 'wordpress_posts'])) {
             $all_settings = get_option('data_machine_settings', []);
             $wp_settings = $all_settings['wordpress_settings'] ?? [];
             $global_settings = [];
 
-            // Check for active global settings
             if (!empty($wp_settings['default_author_id'])) {
                 $user = get_userdata($wp_settings['default_author_id']);
                 $author_name = $user ? $user->display_name : 'Unknown';

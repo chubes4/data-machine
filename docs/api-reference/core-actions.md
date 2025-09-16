@@ -199,6 +199,90 @@ do_action('dm_cleanup_old_files');
 - Cleans up orphaned files
 - Runs via Action Scheduler
 
+## Cache Management Actions
+
+### `dm_clear_cache`
+
+**Purpose**: Clear caches for a specific pipeline
+
+**Parameters**:
+- `$pipeline_id` (int) - Pipeline ID to clear caches for
+
+**Usage**:
+```php
+do_action('dm_clear_cache', $pipeline_id);
+```
+
+**Process**:
+1. Clears pipeline-specific caches (configuration, steps)
+2. Clears flow caches related to the pipeline
+3. Clears pipeline flows cache
+4. Uses pattern-based clearing for broader cache invalidation
+
+**Cache Types Cleared**:
+- `dm_pipeline_{id}` - Pipeline configuration
+- `dm_pipeline_steps_{id}` - Pipeline steps
+- `dm_pipeline_config_{id}` - Pipeline configuration
+- `dm_pipeline_flows_{id}` - Pipeline flows
+- `dm_flow_*` - All flow-related caches
+
+**Automatic Triggering**: Automatically triggered on `dm_auto_save` action
+
+### `dm_clear_all_cache`
+
+**Purpose**: Clear all Data Machine caches (complete reset)
+
+**Usage**:
+```php
+do_action('dm_clear_all_cache');
+```
+
+**Process**:
+1. Clears all Data Machine cache patterns
+2. Uses SQL queries to find matching transients
+3. Removes both data and timeout transients
+
+**Cache Patterns Cleared**:
+- `dm_pipeline_*` - All pipeline-related caches
+- `dm_flow_*` - All flow-related caches
+- `dm_job_*` - All job-related caches
+- `dm_recent_jobs*` - Recent jobs caches
+- `dm_flow_jobs*` - Flow jobs caches
+- `dm_all_pipelines` - Complete pipeline list cache
+
+**Performance Note**: Use sparingly - only when complete cache reset is necessary
+
+### Cache Implementation Details
+
+**Storage Method**: WordPress transients with pattern-based management
+
+**Pattern Clearing**:
+- Converts wildcard patterns (`*`) to SQL LIKE patterns (`%`)
+- Queries `wp_options` table for matching transient keys
+- Clears both data transients and timeout transients
+
+**Cache Keys Structure**:
+```php
+// Pipeline caches
+'dm_pipeline_' . $pipeline_id
+'dm_pipeline_steps_' . $pipeline_id
+'dm_pipeline_config_' . $pipeline_id
+
+// Flow caches
+'dm_flow_' . $flow_id
+'dm_pipeline_flows_' . $pipeline_id
+'dm_flow_step_' . $flow_step_id
+
+// System caches
+'dm_all_pipelines'
+'dm_recent_jobs_' . $context
+```
+
+**Cache Invalidation**: Cache clears explicitly on:
+- Pipeline/flow/step operations (explicit `dm_clear_cache` calls)
+- System-wide operations (`dm_clear_all_cache`)
+- Manual cache clearing operations
+
 ## Import/Export Actions
 
 ### `dm_import`

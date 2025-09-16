@@ -47,38 +47,7 @@ function dm_register_files_fetch_filters() {
         return $all_settings;
     });
     
-    // Metadata parameter injection - Files specific
-    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-        // Only process for steps that come after files fetch
-        if (empty($data) || !is_array($data)) {
-            return $parameters;
-        }
-        
-        $latest_entry = $data[0] ?? [];
-        $metadata = $latest_entry['metadata'] ?? [];
-        $source_type = $metadata['source_type'] ?? '';
-        
-        // Only inject Files metadata
-        if ($source_type === 'files') {
-            // Add Files specific parameters to flat structure
-            $parameters['file_path'] = $metadata['file_path'] ?? '';
-            $parameters['file_name'] = $metadata['file_name'] ?? '';
-            $parameters['mime_type'] = $metadata['mime_type'] ?? '';
-            $parameters['file_size'] = $metadata['file_size'] ?? 0;
-            $parameters['original_id'] = $metadata['original_id'] ?? '';
-            $parameters['original_title'] = $metadata['original_title'] ?? '';
-            $parameters['original_date_gmt'] = $metadata['original_date_gmt'] ?? '';
-            
-            do_action('dm_log', 'debug', 'Files: Metadata injected into engine parameters', [
-                'flow_step_id' => $flow_step_id,
-                'file_path' => $parameters['file_path'],
-                'file_name' => $parameters['file_name'],
-                'mime_type' => $parameters['mime_type']
-            ]);
-        }
-        
-        return $parameters;
-    }, 10, 5);
+    // Files-specific parameter injection removed - now handled by engine-level extraction
     
     // Files custom template registration - provides specialized upload interface
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
@@ -98,42 +67,9 @@ function dm_register_files_fetch_filters() {
         return $content;
     }, 10, 3);
 
-// Repository registration and cleanup now handled in Engine/filters/DataMachineFilters.php
+// Repository registration and cleanup now handled in Engine/filters/FilesRepository.php
     
-    // Schedule cleanup on plugin activation or settings change
-    add_action('init', function() {
-        // Only schedule if auto-cleanup is enabled and not already scheduled
-        if (dm_files_should_schedule_cleanup() && !as_next_scheduled_action('dm_cleanup_old_files')) {
-            as_schedule_recurring_action(
-                time() + WEEK_IN_SECONDS,
-                WEEK_IN_SECONDS,
-                'dm_cleanup_old_files',
-                [],
-                'data-machine-files'
-            );
-            
-            do_action('dm_log', 'debug', 'FilesRepository: Weekly cleanup scheduled.');
-        }
-    });
-    
-    
-}
 
-
-
-/**
- * Check if cleanup should be scheduled based on settings
- *
- * @return bool True if cleanup should be scheduled
- */
-function dm_files_should_schedule_cleanup(): bool {
-    // Get settings via filter discovery pattern
-    $all_settings = apply_filters('dm_handler_settings', []);
-    $files_settings = $all_settings['files'] ?? null;
-    
-    // Default to auto cleanup enabled. In the future, this could check actual handler 
-    // configurations across all flows to see if any have auto_cleanup_enabled set to true
-    return true;
 }
 
 // Auto-register when file loads - achieving complete self-containment

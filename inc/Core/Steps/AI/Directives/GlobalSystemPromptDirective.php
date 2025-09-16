@@ -1,17 +1,18 @@
 <?php
 /**
- * Global System Prompt Directive - Priority 10 (Highest Priority)
+ * Global System Prompt Directive - Priority 10
  *
- * Injects user-configured foundational AI behavior instructions as the first directive
- * in the 5-tier AI directive system. Sets overall tone, personality, and core behavior
+ * Injects user-configured foundational AI behavior instructions as the second directive
+ * in the 6-tier AI directive system. Sets overall tone, personality, and core behavior
  * for ALL AI interactions across the entire system.
  *
- * Priority Order in 5-Tier System:
- * 1. Priority 10 - Global System Prompt (THIS CLASS)
- * 2. Priority 20 - Pipeline System Prompt
- * 3. Priority 30 - Tool Definitions and Workflow Context
- * 4. Priority 40 - Data Packet Structure
- * 5. Priority 50 - WordPress Site Context
+ * Priority Order in 6-Tier System:
+ * 1. Priority 5 - Plugin Core Directive
+ * 2. Priority 10 - Global System Prompt (THIS CLASS)
+ * 3. Priority 20 - Pipeline System Prompt
+ * 4. Priority 30 - Tool Definitions and Workflow Context
+ * 5. Priority 40 - Data Packet Structure
+ * 6. Priority 50 - WordPress Site Context
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -57,5 +58,5 @@ class GlobalSystemPromptDirective {
     }
 }
 
-// Self-register (Priority 10 = highest priority in 5-tier directive system)
+// Self-register (Priority 10 = second priority in 6-tier directive system)
 add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);

@@ -60,6 +60,10 @@ do_action('dm_auto_save', $pipeline_id);
 do_action('dm_fail_job', $job_id, $reason, $context_data); // Explicit job failure with configurable cleanup
 do_action('dm_cleanup_old_files'); // File repository maintenance via Action Scheduler
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
+
+// Cache Management
+do_action('dm_clear_cache', $pipeline_id); // Clear specific pipeline cache
+do_action('dm_clear_all_cache'); // Clear all Data Machine caches
 ```
 
 ## Architecture
@@ -156,31 +160,22 @@ $result = apply_filters('ai_request', [
 
 ### AI Request Priority System
 
-**5-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes in standardized priority order with 10-unit spacing for extensibility:
+**6-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes:
 
-1. **Priority 10 - Global System Prompt** (`GlobalSystemPromptDirective`): **HIGHEST PRIORITY** - User-configured foundational instructions that set the overall tone, personality, and core behavior for ALL AI interactions. This is the first message the AI model sees and serves as the master directive that influences every response. Essential for establishing consistent AI behavior across all workflows.
-2. **Priority 20 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): User-configured pipeline instructions and internal linking guidance with complete workflow structure visualization showing AI agent position
-3. **Priority 30 - Tool Definitions and Workflow Context** (`ToolDefinitionsDirective`): Dynamic tool-specific prompts, usage instructions, and flow-specific workflow context with handler tool prioritization
-4. **Priority 40 - Data Packet Structure** (`DataPacketStructureDirective`): JSON structure explanation for AI agents including data packet array format, chronological ordering, and workflow dynamics
-5. **Priority 50 - WordPress Site Context** (`SiteContextDirective`): WordPress environment information including post types, taxonomies, and site metadata (toggleable via settings, lowest priority)
+1. **Priority 5 - Plugin Core Directive** (`PluginCoreDirective`): Foundational AI agent identity and core behavioral principles
+2. **Priority 10 - Global System Prompt** (`GlobalSystemPromptDirective`): User-configured foundational AI behavior
+3. **Priority 20 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): Pipeline instructions and workflow visualization
+4. **Priority 30 - Tool Definitions** (`ToolDefinitionsDirective`): Dynamic tool prompts and workflow context
+5. **Priority 40 - Data Packet Structure** (`DataPacketStructureDirective`): JSON structure explanation for AI agents
+6. **Priority 50 - WordPress Site Context** (`SiteContextDirective`): WordPress environment info (toggleable)
 
 ```php
-// 5-tier modular AI directive system with standardized priority spacing
-// Each directive is a separate class that auto-registers with the ai_request filter
-
-// Priority 10: Global system prompt (HIGHEST PRIORITY - foundational AI behavior settings)
+// Auto-registering directive classes with standardized priority spacing
+add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 5, 5);
 add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
-
-// Priority 20: Pipeline system prompt (user configuration + workflow structure visualization)
 add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
-
-// Priority 30: Tool definitions and workflow context (enhanced with flow-specific context)
 add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
-
-// Priority 40: Data packet structure explanation (JSON format and ordering)
 add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5);
-
-// Priority 50: WordPress site context (environment info - toggleable, lowest priority)
 add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
@@ -391,11 +386,6 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 // Includes configuration warnings and per-step enablement checkboxes
 ```
 
-**Tool Capabilities**:
-- **Google Search**: Web search, site restriction (API key + Search Engine ID required)
-- **Local Search**: WordPress WP_Query search (no configuration needed)
-- **WebFetch**: Retrieve and process web page content (50K character limit, no configuration needed)
-- **WordPress Post Reader**: Single WordPress post content retrieval by URL (no configuration needed)
 
 ## Handler Matrix
 
@@ -486,6 +476,30 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 **Features**: Drag & drop, auto-save, status indicators, modal configuration
 **OAuth**: `/dm-oauth/{provider}/` URLs with popup flow
 
+### Universal Handler Settings Template System
+
+**Template Path**: `inc/Core/Admin/Pages/Pipelines/templates/modal/handler-settings.php`
+
+**Unified Configuration**: Single template handles all handler types, eliminating code duplication across individual handler templates.
+
+```php
+// Universal template approach
+$handler_settings = apply_filters('dm_handler_settings', [])[$handler_slug] ?? null;
+if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
+    $settings_fields = apply_filters('dm_enabled_settings',
+        $handler_settings::get_fields($current_settings),
+        $handler_slug, $step_type, $context
+    );
+}
+```
+
+**Template Features**:
+- **Dynamic Field Rendering**: Uses Settings classes to generate appropriate fields for any handler type
+- **Authentication Integration**: Automatic auth system detection and management button display
+- **Global Settings Notification**: Shows active WordPress global settings with direct settings link
+- **Context-Aware Configuration**: Supports flow-level and pipeline-level configuration inheritance
+- **Validation Integration**: Real-time configuration validation and status indicators
+
 ## Settings
 
 **Controls**: Engine Mode (headless - disables admin pages only), admin page toggles, tool toggles, site context toggle, global system prompt, job data cleanup on failure
@@ -553,58 +567,22 @@ class MyStep {
 ```
 
 
-### Tool Parameters (AI Tools Only)
-
-**AIStepToolParameters Class**: Builds standardized parameter structures for AI tool execution with unified flat parameter format compatible with handler tool call methods.
-
-```php
-// Standard AI tool parameter building - creates flat parameter structure
-$parameters = AIStepToolParameters::buildParameters(
-    $ai_tool_parameters,     // Parameters from AI tool call
-    $unified_parameters,     // Unified parameter structure from engine
-    $tool_definition         // Tool definition from ai_tools filter
-);
-
-// Handler tools with engine parameters merged - for Update handlers requiring source_url
-$parameters = AIStepToolParameters::buildForHandlerTool(
-    $ai_tool_parameters,     // AI tool call parameters
-    $data,                   // Data packet array for content extraction
-    $tool_definition,        // Tool specification
-    $engine_parameters,      // Additional parameters from engine context (source_url, etc.)
-    $handler_config         // Handler-specific settings
-);
-```
-
-**Parameter Structure**: Merges AI-provided parameters with engine context and extracted content data into flat structure:
-- Extracts `content` and `title` from data packets based on tool specifications
-- Adds `tool_definition`, `tool_name`, `handler_config` to parameter structure  
-- Merges all AI tool parameters directly into flat structure
-- For handler tools: merges engine parameters (like `source_url`) for Update handlers
-
-**Benefits**:
-- ✅ **Truly Flexible**: ANY metadata becomes available as additional parameters
-- ✅ **Clean Signatures**: 2 structured parameters instead of 5 individual ones
-- ✅ **Filter-Based**: Steps declare requirements, no hard-coded extraction
-- ✅ **Extensible**: New metadata types automatically available
 
 ## Step Implementation
 
-**New Simplified Step Pattern**:
+**Standard Implementation Patterns**:
 
 ```php
+// Step Pattern
 class MyStep {
     public function execute(array $parameters): array {
-        // Extract from flat parameter structure
         $job_id = $parameters['job_id'];
         $flow_step_id = $parameters['flow_step_id'];
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
-        
-        // Extract what this step needs
-        $source_url = $parameters['source_url'] ?? null;
-        
+
         do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
-        
+
         array_unshift($data, [
             'type' => 'my_step',
             'content' => ['title' => $title, 'body' => $content],
@@ -615,60 +593,22 @@ class MyStep {
     }
 }
 
-add_filter('dm_steps', function($steps) {
-    $steps['my_step'] = ['name' => __('My Step'), 'class' => 'MyStep', 'position' => 50];
-    return $steps;
-});
-
-```
-
-**Fetch Handlers**:
-```php
+// Fetch Handler
 class MyFetchHandler {
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         do_action('dm_mark_item_processed', $flow_step_id, 'my_handler', $item_id, $job_id);
         return ['processed_items' => $items];
     }
 }
-```
 
-**Publish Handlers**:
-```php
+// Publish/Update Handler
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // $parameters built by AIStepToolParameters (see Tool Parameters above)
         $handler_config = $tool_def['handler_config'] ?? [];
+        // For Update handlers: $parameters['source_url'] required from engine
         return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
     }
 }
-```
-
-**Update Handlers**:
-```php
-class MyUpdateHandler {
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // $parameters built by AIStepToolParameters with engine parameters merged
-        // source_url comes from engine parameters, required for WordPress updates
-        if (empty($parameters['source_url'])) {
-            return ['success' => false, 'error' => 'Missing required source_url parameter'];
-        }
-        
-        $handler_config = $tool_def['handler_config'] ?? [];
-        $post_id = url_to_postid($parameters['source_url']);
-        
-        return ['success' => true, 'data' => ['updated_id' => $post_id, 'modifications' => $changes]];
-    }
-}
-
-add_filter('dm_handlers', function($handlers) {
-    $handlers['my_update'] = [
-        'type' => 'update',
-        'class' => 'MyUpdateHandler',
-        'label' => __('My Update Handler'),
-        'description' => __('Updates existing content')
-    ];
-    return $handlers;
-});
 ```
 
 ## System Integration
@@ -756,8 +696,18 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json (containing 90+ filter registrations)
-**Key Auto-loaded Classes**: Modular directive classes (`GlobalSystemPromptDirective.php`, `PipelineSystemPromptDirective.php`, `ToolDefinitionsDirective.php`, `DataPacketStructureDirective.php`, `SiteContextDirective.php`), `AIStepToolParameters.php`, `AIStepConversationManager.php` - automatic filter registration, parameter building, and conversation state management
+**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json
+**Key Classes**: Directive classes, `AIStepToolParameters`, `AIStepConversationManager`
+**AI HTTP Client**: `chubes4/ai-http-client` provides unified HTTP interface
+
+### Engine Filter Architecture
+
+**Streamlined Engine Filters** (`inc/Engine/Filters/`):
+- **Create.php**: Centralized creation operations with comprehensive validation and permission checking
+- **StatusDetection.php**: Filter-based status detection system with RED/YELLOW/GREEN priority architecture
+- **Comment Cleanup**: Engine filters maintain clean, focused documentation without redundant comments
+- **Atomic Operations**: Complete creation workflows with proper cache invalidation and AJAX response handling
+- **Permission Security**: All engine operations require `manage_options` capability with consistent validation
 
 ## Extensions
 

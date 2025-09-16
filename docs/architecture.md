@@ -58,6 +58,13 @@ Flow-isolated UUID storage with automatic cleanup:
 - Automatic purging on job completion
 - Support for local and remote file processing
 
+### Cache Management
+Centralized WordPress transient-based cache system:
+- Automatic cache invalidation on pipeline changes
+- Pattern-based cache clearing for efficient management
+- Pipeline-specific and global cache operations
+- Integration with auto-save functionality
+
 ### Admin Interface
 WordPress admin integration with `manage_options` security:
 - Drag & drop pipeline builder
@@ -77,7 +84,8 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- 5-tier AI directive priority system with standardized 10-unit spacing for extensibility:
+- 6-tier AI directive priority system with standardized spacing for extensibility:
+  - **Priority 5**: PluginCoreDirective (foundational AI agent identity)
   - **Priority 10**: GlobalSystemPromptDirective (foundational AI behavior)
   - **Priority 20**: PipelineSystemPromptDirective (workflow structure visualization)
   - **Priority 30**: ToolDefinitionsDirective (tool definitions + workflow context)

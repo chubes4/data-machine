@@ -113,31 +113,30 @@ class FetchStep {
                 
                 if (isset($result['processed_items']) && is_array($result['processed_items']) && !empty($result['processed_items'])) {
                     $item_data = $result['processed_items'][0];
-                    
-                    if (isset($item_data['file_name']) || isset($item_data['file_path'])) {
-                        $title = $item_data['original_title'] ?? $item_data['file_name'] ?? 'Uploaded File';
-                        $body = "File: " . ($item_data['file_name'] ?? '') . "\nPath: " . ($item_data['file_path'] ?? '') . "\nType: " . ($item_data['mime_type'] ?? '') . "\nSize: " . ($item_data['file_size'] ?? 0) . " bytes";
-                        
+
+                    // Universal file parameter extraction for all handlers
+                    if (isset($item_data['file_path'])) {
+                        // File-based data (Files handler, Reddit images, etc.)
+                        $title = $item_data['metadata']['original_title'] ?? $item_data['file_name'] ?? 'File';
+                        $body = $item_data['data']['content_string'] ?? '';
+
+                        // If no content string, create basic file info
+                        if (empty($body)) {
+                            $body = "File: " . ($item_data['file_name'] ?? '') . "\nType: " . ($item_data['mime_type'] ?? '') . "\nSize: " . ($item_data['file_size'] ?? 0) . " bytes";
+                        }
+
                         $result['metadata'] = array_merge($result['metadata'] ?? [], [
-                            'file_path' => $item_data['file_path'] ?? '',
-                            'original_filename' => $item_data['file_name'] ?? '',
+                            'file_path' => $item_data['file_path'],
+                            'file_name' => $item_data['file_name'] ?? '',
                             'mime_type' => $item_data['mime_type'] ?? '',
                             'file_size' => $item_data['file_size'] ?? 0
-                        ]);
+                        ], $item_data['metadata'] ?? []);
                     } else {
+                        // Text-only data (RSS, WordPress, etc.)
                         $content_string = $item_data['data']['content_string'] ?? '';
-                        $file_info = $item_data['data']['file_info'] ?? null;
-                        
                         $title = $item_data['metadata']['original_title'] ?? '';
                         $body = $content_string;
-                        
-                        if ($file_info && !empty($file_info['url'])) {
-                            $result['metadata'] = array_merge($result['metadata'] ?? [], [
-                                'image_url' => $file_info['url'],
-                                'image_mime_type' => $file_info['mime_type'] ?? 'image/jpeg'
-                            ]);
-                        }
-                        
+
                         $result['metadata'] = array_merge($result['metadata'] ?? [], $item_data['metadata'] ?? []);
                     }
                 } else {

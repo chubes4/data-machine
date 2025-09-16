@@ -152,4 +152,132 @@ class AIStepConversationManager {
     public static function logConversationAction(string $action, array $context = []): void {
         do_action('dm_log', 'debug', "ConversationManager: {$action}", $context);
     }
+
+    /**
+     * Validate tool call against conversation history to prevent duplicates.
+     *
+     * Checks if the current tool call with its parameters was already executed
+     * in the immediately previous turn to prevent repetitive AI behavior.
+     *
+     * @param string $tool_name Current tool name being called
+     * @param array $tool_parameters Current tool parameters
+     * @param array $conversation_messages Complete conversation history
+     * @return array Validation result with 'is_duplicate' boolean and 'message' string
+     */
+    public static function validateToolCall(string $tool_name, array $tool_parameters, array $conversation_messages): array {
+        if (empty($conversation_messages)) {
+            return ['is_duplicate' => false, 'message' => ''];
+        }
+
+        // Find the most recent tool call in conversation history (scan from end backwards)
+        $previous_tool_call = null;
+        for ($i = count($conversation_messages) - 1; $i >= 0; $i--) {
+            $message = $conversation_messages[$i];
+
+            if ($message['role'] === 'assistant' &&
+                isset($message['content']) &&
+                is_string($message['content']) &&
+                strpos($message['content'], 'AI ACTION') === 0) {
+
+                $previous_tool_call = self::extractToolCallFromMessage($message);
+                break; // Only check the immediate previous tool call
+            }
+        }
+
+        // If no previous tool call found, this can't be a duplicate
+        if (!$previous_tool_call) {
+            return ['is_duplicate' => false, 'message' => ''];
+        }
+
+        // Check for exact match: same tool name and identical parameters
+        $is_duplicate = ($previous_tool_call['tool_name'] === $tool_name) &&
+                       ($previous_tool_call['parameters'] === $tool_parameters);
+
+        if ($is_duplicate) {
+            do_action('dm_log', 'debug', 'ConversationManager: Duplicate tool call detected', [
+                'tool_name' => $tool_name,
+                'current_parameters' => $tool_parameters,
+                'previous_parameters' => $previous_tool_call['parameters'],
+                'duplicate_prevention' => 'soft_rejection'
+            ]);
+
+            $correction_message = "You just called the {$tool_name} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";
+            return ['is_duplicate' => true, 'message' => $correction_message];
+        }
+
+        return ['is_duplicate' => false, 'message' => ''];
+    }
+
+    /**
+     * Extract tool call information from formatted conversation message.
+     *
+     * Parses tool name and parameters from AI ACTION messages created by
+     * formatToolCallMessage() method.
+     *
+     * @param array $message Conversation message array
+     * @return array|null Tool call data with 'tool_name' and 'parameters' keys, or null if not found
+     */
+    public static function extractToolCallFromMessage(array $message): ?array {
+        if ($message['role'] !== 'assistant' || !isset($message['content'])) {
+            return null;
+        }
+
+        $content = $message['content'];
+
+        // Match pattern: "AI ACTION (Turn X): Executing Tool Name with parameters: key1: value1, key2: value2"
+        if (!preg_match('/AI ACTION \(Turn \d+\): Executing (.+?)(?: with parameters: (.+))?$/', $content, $matches)) {
+            return null;
+        }
+
+        $tool_display_name = trim($matches[1]);
+        $tool_name = strtolower(str_replace(' ', '_', $tool_display_name));
+
+        $parameters = [];
+        if (isset($matches[2]) && !empty($matches[2])) {
+            $params_string = $matches[2];
+
+            // Parse parameters string: "key1: value1, key2: value2, ..."
+            $param_pairs = explode(', ', $params_string);
+            foreach ($param_pairs as $pair) {
+                if (strpos($pair, ': ') !== false) {
+                    list($key, $value) = explode(': ', $pair, 2);
+                    $key = trim($key);
+                    $value = trim($value);
+
+                    // Handle truncated values (ending with ...)
+                    if (substr($value, -3) === '...') {
+                        // For truncated values, we'll consider them as potentially different
+                        // This gives the benefit of doubt to the AI
+                        $value = substr($value, 0, -3) . '_truncated_' . time();
+                    }
+
+                    // Try to decode JSON values
+                    $decoded = json_decode($value, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $parameters[$key] = $decoded;
+                    } else {
+                        $parameters[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        return [
+            'tool_name' => $tool_name,
+            'parameters' => $parameters
+        ];
+    }
+
+    /**
+     * Generate gentle correction message for duplicate tool calls.
+     *
+     * @param string $tool_name Tool name that was duplicated
+     * @return array Formatted user message for conversation
+     */
+    public static function generateDuplicateToolCallMessage(string $tool_name): array {
+        $tool_display = ucwords(str_replace('_', ' ', $tool_name));
+        $message = "You just called the {$tool_display} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";
+
+        return self::buildConversationMessage('user', $message);
+    }
 }
